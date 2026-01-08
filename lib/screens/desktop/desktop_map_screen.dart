@@ -54,12 +54,14 @@ class DesktopMapScreen extends StatefulWidget {
   final LatLng? initialCenter;
   final double? initialZoom;
   final bool autoFollow;
+  final String? initialMarkerId;
 
   const DesktopMapScreen({
     super.key,
     this.initialCenter,
     this.initialZoom,
     this.autoFollow = true,
+    this.initialMarkerId,
   });
 
   @override
@@ -76,6 +78,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   Artwork? _selectedArtwork;
   Exhibition? _selectedExhibition;
   ArtMarker? _activeMarker;
+  bool _didOpenInitialMarker = false;
   bool _showFiltersPanel = false;
   String _selectedFilter = 'all';
   double _searchRadius = 5.0; // km
@@ -146,7 +149,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadMarkers(force: true);
+      unawaited(_loadMarkers(force: true).then((_) => _maybeOpenInitialMarker()));
 
       // Only animate camera to user location when we're not deep-linking to a target.
       // When initialCenter is provided (e.g. "Open on Map"), keep the camera focused on that target.
@@ -155,6 +158,34 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _refreshUserLocation(animate: shouldAnimateToUser);
       _prefetchMarkerSubjects();
     });
+  }
+
+  Future<void> _maybeOpenInitialMarker() async {
+    if (_didOpenInitialMarker) return;
+    final markerId = widget.initialMarkerId?.trim() ?? '';
+    if (markerId.isEmpty) return;
+
+    _didOpenInitialMarker = true;
+
+    final existing = _artMarkers.where((m) => m.id == markerId).toList(growable: false);
+    if (existing.isNotEmpty) {
+      _handleMarkerTap(existing.first);
+      return;
+    }
+
+    try {
+      final marker = await BackendApiService().getArtMarker(markerId);
+      if (!mounted) return;
+      if (marker == null || !marker.hasValidPosition) return;
+
+      setState(() {
+        _artMarkers.removeWhere((m) => m.id == marker.id);
+        _artMarkers.add(marker);
+      });
+      _handleMarkerTap(marker);
+    } catch (_) {
+      // Best-effort: keep user on map if marker fetch fails.
+    }
   }
 
   LatLng get _effectiveCenter =>
@@ -290,7 +321,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           initialCenter: _effectiveCenter,
           initialZoom: _cameraZoom,
           minZoom: 3.0,
-          maxZoom: 18.0,
+          maxZoom: 24.0,
           isDarkMode: themeProvider.isDarkMode,
           isRetina: isRetina,
           tileProviders: tileProviders,

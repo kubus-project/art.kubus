@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 import '../models/art_marker.dart';
 
 /// A stylised, responsive isometric cube marker used on the discovery map.
+///
+/// Renders a polished 3D isometric cube with the subject icon displayed
+/// directly on the top face in perspective, colored by subject type.
 class ArtMarkerCube extends StatelessWidget {
   const ArtMarkerCube({
     super.key,
@@ -24,88 +27,85 @@ class ArtMarkerCube extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final _CubePalette palette = _CubePalette.fromBase(baseColor);
-    final double cubeHeight = size * 1.1;
-    final double iconExtent = size * 0.44;
+    // Cube body occupies 70% height, rest is for shadow/spacing
+    final double cubeBodyHeight = size * 0.85;
+    final double totalHeight = size * 1.15;
 
     return SizedBox(
       width: size,
-      height: size * 1.3,
+      height: totalHeight,
       child: Stack(
-        alignment: Alignment.bottomCenter,
+        alignment: Alignment.center,
         clipBehavior: Clip.none,
         children: [
-          if (glow)
-            Positioned(
-              bottom: size * -0.04,
-              child: Container(
-                width: size * 1.35,
-                height: size * 0.52,
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: const Alignment(0, -0.1),
-                    radius: 0.9,
-                    colors: [
-                      baseColor.withValues(alpha: 0.32),
-                      baseColor.withValues(alpha: 0.08),
-                      Colors.transparent,
-                    ],
-                    stops: const [0.0, 0.58, 1.0],
-                  ),
-                ),
-              ),
-            ),
-          Positioned.fill(
-            child: Align(
-              alignment: Alignment.bottomCenter,
-              child: CustomPaint(
-                size: Size(size, cubeHeight),
-                painter: _IsometricCubePainter(
-                  palette: palette,
-                ),
-              ),
-            ),
-          ),
+          // Ground shadow (ellipse beneath cube)
           Positioned(
-            top: size * 0.2,
+            bottom: 0,
             child: Transform(
               alignment: Alignment.center,
-              transform: Matrix4.identity()
-                ..setEntry(3, 2, 0.0012)
-                ..rotateX(-18 * math.pi / 180),
+              transform: Matrix4.identity()..scale(1.0, 0.35),
               child: Container(
-                width: iconExtent,
-                height: iconExtent,
+                width: size * 0.72,
+                height: size * 0.72,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.94),
-                  borderRadius: BorderRadius.circular(size * 0.14),
-                  border: Border.all(
-                    color: palette.topAccent.withValues(alpha: 0.65),
-                    width: 1.2,
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      Colors.black.withValues(alpha: glow ? 0.35 : 0.22),
+                      Colors.black.withValues(alpha: 0.08),
+                      Colors.transparent,
+                    ],
+                    stops: const [0.0, 0.55, 1.0],
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.18),
-                      blurRadius: size * 0.12,
-                      offset: Offset(0, size * 0.05),
-                    ),
-                  ],
-                ),
-                child: Icon(
-                  icon,
-                  color: palette.topAccent,
-                  size: size * 0.26,
                 ),
               ),
             ),
           ),
+          // Optional colored glow beneath cube
+          if (glow)
+            Positioned(
+              bottom: size * 0.02,
+              child: Transform(
+                alignment: Alignment.center,
+                transform: Matrix4.identity()..scale(1.0, 0.32),
+                child: Container(
+                  width: size * 0.9,
+                  height: size * 0.9,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        baseColor.withValues(alpha: 0.45),
+                        baseColor.withValues(alpha: 0.15),
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.5, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          // Isometric cube with icon on top
           Positioned(
-            bottom: size * 0.2,
-            child: _SignalPip(
-              tier: marker.signalTier,
-              palette: palette,
-              size: math.max(16.0, size * 0.22),
+            bottom: size * 0.12,
+            child: CustomPaint(
+              size: Size(size * 0.88, cubeBodyHeight),
+              painter: _IsometricCubePainter(
+                palette: palette,
+                icon: icon,
+              ),
             ),
           ),
+          // Signal tier indicator (subtle ring around base)
+          if (marker.signalTier != ArtMarkerSignal.subtle)
+            Positioned(
+              bottom: size * 0.04,
+              child: _SignalIndicator(
+                tier: marker.signalTier,
+                baseColor: baseColor,
+                size: size * 0.68,
+              ),
+            ),
         ],
       ),
     );
@@ -113,40 +113,33 @@ class ArtMarkerCube extends StatelessWidget {
 }
 
 class _IsometricCubePainter extends CustomPainter {
-  const _IsometricCubePainter({required this.palette});
+  const _IsometricCubePainter({
+    required this.palette,
+    required this.icon,
+  });
 
   final _CubePalette palette;
+  final IconData icon;
 
   @override
   void paint(Canvas canvas, Size size) {
     final _ProjectedCube cube = _ProjectedCube(size: size);
 
-    final Path basePath = cube.pathForVertices(const [
-      _CubeVertex.frontLeftBottom,
-      _CubeVertex.frontRightBottom,
-      _CubeVertex.backRightBottom,
-      _CubeVertex.backLeftBottom,
-    ]);
-
-    canvas.drawShadow(
-      basePath.shift(const Offset(0, 6)),
-      Colors.black.withValues(alpha: 0.3),
-      size.width * 0.08,
-      false,
+    // Draw drop shadow beneath the cube
+    final Path shadowPath = Path()
+      ..addOval(Rect.fromCenter(
+        center: Offset(size.width / 2, size.height - size.height * 0.02),
+        width: size.width * 0.65,
+        height: size.height * 0.12,
+      ));
+    canvas.drawPath(
+      shadowPath,
+      Paint()
+        ..color = Colors.black.withValues(alpha: 0.18)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
     );
 
-    final Paint basePaint = Paint()
-      ..shader = LinearGradient(
-        colors: [
-          palette.base.withValues(alpha: 0.9),
-          palette.base.withValues(alpha: 0.45),
-        ],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ).createShader(basePath.getBounds());
-
-    canvas.drawPath(basePath, basePaint);
-
+    // Left face (darker)
     final Path leftPath = cube.pathForVertices(const [
       _CubeVertex.backLeftTop,
       _CubeVertex.frontLeftTop,
@@ -154,6 +147,17 @@ class _IsometricCubePainter extends CustomPainter {
       _CubeVertex.backLeftBottom,
     ]);
 
+    canvas.drawPath(
+      leftPath,
+      Paint()
+        ..shader = LinearGradient(
+          colors: [palette.left, palette.left.withValues(alpha: 0.85)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ).createShader(leftPath.getBounds()),
+    );
+
+    // Right face (slightly lighter than left)
     final Path rightPath = cube.pathForVertices(const [
       _CubeVertex.frontRightTop,
       _CubeVertex.backRightTop,
@@ -161,18 +165,57 @@ class _IsometricCubePainter extends CustomPainter {
       _CubeVertex.frontRightBottom,
     ]);
 
+    canvas.drawPath(
+      rightPath,
+      Paint()
+        ..shader = LinearGradient(
+          colors: [palette.right, palette.right.withValues(alpha: 0.9)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ).createShader(rightPath.getBounds()),
+    );
+
+    // Front-left face
     final Path frontLeftPath = cube.pathForProjectedPoints(
       cube.frontMidTop,
       cube.frontMidBottom,
       side: _FrontSide.left,
     );
 
+    canvas.drawPath(
+      frontLeftPath,
+      Paint()
+        ..shader = LinearGradient(
+          colors: [
+            palette.frontLeft,
+            palette.frontLeft.withValues(alpha: 0.88)
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ).createShader(frontLeftPath.getBounds()),
+    );
+
+    // Front-right face
     final Path frontRightPath = cube.pathForProjectedPoints(
       cube.frontMidTop,
       cube.frontMidBottom,
       side: _FrontSide.right,
     );
 
+    canvas.drawPath(
+      frontRightPath,
+      Paint()
+        ..shader = LinearGradient(
+          colors: [
+            palette.frontRight,
+            palette.frontRight.withValues(alpha: 0.85)
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ).createShader(frontRightPath.getBounds()),
+    );
+
+    // Top face (brightest - icon sits here)
     final Path topPath = cube.pathForVertices(const [
       _CubeVertex.backLeftTop,
       _CubeVertex.backRightTop,
@@ -180,89 +223,60 @@ class _IsometricCubePainter extends CustomPainter {
       _CubeVertex.frontLeftTop,
     ]);
 
-    final Paint leftPaint = Paint()
-      ..shader = LinearGradient(
-        colors: [palette.left, palette.left.withValues(alpha: 0.82)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ).createShader(leftPath.getBounds());
+    // Gradient from center outward for a polished look
+    canvas.drawPath(
+      topPath,
+      Paint()
+        ..shader = RadialGradient(
+          center: const Alignment(0, 0.2),
+          radius: 1.2,
+          colors: [palette.topAccent, palette.top],
+        ).createShader(topPath.getBounds()),
+    );
 
-    final Paint rightPaint = Paint()
-      ..shader = LinearGradient(
-        colors: [palette.right.withValues(alpha: 0.95), palette.right],
-        begin: Alignment.topRight,
-        end: Alignment.bottomLeft,
-      ).createShader(rightPath.getBounds());
-
-    final Paint frontLeftPaint = Paint()
-      ..shader = LinearGradient(
-        colors: [palette.frontLeft, palette.frontLeft.withValues(alpha: 0.86)],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      ).createShader(frontLeftPath.getBounds());
-
-    final Paint frontRightPaint = Paint()
-      ..shader = LinearGradient(
-        colors: [palette.frontRight, palette.frontRight.withValues(alpha: 0.84)],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      ).createShader(frontRightPath.getBounds());
-
-    final Paint topPaint = Paint()
-      ..shader = LinearGradient(
-        colors: [palette.top, palette.topAccent],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ).createShader(topPath.getBounds());
-
-    canvas
-      ..drawPath(leftPath, leftPaint)
-      ..drawPath(rightPath, rightPaint)
-      ..drawPath(frontLeftPath, frontLeftPaint)
-      ..drawPath(frontRightPath, frontRightPaint)
-      ..drawPath(topPath, topPaint);
-
+    // Draw edges for definition
     final Paint edgePaint = Paint()
       ..color = palette.edge
-      ..strokeWidth = size.width * 0.015
+      ..strokeWidth = size.width * 0.018
       ..style = PaintingStyle.stroke
       ..strokeJoin = StrokeJoin.round
       ..strokeCap = StrokeCap.round;
 
-    final Paint frontEdgePaint = Paint()
-      ..color = palette.edge.withValues(alpha: 0.75)
-      ..strokeWidth = edgePaint.strokeWidth
+    // Top face outline
+    canvas.drawPath(
+      cube.pathForVertices(const [
+        _CubeVertex.backLeftTop,
+        _CubeVertex.backRightTop,
+        _CubeVertex.frontRightTop,
+        _CubeVertex.frontLeftTop,
+        _CubeVertex.backLeftTop,
+      ]),
+      edgePaint,
+    );
+
+    // Vertical edges at front corner
+    final Paint verticalEdgePaint = Paint()
+      ..color = palette.edge.withValues(alpha: 0.6)
+      ..strokeWidth = size.width * 0.016
       ..style = PaintingStyle.stroke
-      ..strokeJoin = StrokeJoin.round
       ..strokeCap = StrokeCap.round;
 
-    final Path topOutline = cube.pathForVertices(const [
-      _CubeVertex.backLeftTop,
-      _CubeVertex.backRightTop,
-      _CubeVertex.frontRightTop,
-      _CubeVertex.frontLeftTop,
-      _CubeVertex.backLeftTop,
-    ]);
+    canvas.drawLine(
+      cube.vertex(_CubeVertex.frontLeftTop),
+      cube.vertex(_CubeVertex.frontLeftBottom),
+      verticalEdgePaint,
+    );
+    canvas.drawLine(
+      cube.vertex(_CubeVertex.frontRightTop),
+      cube.vertex(_CubeVertex.frontRightBottom),
+      verticalEdgePaint,
+    );
+    canvas.drawLine(cube.frontMidTop, cube.frontMidBottom, verticalEdgePaint);
 
-    final Path frontOutline = Path()
-      ..moveTo(cube.vertex(_CubeVertex.frontLeftTop).dx,
-          cube.vertex(_CubeVertex.frontLeftTop).dy)
-      ..lineTo(cube.vertex(_CubeVertex.frontLeftBottom).dx,
-          cube.vertex(_CubeVertex.frontLeftBottom).dy)
-      ..moveTo(cube.vertex(_CubeVertex.frontRightTop).dx,
-          cube.vertex(_CubeVertex.frontRightTop).dy)
-      ..lineTo(cube.vertex(_CubeVertex.frontRightBottom).dx,
-          cube.vertex(_CubeVertex.frontRightBottom).dy)
-      ..moveTo(cube.frontMidTop.dx, cube.frontMidTop.dy)
-      ..lineTo(cube.frontMidBottom.dx, cube.frontMidBottom.dy);
-
-    canvas
-      ..drawPath(topOutline, edgePaint)
-      ..drawPath(frontOutline, frontEdgePaint);
-
+    // Highlight along top edges for depth
     final Paint highlightPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.18)
-      ..strokeWidth = size.width * 0.01
+      ..color = Colors.white.withValues(alpha: 0.28)
+      ..strokeWidth = size.width * 0.012
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
@@ -272,68 +286,154 @@ class _IsometricCubePainter extends CustomPainter {
       ..lineTo(cube.vertex(_CubeVertex.frontLeftTop).dx,
           cube.vertex(_CubeVertex.frontLeftTop).dy)
       ..lineTo(cube.frontMidTop.dx, cube.frontMidTop.dy);
-
     canvas.drawPath(highlight, highlightPaint);
+
+    // Draw icon on top face in isometric perspective
+    _drawIconOnTopFace(canvas, size, cube);
+  }
+
+  void _drawIconOnTopFace(Canvas canvas, Size size, _ProjectedCube cube) {
+    // Calculate center of top face
+    final topCenter = Offset(
+      (cube.vertex(_CubeVertex.backLeftTop).dx +
+              cube.vertex(_CubeVertex.backRightTop).dx +
+              cube.vertex(_CubeVertex.frontRightTop).dx +
+              cube.vertex(_CubeVertex.frontLeftTop).dx) /
+          4,
+      (cube.vertex(_CubeVertex.backLeftTop).dy +
+              cube.vertex(_CubeVertex.backRightTop).dy +
+              cube.vertex(_CubeVertex.frontRightTop).dy +
+              cube.vertex(_CubeVertex.frontLeftTop).dy) /
+          4,
+    );
+
+    // Icon circle size relative to cube
+    final double iconRadius = size.width * 0.24;
+
+    // Draw icon background circle (white with subtle shadow)
+    final Paint circleShadowPaint = Paint()
+      ..color = Colors.black.withValues(alpha: 0.15)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
+
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: topCenter + const Offset(0, 1.5),
+        width: iconRadius * 2,
+        height: iconRadius * 1.3, // Squished for isometric
+      ),
+      circleShadowPaint,
+    );
+
+    // Icon background (white ellipse matching isometric perspective)
+    final Paint circlePaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.95);
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: topCenter,
+        width: iconRadius * 2,
+        height: iconRadius * 1.3,
+      ),
+      circlePaint,
+    );
+
+    // Border around icon circle
+    final Paint borderPaint = Paint()
+      ..color = palette.topAccent.withValues(alpha: 0.5)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = size.width * 0.02;
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: topCenter,
+        width: iconRadius * 2,
+        height: iconRadius * 1.3,
+      ),
+      borderPaint,
+    );
+
+    // Draw the icon using a TextPainter
+    final TextPainter iconPainter = TextPainter(
+      text: TextSpan(
+        text: String.fromCharCode(icon.codePoint),
+        style: TextStyle(
+          fontSize: size.width * 0.28,
+          fontFamily: icon.fontFamily,
+          package: icon.fontPackage,
+          color: palette.topAccent,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    iconPainter.layout();
+
+    // Position icon in center of top face
+    final iconOffset = Offset(
+      topCenter.dx - iconPainter.width / 2,
+      topCenter.dy - iconPainter.height / 2 - size.height * 0.015,
+    );
+    iconPainter.paint(canvas, iconOffset);
   }
 
   @override
   bool shouldRepaint(covariant _IsometricCubePainter oldDelegate) {
-    return oldDelegate.palette != palette;
+    return oldDelegate.palette != palette || oldDelegate.icon != icon;
   }
 }
 
-class _SignalPip extends StatelessWidget {
-  const _SignalPip({
+/// Subtle signal indicator rendered as a glowing ring beneath the cube
+class _SignalIndicator extends StatelessWidget {
+  const _SignalIndicator({
     required this.tier,
-    required this.palette,
+    required this.baseColor,
     required this.size,
   });
 
   final ArtMarkerSignal tier;
-  final _CubePalette palette;
+  final Color baseColor;
   final double size;
 
   @override
   Widget build(BuildContext context) {
-    final Color fillColor;
+    final Color glowColor;
+    final double opacity;
+
     switch (tier) {
       case ArtMarkerSignal.legendary:
-        fillColor = Colors.amberAccent;
+        glowColor = Colors.amber;
+        opacity = 0.7;
         break;
       case ArtMarkerSignal.featured:
-        fillColor = palette.topAccent.withValues(alpha: 0.92);
+        glowColor = baseColor;
+        opacity = 0.55;
         break;
       case ArtMarkerSignal.active:
-        fillColor = Colors.white.withValues(alpha: 0.9);
+        glowColor = baseColor;
+        opacity = 0.35;
         break;
       case ArtMarkerSignal.subtle:
-        fillColor = Colors.white.withValues(alpha: 0.55);
-        break;
+        return const SizedBox.shrink();
     }
 
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: palette.edge.withValues(alpha: 0.4), width: size * 0.12),
-        color: fillColor,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.25),
-            blurRadius: size * 0.45,
-            offset: Offset(0, size * 0.12),
-          ),
-        ],
-      ),
+    return Transform(
       alignment: Alignment.center,
-      child: tier == ArtMarkerSignal.legendary
-          ? Icon(
-              Icons.image,
-              size: size * 0.6,
-              color: Colors.black.withValues(alpha: 0.78),
-            )
-          : null,
+      transform: Matrix4.identity()..scale(1.0, 0.35),
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: glowColor.withValues(alpha: opacity),
+            width: tier == ArtMarkerSignal.legendary ? 2.5 : 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: glowColor.withValues(alpha: opacity * 0.6),
+              blurRadius: tier == ArtMarkerSignal.legendary ? 8 : 4,
+              spreadRadius: 1,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -361,16 +461,27 @@ class _CubePalette {
 
   factory _CubePalette.fromBase(Color color) {
     final normalized = _normalizeBase(color);
-    final contrastBoost = _contrastFor(normalized);
+    final hsl = HSLColor.fromColor(normalized);
+
+    // Increase saturation slightly for more vibrant colors
+    final vibrant =
+        hsl.withSaturation((hsl.saturation * 1.15).clamp(0.0, 1.0)).toColor();
+
     return _CubePalette(
-      top: _lighten(normalized, 0.16 + contrastBoost),
-      topAccent: _lighten(normalized, 0.28 + contrastBoost),
-      left: _darken(normalized, 0.08 + contrastBoost / 2),
-      right: _darken(normalized, 0.14 + contrastBoost / 2),
-      frontLeft: _darken(normalized, 0.18 + contrastBoost / 2),
-      frontRight: _darken(normalized, 0.22 + contrastBoost / 2),
-      base: normalized.withValues(alpha: 0.52),
-      edge: Colors.black.withValues(alpha: 0.45),
+      // Top face is brightest (light comes from above)
+      top: _lighten(vibrant, 0.22),
+      topAccent: _saturate(_lighten(vibrant, 0.12), 0.1),
+      // Left face catches some light
+      left: _darken(vibrant, 0.08),
+      // Right face is in shadow
+      right: _darken(vibrant, 0.18),
+      // Front faces are darker (angled away from light)
+      frontLeft: _darken(vibrant, 0.22),
+      frontRight: _darken(vibrant, 0.28),
+      // Base shadow
+      base: normalized.withValues(alpha: 0.4),
+      // Edges for definition
+      edge: Colors.black.withValues(alpha: 0.35),
     );
   }
 
@@ -420,9 +531,10 @@ class _ProjectedCube {
     final double width = maxX - minX;
     final double height = maxY - minY;
     final double scale = math.min(
-      (size.width) / width,
-      (size.height) / height,
-    ) * 0.92;
+          (size.width) / width,
+          (size.height) / height,
+        ) *
+        0.92;
 
     final double offsetX = (size.width - width * scale) / 2;
     final double offsetY = size.height - height * scale;
@@ -555,16 +667,20 @@ Color _darken(Color color, double amount) {
   return hsl.withLightness(lightness).toColor();
 }
 
-Color _normalizeBase(Color color) {
-  final hsl = HSLColor.fromColor(color);
-  final lightness = hsl.lightness.clamp(0.22, 0.68);
-  return hsl.withLightness(lightness.toDouble()).toColor();
+Color _saturate(Color color, double amount) {
+  final HSLColor hsl = HSLColor.fromColor(color);
+  final double saturation = (hsl.saturation + amount).clamp(0.0, 1.0);
+  return hsl.withSaturation(saturation).toColor();
 }
 
-double _contrastFor(Color color) {
-  // Higher contrast for very light/dark colors
-  final brightness = color.computeLuminance();
-  if (brightness < 0.25) return 0.07;
-  if (brightness > 0.75) return 0.05;
-  return 0.02;
+Color _normalizeBase(Color color) {
+  final hsl = HSLColor.fromColor(color);
+  // Clamp lightness to ensure good contrast on both light and dark maps
+  final lightness = hsl.lightness.clamp(0.28, 0.62);
+  // Ensure minimum saturation for color visibility
+  final saturation = hsl.saturation.clamp(0.35, 1.0);
+  return hsl
+      .withLightness(lightness.toDouble())
+      .withSaturation(saturation.toDouble())
+      .toColor();
 }

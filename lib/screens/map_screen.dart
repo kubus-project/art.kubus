@@ -114,12 +114,14 @@ class MapScreen extends StatefulWidget {
   final LatLng? initialCenter;
   final double? initialZoom;
   final bool autoFollow;
+  final String? initialMarkerId;
 
   const MapScreen({
     super.key,
     this.initialCenter,
     this.initialZoom,
     this.autoFollow = true,
+    this.initialMarkerId,
   });
 
   @override
@@ -161,6 +163,7 @@ class _MapScreenState extends State<MapScreen>
   final Set<String> _notifiedMarkers =
       {}; // Track which markers we've notified about
   ArtMarker? _activeMarker;
+  bool _didOpenInitialMarker = false;
   Timer? _proximityCheckTimer;
   StreamSubscription<ArtMarker>? _markerSocketSubscription;
   StreamSubscription<String>? _markerDeletedSubscription;
@@ -234,6 +237,8 @@ class _MapScreenState extends State<MapScreen>
         _autoFollow = widget.autoFollow;
         _mapController.move(
             widget.initialCenter!, widget.initialZoom ?? _lastZoom);
+        _cameraCenter = widget.initialCenter!;
+        _lastZoom = widget.initialZoom ?? _lastZoom;
       }
 
       // Initialize providers and calculate progress after build completes
@@ -390,7 +395,8 @@ class _MapScreenState extends State<MapScreen>
       _pushNotificationService.onNotificationTap = _handleNotificationTap;
 
       // Load art markers from backend
-      await _loadArtMarkers();
+        await _loadArtMarkers(center: widget.initialCenter);
+        await _maybeOpenInitialMarker();
       _markerSocketSubscription =
           _mapMarkerService.onMarkerCreated.listen(_handleMarkerCreated);
       _markerDeletedSubscription =
@@ -403,6 +409,33 @@ class _MapScreenState extends State<MapScreen>
       );
     } catch (e) {
       debugPrint('Error initializing AR integration: $e');
+    }
+  }
+
+  Future<void> _maybeOpenInitialMarker() async {
+    if (_didOpenInitialMarker) return;
+    final markerId = widget.initialMarkerId?.trim() ?? '';
+    if (markerId.isEmpty) return;
+
+    _didOpenInitialMarker = true;
+
+    final existing = _artMarkers.where((m) => m.id == markerId).toList(growable: false);
+    if (existing.isNotEmpty) {
+      _showArtMarkerDialog(existing.first);
+      return;
+    }
+
+    try {
+      final marker = await BackendApiService().getArtMarker(markerId);
+      if (!mounted) return;
+      if (marker == null || !marker.hasValidPosition) return;
+      setState(() {
+        _artMarkers.removeWhere((m) => m.id == marker.id);
+        _artMarkers.add(marker);
+      });
+      _showArtMarkerDialog(marker);
+    } catch (_) {
+      // Best-effort: if marker fetch fails, keep user on the map screen.
     }
   }
 
@@ -1541,7 +1574,7 @@ class _MapScreenState extends State<MapScreen>
       initialCenter: _currentPosition ?? _cameraCenter,
       initialZoom: _lastZoom,
       minZoom: 3.0,
-      maxZoom: 20.0,
+      maxZoom: 24.0,
       isDarkMode: isDark,
       isRetina: isRetina,
       tileProviders: tileProviders,

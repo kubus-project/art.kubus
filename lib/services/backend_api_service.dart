@@ -411,9 +411,34 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
 
   Future<void> _ensureAuthBeforeRequest({String? walletAddress}) async {
     // Determine which wallet we should be authenticated as.
-    final desiredCanonical = WalletUtils.canonical(
-      walletAddress ?? _preferredWalletCanonical,
-    );
+    //
+    // SECURITY: Never auto-issue or switch auth tokens for an arbitrary
+    // wallet passed in from a *read* path (e.g. viewing someone else's
+    // profile). The only wallet we should authenticate as on the client is
+    // the user's own connected/preferred wallet.
+    //
+    // Rule:
+    // - If we have a preferred wallet, we only honor walletAddress when it
+    //   matches that preferred wallet.
+    // - If we do NOT have a preferred wallet yet (cold start), we can honor
+    //   walletAddress (used by explicit sign-in/connect flows).
+    final preferredCanonical = (_preferredWalletCanonical ?? '').trim();
+    final requestedCanonical = WalletUtils.canonical(walletAddress);
+    final canHonorRequested = requestedCanonical.isNotEmpty &&
+        (preferredCanonical.isEmpty || requestedCanonical == preferredCanonical);
+    final desiredCanonical = canHonorRequested
+        ? requestedCanonical
+        : (preferredCanonical.isNotEmpty ? preferredCanonical : requestedCanonical);
+
+    if (preferredCanonical.isNotEmpty &&
+        requestedCanonical.isNotEmpty &&
+        requestedCanonical != preferredCanonical) {
+      _debugLogThrottled(
+        'ignored_wallet_mismatch',
+        'BackendApiService: ignoring requested wallet for auth (mismatch with preferred wallet)',
+        throttle: const Duration(seconds: 20),
+      );
+    }
 
     // If we already have a token but it's for a different wallet, re-issue.
     if ((_authToken ?? '').isNotEmpty && desiredCanonical.isNotEmpty) {
@@ -442,11 +467,14 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     if ((_authToken ?? '').isNotEmpty) return;
     await _ensureAuthWithStoredWallet();
     if ((_authToken ?? '').isNotEmpty) return;
-    if (walletAddress != null && walletAddress.isNotEmpty) {
+    // Only attempt issuance for the desired wallet (which is either the
+    // preferred wallet or, on cold start, an explicitly requested wallet).
+    final desiredRaw = desiredCanonical;
+    if (desiredRaw.isNotEmpty) {
       try {
-        await ensureAuthLoaded(walletAddress: walletAddress);
+        await ensureAuthLoaded(walletAddress: desiredRaw);
       } catch (e) {
-        AppConfig.debugPrint('BackendApiService: ensureAuthLoaded for $walletAddress failed: $e');
+        AppConfig.debugPrint('BackendApiService: ensureAuthLoaded for $desiredRaw failed: $e');
       }
     }
   }
@@ -1544,9 +1572,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     Map<String, dynamic> updates,
   ) async {
     try {
-      try {
-        await ensureAuthLoaded(walletAddress: walletAddress);
-      } catch (_) {}
+      await _ensureAuthBeforeRequest(walletAddress: walletAddress);
       final payload = {
         'walletAddress': walletAddress,
         ...updates,
@@ -1575,14 +1601,15 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
   @override
   Future<Map<String, dynamic>> getProfileByWallet(String walletAddress) async {
     try {
-      await _ensureAuthBeforeRequest(walletAddress: walletAddress);
+      // Public read: do NOT attempt to auto-issue/auth-switch for the wallet
+      // being viewed.
       // Avoid making pointless network calls when wallet is a known placeholder
       final normalized = WalletUtils.normalize(walletAddress);
       if (normalized.isEmpty || ['unknown', 'anonymous', 'n/a', 'none'].contains(normalized.toLowerCase())) {
         throw Exception('Profile not found');
       }
       final uri = Uri.parse('$baseUrl/api/profiles/$walletAddress');
-      final dynamic data = await _fetchJson(uri, includeAuth: true, allowOrbitFallback: true);
+      final dynamic data = await _fetchJson(uri, includeAuth: false, allowOrbitFallback: true);
       final raw = data['data'] ?? data;
       if (raw is Map<String, dynamic>) {
         AppConfig.debugPrint('BackendApiService.getProfileByWallet: parsed profile keys: ${raw.keys.toList()}');
@@ -2082,6 +2109,41 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getNearbyArtMarkers failed: $e');
       rethrow;
+    }
+  }
+
+  /// Get single art marker by ID
+  /// GET /api/art-markers/:id
+  Future<ArtMarker?> getArtMarker(String markerId) async {
+    final id = markerId.trim();
+    if (id.isEmpty) return null;
+
+    try {
+      // Markers can be public (optional auth). Include auth when available,
+      // but do not hard-fail if the user is not signed in yet.
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
+
+      final uri = Uri.parse('$baseUrl/api/art-markers/$id');
+      final dynamic data = await _fetchJson(
+        uri,
+        includeAuth: true,
+        allowOrbitFallback: true,
+      );
+
+      final dynamic payload = data is Map<String, dynamic>
+          ? (data['data'] ?? data['marker'] ?? data['artMarker'] ?? data)
+          : data;
+
+      if (payload is Map<String, dynamic>) {
+        return _artMarkerFromBackendJson(payload);
+      }
+
+      return null;
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.getArtMarker failed: $e');
+      return null;
     }
   }
 
@@ -5687,20 +5749,44 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     int limit = 20,
   }) async {
     try {
-      await _ensureAuthBeforeRequest(walletAddress: walletAddress);
+      final requestedWallet = (walletAddress ?? '').trim();
+
+      // Collections are generally public for other users. Only include auth
+      // when the request is for the currently signed-in wallet (or when the
+      // caller is implicitly requesting "my collections" by omitting a wallet).
+        final requestedCanonical = WalletUtils.canonical(requestedWallet);
+        final preferredCanonical = WalletUtils.canonical(_preferredWalletCanonical ?? '');
+        final isForPreferredWallet = requestedCanonical.isNotEmpty &&
+          preferredCanonical.isNotEmpty &&
+          requestedCanonical == preferredCanonical;
+      final isImplicitSelfRequest = requestedWallet.isEmpty;
+
+      final includeAuth = isImplicitSelfRequest || isForPreferredWallet;
+      if (includeAuth) {
+        if (isForPreferredWallet) {
+          // Guarded: will not auth-switch/issue for arbitrary wallets.
+          await _ensureAuthBeforeRequest(walletAddress: requestedWallet);
+        } else {
+          // Best effort: try to load existing auth for stored wallet, but don't
+          // force issuing tokens for view-only flows.
+          try {
+            await _ensureAuthWithStoredWallet();
+          } catch (_) {}
+        }
+      }
       final queryParams = <String, String>{
         'page': page.toString(),
         'limit': limit.toString(),
       };
       
-      if (walletAddress != null) {
-        queryParams['walletAddress'] = walletAddress;
+      if (requestedWallet.isNotEmpty) {
+        queryParams['walletAddress'] = requestedWallet;
       }
 
       final uri = Uri.parse('$baseUrl/api/collections').replace(queryParameters: queryParams);
       final jsonData = await _fetchJson(
         uri,
-        includeAuth: true,
+        includeAuth: includeAuth,
         allowOrbitFallback: true,
       );
 

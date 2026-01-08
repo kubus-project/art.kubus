@@ -53,9 +53,15 @@ class AppConfig {
   /// Social features
   static const bool enableUserProfiles = true;
   static const bool enableFollowing = true;
-  static const bool enableMessaging = false; // Future feature
+  static const bool enableMessaging = true; // Future feature
   static const bool enablePresence = true;
   static const bool enablePresenceLastVisitedLocation = true;
+
+  /// Web: proxy external images via backend to avoid CORS failures in CanvasKit.
+  ///
+  /// This should generally stay enabled for web builds; the backend still enforces
+  /// SSRF protections + byte limits.
+  static const bool enableExternalImageProxy = true;
 
   // Auth UX: re-prompt login when backend token expires.
   static const bool enableRePromptLoginOnExpiry = true;
@@ -68,7 +74,7 @@ class AppConfig {
   static const bool enableSeason0 = true;
 
   /// Labs section (advanced Web3 surfaces: marketplace/minting/DAO terminology)
-  static const bool enableLabs = false;
+  static const bool enableLabs = true;
   
   /// Analytics and tracking
   static const bool enableAnalytics = isProduction;
@@ -101,8 +107,8 @@ class AppConfig {
   
   /// Welcome and onboarding
   static const bool showWelcomeScreen = true;
-  static const bool skipOnboardingForReturningUsers = true; // Skip welcome/onboarding for users who have launched the app before
-  static const bool skipWeb3OnboardingForReturningUsers = false; // Show Web3 feature onboarding even for returning users (first access per feature)
+  static const bool skipOnboardingForReturningUsers = true; 
+  static const bool skipWeb3OnboardingForReturningUsers = true; 
   static const bool forceWalletOnboarding = true; // Prompt wallet for non-explore features
   static const bool enableGuestMode = true; // Allow explore without wallet
   
@@ -272,6 +278,7 @@ class AppConfig {
       case 'labs': return enableLabs;
       case 'presence': return enablePresence;
       case 'presenceLastVisitedLocation': return enablePresenceLastVisitedLocation;
+      case 'externalImageProxy': return enableExternalImageProxy;
       case 'rePromptLoginOnExpiry': return enableRePromptLoginOnExpiry;
       default: return false;
     }

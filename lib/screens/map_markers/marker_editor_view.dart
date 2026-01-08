@@ -673,7 +673,7 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                   initialCenter: markerPosition,
                   initialZoom: 15,
                   minZoom: 3,
-                  maxZoom: 19,
+                  maxZoom: 24,
                   isDarkMode: isDarkMode,
                   isRetina: isRetina,
                   tileProviders: tileProviders,

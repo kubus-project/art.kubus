@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../screens/desktop/desktop_map_screen.dart';
+import '../screens/map_screen.dart';
 import '../screens/art/collection_detail_screen.dart';
 import '../screens/community/post_detail_screen.dart';
 import '../screens/events/event_detail_screen.dart';
 import '../screens/events/exhibition_detail_screen.dart';
+import '../services/backend_api_service.dart';
 import '../services/share/share_deep_link_parser.dart';
 import '../services/share/share_types.dart';
 import 'artwork_navigation.dart';
@@ -33,6 +36,32 @@ class ShareDeepLinkNavigation {
             .push(MaterialPageRoute(builder: (_) => CollectionDetailScreen(collectionId: target.id)));
         return;
       case ShareEntityType.marker:
+        final navigator = Navigator.of(context);
+        final width = MediaQuery.sizeOf(context).width;
+        final isDesktop = width >= 900;
+
+        final marker = await BackendApiService().getArtMarker(target.id);
+        if (!navigator.mounted) return;
+        if (marker == null || !marker.hasValidPosition) return;
+
+        await navigator.push(
+          MaterialPageRoute(
+            builder: (_) => isDesktop
+                ? DesktopMapScreen(
+                    initialCenter: marker.position,
+                    initialZoom: 16.0,
+                    autoFollow: false,
+                    initialMarkerId: marker.id,
+                  )
+                : MapScreen(
+                    initialCenter: marker.position,
+                    initialZoom: 16.0,
+                    autoFollow: false,
+                    initialMarkerId: marker.id,
+                  ),
+          ),
+        );
+        return;
       case ShareEntityType.nft:
         return;
     }
