@@ -37,6 +37,9 @@ import '../../providers/wallet_provider.dart';
 import '../../services/socket_service.dart';
 import 'profile_screen_methods.dart';
 import '../../models/dao.dart';
+import '../../config/config.dart';
+import 'community_analytics_screen.dart';
+import 'profile_analytics_screen.dart';
 
 class UserProfileScreen extends StatefulWidget {
   final String userId;
@@ -501,6 +504,77 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
             },
             tooltip: l10n.userProfileShareTooltip,
           ),
+          if (AppConfig.isFeatureEnabled('analytics'))
+            TopBarIcon(
+              icon: const Icon(Icons.analytics_outlined),
+              onPressed: () {
+                final wallet = user?.id.toString().trim() ?? '';
+                if (wallet.isEmpty) return;
+                showModalBottomSheet<void>(
+                  context: context,
+                  backgroundColor: Theme.of(context).colorScheme.surface,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                  ),
+                  builder: (sheetContext) {
+                    final scheme = Theme.of(sheetContext).colorScheme;
+                    return SafeArea(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Analytics',
+                              style: GoogleFonts.inter(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: scheme.onSurface,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            ListTile(
+                              leading: Icon(Icons.person_outline, color: scheme.primary),
+                              title: Text('Profile analytics', style: GoogleFonts.inter()),
+                              onTap: () {
+                                Navigator.pop(sheetContext);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ProfileAnalyticsScreen(
+                                      walletAddress: wallet,
+                                      title: 'Profile analytics',
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                            ListTile(
+                              leading: Icon(Icons.forum_outlined, color: scheme.secondary),
+                              title: Text('Community analytics', style: GoogleFonts.inter()),
+                              onTap: () {
+                                Navigator.pop(sheetContext);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => CommunityAnalyticsScreen(
+                                      walletAddress: wallet,
+                                      title: 'Community analytics',
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+              tooltip: 'Analytics',
+            ),
           TopBarIcon(
             icon: const Icon(Icons.more_vert),
             onPressed: _showMoreOptions,
@@ -1853,7 +1927,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: Text(
           l10n.userProfileReportDialogTitle(user!.name),
           style: GoogleFonts.inter(fontWeight: FontWeight.bold),
@@ -1866,15 +1940,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
               style: GoogleFonts.inter(),
             ),
             const SizedBox(height: 16),
-            _buildReportOption(l10n.userProfileReportReasonSpam),
-            _buildReportOption(l10n.userProfileReportReasonInappropriate),
-            _buildReportOption(l10n.userProfileReportReasonHarassment),
-            _buildReportOption(l10n.userProfileReportReasonOther),
+            _buildReportOption(dialogContext, l10n.userProfileReportReasonSpam),
+            _buildReportOption(dialogContext, l10n.userProfileReportReasonInappropriate),
+            _buildReportOption(dialogContext, l10n.userProfileReportReasonHarassment),
+            _buildReportOption(dialogContext, l10n.userProfileReportReasonOther),
           ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: Text(l10n.commonCancel),
           ),
         ],
@@ -1892,18 +1966,39 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     return l10n.commonJustNow;
   }
 
-  Widget _buildReportOption(String reason) {
+  Widget _buildReportOption(BuildContext dialogContext, String reason) {
     return ListTile(
       title: Text(reason),
-      onTap: () {
+      onTap: () async {
         final l10n = AppLocalizations.of(context)!;
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.userProfileReportSubmittedToast),
-            duration: Duration(seconds: 2),
-          ),
-        );
+        final messenger = ScaffoldMessenger.of(context);
+        final targetWallet = WalletUtils.canonical(user?.id ?? widget.userId);
+
+        Navigator.pop(dialogContext);
+
+        if (targetWallet.isEmpty) {
+          messenger.showSnackBar(
+            SnackBar(content: Text(l10n.commonActionFailedToast), duration: const Duration(seconds: 2)),
+          );
+          return;
+        }
+
+        try {
+          await CommunityService.reportUser(
+            targetWallet,
+            reason,
+            details: user?.name,
+          );
+          if (!mounted) return;
+          messenger.showSnackBar(
+            SnackBar(content: Text(l10n.userProfileReportSubmittedToast), duration: const Duration(seconds: 2)),
+          );
+        } catch (_) {
+          if (!mounted) return;
+          messenger.showSnackBar(
+            SnackBar(content: Text(l10n.commonActionFailedToast), duration: const Duration(seconds: 2)),
+          );
+        }
       },
     );
   }

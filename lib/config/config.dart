@@ -28,6 +28,7 @@ class AppConfig {
   static const bool enableCommenting = true;
   static const bool enableSharing = true;
   static const bool enableReporting = true;
+  static const bool enableSupportTickets = true;
   
   /// Web3 and Marketplace features
   static const bool enableWeb3 = true;
@@ -266,6 +267,7 @@ class AppConfig {
       case 'institutions': return enableInstitutions;
       case 'ar': return enableARViewer;
       case 'analytics': return enableAnalytics;
+      case 'supportTickets': return enableSupportTickets;
       case 'debug': return enableDebugPrints;
       case 'debugIssueToken': return enableDebugIssueToken;
       case 'sounds': return enableSoundEffects;

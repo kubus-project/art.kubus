@@ -43,7 +43,7 @@ class ArtMarkerCube extends StatelessWidget {
             bottom: 0,
             child: Transform(
               alignment: Alignment.center,
-              transform: Matrix4.identity()..scale(1.0, 0.35),
+              transform: Matrix4.identity()..scaleByDouble(1.0, 0.35, 1.0, 1.0),
               child: Container(
                 width: size * 0.72,
                 height: size * 0.72,
@@ -67,7 +67,7 @@ class ArtMarkerCube extends StatelessWidget {
               bottom: size * 0.02,
               child: Transform(
                 alignment: Alignment.center,
-                transform: Matrix4.identity()..scale(1.0, 0.32),
+                transform: Matrix4.identity()..scaleByDouble(1.0, 0.32, 1.0, 1.0),
                 child: Container(
                   width: size * 0.9,
                   height: size * 0.9,
@@ -415,7 +415,7 @@ class _SignalIndicator extends StatelessWidget {
 
     return Transform(
       alignment: Alignment.center,
-      transform: Matrix4.identity()..scale(1.0, 0.35),
+      transform: Matrix4.identity()..scaleByDouble(1.0, 0.35, 1.0, 1.0),
       child: Container(
         width: size,
         height: size,

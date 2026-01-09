@@ -4,6 +4,7 @@ import '../config/config.dart';
 import '../models/community_group.dart';
 import '../services/backend_api_service.dart';
 import '../services/user_action_logger.dart';
+import '../utils/wallet_utils.dart';
 
 // Enhanced community interaction models
 class CommunityPost {
@@ -611,19 +612,43 @@ class CommunityService {
   static Future<void> reportPost(CommunityPost post, String reason) async {
     if (!AppConfig.enableReporting) return;
 
-    final prefs = await SharedPreferences.getInstance();
-    final reports = prefs.getStringList('reported_posts') ?? [];
-    final reportData =
-        '${post.id}|$reason|${DateTime.now().millisecondsSinceEpoch}';
+    final backendApi = BackendApiService();
+    final details = post.content.trim().isEmpty ? null : post.content.trim();
 
-    if (!reports.contains(reportData)) {
-      reports.add(reportData);
-      await prefs.setStringList('reported_posts', reports);
+    await backendApi.submitReport(
+      targetType: 'post',
+      targetId: post.id,
+      reason: reason,
+      details: details,
+    );
 
-      if (AppConfig.enableDebugPrints) {
-        debugPrint('Post ${post.id} reported for: $reason');
+    // Optional local record for client-side dedupe/UX.
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final reports = prefs.getStringList('reported_posts') ?? [];
+      final reportData = '${post.id}|$reason|${DateTime.now().millisecondsSinceEpoch}';
+      if (!reports.contains(reportData)) {
+        reports.add(reportData);
+        await prefs.setStringList('reported_posts', reports);
       }
+    } catch (_) {}
+
+    if (AppConfig.enableDebugPrints) {
+      debugPrint('Post ${post.id} reported for: $reason');
     }
+  }
+
+  // Report user (community moderation)
+  static Future<void> reportUser(String walletAddress, String reason, {String? details}) async {
+    if (!AppConfig.enableReporting) return;
+
+    final backendApi = BackendApiService();
+    await backendApi.submitReport(
+      targetType: 'user',
+      targetTextId: WalletUtils.canonical(walletAddress),
+      reason: reason,
+      details: details,
+    );
   }
 
   // Bookmark/Unbookmark post

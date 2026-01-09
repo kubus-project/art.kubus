@@ -996,19 +996,6 @@ class _DesktopArtworkDetailScreenState
       _replyToAuthorName = null;
     });
 
-    final profileProvider =
-        Provider.of<ProfileProvider>(context, listen: false);
-    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final walletAddress = profileProvider.currentUser?.walletAddress ??
-        walletProvider.currentWalletAddress;
-    final displayName = profileProvider.currentUser?.displayName ??
-        profileProvider.currentUser?.username ??
-        ((walletAddress != null && walletAddress.length >= 8)
-            ? 'User ${walletAddress.substring(0, 8)}...'
-            : 'User');
-    final optimisticId =
-        walletAddress ?? profileProvider.currentUser?.id ?? 'current_user';
-
     try {
       await provider.addComment(
         artworkId: artwork.id,

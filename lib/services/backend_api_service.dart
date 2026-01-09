@@ -4087,6 +4087,110 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     }
   }
 
+  // ==================== Reports / Moderation ====================
+
+  /// Submit a user-generated report.
+  /// POST /api/reports
+  Future<Map<String, dynamic>> submitReport({
+    required String targetType,
+    String? targetId,
+    String? targetTextId,
+    required String reason,
+    String? details,
+  }) async {
+    try {
+      await _ensureAuthBeforeRequest();
+
+      final payload = <String, dynamic>{
+        'targetType': targetType.trim(),
+        'reason': reason.trim(),
+      };
+
+      final normalizedTargetId = (targetId ?? '').trim();
+      if (normalizedTargetId.isNotEmpty) {
+        payload['targetId'] = normalizedTargetId;
+      }
+
+      final normalizedTargetTextId = (targetTextId ?? '').trim();
+      if (normalizedTargetTextId.isNotEmpty) {
+        payload['targetTextId'] = normalizedTargetTextId;
+      }
+
+      final normalizedDetails = (details ?? '').trim();
+      if (normalizedDetails.isNotEmpty) {
+        payload['details'] = normalizedDetails;
+      }
+
+      final response = await _post(
+        Uri.parse('$baseUrl/api/reports'),
+        headers: _getHeaders(),
+        body: jsonEncode(payload),
+        isIdempotent: false,
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          final data = decoded['data'];
+          if (data is Map<String, dynamic>) {
+            return data;
+          }
+          return <String, dynamic>{};
+        }
+        return <String, dynamic>{};
+      }
+
+      final body = response.body.isNotEmpty ? response.body : 'No response body';
+      throw Exception('Failed to submit report (${response.statusCode}): $body');
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.submitReport failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Create a support ticket
+  /// POST /api/support/tickets
+  Future<Map<String, dynamic>> createSupportTicket({
+    required String subject,
+    required String message,
+    String? email,
+  }) async {
+    try {
+      final payload = <String, dynamic>{
+        'subject': subject.trim(),
+        'message': message.trim(),
+      };
+      final emailTrimmed = (email ?? '').trim();
+      if (emailTrimmed.isNotEmpty) {
+        payload['email'] = emailTrimmed;
+      }
+
+      final response = await _post(
+        Uri.parse('$baseUrl/api/support/tickets'),
+        headers: _getHeaders(),
+        body: jsonEncode(payload),
+        isIdempotent: false,
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          final data = decoded['data'];
+          if (data is Map<String, dynamic>) {
+            return data;
+          }
+        }
+        return <String, dynamic>{};
+      }
+
+      final body = response.body.isNotEmpty ? response.body : 'No response body';
+      throw Exception('Failed to create support ticket (${response.statusCode}): $body');
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.createSupportTicket failed: $e');
+      rethrow;
+    }
+  }
+
   // ==================== NFT Endpoints ====================
 
   /// Create an NFT series

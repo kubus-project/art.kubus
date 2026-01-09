@@ -14,6 +14,7 @@ import '../../../models/artwork.dart';
 import '../../../models/stats/stats_models.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/kubus_color_roles.dart';
+import '../../../widgets/charts/stats_interactive_line_chart.dart';
 
 class ArtistAnalytics extends StatefulWidget {
   const ArtistAnalytics({super.key});
@@ -310,6 +311,54 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
       out.add((valuesByBucket[key] ?? 0).toDouble());
     }
     return out;
+  }
+
+  List<String> _buildBucketLabels({
+    required DateTime windowEnd,
+    required String timeframe,
+    required String bucket,
+    required int count,
+  }) {
+    if (count <= 0) return const <String>[];
+
+    DateTime bucketStart(DateTime dt) {
+      final utc = dt.toUtc();
+      if (bucket == 'hour') return DateTime.utc(utc.year, utc.month, utc.day, utc.hour);
+      if (bucket == 'week') {
+        final startOfDay = DateTime.utc(utc.year, utc.month, utc.day);
+        return startOfDay.subtract(Duration(days: startOfDay.weekday - 1));
+      }
+      return DateTime.utc(utc.year, utc.month, utc.day);
+    }
+
+    final step = bucket == 'hour'
+        ? const Duration(hours: 1)
+        : bucket == 'week'
+            ? const Duration(days: 7)
+            : const Duration(days: 1);
+
+    final endBucket = bucketStart(windowEnd.subtract(const Duration(microseconds: 1)));
+    final startBucket = endBucket.subtract(step * (count - 1));
+
+    String labelFor(DateTime bucketStartUtc) {
+      final local = bucketStartUtc.toLocal();
+      if (bucket == 'hour') {
+        return '${local.hour.toString().padLeft(2, '0')}h';
+      }
+      if (bucket == 'day' && timeframe == '7d') {
+        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        return days[(local.weekday - 1).clamp(0, 6)];
+      }
+      final mm = local.month.toString().padLeft(2, '0');
+      final dd = local.day.toString().padLeft(2, '0');
+      return '$mm/$dd';
+    }
+
+    return List<String>.generate(
+      count,
+      (i) => labelFor(startBucket.add(step * i)),
+      growable: false,
+    );
   }
 
   Widget _buildOverviewCards() {
@@ -917,17 +966,33 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                                   textAlign: TextAlign.center,
                                 ),
                               )
-                            : CustomPaint(
-                                painter: LineChartPainter(
-                                  current: values,
-                                  previous: previousValues,
-                                  average: averageValues,
-                                  currentColor: currentLineColor,
-                                  previousColor: previousLineColor,
-                                  averageColor: averageLineColor,
-                                  gridColor: scheme.onPrimary.withValues(alpha: 0.1),
+                            : StatsInteractiveLineChart(
+                                height: 200,
+                                gridColor: scheme.onPrimary.withValues(alpha: 0.1),
+                                xLabels: _buildBucketLabels(
+                                  windowEnd: currentTo,
+                                  timeframe: timeframe,
+                                  bucket: bucket,
+                                  count: values.length,
                                 ),
-                                size: const Size(double.infinity, 200),
+                                series: <StatsLineSeries>[
+                                  StatsLineSeries(
+                                    label: 'Current',
+                                    values: values,
+                                    color: currentLineColor,
+                                    showArea: true,
+                                  ),
+                                  StatsLineSeries(
+                                    label: 'Previous',
+                                    values: previousValues,
+                                    color: previousLineColor,
+                                  ),
+                                  StatsLineSeries(
+                                    label: 'Average',
+                                    values: averageValues,
+                                    color: averageLineColor,
+                                  ),
+                                ],
                               ),
               ),
               const SizedBox(height: 16),

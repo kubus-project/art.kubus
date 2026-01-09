@@ -16,6 +16,7 @@ import '../../services/push_notification_service.dart';
 import '../../services/settings_service.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/detail/detail_shell_components.dart';
+import '../../widgets/support/support_ticket_dialog.dart';
 import '../../utils/app_animations.dart';
 import 'components/desktop_widgets.dart';
 import 'community/desktop_profile_edit_screen.dart';
@@ -1105,33 +1106,50 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
 
   void _showSupportDialog() {
     final l10n = AppLocalizations.of(context)!;
+    final rootContext = context;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text(l10n.settingsSupportDialogTitle, style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Theme.of(dialogContext).colorScheme.surface,
+        title: Text(l10n.settingsSupportDialogTitle, style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(dialogContext).colorScheme.onSurface)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(l10n.settingsSupportDialogBody, style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface)),
+            Text(l10n.settingsSupportDialogBody, style: GoogleFonts.inter(color: Theme.of(dialogContext).colorScheme.onSurface)),
             const SizedBox(height: 16),
             ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.secondary, foregroundColor: Colors.white),
-              onPressed: () { Navigator.pop(context); ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.settingsOpeningFaqToast))); },
+              style: ElevatedButton.styleFrom(backgroundColor: Theme.of(dialogContext).colorScheme.secondary, foregroundColor: Colors.white),
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                ScaffoldMessenger.of(rootContext).showSnackBar(SnackBar(content: Text(l10n.settingsOpeningFaqToast)));
+              },
               icon: const Icon(Icons.help_outline),
               label: Text(l10n.settingsViewFaqButton),
             ),
             const SizedBox(height: 8),
             ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.secondary, foregroundColor: Colors.white),
-              onPressed: () { Navigator.pop(context); ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.settingsOpeningEmailClientToast))); },
+              style: ElevatedButton.styleFrom(backgroundColor: Theme.of(dialogContext).colorScheme.secondary, foregroundColor: Colors.white),
+              onPressed: () async {
+                final messenger = ScaffoldMessenger.of(rootContext);
+                Navigator.pop(dialogContext);
+
+                if (!AppConfig.isFeatureEnabled('supportTickets')) {
+                  messenger.showSnackBar(SnackBar(content: Text(l10n.settingsOpeningEmailClientToast)));
+                  return;
+                }
+
+                await showDialog<bool>(
+                  context: rootContext,
+                  builder: (_) => const SupportTicketDialog(),
+                );
+              },
               icon: const Icon(Icons.email),
               label: Text(l10n.settingsContactSupportButton),
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.commonClose)),
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(l10n.commonClose)),
         ],
       ),
     );

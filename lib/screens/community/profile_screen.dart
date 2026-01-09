@@ -41,6 +41,9 @@ import '../events/event_detail_screen.dart';
 import '../../widgets/artist_badge.dart';
 import '../../widgets/institution_badge.dart';
 import '../../models/dao.dart';
+import '../../config/config.dart';
+import 'community_analytics_screen.dart';
+import 'profile_analytics_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -404,6 +407,85 @@ class _ProfileScreenState extends State<ProfileScreen>
                                       tooltip: 'Invites',
                                     ),
                                     const SizedBox(width: 8),
+                                    if (AppConfig.isFeatureEnabled('analytics')) ...[
+                                      TopBarIcon(
+                                        icon: Icon(
+                                          Icons.analytics_outlined,
+                                          color: hasCoverImage
+                                              ? Colors.white
+                                              : Theme.of(context).colorScheme.onSurface,
+                                          size: isSmallScreen ? 22 : 24,
+                                        ),
+                                        onPressed: () {
+                                          final wallet = profileProvider.currentUser?.walletAddress ?? '';
+                                          if (wallet.trim().isEmpty) return;
+                                          showModalBottomSheet<void>(
+                                            context: context,
+                                            backgroundColor: Theme.of(context).colorScheme.surface,
+                                            shape: const RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                                            ),
+                                            builder: (sheetContext) {
+                                              final scheme = Theme.of(sheetContext).colorScheme;
+                                              return SafeArea(
+                                                child: Padding(
+                                                  padding: const EdgeInsets.all(16),
+                                                  child: Column(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(
+                                                        'Analytics',
+                                                        style: GoogleFonts.inter(
+                                                          fontSize: 16,
+                                                          fontWeight: FontWeight.w700,
+                                                          color: scheme.onSurface,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 12),
+                                                      ListTile(
+                                                        leading: Icon(Icons.person_outline, color: scheme.primary),
+                                                        title: Text('Profile analytics', style: GoogleFonts.inter()),
+                                                        onTap: () {
+                                                          Navigator.pop(sheetContext);
+                                                          Navigator.push(
+                                                            context,
+                                                            MaterialPageRoute(
+                                                              builder: (_) => ProfileAnalyticsScreen(
+                                                                walletAddress: wallet,
+                                                                title: 'Profile analytics',
+                                                              ),
+                                                            ),
+                                                          );
+                                                        },
+                                                      ),
+                                                      ListTile(
+                                                        leading: Icon(Icons.forum_outlined, color: scheme.secondary),
+                                                        title: Text('Community analytics', style: GoogleFonts.inter()),
+                                                        onTap: () {
+                                                          Navigator.pop(sheetContext);
+                                                          Navigator.push(
+                                                            context,
+                                                            MaterialPageRoute(
+                                                              builder: (_) => CommunityAnalyticsScreen(
+                                                                walletAddress: wallet,
+                                                                title: 'Community analytics',
+                                                              ),
+                                                            ),
+                                                          );
+                                                        },
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                          );
+                                        },
+                                        tooltip: 'Analytics',
+                                      ),
+                                      const SizedBox(width: 8),
+                                    ],
                                     TopBarIcon(
                                       icon: Icon(
                                         Icons.settings_outlined,

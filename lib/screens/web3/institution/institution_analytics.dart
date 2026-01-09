@@ -17,6 +17,7 @@ import '../../../providers/stats_provider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../models/stats/stats_models.dart';
 import '../../../utils/kubus_color_roles.dart';
+import '../../../widgets/charts/stats_interactive_bar_chart.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../../widgets/empty_state_card.dart';
@@ -864,8 +865,6 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
           bucket: bucket,
           groups: const <String>{'event', 'exhibition'},
         );
-
-        final maxValue = buckets.fold<int>(0, (max, entry) => entry.value > max ? entry.value : max);
         final hasData = buckets.any((entry) => entry.value > 0);
 
         if (isLoading) {
@@ -942,64 +941,14 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
           return '$mm/$dd';
         }
 
-        const barWidth = 22.0;
-        const barSpacing = 10.0;
-
-        return SizedBox(
+        return StatsInteractiveBarChart(
           height: 120,
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final chartWidth = (barWidth + barSpacing) * buckets.length;
-              return SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SizedBox(
-                  width: chartWidth < constraints.maxWidth ? constraints.maxWidth : chartWidth,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: buckets.map((entry) {
-                      final height = maxValue <= 0 ? 0.0 : (entry.value / maxValue) * 100;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: barSpacing),
-                        child: SizedBox(
-                          width: barWidth,
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Text(
-                                entry.value.toString(),
-                                style: GoogleFonts.inter(
-                                  fontSize: 10,
-                                  color: scheme.onSurface.withValues(alpha: 0.7),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Container(
-                                width: barWidth,
-                                height: height,
-                                decoration: BoxDecoration(
-                                  color: roles.web3InstitutionAccent,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                labelFor(entry.bucketStart),
-                                style: GoogleFonts.inter(
-                                  fontSize: 8,
-                                  color: scheme.onSurface.withValues(alpha: 0.5),
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              );
-            },
-          ),
+          barColor: roles.web3InstitutionAccent,
+          gridColor: scheme.onPrimary.withValues(alpha: 0.1),
+          entries: buckets
+              .map((e) => StatsBarEntry(bucketStart: e.bucketStart, value: e.value))
+              .toList(growable: false),
+          xLabels: buckets.map((e) => labelFor(e.bucketStart)).toList(growable: false),
         );
       },
     );

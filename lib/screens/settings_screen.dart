@@ -26,6 +26,7 @@ import 'onboarding_reset_screen.dart';
 import 'community/profile_edit_screen.dart';
 import '../widgets/avatar_widget.dart';
 import '../widgets/empty_state_card.dart';
+import '../widgets/support/support_ticket_dialog.dart';
 import 'web3/wallet/mnemonic_reveal_screen.dart';
 import '../utils/app_animations.dart';
 import '../../config/config.dart';
@@ -2825,14 +2826,15 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   void _showSupportDialog() {
     final l10n = AppLocalizations.of(context)!;
+    final rootContext = context;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surface,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Theme.of(dialogContext).colorScheme.surface,
         title: Text(
           l10n.settingsSupportDialogTitle,
           style: GoogleFonts.inter(
-            color: Theme.of(context).colorScheme.onSurface,
+            color: Theme.of(dialogContext).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -2842,18 +2844,18 @@ class _SettingsScreenState extends State<SettingsScreen>
             Text(
               l10n.settingsSupportDialogBody,
               style: GoogleFonts.inter(
-                color: Theme.of(context).colorScheme.onSurface,
+                color: Theme.of(dialogContext).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+                backgroundColor: Provider.of<ThemeProvider>(dialogContext, listen: false).accentColor,
                 foregroundColor: Colors.white,
               ),
               onPressed: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
+                Navigator.pop(dialogContext);
+                ScaffoldMessenger.of(rootContext).showSnackBar(
                   SnackBar(content: Text(l10n.settingsOpeningFaqToast)),
                 );
               },
@@ -2863,13 +2865,23 @@ class _SettingsScreenState extends State<SettingsScreen>
             const SizedBox(height: 8),
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+                backgroundColor: Provider.of<ThemeProvider>(dialogContext, listen: false).accentColor,
                 foregroundColor: Colors.white,
               ),
-              onPressed: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(l10n.settingsOpeningEmailClientToast)),
+              onPressed: () async {
+                final messenger = ScaffoldMessenger.of(rootContext);
+                Navigator.pop(dialogContext);
+
+                if (!AppConfig.isFeatureEnabled('supportTickets')) {
+                  messenger.showSnackBar(
+                    SnackBar(content: Text(l10n.settingsOpeningEmailClientToast)),
+                  );
+                  return;
+                }
+
+                await showDialog<bool>(
+                  context: rootContext,
+                  builder: (_) => const SupportTicketDialog(),
                 );
               },
               icon: const Icon(Icons.email),
@@ -2879,11 +2891,11 @@ class _SettingsScreenState extends State<SettingsScreen>
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: Text(
               l10n.commonClose,
               style: GoogleFonts.inter(
-                color: Theme.of(context).colorScheme.outline,
+                color: Theme.of(dialogContext).colorScheme.outline,
               ),
             ),
           ),

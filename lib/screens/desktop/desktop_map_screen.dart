@@ -268,21 +268,22 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     : _buildFiltersPanel(themeProvider),
           ),
 
-          // Right side controls
-          Positioned(
-            right: 24,
-            bottom: 100,
-            child: _buildMapControls(themeProvider),
-          ),
-
-          // Bottom info bar
+          // Bottom stack: map controls ABOVE the nearby art card
           Positioned(
             left: _selectedArtwork != null || _selectedExhibition != null
                 ? 400
                 : 24,
             right: 24,
             bottom: 24,
-            child: _buildBottomInfoBar(themeProvider),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                _buildMapControls(themeProvider),
+                const SizedBox(height: 12),
+                _buildBottomInfoBar(themeProvider),
+              ],
+            ),
           ),
         ],
       ),
@@ -1603,96 +1604,87 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   Widget _buildMapControls(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
-    return Column(
-      children: [
-        // Zoom controls
-        Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              IconButton(
-                onPressed: () {
-                  final nextZoom = (_effectiveZoom + 1).clamp(3.0, 18.0);
-                  _moveCamera(_effectiveCenter, nextZoom);
-                },
-                icon: const Icon(Icons.add),
-              ),
-              Container(
-                height: 1,
-                width: 32,
-                color: Theme.of(context)
-                    .colorScheme
-                    .outline
-                    .withValues(alpha: 0.2),
-              ),
-              IconButton(
-                onPressed: () {
-                  final nextZoom = (_effectiveZoom - 1).clamp(3.0, 18.0);
-                  _moveCamera(_effectiveCenter, nextZoom);
-                },
-                icon: const Icon(Icons.remove),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        // Create marker from pending selection
-        Material(
-          color: Theme.of(context).colorScheme.primary,
-          shape: const CircleBorder(),
-          elevation: 4,
-          child: IconButton(
-            onPressed: () {
-              final target = _pendingMarkerLocation ?? _effectiveCenter;
-              _startMarkerCreationFlow(position: target);
-            },
-            icon: const Icon(Icons.add_location_alt_outlined,
-                color: Colors.white),
-            tooltip: l10n.mapCreateMarkerHereTooltip,
-          ),
-        ),
-        const SizedBox(height: 16),
-        // My location button
-        Container(
-          decoration: BoxDecoration(
-            color: _autoFollow
-                ? AppColorUtils.tealAccent.withValues(alpha: 0.15)
-                : Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: IconButton(
-            onPressed: () {
-              setState(() => _autoFollow = true);
-              _refreshUserLocation(animate: true);
-              if (_userLocation == null) {
-                _moveCamera(const LatLng(46.0569, 14.5058), 15.0);
-              }
-            },
-            icon: Icon(
-              Icons.my_location,
-              color: _autoFollow ? Colors.white : AppColorUtils.tealAccent,
+
+    final scheme = Theme.of(context).colorScheme;
+
+    return Material(
+      color: scheme.surface,
+      elevation: 6,
+      borderRadius: BorderRadius.circular(14),
+      shadowColor: Colors.black.withValues(alpha: 0.18),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Zoom - / +
+            IconButton(
+              onPressed: () {
+                final nextZoom = (_effectiveZoom - 1).clamp(3.0, 18.0);
+                _moveCamera(_effectiveCenter, nextZoom);
+              },
+              tooltip: l10n.mapEmptyZoomOutAction,
+              icon: const Icon(Icons.remove),
             ),
-            color: _autoFollow ? AppColorUtils.tealAccent : null,
-          ),
+            IconButton(
+              onPressed: () {
+                final nextZoom = (_effectiveZoom + 1).clamp(3.0, 18.0);
+                _moveCamera(_effectiveCenter, nextZoom);
+              },
+              tooltip: 'Zoom in',
+              icon: const Icon(Icons.add),
+            ),
+            Container(
+              width: 1,
+              height: 26,
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              color: scheme.outline.withValues(alpha: 0.22),
+            ),
+
+            // Create marker
+            Material(
+              color: scheme.primary,
+              shape: const CircleBorder(),
+              elevation: 0,
+              child: IconButton(
+                onPressed: () {
+                  final target = _pendingMarkerLocation ?? _effectiveCenter;
+                  _startMarkerCreationFlow(position: target);
+                },
+                icon: const Icon(Icons.add_location_alt_outlined,
+                    color: Colors.white),
+                tooltip: l10n.mapCreateMarkerHereTooltip,
+              ),
+            ),
+            const SizedBox(width: 6),
+
+            // My location / follow
+            Container(
+              decoration: BoxDecoration(
+                color: _autoFollow
+                    ? AppColorUtils.tealAccent.withValues(alpha: 0.15)
+                    : scheme.surface,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: IconButton(
+                onPressed: () {
+                  setState(() => _autoFollow = true);
+                  _refreshUserLocation(animate: true);
+                  if (_userLocation == null) {
+                    _moveCamera(const LatLng(46.0569, 14.5058), 15.0);
+                  }
+                },
+                tooltip: l10n.mapCenterOnMeTooltip,
+                icon: Icon(
+                  Icons.my_location,
+                  color: _autoFollow ? Colors.white : AppColorUtils.tealAccent,
+                ),
+                color: _autoFollow ? AppColorUtils.tealAccent : null,
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 

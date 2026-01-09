@@ -37,6 +37,9 @@ import '../../../utils/app_animations.dart';
 import '../components/desktop_widgets.dart';
 import '../../art/collection_detail_screen.dart';
 import '../desktop_shell.dart';
+import '../../../config/config.dart';
+import 'desktop_community_analytics_screen.dart';
+import 'desktop_profile_analytics_screen.dart';
 
 /// Desktop user profile screen - viewing another user's profile
 /// Clean card-based layout with follow/message actions
@@ -418,6 +421,78 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           isPrimary: false,
         ),
         const SizedBox(width: 12),
+        if (AppConfig.isFeatureEnabled('analytics')) ...[
+          DesktopActionButton(
+            label: 'Analytics',
+            icon: Icons.analytics_outlined,
+            onPressed: () {
+              final wallet = user?.id.toString().trim() ?? '';
+              if (wallet.isEmpty) return;
+
+              showDialog<void>(
+                context: context,
+                builder: (dialogContext) {
+                  final scheme = Theme.of(dialogContext).colorScheme;
+                  return AlertDialog(
+                    backgroundColor: scheme.surface,
+                    title: Text(
+                      'Analytics',
+                      style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+                    ),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ListTile(
+                          leading: Icon(Icons.person_outline, color: scheme.primary),
+                          title: Text('Profile analytics', style: GoogleFonts.inter()),
+                          onTap: () {
+                            Navigator.pop(dialogContext);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => DesktopProfileAnalyticsScreen(
+                                  walletAddress: wallet,
+                                  title: 'Profile analytics',
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        ListTile(
+                          leading: Icon(Icons.forum_outlined, color: scheme.secondary),
+                          title: Text('Community analytics', style: GoogleFonts.inter()),
+                          onTap: () {
+                            Navigator.pop(dialogContext);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => DesktopCommunityAnalyticsScreen(
+                                  walletAddress: wallet,
+                                  title: 'Community analytics',
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(dialogContext),
+                        child: Text(
+                          'Close',
+                          style: GoogleFonts.inter(color: scheme.primary),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+            isPrimary: false,
+          ),
+          const SizedBox(width: 12),
+        ],
         IconButton(
           onPressed: _showMoreOptions,
           icon: Icon(
@@ -1748,7 +1823,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
@@ -1760,19 +1835,19 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           children: [
             ListTile(
               title: Text(l10n.userProfileReportReasonSpam),
-              onTap: () => _submitReport(l10n),
+              onTap: () => _submitReport(dialogContext, l10n.userProfileReportReasonSpam),
             ),
             ListTile(
               title: Text(l10n.userProfileReportReasonInappropriate),
-              onTap: () => _submitReport(l10n),
+              onTap: () => _submitReport(dialogContext, l10n.userProfileReportReasonInappropriate),
             ),
             ListTile(
               title: Text(l10n.userProfileReportReasonHarassment),
-              onTap: () => _submitReport(l10n),
+              onTap: () => _submitReport(dialogContext, l10n.userProfileReportReasonHarassment),
             ),
             ListTile(
               title: Text(l10n.userProfileReportReasonOther),
-              onTap: () => _submitReport(l10n),
+              onTap: () => _submitReport(dialogContext, l10n.userProfileReportReasonOther),
             ),
           ],
         ),
@@ -1780,11 +1855,26 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     );
   }
 
-  void _submitReport(AppLocalizations l10n) {
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.userProfileReportSubmittedToast)),
-    );
+  Future<void> _submitReport(BuildContext dialogContext, String reason) async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final targetWallet = WalletUtils.canonical(user?.id ?? widget.userId);
+
+    Navigator.pop(dialogContext);
+
+    if (targetWallet.isEmpty) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.commonActionFailedToast)));
+      return;
+    }
+
+    try {
+      await CommunityService.reportUser(targetWallet, reason, details: user?.name);
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(l10n.userProfileReportSubmittedToast)));
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(l10n.commonActionFailedToast)));
+    }
   }
 
   Future<void> _maybeLoadArtistData({bool force = false}) async {
