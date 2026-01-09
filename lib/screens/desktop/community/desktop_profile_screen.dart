@@ -39,6 +39,9 @@ import '../../art/collection_detail_screen.dart';
 import '../../collab/invites_inbox_screen.dart';
 import '../../activity/view_history_screen.dart';
 import '../../events/event_detail_screen.dart';
+import '../../../config/config.dart';
+import 'desktop_community_analytics_screen.dart';
+import 'desktop_profile_analytics_screen.dart';
 
 /// Desktop profile screen with clean card-based layout
 /// Features: Profile header, stats cards, achievements, posts feed
@@ -341,6 +344,71 @@ class _ProfileScreenState extends State<ProfileScreen>
               isPrimary: false,
             ),
             const SizedBox(width: DetailSpacing.md),
+            if (AppConfig.isFeatureEnabled('analytics')) ...[
+              DesktopActionButton(
+                label: 'Analytics',
+                icon: Icons.analytics_outlined,
+                onPressed: () {
+                  final wallet = context.read<ProfileProvider>().currentUser?.walletAddress ?? '';
+                  if (wallet.trim().isEmpty) return;
+                  showDialog<void>(
+                    context: context,
+                    builder: (dialogContext) {
+                      final scheme = Theme.of(dialogContext).colorScheme;
+                      return AlertDialog(
+                        backgroundColor: scheme.surface,
+                        title: Text('Analytics', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                        content: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ListTile(
+                              leading: Icon(Icons.person_outline, color: scheme.primary),
+                              title: Text('Profile analytics', style: GoogleFonts.inter()),
+                              onTap: () {
+                                Navigator.pop(dialogContext);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => DesktopProfileAnalyticsScreen(
+                                      walletAddress: wallet,
+                                      title: 'Profile analytics',
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                            ListTile(
+                              leading: Icon(Icons.forum_outlined, color: scheme.secondary),
+                              title: Text('Community analytics', style: GoogleFonts.inter()),
+                              onTap: () {
+                                Navigator.pop(dialogContext);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => DesktopCommunityAnalyticsScreen(
+                                      walletAddress: wallet,
+                                      title: 'Community analytics',
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(dialogContext),
+                            child: Text('Close', style: GoogleFonts.inter(color: scheme.primary)),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
+                isPrimary: false,
+              ),
+              const SizedBox(width: DetailSpacing.md),
+            ],
             DesktopActionButton(
               label: 'Settings',
               icon: Icons.settings_outlined,

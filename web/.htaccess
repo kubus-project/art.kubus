@@ -9,4 +9,10 @@
   RewriteCond %{REQUEST_URI} \.map$ [NC]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteRule ^ - [R=404,L]
+
+  # Flutter web SPA deep links (e.g. /marker/<id>): serve index.html for any
+  # route that isn't a real file or directory.
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^ index.html [L]
 </IfModule>

@@ -16,6 +16,7 @@ import '../../providers/profile_provider.dart';
 import '../../providers/stats_provider.dart';
 import '../../providers/web3provider.dart';
 import '../../services/stats_api_service.dart';
+import '../../widgets/charts/stats_interactive_line_chart.dart';
 
 class AdvancedStatsScreen extends StatefulWidget {
   final String statType;
@@ -49,6 +50,73 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
     ));
     
     _animationController.forward();
+  }
+
+  List<String> _buildChartLabels(_StatsContext stats) {
+    final now = DateTime.now().toUtc();
+
+    DateTime startOfDayUtc(DateTime dt) {
+      final utc = dt.toUtc();
+      return DateTime.utc(utc.year, utc.month, utc.day);
+    }
+
+    DateTime startOfWeekUtc(DateTime dt) {
+      final dayStart = startOfDayUtc(dt);
+      return dayStart.subtract(Duration(days: dayStart.weekday - 1));
+    }
+
+    DateTime startOfHourUtc(DateTime dt) {
+      final utc = dt.toUtc();
+      return DateTime.utc(utc.year, utc.month, utc.day, utc.hour);
+    }
+
+    final bucket = stats.bucket;
+    final timeframe = stats.timeframe;
+
+    final expected = stats.chartData.length;
+    if (expected <= 0) return const [];
+
+    if (bucket == 'hour') {
+      final endBucket = startOfHourUtc(now);
+      final startBucket = endBucket.subtract(const Duration(hours: 1) * (expected - 1));
+      return List<String>.generate(
+        expected,
+        (i) {
+          final t = startBucket.add(const Duration(hours: 1) * i);
+          return t.hour.toString();
+        },
+        growable: false,
+      );
+    }
+
+    if (bucket == 'week') {
+      final endBucket = startOfWeekUtc(now);
+      final startBucket = endBucket.subtract(const Duration(days: 7) * (expected - 1));
+      return List<String>.generate(
+        expected,
+        (i) {
+          final t = startBucket.add(const Duration(days: 7) * i);
+          return '${t.month}/${t.day}';
+        },
+        growable: false,
+      );
+    }
+
+    // Default: daily buckets
+    final endBucket = startOfDayUtc(now);
+    final startBucket = endBucket.subtract(const Duration(days: 1) * (expected - 1));
+    return List<String>.generate(
+      expected,
+      (i) {
+        final t = startBucket.add(const Duration(days: 1) * i);
+        if (timeframe == '7d') {
+          // Shorter labels when space is tight.
+          return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][t.weekday - 1];
+        }
+        return '${t.month}/${t.day}';
+      },
+      growable: false,
+    );
   }
 
   @override
@@ -214,13 +282,18 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                             ),
                           ),
                         )
-                      : CustomPaint(
-                          painter: LineChartPainter(
-                            data: stats.chartData,
-                            accentColor: scheme.tertiary,
-                            backgroundColor: scheme.primaryContainer,
-                          ),
-                          size: const Size.fromHeight(250),
+                      : StatsInteractiveLineChart(
+                          series: [
+                            StatsLineSeries(
+                              label: widget.statType,
+                              values: stats.chartData,
+                              color: scheme.tertiary,
+                              showArea: true,
+                            ),
+                          ],
+                          xLabels: _buildChartLabels(stats),
+                          height: 250,
+                          gridColor: scheme.onSurface.withValues(alpha: 0.12),
                         ),
             ),
             const SizedBox(height: 16),

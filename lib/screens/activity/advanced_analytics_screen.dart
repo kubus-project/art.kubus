@@ -13,6 +13,8 @@ import '../../utils/app_color_utils.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../models/stats/stats_models.dart';
 import '../../services/stats_api_service.dart';
+import '../../widgets/charts/stats_interactive_line_chart.dart';
+import '../../widgets/charts/stats_interactive_bar_chart.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/stats_provider.dart';
 import '../../providers/web3provider.dart';
@@ -380,6 +382,52 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
 
   Widget _buildAdvancedChart(_AnalyticsContext analytics) {
     final scheme = Theme.of(context).colorScheme;
+
+    List<String> buildLabels() {
+      final now = DateTime.now().toUtc();
+      final bucket = analytics.bucket;
+      final timeframe = analytics.timeframe;
+      final count = analytics.chartData.length;
+      if (count <= 0) return const [];
+
+      DateTime startOfDayUtc(DateTime dt) {
+        final utc = dt.toUtc();
+        return DateTime.utc(utc.year, utc.month, utc.day);
+      }
+
+      DateTime startOfHourUtc(DateTime dt) {
+        final utc = dt.toUtc();
+        return DateTime.utc(utc.year, utc.month, utc.day, utc.hour);
+      }
+
+      if (bucket == 'hour') {
+        final endBucket = startOfHourUtc(now);
+        final startBucket = endBucket.subtract(const Duration(hours: 1) * (count - 1));
+        return List<String>.generate(
+          count,
+          (i) {
+            final t = startBucket.add(const Duration(hours: 1) * i);
+            return t.hour.toString();
+          },
+          growable: false,
+        );
+      }
+
+      final endBucket = startOfDayUtc(now);
+      final startBucket = endBucket.subtract(const Duration(days: 1) * (count - 1));
+      return List<String>.generate(
+        count,
+        (i) {
+          final t = startBucket.add(const Duration(days: 1) * i);
+          if (timeframe == '7d') {
+            return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][t.weekday - 1];
+          }
+          return '${t.month}/${t.day}';
+        },
+        growable: false,
+      );
+    }
+
     return Container(
       height: 300,
       padding: const EdgeInsets.all(20),
@@ -400,7 +448,8 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
             ),
           ),
           const SizedBox(height: 16),
-          Expanded(
+          SizedBox(
+            height: 220,
             child: analytics.isLoading && analytics.chartData.isEmpty
                 ? Center(
                     child: InlineLoading(
@@ -418,12 +467,19 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
                           ),
                         ),
                       )
-                    : CustomPaint(
-                        painter: AdvancedChartPainter(
-                          data: analytics.chartData,
-                          accentColor: scheme.tertiary,
-                        ),
-                        size: Size.infinite,
+                    : StatsInteractiveLineChart(
+                        series: [
+                          StatsLineSeries(
+                            label: widget.statType,
+                            values: analytics.chartData,
+                            color: scheme.tertiary,
+                            showArea: true,
+                          ),
+                        ],
+                        xLabels: buildLabels(),
+                        height: 220,
+                        gridColor: scheme.onSurface.withValues(alpha: 0.18),
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
                       ),
           ),
         ],
@@ -643,9 +699,9 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       height: 200,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: scheme.onSurface.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        border: Border.all(color: scheme.onSurface.withValues(alpha: 0.10)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -655,7 +711,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
             style: GoogleFonts.inter(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: scheme.onSurface,
             ),
           ),
           const SizedBox(height: 16),
@@ -670,16 +726,43 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
                       showAction: false,
                     ),
                   )
-                : CustomPaint(
-                    painter: SeasonalityChartPainter(
-                      accentColor: scheme.tertiary,
-                      data: analytics.seasonalityData,
-                    ),
-                    size: Size.infinite,
-                  ),
+                : _buildSeasonalityInteractiveBarChart(analytics, scheme),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSeasonalityInteractiveBarChart(
+    _AnalyticsContext analytics,
+    ColorScheme scheme,
+  ) {
+    final data = analytics.seasonalityData;
+    if (data.isEmpty) return const SizedBox.shrink();
+
+    final labels = data.length == 7
+        ? const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        : List<String>.generate(data.length, (i) => '${i + 1}', growable: false);
+
+    final now = DateTime.now();
+    final entries = List<StatsBarEntry>.generate(
+      data.length,
+      (i) {
+        final dayOffset = data.length - 1 - i;
+        return StatsBarEntry(
+          bucketStart: now.subtract(Duration(days: dayOffset)),
+          value: (data[i] * 100).round(),
+        );
+      },
+      growable: false,
+    );
+
+    return StatsInteractiveBarChart(
+      entries: entries,
+      xLabels: labels,
+      barColor: scheme.tertiary,
+      gridColor: scheme.onSurface.withValues(alpha: 0.12),
+      height: 140,
     );
   }
 

@@ -3,9 +3,30 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/dao_provider.dart';
 import '../../../providers/themeprovider.dart';
+import '../../../widgets/charts/stats_interactive_bar_chart.dart';
 
 class DAOAnalytics extends StatelessWidget {
   const DAOAnalytics({super.key});
+
+  List<StatsBarEntry> _categoryEntries(Map<String, int> data) {
+    final sorted = data.entries.toList(growable: false)
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    return List<StatsBarEntry>.generate(
+      sorted.length,
+      (i) => StatsBarEntry(
+        bucketStart: DateTime.utc(1970, 1, 1).add(Duration(days: i)),
+        value: sorted[i].value,
+      ),
+      growable: false,
+    );
+  }
+
+  List<String> _categoryLabels(Map<String, int> data) {
+    final sorted = data.entries.toList(growable: false)
+      ..sort((a, b) => b.value.compareTo(a.value));
+    return sorted.map((e) => e.key).toList(growable: false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,6 +46,7 @@ class DAOAnalytics extends StatelessWidget {
       ),
       body: Consumer<DAOProvider>(
         builder: (context, daoProvider, child) {
+          final scheme = Theme.of(context).colorScheme;
           final proposals = daoProvider.proposals;
           final active = daoProvider.getActiveProposals().length;
           final votes = daoProvider.votes.length;
@@ -48,6 +70,19 @@ class DAOAnalytics extends StatelessWidget {
             byStatus.update(p.status.name, (v) => v + 1, ifAbsent: () => 1);
           }
 
+          final typeEntries = _categoryEntries(byType);
+          final typeLabels = _categoryLabels(byType);
+          final statusEntries = _categoryEntries(byStatus);
+          final statusLabels = _categoryLabels(byStatus);
+
+          final treasuryMap = <String, int>{
+            'Total': treasuryAmount.round(),
+            'Inflow': inflow.round(),
+            'Outflow': outflow.round(),
+          };
+          final treasuryEntries = _categoryEntries(treasuryMap);
+          final treasuryLabels = _categoryLabels(treasuryMap);
+
           return RefreshIndicator(
             onRefresh: daoProvider.refreshData,
             child: ListView(
@@ -59,9 +94,33 @@ class DAOAnalytics extends StatelessWidget {
                   context,
                   title: 'Proposals by Type',
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: byType.entries
-                        .map((entry) => _rowStat(context, entry.key, entry.value.toString()))
-                        .toList(),
+                        .isEmpty
+                        ? [
+                            Text(
+                              'No proposals yet.',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: scheme.onSurface.withValues(alpha: 0.7),
+                              ),
+                            ),
+                          ]
+                        : [
+                            SizedBox(
+                              height: 180,
+                              child: StatsInteractiveBarChart(
+                                entries: typeEntries,
+                                xLabels: typeLabels,
+                                barColor: scheme.primary,
+                                gridColor: scheme.onSurface.withValues(alpha: 0.12),
+                                height: 180,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            ...byType.entries
+                                .map((entry) => _rowStat(context, entry.key, entry.value.toString())),
+                          ],
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -69,9 +128,33 @@ class DAOAnalytics extends StatelessWidget {
                   context,
                   title: 'Proposals by Status',
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: byStatus.entries
-                        .map((entry) => _rowStat(context, entry.key, entry.value.toString()))
-                        .toList(),
+                        .isEmpty
+                        ? [
+                            Text(
+                              'No proposals yet.',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: scheme.onSurface.withValues(alpha: 0.7),
+                              ),
+                            ),
+                          ]
+                        : [
+                            SizedBox(
+                              height: 180,
+                              child: StatsInteractiveBarChart(
+                                entries: statusEntries,
+                                xLabels: statusLabels,
+                                barColor: scheme.secondary,
+                                gridColor: scheme.onSurface.withValues(alpha: 0.12),
+                                height: 180,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            ...byStatus.entries
+                                .map((entry) => _rowStat(context, entry.key, entry.value.toString())),
+                          ],
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -79,7 +162,19 @@ class DAOAnalytics extends StatelessWidget {
                   context,
                   title: 'Treasury',
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      SizedBox(
+                        height: 180,
+                        child: StatsInteractiveBarChart(
+                          entries: treasuryEntries,
+                          xLabels: treasuryLabels,
+                          barColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+                          gridColor: scheme.onSurface.withValues(alpha: 0.12),
+                          height: 180,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
                       _rowStat(context, 'Total', '${treasuryAmount.toStringAsFixed(2)} KUB8'),
                       const SizedBox(height: 8),
                       _rowStat(context, 'Inflow', '${inflow.toStringAsFixed(2)} KUB8'),
