@@ -78,7 +78,7 @@ class AppConfig {
   static const bool enableLabs = true;
   
   /// Analytics and tracking
-  static const bool enableAnalytics = isProduction;
+  static const bool enableAnalytics = bool.fromEnvironment('ANALYTICS_APP_ENABLED', defaultValue: isProduction);
   static const bool enableCrashReporting = isProduction;
   static const bool enablePerformanceMonitoring = isProduction;
   

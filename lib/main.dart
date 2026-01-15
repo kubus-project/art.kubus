@@ -61,6 +61,8 @@ import 'services/notification_handler.dart';
 import 'services/solana_wallet_service.dart';
 import 'services/socket_service.dart';
 import 'services/backend_api_service.dart';
+import 'services/telemetry/telemetry_route_observer.dart';
+import 'services/telemetry/telemetry_service.dart';
 
 import 'screens/collab/invites_inbox_screen.dart';
 import 'screens/events/event_detail_screen.dart';
@@ -222,6 +224,14 @@ class _AppLauncherState extends State<AppLauncher> {
               ),
               ChangeNotifierProvider(create: (context) => AppRefreshProvider()),
               ChangeNotifierProvider(create: (context) => ConfigProvider()),
+              ProxyProvider<ConfigProvider, TelemetryService>(
+                create: (_) => TelemetryService(),
+                update: (context, configProvider, telemetry) {
+                  final service = telemetry ?? TelemetryService();
+                  service.setAnalyticsPreferenceEnabled(configProvider.enableAnalytics);
+                  return service;
+                },
+              ),
               ChangeNotifierProvider(create: (context) => PlatformProvider()),
               ChangeNotifierProvider(create: (context) => ConnectionProvider()),
               ChangeNotifierProvider(create: (context) => ProfileProvider()),
@@ -390,11 +400,14 @@ class ArtKubus extends StatefulWidget {
 }
 
 class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
+  final TelemetryRouteObserver _telemetryObserver = TelemetryRouteObserver();
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _initNotificationRouting();
+    unawaited(TelemetryService().ensureInitialized());
   }
 
   void _initNotificationRouting() {
@@ -449,6 +462,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
+    TelemetryService().onAppLifecycleChanged(state);
     final ctx = context;
     if (!mounted) return;
     final walletProvider = Provider.of<WalletProvider>(ctx, listen: false);
@@ -473,6 +487,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
           title: 'art.kubus',
           debugShowCheckedModeBanner: false,
           navigatorKey: appNavigatorKey,
+          navigatorObservers: [_telemetryObserver],
           locale: localeProvider.locale,
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: AppLocalizations.localizationsDelegates,

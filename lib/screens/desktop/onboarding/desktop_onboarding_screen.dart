@@ -1,15 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../services/onboarding_state_service.dart';
+import '../../../services/telemetry/telemetry_service.dart';
 import '../../../widgets/app_logo.dart';
 import '../../../widgets/gradient_icon_card.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../utils/app_animations.dart';
 import 'desktop_permissions_screen.dart';
-import '../../auth/sign_in_screen.dart';
 import '../desktop_shell.dart';
 
 /// Desktop-optimized onboarding experience with side-by-side layout
@@ -146,20 +148,18 @@ class _DesktopOnboardingScreenState extends State<DesktopOnboardingScreen>
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (context) => const DesktopPermissionsScreen(),
+        settings: const RouteSettings(name: '/onboarding/desktop/permissions'),
       ),
     );
   }
 
   void _startWalletCreation() async {
+    unawaited(TelemetryService().trackOnboardingComplete(reason: 'skip_permissions'));
     final navigator = Navigator.of(context);
     final prefs = await SharedPreferences.getInstance();
     await OnboardingStateService.markCompleted(prefs: prefs);
     if (!mounted) return;
-    navigator.pushReplacement(
-      MaterialPageRoute(
-        builder: (context) => const SignInScreen(),
-      ),
-    );
+    navigator.pushReplacementNamed('/sign-in');
   }
 
   @override

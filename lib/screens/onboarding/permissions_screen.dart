@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -7,11 +9,11 @@ import '../../widgets/inline_loading.dart';
 import '../../services/push_notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/onboarding_state_service.dart';
+import '../../services/telemetry/telemetry_service.dart';
 import '../../widgets/app_logo.dart';
 import '../../widgets/gradient_icon_card.dart';
 import '../../screens/desktop/desktop_shell.dart';
 import '../desktop/onboarding/desktop_permissions_screen.dart';
-import '../../main_app.dart';
 import '../../utils/app_color_utils.dart';
 
 class PermissionsScreen extends StatefulWidget {
@@ -783,13 +785,10 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
     final prefs = await SharedPreferences.getInstance();
     await OnboardingStateService.markCompleted(prefs: prefs);
     await prefs.setBool('has_seen_permissions', true);
+    unawaited(TelemetryService().trackOnboardingComplete(reason: 'permissions_complete'));
     
     if (mounted) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => const MainApp(),
-        ),
-      );
+      Navigator.of(context).pushReplacementNamed('/main');
     }
   }
 }

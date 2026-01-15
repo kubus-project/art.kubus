@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -17,6 +19,7 @@ import '../../../services/solana_walletconnect_service.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../services/app_bootstrap_service.dart';
 import '../../../services/user_service.dart';
+import '../../../services/telemetry/telemetry_service.dart';
 import '../../../models/user.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../../widgets/gradient_icon_card.dart';
@@ -25,7 +28,13 @@ import '../../auth/register_screen.dart';
 
 class ConnectWallet extends StatefulWidget {
   final int initialStep;
-  const ConnectWallet({super.key, this.initialStep = 0});
+  final String? telemetryAuthFlow;
+
+  const ConnectWallet({
+    super.key,
+    this.initialStep = 0,
+    this.telemetryAuthFlow,
+  });
 
   @override
   State<ConnectWallet> createState() => _ConnectWalletState();
@@ -74,6 +83,34 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     _mnemonicController.dispose();
     _wcUriController.dispose();
     super.dispose();
+  }
+
+  String? _normalizedAuthFlow() {
+    final raw = (widget.telemetryAuthFlow ?? '').trim().toLowerCase();
+    if (raw == 'signin' || raw == 'login') return 'signin';
+    if (raw == 'signup' || raw == 'register') return 'signup';
+    return null;
+  }
+
+  void _trackWalletAuthSuccess() {
+    final flow = _normalizedAuthFlow();
+    if (flow == null) return;
+    if (flow == 'signin') {
+      unawaited(TelemetryService().trackSignInSuccess(method: 'wallet'));
+      return;
+    }
+    unawaited(TelemetryService().trackSignUpSuccess(method: 'wallet'));
+  }
+
+  void _trackWalletAuthFailure(String errorClass) {
+    final flow = _normalizedAuthFlow();
+    if (flow == null) return;
+    final normalized = (errorClass).trim().isEmpty ? 'unknown' : errorClass.trim();
+    if (flow == 'signin') {
+      unawaited(TelemetryService().trackSignInFailure(method: 'wallet', errorClass: normalized));
+      return;
+    }
+    unawaited(TelemetryService().trackSignUpFailure(method: 'wallet', errorClass: normalized));
   }
 
   Future<void> _runPostWalletConnectRefresh(String walletAddress) async {
@@ -705,10 +742,12 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
             behavior: SnackBarBehavior.floating,
           ),
         );
+        _trackWalletAuthSuccess();
         navigator.pop();
       }
     } catch (e) {
       debugPrint('connectwallet: import wallet failed: $e');
+      _trackWalletAuthFailure('wallet_import_failed');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -1553,12 +1592,14 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
           try {
             await _runPostWalletConnectRefresh(address);
           } catch (_) {}
+          _trackWalletAuthSuccess();
           navigator.pop();
         }
       };
       
       wcService.onError = (error) {
         debugPrint('connectwallet: walletconnect error: $error');
+        _trackWalletAuthFailure('walletconnect_error');
         if (mounted) {
           setState(() {
             _isLoading = false;
@@ -1589,6 +1630,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
       }
     } catch (e) {
       debugPrint('connectwallet: walletconnect failed: $e');
+      _trackWalletAuthFailure('walletconnect_failed');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -1689,11 +1731,13 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
               behavior: SnackBarBehavior.floating,
             ),
           );
+          _trackWalletAuthSuccess();
           navigator.pop();
         }
       }
     } catch (e) {
       debugPrint('connectwallet: create wallet failed: $e');
+      _trackWalletAuthFailure('wallet_create_failed');
       if (mounted) {
         setState(() {
           _isLoading = false;

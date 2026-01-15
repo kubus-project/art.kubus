@@ -6,19 +6,18 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/config.dart';
-import '../../main_app.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../providers/web3provider.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/google_auth_service.dart';
 import '../../services/onboarding_state_service.dart';
+import '../../services/telemetry/telemetry_service.dart';
 import '../../widgets/app_logo.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/gradient_icon_card.dart';
 import '../../widgets/google_sign_in_button.dart';
 import '../web3/wallet/connectwallet_screen.dart';
-import 'register_screen.dart';
 import '../desktop/auth/desktop_auth_shell.dart';
 import '../desktop/desktop_shell.dart';
 
@@ -75,6 +74,7 @@ class _SignInScreenState extends State<SignInScreen> {
     }
     if (userId != null && userId.toString().isNotEmpty) {
       await prefs.setString('user_id', userId.toString());
+      TelemetryService().setActorUserId(userId.toString());
     }
     if (!mounted) return;
 
@@ -118,7 +118,7 @@ class _SignInScreenState extends State<SignInScreen> {
       return;
     }
 
-    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const MainApp()));
+    Navigator.of(context).pushReplacementNamed('/main');
   }
 
   Future<String?> _ensureWalletProvisioned(String? existingWallet, {String? desiredUsername}) async {
@@ -212,12 +212,15 @@ class _SignInScreenState extends State<SignInScreen> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.authEnterValidEmailPassword)));
       return;
     }
+    unawaited(TelemetryService().trackSignInAttempt(method: 'email'));
     setState(() => _isEmailSubmitting = true);
     try {
       final api = BackendApiService();
       final result = await api.loginWithEmail(email: email, password: password);
       await _handleAuthSuccess(result);
+      unawaited(TelemetryService().trackSignInSuccess(method: 'email'));
     } catch (e) {
+      unawaited(TelemetryService().trackSignInFailure(method: 'email', errorClass: e.runtimeType.toString()));
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.authEmailSignInFailed)));
     } finally {
@@ -231,6 +234,8 @@ class _SignInScreenState extends State<SignInScreen> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.authGoogleSignInDisabled)));
       return;
     }
+
+    unawaited(TelemetryService().trackSignInAttempt(method: 'google'));
 
     // Honor any server-provided rate-limit cooldown persisted from prior attempts.
     try {
@@ -248,6 +253,7 @@ class _SignInScreenState extends State<SignInScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(l10n.authGoogleRateLimitedRetryIn(friendly))),
           );
+          unawaited(TelemetryService().trackSignInFailure(method: 'google', errorClass: 'rate_limited'));
           return;
         }
       }
@@ -257,6 +263,7 @@ class _SignInScreenState extends State<SignInScreen> {
     try {
       final googleResult = await GoogleAuthService().signIn();
       if (googleResult == null) {
+        unawaited(TelemetryService().trackSignInFailure(method: 'google', errorClass: 'cancelled'));
         if (!mounted) return;
         setState(() => _isGoogleSubmitting = false);
         return;
@@ -273,7 +280,9 @@ class _SignInScreenState extends State<SignInScreen> {
         await prefs.remove('rate_limit_auth_google_until');
       } catch (_) {}
       await _handleAuthSuccess(result);
+      unawaited(TelemetryService().trackSignInSuccess(method: 'google'));
     } catch (e) {
+      unawaited(TelemetryService().trackSignInFailure(method: 'google', errorClass: e.runtimeType.toString()));
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.authGoogleSignInFailed)));
     } finally {
@@ -287,9 +296,16 @@ class _SignInScreenState extends State<SignInScreen> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.authWalletConnectionDisabled)));
       return;
     }
+
+    unawaited(TelemetryService().trackSignInAttempt(method: 'wallet'));
     final isDesktop = MediaQuery.of(context).size.width >= DesktopBreakpoints.medium;
     if (isDesktop) {
-      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ConnectWallet(initialStep: 0)));
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const ConnectWallet(initialStep: 0, telemetryAuthFlow: 'signin'),
+          settings: const RouteSettings(name: '/connect-wallet'),
+        ),
+      );
       return;
     }
     showModalBottomSheet(
@@ -314,12 +330,22 @@ class _SignInScreenState extends State<SignInScreen> {
                 const SizedBox(height: 16),
                 _walletOptionButton(ctx, sheetL10n.authWalletOptionWalletConnect, Icons.qr_code_2_outlined, () {
                   Navigator.of(ctx).pop();
-                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ConnectWallet(initialStep: 3)));
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ConnectWallet(initialStep: 3, telemetryAuthFlow: 'signin'),
+                      settings: const RouteSettings(name: '/connect-wallet/walletconnect'),
+                    ),
+                  );
                 }),
                 const SizedBox(height: 16),
                 _walletOptionButton(ctx, sheetL10n.authWalletOptionOtherWallets, Icons.apps_outlined, () {
                   Navigator.of(ctx).pop();
-                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ConnectWallet(initialStep: 0)));
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ConnectWallet(initialStep: 0, telemetryAuthFlow: 'signin'),
+                      settings: const RouteSettings(name: '/connect-wallet'),
+                    ),
+                  );
                 }),
               ],
             ),
@@ -387,7 +413,11 @@ class _SignInScreenState extends State<SignInScreen> {
         footer: Align(
           alignment: Alignment.centerLeft,
           child: TextButton(
-            onPressed: () => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const MainApp())),
+            onPressed: () {
+              unawaited(TelemetryService().trackSignInAttempt(method: 'guest'));
+              unawaited(TelemetryService().trackSignInSuccess(method: 'guest'));
+              Navigator.of(context).pushReplacementNamed('/main');
+            },
             child: Text(
               l10n.commonSkipForNow,
               style: GoogleFonts.inter(
@@ -416,7 +446,11 @@ class _SignInScreenState extends State<SignInScreen> {
                     children: [
                       const AppLogo(width: 48, height: 48),
                       TextButton(
-                        onPressed: () => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const MainApp())),
+                        onPressed: () {
+                          unawaited(TelemetryService().trackSignInAttempt(method: 'guest'));
+                          unawaited(TelemetryService().trackSignInSuccess(method: 'guest'));
+                          Navigator.of(context).pushReplacementNamed('/main');
+                        },
                         child: Text(l10n.commonSkipForNow, style: GoogleFonts.inter(color: colorScheme.onSurface.withValues(alpha: 0.7))),
                       ),
                     ],
@@ -508,7 +542,7 @@ class _SignInScreenState extends State<SignInScreen> {
               ],
               const SizedBox(height: 12),
               TextButton(
-                onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RegisterScreen())),
+                onPressed: () => Navigator.of(context).pushNamed('/register'),
                 child: Text(l10n.authNeedAccountRegister, style: GoogleFonts.inter(color: colorScheme.primary, fontWeight: FontWeight.w700)),
               ),
             ],

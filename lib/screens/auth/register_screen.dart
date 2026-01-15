@@ -1,22 +1,23 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/config.dart';
-import '../../main_app.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../providers/web3provider.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/google_auth_service.dart';
 import '../../services/onboarding_state_service.dart';
+import '../../services/telemetry/telemetry_service.dart';
 import '../../widgets/app_logo.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/gradient_icon_card.dart';
 import '../../widgets/google_sign_in_button.dart';
 import '../web3/wallet/connectwallet_screen.dart';
-import 'sign_in_screen.dart';
 import '../desktop/auth/desktop_auth_shell.dart';
 import '../desktop/desktop_shell.dart';
 
@@ -64,6 +65,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
     if (userId != null && userId.toString().isNotEmpty) {
       await prefs.setString('user_id', userId.toString());
+      TelemetryService().setActorUserId(userId.toString());
     }
     if (!mounted) return;
     try {
@@ -81,7 +83,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
     }
     if (!mounted) return;
-    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const MainApp()));
+    Navigator.of(context).pushReplacementNamed('/main');
   }
 
   Future<void> _registerWithEmail() async {
@@ -97,6 +99,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.authEnterValidEmailPassword)));
       return;
     }
+    unawaited(TelemetryService().trackSignUpAttempt(method: 'email'));
     setState(() => _isSubmitting = true);
     try {
       final api = BackendApiService();
@@ -106,7 +109,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         username: username.isNotEmpty ? username : null,
       );
       await _handleAuthSuccess(result);
+      unawaited(TelemetryService().trackSignUpSuccess(method: 'email'));
     } catch (e) {
+      unawaited(TelemetryService().trackSignUpFailure(method: 'email', errorClass: e.runtimeType.toString()));
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.authRegistrationFailed)));
     } finally {
@@ -199,10 +204,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.authGoogleSignInDisabled)));
       return;
     }
+    unawaited(TelemetryService().trackSignUpAttempt(method: 'google'));
     setState(() => _isGoogleSubmitting = true);
     try {
       final googleResult = await GoogleAuthService().signIn();
       if (googleResult == null) {
+        unawaited(TelemetryService().trackSignUpFailure(method: 'google', errorClass: 'cancelled'));
         setState(() => _isGoogleSubmitting = false);
         return;
       }
@@ -213,7 +220,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         username: googleResult.displayName,
       );
       await _handleAuthSuccess(result);
+      unawaited(TelemetryService().trackSignUpSuccess(method: 'google'));
     } catch (e) {
+      unawaited(TelemetryService().trackSignUpFailure(method: 'google', errorClass: e.runtimeType.toString()));
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.authGoogleSignInFailed)));
     } finally {
@@ -227,9 +236,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.authWalletConnectionDisabled)));
       return;
     }
+    unawaited(TelemetryService().trackSignUpAttempt(method: 'wallet'));
     final isDesktop = MediaQuery.of(context).size.width >= DesktopBreakpoints.medium;
     if (isDesktop) {
-      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ConnectWallet(initialStep: 0)));
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const ConnectWallet(initialStep: 0, telemetryAuthFlow: 'signup'),
+          settings: const RouteSettings(name: '/connect-wallet'),
+        ),
+      );
       return;
     }
     showModalBottomSheet(
@@ -254,12 +269,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 8),
                 _walletOptionButton(ctx, sheetL10n.authWalletOptionWalletConnect, Icons.qr_code_2_outlined, () {
                   Navigator.of(ctx).pop();
-                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ConnectWallet(initialStep: 3)));
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ConnectWallet(initialStep: 3, telemetryAuthFlow: 'signup'),
+                      settings: const RouteSettings(name: '/connect-wallet/walletconnect'),
+                    ),
+                  );
                 }),
                 const SizedBox(height: 8),
                 _walletOptionButton(ctx, sheetL10n.authWalletOptionOtherWallets, Icons.apps_outlined, () {
                   Navigator.of(ctx).pop();
-                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ConnectWallet(initialStep: 0)));
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ConnectWallet(initialStep: 0, telemetryAuthFlow: 'signup'),
+                      settings: const RouteSettings(name: '/connect-wallet'),
+                    ),
+                  );
                 }),
               ],
             ),
@@ -327,7 +352,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         footer: Align(
           alignment: Alignment.centerLeft,
           child: TextButton(
-            onPressed: () => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const SignInScreen())),
+            onPressed: () => Navigator.of(context).pushReplacementNamed('/sign-in'),
             child: Text(
               l10n.authHaveAccountSignIn,
               style: GoogleFonts.inter(
@@ -356,7 +381,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     children: [
                       const AppLogo(width: 48, height: 48),
                       TextButton(
-                        onPressed: () => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const SignInScreen())),
+                        onPressed: () => Navigator.of(context).pushReplacementNamed('/sign-in'),
                         child: Text(l10n.authHaveAccountSignIn, style: GoogleFonts.inter(color: colorScheme.onSurface.withValues(alpha: 0.7))),
                       ),
                     ],
