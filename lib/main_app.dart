@@ -4,6 +4,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'providers/themeprovider.dart';
 import 'providers/wallet_provider.dart';
 import 'providers/profile_provider.dart';
+import 'services/telemetry/telemetry_service.dart';
 import 'screens/home_screen.dart';
 import 'screens/map_screen.dart';
 import 'screens/art/ar_screen.dart';
@@ -23,6 +24,15 @@ class MainApp extends StatefulWidget {
 
 class _MainAppState extends State<MainApp> {
   int _currentIndex = 0; // Start with map (index 0)
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _syncTelemetryForIndex(_currentIndex);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -140,9 +150,11 @@ class _MainAppState extends State<MainApp> {
     return Expanded(
       child: GestureDetector(
         onTap: () {
+          if (_currentIndex == index) return;
           setState(() {
             _currentIndex = index;
           });
+          _syncTelemetryForIndex(index);
         },
         child: AnimatedContainer(
           duration: animationTheme.short,
@@ -226,6 +238,47 @@ class _MainAppState extends State<MainApp> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.lockAuthenticationFailedToast)));
     }
+  }
+
+  void _syncTelemetryForIndex(int index) {
+    if (DesktopBreakpoints.isDesktop(context)) return;
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+
+    String name;
+    String route;
+
+    switch (index) {
+      case 0:
+        name = 'MainTabMap';
+        route = '/main/tab/map';
+        break;
+      case 1:
+        name = 'MainTabAR';
+        route = '/main/tab/ar';
+        break;
+      case 2:
+        name = 'MainTabCommunity';
+        route = '/main/tab/community';
+        break;
+      case 3:
+        name = 'MainTabHome';
+        route = '/main/tab/home';
+        break;
+      case 4:
+        if (!profileProvider.isSignedIn) {
+          name = 'SignIn';
+          route = '/sign-in';
+        } else {
+          name = 'MainTabProfile';
+          route = '/main/tab/profile';
+        }
+        break;
+      default:
+        name = 'MainTabUnknown';
+        route = '/main/tab/unknown';
+    }
+
+    TelemetryService().setActiveScreen(screenName: name, screenRoute: route);
   }
 }
 

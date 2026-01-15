@@ -11,6 +11,7 @@ import '../../providers/recent_activity_provider.dart';
 import '../../config/config.dart';
 import '../../models/recent_activity.dart';
 import '../../utils/activity_navigation.dart';
+import '../../services/telemetry/telemetry_service.dart';
 import 'desktop_home_screen.dart';
 import 'desktop_map_screen.dart';
 import 'community/desktop_community_screen.dart';
@@ -200,6 +201,11 @@ class _DesktopShellState extends State<DesktopShell>
     if (_isNavigationExpanded) {
       _navExpandController.value = 1.0;
     }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _syncTelemetry();
+    });
   }
 
   @override
@@ -213,6 +219,7 @@ class _DesktopShellState extends State<DesktopShell>
     setState(() {
       _screenStack.add(screen);
     });
+    _syncTelemetry();
   }
 
   /// Pop a screen from the in-shell stack
@@ -221,6 +228,7 @@ class _DesktopShellState extends State<DesktopShell>
       setState(() {
         _screenStack.removeLast();
       });
+      _syncTelemetry();
     }
   }
 
@@ -230,6 +238,7 @@ class _DesktopShellState extends State<DesktopShell>
       _activeRoute = route;
       _screenStack.clear();
     });
+    _syncTelemetry();
   }
 
   void _toggleNavigation() {
@@ -258,6 +267,7 @@ class _DesktopShellState extends State<DesktopShell>
       // Clear any pushed subscreens when navigating to a new main tab
       _screenStack.clear();
     });
+    _syncTelemetry();
   }
 
   Widget _buildCurrentScreen(String route) {
@@ -280,6 +290,38 @@ class _DesktopShellState extends State<DesktopShell>
       default:
         return const DesktopHomeScreen();
     }
+  }
+
+  String _telemetryScreenNameForRoute(String route) {
+    switch (route) {
+      case '/home':
+        return 'DesktopHome';
+      case '/explore':
+        return 'DesktopExplore';
+      case '/community':
+        return 'DesktopCommunity';
+      case '/artist-studio':
+        return 'DesktopArtistStudio';
+      case '/institution':
+        return 'DesktopInstitutionHub';
+      case '/governance':
+        return 'DesktopGovernanceHub';
+      case '/marketplace':
+        return 'DesktopMarketplace';
+      case _walletRoute:
+        return 'DesktopWallet';
+      case _web3EntryRoute:
+        return 'DesktopWeb3';
+      default:
+        return 'DesktopShell';
+    }
+  }
+
+  void _syncTelemetry() {
+    final hasStack = _screenStack.isNotEmpty;
+    final screenRoute = hasStack ? '$_activeRoute#sub' : _activeRoute;
+    final screenName = hasStack ? _screenStack.last.runtimeType.toString() : _telemetryScreenNameForRoute(_activeRoute);
+    TelemetryService().setActiveScreen(screenName: screenName, screenRoute: screenRoute);
   }
 
   List<DesktopNavItem> _navItemsForState(bool isSignedIn,
@@ -325,11 +367,11 @@ class _DesktopShellState extends State<DesktopShell>
         !isWalletRoute &&
         _activeRoute != navItems.first.route) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          setState(() {
-            _activeRoute = navItems.first.route;
-          });
-        }
+        if (!mounted) return;
+        setState(() {
+          _activeRoute = navItems.first.route;
+        });
+        _syncTelemetry();
       });
     }
     final selectedIndex =
@@ -513,14 +555,19 @@ class _DesktopShellState extends State<DesktopShell>
 
     setState(() {
       _activeRoute = _walletRoute;
+      _screenStack.clear();
     });
+    _syncTelemetry();
   }
 
   void _startWeb3OnboardingFlow() {
     final l10n = AppLocalizations.of(context)!;
     final navigator = Navigator.of(context);
     navigator.push(
-      MaterialPageRoute(builder: (_) => const SignInScreen()),
+      MaterialPageRoute(
+        builder: (_) => const SignInScreen(),
+        settings: const RouteSettings(name: '/sign-in'),
+      ),
     );
 
     // Layer Web3 onboarding over the sign-in screen so users see context before connecting wallets
@@ -535,10 +582,15 @@ class _DesktopShellState extends State<DesktopShell>
               if (mounted) {
                 setState(() {
                   _activeRoute = _walletRoute;
+                  _screenStack.clear();
                 });
+                _syncTelemetry();
               }
               navigator.push(
-                MaterialPageRoute(builder: (_) => const ConnectWallet()),
+                MaterialPageRoute(
+                  builder: (_) => const ConnectWallet(),
+                  settings: const RouteSettings(name: '/connect-wallet'),
+                ),
               );
             },
           ),

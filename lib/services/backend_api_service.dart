@@ -24,6 +24,7 @@ import 'storage_config.dart';
 import 'user_action_logger.dart';
 import 'auth_session_coordinator.dart';
 import 'http_client_factory.dart';
+import 'telemetry/kubus_client_context.dart';
 
 /// Backend API Service
 /// 
@@ -584,6 +585,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     };
+
+    headers.addAll(KubusClientContext.instance.headers);
 
     if (includeAuth && _authToken != null) {
       headers['Authorization'] = 'Bearer $_authToken';
@@ -5822,6 +5825,27 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       AppConfig.debugPrint('BackendApiService.sendTelemetryEvent: status ${response.statusCode}');
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.sendTelemetryEvent failed: $e');
+    }
+  }
+
+  /// Ingest app client telemetry in batches (best-effort; non-blocking).
+  ///
+  /// POST /api/analytics/app
+  Future<http.Response?> postAppTelemetry(String jsonBody) async {
+    try {
+      final uri = Uri.parse('$baseUrl/api/analytics/app');
+      final response = await _post(
+        uri,
+        includeAuth: false,
+        headers: _getHeaders(includeAuth: false),
+        body: jsonBody,
+        isIdempotent: true,
+        timeout: const Duration(seconds: 6),
+      );
+      return response;
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.postAppTelemetry failed: $e');
+      return null;
     }
   }
 

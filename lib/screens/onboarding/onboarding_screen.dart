@@ -1,14 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/onboarding_state_service.dart';
+import '../../services/telemetry/telemetry_service.dart';
 import '../../widgets/app_logo.dart';
 import '../../widgets/gradient_icon_card.dart';
 import '../../screens/desktop/desktop_shell.dart';
 import '../desktop/onboarding/desktop_onboarding_screen.dart';
 import 'permissions_screen.dart';
-import '../auth/sign_in_screen.dart';
 import '../../utils/app_color_utils.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -113,7 +115,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const DesktopOnboardingScreen()),
+            MaterialPageRoute(
+              builder: (context) => const DesktopOnboardingScreen(),
+              settings: const RouteSettings(name: '/onboarding/desktop'),
+            ),
           );
         }
       });
@@ -367,22 +372,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (context) => const PermissionsScreen(),
+        settings: const RouteSettings(name: '/onboarding/permissions'),
       ),
     );
   }
 
   void _startWalletCreation() async {
+    unawaited(TelemetryService().trackOnboardingComplete(reason: 'skip_permissions'));
     // Mark onboarding as completed but don't force wallet creation.
     // This ensures AppInitializer treats the user as returning.
     final navigator = Navigator.of(context);
     final prefs = await SharedPreferences.getInstance();
     await OnboardingStateService.markCompleted(prefs: prefs);
     if (!mounted) return;
-    navigator.pushReplacement(
-      MaterialPageRoute(
-        builder: (context) => const SignInScreen(),
-      ),
-    );
+    navigator.pushReplacementNamed('/sign-in');
   }
 }
 

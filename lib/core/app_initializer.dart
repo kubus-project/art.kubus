@@ -56,7 +56,10 @@ class _AppInitializerState extends State<AppInitializer> {
       final isDesktop = DesktopBreakpoints.isDesktop(navigator.context);
       _didNavigate = true;
       navigator.pushReplacement(
-        MaterialPageRoute(builder: (_) => isDesktop ? const DesktopOnboardingScreen() : const OnboardingScreen()),
+        MaterialPageRoute(
+          builder: (_) => isDesktop ? const DesktopOnboardingScreen() : const OnboardingScreen(),
+          settings: RouteSettings(name: isDesktop ? '/onboarding/desktop' : '/onboarding'),
+        ),
       );
     });
   }
@@ -244,9 +247,7 @@ class _AppInitializerState extends State<AppInitializer> {
       } catch (_) {}
       if (!mounted) return;
       _didNavigate = true;
-      navigator.pushReplacement(
-        MaterialPageRoute(builder: (context) => const MainApp()),
-      );
+      navigator.pushReplacementNamed('/main');
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         final linkContext = appNavigatorKey.currentContext;
         if (linkContext == null) return;
@@ -267,14 +268,10 @@ class _AppInitializerState extends State<AppInitializer> {
       if (!mounted) return;
       if (shouldShowSignIn) {
         _didNavigate = true;
-        navigator.pushReplacement(
-          MaterialPageRoute(builder: (context) => const SignInScreen()),
-        );
+        navigator.pushReplacementNamed('/sign-in');
       } else {
         _didNavigate = true;
-        navigator.pushReplacement(
-          MaterialPageRoute(builder: (context) => const MainApp()),
-        );
+        navigator.pushReplacementNamed('/main');
       }
     } else if (!hasCompletedOnboarding) {
       // First-time user - show onboarding (no wallet required)
@@ -286,7 +283,10 @@ class _AppInitializerState extends State<AppInitializer> {
         unawaited(warmupFuture);
         _didNavigate = true;
         navigator.pushReplacement(
-          MaterialPageRoute(builder: (context) => const DesktopOnboardingScreen()),
+          MaterialPageRoute(
+            builder: (context) => const DesktopOnboardingScreen(),
+            settings: const RouteSettings(name: '/onboarding/desktop'),
+          ),
         );
       } else {
         if (kDebugMode) {
@@ -295,7 +295,10 @@ class _AppInitializerState extends State<AppInitializer> {
         unawaited(warmupFuture);
         _didNavigate = true;
         navigator.pushReplacement(
-          MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+          MaterialPageRoute(
+            builder: (context) => const OnboardingScreen(),
+            settings: const RouteSettings(name: '/onboarding'),
+          ),
         );
       }
     } else {
@@ -306,9 +309,7 @@ class _AppInitializerState extends State<AppInitializer> {
       unawaited(warmupFuture);
       if (!mounted) return;
       _didNavigate = true;
-      navigator.pushReplacement(
-        MaterialPageRoute(builder: (context) => shouldShowSignIn ? const SignInScreen() : const MainApp()),
-      );
+      navigator.pushReplacementNamed(shouldShowSignIn ? '/sign-in' : '/main');
     }
     } catch (e, st) {
       AppConfig.debugPrint('AppInitializer: initialization failed: $e');
@@ -317,7 +318,10 @@ class _AppInitializerState extends State<AppInitializer> {
       final isDesktop = DesktopBreakpoints.isDesktop(context);
       _didNavigate = true;
       navigator.pushReplacement(
-        MaterialPageRoute(builder: (_) => isDesktop ? const DesktopOnboardingScreen() : const OnboardingScreen()),
+        MaterialPageRoute(
+          builder: (_) => isDesktop ? const DesktopOnboardingScreen() : const OnboardingScreen(),
+          settings: RouteSettings(name: isDesktop ? '/onboarding/desktop' : '/onboarding'),
+        ),
       );
     } finally {
       _startupWatchdog?.cancel();
