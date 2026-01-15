@@ -44,7 +44,7 @@ class TelemetryService {
   DateTime? _flushScheduledForUtc;
   bool _flushing = false;
   int _consecutiveFailures = 0;
-  DateTime? _backoffUntilUtc;
+  Timer? _backoffTimer;
   final Random _rand = Random.secure();
 
   final Set<String> _onceKeys = <String>{};
@@ -109,6 +109,7 @@ class TelemetryService {
       _syncClientContext();
       _scheduleFlush(const Duration(milliseconds: 250));
     } else {
+      _cancelBackoffTimer();
       _cancelFlushTimer();
     }
   }
@@ -128,8 +129,8 @@ class TelemetryService {
     final routeName = (route.settings.name ?? '').trim();
     final screenRoute = routeName.isNotEmpty ? routeName : null;
 
-    final screenName = _screenNameForRouteName(routeName) ??
-        (screenRoute != null ? screenRoute : route.runtimeType.toString());
+    final screenName =
+        _screenNameForRouteName(routeName) ?? screenRoute ?? route.runtimeType.toString();
 
     setActiveScreen(screenName: screenName, screenRoute: screenRoute);
   }
@@ -357,7 +358,7 @@ class TelemetryService {
   }
 
   Future<void> _trackOncePerSession(String eventType, {Map<String, Object?> extra = const {}}) async {
-    final key = '${_sessionId}::$eventType';
+    final key = '$_sessionId::$eventType';
     if (_onceKeys.contains(key)) return;
     _onceKeys.add(key);
     await trackEvent(eventType, extra: extra);
@@ -495,19 +496,18 @@ class TelemetryService {
 
   void _scheduleFlush(Duration delay) {
     if (!_enabled) return;
+    if (_backoffTimer != null) return;
     final now = DateTime.now().toUtc();
-    final backoffUntil = _backoffUntilUtc;
     final desiredAt = now.add(delay);
-    final scheduledAt = backoffUntil != null && backoffUntil.isAfter(desiredAt) ? backoffUntil : desiredAt;
 
     final currentFireAt = _flushScheduledForUtc;
-    if (currentFireAt != null && !scheduledAt.isBefore(currentFireAt)) {
+    if (currentFireAt != null && !desiredAt.isBefore(currentFireAt)) {
       return;
     }
 
     _cancelFlushTimer();
-    _flushScheduledForUtc = scheduledAt;
-    _flushTimer = Timer(scheduledAt.difference(now), () {
+    _flushScheduledForUtc = desiredAt;
+    _flushTimer = Timer(desiredAt.difference(now), () {
       _flushTimer = null;
       _flushScheduledForUtc = null;
       unawaited(_flush());
@@ -520,16 +520,15 @@ class TelemetryService {
     _flushScheduledForUtc = null;
   }
 
+  void _cancelBackoffTimer() {
+    _backoffTimer?.cancel();
+    _backoffTimer = null;
+  }
+
   Future<void> _flush() async {
     if (_flushing) return;
     if (!_enabled) return;
-
-    final now = DateTime.now().toUtc();
-    final backoffUntil = _backoffUntilUtc;
-    if (backoffUntil != null && backoffUntil.isAfter(now)) {
-      _scheduleFlush(backoffUntil.difference(now));
-      return;
-    }
+    if (_backoffTimer != null) return;
 
     _flushing = true;
     try {
@@ -539,7 +538,7 @@ class TelemetryService {
       final result = await _sender.sendBatch(batch);
       if (result.ok) {
         _consecutiveFailures = 0;
-        _backoffUntilUtc = null;
+        _cancelBackoffTimer();
         await _queue.removeFirst(batch.length);
         final remaining = await _queue.count();
         if (remaining > 0) {
@@ -550,7 +549,7 @@ class TelemetryService {
 
       if (result.shouldDrop) {
         _consecutiveFailures = 0;
-        _backoffUntilUtc = null;
+        _cancelBackoffTimer();
         await _queue.removeFirst(batch.length);
         final remaining = await _queue.count();
         if (remaining > 0) {
@@ -562,8 +561,12 @@ class TelemetryService {
       _consecutiveFailures += 1;
       final retryAfter = result.retryAfter;
       final backoff = retryAfter ?? _computeBackoff(_consecutiveFailures);
-      _backoffUntilUtc = DateTime.now().toUtc().add(backoff);
-      _scheduleFlush(backoff);
+      _cancelFlushTimer();
+      _cancelBackoffTimer();
+      _backoffTimer = Timer(backoff, () {
+        _backoffTimer = null;
+        unawaited(_flush());
+      });
     } finally {
       _flushing = false;
     }

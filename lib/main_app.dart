@@ -13,6 +13,7 @@ import 'screens/community/profile_screen.dart';
 import 'screens/auth/sign_in_screen.dart';
 import 'screens/desktop/desktop_shell.dart';
 import 'utils/app_animations.dart';
+import 'utils/design_tokens.dart';
 import 'widgets/user_persona_onboarding_gate.dart';
 
 class MainApp extends StatefulWidget {
@@ -122,8 +123,8 @@ class _MainAppState extends State<MainApp> {
           child: SafeArea(
             child: Padding(
               padding: EdgeInsets.symmetric(
-                horizontal: isSmallScreen ? 4 : 8, 
-                vertical: isSmallScreen ? 2 : 4,
+                horizontal: isSmallScreen ? KubusSpacing.xs : KubusSpacing.sm, 
+                vertical: isSmallScreen ? 2 : KubusSpacing.xs,
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -160,14 +161,14 @@ class _MainAppState extends State<MainApp> {
           duration: animationTheme.short,
           curve: animationTheme.defaultCurve,
           padding: EdgeInsets.symmetric(
-            horizontal: isSmallScreen ? 4 : 8, 
-            vertical: isSmallScreen ? 6 : 8,
+            horizontal: isSmallScreen ? KubusSpacing.xs : KubusSpacing.sm, 
+            vertical: isSmallScreen ? KubusSpacing.sm : KubusSpacing.md,
           ),
           decoration: BoxDecoration(
             color: isSelected 
                 ? themeProvider.accentColor.withValues(alpha: 0.12)
                 : Colors.transparent,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: KubusRadius.circular(KubusRadius.md),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,

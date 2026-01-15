@@ -15,6 +15,8 @@ import '../../widgets/gradient_icon_card.dart';
 import '../../screens/desktop/desktop_shell.dart';
 import '../desktop/onboarding/desktop_permissions_screen.dart';
 import '../../utils/app_color_utils.dart';
+import '../../utils/design_tokens.dart';
+import '../../widgets/kubus_button.dart';
 
 class PermissionsScreen extends StatefulWidget {
   const PermissionsScreen({super.key});
@@ -484,7 +486,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
         final effectiveSmallScreen = isSmallScreen || constraintSmallScreen;
         
         return Padding(
-          padding: EdgeInsets.all(effectiveSmallScreen ? 20 : 24),
+          padding: EdgeInsets.all(effectiveSmallScreen ? KubusSpacing.lg : KubusSpacing.xl),
           child: Column(
             children: [
               // Page indicator
@@ -495,17 +497,17 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                   (index) => _buildDot(index),
                 ),
               ),
-              SizedBox(height: effectiveSmallScreen ? 20 : 24),
+              SizedBox(height: effectiveSmallScreen ? KubusSpacing.lg : KubusSpacing.xl),
               // Permission status
               if (isGranted)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.md, vertical: KubusSpacing.sm + 4),
+                  margin: const EdgeInsets.only(bottom: KubusSpacing.md),
                   decoration: BoxDecoration(
-                    color: AppColorUtils.greenAccent.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    color: KubusColors.success.withValues(alpha: 0.1),
+                    borderRadius: KubusRadius.circular(KubusRadius.md),
                     border: Border.all(
-                      color: AppColorUtils.greenAccent.withValues(alpha: 0.3),
+                      color: KubusColors.success.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Row(
@@ -513,56 +515,38 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                     children: [
                       Icon(
                         Icons.check_circle,
-                        color: AppColorUtils.greenAccent,
+                        color: KubusColors.success,
                         size: 20,
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: KubusSpacing.sm),
                       Text(
                         l10n.permissionsGrantedLabel,
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
+                        style: KubusTypography.textTheme.labelLarge?.copyWith(
                           fontWeight: FontWeight.w600,
-                          color: AppColorUtils.greenAccent,
+                          color: KubusColors.success,
                         ),
                       ),
                     ],
                   ),
                 ),
               // Grant permission button
-              SizedBox(
-                width: double.infinity,
-                height: effectiveSmallScreen ? 50 : 56,
-                child: ElevatedButton(
-                  onPressed: isGranted ? (isLastPage ? _completeOnboarding : _nextPage) : () => _requestPermission(currentPermission),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isGranted 
-                        ? Theme.of(context).colorScheme.primary
-                        : _pages[_currentPage].gradient.colors.first,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: Text(
-                    isGranted 
-                        ? (isLastPage ? l10n.permissionsGetStarted : l10n.permissionsNextPermission)
-                        : l10n.permissionsGrantPermission,
-                    style: GoogleFonts.inter(
-                      fontSize: effectiveSmallScreen ? 16 : 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
+              KubusButton(
+                onPressed: isGranted ? (isLastPage ? _completeOnboarding : _nextPage) : () => _requestPermission(currentPermission),
+                backgroundColor: isGranted 
+                    ? Theme.of(context).colorScheme.primary
+                    : _pages[_currentPage].gradient.colors.first,
+                label: isGranted 
+                    ? (isLastPage ? l10n.permissionsGetStarted : l10n.permissionsNextPermission)
+                    : l10n.permissionsGrantPermission,
+                isFullWidth: true,
               ),
-              SizedBox(height: effectiveSmallScreen ? 12 : 16),
+              SizedBox(height: effectiveSmallScreen ? KubusSpacing.sm : KubusSpacing.md),
               // Skip button
               TextButton(
                 onPressed: isLastPage ? _completeOnboarding : _nextPage,
                 child: Text(
                   isLastPage ? l10n.commonSkipForNow : l10n.permissionsSkipThisPermission,
-                  style: GoogleFonts.inter(
-                    fontSize: effectiveSmallScreen ? 14 : 16,
+                  style: KubusTypography.textTheme.labelLarge?.copyWith(
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
@@ -585,9 +569,9 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       height: 8,
       decoration: BoxDecoration(
         color: isGranted
-            ? AppColorUtils.greenAccent
+            ? KubusColors.success
             : (isActive 
-                ? AppColorUtils.amberAccent
+                ? KubusColors.warning
                 : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3)),
         borderRadius: BorderRadius.circular(4),
       ),

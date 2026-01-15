@@ -21,8 +21,6 @@ import '../services/onboarding_state_service.dart';
 import '../screens/onboarding/onboarding_screen.dart';
 import '../screens/desktop/onboarding/desktop_onboarding_screen.dart';
 import '../screens/desktop/desktop_shell.dart';
-import '../main_app.dart';
-import '../screens/auth/sign_in_screen.dart';
 import '../widgets/app_loading.dart';
 import '../utils/share_deep_link_navigation.dart';
 import 'app_navigator.dart';

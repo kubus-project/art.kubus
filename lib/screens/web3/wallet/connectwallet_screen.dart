@@ -21,8 +21,10 @@ import '../../../services/app_bootstrap_service.dart';
 import '../../../services/user_service.dart';
 import '../../../services/telemetry/telemetry_service.dart';
 import '../../../models/user.dart';
-import '../../../widgets/inline_loading.dart';
 import '../../../widgets/gradient_icon_card.dart';
+import '../../../widgets/kubus_button.dart';
+import '../../../widgets/kubus_card.dart';
+import '../../../utils/design_tokens.dart';
 import '../../auth/sign_in_screen.dart';
 import '../../auth/register_screen.dart';
 
@@ -373,39 +375,22 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     Color startColor;
     Color endColor;
     if (icon == Icons.qr_code_scanner) {
-      startColor = Color(0xFF06B6D4);
-      endColor = Color(0xFF3B82F6);
+      startColor = const Color(0xFF06B6D4);
+      endColor = const Color(0xFF3B82F6);
     } else if (icon == Icons.login) {
-      startColor = Color.fromARGB(255, 3, 115, 185);
-      endColor = Color.fromARGB(255, 13, 228, 49);
+      startColor = const Color.fromARGB(255, 3, 115, 185);
+      endColor = const Color.fromARGB(255, 13, 228, 49);
     } else {
-      startColor = Color(0xFFF59E0B);
-      endColor = Color(0xFFEF4444);
+      startColor = const Color(0xFFF59E0B);
+      endColor = const Color(0xFFEF4444);
     }
     
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        margin: EdgeInsets.only(bottom: isSmallScreen ? 12 : 14),
-        padding: EdgeInsets.all(isSmallScreen ? 16 : 18),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: Theme.of(context).colorScheme.surface,
-          border: Border.all(
-            color: startColor.withValues(alpha: isSubdued ? 0.2 : 0.3),
-            width: 1.5,
-          ),
-          boxShadow: isSubdued
-              ? []
-              : [
-                  BoxShadow(
-                    color: startColor.withValues(alpha: 0.2),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-        ),
+    return Padding(
+      padding: EdgeInsets.only(bottom: isSmallScreen ? KubusSpacing.sm : KubusSpacing.md),
+      child: KubusCard(
+        onTap: onTap,
+        padding: EdgeInsets.all(isSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
+        color: Theme.of(context).colorScheme.surface,
         child: Row(
           children: [
             SizedBox(
@@ -421,26 +406,23 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                 radius: isSmallScreen ? 14 : 16,
               ),
             ),
-            SizedBox(width: isSmallScreen ? 14 : 16),
+            SizedBox(width: isSmallScreen ? KubusSpacing.sm : KubusSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
-                    style: GoogleFonts.inter(
-                      fontSize: isSmallScreen ? 15 : 17,
-                      fontWeight: FontWeight.w600,
+                    style: KubusTypography.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 3),
                   Text(
                     description,
-                    style: GoogleFonts.inter(
-                      fontSize: isSmallScreen ? 12 : 13,
+                    style: KubusTypography.textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                      height: 1.3,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -448,7 +430,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                 ],
               ),
             ),
-            SizedBox(width: isSmallScreen ? 6 : 8),
+            SizedBox(width: isSmallScreen ? KubusSpacing.xs : KubusSpacing.sm),
             Icon(
               Icons.arrow_forward_ios,
               color: color,
@@ -513,37 +495,35 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
               ),
               SizedBox(height: isSmallScreen ? 20 : 24),
             
-              // Mnemonic Input Field
-              TextField(
-                controller: _mnemonicController,
-                maxLines: isSmallScreen ? 3 : 4,
-                decoration: InputDecoration(
-                  hintText: l10n.connectWalletImportHint,
-                  hintStyle: GoogleFonts.inter(
-                    fontSize: isSmallScreen ? 12 : 13,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                // Mnemonic Input Field
+                TextField(
+                  controller: _mnemonicController,
+                  maxLines: isSmallScreen ? 3 : 4,
+                  decoration: InputDecoration(
+                    hintText: l10n.connectWalletImportHint,
+                    hintStyle: KubusTypography.textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                    ),
+                    filled: true,
+                    fillColor: Theme.of(context).colorScheme.surface,
+                    contentPadding: EdgeInsets.all(isSmallScreen ? 12 : 14),
+                    border: OutlineInputBorder(
+                      borderRadius: KubusRadius.circular(KubusRadius.md),
+                      borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: KubusRadius.circular(KubusRadius.md),
+                      borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: KubusRadius.circular(KubusRadius.md),
+                      borderSide: const BorderSide(color: Colors.blue, width: 2),
+                    ),
                   ),
-                  filled: true,
-                  fillColor: Theme.of(context).colorScheme.surface,
-                  contentPadding: EdgeInsets.all(isSmallScreen ? 12 : 14),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.blue, width: 2),
+                  style: KubusTypography.textTheme.bodyLarge?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
-                style: GoogleFonts.inter(
-                  fontSize: isSmallScreen ? 12 : 13,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
               SizedBox(height: isSmallScreen ? 12 : 14),
             
               // Warning Box
@@ -574,39 +554,15 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
               SizedBox(height: isSmallScreen ? 20 : 24),
               
               // Connect Button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : () => _importWalletFromMnemonic(web3Provider),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF0EA5E9),
-                    padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 16 : 18),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    elevation: 2,
-                    disabledBackgroundColor: Colors.blue.withValues(alpha: 0.5),
-                  ),
-                  child: _isLoading
-                      ? SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : Text(
-                          l10n.connectWalletImportButton,
-                          style: GoogleFonts.inter(
-                            fontSize: isSmallScreen ? 16 : 17,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
-                ),
+              KubusButton(
+                onPressed: _isLoading ? null : () => _importWalletFromMnemonic(web3Provider),
+                isLoading: _isLoading,
+                label: l10n.connectWalletImportButton,
+                isFullWidth: true,
+                backgroundColor: const Color(0xFF0EA5E9),
+                foregroundColor: Colors.white,
               ),
-              SizedBox(height: isSmallScreen ? 16 : 20),
+              SizedBox(height: isSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
             ],
           ),
         ),
@@ -886,47 +842,22 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
               SizedBox(height: isSmallScreen ? 20 : 24),
               
               // Generate Button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : () => _generateNewWallet(web3Provider),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF10B981),
-                    padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 16 : 18),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    elevation: 2,
-                    disabledBackgroundColor: Colors.green.withValues(alpha: 0.5),
-                  ),
-                  child: _isLoading
-                      ? SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : Text(
-                          l10n.connectWalletCreateGenerateButton,
-                          style: GoogleFonts.inter(
-                            fontSize: isSmallScreen ? 16 : 17,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
-                ),
+              KubusButton(
+                onPressed: _isLoading ? null : () => _generateNewWallet(web3Provider),
+                isLoading: _isLoading,
+                label: l10n.connectWalletCreateGenerateButton,
+                isFullWidth: true,
+                backgroundColor: const Color(0xFF10B981),
+                foregroundColor: Colors.white,
               ),
-              SizedBox(height: isSmallScreen ? 16 : 20),
+              SizedBox(height: isSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Flexible(
                     child: Text(
                       l10n.connectWalletCreateAlreadyHaveWalletPrefix,
-                      style: GoogleFonts.inter(
-                        fontSize: isSmallScreen ? 12 : 13,
+                      style: KubusTypography.textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
@@ -935,8 +866,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                     onTap: () => setState(() => _currentStep = 1),
                     child: Text(
                       l10n.connectWalletCreateAlreadyHaveWalletLink,
-                      style: GoogleFonts.inter(
-                        fontSize: isSmallScreen ? 12 : 13,
+                      style: KubusTypography.textTheme.bodySmall?.copyWith(
                         color: Colors.blue,
                         decoration: TextDecoration.underline,
                         fontWeight: FontWeight.w500,
@@ -945,7 +875,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                   ),
                 ],
               ),
-              SizedBox(height: isSmallScreen ? 16 : 20),
+              SizedBox(height: isSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
             ],
           ),
         ),
@@ -976,8 +906,8 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                 child: Column(
                   children: [
                     GradientIconCard(
-                      start: Color(0xFF06B6D4),
-                      end: Color(0xFF3B82F6),
+                      start: const Color(0xFF06B6D4),
+                      end: const Color(0xFF3B82F6),
                       icon: Icons.qr_code_scanner_rounded,
                       iconSize: isSmallScreen ? 44 : 52,
                       width: isSmallScreen ? 88 : 100,
@@ -987,8 +917,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                     SizedBox(height: isSmallScreen ? 14 : 18),
                     Text(
                       l10n.connectWalletWalletConnectTitle,
-                      style: GoogleFonts.inter(
-                        fontSize: isSmallScreen ? 22 : 26,
+                      style: KubusTypography.textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
@@ -996,23 +925,21 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                   ],
                 ),
               ),
-              SizedBox(height: isSmallScreen ? 12 : 16),
+              SizedBox(height: isSmallScreen ? KubusSpacing.sm : KubusSpacing.md),
               Text(
                 l10n.connectWalletWalletConnectDescription,
-                style: GoogleFonts.inter(
-                  fontSize: isSmallScreen ? 14 : 15,
+                style: KubusTypography.textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                  height: 1.5,
                 ),
               ),
-              SizedBox(height: isSmallScreen ? 20 : 24),
+              SizedBox(height: isSmallScreen ? KubusSpacing.lg : KubusSpacing.xl),
             
               // Supported Wallets
               Container(
-                padding: EdgeInsets.all(isSmallScreen ? 12 : 14),
+                padding: EdgeInsets.all(isSmallScreen ? KubusSpacing.sm : KubusSpacing.md),
                 decoration: BoxDecoration(
                   color: Colors.blue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: KubusRadius.circular(KubusRadius.sm),
                   border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
                 ),
                 child: Column(
@@ -1021,37 +948,33 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                     Row(
                       children: [
                         Icon(Icons.check_circle, color: Colors.blue, size: isSmallScreen ? 20 : 22),
-                        SizedBox(width: isSmallScreen ? 10 : 12),
+                        SizedBox(width: isSmallScreen ? KubusSpacing.xs : KubusSpacing.sm),
                         Text(
                           l10n.connectWalletWalletConnectSupportedTitle,
-                          style: GoogleFonts.inter(
-                            fontSize: isSmallScreen ? 14 : 15,
-                            fontWeight: FontWeight.w600,
+                          style: KubusTypography.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
                             color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                       ],
                     ),
-                    SizedBox(height: isSmallScreen ? 10 : 12),
+                    SizedBox(height: isSmallScreen ? KubusSpacing.xs : KubusSpacing.sm),
                     Text(
                       l10n.connectWalletWalletConnectSupportedList,
-                      style: GoogleFonts.inter(
-                        fontSize: isSmallScreen ? 12 : 13,
+                      style: KubusTypography.textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                        height: 1.5,
                       ),
                     ),
                   ],
                 ),
               ),
-              SizedBox(height: isSmallScreen ? 16 : 20),
+              SizedBox(height: isSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
             
               // Instructions
               Text(
                 l10n.connectWalletWalletConnectHowToTitle,
-                style: GoogleFonts.inter(
-                  fontSize: isSmallScreen ? 14 : 15,
-                  fontWeight: FontWeight.w600,
+                style: KubusTypography.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
@@ -1062,38 +985,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
               SizedBox(height: isSmallScreen ? 16 : 20),
             
               // Quick connect without typing
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _isLoading ? null : () => _quickWalletConnect(web3Provider),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF3B82F6),
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 16 : 18),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    elevation: 2,
-                  ),
-                  icon: _isLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : const Icon(Icons.flash_on_rounded, color: Colors.white, size: 22),
-                  label: Text(
-                    _isLoading ? l10n.connectWalletWalletConnectConnectingLabel : l10n.connectWalletWalletConnectQuickConnectLabel,
-                    style: GoogleFonts.inter(
-                      fontSize: isSmallScreen ? 15 : 17,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(height: isSmallScreen ? 12 : 14),
+
               
               // URI Input Field
               TextField(
@@ -1101,23 +993,22 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                 maxLines: isSmallScreen ? 2 : 3,
                 decoration: InputDecoration(
                   hintText: l10n.connectWalletWalletConnectUriHint,
-                  hintStyle: GoogleFonts.inter(
-                    fontSize: isSmallScreen ? 11 : 12,
+                  hintStyle: KubusTypography.textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                   ),
                   filled: true,
                   fillColor: Theme.of(context).colorScheme.surface,
                   contentPadding: EdgeInsets.all(isSmallScreen ? 10 : 12),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: KubusRadius.circular(KubusRadius.md),
                     borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
                   ),
                   enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: KubusRadius.circular(KubusRadius.md),
                     borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: KubusRadius.circular(KubusRadius.md),
                     borderSide: const BorderSide(color: Colors.blue, width: 2),
                   ),
                   suffixIcon: IconButton(
@@ -1132,8 +1023,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                     },
                   ),
                 ),
-                style: GoogleFonts.inter(
-                  fontSize: isSmallScreen ? 11 : 12,
+                style: KubusTypography.textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
@@ -1144,7 +1034,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                 padding: EdgeInsets.all(isSmallScreen ? 12 : 14),
                 decoration: BoxDecoration(
                   color: Colors.orange.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: KubusRadius.circular(KubusRadius.sm),
                   border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
                 ),
                 child: Row(
@@ -1155,10 +1045,8 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                     Expanded(
                       child: Text(
                         l10n.connectWalletWalletConnectSecurityNote,
-                        style: GoogleFonts.inter(
-                          fontSize: isSmallScreen ? 11 : 12,
+                        style: KubusTypography.textTheme.bodySmall?.copyWith(
                           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                          height: 1.4,
                         ),
                       ),
                     ),
@@ -1168,145 +1056,51 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
               SizedBox(height: isSmallScreen ? 20 : 24),
               
               // Connect Buttons
-              isSmallScreen
-                  ? Column(
-                      children: [
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: _isLoading ? null : () => _scanQRCode(web3Provider),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              disabledBackgroundColor: Colors.blue.withValues(alpha: 0.5),
-                            ),
-                            icon: const Icon(Icons.qr_code_scanner, color: Colors.white, size: 20),
-                            label: Text(
-                              l10n.connectWalletWalletConnectScanQrButton,
-                              style: GoogleFonts.inter(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: _isLoading ? null : () => _connectWithWalletConnect(web3Provider),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              disabledBackgroundColor: Colors.blue.withValues(alpha: 0.5),
-                            ),
-                            child: _isLoading
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: InlineLoading(shape: BoxShape.circle, tileSize: 4.0, color: Colors.white),
-                                  )
-                                : Text(
-                                    l10n.connectWalletWalletConnectConnectButton,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                          ),
-                        ),
-                      ],
-                    )
-                  : Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: _isLoading ? null : () => _scanQRCode(web3Provider),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              disabledBackgroundColor: Colors.blue.withValues(alpha: 0.5),
-                            ),
-                            icon: const Icon(Icons.qr_code_scanner, color: Colors.white),
-                            label: Text(
-                              l10n.connectWalletWalletConnectScanQrButton,
-                              style: GoogleFonts.inter(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: _isLoading ? null : () => _connectWithWalletConnect(web3Provider),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              disabledBackgroundColor: Colors.blue.withValues(alpha: 0.5),
-                            ),
-                            child: _isLoading
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: InlineLoading(shape: BoxShape.circle, tileSize: 4.0, color: Colors.white),
-                                  )
-                                : Text(
-                                    l10n.connectWalletWalletConnectConnectButton,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                          ),
-                        ),
-                      ],
-                    ),
-              SizedBox(height: isSmallScreen ? 16 : 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Flexible(
-                    child: Text(
-                      l10n.connectWalletWalletConnectNoWalletPrefix,
-                      style: GoogleFonts.inter(
-                        fontSize: isSmallScreen ? 12 : 13,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              if (isSmallScreen) ...[
+                KubusButton(
+                  onPressed: _isLoading ? null : () => _quickWalletConnect(web3Provider),
+                  isLoading: _isLoading,
+                  icon: Icons.flash_on_rounded,
+                  label: l10n.connectWalletWalletConnectQuickConnectLabel,
+                  isFullWidth: true,
+                  backgroundColor: const Color(0xFF3B82F6),
+                  foregroundColor: Colors.white,
+                ),
+                const SizedBox(height: 12),
+                KubusButton(
+                  onPressed: _isLoading ? null : () => _connectWithWalletConnect(web3Provider),
+                  isLoading: _isLoading,
+                  label: l10n.connectWalletWalletConnectConnectButton,
+                  isFullWidth: true,
+                  backgroundColor: const Color(0xFF3B82F6),
+                  foregroundColor: Colors.white,
+                ),
+              ] else ...[
+                 Row(
+                  children: [
+                    Expanded(
+                      child: KubusButton(
+                        onPressed: _isLoading ? null : () => _scanQRCode(web3Provider),
+                        icon: Icons.qr_code_scanner,
+                        label: l10n.connectWalletWalletConnectScanQrButton,
+                        backgroundColor: const Color(0xFF3B82F6),
+                        foregroundColor: Colors.white,
                       ),
                     ),
-                  ),
-                  GestureDetector(
-                    onTap: () => setState(() => _currentStep = 2),
-                    child: Text(
-                      l10n.connectWalletWalletConnectNoWalletLink,
-                      style: GoogleFonts.inter(
-                        fontSize: isSmallScreen ? 12 : 13,
-                        color: Colors.green,
-                        decoration: TextDecoration.underline,
-                        fontWeight: FontWeight.w500,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: KubusButton(
+                        onPressed: _isLoading ? null : () => _connectWithWalletConnect(web3Provider),
+                        isLoading: _isLoading,
+                        label: l10n.connectWalletWalletConnectConnectButton,
+                        backgroundColor: const Color(0xFF3B82F6),
+                        foregroundColor: Colors.white,
                       ),
                     ),
-                  ),
-                ],
-              ),
-              SizedBox(height: isSmallScreen ? 16 : 20),
+                  ],
+                ),
+              ],
+
             ],
           ),
         ),
@@ -1332,8 +1126,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
             child: Center(
               child: Text(
                 number,
-                style: GoogleFonts.inter(
-                  fontSize: isSmallScreen ? 11 : 12,
+                style: KubusTypography.textTheme.labelSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: Colors.blue,
                 ),
@@ -1344,8 +1137,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
           Expanded(
             child: Text(
               text,
-              style: GoogleFonts.inter(
-                fontSize: isSmallScreen ? 12 : 13,
+              style: KubusTypography.textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
               ),
             ),

@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../models/art_marker.dart';
@@ -309,7 +309,7 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
     if (widget.useSheet) {
       return Material(
         color: scheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(KubusRadius.xl)),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
           child: Column(
@@ -322,7 +322,7 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
                   const SizedBox(width: 10),
                   Text(
                     l10n.mapMarkerDialogTitle,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                       color: scheme.onSurface,
                     ),
@@ -364,7 +364,7 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
           const SizedBox(width: 10),
           Text(
             l10n.mapMarkerDialogTitle,
-            style: GoogleFonts.inter(
+            style: KubusTypography.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w700,
               color: scheme.onSurface,
             ),
@@ -402,8 +402,7 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
             children: [
               Text(
                 l10n.mapMarkerDialogAttachHint,
-                style: GoogleFonts.outfit(
-                  fontSize: 14,
+                style: KubusTypography.textTheme.bodyMedium?.copyWith(
                   color: scheme.onSurface.withValues(alpha: 0.7),
                 ),
               ),
@@ -414,7 +413,7 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
                 decoration: InputDecoration(
                   labelText: l10n.mapMarkerDialogSubjectTypeLabel,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: KubusRadius.circular(8),
                   ),
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -445,7 +444,7 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
                         _subjectTypeLabel(l10n, _selectedSubjectType),
                       ),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: KubusRadius.circular(8),
                       ),
                       contentPadding:
                           const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -459,11 +458,11 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
                               children: [
                                 Text(option.title,
                                     style:
-                                        GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+                                        KubusTypography.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
                                 if (option.subtitle.isNotEmpty)
                                   Text(
                                     option.subtitle,
-                                    style: GoogleFonts.outfit(fontSize: 12),
+                                    style: KubusTypography.textTheme.bodySmall?.copyWith(fontSize: 12),
                                   ),
                               ],
                             ),
@@ -502,8 +501,7 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
               if (_showOptionalArAsset(_selectedSubjectType)) ...[
                 Text(
                   l10n.mapMarkerDialogLinkedArAssetTitle,
-                  style: GoogleFonts.outfit(
-                    fontSize: 14,
+                  style: KubusTypography.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: scheme.onSurface,
                   ),
@@ -520,7 +518,7 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
                     initialValue: _selectedArAsset,
                     decoration: InputDecoration(
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: KubusRadius.circular(8),
                       ),
                       contentPadding:
                           const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -544,7 +542,7 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
                 decoration: InputDecoration(
                   labelText: l10n.mapMarkerDialogMarkerTitleLabel,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: KubusRadius.circular(8),
                   ),
                 ),
                 validator: (value) {
@@ -564,7 +562,7 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
                 decoration: InputDecoration(
                   labelText: l10n.mapMarkerDialogDescriptionLabel,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: KubusRadius.circular(8),
                   ),
                 ),
                 validator: (value) {
@@ -583,7 +581,7 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
                 decoration: InputDecoration(
                   labelText: l10n.mapMarkerDialogCategoryLabel,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: KubusRadius.circular(8),
                   ),
                 ),
               ),
@@ -594,7 +592,7 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
                 decoration: InputDecoration(
                   labelText: l10n.mapMarkerDialogMarkerLayerLabel,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: KubusRadius.circular(8),
                   ),
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -615,10 +613,10 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text(l10n.mapMarkerDialogPublicMarkerTitle,
-                    style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+                    style: KubusTypography.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
                 subtitle: Text(
                   l10n.mapMarkerDialogPublicMarkerSubtitle,
-                  style: GoogleFonts.outfit(fontSize: 12),
+                  style: KubusTypography.textTheme.bodySmall?.copyWith(fontSize: 12),
                 ),
                 value: _isPublic,
                 onChanged: (value) => setState(() => _isPublic = value),
@@ -633,7 +631,7 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
                         decoration: InputDecoration(
                           labelText: l10n.mapMarkerDialogLatitudeLabel,
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: KubusRadius.circular(8),
                           ),
                         ),
                         keyboardType:
@@ -654,7 +652,7 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
                         decoration: InputDecoration(
                           labelText: l10n.mapMarkerDialogLongitudeLabel,
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: KubusRadius.circular(8),
                           ),
                         ),
                         keyboardType:
@@ -702,13 +700,13 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
       children: [
         TextButton(
           onPressed: () => Navigator.of(context).maybePop(),
-          child: Text(l10n.commonCancel, style: GoogleFonts.outfit()),
+          child: Text(l10n.commonCancel, style: KubusTypography.textTheme.labelLarge),
         ),
         const SizedBox(width: 8),
         ElevatedButton.icon(
           onPressed: _submit,
           icon: const Icon(Icons.add_location_alt),
-          label: Text(l10n.mapMarkerDialogCreateButton, style: GoogleFonts.outfit()),
+          label: Text(l10n.mapMarkerDialogCreateButton, style: KubusTypography.textTheme.labelLarge?.copyWith(color: Colors.white)),
         ),
       ],
     );
@@ -719,12 +717,12 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
     return [
       TextButton(
         onPressed: () => Navigator.of(context).pop(),
-        child: Text(l10n.commonCancel, style: GoogleFonts.outfit()),
+        child: Text(l10n.commonCancel, style: KubusTypography.textTheme.labelLarge),
       ),
       ElevatedButton.icon(
         onPressed: _submit,
         icon: const Icon(Icons.add_location_alt),
-        label: Text(l10n.mapMarkerDialogCreateButton, style: GoogleFonts.outfit()),
+        label: Text(l10n.mapMarkerDialogCreateButton, style: KubusTypography.textTheme.labelLarge?.copyWith(color: Colors.white)),
       ),
     ];
   }
@@ -735,11 +733,11 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHighest.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: KubusRadius.circular(8),
       ),
       child: Text(
         text,
-        style: GoogleFonts.outfit(fontSize: 13),
+        style: KubusTypography.textTheme.bodyMedium?.copyWith(fontSize: 13),
       ),
     );
   }

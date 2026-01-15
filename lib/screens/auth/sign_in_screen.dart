@@ -14,9 +14,11 @@ import '../../services/google_auth_service.dart';
 import '../../services/onboarding_state_service.dart';
 import '../../services/telemetry/telemetry_service.dart';
 import '../../widgets/app_logo.dart';
-import '../../widgets/inline_loading.dart';
 import '../../widgets/gradient_icon_card.dart';
 import '../../widgets/google_sign_in_button.dart';
+import '../../widgets/kubus_button.dart';
+import '../../widgets/kubus_card.dart';
+import '../../utils/design_tokens.dart';
 import '../web3/wallet/connectwallet_screen.dart';
 import '../desktop/auth/desktop_auth_shell.dart';
 import '../desktop/desktop_shell.dart';
@@ -357,18 +359,18 @@ class _SignInScreenState extends State<SignInScreen> {
 
   Widget _walletOptionButton(BuildContext context, String label, IconData icon, VoidCallback onTap) {
     final colorScheme = Theme.of(context).colorScheme;
-    return ElevatedButton.icon(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: colorScheme.surface,
-        foregroundColor: colorScheme.onSurface,
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        side: BorderSide(color: colorScheme.outline.withValues(alpha: 0.4)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        elevation: 0,
+    return KubusCard(
+      onTap: onTap,
+      padding: const EdgeInsets.symmetric(vertical: KubusSpacing.md, horizontal: KubusSpacing.md),
+      color: colorScheme.surface,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: colorScheme.primary, size: 22),
+          const SizedBox(width: KubusSpacing.sm),
+          Text(label, style: KubusTypography.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+        ],
       ),
-      onPressed: onTap,
-      icon: Icon(icon, color: colorScheme.primary, size: 22),
-      label: Text(label, style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16)),
     );
   }
 
@@ -505,45 +507,46 @@ class _SignInScreenState extends State<SignInScreen> {
           ),
         if (!isDesktop) const SizedBox(height: 20),
         if (enableWallet)
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: colorScheme.primary,
-              foregroundColor: colorScheme.onPrimary,
-              minimumSize: const Size.fromHeight(56),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              elevation: 2,
-            ),
+          KubusButton(
             onPressed: _showConnectWalletModal,
-            icon: Icon(Icons.account_balance_wallet_outlined, size: 24, color: colorScheme.onPrimary),
-            label: Text(l10n.authConnectWalletButton, style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w700, color: colorScheme.onPrimary)),
+            icon: Icons.account_balance_wallet_outlined,
+            label: l10n.authConnectWalletButton,
+            isFullWidth: true,
           ),
-        if (enableWallet) const SizedBox(height: 16),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: colorScheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: colorScheme.outlineVariant),
-          ),
+        if (enableWallet) const SizedBox(height: KubusSpacing.md),
+        KubusCard(
+          padding: const EdgeInsets.all(KubusSpacing.md),
+          color: colorScheme.surfaceContainerHighest,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text(l10n.authOrLogInWithEmailOrUsername, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: colorScheme.onSurface)),
-              const SizedBox(height: 12),
+              Text(
+                l10n.authOrLogInWithEmailOrUsername,
+                style: KubusTypography.textTheme.titleMedium?.copyWith(
+                  color: colorScheme.onSurface,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: KubusSpacing.md),
               if (enableEmail) _buildEmailForm(colorScheme),
               if (enableGoogle) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: KubusSpacing.md),
                 GoogleSignInButton(
                   onPressed: _signInWithGoogle,
                   isLoading: _isGoogleSubmitting,
                   colorScheme: colorScheme,
                 ),
               ],
-              const SizedBox(height: 12),
+              const SizedBox(height: KubusSpacing.md),
               TextButton(
                 onPressed: () => Navigator.of(context).pushNamed('/register'),
-                child: Text(l10n.authNeedAccountRegister, style: GoogleFonts.inter(color: colorScheme.primary, fontWeight: FontWeight.w700)),
+                child: Text(
+                  l10n.authNeedAccountRegister,
+                  style: KubusTypography.textTheme.labelLarge?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
           ),
@@ -561,36 +564,25 @@ class _SignInScreenState extends State<SignInScreen> {
           keyboardType: TextInputType.emailAddress,
           decoration: InputDecoration(
             labelText: AppLocalizations.of(context)!.commonEmail,
-            border: OutlineInputBorder(),
+            border: const OutlineInputBorder(),
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: KubusSpacing.sm),
         TextField(
           controller: _passwordController,
           obscureText: true,
           decoration: InputDecoration(
             labelText: AppLocalizations.of(context)!.commonPassword,
-            border: OutlineInputBorder(),
+            border: const OutlineInputBorder(),
           ),
         ),
-        const SizedBox(height: 12),
-        ElevatedButton.icon(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: colorScheme.primary,
-            foregroundColor: colorScheme.onPrimary,
-            minimumSize: const Size.fromHeight(54),
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            elevation: 1,
-          ),
+        const SizedBox(height: KubusSpacing.md),
+        KubusButton(
           onPressed: _isEmailSubmitting ? null : _submitEmail,
-          icon: _isEmailSubmitting
-              ? const SizedBox(width: 20, height: 20, child: InlineLoading(width: 20, height: 20, tileSize: 5))
-              : Icon(Icons.login_rounded, color: colorScheme.onPrimary, size: 22),
-          label: Text(
-            _isEmailSubmitting ? AppLocalizations.of(context)!.commonWorking : AppLocalizations.of(context)!.authSignInWithEmail,
-            style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: colorScheme.onPrimary),
-          ),
+          isLoading: _isEmailSubmitting,
+          icon: _isEmailSubmitting ? null : Icons.login_rounded,
+          label: _isEmailSubmitting ? AppLocalizations.of(context)!.commonWorking : AppLocalizations.of(context)!.authSignInWithEmail,
+          isFullWidth: true,
         ),
       ],
     );

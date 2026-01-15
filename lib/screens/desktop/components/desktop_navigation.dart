@@ -11,6 +11,8 @@ import '../../../widgets/avatar_widget.dart';
 import '../../../widgets/app_logo.dart';
 import '../../../utils/app_animations.dart';
 
+import '../../../utils/design_tokens.dart';
+
 /// Navigation item data model
 class DesktopNavItem {
   final IconData icon;
@@ -159,16 +161,14 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                 children: [
                   Text(
                     'art.kubus',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
+                    style: KubusTypography.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   Text(
                     'Art Platform',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
+                    style: KubusTypography.textTheme.bodySmall?.copyWith(
                       color: Theme.of(context)
                           .colorScheme
                           .onSurface
@@ -225,13 +225,13 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                         .onSurface
                         .withValues(alpha: 0.05)
                     : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: KubusRadius.circular(KubusRadius.md),
           ),
           child: Material(
             color: Colors.transparent,
             child: InkWell(
               onTap: () => widget.onItemSelected(index),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: KubusRadius.circular(KubusRadius.md),
               child: Padding(
                 padding: EdgeInsets.symmetric(
                   horizontal:
@@ -265,8 +265,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                           duration: const Duration(milliseconds: 150),
                           child: Text(
                             item.label,
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
+                            style: KubusTypography.textTheme.bodyMedium?.copyWith(
                               fontWeight: isSelected
                                   ? FontWeight.w600
                                   : FontWeight.w500,
@@ -300,8 +299,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
       ),
       child: Text(
         count > 99 ? '99+' : count.toString(),
-        style: GoogleFonts.inter(
-          fontSize: 12,
+        style: KubusTypography.textTheme.labelSmall?.copyWith(
           fontWeight: FontWeight.bold,
           color: Colors.white,
         ),
@@ -487,7 +485,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                       child: Center(
                         child: Text(
                           badgeCount > 99 ? '99+' : badgeCount.toString(),
-                          style: GoogleFonts.inter(
+                          style: KubusTypography.textTheme.labelSmall?.copyWith(
                             fontSize: 9,
                             fontWeight: FontWeight.w700,
                             color: Theme.of(context).colorScheme.onError,
@@ -574,7 +572,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                     child: Center(
                       child: Text(
                         badgeCount > 99 ? '99+' : badgeCount.toString(),
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.textTheme.labelSmall?.copyWith(
                           fontSize: 9,
                           fontWeight: FontWeight.w700,
                           color: Theme.of(context).colorScheme.onError,
@@ -671,8 +669,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                                 const SizedBox(width: 5),
                                 Text(
                                   'My Wallet',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11,
+                                  style: KubusTypography.textTheme.labelSmall?.copyWith(
                                     fontWeight: FontWeight.w600,
                                     color: Colors.white.withValues(alpha: 0.9),
                                   ),
@@ -691,7 +688,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                                     children: [
                                       Text(
                                         'KUB8',
-                                        style: GoogleFonts.inter(
+                                        style: KubusTypography.textTheme.bodySmall?.copyWith(
                                           fontSize: 10,
                                           color: Colors.white
                                               .withValues(alpha: 0.7),
@@ -699,7 +696,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                                       ),
                                       Text(
                                         kub8Balance.toStringAsFixed(2),
-                                        style: GoogleFonts.inter(
+                                        style: KubusTypography.textTheme.bodySmall?.copyWith(
                                           fontSize: 11,
                                           fontWeight: FontWeight.bold,
                                           color: Colors.white,
@@ -714,7 +711,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                                     children: [
                                       Text(
                                         'SOL',
-                                        style: GoogleFonts.inter(
+                                        style: KubusTypography.textTheme.bodySmall?.copyWith(
                                           fontSize: 10,
                                           color: Colors.white
                                               .withValues(alpha: 0.7),
@@ -722,7 +719,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                                       ),
                                       Text(
                                         solBalance.toStringAsFixed(3),
-                                        style: GoogleFonts.inter(
+                                        style: KubusTypography.textTheme.bodySmall?.copyWith(
                                           fontSize: 11,
                                           fontWeight: FontWeight.bold,
                                           color: Colors.white,
