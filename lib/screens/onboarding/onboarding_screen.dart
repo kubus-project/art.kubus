@@ -11,7 +11,8 @@ import '../../widgets/gradient_icon_card.dart';
 import '../../screens/desktop/desktop_shell.dart';
 import '../desktop/onboarding/desktop_onboarding_screen.dart';
 import 'permissions_screen.dart';
-import '../../utils/app_color_utils.dart';
+import '../../utils/design_tokens.dart';
+import '../../widgets/kubus_button.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -278,7 +279,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
         final effectiveSmallScreen = isSmallScreen || constraintSmallScreen;
         
         return Padding(
-          padding: EdgeInsets.all(effectiveSmallScreen ? 20 : 24),
+          padding: EdgeInsets.all(effectiveSmallScreen ? KubusSpacing.lg : KubusSpacing.xl),
           child: Column(
             children: [
               // Page indicator
@@ -289,41 +290,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
                   (index) => _buildDot(index),
                 ),
               ),
-              SizedBox(height: effectiveSmallScreen ? 24 : 32),
+              SizedBox(height: effectiveSmallScreen ? KubusSpacing.lg : KubusSpacing.xl),
               // Action button
-              SizedBox(
-                width: double.infinity,
-                height: effectiveSmallScreen ? 50 : 56,
-                child: ElevatedButton(
-                  onPressed: _currentPage == _pages.length - 1 
-                      ? _goToPermissions
-                      : _nextPage,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: Text(
-                    _currentPage == _pages.length - 1 ? l10n.onboardingGrantPermissions : l10n.commonContinue,
-                    style: GoogleFonts.inter(
-                      fontSize: effectiveSmallScreen ? 16 : 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
+              KubusButton(
+                onPressed: _currentPage == _pages.length - 1 
+                    ? _goToPermissions
+                    : _nextPage,
+                label: _currentPage == _pages.length - 1 ? l10n.onboardingGrantPermissions : l10n.commonContinue,
+                isFullWidth: true,
               ),
-              SizedBox(height: effectiveSmallScreen ? 12 : 16),
+              SizedBox(height: effectiveSmallScreen ? KubusSpacing.sm : KubusSpacing.md),
               // Alternative action
               if (_currentPage == _pages.length - 1)
                 TextButton(
                   onPressed: _startWalletCreation,
                   child: Text(
                     l10n.onboardingSkipPermissions,
-                    style: GoogleFonts.inter(
-                      fontSize: effectiveSmallScreen ? 14 : 16,
+                    style: KubusTypography.textTheme.labelLarge?.copyWith(
                       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
@@ -344,7 +327,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
       height: 8,
       decoration: BoxDecoration(
         color: isActive 
-            ? AppColorUtils.amberAccent
+            ? KubusColors.warning
             : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(4),
       ),

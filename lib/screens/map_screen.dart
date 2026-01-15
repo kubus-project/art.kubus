@@ -38,6 +38,7 @@ import 'community/user_profile_screen.dart';
 import '../utils/grid_utils.dart';
 import '../utils/artwork_media_resolver.dart';
 import '../utils/category_accent_color.dart';
+import '../utils/design_tokens.dart';
 
 import '../utils/app_color_utils.dart';
 import '../utils/map_marker_helper.dart';
@@ -700,7 +701,7 @@ class _MapScreenState extends State<MapScreen>
                 children: [
                   Text(
                     l10n.mapArArtworkNearbyTitle,
-                    style: GoogleFonts.outfit(
+                    style: KubusTypography.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
@@ -708,8 +709,7 @@ class _MapScreenState extends State<MapScreen>
                   Text(
                     l10n.mapArArtworkNearbySubtitle(
                         marker.name, distance.round()),
-                    style: GoogleFonts.outfit(
-                      fontSize: 12,
+                    style: KubusTypography.textTheme.labelMedium?.copyWith(
                       color: Colors.white.withValues(alpha: 0.9),
                     ),
                   ),
@@ -891,7 +891,7 @@ class _MapScreenState extends State<MapScreen>
         SnackBar(
           content: Text(
             l10n.mapMarkerCreateWalletRequired,
-            style: GoogleFonts.outfit(),
+            style: KubusTypography.textTheme.bodyMedium?.copyWith(color: Colors.white),
           ),
           behavior: SnackBarBehavior.floating,
         ),
@@ -950,7 +950,7 @@ class _MapScreenState extends State<MapScreen>
               Expanded(
                 child: Text(
                   l10n.mapMarkerCreatedToast,
-                  style: GoogleFonts.outfit(color: Colors.white),
+                  style: KubusTypography.textTheme.bodyMedium?.copyWith(color: Colors.white),
                 ),
               ),
             ],
@@ -965,7 +965,7 @@ class _MapScreenState extends State<MapScreen>
         SnackBar(
           content: Text(
             l10n.mapMarkerCreateFailedToast,
-            style: GoogleFonts.outfit(color: Colors.white),
+            style: KubusTypography.textTheme.bodyMedium?.copyWith(color: Colors.white),
           ),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
@@ -1080,7 +1080,7 @@ class _MapScreenState extends State<MapScreen>
           SnackBar(
             content: Text(
               e.message,
-              style: GoogleFonts.outfit(color: Colors.white),
+              style: KubusTypography.textTheme.bodyMedium?.copyWith(color: Colors.white),
             ),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
@@ -1452,7 +1452,7 @@ class _MapScreenState extends State<MapScreen>
             Text(
               l10n.mapArtDiscoveredTitle,
               style:
-                  GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold),
+                  KubusTypography.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -1477,7 +1477,7 @@ class _MapScreenState extends State<MapScreen>
             Text(
               artwork.title,
               style:
-                  GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
+                  KubusTypography.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
@@ -1485,7 +1485,7 @@ class _MapScreenState extends State<MapScreen>
               child: ArtworkCreatorByline(
                 artwork: artwork,
                 style:
-                    GoogleFonts.outfit(fontSize: 14, color: Colors.grey[600]),
+                    KubusTypography.textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
                 maxLines: 1,
               ),
             ),
@@ -1494,7 +1494,7 @@ class _MapScreenState extends State<MapScreen>
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: Colors.amber.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: KubusRadius.circular(KubusRadius.xl),
                 border: Border.all(color: Colors.amber),
               ),
               child: Row(
@@ -1504,7 +1504,7 @@ class _MapScreenState extends State<MapScreen>
                   const SizedBox(width: 4),
                   Text(
                     l10n.commonKub8PointsReward(artwork.rewards),
-                    style: GoogleFonts.outfit(
+                    style: KubusTypography.textTheme.labelMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Colors.amber[800],
                     ),
@@ -1518,14 +1518,14 @@ class _MapScreenState extends State<MapScreen>
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child:
-                Text(l10n.commonContinueExploring, style: GoogleFonts.outfit()),
+                Text(l10n.commonContinueExploring, style: KubusTypography.textTheme.labelLarge),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.of(context).pop();
               openArtwork(context, artwork.id, source: 'map_discovery_dialog');
             },
-            child: Text(l10n.commonViewDetails, style: GoogleFonts.outfit()),
+            child: Text(l10n.commonViewDetails, style: KubusTypography.textTheme.labelLarge?.copyWith(color: Colors.white)),
           ),
         ],
       ),
@@ -1943,8 +1943,7 @@ class _MapScreenState extends State<MapScreen>
                       if (canPresentExhibition) ...[
                         Text(
                           'Razstava',
-                          style: GoogleFonts.outfit(
-                            fontSize: 10,
+                          style: KubusTypography.textTheme.labelSmall?.copyWith(
                             fontWeight: FontWeight.w700,
                             color: baseColor,
                             height: 1.0,
@@ -1956,9 +1955,8 @@ class _MapScreenState extends State<MapScreen>
                         displayTitle,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.outfit(
+                        style: KubusTypography.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w700,
-                          fontSize: 14,
                           height: 1.2,
                         ),
                       ),
@@ -1981,8 +1979,7 @@ class _MapScreenState extends State<MapScreen>
                         const SizedBox(width: 3),
                         Text(
                           distanceText,
-                          style: GoogleFonts.outfit(
-                            fontSize: 10,
+                          style: KubusTypography.textTheme.labelSmall?.copyWith(
                             fontWeight: FontWeight.w600,
                             color: baseColor,
                           ),
@@ -2033,10 +2030,10 @@ class _MapScreenState extends State<MapScreen>
                 description.length > 150
                     ? '${description.substring(0, 150)}...'
                     : description,
-                style: GoogleFonts.outfit(
-                  fontSize: 11,
+                style: KubusTypography.textTheme.bodySmall?.copyWith(
                   color: scheme.onSurfaceVariant,
                   height: 1.4,
+                  fontSize: 11,
                 ),
               ),
             ],
@@ -2098,8 +2095,8 @@ class _MapScreenState extends State<MapScreen>
                   canPresentExhibition
                       ? 'Odpri razstavo'
                       : l10n.commonViewDetails,
-                  style: GoogleFonts.outfit(
-                      fontWeight: FontWeight.w600, fontSize: 12),
+                  style: KubusTypography.textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.w600),
                 ),
               ),
             ),
@@ -2128,8 +2125,7 @@ class _MapScreenState extends State<MapScreen>
       final typeLabelPainter = TextPainter(
         text: TextSpan(
           text: 'Razstava',
-          style: GoogleFonts.outfit(
-            fontSize: 10,
+          style: KubusTypography.textTheme.labelSmall?.copyWith(
             fontWeight: FontWeight.w700,
             height: 1.0,
           ),
@@ -2144,9 +2140,8 @@ class _MapScreenState extends State<MapScreen>
     final titlePainter = TextPainter(
       text: TextSpan(
         text: title,
-        style: GoogleFonts.outfit(
+        style: KubusTypography.textTheme.titleSmall?.copyWith(
           fontWeight: FontWeight.w700,
-          fontSize: 14,
           height: 1.2,
         ),
       ),
@@ -2161,8 +2156,7 @@ class _MapScreenState extends State<MapScreen>
       final distancePainter = TextPainter(
         text: TextSpan(
           text: distanceText,
-          style: GoogleFonts.outfit(
-            fontSize: 10,
+          style: KubusTypography.textTheme.labelSmall?.copyWith(
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -2186,9 +2180,9 @@ class _MapScreenState extends State<MapScreen>
       final descriptionPainter = TextPainter(
         text: TextSpan(
           text: description,
-          style: GoogleFonts.outfit(
-            fontSize: 11,
+          style: KubusTypography.textTheme.bodySmall?.copyWith(
             height: 1.4,
+            fontSize: 11,
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
@@ -2205,7 +2199,7 @@ class _MapScreenState extends State<MapScreen>
     final buttonTextPainter = TextPainter(
       text: TextSpan(
         text: buttonLabel,
-        style: GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 12),
+        style: KubusTypography.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
       ),
       textDirection: TextDirection.ltr,
     )..layout();
@@ -2253,7 +2247,7 @@ class _MapScreenState extends State<MapScreen>
         children: [
           Icon(icon, size: 14, color: accent),
           const SizedBox(width: 6),
-          Text(label, style: GoogleFonts.outfit(fontSize: 11)),
+          Text(label, style: KubusTypography.textTheme.labelSmall),
         ],
       ),
     );
@@ -2559,12 +2553,12 @@ class _MapScreenState extends State<MapScreen>
     final scheme = theme.colorScheme;
     return Material(
       elevation: 8,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: KubusRadius.circular(KubusRadius.lg),
       color: scheme.surface,
       child: TextField(
         controller: _searchController,
         focusNode: _searchFocusNode,
-        style: GoogleFonts.outfit(),
+        style: KubusTypography.textTheme.bodyMedium,
         decoration: InputDecoration(
           hintText: l10n.mapSearchHint,
           prefixIcon: const Icon(Icons.search),
@@ -2668,7 +2662,7 @@ class _MapScreenState extends State<MapScreen>
                 padding: const EdgeInsets.all(16),
                 child: Text(
                   l10n.mapSearchMinCharsHint,
-                  style: GoogleFonts.outfit(
+                  style: KubusTypography.textTheme.bodyMedium?.copyWith(
                     color: scheme.onSurfaceVariant,
                   ),
                 ),
@@ -2687,7 +2681,7 @@ class _MapScreenState extends State<MapScreen>
                 padding: const EdgeInsets.all(16),
                 child: Text(
                   l10n.mapNoSuggestions,
-                  style: GoogleFonts.outfit(
+                  style: KubusTypography.textTheme.bodyMedium?.copyWith(
                     color: scheme.onSurfaceVariant,
                   ),
                 ),
@@ -2714,13 +2708,13 @@ class _MapScreenState extends State<MapScreen>
                   ),
                   title: Text(
                     suggestion.label,
-                    style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+                    style: KubusTypography.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                   ),
                   subtitle: suggestion.subtitle == null
                       ? null
                       : Text(
                           suggestion.subtitle!,
-                          style: GoogleFonts.outfit(
+                          style: KubusTypography.textTheme.bodySmall?.copyWith(
                             color: scheme.onSurfaceVariant,
                             fontSize: 12,
                           ),
@@ -2782,7 +2776,7 @@ class _MapScreenState extends State<MapScreen>
           children: [
             Text(
               l10n.mapFiltersTitle,
-              style: GoogleFonts.outfit(
+              style: KubusTypography.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: scheme.onSurface,
               ),
@@ -2808,7 +2802,7 @@ class _MapScreenState extends State<MapScreen>
         const SizedBox(height: 12),
         Text(
           l10n.mapLayersTitle,
-          style: GoogleFonts.outfit(
+          style: KubusTypography.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w600,
             color: scheme.onSurface,
           ),
@@ -2848,7 +2842,7 @@ class _MapScreenState extends State<MapScreen>
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: scheme.surface,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: KubusRadius.circular(18),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.08),
@@ -2879,14 +2873,12 @@ class _MapScreenState extends State<MapScreen>
                       l10n.mapDiscoveryPathTitle,
                       style: GoogleFonts.outfit(
                         fontWeight: FontWeight.w600,
-                        fontSize: 15,
                       ),
                     ),
                     Text(
                       l10n.commonPercentComplete((overall * 100).round()),
-                      style: GoogleFonts.outfit(
+                      style: KubusTypography.textTheme.bodySmall?.copyWith(
                         color: scheme.onSurfaceVariant,
-                        fontSize: 12,
                       ),
                     ),
                   ],
@@ -2951,7 +2943,7 @@ class _MapScreenState extends State<MapScreen>
               children: [
                 Text(
                   task.name,
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+                  style: KubusTypography.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 4),
                 ClipRRect(
@@ -2969,7 +2961,7 @@ class _MapScreenState extends State<MapScreen>
           const SizedBox(width: 12),
           Text(
             '${(pct * 100).round()}%',
-            style: GoogleFonts.outfit(
+            style: KubusTypography.textTheme.labelMedium?.copyWith(
               fontWeight: FontWeight.w600,
               color: scheme.onSurfaceVariant,
             ),
@@ -3033,7 +3025,7 @@ class _MapScreenState extends State<MapScreen>
             decoration: BoxDecoration(
               color: scheme.surface,
               borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(28)),
+                  const BorderRadius.vertical(top: Radius.circular(KubusRadius.xl)),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.18),
@@ -3069,8 +3061,7 @@ class _MapScreenState extends State<MapScreen>
                               children: [
                                 Text(
                                   l10n.mapNearbyArtTitle,
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 18,
+                                  style: KubusTypography.textTheme.titleMedium?.copyWith(
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -3079,8 +3070,7 @@ class _MapScreenState extends State<MapScreen>
                                     artworks.length,
                                     (discoveryProgress * 100).round(),
                                   ),
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 12,
+                                  style: KubusTypography.textTheme.bodySmall?.copyWith(
                                     color: scheme.onSurfaceVariant,
                                   ),
                                 ),
@@ -3209,7 +3199,7 @@ class _MapScreenState extends State<MapScreen>
           padding: const EdgeInsets.all(32),
           decoration: BoxDecoration(
             color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: KubusRadius.circular(24),
             border: Border.all(
               color: scheme.outlineVariant.withValues(alpha: 0.3),
               width: 1,
@@ -3234,8 +3224,7 @@ class _MapScreenState extends State<MapScreen>
               const SizedBox(height: 20),
               Text(
                 l10n.mapEmptyNoArtworksTitle,
-                style: GoogleFonts.outfit(
-                  fontSize: 18,
+                style: KubusTypography.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: scheme.onSurface,
                 ),
@@ -3244,8 +3233,7 @@ class _MapScreenState extends State<MapScreen>
               Text(
                 l10n.mapEmptyNoArtworksDescription,
                 textAlign: TextAlign.center,
-                style: GoogleFonts.outfit(
-                  fontSize: 14,
+                style: KubusTypography.textTheme.bodyMedium?.copyWith(
                   color: scheme.onSurfaceVariant,
                   height: 1.4,
                 ),
@@ -3669,7 +3657,7 @@ class _EmptyStateChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: KubusRadius.circular(20),
         border: Border.all(
           color: color.withValues(alpha: 0.2),
           width: 1,
@@ -3682,8 +3670,7 @@ class _EmptyStateChip extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             label,
-            style: GoogleFonts.outfit(
-              fontSize: 12,
+            style: KubusTypography.textTheme.labelMedium?.copyWith(
               fontWeight: FontWeight.w500,
               color: color,
             ),

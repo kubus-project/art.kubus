@@ -2,15 +2,16 @@ import 'package:flutter/material.dart';
 
 import '../models/recent_activity.dart';
 import 'kubus_color_roles.dart';
+import 'design_tokens.dart';
 
 /// Semantic color palette for UI elements throughout the app.
 /// These provide visual variety while maintaining design consistency.
 class AppColorUtils {
   // Semantic accent colors for varied UI elements
   static const Color tealAccent = Color(0xFF4ECDC4);
-  static const Color coralAccent = Color(0xFFFF6B6B);
-  static const Color greenAccent = Color(0xFF4CAF50);
-  static const Color amberAccent = Color(0xFFFFB300);
+  static const Color coralAccent = KubusColors.errorDark; // 0xFFFF6B6B
+  static const Color greenAccent = KubusColors.successDark; // 0xFF4CAF50
+  static const Color amberAccent = KubusColors.warningDark; // 0xFFFFB300
   static const Color purpleAccent = Color(0xFF9575CD);
   static const Color blueAccent = Color(0xFF42A5F5);
   static const Color pinkAccent = Color(0xFFEC407A);

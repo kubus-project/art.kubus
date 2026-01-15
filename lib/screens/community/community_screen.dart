@@ -58,6 +58,7 @@ import '../../utils/artwork_navigation.dart';
 import '../../widgets/community/community_author_role_badges.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/community_subject_navigation.dart';
+import '../../utils/design_tokens.dart';
 import '../../utils/media_url_resolver.dart';
 import '../season0/season0_screen.dart';
 
@@ -1160,13 +1161,12 @@ class _CommunityScreenState extends State<CommunityScreen>
     final isSmallScreen = MediaQuery.of(context).size.width < 375;
     final animationTheme = context.animationTheme;
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(KubusSpacing.xl),
       child: Row(
         children: [
           Text(
             l10n.communityScreenTitle,
-            style: GoogleFonts.inter(
-              fontSize: 28,
+            style: KubusTypography.textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: Theme.of(context).colorScheme.onSurface,
             ),
@@ -1327,7 +1327,7 @@ class _CommunityScreenState extends State<CommunityScreen>
           margin: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 24),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: KubusRadius.circular(KubusRadius.lg),
           ),
           child: TabBar(
             controller: _tabController,
@@ -1338,7 +1338,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                 .map((tab) => Tab(
                       child: Text(
                         tab,
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.textTheme.labelSmall?.copyWith(
                           fontSize: isSmallScreen ? 9 : 10,
                           fontWeight: FontWeight.w600,
                         ),
@@ -1349,18 +1349,18 @@ class _CommunityScreenState extends State<CommunityScreen>
                 .toList(),
             indicator: BoxDecoration(
               color: themeProvider.accentColor,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: KubusRadius.circular(KubusRadius.md),
             ),
             indicatorPadding: EdgeInsets.all(isSmallScreen ? 2 : 4),
             indicatorSize: TabBarIndicatorSize.tab,
             labelColor: Theme.of(context).colorScheme.onPrimary,
             unselectedLabelColor:
                 Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-            labelStyle: GoogleFonts.inter(
+            labelStyle: KubusTypography.textTheme.labelSmall?.copyWith(
               fontSize: isSmallScreen ? 9 : 10,
               fontWeight: FontWeight.w600,
             ),
-            unselectedLabelStyle: GoogleFonts.inter(
+            unselectedLabelStyle: KubusTypography.textTheme.labelSmall?.copyWith(
               fontSize: isSmallScreen ? 9 : 10,
               fontWeight: FontWeight.normal,
             ),
@@ -1490,15 +1490,15 @@ class _CommunityScreenState extends State<CommunityScreen>
         );
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.all(14),
+        margin: const EdgeInsets.only(bottom: KubusSpacing.md),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [accent.withValues(alpha: 0.15), scheme.primaryContainer.withValues(alpha: 0.4)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: KubusRadius.circular(KubusRadius.md),
           border: Border.all(color: accent.withValues(alpha: 0.3)),
         ),
         child: Row(
@@ -1508,7 +1508,7 @@ class _CommunityScreenState extends State<CommunityScreen>
               height: 40,
               decoration: BoxDecoration(
                 color: accent.withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: KubusRadius.circular(KubusRadius.sm),
               ),
               child: Icon(Icons.rocket_launch_outlined, color: accent, size: 22),
             ),
@@ -1519,8 +1519,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                 children: [
                   Text(
                     l10n.season0BannerTitle,
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
+                    style: KubusTypography.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                       color: scheme.onSurface,
                     ),
@@ -1528,8 +1527,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                   const SizedBox(height: 2),
                   Text(
                     l10n.season0BannerTap,
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
+                    style: KubusTypography.textTheme.bodySmall?.copyWith(
                       color: scheme.onSurface.withValues(alpha: 0.65),
                     ),
                   ),
@@ -1594,8 +1592,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                 child: Center(
                   child: Text(
                     l10n.communityGroupsEndOfDirectory,
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
+                    style: KubusTypography.textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context)
                           .colorScheme
                           .onSurface
@@ -1661,10 +1658,10 @@ class _CommunityScreenState extends State<CommunityScreen>
           .surfaceContainerHighest
           .withValues(alpha: 0.4),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: KubusRadius.circular(KubusRadius.lg),
           borderSide: BorderSide.none,
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+        contentPadding: const EdgeInsets.symmetric(horizontal: KubusSpacing.md, vertical: 0),
       ),
     );
   }
@@ -1673,11 +1670,11 @@ class _CommunityScreenState extends State<CommunityScreen>
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     return Container(
-      padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(KubusSpacing.md),
+      margin: const EdgeInsets.only(bottom: KubusSpacing.sm + 4),
       decoration: BoxDecoration(
         color: scheme.errorContainer,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: KubusRadius.circular(KubusRadius.lg),
       ),
       child: Row(
         children: [
@@ -1686,7 +1683,7 @@ class _CommunityScreenState extends State<CommunityScreen>
           Expanded(
             child: Text(
               message,
-              style: GoogleFonts.inter(
+              style: KubusTypography.textTheme.bodyMedium?.copyWith(
                 color: scheme.onErrorContainer,
                 fontWeight: FontWeight.w600,
               ),
@@ -1717,7 +1714,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: scheme.primaryContainer,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: KubusRadius.circular(18),
         border: Border.all(color: scheme.outline.withValues(alpha: 0.5)),
       ),
       child: Column(
@@ -1732,8 +1729,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                   children: [
                     Text(
                       group.name,
-                      style: GoogleFonts.inter(
-                        fontSize: 18,
+                      style: KubusTypography.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                         color: scheme.onSurface,
                       ),
@@ -1743,8 +1739,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                       group.description?.isNotEmpty == true
                           ? group.description!
                           : l10n.communityGroupNoDescription,
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
+                      style: KubusTypography.textTheme.bodySmall?.copyWith(
                         color: scheme.onSurface.withValues(alpha: 0.7),
                       ),
                       maxLines: 2,
@@ -1774,7 +1769,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                       : scheme.onPrimary,
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  textStyle: GoogleFonts.inter(fontSize: 13),
+                  textStyle: KubusTypography.textTheme.labelMedium,
                 ),
               ),
             ],
@@ -1800,18 +1795,17 @@ class _CommunityScreenState extends State<CommunityScreen>
           if (group.latestPost != null) ...[
             const SizedBox(height: 12),
             Container(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(KubusSpacing.md),
               decoration: BoxDecoration(
                 color: scheme.surface,
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: KubusRadius.circular(KubusRadius.md + 2),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     l10n.communityGroupLatestPostLabel,
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
+                    style: KubusTypography.textTheme.labelSmall?.copyWith(
                       fontWeight: FontWeight.w600,
                       color: scheme.onSurface.withValues(alpha: 0.6),
                     ),
@@ -1821,18 +1815,17 @@ class _CommunityScreenState extends State<CommunityScreen>
                     group.latestPost?.content ?? '—',
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.textTheme.bodySmall?.copyWith(
                       color: scheme.onSurface,
-                      fontSize: 13,
                     ),
                   ),
                   if (group.latestPost?.createdAt != null) ...[
                     const SizedBox(height: 4),
                     Text(
                       _getTimeAgo(group.latestPost!.createdAt!),
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
+                      style: KubusTypography.textTheme.labelSmall?.copyWith(
                         color: scheme.onSurface.withValues(alpha: 0.5),
+                        fontSize: 10,
                       ),
                     ),
                   ],
@@ -1919,18 +1912,17 @@ class _CommunityScreenState extends State<CommunityScreen>
     }
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         color: scheme.primaryContainer,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: KubusRadius.circular(18),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             l10n.communityArtFeedHeaderTitle,
-            style: GoogleFonts.inter(
-              fontSize: 18,
+            style: KubusTypography.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w700,
               color: scheme.onSurface,
             ),
@@ -1940,16 +1932,14 @@ class _CommunityScreenState extends State<CommunityScreen>
             l10n.communityArtFeedRadiusSubtitle(
               l10n.commonDistanceKm(radiusKm.toStringAsFixed(1)),
             ),
-            style: GoogleFonts.inter(
-              fontSize: 13,
+            style: KubusTypography.textTheme.bodySmall?.copyWith(
               color: scheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
           const SizedBox(height: 4),
           Text(
             subtitle,
-            style: GoogleFonts.inter(
-              fontSize: 12,
+            style: KubusTypography.textTheme.labelSmall?.copyWith(
               color: scheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
@@ -2008,10 +1998,10 @@ class _CommunityScreenState extends State<CommunityScreen>
     VoidCallback? onAction,
   }) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 24),
-      padding: const EdgeInsets.all(24),
+      margin: const EdgeInsets.symmetric(vertical: KubusSpacing.xl),
+      padding: const EdgeInsets.all(KubusSpacing.xl),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: KubusRadius.circular(18),
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
       ),
       child: Column(
@@ -2022,8 +2012,7 @@ class _CommunityScreenState extends State<CommunityScreen>
           const SizedBox(height: 12),
           Text(
             title,
-            style: GoogleFonts.inter(
-              fontSize: 16,
+            style: KubusTypography.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -2031,8 +2020,7 @@ class _CommunityScreenState extends State<CommunityScreen>
           Text(
             description,
             textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
-              fontSize: 13,
+            style: KubusTypography.textTheme.bodySmall?.copyWith(
               color: Theme.of(context)
                   .colorScheme
                   .onSurface
@@ -2059,10 +2047,10 @@ class _CommunityScreenState extends State<CommunityScreen>
         (post.mediaUrls.isNotEmpty ? post.mediaUrls.first : null);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 20),
+      margin: const EdgeInsets.only(bottom: KubusSpacing.lg),
       decoration: BoxDecoration(
         color: scheme.primaryContainer,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: KubusRadius.circular(20),
         border: Border.all(color: scheme.outline.withValues(alpha: 0.4)),
       ),
       child: Column(
@@ -2077,11 +2065,11 @@ class _CommunityScreenState extends State<CommunityScreen>
             ),
             title: Text(
               post.authorName,
-              style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+              style: KubusTypography.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
             ),
             subtitle: Text(
               '${_getTimeAgo(post.timestamp)} • ${post.category}',
-              style: GoogleFonts.inter(fontSize: 12),
+              style: KubusTypography.textTheme.labelSmall,
             ),
             trailing: IconButton(
               tooltip: l10n.commonShare,
@@ -2135,14 +2123,13 @@ class _CommunityScreenState extends State<CommunityScreen>
               ),
             ),
           Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(KubusSpacing.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   post.content,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
+                  style: KubusTypography.textTheme.bodyMedium?.copyWith(
                     height: 1.4,
                     color: scheme.onSurface,
                   ),
@@ -2163,8 +2150,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                 ? l10n.commonDistanceKmAway(post.distanceKm!.toStringAsFixed(1))
                                 : null,
                           ].whereType<String>().join(' • '),
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
+                          style: KubusTypography.textTheme.labelSmall?.copyWith(
                             color: scheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
@@ -3033,7 +3019,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       icon: Icon(Icons.edit_outlined, color: scheme.onPrimary),
       label: Text(
         l10n.communityFabNewPost,
-        style: GoogleFonts.inter(
+        style: KubusTypography.textTheme.labelMedium?.copyWith(
           fontWeight: FontWeight.w600,
           color: scheme.onPrimary,
         ),
@@ -3112,7 +3098,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                 decoration: BoxDecoration(
                                   color: scheme.surface,
-                                  borderRadius: BorderRadius.circular(8),
+                                  borderRadius: KubusRadius.circular(KubusRadius.sm),
                                   boxShadow: [
                                     BoxShadow(
                                       color: Colors.black.withValues(alpha: 0.1),
@@ -3123,8 +3109,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                 ),
                                 child: Text(
                                   option.label,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 13,
+                                  style: KubusTypography.textTheme.labelMedium?.copyWith(
                                     fontWeight: FontWeight.w500,
                                     color: scheme.onSurface,
                                   ),
@@ -3173,7 +3158,7 @@ class _CommunityScreenState extends State<CommunityScreen>
             child: Text(
               _isFabExpanded ? l10n.commonClose : mainLabel,
               key: ValueKey(_isFabExpanded),
-              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+              style: KubusTypography.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
             ),
           ),
         ),
@@ -3204,7 +3189,7 @@ class _CommunityScreenState extends State<CommunityScreen>
               height: MediaQuery.of(context).size.height * 0.65,
               decoration: BoxDecoration(
                 color: scheme.surface,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(KubusRadius.xl)),
               ),
               child: Column(
                 children: [
@@ -3214,7 +3199,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                     margin: const EdgeInsets.symmetric(vertical: 12),
                     decoration: BoxDecoration(
                       color: scheme.outline.withValues(alpha: 0.4),
-                      borderRadius: BorderRadius.circular(3),
+                      borderRadius: KubusRadius.circular(3),
                     ),
                   ),
                   Padding(
@@ -3223,8 +3208,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                       children: [
                         Text(
                           l10n.communityCreateGroupTitle,
-                          style: GoogleFonts.inter(
-                            fontSize: 20,
+                          style: KubusTypography.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
                             color: scheme.onSurface,
                           ),
@@ -3249,7 +3233,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                               labelText: l10n.communityCreateGroupNameLabel,
                               hintText: l10n.communityCreateGroupNameHint,
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: KubusRadius.circular(KubusRadius.md),
                               ),
                               filled: true,
                               fillColor: scheme.primaryContainer.withValues(alpha: 0.4),

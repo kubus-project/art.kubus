@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'design_tokens.dart';
 
 /// Centralized color roles for the art.kubus app.
 /// All UI color decisions should go through this extension or AppColorUtils.
@@ -124,17 +125,17 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
 
   /// Default dark theme roles
   static const dark = KubusColorRoles(
-    likeAction: Color(0xFFFF6B6B), // Coral red - consistent across app
-    tagChipBackground: Color(0xFF9575CD), // Purple - sanctioned for tags
-    tagChipForeground: Colors.white,
-    positiveAction: Color(0xFF4CAF50), // Green
-    negativeAction: Color(0xFFFF6B6B), // Coral red
-    warningAction: Color(0xFFFFB300), // Amber
+    likeAction: KubusColors.errorDark, // Coral red - consistent across app
+    tagChipBackground: Color(0xFF9575CD), // Keep custom purple for now or migrate if token exists
+    tagChipForeground: KubusColors.textPrimaryDark,
+    positiveAction: KubusColors.successDark,
+    negativeAction: KubusColors.errorDark,
+    warningAction: KubusColors.warningDark,
     lockedFeature: Color(0xFFFF9800), // Orange
     statTeal: Color(0xFF4ECDC4),
-    statCoral: Color(0xFFFF6B6B),
-    statGreen: Color(0xFF4CAF50),
-    statAmber: Color(0xFFFFB300),
+    statCoral: KubusColors.errorDark,
+    statGreen: KubusColors.successDark,
+    statAmber: KubusColors.warningDark,
     statPurple: Color(0xFF9575CD),
     achievementGold: Color(0xFFFFD700),
     artistStudioRed: Colors.red,
@@ -142,17 +143,17 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
 
   /// Default light theme roles
   static const light = KubusColorRoles(
-    likeAction: Color(0xFFE53935), // Material red 600
+    likeAction: KubusColors.error, // Material red 600
     tagChipBackground: Color(0xFF7E57C2), // Deep purple 400
-    tagChipForeground: Colors.white,
-    positiveAction: Color(0xFF43A047), // Green 600
-    negativeAction: Color(0xFFE53935), // Red 600
-    warningAction: Color(0xFFFFA000), // Amber 700
+    tagChipForeground: KubusColors.textPrimaryLight,
+    positiveAction: KubusColors.success, // Green 600
+    negativeAction: KubusColors.error, // Red 600
+    warningAction: KubusColors.warning, // Amber 700
     lockedFeature: Color(0xFFFB8C00), // Orange 600
     statTeal: Color(0xFF00897B), // Teal 600
-    statCoral: Color(0xFFE53935), // Red 600
-    statGreen: Color(0xFF43A047), // Green 600
-    statAmber: Color(0xFFFFA000), // Amber 700
+    statCoral: KubusColors.error, // Red 600
+    statGreen: KubusColors.success, // Green 600
+    statAmber: KubusColors.warning, // Amber 700
     statPurple: Color(0xFF7E57C2), // Deep purple 400
     achievementGold: Color(0xFFFFC107), // Amber 500
     artistStudioRed: Colors.red,
