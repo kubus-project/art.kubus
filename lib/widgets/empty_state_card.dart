@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/themeprovider.dart';
+import 'glass_components.dart';
 
 class EmptyStateCard extends StatelessWidget {
   final IconData icon;
@@ -25,20 +26,28 @@ class EmptyStateCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final accent =
         Provider.of<ThemeProvider>(context, listen: false).accentColor;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final radius = BorderRadius.circular(16);
+    final glassTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
+
     return Container(
       width: double.infinity,
-      // Ensure the child Column is centered within the available space
-      // when the card is placed inside a fixed-height parent.
       alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: radius,
         border: Border.all(
-          color: Theme.of(context).colorScheme.onSurface.withAlpha((0.08 * 255).round()),
+          color: scheme.outline.withValues(alpha: 0.14),
         ),
       ),
-      child: Column(
+      child: LiquidGlassPanel(
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+        margin: EdgeInsets.zero,
+        borderRadius: radius,
+        showBorder: false,
+        backgroundColor: glassTint,
+        child: Column(
         // Center content both vertically and horizontally so the icon/text
         // do not hug the top or bottom when the card is placed in a fixed
         // height container (e.g. SizedBox).
@@ -77,6 +86,7 @@ class EmptyStateCard extends StatelessWidget {
             ),
           ],
         ],
+        ),
       ),
     );
   }

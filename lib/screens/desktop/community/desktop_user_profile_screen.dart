@@ -191,18 +191,14 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
     if (isLoading) {
       return Scaffold(
-        backgroundColor: themeProvider.isDarkMode
-            ? Theme.of(context).scaffoldBackgroundColor
-            : const Color(0xFFF8F9FA),
+        backgroundColor: Colors.transparent,
         body: const Center(child: AppLoading()),
       );
     }
 
     if (user == null) {
       return Scaffold(
-        backgroundColor: themeProvider.isDarkMode
-            ? Theme.of(context).scaffoldBackgroundColor
-            : const Color(0xFFF8F9FA),
+        backgroundColor: Colors.transparent,
         body: Center(
           child: EmptyStateCard(
             icon: Icons.person_off_outlined,
@@ -219,9 +215,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     final isInstitution = user!.isInstitution || (daoReview != null && daoReview.isInstitutionApplication && daoReview.isApproved);
 
     return Scaffold(
-      backgroundColor: themeProvider.isDarkMode
-          ? Theme.of(context).scaffoldBackgroundColor
-          : const Color(0xFFF8F9FA),
+      backgroundColor: Colors.transparent,
       body: AnimatedBuilder(
         animation: _animationController,
         builder: (context, child) {

@@ -7,6 +7,7 @@ import '../../../providers/web3provider.dart';
 import '../../../models/dao.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/kubus_color_roles.dart';
+import '../../../widgets/glass_components.dart';
 import '../components/desktop_widgets.dart';
 import '../desktop_shell.dart';
 import '../../web3/dao/governance_hub.dart';
@@ -51,9 +52,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
     final isLarge = screenWidth >= 1200;
 
     return Scaffold(
-      backgroundColor: themeProvider.isDarkMode
-          ? Theme.of(context).scaffoldBackgroundColor
-          : const Color(0xFFF8F9FA),
+      backgroundColor: Colors.transparent,
       body: AnimatedBuilder(
         animation: _animationController,
         builder: (context, child) {
@@ -70,7 +69,6 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
                   flex: isLarge ? 2 : 3,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Theme.of(context).scaffoldBackgroundColor,
                       border: Border(
                         right: BorderSide(
                           color: Theme.of(context)
@@ -99,11 +97,30 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
   }
 
   Widget _buildRightPanel(ThemeProvider themeProvider) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
-      color: Theme.of(context).colorScheme.surface,
-      child: ListView(
-        padding: const EdgeInsets.all(24),
-        children: [
+      decoration: BoxDecoration(
+        border: Border(
+          left: BorderSide(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.06)
+                : scheme.outline.withValues(alpha: 0.10),
+            width: 1,
+          ),
+        ),
+      ),
+      child: LiquidGlassPanel(
+        padding: EdgeInsets.zero,
+        margin: EdgeInsets.zero,
+        borderRadius: BorderRadius.zero,
+        showBorder: false,
+        backgroundColor: scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10),
+        child: ListView(
+          padding: const EdgeInsets.all(24),
+          children: [
           // Header
           Text(
             'DAO Overview',
@@ -187,7 +204,8 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
           ),
           const SizedBox(height: 12),
           _buildRecentActivity(themeProvider),
-        ],
+          ],
+        ),
       ),
     );
   }

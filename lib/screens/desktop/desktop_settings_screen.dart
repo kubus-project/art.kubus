@@ -26,6 +26,9 @@ import '../onboarding/onboarding_screen.dart';
 import '../../../config/config.dart';
 import '../../providers/locale_provider.dart';
 import '../../utils/app_color_utils.dart';
+import '../../widgets/glass_components.dart';
+import '../../utils/design_tokens.dart';
+ 
 
 
 /// Desktop profile and settings screen
@@ -214,44 +217,59 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     final screenWidth = MediaQuery.of(context).size.width;
     final isLarge = screenWidth >= 1200;
 
-    return Scaffold(
-      backgroundColor: themeProvider.isDarkMode
-          ? Theme.of(context).scaffoldBackgroundColor
-          : const Color(0xFFF8F9FA),
-      body: AnimatedBuilder(
-        animation: _animationController,
-        builder: (context, child) {
-          return FadeTransition(
-            opacity: CurvedAnimation(
-              parent: _animationController,
-              curve: animationTheme.fadeCurve,
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Settings sidebar
-                if (isLarge)
-                  Container(
-                    width: 280,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
-                      border: Border(
-                        right: BorderSide(
-                          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+    return AnimatedGradientBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: AnimatedBuilder(
+          animation: _animationController,
+          builder: (context, child) {
+            return FadeTransition(
+              opacity: CurvedAnimation(
+                parent: _animationController,
+                curve: animationTheme.fadeCurve,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Settings sidebar
+                  if (isLarge)
+                    SizedBox(
+                      width: 280,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border(
+                            right: BorderSide(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .outline
+                                  .withValues(alpha: 0.1),
+                            ),
+                          ),
+                        ),
+                        child: LiquidGlassPanel(
+                          padding: EdgeInsets.zero,
+                          margin: EdgeInsets.zero,
+                          borderRadius: BorderRadius.zero,
+                          blurSigma: KubusGlassEffects.blurSigmaLight,
+                          showBorder: false,
+                          backgroundColor:
+                              Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.black.withValues(alpha: 0.20)
+                                  : Colors.white.withValues(alpha: 0.24),
+                          child: _buildSettingsSidebar(themeProvider),
                         ),
                       ),
                     ),
-                    child: _buildSettingsSidebar(themeProvider),
-                  ),
 
-                // Main content
-                Expanded(
-                  child: _buildMainContent(themeProvider, isLarge),
-                ),
-              ],
-            ),
-          );
-        },
+                  // Main content
+                  Expanded(
+                    child: _buildMainContent(themeProvider, isLarge),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }

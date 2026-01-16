@@ -29,6 +29,7 @@ import '../../events/exhibition_creator_screen.dart';
 import '../../events/exhibition_detail_screen.dart';
 import '../../events/exhibition_list_screen.dart';
 import '../../map_markers/manage_markers_screen.dart';
+import '../../../widgets/glass_components.dart';
 
 /// Desktop Artist Studio screen with split-panel layout
 /// Left: Mobile artist studio view
@@ -158,7 +159,6 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-    final scheme = Theme.of(context).colorScheme;
     final animationTheme = context.animationTheme;
     final l10n = AppLocalizations.of(context)!;
     final screenWidth = MediaQuery.of(context).size.width;
@@ -210,9 +210,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
     }
 
     return Scaffold(
-      backgroundColor: themeProvider.isDarkMode
-          ? Theme.of(context).scaffoldBackgroundColor
-          : scheme.surface,
+      backgroundColor: Colors.transparent,
       body: AnimatedBuilder(
         animation: _animationController,
         builder: (context, child) {
@@ -229,7 +227,6 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                   flex: isLarge ? 2 : 3,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Theme.of(context).scaffoldBackgroundColor,
                       border: Border(
                         right: BorderSide(
                           color: Theme.of(context)
@@ -270,6 +267,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
   Widget _buildRightPanel(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final dashboardState = context.watch<DesktopDashboardStateProvider>();
     final section = dashboardState.artistStudioSection;
 
@@ -300,11 +298,24 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
 
     final showExhibitions = AppConfig.isFeatureEnabled('exhibitions');
 
+    final glassTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
+
     return Container(
-      color: scheme.surface,
-      child: ListView(
-        padding: const EdgeInsets.all(24),
-        children: [
+      decoration: BoxDecoration(
+        border: Border(
+          left: BorderSide(
+            color: scheme.outline.withValues(alpha: 0.10),
+          ),
+        ),
+      ),
+      child: LiquidGlassPanel(
+        padding: EdgeInsets.zero,
+        borderRadius: BorderRadius.zero,
+        showBorder: false,
+        backgroundColor: glassTint,
+        child: ListView(
+          padding: const EdgeInsets.all(24),
+          children: [
           // Header
           Text(
             sectionTitle(),
@@ -538,7 +549,8 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
             const SizedBox(height: 12),
             _buildRecentActivity(themeProvider),
           ],
-        ],
+          ],
+        ),
       ),
     );
   }

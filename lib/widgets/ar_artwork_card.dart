@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 import '../models/artwork.dart';
 import '../services/ar_integration_service.dart';
 import 'artwork_creator_byline.dart';
+import 'glass_components.dart';
 
 /// Card widget displaying AR-enabled artwork with interaction options
 class ARArtworkCard extends StatefulWidget {
@@ -84,13 +85,33 @@ class _ARArtworkCardState extends State<ARArtworkCard> {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final l10n = AppLocalizations.of(context)!;
+    final isDark = theme.brightness == Brightness.dark;
+    final radius = BorderRadius.circular(16);
+    final glassTint = colors.surface.withValues(alpha: isDark ? 0.16 : 0.10);
     final isInRange = _isInRange();
     final canViewAR = widget.artwork.arEnabled && isInRange;
 
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Column(
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        border: Border.all(
+          color: colors.outline.withValues(alpha: 0.14),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: colors.shadow.withValues(alpha: 0.12),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: LiquidGlassPanel(
+        padding: EdgeInsets.zero,
+        margin: EdgeInsets.zero,
+        borderRadius: radius,
+        showBorder: false,
+        backgroundColor: glassTint,
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Image with AR badge
@@ -312,6 +333,7 @@ class _ARArtworkCardState extends State<ARArtworkCard> {
             ),
           ),
         ],
+        ),
       ),
     );
   }

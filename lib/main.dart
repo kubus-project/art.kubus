@@ -64,6 +64,8 @@ import 'services/backend_api_service.dart';
 import 'services/telemetry/telemetry_route_observer.dart';
 import 'services/telemetry/telemetry_service.dart';
 
+import 'widgets/glass_components.dart';
+
 import 'screens/collab/invites_inbox_screen.dart';
 import 'screens/events/event_detail_screen.dart';
 import 'screens/events/exhibition_detail_screen.dart';
@@ -213,6 +215,16 @@ class _AppLauncherState extends State<AppLauncher> {
               theme: themeProvider.lightTheme,
               darkTheme: themeProvider.darkTheme,
               themeMode: themeProvider.themeMode,
+              builder: (context, child) {
+                // Safety net for Flutter web: if any route uses transparency and
+                // forgets to paint its own backdrop, we'd otherwise see the host
+                // page's HTML background.
+                return AnimatedGradientBackground(
+                  animate: false,
+                  intensity: 0.22,
+                  child: child ?? const SizedBox.shrink(),
+                );
+              },
               home: Scaffold(body: const AppLoading()),
             );
           }
@@ -495,6 +507,15 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
           theme: themeProvider.lightTheme,
           darkTheme: themeProvider.darkTheme,
           themeMode: themeProvider.themeMode,
+          builder: (context, child) {
+            // Global backdrop to prevent 'HTML background bleed-through' on web
+            // when screens use transparent scaffolds for glass/gradient UI.
+            return AnimatedGradientBackground(
+              animate: false,
+              intensity: 0.22,
+              child: child ?? const SizedBox.shrink(),
+            );
+          },
           onGenerateRoute: (settings) {
             final name = (settings.name ?? '').trim();
             if (name.isEmpty) {
@@ -540,7 +561,6 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
             },
             '/wallet_connect': (context) => const ConnectWallet(),
             '/connect_wallet': (context) => const ConnectWallet(),
-            '/connect-wallet': (context) => const ConnectWallet(),
             '/sign-in': (context) {
               final args = ModalRoute.of(context)?.settings.arguments;
               if (args is Map) {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../glass_components.dart';
 
 /// Design system spacing constants for detail screens
 class DetailSpacing {
@@ -114,32 +115,31 @@ class DetailCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
 
-    final card = Container(
+    final radius = BorderRadius.circular(borderRadius);
+    final glassTint = (backgroundColor ?? scheme.surface)
+        .withValues(alpha: isDark ? 0.16 : 0.10);
+
+    return Container(
       decoration: BoxDecoration(
-        color: backgroundColor ?? scheme.surface,
-        borderRadius: BorderRadius.circular(borderRadius),
+        borderRadius: radius,
         border: showBorder
-            ? Border.all(color: scheme.outlineVariant.withValues(alpha: 0.4))
+            ? Border.all(color: scheme.outlineVariant.withValues(alpha: 0.35))
             : null,
       ),
-      padding: padding ?? const EdgeInsets.all(DetailSpacing.lg),
-      child: child,
+      child: LiquidGlassPanel(
+        padding: padding ?? const EdgeInsets.all(DetailSpacing.lg),
+        margin: EdgeInsets.zero,
+        borderRadius: radius,
+        showBorder: false,
+        backgroundColor: glassTint,
+        onTap: onTap,
+        child: child,
+      ),
     );
-
-    if (onTap != null) {
-      return Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(borderRadius),
-          child: card,
-        ),
-      );
-    }
-
-    return card;
   }
 }
 
@@ -305,51 +305,55 @@ class DetailActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
     final effectiveActiveColor = activeColor ?? scheme.primary;
+
+    final isEnabled = onPressed != null;
 
     final bgColor = backgroundColor ??
         (isActive
-            ? effectiveActiveColor.withValues(alpha: 0.1)
-            : scheme.surfaceContainerHighest);
+            ? effectiveActiveColor.withValues(alpha: isDark ? 0.22 : 0.16)
+            : scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10));
     final fgColor =
         foregroundColor ?? (isActive ? effectiveActiveColor : scheme.onSurface);
 
-    return Material(
-      color: bgColor,
-      borderRadius: BorderRadius.circular(DetailRadius.md),
-      child: InkWell(
+    final radius = BorderRadius.circular(DetailRadius.md);
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        border: Border.all(
+          color: isActive
+              ? effectiveActiveColor.withValues(alpha: 0.28)
+              : scheme.outlineVariant.withValues(alpha: isEnabled ? 0.35 : 0.22),
+        ),
+      ),
+      child: LiquidGlassPanel(
+        padding: const EdgeInsets.symmetric(
+          vertical: DetailSpacing.md,
+          horizontal: DetailSpacing.lg,
+        ),
+        margin: EdgeInsets.zero,
+        borderRadius: radius,
+        showBorder: false,
+        backgroundColor: bgColor,
         onTap: onPressed,
-        borderRadius: BorderRadius.circular(DetailRadius.md),
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            vertical: DetailSpacing.md,
-            horizontal: DetailSpacing.lg,
-          ),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(DetailRadius.md),
-            border: Border.all(
-              color: isActive
-                  ? effectiveActiveColor.withValues(alpha: 0.25)
-                  : scheme.outlineVariant.withValues(alpha: 0.4),
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 18, color: fgColor),
-              const SizedBox(width: DetailSpacing.sm),
-              Flexible(
-                child: Text(
-                  label,
-                  style:
-                      DetailTypography.button(context).copyWith(color: fgColor),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 18, color: fgColor),
+            const SizedBox(width: DetailSpacing.sm),
+            Flexible(
+              child: Text(
+                label,
+                style: DetailTypography.button(context).copyWith(color: fgColor),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

@@ -10,6 +10,8 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../config/config.dart';
 import '../../providers/exhibitions_provider.dart';
 import 'exhibition_detail_screen.dart';
+import '../../widgets/glass_components.dart';
+ 
 
 class ExhibitionCreatorScreen extends StatefulWidget {
   const ExhibitionCreatorScreen({super.key});
@@ -96,176 +98,184 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
       );
     }
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
+    return AnimatedGradientBackground(
+      child: Scaffold(
         backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Text(
-          l10n.exhibitionCreatorAppBarTitle,
-          style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          title: Text(
+            l10n.exhibitionCreatorAppBarTitle,
+            style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+          ),
         ),
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Form(
-            key: _formKey,
-            child: ListView(
-              children: [
-                Text(
-                  l10n.exhibitionCreatorBasicsTitle,
-                  style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _titleController,
-                  decoration: InputDecoration(
-                    labelText: l10n.exhibitionCreatorTitleLabel,
-                    border: OutlineInputBorder(),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Form(
+              key: _formKey,
+              child: ListView(
+                children: [
+                  Text(
+                    l10n.exhibitionCreatorBasicsTitle,
+                    style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700),
                   ),
-                  validator: (v) {
-                    if ((v ?? '').trim().isEmpty) return l10n.exhibitionCreatorTitleValidation;
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _descriptionController,
-                  decoration: InputDecoration(
-                    labelText: l10n.exhibitionCreatorDescriptionLabel,
-                    border: OutlineInputBorder(),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _titleController,
+                    decoration: InputDecoration(
+                      labelText: l10n.exhibitionCreatorTitleLabel,
+                      border: const OutlineInputBorder(),
+                    ),
+                    validator: (v) {
+                      if ((v ?? '').trim().isEmpty) return l10n.exhibitionCreatorTitleValidation;
+                      return null;
+                    },
                   ),
-                  minLines: 3,
-                  maxLines: 6,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _locationController,
-                  decoration: InputDecoration(
-                    labelText: l10n.exhibitionCreatorLocationLabel,
-                    border: OutlineInputBorder(),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _descriptionController,
+                    decoration: InputDecoration(
+                      labelText: l10n.exhibitionCreatorDescriptionLabel,
+                      border: const OutlineInputBorder(),
+                    ),
+                    minLines: 3,
+                    maxLines: 6,
                   ),
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  l10n.exhibitionCreatorScheduleTitle,
-                  style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 12),
-                _DateRow(
-                  label: l10n.exhibitionCreatorStartsLabel,
-                  value: _startsAt,
-                  onPick: () => _pickDate(isStart: true),
-                  onClear: () => setState(() => _startsAt = null),
-                ),
-                const SizedBox(height: 10),
-                _DateRow(
-                  label: l10n.exhibitionCreatorEndsLabel,
-                  value: _endsAt,
-                  onPick: () => _pickDate(isStart: false),
-                  onClear: () => setState(() => _endsAt = null),
-                ),
-                const SizedBox(height: 18),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: _published,
-                  title: Text(l10n.exhibitionCreatorPublishTitle, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-                  subtitle: Text(
-                    _published ? l10n.exhibitionCreatorPublishVisible : l10n.exhibitionCreatorPublishDraft,
-                    style: GoogleFonts.inter(color: scheme.onSurface.withValues(alpha: 0.7), fontSize: 12),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _locationController,
+                    decoration: InputDecoration(
+                      labelText: l10n.exhibitionCreatorLocationLabel,
+                      border: const OutlineInputBorder(),
+                    ),
                   ),
-                  onChanged: _submitting ? null : (v) => setState(() => _published = v),
-                ),
-                const SizedBox(height: 16),
-
-                Text(
-                  l10n.commonCoverImage,
-                  style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _submitting ? null : _pickCoverImage,
-                        icon: const Icon(Icons.image_outlined),
-                        label: Text(
-                          _coverBytes == null ? l10n.commonUpload : l10n.commonChangeCover,
-                          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                  const SizedBox(height: 18),
+                  Text(
+                    l10n.exhibitionCreatorScheduleTitle,
+                    style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 12),
+                  _DateRow(
+                    label: l10n.exhibitionCreatorStartsLabel,
+                    value: _startsAt,
+                    onPick: () => _pickDate(isStart: true),
+                    onClear: () => setState(() => _startsAt = null),
+                  ),
+                  const SizedBox(height: 10),
+                  _DateRow(
+                    label: l10n.exhibitionCreatorEndsLabel,
+                    value: _endsAt,
+                    onPick: () => _pickDate(isStart: false),
+                    onClear: () => setState(() => _endsAt = null),
+                  ),
+                  const SizedBox(height: 18),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: _published,
+                    title: Text(
+                      l10n.exhibitionCreatorPublishTitle,
+                      style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      _published ? l10n.exhibitionCreatorPublishVisible : l10n.exhibitionCreatorPublishDraft,
+                      style: GoogleFonts.inter(
+                        color: scheme.onSurface.withValues(alpha: 0.7),
+                        fontSize: 12,
+                      ),
+                    ),
+                    onChanged: _submitting ? null : (v) => setState(() => _published = v),
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    l10n.commonCoverImage,
+                    style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _submitting ? null : _pickCoverImage,
+                          icon: const Icon(Icons.image_outlined),
+                          label: Text(
+                            _coverBytes == null ? l10n.commonUpload : l10n.commonChangeCover,
+                            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        tooltip: l10n.commonRemove,
+                        onPressed: (_submitting || _coverBytes == null)
+                            ? null
+                            : () => setState(() {
+                                  _coverBytes = null;
+                                  _coverFileName = null;
+                                }),
+                        icon: const Icon(Icons.delete_outline),
+                      ),
+                    ],
+                  ),
+                  if (_coverBytes != null) ...[
+                    const SizedBox(height: 10),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        height: 160,
+                        width: double.infinity,
+                        color: scheme.surfaceContainerHighest,
+                        child: Image.memory(
+                          _coverBytes!,
+                          fit: BoxFit.cover,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      tooltip: l10n.commonRemove,
-                      onPressed: (_submitting || _coverBytes == null)
-                          ? null
-                          : () => setState(() {
-                                _coverBytes = null;
-                                _coverFileName = null;
-                              }),
-                      icon: const Icon(Icons.delete_outline),
-                    ),
                   ],
-                ),
-                if (_coverBytes != null) ...[
-                  const SizedBox(height: 10),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      height: 160,
-                      width: double.infinity,
-                      color: scheme.surfaceContainerHighest,
-                      child: Image.memory(
-                        _coverBytes!,
-                        fit: BoxFit.cover,
+                  const SizedBox(height: 18),
+                  if (AppConfig.isFeatureEnabled('collabInvites'))
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: scheme.primaryContainer.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: scheme.outline.withValues(alpha: 0.2)),
                       ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.group_add_outlined, size: 20, color: scheme.primary),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              l10n.exhibitionCreatorCollabHint,
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: scheme.onSurface.withValues(alpha: 0.8),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _submitting ? null : _submit,
+                      child: _submitting
+                          ? const SizedBox(
+                              height: 18,
+                              width: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2.2),
+                            )
+                          : Text(
+                              l10n.commonCreate,
+                              style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+                            ),
                     ),
                   ),
                 ],
-                const SizedBox(height: 18),
-
-                // Collaboration hint
-                if (AppConfig.isFeatureEnabled('collabInvites'))
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: scheme.primaryContainer.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: scheme.outline.withValues(alpha: 0.2)),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.group_add_outlined, size: 20, color: scheme.primary),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            l10n.exhibitionCreatorCollabHint,
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              color: scheme.onSurface.withValues(alpha: 0.8),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _submitting ? null : _submit,
-                    child: _submitting
-                        ? const SizedBox(
-                            height: 18,
-                            width: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2.2),
-                          )
-                        : Text(l10n.commonCreate, style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),

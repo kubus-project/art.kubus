@@ -177,7 +177,7 @@ class _DesktopArtworkDetailScreenState
         );
 
         return Scaffold(
-          backgroundColor: scheme.surface,
+          backgroundColor: Colors.transparent,
           appBar: widget.showAppBar
               ? AppBar(
                   title: Text(artwork.title,

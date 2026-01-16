@@ -3635,16 +3635,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectWalletOptionWalletConnectDescription => 'Connect using a QR code or WalletConnect URI';
 
   @override
-  String get connectWalletOptionSignInTitle => 'Import wallet';
+  String get connectWalletOptionSignInTitle => 'Sign in';
 
   @override
-  String get connectWalletOptionSignInDescription => 'Use your existing recovery phrase';
+  String get connectWalletOptionSignInDescription => 'Sign in with your e-mail and password';
 
   @override
-  String get connectWalletOptionRegisterTitle => 'Create new wallet';
+  String get connectWalletOptionRegisterTitle => 'Register account';
 
   @override
-  String get connectWalletOptionRegisterDescription => 'Generate a new wallet on this device';
+  String get connectWalletOptionRegisterDescription => 'Register with your e-mail or Google account';
 
   @override
   String get connectWalletHybridHelpLink => 'What’s WalletConnect?';

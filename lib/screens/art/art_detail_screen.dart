@@ -28,6 +28,8 @@ import '../../config/config.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import '../../widgets/glass_components.dart';
+ 
 
 class ArtDetailScreen extends StatefulWidget {
   final String artworkId;
@@ -118,15 +120,19 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         final isSignedIn = profileProvider.isSignedIn;
 
         if (_artworkLoading) {
-          return Scaffold(
-            backgroundColor: Theme.of(context).colorScheme.surface,
-            appBar: AppBar(
-              title: Text(l10n.artDetailLoadingTitle,
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-              backgroundColor: Theme.of(context).colorScheme.surface,
-              elevation: 0,
+          return AnimatedGradientBackground(
+            child: Scaffold(
+              backgroundColor: Colors.transparent,
+              appBar: AppBar(
+                title: Text(
+                  l10n.artDetailLoadingTitle,
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                ),
+                backgroundColor: Theme.of(context).colorScheme.surface,
+                elevation: 0,
+              ),
+              body: const Center(child: InlineLoading()),
             ),
-            body: const Center(child: InlineLoading()),
           );
         }
 
@@ -219,52 +225,53 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
           );
         }
 
-        return Scaffold(
-          backgroundColor: Theme.of(context).colorScheme.surface,
-          body: AnimatedBuilder(
-            animation: _animationController,
-            builder: (context, child) {
-              return FadeTransition(
-                opacity: _fadeAnimation,
-                child: SlideTransition(
-                  position: _slideAnimation,
-                  child: CustomScrollView(
-                    controller: _scrollController,
-                    slivers: [
-                      _buildAppBar(artwork),
-                      SliverPadding(
-                        padding: const EdgeInsets.all(DetailSpacing.xl),
-                        sliver: SliverList(
-                          delegate: SliverChildListDelegate([
-                            _buildArtInfo(artwork),
-                            const SizedBox(height: DetailSpacing.xl),
-                            _buildDescription(artwork),
-                            const SizedBox(height: DetailSpacing.xl),
-                            _buildSocialStats(artwork),
-                            const SizedBox(height: DetailSpacing.xl),
-                            _buildActionButtons(artwork),
-                            const SizedBox(height: DetailSpacing.xl),
-                            if (AppConfig.isFeatureEnabled(
-                                'collabInvites')) ...[
-                              CollaborationPanel(
-                                entityType: 'artworks',
-                                entityId: artwork.id,
-                              ),
+        return AnimatedGradientBackground(
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            body: AnimatedBuilder(
+              animation: _animationController,
+              builder: (context, child) {
+                return FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: SlideTransition(
+                    position: _slideAnimation,
+                    child: CustomScrollView(
+                      controller: _scrollController,
+                      slivers: [
+                        _buildAppBar(artwork),
+                        SliverPadding(
+                          padding: const EdgeInsets.all(DetailSpacing.xl),
+                          sliver: SliverList(
+                            delegate: SliverChildListDelegate([
+                              _buildArtInfo(artwork),
                               const SizedBox(height: DetailSpacing.xl),
-                            ],
-                            _buildCommentsSection(artwork, artworkProvider),
-                            const SizedBox(height: 100), // Bottom padding
-                          ]),
+                              _buildDescription(artwork),
+                              const SizedBox(height: DetailSpacing.xl),
+                              _buildSocialStats(artwork),
+                              const SizedBox(height: DetailSpacing.xl),
+                              _buildActionButtons(artwork),
+                              const SizedBox(height: DetailSpacing.xl),
+                              if (AppConfig.isFeatureEnabled('collabInvites')) ...[
+                                CollaborationPanel(
+                                  entityType: 'artworks',
+                                  entityId: artwork.id,
+                                ),
+                                const SizedBox(height: DetailSpacing.xl),
+                              ],
+                              _buildCommentsSection(artwork, artworkProvider),
+                              const SizedBox(height: 100), // Bottom padding
+                            ]),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
+            floatingActionButton:
+                (_showComments && isSignedIn) ? _buildCommentFAB(artwork) : null,
           ),
-          floatingActionButton:
-              (_showComments && isSignedIn) ? _buildCommentFAB(artwork) : null,
         );
       },
     );

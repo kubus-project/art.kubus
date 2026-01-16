@@ -5,6 +5,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 
 import '../models/recent_activity.dart';
 import '../utils/app_color_utils.dart';
+import 'glass_components.dart';
 
 /// Shared tile UI for both mobile and desktop notification/activity surfaces.
 class RecentActivityTile extends StatelessWidget {
@@ -24,12 +25,17 @@ class RecentActivityTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
     final description = activity.description.trim().isNotEmpty
         ? activity.description
         : (activity.metadata['message']?.toString() ?? '');
     final isUnread = !activity.isRead;
     final tileColor = accentColor ??
         AppColorUtils.activityColor(activity.category.name, theme.colorScheme);
+
+    final baseSurface = isUnread ? scheme.secondaryContainer : scheme.primaryContainer;
+    final glassTint = baseSurface.withValues(alpha: isUnread ? (isDark ? 0.78 : 0.86) : (isDark ? 0.70 : 0.84));
 
     return Container(
       margin: margin,
@@ -39,19 +45,21 @@ class RecentActivityTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           onTap: onTap,
           child: Container(
-            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: isUnread
-                  ? theme.colorScheme.secondaryContainer.withValues(alpha: 0.7)
-                  : theme.colorScheme.primaryContainer,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: isUnread
-                    ? tileColor.withValues(alpha: 0.4)
-                    : theme.colorScheme.outline,
+                    ? tileColor.withValues(alpha: 0.38)
+                    : scheme.outline.withValues(alpha: 0.20),
               ),
             ),
-            child: Row(
+            child: LiquidGlassPanel(
+              padding: const EdgeInsets.all(16),
+              margin: EdgeInsets.zero,
+              borderRadius: BorderRadius.circular(12),
+              showBorder: false,
+              backgroundColor: glassTint,
+              child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
@@ -116,7 +124,7 @@ class RecentActivityTile extends StatelessWidget {
                         formatActivityTime(context, activity.timestamp),
                         style: GoogleFonts.inter(
                           fontSize: 11,
-                          color: theme.colorScheme.onSurface
+                          color: scheme.onSurface
                               .withValues(alpha: 0.5),
                         ),
                       ),
@@ -124,6 +132,7 @@ class RecentActivityTile extends StatelessWidget {
                   ),
                 ),
               ],
+              ),
             ),
           ),
         ),

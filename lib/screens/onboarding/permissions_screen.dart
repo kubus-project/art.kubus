@@ -17,6 +17,7 @@ import '../desktop/onboarding/desktop_permissions_screen.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/design_tokens.dart';
 import '../../widgets/kubus_button.dart';
+import '../../widgets/glass_components.dart';
 
 class PermissionsScreen extends StatefulWidget {
   const PermissionsScreen({super.key});
@@ -222,28 +223,32 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       );
     }
     
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(isSmallScreen),
-            Expanded(
-              child: PageView.builder(
-                controller: _pageController,
-                onPageChanged: (index) {
-                  setState(() {
-                    _currentPage = index;
-                  });
-                },
-                itemCount: _pages.length,
-                itemBuilder: (context, index) {
-                  return _buildPage(_pages[index], isSmallScreen);
-                },
+    return AnimatedGradientBackground(
+      duration: const Duration(seconds: 10),
+      intensity: 0.25,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
+          child: Column(
+            children: [
+              _buildHeader(isSmallScreen),
+              Expanded(
+                child: PageView.builder(
+                  controller: _pageController,
+                  onPageChanged: (index) {
+                    setState(() {
+                      _currentPage = index;
+                    });
+                  },
+                  itemCount: _pages.length,
+                  itemBuilder: (context, index) {
+                    return _buildPage(_pages[index], isSmallScreen);
+                  },
+                ),
               ),
-            ),
-            _buildBottomSection(isSmallScreen),
-          ],
+              _buildBottomSection(isSmallScreen),
+            ],
+          ),
         ),
       ),
     );

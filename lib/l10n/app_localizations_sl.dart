@@ -3649,16 +3649,16 @@ class AppLocalizationsSl extends AppLocalizations {
   String get connectWalletOptionWalletConnectDescription => 'Poveži z QR kodo ali URI WalletConnect';
 
   @override
-  String get connectWalletOptionSignInTitle => 'Uvozi denarnico';
+  String get connectWalletOptionSignInTitle => 'Vpiši se';
 
   @override
-  String get connectWalletOptionSignInDescription => 'Uporabi obstoječo obnovitveno frazo';
+  String get connectWalletOptionSignInDescription => 'Vpiši se z e-naslovom in geslom';
 
   @override
-  String get connectWalletOptionRegisterTitle => 'Ustvari novo denarnico';
+  String get connectWalletOptionRegisterTitle => 'Registriraj se';
 
   @override
-  String get connectWalletOptionRegisterDescription => 'Ustvari novo denarnico na tej napravi';
+  String get connectWalletOptionRegisterDescription => 'Registriraj nov račun z e-naslovom ali Google računom';
 
   @override
   String get connectWalletHybridHelpLink => 'Kaj je WalletConnect?';

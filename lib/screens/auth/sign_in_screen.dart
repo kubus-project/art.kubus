@@ -18,6 +18,7 @@ import '../../widgets/gradient_icon_card.dart';
 import '../../widgets/google_sign_in_button.dart';
 import '../../widgets/kubus_button.dart';
 import '../../widgets/kubus_card.dart';
+import '../../widgets/glass_components.dart';
 import '../../utils/design_tokens.dart';
 import '../web3/wallet/connectwallet_screen.dart';
 import '../desktop/auth/desktop_auth_shell.dart';
@@ -59,10 +60,12 @@ class _SignInScreenState extends State<SignInScreen> {
     final data = (payload['data'] as Map<String, dynamic>?) ?? payload;
     final user = (data['user'] as Map<String, dynamic>?) ?? data;
     String? walletAddress = user['walletAddress'] ?? user['wallet_address'];
-    final usernameFromUser = (user['username'] ?? user['displayName'] ?? '').toString();
+    final usernameFromUser =
+        (user['username'] ?? user['displayName'] ?? '').toString();
     final userId = user['id'];
     try {
-      walletAddress = await _ensureWalletProvisioned(walletAddress?.toString(), desiredUsername: usernameFromUser);
+      walletAddress = await _ensureWalletProvisioned(walletAddress?.toString(),
+          desiredUsername: usernameFromUser);
     } catch (e) {
       AppConfig.debugPrint('SignInScreen: wallet provisioning failed: $e');
     }
@@ -123,7 +126,8 @@ class _SignInScreenState extends State<SignInScreen> {
     Navigator.of(context).pushReplacementNamed('/main');
   }
 
-  Future<String?> _ensureWalletProvisioned(String? existingWallet, {String? desiredUsername}) async {
+  Future<String?> _ensureWalletProvisioned(String? existingWallet,
+      {String? desiredUsername}) async {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final web3Provider = Provider.of<Web3Provider>(context, listen: false);
     final sanitizedExisting = existingWallet?.trim();
@@ -141,11 +145,13 @@ class _SignInScreenState extends State<SignInScreen> {
         try {
           await walletProvider.connectWalletWithAddress(address);
         } catch (e) {
-          AppConfig.debugPrint('SignInScreen: connectWalletWithAddress failed: $e');
+          AppConfig.debugPrint(
+              'SignInScreen: connectWalletWithAddress failed: $e');
         }
       }
       try {
-        if (!web3Provider.isConnected || web3Provider.walletAddress != address) {
+        if (!web3Provider.isConnected ||
+            web3Provider.walletAddress != address) {
           await web3Provider.connectExistingWallet(address);
         }
       } catch (e) {
@@ -182,11 +188,15 @@ class _SignInScreenState extends State<SignInScreen> {
     return address;
   }
 
-  Future<void> _upsertProfileWithUsername(String address, String? desiredUsername) async {
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
-    final effectiveUsername = (desiredUsername ?? '').isNotEmpty ? desiredUsername : null;
+  Future<void> _upsertProfileWithUsername(
+      String address, String? desiredUsername) async {
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
+    final effectiveUsername =
+        (desiredUsername ?? '').isNotEmpty ? desiredUsername : null;
     try {
-      await profileProvider.createProfileFromWallet(walletAddress: address, username: effectiveUsername);
+      await profileProvider.createProfileFromWallet(
+          walletAddress: address, username: effectiveUsername);
     } catch (e) {
       AppConfig.debugPrint('SignInScreen: createProfileFromWallet failed: $e');
     }
@@ -197,7 +207,8 @@ class _SignInScreenState extends State<SignInScreen> {
           'displayName': effectiveUsername,
         });
       } catch (err) {
-        AppConfig.debugPrint('SignInScreen: updateProfile username patch failed: $err');
+        AppConfig.debugPrint(
+            'SignInScreen: updateProfile username patch failed: $err');
       }
     }
   }
@@ -205,13 +216,15 @@ class _SignInScreenState extends State<SignInScreen> {
   Future<void> _submitEmail() async {
     final l10n = AppLocalizations.of(context)!;
     if (!AppConfig.enableEmailAuth) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.authEmailSignInDisabled)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10n.authEmailSignInDisabled)));
       return;
     }
     final email = _emailController.text.trim();
     final password = _passwordController.text;
     if (email.isEmpty || password.length < 8) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.authEnterValidEmailPassword)));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.authEnterValidEmailPassword)));
       return;
     }
     unawaited(TelemetryService().trackSignInAttempt(method: 'email'));
@@ -222,9 +235,11 @@ class _SignInScreenState extends State<SignInScreen> {
       await _handleAuthSuccess(result);
       unawaited(TelemetryService().trackSignInSuccess(method: 'email'));
     } catch (e) {
-      unawaited(TelemetryService().trackSignInFailure(method: 'email', errorClass: e.runtimeType.toString()));
+      unawaited(TelemetryService().trackSignInFailure(
+          method: 'email', errorClass: e.runtimeType.toString()));
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.authEmailSignInFailed)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10n.authEmailSignInFailed)));
     } finally {
       if (mounted) setState(() => _isEmailSubmitting = false);
     }
@@ -233,7 +248,8 @@ class _SignInScreenState extends State<SignInScreen> {
   Future<void> _signInWithGoogle() async {
     final l10n = AppLocalizations.of(context)!;
     if (!AppConfig.enableGoogleAuth) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.authGoogleSignInDisabled)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10n.authGoogleSignInDisabled)));
       return;
     }
 
@@ -253,9 +269,11 @@ class _SignInScreenState extends State<SignInScreen> {
           final friendly = mins > 0 ? '${mins}m ${secs}s' : '${secs}s';
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.authGoogleRateLimitedRetryIn(friendly))),
+            SnackBar(
+                content: Text(l10n.authGoogleRateLimitedRetryIn(friendly))),
           );
-          unawaited(TelemetryService().trackSignInFailure(method: 'google', errorClass: 'rate_limited'));
+          unawaited(TelemetryService().trackSignInFailure(
+              method: 'google', errorClass: 'rate_limited'));
           return;
         }
       }
@@ -265,7 +283,8 @@ class _SignInScreenState extends State<SignInScreen> {
     try {
       final googleResult = await GoogleAuthService().signIn();
       if (googleResult == null) {
-        unawaited(TelemetryService().trackSignInFailure(method: 'google', errorClass: 'cancelled'));
+        unawaited(TelemetryService()
+            .trackSignInFailure(method: 'google', errorClass: 'cancelled'));
         if (!mounted) return;
         setState(() => _isGoogleSubmitting = false);
         return;
@@ -284,9 +303,11 @@ class _SignInScreenState extends State<SignInScreen> {
       await _handleAuthSuccess(result);
       unawaited(TelemetryService().trackSignInSuccess(method: 'google'));
     } catch (e) {
-      unawaited(TelemetryService().trackSignInFailure(method: 'google', errorClass: e.runtimeType.toString()));
+      unawaited(TelemetryService().trackSignInFailure(
+          method: 'google', errorClass: e.runtimeType.toString()));
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.authGoogleSignInFailed)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10n.authGoogleSignInFailed)));
     } finally {
       if (mounted) setState(() => _isGoogleSubmitting = false);
     }
@@ -295,16 +316,19 @@ class _SignInScreenState extends State<SignInScreen> {
   void _showConnectWalletModal() {
     final l10n = AppLocalizations.of(context)!;
     if (!AppConfig.enableWalletConnect || !AppConfig.enableWeb3) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.authWalletConnectionDisabled)));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.authWalletConnectionDisabled)));
       return;
     }
 
     unawaited(TelemetryService().trackSignInAttempt(method: 'wallet'));
-    final isDesktop = MediaQuery.of(context).size.width >= DesktopBreakpoints.medium;
+    final isDesktop =
+        MediaQuery.of(context).size.width >= DesktopBreakpoints.medium;
     if (isDesktop) {
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => const ConnectWallet(initialStep: 0, telemetryAuthFlow: 'signin'),
+          builder: (_) =>
+              const ConnectWallet(initialStep: 0, telemetryAuthFlow: 'signin'),
           settings: const RouteSettings(name: '/connect-wallet'),
         ),
       );
@@ -325,26 +349,40 @@ class _SignInScreenState extends State<SignInScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(sheetL10n.authConnectWalletModalTitle, style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700, color: colorScheme.onSurface)),
+                Text(sheetL10n.authConnectWalletModalTitle,
+                    style: GoogleFonts.inter(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: colorScheme.onSurface)),
                 const SizedBox(height: 12),
-                Text(sheetL10n.authConnectWalletModalDescriptionSignIn, style: GoogleFonts.inter(fontSize: 14, color: colorScheme.onSurface.withValues(alpha: 0.7))),
+                Text(sheetL10n.authConnectWalletModalDescriptionSignIn,
+                    style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: colorScheme.onSurface.withValues(alpha: 0.7))),
                 const SizedBox(height: 24),
                 const SizedBox(height: 16),
-                _walletOptionButton(ctx, sheetL10n.authWalletOptionWalletConnect, Icons.qr_code_2_outlined, () {
+                _walletOptionButton(
+                    ctx,
+                    sheetL10n.authWalletOptionWalletConnect,
+                    Icons.qr_code_2_outlined, () {
                   Navigator.of(ctx).pop();
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => const ConnectWallet(initialStep: 3, telemetryAuthFlow: 'signin'),
-                      settings: const RouteSettings(name: '/connect-wallet/walletconnect'),
+                      builder: (_) => const ConnectWallet(
+                          initialStep: 3, telemetryAuthFlow: 'signin'),
+                      settings: const RouteSettings(
+                          name: '/connect-wallet/walletconnect'),
                     ),
                   );
                 }),
                 const SizedBox(height: 16),
-                _walletOptionButton(ctx, sheetL10n.authWalletOptionOtherWallets, Icons.apps_outlined, () {
+                _walletOptionButton(ctx, sheetL10n.authWalletOptionOtherWallets,
+                    Icons.apps_outlined, () {
                   Navigator.of(ctx).pop();
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => const ConnectWallet(initialStep: 0, telemetryAuthFlow: 'signin'),
+                      builder: (_) => const ConnectWallet(
+                          initialStep: 0, telemetryAuthFlow: 'signin'),
                       settings: const RouteSettings(name: '/connect-wallet'),
                     ),
                   );
@@ -357,18 +395,22 @@ class _SignInScreenState extends State<SignInScreen> {
     );
   }
 
-  Widget _walletOptionButton(BuildContext context, String label, IconData icon, VoidCallback onTap) {
+  Widget _walletOptionButton(
+      BuildContext context, String label, IconData icon, VoidCallback onTap) {
     final colorScheme = Theme.of(context).colorScheme;
     return KubusCard(
       onTap: onTap,
-      padding: const EdgeInsets.symmetric(vertical: KubusSpacing.md, horizontal: KubusSpacing.md),
+      padding: const EdgeInsets.symmetric(
+          vertical: KubusSpacing.md, horizontal: KubusSpacing.md),
       color: colorScheme.surface,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(icon, color: colorScheme.primary, size: 22),
           const SizedBox(width: KubusSpacing.sm),
-          Text(label, style: KubusTypography.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+          Text(label,
+              style: KubusTypography.textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w600)),
         ],
       ),
     );
@@ -381,7 +423,8 @@ class _SignInScreenState extends State<SignInScreen> {
     final enableWallet = AppConfig.enableWeb3 && AppConfig.enableWalletConnect;
     final enableEmail = AppConfig.enableEmailAuth;
     final enableGoogle = AppConfig.enableGoogleAuth;
-    final isDesktop = MediaQuery.of(context).size.width >= DesktopBreakpoints.medium;
+    final isDesktop =
+        MediaQuery.of(context).size.width >= DesktopBreakpoints.medium;
 
     final form = _buildAuthForm(
       colorScheme: colorScheme,
@@ -432,38 +475,66 @@ class _SignInScreenState extends State<SignInScreen> {
       );
     }
 
+    final authGradient = Theme.of(context).brightness == Brightness.dark
+        ? KubusGradients.authDark
+        : KubusGradients.fromColors(
+            const Color(0xFF0EA5E9).withValues(alpha: 0.55),
+            const Color(0xFF10B981).withValues(alpha: 0.50),
+          );
+
     return Scaffold(
-      backgroundColor: colorScheme.surface,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 520),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          AnimatedGradientBackground(
+            duration: const Duration(seconds: 10),
+            intensity: 0.2,
+            child: const SizedBox.expand(),
+          ),
+          DecoratedBox(
+            decoration: BoxDecoration(gradient: authGradient),
+            child: const SizedBox.expand(),
+          ),
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 520),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      const AppLogo(width: 48, height: 48),
-                      TextButton(
-                        onPressed: () {
-                          unawaited(TelemetryService().trackSignInAttempt(method: 'guest'));
-                          unawaited(TelemetryService().trackSignInSuccess(method: 'guest'));
-                          Navigator.of(context).pushReplacementNamed('/main');
-                        },
-                        child: Text(l10n.commonSkipForNow, style: GoogleFonts.inter(color: colorScheme.onSurface.withValues(alpha: 0.7))),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const AppLogo(width: 48, height: 48),
+                          TextButton(
+                            onPressed: () {
+                              unawaited(TelemetryService()
+                                  .trackSignInAttempt(method: 'guest'));
+                              unawaited(TelemetryService()
+                                  .trackSignInSuccess(method: 'guest'));
+                              Navigator.of(context)
+                                  .pushReplacementNamed('/main');
+                            },
+                            child: Text(
+                              l10n.commonSkipForNow,
+                              style: GoogleFonts.inter(
+                                color: colorScheme.onSurface.withValues(alpha: 0.7),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
+                      const SizedBox(height: 12),
+                      form,
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  form,
-                ],
+                ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -495,11 +566,17 @@ class _SignInScreenState extends State<SignInScreen> {
                   radius: 20,
                 ),
                 const SizedBox(height: 12),
-                Text(l10n.authSignInTitle, style: GoogleFonts.inter(fontSize: 26, fontWeight: FontWeight.w800, color: colorScheme.onSurface)),
+                Text(l10n.authSignInTitle,
+                    style: GoogleFonts.inter(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        color: colorScheme.onSurface)),
                 const SizedBox(height: 8),
                 Text(
                   l10n.authSignInSubtitle,
-                  style: GoogleFonts.inter(fontSize: 14, color: colorScheme.onSurface.withValues(alpha: 0.85)),
+                  style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: colorScheme.onSurface.withValues(alpha: 0.85)),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -581,7 +658,9 @@ class _SignInScreenState extends State<SignInScreen> {
           onPressed: _isEmailSubmitting ? null : _submitEmail,
           isLoading: _isEmailSubmitting,
           icon: _isEmailSubmitting ? null : Icons.login_rounded,
-          label: _isEmailSubmitting ? AppLocalizations.of(context)!.commonWorking : AppLocalizations.of(context)!.authSignInWithEmail,
+          label: _isEmailSubmitting
+              ? AppLocalizations.of(context)!.commonWorking
+              : AppLocalizations.of(context)!.authSignInWithEmail,
           isFullWidth: true,
         ),
       ],

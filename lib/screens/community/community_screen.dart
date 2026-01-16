@@ -1116,9 +1116,11 @@ class _CommunityScreenState extends State<CommunityScreen>
   Widget build(BuildContext context) {
     final hub = context.watch<CommunityHubProvider>();
     _maybeHandleComposerOpenRequest(hub);
+    
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: Colors.transparent,
       body: SafeArea(
+        bottom: false,
         child: AnimatedBuilder(
           animation: _animationController,
           builder: (context, child) {
@@ -1150,7 +1152,14 @@ class _CommunityScreenState extends State<CommunityScreen>
       ),
       floatingActionButton: AnimatedBuilder(
         animation: _tabController,
-        builder: (_, __) => _buildFloatingActionButton(),
+        builder: (_, __) {
+          return Padding(
+            padding: const EdgeInsets.only(
+              bottom: KubusLayout.mainBottomNavBarHeight,
+            ),
+            child: _buildFloatingActionButton(),
+          );
+        },
       ),
     );
   }
@@ -1408,13 +1417,18 @@ class _CommunityScreenState extends State<CommunityScreen>
         onRefresh: onRefresh,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          child: SizedBox(
-            height: MediaQuery.of(context).size.height * 0.6,
-            child: Center(
-              child: EmptyStateCard(
-                icon: emptyIcon,
-                title: emptyTitle,
-                description: emptySubtitle,
+          child: Padding(
+            padding: const EdgeInsets.only(
+              bottom: KubusLayout.mainBottomNavBarHeight,
+            ),
+            child: SizedBox(
+              height: MediaQuery.of(context).size.height * 0.6,
+              child: Center(
+                child: EmptyStateCard(
+                  icon: emptyIcon,
+                  title: emptyTitle,
+                  description: emptySubtitle,
+                ),
               ),
             ),
           ),
@@ -1429,7 +1443,12 @@ class _CommunityScreenState extends State<CommunityScreen>
           ListView.builder(
             controller: showBufferedBanner ? _feedScrollController : null,
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.fromLTRB(
+              24,
+              24,
+              24,
+              24 + KubusLayout.mainBottomNavBarHeight,
+            ),
             itemCount: _communityPosts.length + (AppConfig.isFeatureEnabled('season0') ? 1 : 0),
             itemBuilder: (context, index) {
               // Season 0 banner at the top if enabled
@@ -1552,7 +1571,12 @@ class _CommunityScreenState extends State<CommunityScreen>
         final hasGroups = hub.groups.isNotEmpty;
         final listView = ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          padding: const EdgeInsets.fromLTRB(
+            24,
+            20,
+            24,
+            20 + KubusLayout.mainBottomNavBarHeight,
+          ),
           children: [
             _buildGroupSearchField(hub),
             const SizedBox(height: 12),
@@ -1855,7 +1879,12 @@ class _CommunityScreenState extends State<CommunityScreen>
       child: ListView(
         controller: _artFeedScrollController,
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(
+          24,
+          24,
+          24,
+          24 + KubusLayout.mainBottomNavBarHeight,
+        ),
         children: [
           _buildArtFeedHeader(),
           const SizedBox(height: 16),

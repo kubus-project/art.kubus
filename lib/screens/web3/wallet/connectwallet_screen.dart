@@ -24,6 +24,7 @@ import '../../../models/user.dart';
 import '../../../widgets/gradient_icon_card.dart';
 import '../../../widgets/kubus_button.dart';
 import '../../../widgets/kubus_card.dart';
+import '../../../widgets/glass_components.dart';
 import '../../../utils/design_tokens.dart';
 import '../../auth/sign_in_screen.dart';
 import '../../auth/register_screen.dart';
@@ -166,7 +167,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: KubusGradients.animatedDarkColors.first,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -188,14 +189,20 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
           ),
         ),
       ),
-      body: Consumer<Web3Provider>(
-        builder: (context, web3Provider, child) {
-          if (web3Provider.isConnected) {
-            return _buildConnectedView(web3Provider);
-          } else {
-            return _buildStepContent(web3Provider);
-          }
-        },
+      body: AnimatedGradientBackground(
+        duration: const Duration(seconds: 10),
+        intensity: 0.2,
+        child: SizedBox.expand(
+          child: Consumer<Web3Provider>(
+            builder: (context, web3Provider, child) {
+              if (web3Provider.isConnected) {
+                return _buildConnectedView(web3Provider);
+              } else {
+                return _buildStepContent(web3Provider);
+              }
+            },
+          ),
+        ),
       ),
     );
   }

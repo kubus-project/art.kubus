@@ -17,6 +17,8 @@ import '../../providers/stats_provider.dart';
 import '../../providers/web3provider.dart';
 import '../../services/stats_api_service.dart';
 import '../../widgets/charts/stats_interactive_line_chart.dart';
+import '../../widgets/glass_components.dart';
+ 
 
 class AdvancedStatsScreen extends StatefulWidget {
   final String statType;
@@ -133,44 +135,46 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
     final wallet = (profileProvider.currentUser?.walletAddress ?? web3Provider.walletAddress).trim();
     final stats = _buildStatsContext(statsProvider: statsProvider, walletAddress: wallet);
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: Text('${widget.statType} Analytics'),
+    return AnimatedGradientBackground(
+      child: Scaffold(
         backgroundColor: Colors.transparent,
-        elevation: 0,
-        actions: [
-          TopBarIcon(
-            icon: const Icon(Icons.download),
-            onPressed: () => _showExportDialog(stats),
-            tooltip: 'Export',
-          ),
-          TopBarIcon(
-            icon: const Icon(Icons.share),
-            onPressed: () => _showShareDialog(stats),
-            tooltip: 'Share',
-          ),
-        ],
-      ),
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildTimeframeSelectorCard(),
-              const SizedBox(height: 20),
-              _buildAdvancedChart(stats),
-              const SizedBox(height: 20),
-              _buildDetailedMetrics(stats),
-              const SizedBox(height: 20),
-              _buildComparativeAnalysis(stats),
-              const SizedBox(height: 20),
-              _buildInsightsCard(stats),
-              const SizedBox(height: 20),
-              _buildGoalsCard(stats),
-            ],
+        appBar: AppBar(
+          title: Text('${widget.statType} Analytics'),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          actions: [
+            TopBarIcon(
+              icon: const Icon(Icons.download),
+              onPressed: () => _showExportDialog(stats),
+              tooltip: 'Export',
+            ),
+            TopBarIcon(
+              icon: const Icon(Icons.share),
+              onPressed: () => _showShareDialog(stats),
+              tooltip: 'Share',
+            ),
+          ],
+        ),
+        body: FadeTransition(
+          opacity: _fadeAnimation,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildTimeframeSelectorCard(),
+                const SizedBox(height: 20),
+                _buildAdvancedChart(stats),
+                const SizedBox(height: 20),
+                _buildDetailedMetrics(stats),
+                const SizedBox(height: 20),
+                _buildComparativeAnalysis(stats),
+                const SizedBox(height: 20),
+                _buildInsightsCard(stats),
+                const SizedBox(height: 20),
+                _buildGoalsCard(stats),
+              ],
+            ),
           ),
         ),
       ),

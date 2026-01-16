@@ -3,16 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../utils/wallet_utils.dart';
-import '../../widgets/topbar_icon.dart';
 import '../../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
 import '../../models/user.dart';
 import '../../services/user_service.dart';
 import '../../models/achievements.dart';
 import '../../services/backend_api_service.dart';
+import '../../services/block_list_service.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
-import '../../services/block_list_service.dart';
 import '../../utils/category_accent_color.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../community/community_interactions.dart';
@@ -37,9 +36,8 @@ import '../../providers/wallet_provider.dart';
 import '../../services/socket_service.dart';
 import 'profile_screen_methods.dart';
 import '../../models/dao.dart';
-import '../../config/config.dart';
-import 'community_analytics_screen.dart';
-import 'profile_analytics_screen.dart';
+import '../../widgets/glass_components.dart';
+ 
 
 class UserProfileScreen extends StatefulWidget {
   final String userId;
@@ -463,160 +461,120 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     final isArtist = user!.isArtist || (daoReview != null && daoReview.isArtistApplication && daoReview.isApproved);
     final isInstitution = user!.isInstitution || (daoReview != null && daoReview.isInstitutionApplication && daoReview.isApproved);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Flexible(
-              fit: FlexFit.loose,
-              child: Text(
-                user!.name,
-                style: GoogleFonts.inter(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-                overflow: TextOverflow.ellipsis,
-                softWrap: false,
-              ),
+    return AnimatedGradientBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          title: Text(
+            user!.name.isNotEmpty ? user!.name : l10n.userProfileTitle,
+            style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+          ),
+          actions: [
+            IconButton(
+              tooltip: l10n.commonMore,
+              onPressed: _showMoreOptions,
+              icon: const Icon(Icons.more_vert),
             ),
-            if (isArtist) ...[
-              const SizedBox(width: 8),
-              const ArtistBadge(),
-            ],
-            if (isInstitution) ...[
-              const SizedBox(width: 8),
-              const InstitutionBadge(),
-            ],
           ],
         ),
-        actions: [
-          TopBarIcon(
-            icon: const Icon(Icons.share),
-            onPressed: () {
-              final targetWallet = user?.id.toString().trim();
-              if (targetWallet == null || targetWallet.isEmpty) return;
-              ShareService().showShareSheet(
-                context,
-                target: ShareTarget.profile(walletAddress: targetWallet, title: user?.name),
-                sourceScreen: 'user_profile',
-              );
-            },
-            tooltip: l10n.userProfileShareTooltip,
-          ),
-          if (AppConfig.isFeatureEnabled('analytics'))
-            TopBarIcon(
-              icon: const Icon(Icons.analytics_outlined),
-              onPressed: () {
-                final wallet = user?.id.toString().trim() ?? '';
-                if (wallet.isEmpty) return;
-                showModalBottomSheet<void>(
-                  context: context,
-                  backgroundColor: Theme.of(context).colorScheme.surface,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        body: RefreshIndicator(
+          onRefresh: _handleRefresh,
+          color: themeProvider.accentColor,
+          child: SingleChildScrollView(
+            controller: _scrollController,
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: DetailSpacing.xl),
+              child: Column(
+                children: [
+                  _buildProfileHeader(
+                    themeProvider,
+                    isArtist: isArtist,
+                    isInstitution: isInstitution,
                   ),
-                  builder: (sheetContext) {
-                    final scheme = Theme.of(sheetContext).colorScheme;
-                    return SafeArea(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Analytics',
-                              style: GoogleFonts.inter(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: scheme.onSurface,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            ListTile(
-                              leading: Icon(Icons.person_outline, color: scheme.primary),
-                              title: Text('Profile analytics', style: GoogleFonts.inter()),
-                              onTap: () {
-                                Navigator.pop(sheetContext);
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => ProfileAnalyticsScreen(
-                                      walletAddress: wallet,
-                                      title: 'Profile analytics',
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                            ListTile(
-                              leading: Icon(Icons.forum_outlined, color: scheme.secondary),
-                              title: Text('Community analytics', style: GoogleFonts.inter()),
-                              onTap: () {
-                                Navigator.pop(sheetContext);
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => CommunityAnalyticsScreen(
-                                      walletAddress: wallet,
-                                      title: 'Community analytics',
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-              tooltip: 'Analytics',
-            ),
-          TopBarIcon(
-            icon: const Icon(Icons.more_vert),
-            onPressed: _showMoreOptions,
-            tooltip: l10n.userProfileMoreTooltip,
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: _handleRefresh,
-        color: themeProvider.accentColor,
-        child: SingleChildScrollView(
-          controller: _scrollController,
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: DetailSpacing.xl),
-            child: Column(
-              children: [
-                _buildProfileHeader(themeProvider, isArtist: isArtist, isInstitution: isInstitution),
-                const SizedBox(height: DetailSpacing.md),
-                _buildStatsRow(l10n),
-                const SizedBox(height: DetailSpacing.lg),
-                _buildActionButtons(themeProvider, l10n),
-                const SizedBox(height: DetailSpacing.lg),
-                if (isArtist) ...[
-                  _buildArtistHighlightsGrid(l10n),
+                  const SizedBox(height: DetailSpacing.md),
+                  _buildStatsRow(l10n),
+                  const SizedBox(height: DetailSpacing.lg),
+                  _buildActionButtons(themeProvider, l10n),
+                  const SizedBox(height: DetailSpacing.lg),
+                  if (isArtist) ...[
+                    _buildArtistHighlightsGrid(l10n),
+                    const SizedBox(height: DetailSpacing.xl),
+                  ],
+                  isInstitution
+                      ? _buildInstitutionHighlights(l10n)
+                      : _buildAchievements(themeProvider, l10n),
                   const SizedBox(height: DetailSpacing.xl),
+                  _buildPostsSection(l10n),
+                  if (isArtist) ...[
+                    const SizedBox(height: DetailSpacing.xl),
+                    _buildArtistEventsShowcase(l10n),
+                  ],
+                  const SizedBox(height: DetailSpacing.xxl),
                 ],
-                isInstitution
-                    ? _buildInstitutionHighlights(l10n)
-                    : _buildAchievements(themeProvider, l10n),
-                const SizedBox(height: DetailSpacing.xl),
-                _buildPostsSection(l10n),
-                if (isArtist) ...[
-                  const SizedBox(height: DetailSpacing.xl),
-                  _buildArtistEventsShowcase(l10n),
-                ],
-                const SizedBox(height: DetailSpacing.xxl),
-              ],
+              ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Future<void> _showMoreOptions() async {
+    final l10n = AppLocalizations.of(context)!;
+    final target = ShareTarget.profile(walletAddress: user!.id, title: user!.name);
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: false,
+      builder: (sheetContext) {
+        final surface = Theme.of(sheetContext).colorScheme.surface;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: LiquidGlassPanel(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              backgroundColor: surface.withValues(alpha: 0.65),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.ios_share),
+                    title: Text(l10n.commonShare, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                    onTap: () async {
+                      Navigator.of(sheetContext).pop();
+                      await ShareService().showShareSheet(
+                        context,
+                        target: target,
+                        sourceScreen: 'user_profile',
+                      );
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.block),
+                    title: Text(l10n.userProfileMoreOptionsBlockUser, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                    onTap: () {
+                      Navigator.of(sheetContext).pop();
+                      _showBlockConfirmation();
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.report),
+                    title: Text(l10n.userProfileMoreOptionsReportUser, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                    onTap: () {
+                      Navigator.of(sheetContext).pop();
+                      _showReportDialog();
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -1813,62 +1771,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
         });
       }
     }
-  }
-
-  void _showMoreOptions() {
-    final l10n = AppLocalizations.of(context)!;
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 24),
-            _buildOptionItem(Icons.block, l10n.userProfileMoreOptionsBlockUser, () {
-              Navigator.pop(context);
-              _showBlockConfirmation();
-            }),
-            _buildOptionItem(Icons.report, l10n.userProfileMoreOptionsReportUser, () {
-              Navigator.pop(context);
-              _showReportDialog();
-            }),
-            _buildOptionItem(Icons.copy, l10n.userProfileMoreOptionsCopyLink, () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(l10n.userProfileLinkCopiedToast),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            }),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOptionItem(IconData icon, String title, VoidCallback onTap) {
-    return ListTile(
-      leading: Icon(icon),
-      title: Text(
-        title,
-        style: GoogleFonts.inter(fontSize: 16),
-      ),
-      onTap: onTap,
-    );
   }
 
   void _showBlockConfirmation() {

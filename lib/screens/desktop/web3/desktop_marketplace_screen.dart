@@ -69,9 +69,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
     final isLarge = screenWidth >= 1200;
 
     return Scaffold(
-      backgroundColor: themeProvider.isDarkMode
-          ? Theme.of(context).scaffoldBackgroundColor
-          : const Color(0xFFF8F9FA),
+      backgroundColor: Colors.transparent,
       body: Row(
         children: [
           // Filters sidebar

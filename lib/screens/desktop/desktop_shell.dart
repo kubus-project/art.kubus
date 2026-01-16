@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -30,6 +31,7 @@ import '../web3/wallet/connectwallet_screen.dart';
 import '../collab/invites_inbox_screen.dart';
 import '../../widgets/user_persona_onboarding_gate.dart';
 import '../../widgets/recent_activity_tile.dart';
+import '../../widgets/glass_components.dart';
 
 /// Provides in-shell navigation for subscreens that should appear in the main
 /// content area instead of pushing a fullscreen route.
@@ -396,64 +398,90 @@ class _DesktopShellState extends State<DesktopShell>
         popScreen: _popScreenFromStack,
         navigateToRoute: _navigateToRoute,
         canPop: _screenStack.isNotEmpty,
-        child: Scaffold(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          body: Row(
-            children: [
-              // Main content area (takes most space)
-              Expanded(
-                child: _screenStack.isNotEmpty
-                    ? _screenStack.last
-                    : _buildCurrentScreen(effectiveRoute),
+        child: Stack(
+          children: [
+             Positioned.fill(
+              child: AnimatedGradientBackground(
+                duration: const Duration(seconds: 12),
+                intensity: 0.25,
+                child: const SizedBox.expand(),
               ),
+            ),
+            Scaffold(
+              backgroundColor: Colors.transparent,
+              body: Row(
+                children: [
+                  // Main content area (takes most space)
+                  Expanded(
+                    child: _screenStack.isNotEmpty
+                        ? _screenStack.last
+                        : _buildCurrentScreen(effectiveRoute),
+                  ),
 
-              // Right sidebar navigation (Twitter/X style)
-              AnimatedBuilder(
-                animation: _navExpandAnimation,
-                builder: (context, child) {
-                  final expandedWidth = isLarge
-                      ? DesktopNavigation.expandedWidthLarge
-                      : DesktopNavigation.expandedWidthMedium;
-                  final collapsedWidth = DesktopNavigation.collapsedWidth;
-                  final currentWidth = collapsedWidth +
-                      (expandedWidth - collapsedWidth) *
-                          _navExpandAnimation.value;
+                  // Right sidebar navigation (Twitter/X style) with glass effect
+                  AnimatedBuilder(
+                    animation: _navExpandAnimation,
+                    builder: (context, child) {
+                      final expandedWidth = isLarge
+                          ? DesktopNavigation.expandedWidthLarge
+                          : DesktopNavigation.expandedWidthMedium;
+                      final collapsedWidth = DesktopNavigation.collapsedWidth;
+                      final currentWidth = collapsedWidth +
+                          (expandedWidth - collapsedWidth) *
+                              _navExpandAnimation.value;
 
-                  return Container(
-                    width: currentWidth,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surface,
-                      border: Border(
-                        left: BorderSide(
-                          color:
-                              theme.colorScheme.outline.withValues(alpha: 0.2),
-                          width: 1,
+                      final scheme = theme.colorScheme;
+                      final glassTint = theme.brightness == Brightness.dark
+                          ? Colors.black.withValues(alpha: 0.22)
+                          : Colors.white.withValues(alpha: 0.26);
+
+                      return ClipRRect(
+                        child: Container(
+                          width: currentWidth,
+                          decoration: BoxDecoration(
+                            border: Border(
+                              left: BorderSide(
+                                color: theme.brightness == Brightness.dark
+                                    ? Colors.white.withValues(alpha: 0.06)
+                                    : scheme.outline.withValues(alpha: 0.15),
+                                width: 1,
+                              ),
+                            ),
+                          ),
+                          child: LiquidGlassPanel(
+                            padding: EdgeInsets.zero,
+                            margin: EdgeInsets.zero,
+                            borderRadius: BorderRadius.zero,
+                            blurSigma: KubusGlassEffects.blurSigmaLight,
+                            showBorder: false,
+                            backgroundColor: glassTint,
+                            child: DesktopNavigation(
+                              items: navItems,
+                              selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
+                              onItemSelected: (index) =>
+                                  _onNavItemSelected(index, navItems, isSignedIn),
+                              isExpanded: _isNavigationExpanded,
+                              expandAnimation: _navExpandAnimation,
+                              onToggleExpand: _toggleNavigation,
+                              onProfileTap: () => _showProfileMenu(context),
+                              onSettingsTap: () => _showSettingsScreen(context),
+                              onNotificationsTap: () =>
+                                  unawaited(_showNotificationsPanel(context)),
+                              onWalletTap: () => _handleWalletTap(isSignedIn),
+                              onCollabInvitesTap: isSignedIn &&
+                                      AppConfig.isFeatureEnabled('collabInvites')
+                                  ? () => _showCollabInvites()
+                                  : null,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                    child: DesktopNavigation(
-                      items: navItems,
-                      selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
-                      onItemSelected: (index) =>
-                          _onNavItemSelected(index, navItems, isSignedIn),
-                      isExpanded: _isNavigationExpanded,
-                      expandAnimation: _navExpandAnimation,
-                      onToggleExpand: _toggleNavigation,
-                      onProfileTap: () => _showProfileMenu(context),
-                      onSettingsTap: () => _showSettingsScreen(context),
-                      onNotificationsTap: () =>
-                          unawaited(_showNotificationsPanel(context)),
-                      onWalletTap: () => _handleWalletTap(isSignedIn),
-                      onCollabInvitesTap: isSignedIn &&
-                              AppConfig.isFeatureEnabled('collabInvites')
-                          ? () => _showCollabInvites()
-                          : null,
-                    ),
-                  );
-                },
+                      );
+                    },
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
