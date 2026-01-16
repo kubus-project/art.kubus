@@ -82,6 +82,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   Artwork? _selectedArtwork;
   Exhibition? _selectedExhibition;
   ArtMarker? _activeMarker;
+  bool _markerOverlayExpanded = false;
   bool _didOpenInitialMarker = false;
   bool _showFiltersPanel = false;
   String _selectedFilter = 'nearby';
@@ -396,6 +397,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               _showSearchOverlay = false;
               _pendingMarkerLocation = null;
               _activeMarker = null;
+              _markerOverlayExpanded = false;
             });
           },
           onLongPress: (_, point) {
@@ -410,7 +412,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               setState(() => _autoFollow = false);
             }
             if (hasGesture && _activeMarker != null) {
-              setState(() => _activeMarker = null);
+              setState(() {
+                _activeMarker = null;
+                _markerOverlayExpanded = false;
+              });
             }
             _queueMarkerRefresh(center, fromGesture: hasGesture);
           },
@@ -827,7 +832,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   Widget _buildArtworkDetailPanel(
       ThemeProvider themeProvider, AppAnimationTheme animationTheme) {
-    final artwork = _selectedArtwork!;
+    final artworkProvider = context.watch<ArtworkProvider>();
+    // Get the latest artwork from provider to ensure like/save states are updated
+    final artwork = artworkProvider.getArtworkById(_selectedArtwork!.id) ?? _selectedArtwork!;
     final scheme = Theme.of(context).colorScheme;
     final accent = themeProvider.accentColor;
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -836,8 +843,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       metadata: _activeMarker?.metadata ?? artwork.metadata,
     );
     final distanceLabel = _formatDistanceToArtwork(artwork);
-
-    final artworkProvider = context.read<ArtworkProvider>();
 
     return LiquidGlassPanel(
       margin: const EdgeInsets.only(left: 24),
@@ -1112,10 +1117,19 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                             padding: const EdgeInsets.symmetric(
                                 vertical: 14, horizontal: 12),
                             side: BorderSide(
-                              color: accent.withValues(alpha: 0.55),
-                              width: 1.1,
+                              color: (artwork.isFavoriteByCurrentUser || artwork.isFavorite)
+                                  ? accent
+                                  : accent.withValues(alpha: 0.55),
+                              width: (artwork.isFavoriteByCurrentUser || artwork.isFavorite) 
+                                  ? 1.5 
+                                  : 1.1,
                             ),
-                            foregroundColor: scheme.onSurface,
+                            foregroundColor: (artwork.isFavoriteByCurrentUser || artwork.isFavorite)
+                                ? accent
+                                : scheme.onSurface,
+                            backgroundColor: (artwork.isFavoriteByCurrentUser || artwork.isFavorite)
+                                ? accent.withValues(alpha: 0.08)
+                                : null,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -1128,11 +1142,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                             ? Icons.favorite
                             : Icons.favorite_border,
                         themeProvider: themeProvider,
-                        tooltip: artwork.isLikedByCurrentUser
+                        tooltip: '${artwork.likesCount} ${artwork.isLikedByCurrentUser
                             ? AppLocalizations.of(context)!.artworkDetailLiked
-                            : AppLocalizations.of(context)!.artworkDetailLike,
+                            : AppLocalizations.of(context)!.artworkDetailLike}',
                         isActive: artwork.isLikedByCurrentUser,
-                        activeIconColor: AppColorUtils.contrastText(accent),
+                        activeTint: scheme.error.withValues(alpha: 0.18),
+                        activeIconColor: scheme.error,
                         onTap: () {
                           unawaited(artworkProvider.toggleLike(artwork.id));
                         },
@@ -2686,7 +2701,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   void _handleMarkerTap(ArtMarker marker) {
     _moveCamera(marker.position, math.max(_effectiveZoom, 15));
-    setState(() => _activeMarker = marker);
+    setState(() {
+      _activeMarker = marker;
+      _markerOverlayExpanded = false; // Reset expand state for new marker
+    });
     _maybeRecordPresenceVisitForMarker(marker);
 
     final primaryExhibition = marker.resolvedExhibitionSummary;
@@ -2825,256 +2843,457 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final displayTitle = canPresentExhibition && exhibitionTitle.isNotEmpty
         ? exhibitionTitle
         : (artwork?.title.isNotEmpty == true ? artwork!.title : marker.name);
-    final description = marker.description.isNotEmpty
-        ? marker.description
-        : (artwork?.description ?? '');
+    final rawDescription = (marker.description.isNotEmpty
+            ? marker.description
+            : (artwork?.description ?? ''))
+        .trim();
+
+    // Expand/collapse logic for long descriptions (same as mobile)
+    const int maxPreviewChars = 180;
+    final bool canExpand = rawDescription.length > maxPreviewChars;
+    final String visibleDescription = !canExpand
+        ? rawDescription
+        : (_markerOverlayExpanded
+            ? rawDescription
+            : '${rawDescription.substring(0, maxPreviewChars)}…');
 
     final showChips =
         _hasMetadataChips(marker, artwork) || canPresentExhibition;
 
-    final markerHeight = _computeMarkerOverlayHeight(
-      title: displayTitle,
-      distanceText: distanceText,
-      description: description,
-      hasChips: showChips,
-      imageHeight: 90,
-      buttonVerticalPadding: 8,
-      buttonTextStyle:
-          GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 12),
-      showTypeLabel: canPresentExhibition,
-    );
+    final artworkProvider = context.read<ArtworkProvider>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Use a large fixed height that accommodates expanded content
+    // The actual content will size itself with AnimatedSize
+    const double maxOverlayHeight = 600;
 
     return Marker(
       point: marker.position,
-      width: 260,
-      height: markerHeight,
+      width: 300,
+      height: maxOverlayHeight,
       alignment: Alignment.topCenter,
-      child: GestureDetector(
-        onTap: () => canPresentExhibition
-            ? _openExhibitionFromMarker(marker, primaryExhibition, artwork)
-            : _openMarkerDetail(marker, artwork),
-        child: Material(
-          color: Colors.transparent,
-          child: Container(
-            width: 240,
-            margin: const EdgeInsets.only(bottom: 48),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: baseColor.withValues(alpha: 0.35)),
-              boxShadow: [
-                BoxShadow(
-                  color: baseColor.withValues(alpha: 0.24),
-                  blurRadius: 18,
-                  offset: const Offset(0, 12),
-                ),
-              ],
-            ),
-            child: LiquidGlassPanel(
-              padding: const EdgeInsets.all(12),
-              borderRadius: BorderRadius.circular(16),
-              showBorder: false,
-              backgroundColor: scheme.surface.withValues(alpha: 0.45),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header row: Title + distance + close button
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Column(
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 48),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 280),
+            child: AnimatedSize(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              alignment: Alignment.topCenter,
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: baseColor.withValues(alpha: 0.35),
+                      width: 1.1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: baseColor.withValues(alpha: 0.22),
+                        blurRadius: 20,
+                        offset: const Offset(0, 12),
+                      ),
+                    ],
+                  ),
+                  child: LiquidGlassPanel(
+                    padding: const EdgeInsets.all(14),
+                    borderRadius: BorderRadius.circular(18),
+                    showBorder: false,
+                    backgroundColor: scheme.surface.withValues(alpha: 0.45),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Header row: Title + distance + close button
+                        Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            if (canPresentExhibition) ...[
-                              Text(
-                                'Exhibition',
-                                style: GoogleFonts.inter(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                  color: baseColor,
-                                  height: 1.0,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (canPresentExhibition) ...[
+                                    Text(
+                                      'Exhibition',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                        color: baseColor,
+                                        height: 1.0,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                  ],
+                                  Text(
+                                    displayTitle,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 14,
+                                      height: 1.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            if (distanceText != null) ...[
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: baseColor.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.near_me, size: 12, color: baseColor),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      distanceText,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                        color: baseColor,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(height: 2),
+                              const SizedBox(width: 6),
                             ],
-                            Text(
-                              displayTitle,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.inter(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 14,
-                                height: 1.2,
-                              ),
+                            _markerOverlayIconButton(
+                              icon: Icons.close,
+                              tooltip: l10n.commonClose,
+                              scheme: scheme,
+                              isDark: isDark,
+                              onTap: () => setState(() {
+                                _activeMarker = null;
+                                _markerOverlayExpanded = false;
+                              }),
                             ),
                           ],
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      if (distanceText != null) ...[
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
+                        const SizedBox(height: 10),
+
+                        // Image
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: SizedBox(
+                            height: 120,
+                            width: double.infinity,
+                            child: imageUrl != null
+                                ? Image.network(
+                                    imageUrl,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) =>
+                                        _markerImageFallback(baseColor, scheme, marker),
+                                    loadingBuilder: (context, child, progress) {
+                                      if (progress == null) return child;
+                                      return Container(
+                                        color: baseColor.withValues(alpha: 0.12),
+                                        child: const Center(
+                                          child: CircularProgressIndicator(
+                                              strokeWidth: 2),
+                                        ),
+                                      );
+                                    },
+                                  )
+                                : _markerImageFallback(baseColor, scheme, marker),
                           ),
-                          decoration: BoxDecoration(
-                            color: baseColor.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(6),
+                        ),
+
+                        // Description with expand/collapse
+                        if (visibleDescription.isNotEmpty) ...[
+                          const SizedBox(height: 10),
+                          Text(
+                            visibleDescription,
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: scheme.onSurfaceVariant,
+                              height: 1.4,
+                            ),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.near_me, size: 10, color: baseColor),
-                              const SizedBox(width: 3),
-                              Text(
-                                distanceText,
+                        ],
+
+                        // Expand/Collapse button for long descriptions
+                        if (canExpand) ...[
+                          const SizedBox(height: 6),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: TextButton(
+                              onPressed: () => setState(
+                                () => _markerOverlayExpanded = !_markerOverlayExpanded,
+                              ),
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              child: Text(
+                                _markerOverlayExpanded
+                                    ? l10n.commonCollapse
+                                    : l10n.commonExpand,
                                 style: GoogleFonts.inter(
-                                  fontSize: 10,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                   color: baseColor,
                                 ),
                               ),
+                            ),
+                          ),
+                        ],
+
+                        // Metadata chips
+                        if (showChips) ...[
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              if (canPresentExhibition)
+                                _attendanceProofChip(scheme, baseColor),
+                              if (artwork != null &&
+                                  artwork.category.isNotEmpty &&
+                                  artwork.category != 'General')
+                                _compactChip(
+                                  scheme,
+                                  Icons.palette,
+                                  artwork.category,
+                                  baseColor,
+                                ),
+                              if (marker.metadata?['subjectCategory'] != null ||
+                                  marker.metadata?['subject_category'] != null)
+                                _compactChip(
+                                  scheme,
+                                  Icons.category_outlined,
+                                  (marker.metadata!['subjectCategory'] ??
+                                          marker.metadata!['subject_category'])
+                                      .toString(),
+                                  baseColor,
+                                ),
+                              if (marker.metadata?['locationName'] != null ||
+                                  marker.metadata?['location'] != null)
+                                _compactChip(
+                                  scheme,
+                                  Icons.place_outlined,
+                                  (marker.metadata!['locationName'] ??
+                                          marker.metadata!['location'])
+                                      .toString(),
+                                  baseColor,
+                                ),
+                              if (artwork != null && artwork.rewards > 0)
+                                _compactChip(
+                                  scheme,
+                                  Icons.card_giftcard,
+                                  '+${artwork.rewards}',
+                                  baseColor,
+                                ),
                             ],
                           ),
-                        ),
-                        const SizedBox(width: 6),
-                      ],
-                      InkWell(
-                        onTap: () => setState(() => _activeMarker = null),
-                        borderRadius: BorderRadius.circular(4),
-                        child: Icon(
-                          Icons.close,
-                          size: 18,
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
+                        ],
 
-                  // Image
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: SizedBox(
-                      height: 90,
-                      width: double.infinity,
-                      child: imageUrl != null
-                          ? Image.network(
-                              imageUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) =>
-                                  _markerImageFallback(baseColor, scheme, marker),
-                              loadingBuilder: (context, child, progress) {
-                                if (progress == null) return child;
-                                return Container(
-                                  color: baseColor.withValues(alpha: 0.12),
-                                  child: const Center(
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2),
-                                  ),
-                                );
-                              },
-                            )
-                          : _markerImageFallback(baseColor, scheme, marker),
+                        // Action row: Like, Save, Share buttons (for artworks)
+                        if (artwork != null && !canPresentExhibition) ...[
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              _markerOverlayActionButton(
+                                icon: artwork.isLikedByCurrentUser
+                                    ? Icons.favorite
+                                    : Icons.favorite_border,
+                                label: '${artwork.likesCount}',
+                                isActive: artwork.isLikedByCurrentUser,
+                                activeColor: scheme.error,
+                                scheme: scheme,
+                                isDark: isDark,
+                                onTap: () {
+                                  unawaited(artworkProvider.toggleLike(artwork.id));
+                                },
+                              ),
+                              const SizedBox(width: 8),
+                              _markerOverlayActionButton(
+                                icon: artwork.isFavoriteByCurrentUser || artwork.isFavorite
+                                    ? Icons.bookmark
+                                    : Icons.bookmark_border,
+                                label: l10n.commonSave,
+                                isActive: artwork.isFavoriteByCurrentUser || artwork.isFavorite,
+                                activeColor: baseColor,
+                                scheme: scheme,
+                                isDark: isDark,
+                                onTap: () {
+                                  unawaited(artworkProvider.toggleFavorite(artwork.id));
+                                },
+                              ),
+                              const SizedBox(width: 8),
+                              _markerOverlayActionButton(
+                                icon: Icons.share_outlined,
+                                label: l10n.commonShare,
+                                isActive: false,
+                                activeColor: baseColor,
+                                scheme: scheme,
+                                isDark: isDark,
+                                onTap: () {
+                                  ShareService().showShareSheet(
+                                    context,
+                                    target: ShareTarget.artwork(
+                                      artworkId: artwork.id,
+                                      title: artwork.title,
+                                    ),
+                                    sourceScreen: 'desktop_map_marker',
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+
+                        const SizedBox(height: 12),
+
+                        // Primary action button
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: baseColor,
+                              foregroundColor: AppColorUtils.contrastText(baseColor),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                            ),
+                            onPressed: canPresentExhibition
+                                ? () => _openExhibitionFromMarker(
+                                    marker, primaryExhibition, artwork)
+                                : () => _openMarkerDetail(marker, artwork),
+                            icon: Icon(
+                              canPresentExhibition
+                                  ? Icons.museum_outlined
+                                  : Icons.arrow_forward,
+                              size: 18,
+                            ),
+                            label: Text(
+                              canPresentExhibition
+                                  ? 'Open Exhibition'
+                                  : l10n.commonViewDetails,
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
-                  // Description (only if available)
-                  if (description.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    Text(
-                      description.length > 180
-                          ? '${description.substring(0, 180)}...'
-                          : description,
+  /// Small icon button for marker overlay header
+  Widget _markerOverlayIconButton({
+    required IconData icon,
+    required String tooltip,
+    required ColorScheme scheme,
+    required bool isDark,
+    required VoidCallback? onTap,
+  }) {
+    final bg = scheme.surface.withValues(alpha: isDark ? 0.46 : 0.52);
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(999),
+          onTap: onTap,
+          child: Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: scheme.outlineVariant.withValues(alpha: 0.35),
+              ),
+            ),
+            child: LiquidGlassPanel(
+              padding: EdgeInsets.zero,
+              margin: EdgeInsets.zero,
+              borderRadius: BorderRadius.circular(999),
+              showBorder: false,
+              backgroundColor: bg,
+              child: Center(
+                child: Icon(icon, size: 16, color: scheme.onSurface),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Action button for marker overlay (like, save, share)
+  Widget _markerOverlayActionButton({
+    required IconData icon,
+    required String label,
+    required bool isActive,
+    required Color activeColor,
+    required ColorScheme scheme,
+    required bool isDark,
+    required VoidCallback? onTap,
+  }) {
+    final bg = isActive
+        ? activeColor.withValues(alpha: isDark ? 0.24 : 0.18)
+        : scheme.surface.withValues(alpha: isDark ? 0.34 : 0.42);
+    final border = isActive
+        ? activeColor.withValues(alpha: 0.35)
+        : scheme.outlineVariant.withValues(alpha: 0.30);
+    final fg = isActive ? activeColor : scheme.onSurfaceVariant;
+
+    return Expanded(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: border),
+            ),
+            child: LiquidGlassPanel(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              margin: EdgeInsets.zero,
+              borderRadius: BorderRadius.circular(10),
+              showBorder: false,
+              backgroundColor: bg,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 16, color: fg),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      label,
                       style: GoogleFonts.inter(
                         fontSize: 11,
-                        color: scheme.onSurfaceVariant,
-                        height: 1.4,
+                        fontWeight: FontWeight.w600,
+                        color: fg,
                       ),
-                    ),
-                  ],
-
-                  // Metadata chips
-                  if (showChips) ...[
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      children: [
-                        if (canPresentExhibition)
-                          _attendanceProofChip(scheme, baseColor),
-                        if (artwork != null &&
-                            artwork.category.isNotEmpty &&
-                            artwork.category != 'General')
-                          _compactChip(
-                            scheme,
-                            Icons.palette,
-                            artwork.category,
-                            baseColor,
-                          ),
-                        if (marker.metadata?['subjectCategory'] != null ||
-                            marker.metadata?['subject_category'] != null)
-                          _compactChip(
-                            scheme,
-                            Icons.category_outlined,
-                            (marker.metadata!['subjectCategory'] ??
-                                    marker.metadata!['subject_category'])
-                                .toString(),
-                            baseColor,
-                          ),
-                        if (marker.metadata?['locationName'] != null ||
-                            marker.metadata?['location'] != null)
-                          _compactChip(
-                            scheme,
-                            Icons.place_outlined,
-                            (marker.metadata!['locationName'] ??
-                                    marker.metadata!['location'])
-                                .toString(),
-                            baseColor,
-                          ),
-                        if (artwork != null && artwork.rewards > 0)
-                          _compactChip(
-                            scheme,
-                            Icons.card_giftcard,
-                            '+${artwork.rewards}',
-                            baseColor,
-                          ),
-                      ],
-                    ),
-                  ],
-                  const SizedBox(height: 10),
-
-                  // Action button
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: baseColor,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                      ),
-                      onPressed: canPresentExhibition
-                          ? () => _openExhibitionFromMarker(
-                              marker, primaryExhibition, artwork)
-                          : () => _openMarkerDetail(marker, artwork),
-                      icon: Icon(
-                        canPresentExhibition
-                            ? Icons.museum_outlined
-                            : Icons.arrow_forward,
-                        size: 16,
-                      ),
-                      label: Text(
-                        canPresentExhibition
-                            ? 'Open exhibition'
-                            : l10n.commonViewDetails,
-                        style: GoogleFonts.inter(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
-                        ),
-                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
@@ -3110,130 +3329,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         ],
       ),
     );
-  }
-
-  double _computeMarkerOverlayHeight({
-    required String title,
-    required String? distanceText,
-    required String description,
-    required bool hasChips,
-    required double imageHeight,
-    required double buttonVerticalPadding,
-    required TextStyle buttonTextStyle,
-    bool showTypeLabel = false,
-  }) {
-    const double cardWidth = 240;
-    const double horizontalPadding = 12;
-    const double verticalPadding = 12;
-    final double contentWidth = cardWidth - (horizontalPadding * 2);
-
-    // Type label height (e.g. "Exhibition")
-    double typeLabelHeight = 0;
-    if (showTypeLabel) {
-      final typeLabelPainter = TextPainter(
-        text: TextSpan(
-          text: 'Exhibition',
-          style: GoogleFonts.inter(
-            fontSize: 10,
-            fontWeight: FontWeight.w700,
-            height: 1.0,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout(maxWidth: contentWidth);
-      typeLabelHeight =
-          typeLabelPainter.size.height + 2; // +2 for SizedBox spacing
-    }
-
-    // Title height (max 2 lines)
-    final titlePainter = TextPainter(
-      text: TextSpan(
-        text: title,
-        style: GoogleFonts.inter(
-          fontWeight: FontWeight.w700,
-          fontSize: 14,
-          height: 1.2,
-        ),
-      ),
-      maxLines: 2,
-      textDirection: TextDirection.ltr,
-    )..layout(maxWidth: contentWidth);
-    final double titleHeight = titlePainter.size.height;
-
-    // Distance badge height
-    double distanceBadgeHeight = 0;
-    if (distanceText != null && distanceText.isNotEmpty) {
-      final distancePainter = TextPainter(
-        text: TextSpan(
-          text: distanceText,
-          style: GoogleFonts.inter(
-            fontSize: 10,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout(maxWidth: contentWidth);
-      // padding vertical 2 + icon size 10 -> height is max(text, icon) + padding*2
-      distanceBadgeHeight = (distancePainter.size.height).clamp(10, 20) + 4;
-    }
-
-    // Close icon height (18)
-    const double closeIconHeight = 18;
-    final double headerHeight = [
-      titleHeight,
-      distanceBadgeHeight,
-      closeIconHeight
-    ].reduce((a, b) => a > b ? a : b);
-
-    // Description height (wrap, no maxLines since text trimmed already)
-    double descriptionHeight = 0;
-    if (description.isNotEmpty) {
-      final descriptionPainter = TextPainter(
-        text: TextSpan(
-          text: description,
-          style: GoogleFonts.inter(
-            fontSize: 11,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-            height: 1.4,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-        maxLines: null,
-      )..layout(maxWidth: contentWidth);
-      descriptionHeight = descriptionPainter.size.height;
-    }
-
-    // Chips height (single wrap row approx chip height 20 plus run spacing)
-    final double chipsHeight = hasChips ? 24.0 : 0.0;
-
-    // Button height: text + vertical padding*2 (icon height 16 already fits)
-    final buttonTextPainter = TextPainter(
-      text: TextSpan(text: 'View details', style: buttonTextStyle),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    final double buttonHeight =
-        buttonTextPainter.size.height + (buttonVerticalPadding * 2);
-
-    // Spacing between sections
-    double spacing = 0;
-    spacing += 10; // after header
-    spacing += 10; // after image
-    if (descriptionHeight > 0) spacing += 10;
-    if (chipsHeight > 0) spacing += 10;
-    spacing += 10; // before button
-
-    // Total container height
-    final double containerHeight = verticalPadding * 2 +
-        typeLabelHeight +
-        headerHeight +
-        imageHeight +
-        descriptionHeight +
-        chipsHeight +
-        buttonHeight +
-        spacing;
-
-    // Marker height includes bottom margin offset (48)
-    return containerHeight + 48;
   }
 
   /// Check if marker has any metadata chips to display
