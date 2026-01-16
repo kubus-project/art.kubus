@@ -40,24 +40,41 @@ jobs:
   deploy_web:
     name: FTP deploy (Flutter web)
     runs-on: ubuntu-latest
-    if: ${{ inputs.deploy_web && secrets.FTP_SERVER != '' && secrets.FTP_USERNAME != '' && secrets.FTP_PASSWORD != '' }}
+    if: ${{ inputs.deploy_web }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Check FTP secrets
+        id: ftp
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          if [ -n "$FTP_SERVER" ] && [ -n "$FTP_USERNAME" ] && [ -n "$FTP_PASSWORD" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Set up Flutter
+        if: ${{ steps.ftp.outputs.ok == 'true' }}
         uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
 
       - name: Build Flutter web
+        if: ${{ steps.ftp.outputs.ok == 'true' }}
         run: |
           flutter pub get
           flutter build web --release
 
       - name: FTP Deploy (Flutter Web)
+        if: ${{ steps.ftp.outputs.ok == 'true' }}
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -65,6 +82,11 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: build/web/
           server-dir: /app.kubus.site/
+
+      - name: Skip deploy (missing FTP secrets)
+        if: ${{ steps.ftp.outputs.ok != 'true' }}
+        run: |
+          echo "FTP secrets not configured; skipping web deploy."
 
   apk:
     name: Build APK + upload to GitHub Release
