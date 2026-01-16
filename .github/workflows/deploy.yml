@@ -103,15 +103,45 @@ jobs:
           flutter pub get
           flutter build web --release ${{ steps.defines.outputs.args }}
 
-      - name: FTP Deploy (Flutter Web)
+      - name: Preflight FTP connectivity
         if: ${{ steps.ftp.outputs.ok == 'true' }}
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        id: net
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_PORT: ${{ vars.FTP_PORT }}
+        run: |
+          PORT="${FTP_PORT:-21}"
+          echo "Checking TCP connectivity to ${FTP_SERVER}:${PORT}..."
+          # nc is available on ubuntu-latest
+          if nc -vz -w 10 "$FTP_SERVER" "$PORT"; then
+            echo "FTP port reachable."
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Unable to reach ${FTP_SERVER}:${PORT} from this runner."
+            echo "If your host requires allowlisting GitHub Actions runner IPs, add them in your hosting firewall." 
+            echo "If your host only supports SFTP, FTP deploy won't work; switch to an SFTP-based deploy." 
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: FTP Deploy (Flutter Web)
+        if: ${{ steps.ftp.outputs.ok == 'true' && steps.net.outputs.ok == 'true' }}
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.6
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ${{ vars.FTP_PROTOCOL != '' && vars.FTP_PROTOCOL || 'ftps' }}
+          port: ${{ vars.FTP_PORT != '' && vars.FTP_PORT || 21 }}
+          security: ${{ vars.FTP_SECURITY != '' && vars.FTP_SECURITY || 'loose' }}
+          timeout: ${{ vars.FTP_TIMEOUT_MS != '' && vars.FTP_TIMEOUT_MS || 120000 }}
           local-dir: build/web/
           server-dir: /app.kubus.site/
+
+      - name: Skip deploy (FTP not reachable)
+        if: ${{ steps.ftp.outputs.ok == 'true' && steps.net.outputs.ok != 'true' }}
+        run: |
+          echo "FTP server is not reachable from this GitHub runner; skipping web deploy to avoid a failed workflow."
 
       - name: Skip deploy (missing FTP secrets)
         if: ${{ steps.ftp.outputs.ok != 'true' }}
@@ -148,11 +178,12 @@ jobs:
       - name: Install Android SDK components
         shell: bash
         run: |
-          sdkmanager --install "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+          sdkmanager --install "cmdline-tools;latest" "platforms;android-36" "build-tools;36.0.0" "platform-tools"
 
       - name: Accept Android licenses
         shell: bash
-        run: yes | flutter doctor --android-licenses
+        run: |
+          yes | sdkmanager --licenses > /dev/null
 
       - name: Flutter pub get
         run: flutter pub get
