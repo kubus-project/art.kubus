@@ -66,6 +66,62 @@ jobs:
             echo "ok=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Normalize FTP server host/port
+        if: ${{ steps.ftp.outputs.ok == 'true' }}
+        id: ftp_target
+        shell: bash
+        env:
+          FTP_SERVER_RAW: ${{ secrets.FTP_SERVER }}
+          FTP_PORT_RAW: ${{ vars.FTP_PORT }}
+        run: |
+          # Users sometimes put values like:
+          #   ftps://ftp.example.com
+          #   ftp.example.com/
+          #   ftp.example.com:21
+          # This step normalizes to HOST + PORT without printing the secret value.
+
+          RAW="${FTP_SERVER_RAW}"
+          RAW="$(printf '%s' "$RAW" | tr -d '\r\n')"
+          RAW="$(printf '%s' "$RAW" | xargs)"
+
+          HAS_PROTO=false
+          if [[ "$RAW" == *"://"* ]]; then
+            HAS_PROTO=true
+          fi
+
+          HOSTPORT="$(printf '%s' "$RAW" | sed -E 's#^[a-zA-Z]+://##; s#/.*$##')"
+          HOSTPORT="$(printf '%s' "$HOSTPORT" | xargs)"
+
+          HOST="$HOSTPORT"
+          PORT="${FTP_PORT_RAW:-21}"
+
+          # If host looks like host:port (not IPv6), split it.
+          if [[ "$HOSTPORT" == *:* && "$HOSTPORT" != \[*\] ]]; then
+            CAND_PORT="${HOSTPORT##*:}"
+            CAND_HOST="${HOSTPORT%%:*}"
+            if [[ "$CAND_PORT" =~ ^[0-9]+$ ]]; then
+              HOST="$CAND_HOST"
+              # Only take port from FTP_SERVER when FTP_PORT wasn't provided.
+              if [ -z "${FTP_PORT_RAW:-}" ]; then
+                PORT="$CAND_PORT"
+              fi
+            fi
+          fi
+
+          if [ -z "$HOST" ]; then
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "Unable to parse FTP host from FTP_SERVER secret." >&2
+            exit 0
+          fi
+
+          echo "ok=true" >> "$GITHUB_OUTPUT"
+          echo "host=$HOST" >> "$GITHUB_OUTPUT"
+          echo "port=$PORT" >> "$GITHUB_OUTPUT"
+
+          if [ "$HAS_PROTO" = true ]; then
+            echo "Note: FTP_SERVER appears to include a protocol (e.g., ftps://). Use hostname only (e.g., ftp.kubus.site)."
+          fi
+
       - name: Set up Flutter
         if: ${{ steps.ftp.outputs.ok == 'true' }}
         uses: subosito/flutter-action@v2
@@ -126,39 +182,53 @@ jobs:
           fi
 
       - name: Preflight FTP connectivity
-        if: ${{ steps.ftp.outputs.ok == 'true' }}
+        if: ${{ steps.ftp.outputs.ok == 'true' && steps.ftp_target.outputs.ok == 'true' }}
         id: net
         shell: bash
         env:
-          FTP_SERVER: ${{ secrets.FTP_SERVER }}
-          FTP_PORT: ${{ vars.FTP_PORT }}
+          FTP_HOST: ${{ steps.ftp_target.outputs.host }}
+          FTP_PORT: ${{ steps.ftp_target.outputs.port }}
         run: |
           PORT="${FTP_PORT:-21}"
-          echo "Checking TCP connectivity to ${FTP_SERVER}:${PORT}..."
+          echo "Checking TCP connectivity to ${FTP_HOST}:${PORT}..."
+
+          if ! getent hosts "$FTP_HOST" >/dev/null 2>&1; then
+            echo "DNS lookup failed for the configured FTP host." >&2
+            echo "Check your Actions secret FTP_SERVER. It must be a resolvable hostname like: ftp.kubus.site" >&2
+            echo "Do NOT include protocol (ftp://, ftps://), paths (/...), or surrounding spaces." >&2
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           # nc is available on ubuntu-latest
-          if nc -vz -w 10 "$FTP_SERVER" "$PORT"; then
+          if nc -vz -w 10 "$FTP_HOST" "$PORT"; then
             echo "FTP port reachable."
             echo "ok=true" >> "$GITHUB_OUTPUT"
           else
-            echo "Unable to reach ${FTP_SERVER}:${PORT} from this runner."
+            echo "Unable to reach ${FTP_HOST}:${PORT} from this runner."
             echo "If your host requires allowlisting GitHub Actions runner IPs, add them in your hosting firewall." 
             echo "If your host only supports SFTP, FTP deploy won't work; switch to an SFTP-based deploy." 
             echo "ok=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: FTP Deploy (Flutter Web)
-        if: ${{ steps.ftp.outputs.ok == 'true' && steps.net.outputs.ok == 'true' }}
+        if: ${{ steps.ftp.outputs.ok == 'true' && steps.ftp_target.outputs.ok == 'true' && steps.net.outputs.ok == 'true' }}
         uses: SamKirkland/FTP-Deploy-Action@v4.3.6
         with:
-          server: ${{ secrets.FTP_SERVER }}
+          server: ${{ steps.ftp_target.outputs.host }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ${{ vars.FTP_PROTOCOL || 'ftps' }}
-          port: ${{ vars.FTP_PORT || 21 }}
+          port: ${{ steps.ftp_target.outputs.port }}
           security: ${{ vars.FTP_SECURITY || 'loose' }}
           timeout: ${{ vars.FTP_TIMEOUT_MS || 120000 }}
           local-dir: build/web/
           server-dir: /app.kubus.site/
+
+      - name: Skip deploy (invalid FTP_SERVER)
+        if: ${{ steps.ftp.outputs.ok == 'true' && steps.ftp_target.outputs.ok != 'true' }}
+        run: |
+          echo "FTP secrets are present, but FTP_SERVER could not be parsed into a hostname."
+          echo "Set FTP_SERVER to something like: ftp.kubus.site (no ftps://, no path, no spaces)."
 
       - name: Skip deploy (FTP not reachable)
         if: ${{ steps.ftp.outputs.ok == 'true' && steps.net.outputs.ok != 'true' }}
