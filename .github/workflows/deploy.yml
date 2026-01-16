@@ -304,6 +304,28 @@ jobs:
           source: "build/web/*"
           target: ${{ vars.WEB_SERVER_DIR || '/app.kubus.site/' }}
 
+      - name: Show SSH host fingerprints (for pinning)
+        if: ${{ steps.ftp.outputs.ok == 'true' && steps.ftp_target.outputs.ok == 'true' && steps.net.outputs.ftp_ok != 'true' && steps.net.outputs.sftp_ok == 'true' }}
+        shell: bash
+        env:
+          SFTP_HOST: ${{ secrets.SFTP_SERVER || steps.ftp_target.outputs.host }}
+          SFTP_PORT: ${{ vars.SFTP_PORT || 22 }}
+        run: |
+          echo "Fetching SSH host keys for ${SFTP_HOST}:${SFTP_PORT} (best-effort)..."
+          if ! command -v ssh-keyscan >/dev/null 2>&1; then
+            echo "ssh-keyscan not available on runner" >&2
+            exit 0
+          fi
+          if ! command -v ssh-keygen >/dev/null 2>&1; then
+            echo "ssh-keygen not available on runner" >&2
+            exit 0
+          fi
+
+          # This prints the fingerprints you should pin in the SFTP_HOST_FINGERPRINT secret.
+          # Note: ssh-keyscan is not authenticated; use it to obtain the value, then
+          # confirm it via your hosting control panel/SSH access page if possible.
+          ssh-keyscan -p "$SFTP_PORT" -t ed25519,ecdsa,rsa "$SFTP_HOST" 2>/dev/null | ssh-keygen -lf - || true
+
       - name: SFTP deploy note
         if: ${{ steps.ftp.outputs.ok == 'true' && steps.ftp_target.outputs.ok == 'true' && steps.net.outputs.ftp_ok != 'true' && steps.net.outputs.sftp_ok == 'true' && steps.sftp.outcome != 'success' }}
         run: |
