@@ -1,6 +1,10 @@
 name: Deploy (manual)
 
 on:
+  push:
+    branches:
+      - master
+      - main
   workflow_dispatch:
     inputs:
       deploy_web:
@@ -40,7 +44,7 @@ jobs:
   deploy_web:
     name: FTP deploy (Flutter web)
     runs-on: ubuntu-latest
-    if: ${{ inputs.deploy_web }}
+    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy_web) }}
 
     steps:
       - name: Checkout
@@ -117,7 +121,7 @@ jobs:
   apk:
     name: Build APK + upload to GitHub Release
     runs-on: ubuntu-latest
-    if: ${{ inputs.build_apk }}
+    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.build_apk) }}
     timeout-minutes: 30
 
     steps:
@@ -179,31 +183,73 @@ jobs:
       - name: Build APK (release mode, current project signing)
         run: flutter build apk --release ${{ steps.apk_defines.outputs.args }}
 
+      - name: Compute release metadata
+        id: meta
+        shell: bash
+        run: |
+          VERSION=$(grep -E '^version:\s*' pubspec.yaml | awk '{print $2}' | cut -d+ -f1)
+          if [ -z "$VERSION" ]; then
+            echo "Unable to parse version from pubspec.yaml" >&2
+            exit 1
+          fi
+
+          TAG="v${VERSION}-alpha"
+
+          # Allow manual override when workflow_dispatch provides a tag.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.release_tag }}" ]; then
+            TAG="${{ inputs.release_tag }}"
+          fi
+
+          # File name requested by user: art.kubus.vX.Y.Z.-alpha.apk
+          APK_NAME="art.kubus.v${VERSION}.-alpha.apk"
+
+          # prerelease: always true on push; configurable on manual.
+          PRE="true"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            PRE="${{ inputs.prerelease }}"
+          fi
+
+          # publish: always on push; configurable on manual.
+          PUB="true"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            PUB="${{ inputs.publish_github_release }}"
+          fi
+
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "apk_name=${APK_NAME}" >> "$GITHUB_OUTPUT"
+          echo "prerelease=${PRE}" >> "$GITHUB_OUTPUT"
+          echo "publish=${PUB}" >> "$GITHUB_OUTPUT"
+
+      - name: Rename APK asset
+        id: rename
+        shell: bash
+        run: |
+          SRC="build/app/outputs/flutter-apk/app-release.apk"
+          if [ ! -f "$SRC" ]; then
+            echo "Expected APK not found at $SRC" >&2
+            ls -la build/app/outputs/flutter-apk || true
+            exit 1
+          fi
+          DEST="build/app/outputs/flutter-apk/${{ steps.meta.outputs.apk_name }}"
+          cp "$SRC" "$DEST"
+          echo "dest=$DEST" >> "$GITHUB_OUTPUT"
+
       - name: Upload APK as workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-release-apk
-          path: build/app/outputs/flutter-apk/*.apk
+          name: ${{ steps.meta.outputs.apk_name }}
+          path: ${{ steps.rename.outputs.dest }}
           if-no-files-found: error
 
-      - name: Choose release tag
-        id: release_tag
-        if: ${{ inputs.publish_github_release }}
-        shell: bash
-        run: |
-          TAG="${{ inputs.release_tag }}"
-          if [ -z "$TAG" ]; then
-            TAG="apk-${GITHUB_RUN_NUMBER}"
-          fi
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-
-      - name: Publish GitHub Release + upload APK
-        if: ${{ inputs.publish_github_release }}
-        uses: softprops/action-gh-release@v2
+      - name: Create/Update GitHub Release + upload APK
+        if: ${{ steps.meta.outputs.publish == 'true' }}
+        uses: ncipollo/release-action@v1
         with:
-          tag_name: ${{ steps.release_tag.outputs.tag }}
-          name: ${{ steps.release_tag.outputs.tag }}
-          prerelease: ${{ inputs.prerelease }}
-          generate_release_notes: true
-          files: |
-            build/app/outputs/flutter-apk/*.apk
+          tag: ${{ steps.meta.outputs.tag }}
+          name: art.kubus v${{ steps.meta.outputs.version }} alpha
+          prerelease: ${{ steps.meta.outputs.prerelease }}
+          generateReleaseNotes: true
+          allowUpdates: true
+          replacesArtifacts: true
+          artifacts: ${{ steps.rename.outputs.dest }}
