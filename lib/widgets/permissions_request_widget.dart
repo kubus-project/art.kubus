@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'inline_loading.dart';
 import 'glass_components.dart';
 import '../services/push_notification_service.dart';
+import '../services/notification_helper.dart';
 import '../utils/kubus_color_roles.dart';
 
 class PermissionsRequestWidget extends StatefulWidget {
@@ -42,22 +43,26 @@ class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
 
   Future<void> _checkPermissions() async {
     try {
-      final cameraStatus = await Permission.camera.status;
       final locationStatus = await Permission.locationWhenInUse.status;
-      final notificationStatus = await Permission.notification.status;
+      final notificationGranted = kIsWeb
+          ? await isWebNotificationPermissionGranted()
+          : (await Permission.notification.status).isGranted;
+
+      // On web, we don't request/check camera permission in the onboarding flow.
+      final cameraGranted = kIsWeb ? true : (await Permission.camera.status).isGranted;
 
       if (mounted) {
         setState(() {
-          _cameraGranted = cameraStatus.isGranted;
+          _cameraGranted = cameraGranted;
           _locationGranted = locationStatus.isGranted;
-          _notificationGranted = notificationStatus.isGranted;
+          _notificationGranted = notificationGranted;
         });
       }
     } catch (e, st) {
       debugPrint('PermissionsRequestWidget._checkPermissions failed: $e\n$st');
       if (mounted) {
         setState(() {
-          _cameraGranted = false;
+          _cameraGranted = kIsWeb ? true : false;
           _locationGranted = false;
           _notificationGranted = false;
         });
@@ -73,15 +78,19 @@ class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
     });
 
     try {
-      // Request camera permission
-      try {
-        final cameraStatus = await Permission.camera.request();
-        setState(() {
-          _cameraGranted = cameraStatus.isGranted;
-        });
-      } catch (e, st) {
-        debugPrint('PermissionsRequestWidget._requestAllPermissions camera.request failed: $e\n$st');
-        setState(() => _cameraGranted = false);
+      // Request camera permission (not requested on web)
+      if (!kIsWeb) {
+        try {
+          final cameraStatus = await Permission.camera.request();
+          setState(() {
+            _cameraGranted = cameraStatus.isGranted;
+          });
+        } catch (e, st) {
+          debugPrint('PermissionsRequestWidget._requestAllPermissions camera.request failed: $e\n$st');
+          setState(() => _cameraGranted = false);
+        }
+      } else {
+        setState(() => _cameraGranted = true);
       }
 
       // Request location permission
@@ -127,8 +136,9 @@ class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
         });
       }
 
-      // Check if all critical permissions are granted (camera and location are critical for AR)
-      if (_cameraGranted && _locationGranted) {
+      // On web we don't request camera permission; require only location for core UX.
+      final requiredOk = kIsWeb ? _locationGranted : (_cameraGranted && _locationGranted);
+      if (requiredOk) {
         widget.onPermissionsGranted?.call();
       } else {
         _showPermissionDeniedDialog();
@@ -151,7 +161,9 @@ class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
         ),
         content: Text(
-          'Camera and Location permissions are essential for AR experiences. You can continue without them, but some features will be limited.\n\nYou can enable permissions later in Settings.',
+          kIsWeb
+              ? 'Location permission is essential for map discovery and nearby artwork features. You can continue without it, but some features will be limited.\n\nYou can enable permissions later in your browser settings.'
+              : 'Camera and Location permissions are essential for AR experiences. You can continue without them, but some features will be limited.\n\nYou can enable permissions later in Settings.',
           style: GoogleFonts.outfit(),
         ),
         actions: [
@@ -188,14 +200,16 @@ class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _buildPermissionTile(
-            icon: Icons.camera_alt,
-            title: 'Camera Access',
-            description: 'Required for AR experiences and scanning artworks',
-            isGranted: _cameraGranted,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-          const SizedBox(height: 16),
+          if (!kIsWeb) ...[
+            _buildPermissionTile(
+              icon: Icons.camera_alt,
+              title: 'Camera Access',
+              description: 'Required for AR experiences and scanning artworks',
+              isGranted: _cameraGranted,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(height: 16),
+          ],
           _buildPermissionTile(
             icon: Icons.location_on,
             title: 'Location Access',

@@ -17,3 +17,11 @@ Future<bool> requestWebNotificationPermission() async {
     return false;
   }
 }
+
+Future<bool> isWebNotificationPermissionGranted() async {
+  try {
+    return web.Notification.permission == 'granted';
+  } catch (_) {
+    return false;
+  }
+}

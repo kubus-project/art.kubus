@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../widgets/inline_loading.dart';
 import '../../services/push_notification_service.dart';
+import '../../services/notification_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/onboarding_state_service.dart';
 import '../../services/telemetry/telemetry_service.dart';
@@ -53,11 +54,20 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       final locationStatus = await Permission.location.status;
       locationGranted = locationStatus.isGranted;
 
-      final cameraStatus = await Permission.camera.status;
-      cameraGranted = cameraStatus.isGranted;
+      // On web we do not request or check camera permission in onboarding.
+      if (kIsWeb) {
+        cameraGranted = true;
+      } else {
+        final cameraStatus = await Permission.camera.status;
+        cameraGranted = cameraStatus.isGranted;
+      }
 
-      final notificationStatus = await Permission.notification.status;
-      notificationsGranted = notificationStatus.isGranted;
+      if (kIsWeb) {
+        notificationsGranted = await isWebNotificationPermissionGranted();
+      } else {
+        final notificationStatus = await Permission.notification.status;
+        notificationsGranted = notificationStatus.isGranted;
+      }
 
       if (kIsWeb) {
         storageGranted = true;
@@ -87,8 +97,8 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
 
     final requiredPermissions = <PermissionType>[
       PermissionType.location,
-      PermissionType.camera,
       PermissionType.notifications,
+      if (!kIsWeb) PermissionType.camera,
       if (!kIsWeb) PermissionType.storage,
     ];
 
@@ -172,7 +182,10 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
 
   // Filter pages for the current platform. Do not request storage/photos on web.
   List<PermissionPage> get _pages => kIsWeb
-      ? _allPages.where((p) => p.permissionType != PermissionType.storage).toList()
+      ? _allPages
+        .where((p) => p.permissionType != PermissionType.storage)
+        .where((p) => p.permissionType != PermissionType.camera)
+        .toList()
       : _allPages;
 
   @override
@@ -630,6 +643,16 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       if (mounted) {
         setState(() {
           _storageGranted = true;
+        });
+      }
+      return;
+    }
+
+    if (type == PermissionType.camera && kIsWeb) {
+      // Camera access is intentionally not requested on web.
+      if (mounted) {
+        setState(() {
+          _cameraGranted = true;
         });
       }
       return;

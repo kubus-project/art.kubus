@@ -360,9 +360,9 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
                         : (isWideScreen ? 10 : isTablet ? 9 : isSmallScreen ? 6 : 8),
                     height: isWideScreen ? 10 : isTablet ? 9 : isSmallScreen ? 6 : 8,
                     decoration: BoxDecoration(
-                      color: index == _currentPage
-                          ? Provider.of<ThemeProvider>(context).accentColor
-                          : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                      // Match each dot to the page's icon gradient color.
+                      color: widget.pages[index].gradientColors.first
+                          .withValues(alpha: index == _currentPage ? 1.0 : 0.35),
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
