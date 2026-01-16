@@ -23,7 +23,6 @@ import '../../../services/telemetry/telemetry_service.dart';
 import '../../../models/user.dart';
 import '../../../widgets/gradient_icon_card.dart';
 import '../../../widgets/kubus_button.dart';
-import '../../../widgets/kubus_card.dart';
 import '../../../widgets/glass_components.dart';
 import '../../../utils/design_tokens.dart';
 import '../../auth/sign_in_screen.dart';
@@ -86,6 +85,38 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     _mnemonicController.dispose();
     _wcUriController.dispose();
     super.dispose();
+  }
+
+  List<Color> _backgroundPaletteForStep(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    Color start;
+    Color end;
+    switch (_currentStep) {
+      case 1:
+        start = const Color(0xFF0EA5E9);
+        end = const Color(0xFF06B6D4);
+        break;
+      case 2:
+        start = const Color(0xFF10B981);
+        end = const Color(0xFF059669);
+        break;
+      case 3:
+        start = const Color(0xFF06B6D4);
+        end = const Color(0xFF3B82F6);
+        break;
+      case 0:
+      default:
+        start = const Color(0xFF099514);
+        end = const Color(0xFF3B82F6);
+        break;
+    }
+
+    final bgStart = start.withValues(alpha: isDark ? 0.42 : 0.52);
+    final bgEnd = end.withValues(alpha: isDark ? 0.38 : 0.48);
+    final bgMid = (Color.lerp(bgStart, bgEnd, 0.55) ?? bgEnd)
+        .withValues(alpha: isDark ? 0.40 : 0.50);
+    return <Color>[bgStart, bgMid, bgEnd, bgStart];
   }
 
   String? _normalizedAuthFlow() {
@@ -167,10 +198,13 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      backgroundColor: KubusGradients.animatedDarkColors.first,
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
+        scrolledUnderElevation: 0,
         leading: _currentStep > 0 
           ? IconButton(
               icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
@@ -192,6 +226,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
       body: AnimatedGradientBackground(
         duration: const Duration(seconds: 10),
         intensity: 0.2,
+        colors: _backgroundPaletteForStep(context),
         child: SizedBox.expand(
           child: Consumer<Web3Provider>(
             builder: (context, web3Provider, child) {
@@ -252,6 +287,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
       child: ScaleTransition(
         scale: _scaleAnimation,
         child: SafeArea(
+          top: false,
           child: SingleChildScrollView(
             padding: EdgeInsets.symmetric(
               horizontal: screenWidth * 0.05,
@@ -260,17 +296,14 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
             child: Column(
               children: [
                 SizedBox(height: isSmallScreen ? 16 : 32),
-                Container(
+                LiquidGlassPanel(
                   padding: EdgeInsets.all(isSmallScreen ? 14 : 16),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surface,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
+                  borderRadius: BorderRadius.circular(18),
                   child: Column(
                     children: [
                       GradientIconCard(
-                        start: Color.fromARGB(255, 9, 149, 20),
-                        end: Color(0xFF3B82F6),
+                        start: const Color.fromARGB(255, 9, 149, 20),
+                        end: const Color(0xFF3B82F6),
                         icon: Icons.account_balance_wallet_outlined,
                         iconSize: isSmallScreen ? 44 : 52,
                         width: isSmallScreen ? 84 : 100,
@@ -379,6 +412,9 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
   }) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 360;
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardTint = scheme.surface.withValues(alpha: isDark ? 0.22 : 0.26);
     Color startColor;
     Color endColor;
     if (icon == Icons.qr_code_scanner) {
@@ -394,10 +430,13 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     
     return Padding(
       padding: EdgeInsets.only(bottom: isSmallScreen ? KubusSpacing.sm : KubusSpacing.md),
-      child: KubusCard(
+      child: LiquidGlassPanel(
         onTap: onTap,
         padding: EdgeInsets.all(isSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
-        color: Theme.of(context).colorScheme.surface,
+        margin: EdgeInsets.zero,
+        borderRadius: BorderRadius.circular(isSmallScreen ? 16 : 18),
+        blurSigma: KubusGlassEffects.blurSigmaLight,
+        backgroundColor: cardTint,
         child: Row(
           children: [
             SizedBox(
@@ -422,14 +461,14 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                     title,
                     style: KubusTypography.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface,
+                      color: scheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 3),
                   Text(
                     description,
                     style: KubusTypography.textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      color: scheme.onSurface.withValues(alpha: 0.65),
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,

@@ -674,7 +674,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: Theme.of(context).scaffoldBackgroundColor,
+                      color: Theme.of(context).colorScheme.surface,
                       width: 5,
                     ),
                     boxShadow: [

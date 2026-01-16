@@ -20,6 +20,7 @@ import '../../widgets/kubus_button.dart';
 import '../../widgets/kubus_card.dart';
 import '../../widgets/glass_components.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/kubus_color_roles.dart';
 import '../web3/wallet/connectwallet_screen.dart';
 import '../desktop/auth/desktop_auth_shell.dart';
 import '../desktop/desktop_shell.dart';
@@ -420,6 +421,9 @@ class _SignInScreenState extends State<SignInScreen> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
+    final roles = KubusColorRoles.of(context);
+    final accentStart = colorScheme.primary;
+    final accentEnd = roles.positiveAction;
     final enableWallet = AppConfig.enableWeb3 && AppConfig.enableWalletConnect;
     final enableEmail = AppConfig.enableEmailAuth;
     final enableGoogle = AppConfig.enableGoogleAuth;
@@ -444,16 +448,16 @@ class _SignInScreenState extends State<SignInScreen> {
           l10n.authHighlightControl,
         ],
         icon: GradientIconCard(
-          start: const Color(0xFF0EA5E9),
-          end: const Color(0xFF10B981),
+          start: accentStart,
+          end: accentEnd,
           icon: Icons.login_rounded,
           iconSize: 52,
           width: 100,
           height: 100,
           radius: 20,
         ),
-        gradientStart: const Color(0xFF0EA5E9),
-        gradientEnd: const Color(0xFF10B981),
+        gradientStart: accentStart,
+        gradientEnd: accentEnd,
         form: form,
         footer: Align(
           alignment: Alignment.centerLeft,
@@ -475,60 +479,64 @@ class _SignInScreenState extends State<SignInScreen> {
       );
     }
 
-    final authGradient = Theme.of(context).brightness == Brightness.dark
-        ? KubusGradients.authDark
-        : KubusGradients.fromColors(
-            const Color(0xFF0EA5E9).withValues(alpha: 0.55),
-            const Color(0xFF10B981).withValues(alpha: 0.50),
-          );
+    final bgStart = accentStart.withValues(alpha: 0.55);
+    final bgEnd = accentEnd.withValues(alpha: 0.50);
+    final bgMid = (Color.lerp(bgStart, bgEnd, 0.55) ?? bgEnd).withValues(alpha: 0.52);
+    final bgColors = <Color>[bgStart, bgMid, bgEnd, bgStart];
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        titleSpacing: 16,
+        title: const AppLogo(width: 36, height: 36),
+        actions: [
+          TextButton(
+            onPressed: () {
+              unawaited(
+                  TelemetryService().trackSignInAttempt(method: 'guest'));
+              unawaited(
+                  TelemetryService().trackSignInSuccess(method: 'guest'));
+              Navigator.of(context).pushReplacementNamed('/main');
+            },
+            child: Text(
+              l10n.commonSkipForNow,
+              style: GoogleFonts.inter(
+                color: colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
       body: Stack(
         fit: StackFit.expand,
         children: [
           AnimatedGradientBackground(
             duration: const Duration(seconds: 10),
             intensity: 0.2,
-            child: const SizedBox.expand(),
-          ),
-          DecoratedBox(
-            decoration: BoxDecoration(gradient: authGradient),
+            colors: bgColors,
             child: const SizedBox.expand(),
           ),
           SafeArea(
+            top: false,
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 520),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const AppLogo(width: 48, height: 48),
-                          TextButton(
-                            onPressed: () {
-                              unawaited(TelemetryService()
-                                  .trackSignInAttempt(method: 'guest'));
-                              unawaited(TelemetryService()
-                                  .trackSignInSuccess(method: 'guest'));
-                              Navigator.of(context)
-                                  .pushReplacementNamed('/main');
-                            },
-                            child: Text(
-                              l10n.commonSkipForNow,
-                              style: GoogleFonts.inter(
-                                color: colorScheme.onSurface.withValues(alpha: 0.7),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      form,
-                    ],
+              child: Padding(
+                padding: const EdgeInsets.only(top: kToolbarHeight + 12),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 520),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        form,
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -547,39 +555,47 @@ class _SignInScreenState extends State<SignInScreen> {
     required bool isDesktop,
   }) {
     final l10n = AppLocalizations.of(context)!;
+    final roles = KubusColorRoles.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         if (!isDesktop)
-          Container(
+          SizedBox(
             width: double.infinity,
-            padding: const EdgeInsets.all(18),
-            child: Column(
-              children: [
-                GradientIconCard(
-                  start: const Color(0xFF0EA5E9),
-                  end: const Color(0xFF10B981),
-                  icon: Icons.login_rounded,
-                  iconSize: 52,
-                  width: 100,
-                  height: 100,
-                  radius: 20,
-                ),
-                const SizedBox(height: 12),
-                Text(l10n.authSignInTitle,
+            child: LiquidGlassPanel(
+              padding: const EdgeInsets.all(18),
+              borderRadius: BorderRadius.circular(20),
+              child: Column(
+                children: [
+                  GradientIconCard(
+                    start: colorScheme.primary,
+                    end: roles.positiveAction,
+                    icon: Icons.login_rounded,
+                    iconSize: 52,
+                    width: 100,
+                    height: 100,
+                    radius: 20,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    l10n.authSignInTitle,
                     style: GoogleFonts.inter(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
-                        color: colorScheme.onSurface)),
-                const SizedBox(height: 8),
-                Text(
-                  l10n.authSignInSubtitle,
-                  style: GoogleFonts.inter(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w800,
+                      color: colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    l10n.authSignInSubtitle,
+                    style: GoogleFonts.inter(
                       fontSize: 14,
-                      color: colorScheme.onSurface.withValues(alpha: 0.85)),
-                  textAlign: TextAlign.center,
-                ),
-              ],
+                      color: colorScheme.onSurface.withValues(alpha: 0.85),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
             ),
           ),
         if (!isDesktop) const SizedBox(height: 20),

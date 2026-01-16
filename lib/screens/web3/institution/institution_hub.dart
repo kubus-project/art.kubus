@@ -176,10 +176,12 @@ class _InstitutionHubState extends State<InstitutionHub> {
     ];
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
+        scrolledUnderElevation: 0,
         title: Text(
           'Institution Hub',
           style: GoogleFonts.inter(

@@ -100,6 +100,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
+    final roles = KubusColorRoles.of(context);
 
     return Container(
       decoration: BoxDecoration(
@@ -159,7 +160,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
             'Vote on Proposals',
             'Participate in governance',
             Icons.how_to_vote_outlined,
-            const Color(0xFF4ECDC4),
+            roles.statTeal,
             () {
               // Navigate to proposals tab in mobile view
             },
@@ -168,7 +169,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
             'Analytics',
             'View DAO performance',
             Icons.analytics_outlined,
-            const Color(0xFFFF6B6B),
+            roles.statCoral,
             () {
               DesktopShellScope.of(context)?.pushScreen(
                 DesktopSubScreen(
@@ -214,6 +215,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
     return Consumer<Web3Provider>(
       builder: (context, web3Provider, _) {
         final daoAccent = KubusColorRoles.of(context).web3DaoAccent;
+        final roles = KubusColorRoles.of(context);
         final votingPower = web3Provider.kub8Balance;
         final hasVotingPower = votingPower > 0;
 
@@ -267,20 +269,17 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
               ),
               if (!hasVotingPower) ...[
                 const SizedBox(height: 16),
-                Container(
+                LiquidGlassPanel(
                   padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: Colors.orange.withValues(alpha: 0.3),
-                    ),
-                  ),
+                  borderRadius: BorderRadius.circular(10),
+                  showBorder: false,
+                  backgroundColor:
+                      roles.lockedFeature.withValues(alpha: 0.12),
                   child: Row(
                     children: [
                       Icon(
                         Icons.info_outline,
-                        color: Colors.orange,
+                        color: roles.lockedFeature,
                         size: 20,
                       ),
                       const SizedBox(width: 12),
@@ -314,22 +313,23 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
     Color color,
     VoidCallback onTap,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final radius = BorderRadius.circular(12);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
+      child: LiquidGlassPanel(
+        padding: EdgeInsets.zero,
+        borderRadius: radius,
+        showBorder: false,
+        backgroundColor: color.withValues(alpha: isDark ? 0.16 : 0.10),
+        onTap: onTap,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            border: Border.all(color: color.withValues(alpha: 0.20)),
+          ),
+          child: Padding(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: color.withValues(alpha: 0.2),
-              ),
-            ),
             child: Row(
               children: [
                 Container(
@@ -409,7 +409,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
                     'Active',
                     activeProposals.toString(),
                     Icons.pending_actions_outlined,
-                    const Color(0xFF4ECDC4),
+                    KubusColorRoles.of(context).statTeal,
                   ),
                 ),
               ],
@@ -422,7 +422,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
                     'Members',
                     totalMembers.toString(),
                     Icons.people_outline,
-                    const Color(0xFFFF6B6B),
+                    KubusColorRoles.of(context).statCoral,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -431,7 +431,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
                     'Treasury',
                     '${(daoProvider.treasuryOnChainBalance ?? 0).toStringAsFixed(2)} KUB8',
                     Icons.account_balance_outlined,
-                    Colors.green,
+                    KubusColorRoles.of(context).positiveAction,
                   ),
                 ),
               ],
@@ -444,16 +444,19 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
 
   Widget _buildStatCard(
       String label, String value, IconData icon, Color color) {
-    return Container(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final radius = BorderRadius.circular(12);
+    return LiquidGlassPanel(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: color.withValues(alpha: 0.2),
+      borderRadius: radius,
+      showBorder: false,
+      backgroundColor: color.withValues(alpha: isDark ? 0.15 : 0.10),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: radius,
+          border: Border.all(color: color.withValues(alpha: 0.18)),
         ),
-      ),
-      child: Column(
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, color: color, size: 20),
@@ -477,6 +480,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
             ),
           ),
         ],
+        ),
       ),
     );
   }
@@ -487,34 +491,27 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
         final recentProposals = daoProvider.proposals.take(3).toList();
 
         if (recentProposals.isEmpty) {
-          return Container(
+          final theme = Theme.of(context);
+          final scheme = theme.colorScheme;
+          final isDark = theme.brightness == Brightness.dark;
+          return LiquidGlassPanel(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context)
-                  .colorScheme
-                  .primaryContainer
-                  .withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(12),
-            ),
+            borderRadius: BorderRadius.circular(12),
+            showBorder: false,
+            backgroundColor: scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10),
             child: Column(
               children: [
                 Icon(
                   Icons.inbox_outlined,
                   size: 40,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.3),
+                  color: scheme.onSurface.withValues(alpha: 0.3),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'No recent activity',
                   style: GoogleFonts.inter(
                     fontSize: 14,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.6),
+                    color: scheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
               ],

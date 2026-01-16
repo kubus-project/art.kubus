@@ -199,25 +199,51 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
     final screenHeight = mediaQuery.size.height;
     final screenWidth = mediaQuery.size.width;
     final isSmallScreen = screenHeight < 700 || screenWidth < 375;
+
+    final pages = _pages;
+    final current = pages[_currentPage.clamp(0, pages.length - 1)];
+    final start = current.gradient.colors.first.withValues(alpha: 0.55);
+    final end = (current.gradient.colors.length > 1
+        ? current.gradient.colors[1]
+        : current.gradient.colors.first)
+      .withValues(alpha: 0.50);
+    final mid = (Color.lerp(start, end, 0.55) ?? end).withValues(alpha: 0.52);
+    final bgColors = <Color>[start, mid, end, start];
     
     // Show loading while checking permissions
     if (_isCheckingPermissions) {
-      return Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+      return AnimatedGradientBackground(
+        duration: const Duration(seconds: 10),
+        intensity: 0.25,
+        colors: bgColors,
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-              SizedBox(width: 56, height: 56, child: InlineLoading(shape: BoxShape.circle, color: Theme.of(context).colorScheme.primary, tileSize: 6.0)),
-              SizedBox(height: 24),
-              Text(
-                l10n.permissionsChecking,
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                SizedBox(
+                  width: 56,
+                  height: 56,
+                  child: InlineLoading(
+                    shape: BoxShape.circle,
+                    color: Theme.of(context).colorScheme.primary,
+                    tileSize: 6.0,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 24),
+                Text(
+                  l10n.permissionsChecking,
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.7),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -226,6 +252,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
     return AnimatedGradientBackground(
       duration: const Duration(seconds: 10),
       intensity: 0.25,
+      colors: bgColors,
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: SafeArea(

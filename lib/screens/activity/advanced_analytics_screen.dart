@@ -84,6 +84,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final profileProvider = context.watch<ProfileProvider>();
     final web3Provider = context.watch<Web3Provider>();
     final statsProvider = context.watch<StatsProvider>();
@@ -98,12 +99,14 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
     return FadeTransition(
       opacity: _fadeAnimation,
       child: Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        backgroundColor: Colors.transparent,
         appBar: AppBar(
           backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+          scrolledUnderElevation: 0,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            icon: Icon(Icons.arrow_back, color: scheme.onSurface),
             onPressed: () => Navigator.pop(context),
           ),
           title: Text(
@@ -111,12 +114,12 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
             style: GoogleFonts.inter(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: scheme.onSurface,
             ),
           ),
           actions: [
             TopBarIcon(
-              icon: const Icon(Icons.share, color: Colors.white),
+              icon: Icon(Icons.share, color: scheme.onSurface),
               onPressed: () => unawaited(_shareAnalytics(analytics)),
               tooltip: 'Share',
             ),

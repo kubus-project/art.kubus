@@ -88,14 +88,14 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
         : widget.feature;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: Colors.transparent,
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Theme.of(context).scaffoldBackgroundColor,
+              Colors.transparent,
               themeProvider.accentColor.withValues(alpha: 0.05),
             ],
           ),
@@ -221,7 +221,7 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
               color: Colors.green,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: Theme.of(context).scaffoldBackgroundColor,
+                color: Theme.of(context).colorScheme.surface,
                 width: 3,
               ),
             ),

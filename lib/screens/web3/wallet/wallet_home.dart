@@ -47,10 +47,12 @@ class _WalletHomeState extends State<WalletHome> {
         // Show loading indicator while wallet is loading
         if (isLoading) {
           return Scaffold(
-            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            backgroundColor: Colors.transparent,
             appBar: AppBar(
-              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              backgroundColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
               elevation: 0,
+              scrolledUnderElevation: 0,
               title: Text(
                 l10n.walletHomeTitle,
                 style: GoogleFonts.inter(
@@ -82,10 +84,12 @@ class _WalletHomeState extends State<WalletHome> {
         // Show empty state if no wallet data AND no address
         if (wallet == null && walletAddress == null) {
           return Scaffold(
-            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            backgroundColor: Colors.transparent,
             appBar: AppBar(
-              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              backgroundColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
               elevation: 0,
+              scrolledUnderElevation: 0,
               title: Text(
                 l10n.walletHomeTitle,
                 style: GoogleFonts.inter(
@@ -96,7 +100,7 @@ class _WalletHomeState extends State<WalletHome> {
               ),
               actions: [
                 IconButton(
-                  icon: Icon(Icons.settings, color: Theme.of(context).colorScheme.onPrimary),
+                  icon: Icon(Icons.settings, color: Theme.of(context).colorScheme.onSurface),
                   onPressed: _showWalletSettings,
                 ),
               ],
@@ -131,10 +135,12 @@ class _WalletHomeState extends State<WalletHome> {
             bool isSmallScreen = constraints.maxWidth < 600;
             
             return Scaffold(
-              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              backgroundColor: Colors.transparent,
               appBar: AppBar(
-                backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                backgroundColor: Colors.transparent,
+                surfaceTintColor: Colors.transparent,
                 elevation: 0,
+                scrolledUnderElevation: 0,
                 title: Text(
                   l10n.walletHomeTitle,
                   style: GoogleFonts.inter(
@@ -145,7 +151,7 @@ class _WalletHomeState extends State<WalletHome> {
                 ),
                 actions: [
                   IconButton(
-                    icon: Icon(Icons.vpn_key, color: Theme.of(context).colorScheme.onPrimary),
+                    icon: Icon(Icons.vpn_key, color: Theme.of(context).colorScheme.onSurface),
                     onPressed: () {
                       Navigator.push(
                         context,
@@ -154,7 +160,7 @@ class _WalletHomeState extends State<WalletHome> {
                     },
                   ),
                   IconButton(
-                    icon: Icon(Icons.settings, color: Theme.of(context).colorScheme.onPrimary),
+                    icon: Icon(Icons.settings, color: Theme.of(context).colorScheme.onSurface),
                     onPressed: _showWalletSettings,
                   ),
                 ],

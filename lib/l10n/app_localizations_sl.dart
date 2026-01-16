@@ -426,6 +426,12 @@ class AppLocalizationsSl extends AppLocalizations {
   String get authSignedInProfileRefreshSoon => 'Prijava je uspela. Profil se bo kmalu osvežil.';
 
   @override
+  String get authReauthDialogTitle => 'Ponovna prijava';
+
+  @override
+  String get authReauthDialogMessage => 'Tvoja seja je potekla. Za nadaljevanje potrdi svoje poverilnice.';
+
+  @override
   String get authAccountCreatedProfileLoading => 'Račun je ustvarjen. Profil se nalaga v ozadju.';
 
   @override
@@ -2596,10 +2602,10 @@ class AppLocalizationsSl extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count odkritij',
-      few: '$count odkritja',
-      two: '$count odkritji',
-      one: '$count odkritje',
+      other: '# odkritij',
+      few: '# odkritja',
+      two: '# odkritji',
+      one: '# odkritje',
     );
     return '$_temp0';
   }
@@ -6498,8 +6504,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get communitySubjectPickerSearchHint => 'Išči po imenu';
 
   @override
-  String get communitySubjectPickerSearchPrompt =>
-      'Začni tipkati za iskanje institucij';
+  String get communitySubjectPickerSearchPrompt => 'Začni tipkati za iskanje institucij';
 
   @override
   String get communitySubjectPickerLoadFailed => 'Ni mogoče naložiti predmetov.';

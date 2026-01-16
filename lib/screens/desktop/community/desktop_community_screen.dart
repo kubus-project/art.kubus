@@ -35,6 +35,7 @@ import '../../../widgets/community/community_post_options_sheet.dart';
 import '../../../widgets/community/community_subject_picker.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/app_color_utils.dart';
+import '../../../utils/design_tokens.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/wallet_utils.dart';
@@ -1458,6 +1459,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
   Widget _buildSearchOverlay(ThemeProvider themeProvider) {
     final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final glassTint = scheme.surface.withValues(alpha: isDark ? 0.22 : 0.26);
     final trimmedQuery = _searchQuery.trim();
     if (!_isFetchingSearch &&
         _searchResults.isEmpty &&
@@ -1475,111 +1478,112 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             maxWidth: 320,
             maxHeight: 320,
           ),
-          child: Material(
-            elevation: 12,
+          child: LiquidGlassPanel(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            margin: EdgeInsets.zero,
             borderRadius: BorderRadius.circular(12),
-            color: scheme.surface,
-            shadowColor: themeProvider.accentColor.withValues(alpha: 0.12),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Builder(
-                builder: (context) {
-                  if (trimmedQuery.length < 2) {
-                    return Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Text(
-                        'Type at least 2 characters to search',
-                        style: GoogleFonts.inter(
-                          color: scheme.onSurface.withValues(alpha: 0.6),
-                        ),
+            blurSigma: KubusGlassEffects.blurSigmaLight,
+            backgroundColor: glassTint,
+            child: Builder(
+              builder: (context) {
+                if (trimmedQuery.length < 2) {
+                  return Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      'Type at least 2 characters to search',
+                      style: GoogleFonts.inter(
+                        color: scheme.onSurface.withValues(alpha: 0.6),
                       ),
-                    );
-                  }
-
-                  if (_isFetchingSearch) {
-                    return const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Center(child: CircularProgressIndicator()),
-                    );
-                  }
-
-                  if (_searchResults.isEmpty) {
-                    return Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          Icon(Icons.search_off,
-                              color: scheme.onSurface.withValues(alpha: 0.4)),
-                          const SizedBox(width: 12),
-                          Text(
-                            'No results found',
-                            style: GoogleFonts.inter(
-                              color: scheme.onSurface.withValues(alpha: 0.6),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-
-                  return ListView.separated(
-                    shrinkWrap: true,
-                    itemCount: _searchResults.length,
-                    separatorBuilder: (_, __) => Divider(
-                      height: 1,
-                      color: scheme.outlineVariant,
                     ),
-                    itemBuilder: (context, index) {
-                      final profile = _searchResults[index];
-                      final displayName = profile['displayName']?.toString() ??
-                          profile['display_name']?.toString() ??
-                          profile['username']?.toString() ??
-                          profile['wallet']?.toString() ??
-                          'Profile';
-                      final username = profile['username']?.toString() ??
-                          profile['handle']?.toString();
-                      final wallet = (profile['wallet_address'] ??
-                              profile['walletAddress'] ??
-                              profile['wallet'])
-                          ?.toString();
-                      final subtitleText = () {
-                        if (username != null && username.isNotEmpty) {
-                          return '@$username';
-                        }
-                        if (wallet != null && wallet.isNotEmpty) {
-                          return _formatWalletPreview(wallet);
-                        }
-                        return null;
-                      }();
-                      final avatarUrl = profile['avatar'] ??
-                          profile['avatar_url'] ??
-                          profile['profileImageUrl'];
-                      return ListTile(
-                        leading: AvatarWidget(
-                          avatarUrl: avatarUrl?.toString(),
-                          wallet: wallet ?? '',
-                          radius: 20,
-                          allowFabricatedFallback: true,
-                        ),
-                        title: Text(
-                          displayName,
-                          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-                        ),
-                        subtitle: subtitleText == null
-                            ? null
-                            : Text(
-                                subtitleText,
-                                style: GoogleFonts.inter(
-                                  color:
-                                      scheme.onSurface.withValues(alpha: 0.6),
-                                ),
-                              ),
-                        onTap: () => _handleSearchResultTap(profile),
-                      );
-                    },
                   );
-                },
-              ),
+                }
+
+                if (_isFetchingSearch) {
+                  return const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+
+                if (_searchResults.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.search_off,
+                          color: scheme.onSurface.withValues(alpha: 0.4),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'No results found',
+                          style: GoogleFonts.inter(
+                            color: scheme.onSurface.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: _searchResults.length,
+                  separatorBuilder: (_, __) => Divider(
+                    height: 1,
+                    color: scheme.outlineVariant,
+                  ),
+                  itemBuilder: (context, index) {
+                    final profile = _searchResults[index];
+                    final displayName = profile['displayName']?.toString() ??
+                        profile['display_name']?.toString() ??
+                        profile['username']?.toString() ??
+                        profile['wallet']?.toString() ??
+                        'Profile';
+                    final username =
+                        profile['username']?.toString() ?? profile['handle']?.toString();
+                    final wallet = (profile['wallet_address'] ??
+                            profile['walletAddress'] ??
+                            profile['wallet'])
+                        ?.toString();
+
+                    final subtitleText = () {
+                      if (username != null && username.isNotEmpty) {
+                        return '@$username';
+                      }
+                      if (wallet != null && wallet.isNotEmpty) {
+                        return _formatWalletPreview(wallet);
+                      }
+                      return null;
+                    }();
+
+                    final avatarUrl = profile['avatar'] ??
+                        profile['avatar_url'] ??
+                        profile['profileImageUrl'];
+                    return ListTile(
+                      leading: AvatarWidget(
+                        avatarUrl: avatarUrl?.toString(),
+                        wallet: wallet ?? '',
+                        radius: 20,
+                        allowFabricatedFallback: true,
+                      ),
+                      title: Text(
+                        displayName,
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                      ),
+                      subtitle: subtitleText == null
+                          ? null
+                          : Text(
+                              subtitleText,
+                              style: GoogleFonts.inter(
+                                color: scheme.onSurface.withValues(alpha: 0.6),
+                              ),
+                            ),
+                      onTap: () => _handleSearchResultTap(profile),
+                    );
+                  },
+                );
+              },
             ),
           ),
         ),
@@ -4184,8 +4188,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                           margin: EdgeInsets.zero,
                           borderRadius: BorderRadius.circular(12),
                           showBorder: false,
-                          backgroundColor: scheme.primaryContainer.withValues(
-                            alpha: isDark ? 0.78 : 0.86,
+                          backgroundColor: scheme.surface.withValues(
+                            alpha: isDark ? 0.22 : 0.26,
                           ),
                           child: TextField(
                             controller: _messageSearchController,
@@ -8028,8 +8032,12 @@ class _NewConversationDialogState extends State<_NewConversationDialog> {
                 showBorder: false,
                 backgroundColor: Theme.of(context)
                     .colorScheme
-                    .primaryContainer
-                    .withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.78 : 0.86),
+                    .surface
+                    .withValues(
+                      alpha: Theme.of(context).brightness == Brightness.dark
+                          ? 0.22
+                          : 0.26,
+                    ),
                 child: SizedBox(
                   height: 44,
                   child: TextField(

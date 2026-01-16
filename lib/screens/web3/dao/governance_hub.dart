@@ -97,10 +97,12 @@ class _GovernanceHubState extends State<GovernanceHub>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
+        scrolledUnderElevation: 0,
         title: Text(
           'DAO Governance',
           style: GoogleFonts.inter(
@@ -113,12 +115,12 @@ class _GovernanceHubState extends State<GovernanceHub>
         actions: [
           IconButton(
             icon: Icon(Icons.help_outline,
-                color: Theme.of(context).colorScheme.onPrimary),
+                color: Theme.of(context).colorScheme.onSurface),
             onPressed: _showOnboarding,
           ),
           IconButton(
             icon: Icon(Icons.info_outline,
-                color: Theme.of(context).colorScheme.onPrimary),
+                color: Theme.of(context).colorScheme.onSurface),
             onPressed: _showGovernanceInfo,
           ),
         ],
@@ -377,7 +379,7 @@ class _GovernanceHubState extends State<GovernanceHub>
         }
 
         return Container(
-          color: Theme.of(context).scaffoldBackgroundColor,
+          color: Colors.transparent,
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
@@ -1130,7 +1132,7 @@ class _GovernanceHubState extends State<GovernanceHub>
         }
 
         return Container(
-          color: Theme.of(context).scaffoldBackgroundColor,
+          color: Colors.transparent,
           child: ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: votingHistory.length,
@@ -1234,7 +1236,7 @@ class _GovernanceHubState extends State<GovernanceHub>
 
   Widget _buildCreateProposal() {
     return Container(
-      color: Theme.of(context).scaffoldBackgroundColor,
+      color: Colors.transparent,
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -1586,7 +1588,7 @@ class _GovernanceHubState extends State<GovernanceHub>
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     return Container(
-      color: Theme.of(context).scaffoldBackgroundColor,
+      color: Colors.transparent,
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -1945,7 +1947,7 @@ class _GovernanceHubState extends State<GovernanceHub>
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     return Container(
-      color: Theme.of(context).scaffoldBackgroundColor,
+      color: Colors.transparent,
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(

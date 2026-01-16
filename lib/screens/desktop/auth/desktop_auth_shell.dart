@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/themeprovider.dart';
-import '../../../widgets/app_logo.dart';
-import '../components/desktop_widgets.dart';
+import '../../../widgets/glass_components.dart';
 
 class DesktopAuthShell extends StatelessWidget {
   final String title;
@@ -31,50 +30,65 @@ class DesktopAuthShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-    return Scaffold(
-        body: Container(
-      decoration: BoxDecoration(
-        gradient: themeProvider.isDarkMode
-            ? KubusGradients.authDark
-            : (gradientStart != null && gradientEnd != null)
-                ? KubusGradients.fromColors(
-                    gradientStart!.withValues(alpha: 0.55),
-                    gradientEnd!.withValues(alpha: 0.50),
-                  )
-                : null,
-        color: (themeProvider.isDarkMode ||
-                (gradientStart != null && gradientEnd != null))
-            ? null
-            : const Color(0xFFF7F8FA),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Align(
-          alignment: const Alignment(0, -0.382),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1200),
-            child: SingleChildScrollView(
-              child: IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
+    final fallbackStart = Theme.of(context).colorScheme.primary;
+    final fallbackEnd = themeProvider.accentColor;
+    final baseStart = gradientStart ?? fallbackStart;
+    final baseEnd = gradientEnd ?? fallbackEnd;
+
+    final isDark = themeProvider.isDarkMode;
+
+    // Keep the auth background palette tied to the screen's icon/role colors
+    // on desktop (and everywhere else), including in dark mode.
+    final bgStart = baseStart.withValues(alpha: isDark ? 0.42 : 0.55);
+    final bgEnd = baseEnd.withValues(alpha: isDark ? 0.38 : 0.50);
+    final bgMid = (Color.lerp(bgStart, bgEnd, 0.55) ?? bgEnd)
+      .withValues(alpha: isDark ? 0.40 : 0.52);
+
+    final basePalette = <Color>[bgStart, bgMid, bgEnd, bgStart];
+    final bgColors = isDark
+      ? List<Color>.generate(
+        basePalette.length,
+        (i) {
+          final darkBase = KubusGradients.authDark.colors;
+          final fallback = Colors.black.withValues(alpha: 0.55);
+          final d = (darkBase.isNotEmpty ? darkBase[i % darkBase.length] : fallback)
+            .withValues(alpha: 0.55);
+          return Color.lerp(d, basePalette[i], 0.55) ?? basePalette[i];
+        },
+        growable: false,
+        )
+      : basePalette;
+
+    return AnimatedGradientBackground(
+      duration: const Duration(seconds: 12),
+      intensity: 0.24,
+      colors: bgColors,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Align(
+            alignment: const Alignment(0, -0.382),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1200),
+              child: SingleChildScrollView(
+                child: IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: LiquidGlassPanel(
+                          padding: const EdgeInsets.all(24),
                           borderRadius: BorderRadius.circular(20),
-                          color: Theme.of(context)
-                              .colorScheme
-                              .surface
-                              .withValues(alpha: 0.5),
-                        ),
-                        child: DesktopCard(
-                          showBorder: false,
-                          backgroundColor: Colors.transparent,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const AppLogo(width: 64, height: 64),
+                              Row(
+                                children: [
+                                  if (icon != null) icon!,
+                                ],
+                              ),
                               const SizedBox(height: 24),
                               Text(
                                 title,
@@ -147,51 +161,32 @@ class DesktopAuthShell extends StatelessWidget {
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 24),
-                    Expanded(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(20),
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .surface
-                                  .withValues(alpha: 0.7),
-                              border: Border.all(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .outlineVariant,
-                              ),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(24),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  form,
-                                  if (footer != null) ...[
-                                    const SizedBox(height: 16),
-                                    footer!,
-                                  ],
-                                ],
-                              ),
-                            ),
+                      const SizedBox(width: 24),
+                      Expanded(
+                        child: LiquidGlassPanel(
+                          padding: const EdgeInsets.all(24),
+                          borderRadius: BorderRadius.circular(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              form,
+                              if (footer != null) ...[
+                                const SizedBox(height: 16),
+                                footer!,
+                              ],
+                            ],
                           ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
         ),
       ),
-    ));
+    );
   }
 }

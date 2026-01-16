@@ -917,6 +917,18 @@ abstract class AppLocalizations {
   /// **'Signed in. Your profile will refresh shortly.'**
   String get authSignedInProfileRefreshSoon;
 
+  /// Title shown in a dialog when the user's session has expired and they need to re-authenticate.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in again'**
+  String get authReauthDialogTitle;
+
+  /// Message shown in a dialog when the user's session has expired and they need to re-authenticate.
+  ///
+  /// In en, this message translates to:
+  /// **'Your session has expired. Please verify your credentials to continue.'**
+  String get authReauthDialogMessage;
+
   /// No description provided for @authAccountCreatedProfileLoading.
   ///
   /// In en, this message translates to:
@@ -6950,25 +6962,25 @@ abstract class AppLocalizations {
   /// No description provided for @connectWalletOptionSignInTitle.
   ///
   /// In en, this message translates to:
-  /// **'Import wallet'**
+  /// **'Sign in'**
   String get connectWalletOptionSignInTitle;
 
   /// No description provided for @connectWalletOptionSignInDescription.
   ///
   /// In en, this message translates to:
-  /// **'Use your existing recovery phrase'**
+  /// **'Sign in with your e-mail and password'**
   String get connectWalletOptionSignInDescription;
 
   /// No description provided for @connectWalletOptionRegisterTitle.
   ///
   /// In en, this message translates to:
-  /// **'Create new wallet'**
+  /// **'Register account'**
   String get connectWalletOptionRegisterTitle;
 
   /// No description provided for @connectWalletOptionRegisterDescription.
   ///
   /// In en, this message translates to:
-  /// **'Generate a new wallet on this device'**
+  /// **'Register with your e-mail or Google account'**
   String get connectWalletOptionRegisterDescription;
 
   /// No description provided for @connectWalletHybridHelpLink.
@@ -12170,7 +12182,7 @@ abstract class AppLocalizations {
   /// Humanized years active value for profile display.
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, one {# year} other {# years}}'**
+  /// **'{count, plural, one {{count} year} other {{count} years}}'**
   String profileYearsActiveValue(int count);
 
   /// No description provided for @manageMarkersPickArAssetPlaceholder.

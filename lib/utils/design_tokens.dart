@@ -281,10 +281,10 @@ class KubusGlassEffects {
   static const double blurSigmaHeavy = 20.0;
 
   /// Glass panel opacity in dark mode
-  static const double glassOpacityDark = 0.75;
+  static const double glassOpacityDark = 0.60;
 
   /// Glass panel opacity in light mode
-  static const double glassOpacityLight = 0.85;
+  static const double glassOpacityLight = 0.72;
 
   /// Border opacity for glass panels
   static const double glassBorderOpacity = 0.15;

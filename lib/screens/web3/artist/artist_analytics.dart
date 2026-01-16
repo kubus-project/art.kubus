@@ -117,7 +117,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
     return FadeTransition(
       opacity: _fadeAnimation,
       child: Container(
-        color: Theme.of(context).scaffoldBackgroundColor,
+        color: Colors.transparent,
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(

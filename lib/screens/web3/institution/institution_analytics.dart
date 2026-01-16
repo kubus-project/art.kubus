@@ -179,7 +179,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
     return FadeTransition(
       opacity: _fadeAnimation,
       child: Container(
-        color: Theme.of(context).scaffoldBackgroundColor,
+        color: Colors.transparent,
         padding: const EdgeInsets.all(16),
         child: SingleChildScrollView(
           child: Column(

@@ -46,7 +46,7 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
         final entries = provider.entries.where(_matchesFilters).toList(growable: false);
 
         return Container(
-          color: Theme.of(context).scaffoldBackgroundColor,
+          color: Colors.transparent,
           child: Column(
             children: [
               _buildHeader(

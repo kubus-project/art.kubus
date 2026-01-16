@@ -172,6 +172,14 @@ class _DesktopOnboardingScreenState extends State<DesktopOnboardingScreen>
     final screenWidth = MediaQuery.of(context).size.width;
     final pages = _pages(l10n);
 
+    final current = pages[_currentPage.clamp(0, pages.length - 1)];
+    final start = current.gradient.colors.first.withValues(alpha: 0.55);
+    final end = (current.gradient.colors.length > 1
+            ? current.gradient.colors[1]
+            : current.gradient.colors.first)
+        .withValues(alpha: 0.50);
+    final mid = Color.lerp(start, end, 0.55) ?? end;
+
     // Use larger layout for desktop
     final contentWidth = screenWidth > DesktopBreakpoints.large
         ? 1400.0
@@ -180,6 +188,7 @@ class _DesktopOnboardingScreenState extends State<DesktopOnboardingScreen>
             : 900.0;
 
     return AnimatedGradientBackground(
+      colors: <Color>[start, mid, end, start],
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: Center(

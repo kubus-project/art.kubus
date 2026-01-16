@@ -515,7 +515,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   padding: const EdgeInsets.all(3),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Theme.of(context).scaffoldBackgroundColor,
+                    color: Theme.of(context).colorScheme.surface,
                     boxShadow: [
                       BoxShadow(
                         color: Theme.of(context).shadowColor.withValues(alpha: 0.1),

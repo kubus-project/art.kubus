@@ -42,10 +42,13 @@ class _NFTGalleryState extends State<NFTGallery> {
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
+        scrolledUnderElevation: 0,
         title: Text(
           l10n.walletHomeActionNfts,
           style: GoogleFonts.inter(
@@ -60,7 +63,7 @@ class _NFTGalleryState extends State<NFTGallery> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: Icon(Icons.refresh, color: scheme.onSurface),
             onPressed: () {
               final provider = Provider.of<CollectiblesProvider>(context, listen: false);
               unawaited(provider.initialize(loadMockIfEmpty: AppConfig.isDevelopment));
@@ -120,7 +123,12 @@ class _NFTGalleryState extends State<NFTGallery> {
               final childAspectRatio = isSmallScreen ? 0.75 : 0.82;
 
               return GridView.builder(
-                padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
+                padding: EdgeInsets.fromLTRB(
+                  isSmallScreen ? 16 : 24,
+                  (isSmallScreen ? 16 : 24) + kToolbarHeight,
+                  isSmallScreen ? 16 : 24,
+                  isSmallScreen ? 16 : 24,
+                ),
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: crossAxisCount,
                   crossAxisSpacing: 16,

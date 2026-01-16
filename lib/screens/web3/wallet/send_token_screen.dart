@@ -63,12 +63,14 @@ class _SendTokenScreenState extends State<SendTokenScreen>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
+        scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onPrimary),
+          icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
@@ -86,7 +88,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
                 icon: Icon(
                   platformProvider.getQRScannerIcon(),
                   color: platformProvider.supportsQRScanning 
-                    ? Theme.of(context).colorScheme.onPrimary 
+                    ? Theme.of(context).colorScheme.onSurface 
                     : platformProvider.getUnsupportedFeatureColor(context),
                 ),
                 onPressed: platformProvider.supportsQRScanning 

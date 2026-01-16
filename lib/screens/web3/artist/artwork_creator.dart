@@ -100,7 +100,7 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
       child: SlideTransition(
         position: _slideAnimation,
         child: Container(
-          color: Theme.of(context).scaffoldBackgroundColor,
+          color: Colors.transparent,
           child: Column(
             children: [
               _buildHeader(),

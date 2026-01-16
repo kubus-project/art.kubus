@@ -732,22 +732,23 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
   Widget _buildQuickActionTile(String title, String subtitle, IconData icon,
       Color color, VoidCallback onTap,
       {Widget? trailing}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final radius = BorderRadius.circular(12);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
+      child: LiquidGlassPanel(
+        padding: EdgeInsets.zero,
+        borderRadius: radius,
+        showBorder: false,
+        backgroundColor: color.withValues(alpha: isDark ? 0.16 : 0.10),
+        onTap: onTap,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            border: Border.all(color: color.withValues(alpha: 0.20)),
+          ),
+          child: Padding(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: color.withValues(alpha: 0.2),
-              ),
-            ),
             child: Row(
               children: [
                 Container(

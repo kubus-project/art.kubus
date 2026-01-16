@@ -91,10 +91,12 @@ class _MarketplaceState extends State<Marketplace>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
+        scrolledUnderElevation: 0,
         title: Text(
           'NFT Marketplace',
           style: GoogleFonts.inter(
@@ -107,12 +109,12 @@ class _MarketplaceState extends State<Marketplace>
         actions: [
           IconButton(
             icon: Icon(Icons.help_outline,
-                color: Theme.of(context).colorScheme.onPrimary),
+                color: Theme.of(context).colorScheme.onSurface),
             onPressed: _showOnboarding,
           ),
           IconButton(
             icon: Icon(Icons.settings,
-                color: Theme.of(context).colorScheme.onPrimary),
+                color: Theme.of(context).colorScheme.onSurface),
             onPressed: _showSettings,
           ),
         ],

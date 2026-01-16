@@ -34,8 +34,13 @@ class RecentActivityTile extends StatelessWidget {
     final tileColor = accentColor ??
         AppColorUtils.activityColor(activity.category.name, theme.colorScheme);
 
-    final baseSurface = isUnread ? scheme.secondaryContainer : scheme.primaryContainer;
-    final glassTint = baseSurface.withValues(alpha: isUnread ? (isDark ? 0.78 : 0.86) : (isDark ? 0.70 : 0.84));
+    final baseSurface =
+      isUnread ? scheme.secondaryContainer : scheme.primaryContainer;
+    final glassTint = baseSurface.withValues(
+      alpha: isUnread
+        ? (isDark ? 0.34 : 0.40)
+        : (isDark ? 0.28 : 0.36),
+    );
 
     return Container(
       margin: margin,
