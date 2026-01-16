@@ -13,6 +13,7 @@ import '../../../widgets/app_logo.dart';
 import '../../../widgets/gradient_icon_card.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../services/push_notification_service.dart';
+import '../../../services/notification_helper.dart';
 import '../../../utils/app_animations.dart';
 import '../desktop_shell.dart';
 import '../../../widgets/glass_components.dart';
@@ -117,7 +118,10 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
   }
 
   List<PermissionPage> get _pages => kIsWeb
-      ? _allPages.where((p) => p.permissionType != PermissionType.storage).toList()
+      ? _allPages
+        .where((p) => p.permissionType != PermissionType.storage)
+        .where((p) => p.permissionType != PermissionType.camera)
+        .toList()
       : _allPages;
 
   @override
@@ -136,11 +140,19 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
       final locationStatus = await Permission.location.status;
       locationGranted = locationStatus.isGranted;
 
-      final cameraStatus = await Permission.camera.status;
-      cameraGranted = cameraStatus.isGranted;
+      if (kIsWeb) {
+        cameraGranted = true;
+      } else {
+        final cameraStatus = await Permission.camera.status;
+        cameraGranted = cameraStatus.isGranted;
+      }
 
-      final notificationStatus = await Permission.notification.status;
-      notificationsGranted = notificationStatus.isGranted;
+      if (kIsWeb) {
+        notificationsGranted = await isWebNotificationPermissionGranted();
+      } else {
+        final notificationStatus = await Permission.notification.status;
+        notificationsGranted = notificationStatus.isGranted;
+      }
 
       if (kIsWeb) {
         storageGranted = true;
@@ -167,8 +179,8 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
     // If all permissions granted, auto-complete
     final requiredPermissions = <PermissionType>[
       PermissionType.location,
-      PermissionType.camera,
       PermissionType.notifications,
+      if (!kIsWeb) PermissionType.camera,
       if (!kIsWeb) PermissionType.storage,
     ];
 
@@ -194,6 +206,12 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
   Future<void> _requestPermission(PermissionType type) async {
     if (type == PermissionType.storage && kIsWeb) {
       setState(() => _storageGranted = true);
+      return;
+    }
+
+    if (type == PermissionType.camera && kIsWeb) {
+      // Camera access is intentionally not requested on web.
+      setState(() => _cameraGranted = true);
       return;
     }
 

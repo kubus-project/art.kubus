@@ -79,6 +79,14 @@ class PushNotificationService {
     if (!_initialized) await initialize();
 
     final prefs = await SharedPreferences.getInstance();
+    if (kIsWeb) {
+      // On web (including Chromium), rely on the browser's Notification permission
+      // instead of plugin/shared pref state.
+      _permissionGranted = await isWebNotificationPermissionGranted();
+      await prefs.setBool('notification_permission_granted', _permissionGranted);
+      return _permissionGranted;
+    }
+
     _permissionGranted = prefs.getBool('notification_permission_granted') ?? false;
     
     return _permissionGranted;

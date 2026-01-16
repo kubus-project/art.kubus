@@ -334,15 +334,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
 
   Widget _buildDot(int index) {
     final isActive = index == _currentPage;
+    final pageColor = _pages[index].gradient.colors.first;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       margin: const EdgeInsets.symmetric(horizontal: 4),
       width: isActive ? 24 : 8,
       height: 8,
       decoration: BoxDecoration(
-        color: isActive 
-            ? KubusColors.warning
-            : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+        // Match each step dot to the page's icon/gradient color.
+        color: pageColor.withValues(alpha: isActive ? 1.0 : 0.35),
         borderRadius: BorderRadius.circular(4),
       ),
     );

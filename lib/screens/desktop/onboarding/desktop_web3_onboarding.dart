@@ -373,6 +373,7 @@ class _DesktopWeb3OnboardingScreenState
             final page = entry.value;
             final isActive = index == _currentPage;
             final isPast = index < _currentPage;
+            final pageColor = page.gradientColors.first;
 
             return MouseRegion(
               cursor: SystemMouseCursors.click,
@@ -411,12 +412,14 @@ class _DesktopWeb3OnboardingScreenState
                         width: isActive ? 32 : 8,
                         height: 8,
                         decoration: BoxDecoration(
-                          color: isPast || isActive
-                              ? accentColor
-                              : Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.3),
+                          // Match the dot to the page icon/gradient color.
+                          color: pageColor.withValues(
+                            alpha: isActive
+                                ? 1.0
+                                : isPast
+                                    ? 0.65
+                                    : 0.25,
+                          ),
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),
