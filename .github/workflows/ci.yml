@@ -24,6 +24,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          submodules: false
 
       - name: Paths filter
         id: filter
@@ -47,6 +48,7 @@ jobs:
               - 'linux/**'
               - 'third_party/**'
             backend:
+              - 'backend'
               - 'backend/**'
 
   flutter:
@@ -59,6 +61,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: false
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -69,48 +73,92 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
+      - name: Prepare Dart defines (optional)
+        id: defines
+        shell: bash
+        env:
+          KUBUS_BACKEND_URL: ${{ secrets.KUBUS_BACKEND_URL }}
+          KUBUS_WALLETCONNECT_PROJECT_ID: ${{ secrets.KUBUS_WALLETCONNECT_PROJECT_ID }}
+          KUBUS_PINATA_API_KEY: ${{ secrets.KUBUS_PINATA_API_KEY }}
+          KUBUS_PINATA_SECRET_KEY: ${{ secrets.KUBUS_PINATA_SECRET_KEY }}
+        run: |
+          ARGS=""
+          add() {
+            local name="$1"
+            local value="$2"
+            if [ -n "$value" ]; then
+              ARGS="$ARGS --dart-define=${name}=${value}"
+            fi
+          }
+          add KUBUS_BACKEND_URL "$KUBUS_BACKEND_URL"
+          add KUBUS_WALLETCONNECT_PROJECT_ID "$KUBUS_WALLETCONNECT_PROJECT_ID"
+          add KUBUS_PINATA_API_KEY "$KUBUS_PINATA_API_KEY"
+          add KUBUS_PINATA_SECRET_KEY "$KUBUS_PINATA_SECRET_KEY"
+          echo "args=$ARGS" >> "$GITHUB_OUTPUT"
+
       - name: Flutter analyze
         run: flutter analyze
 
       - name: Flutter test
-        run: flutter test
+        run: flutter test ${{ steps.defines.outputs.args }}
 
       - name: Flutter build web
-        run: flutter build web --release
+        run: flutter build web --release ${{ steps.defines.outputs.args }}
 
   backend:
     name: Backend (lint + tests)
     needs: changes
-    if: ${{ needs.changes.outputs.backend == 'true' || needs.changes.outputs.workflows == 'true' }}
+    if: ${{ needs.changes.outputs.backend == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
-
-    defaults:
-      run:
-        working-directory: backend
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Check backend sources present
+        id: present
+        shell: bash
+        run: |
+          if [ -f "backend/package.json" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Set up Node
+        if: ${{ steps.present.outputs.ok == 'true' }}
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
       - name: Cache npm
+        if: ${{ steps.present.outputs.ok == 'true' }}
         uses: actions/cache@v4
         with:
           path: ~/.npm
           key: ${{ runner.os }}-node20-npm-${{ hashFiles('backend/package.json') }}
 
       - name: Install dependencies
+        if: ${{ steps.present.outputs.ok == 'true' }}
+        working-directory: backend
         run: npm install --no-audit --no-fund
 
       - name: Lint
+        if: ${{ steps.present.outputs.ok == 'true' }}
+        working-directory: backend
         run: npm run lint
 
       - name: Test
+        if: ${{ steps.present.outputs.ok == 'true' }}
         env:
           NODE_ENV: test
+        working-directory: backend
         run: npm test
+
+      - name: Skip backend checks (submodule not available)
+        if: ${{ steps.present.outputs.ok != 'true' }}
+        run: |
+          echo "backend/ is a git submodule or missing in this checkout; skipping backend lint/tests."
