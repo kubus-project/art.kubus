@@ -199,6 +199,26 @@ jobs:
             echo "ok=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+
+          # Extra diagnostics (non-fatal): also check common alternatives so logs
+          # hint whether you actually need SFTP (22) or implicit FTPS (990).
+          check_port() {
+            local p="$1"
+            local label="$2"
+            echo "Probing ${FTP_HOST}:${p} (${label})..."
+            if nc -vz -w 10 "$FTP_HOST" "$p"; then
+              echo "  reachable"
+              return 0
+            else
+              echo "  not reachable"
+              return 1
+            fi
+          }
+
+          # Probe the configured port first, then common alternates.
+          check_port "$PORT" "configured" || true
+          if [ "$PORT" != "22" ]; then check_port 22 "SFTP/SSH" || true; fi
+          if [ "$PORT" != "990" ]; then check_port 990 "implicit FTPS" || true; fi
           # nc is available on ubuntu-latest
           if nc -vz -w 10 "$FTP_HOST" "$PORT"; then
             echo "FTP port reachable."
@@ -207,6 +227,7 @@ jobs:
             echo "Unable to reach ${FTP_HOST}:${PORT} from this runner."
             echo "If your host requires allowlisting GitHub Actions runner IPs, add them in your hosting firewall." 
             echo "If your host only supports SFTP, FTP deploy won't work; switch to an SFTP-based deploy." 
+            echo "If port 21 is blocked but 990 is open, you may need implicit FTPS (different port/protocol)." 
             echo "ok=false" >> "$GITHUB_OUTPUT"
           fi
 
