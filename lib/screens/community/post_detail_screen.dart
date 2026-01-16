@@ -25,6 +25,7 @@ import '../../widgets/community/community_subject_picker.dart';
 import '../../models/community_subject.dart';
 import '../../utils/community_subject_navigation.dart';
 import '../../utils/media_url_resolver.dart';
+ 
 
 enum PostDetailInitialAction { edit, delete, report, options }
 
@@ -1153,7 +1154,6 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     final post = _post;
     if (!mounted || post == null) return;
     final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
 
     bool deleting = false;
 
@@ -1171,14 +1171,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: deleting ? null : () => Navigator.pop(dialogContext),
+              onPressed: deleting ? null : () => Navigator.of(dialogContext).maybePop(),
               child: Text(l10n.commonCancel),
             ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: theme.colorScheme.error,
-                foregroundColor: theme.colorScheme.onError,
-              ),
+            TextButton(
               onPressed: deleting
                   ? null
                   : () async {
@@ -1186,6 +1182,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                       final messenger = ScaffoldMessenger.of(context);
                       final dialogNavigator = Navigator.of(dialogContext);
                       final navigator = Navigator.of(context);
+
                       AppRefreshProvider? appRefresh;
                       try {
                         appRefresh = Provider.of<AppRefreshProvider>(
@@ -1193,16 +1190,16 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           listen: false,
                         );
                       } catch (_) {}
+
                       final onClose = widget.onClose;
+
                       try {
                         await BackendApiService().deleteCommunityPost(post.id);
                         if (!mounted) return;
                         appRefresh?.triggerCommunity();
                         dialogNavigator.pop();
                         messenger.showSnackBar(
-                          SnackBar(
-                            content: Text(l10n.postDetailPostDeletedToast),
-                          ),
+                          SnackBar(content: Text(l10n.postDetailPostDeletedToast)),
                         );
                         if (onClose != null) {
                           onClose();
@@ -1211,16 +1208,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         }
                       } catch (e) {
                         if (kDebugMode) {
-                          debugPrint(
-                              'PostDetailScreen: delete post failed: $e');
+                          debugPrint('PostDetailScreen: delete post failed: $e');
                         }
                         if (!mounted) return;
                         setDialogState(() => deleting = false);
                         messenger.showSnackBar(
-                          SnackBar(
-                            content:
-                                Text(l10n.postDetailDeletePostFailedToast),
-                          ),
+                          SnackBar(content: Text(l10n.postDetailDeletePostFailedToast)),
                         );
                       }
                     },

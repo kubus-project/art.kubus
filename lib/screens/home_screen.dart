@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -42,8 +44,11 @@ import '../utils/app_animations.dart';
 import '../utils/app_color_utils.dart';
 import '../utils/kubus_color_roles.dart';
 import '../utils/artwork_media_resolver.dart';
+import '../utils/design_tokens.dart';
 import '../widgets/staggered_fade_slide.dart';
 import '../utils/artwork_navigation.dart';
+import '../widgets/glass_components.dart';
+ 
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -73,7 +78,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
     final animationTheme = context.animationTheme;
     final fadeAnimation = CurvedAnimation(
       parent: _animationController,
@@ -88,10 +92,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     ));
 
     return Scaffold(
-      backgroundColor: themeProvider.isDarkMode
-          ? Theme.of(context).scaffoldBackgroundColor
-          : const Color(0xFFF8F9FA),
+      backgroundColor: Colors.transparent,
       body: SafeArea(
+        bottom: false,
         child: AnimatedBuilder(
           animation: _animationController,
           builder: (context, child) {
@@ -110,7 +113,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         final spacing = isSmallScreen ? 16.0 : 24.0;
 
                         return SliverPadding(
-                          padding: EdgeInsets.all(padding),
+                          padding: EdgeInsets.fromLTRB(
+                            padding,
+                            padding,
+                            padding,
+                            padding + KubusLayout.mainBottomNavBarHeight,
+                          ),
                           sliver: SliverList(
                             delegate: SliverChildListDelegate(
                               _buildAnimatedSections(spacing),
@@ -160,101 +168,128 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _buildAppBar() {
     final web3Provider = Provider.of<Web3Provider>(context);
     final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final glassTint = scheme.surface.withValues(alpha: isDark ? 0.18 : 0.12);
 
     return SliverAppBar(
       floating: true,
       snap: true,
       backgroundColor: Colors.transparent,
       elevation: 0,
-      expandedHeight: 120,
+      expandedHeight: 80,
       flexibleSpace: LayoutBuilder(
         builder: (context, constraints) {
           final isSmallScreen = constraints.maxWidth < 375;
 
-          return Container(
-            padding: EdgeInsets.fromLTRB(
-              isSmallScreen ? 16 : 24,
-              16,
-              isSmallScreen ? 16 : 24,
-              16,
-            ),
-            child: Row(
-              children: [
-                // Logo and app name
-                AppLogo(
-                  width: isSmallScreen ? 36 : 40,
-                  height: isSmallScreen ? 36 : 40,
-                ),
-                SizedBox(width: isSmallScreen ? 8 : 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'art.kubus',
-                        style: GoogleFonts.inter(
-                          fontSize: isSmallScreen ? 16 : 18,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                      if (web3Provider.isConnected) ...[
-                        Text(
-                          web3Provider
-                              .formatAddress(web3Provider.walletAddress),
-                          style: GoogleFonts.robotoMono(
-                            fontSize: isSmallScreen ? 10 : 12,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.6),
-                          ),
-                        ),
-                        Container(
-                          margin: EdgeInsets.only(top: isSmallScreen ? 2 : 4),
-                          padding: EdgeInsets.symmetric(
-                            horizontal: isSmallScreen ? 6 : 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: Colors.orange.withValues(alpha: 0.3),
-                              width: 1,
-                            ),
-                          ),
-                          child: Text(
-                            'DEVNET',
-                            style: GoogleFonts.inter(
-                              fontSize: isSmallScreen ? 8 : 10,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.orange,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                // Notification bell
-                Consumer<NotificationProvider>(
-                  builder: (context, np, _) => TopBarIcon(
-                    tooltip: l10n.commonNotifications,
-                    icon: Icon(
-                      Icons.notifications_outlined,
-                      color: Theme.of(context).colorScheme.onSurface,
-                      size: isSmallScreen ? 22 : 26,
+          return ClipRect(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(
+                sigmaX: KubusGlassEffects.blurSigmaLight,
+                sigmaY: KubusGlassEffects.blurSigmaLight,
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: KubusGradients.glass(theme.brightness),
+                  border: Border(
+                    bottom: BorderSide(
+                      color: scheme.outline.withValues(alpha: isDark ? 0.16 : 0.12),
+                      width: 1,
                     ),
-                    onPressed: () {
-                      _showNotificationsBottomSheet(context);
-                    },
-                    badgeCount: np.unreadCount,
-                    badgeColor: Provider.of<ThemeProvider>(context).accentColor,
                   ),
                 ),
-              ],
+                child: Container(
+                  // Add an extra tint layer to keep the bar readable over bright
+                  // parts of the gradient.
+                  color: glassTint,
+                  child: SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        isSmallScreen ? 16 : 24,
+                        8,
+                        isSmallScreen ? 16 : 24,
+                        8,
+                      ),
+                      child: Row(
+                        children: [
+                          // Logo and app name
+                          AppLogo(
+                            width: isSmallScreen ? 36 : 40,
+                            height: isSmallScreen ? 36 : 40,
+                          ),
+                          SizedBox(width: isSmallScreen ? 8 : 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'art.kubus',
+                                  style: GoogleFonts.inter(
+                                    fontSize: isSmallScreen ? 16 : 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: scheme.onSurface,
+                                  ),
+                                ),
+                                if (web3Provider.isConnected) ...[
+                                  Text(
+                                    web3Provider.formatAddress(web3Provider.walletAddress),
+                                    style: GoogleFonts.robotoMono(
+                                      fontSize: isSmallScreen ? 10 : 12,
+                                      color: scheme.onSurface.withValues(alpha: 0.6),
+                                    ),
+                                  ),
+                                  Container(
+                                    margin: EdgeInsets.only(top: isSmallScreen ? 2 : 4),
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: isSmallScreen ? 6 : 8,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: Colors.orange.withValues(alpha: 0.3),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      'DEVNET',
+                                      style: GoogleFonts.inter(
+                                        fontSize: isSmallScreen ? 8 : 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.orange,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          // Notification bell
+                          Consumer<NotificationProvider>(
+                            builder: (context, np, _) => TopBarIcon(
+                              tooltip: l10n.commonNotifications,
+                              icon: Icon(
+                                Icons.notifications_outlined,
+                                color: scheme.onSurface,
+                                size: isSmallScreen ? 22 : 26,
+                              ),
+                              onPressed: () {
+                                _showNotificationsBottomSheet(context);
+                              },
+                              badgeCount: np.unreadCount,
+                              badgeColor: Provider.of<ThemeProvider>(context).accentColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
           );
         },
@@ -491,6 +526,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         final navigationProvider = Provider.of<NavigationProvider>(context);
         final profileProvider = context.watch<ProfileProvider>();
         final l10n = AppLocalizations.of(context)!;
+        final theme = Theme.of(context);
+        final scheme = theme.colorScheme;
+        final isDark = theme.brightness == Brightness.dark;
+        final glassTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
         final frequentScreens =
             navigationProvider.getQuickActionScreens(maxItems: 12);
         final persona = profileProvider.userPersona;
@@ -531,23 +570,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
+                  LiquidGlassPanel(
                     padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: Theme.of(context).colorScheme.outline,
-                      ),
-                    ),
+                    margin: EdgeInsets.zero,
+                    borderRadius: BorderRadius.circular(16),
+                    blurSigma: KubusGlassEffects.blurSigmaLight,
+                    backgroundColor: glassTint,
                     child: Row(
                       children: [
                         Icon(
                           Icons.touch_app,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.5),
+                          color: scheme.onSurface.withValues(alpha: 0.5),
                           size: 32,
                         ),
                         const SizedBox(width: 16),
@@ -556,10 +589,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             l10n.homeQuickActionsEmptyDescription,
                             style: GoogleFonts.inter(
                               fontSize: 14,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.7),
+                              color: scheme.onSurface.withValues(alpha: 0.7),
                             ),
                           ),
                         ),
@@ -581,7 +611,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               def.icon,
                               AppColorUtils.featureColor(
                                 key,
-                                Theme.of(context).colorScheme,
+                                scheme,
                                 roles: KubusColorRoles.of(context),
                               ),
                               false,
@@ -608,7 +638,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         screen.icon,
                         AppColorUtils.featureColor(
                           screen.key,
-                          Theme.of(context).colorScheme,
+                          scheme,
                           roles: KubusColorRoles.of(context),
                         ),
                         false,
@@ -671,86 +701,77 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     VoidCallback? onTap,
     int visitCount = 0,
   }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap ??
-            () {
-              _handleQuickAction(title);
-            },
-        borderRadius: BorderRadius.circular(16),
-        splashColor: color.withValues(alpha: 0.1),
-        highlightColor: color.withValues(alpha: 0.05),
-        child: Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: isSmallScreen ? 16 : 20,
-            vertical: isSmallScreen ? 12 : 16,
-          ),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: Theme.of(context).colorScheme.outline,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final glassTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
+
+    return LiquidGlassPanel(
+      onTap: onTap ?? () => _handleQuickAction(title),
+      padding: EdgeInsets.symmetric(
+        horizontal: isSmallScreen ? 16 : 20,
+        vertical: isSmallScreen ? 12 : 16,
+      ),
+      margin: EdgeInsets.zero,
+      borderRadius: BorderRadius.circular(16),
+      blurSigma: KubusGlassEffects.blurSigmaLight,
+      backgroundColor: glassTint,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
             children: [
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Container(
-                    width: isSmallScreen ? 32 : 40,
-                    height: isSmallScreen ? 32 : 40,
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      icon,
-                      color: color,
-                      size: isSmallScreen ? 16 : 20,
-                    ),
-                  ),
-                  if (visitCount > 0)
-                    Positioned(
-                      top: -4,
-                      right: -4,
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          color: color,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        constraints: const BoxConstraints(
-                          minWidth: 16,
-                          minHeight: 16,
-                        ),
-                        child: Text(
-                          visitCount.toString(),
-                          style: GoogleFonts.inter(
-                            fontSize: 8,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              SizedBox(width: isSmallScreen ? 10 : 12),
-              Text(
-                title,
-                style: GoogleFonts.inter(
-                  fontSize: isSmallScreen ? 12 : 14,
-                  fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.onSurface,
+              Container(
+                width: isSmallScreen ? 32 : 40,
+                height: isSmallScreen ? 32 : 40,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  icon,
+                  color: color,
+                  size: isSmallScreen ? 16 : 20,
                 ),
               ),
+              if (visitCount > 0)
+                Positioned(
+                  top: -4,
+                  right: -4,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
+                    child: Text(
+                      visitCount.toString(),
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
             ],
           ),
-        ),
+          SizedBox(width: isSmallScreen ? 10 : 14),
+          Text(
+            title,
+            style: GoogleFonts.inter(
+              fontSize: isSmallScreen ? 14 : 16,
+              fontWeight: FontWeight.w600,
+              color: scheme.onSurface,
+            ),
+          ),
+        ],
       ),
     );
   }

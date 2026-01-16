@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../utils/design_tokens.dart';
+import 'glass_components.dart';
 
 class KubusButton extends StatelessWidget {
   final VoidCallback? onPressed;
@@ -25,6 +26,16 @@ class KubusButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final isEnabled = !isLoading && onPressed != null;
+
+    final effectiveBackground = backgroundColor ?? colorScheme.primary;
+    final effectiveForeground = foregroundColor ?? colorScheme.onPrimary;
+    // Primary/colored buttons should look mostly opaque in their color, but still sit on glass.
+    final glassTint = effectiveBackground.withValues(
+      alpha: isEnabled ? (isDark ? 0.82 : 0.88) : (isDark ? 0.62 : 0.70),
+    );
+    final radius = KubusRadius.circular(KubusRadius.sm);
     
     Widget content = isLoading
         ? SizedBox(
@@ -32,7 +43,7 @@ class KubusButton extends StatelessWidget {
             width: 20,
             child: CircularProgressIndicator(
               strokeWidth: 2.5,
-              valueColor: AlwaysStoppedAnimation<Color>(colorScheme.onPrimary),
+              valueColor: AlwaysStoppedAnimation<Color>(effectiveForeground),
             ),
           )
         : Row(
@@ -46,33 +57,46 @@ class KubusButton extends StatelessWidget {
               Text(
                 label,
                 style: KubusTypography.textTheme.labelLarge?.copyWith(
-                  color: colorScheme.onPrimary,
+                  color: effectiveForeground,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ],
           );
 
-    final button = ElevatedButton(
-      onPressed: isLoading ? null : onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: backgroundColor ?? colorScheme.primary,
-        foregroundColor: foregroundColor ?? colorScheme.onPrimary,
-        padding: const EdgeInsets.symmetric(
-          horizontal: KubusSpacing.lg,
-          vertical: KubusSpacing.md,
+    final button = Container(
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        border: Border.all(
+          color: effectiveBackground.withValues(alpha: isEnabled ? 0.30 : 0.18),
         ),
-        shape: RoundedRectangleBorder(
-          borderRadius: KubusRadius.circular(KubusRadius.sm),
-        ),
-        elevation: 0, 
-      ).copyWith(
-        elevation: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.pressed)) return 0;
-          return 0; // Flat style preferred for modern look, but can be adjusted
-        }),
       ),
-      child: content,
+      child: LiquidGlassPanel(
+        padding: EdgeInsets.zero,
+        margin: EdgeInsets.zero,
+        borderRadius: radius,
+        showBorder: false,
+        backgroundColor: glassTint,
+        child: ElevatedButton(
+          onPressed: isLoading ? null : onPressed,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.transparent,
+            foregroundColor: effectiveForeground,
+            shadowColor: Colors.transparent,
+            disabledBackgroundColor: Colors.transparent,
+            disabledForegroundColor: effectiveForeground.withValues(alpha: 0.55),
+            padding: const EdgeInsets.symmetric(
+              horizontal: KubusSpacing.lg,
+              vertical: KubusSpacing.md,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: radius,
+            ),
+            elevation: 0,
+          ),
+          child: content,
+        ),
+      ),
     );
 
     if (isFullWidth) {
@@ -102,6 +126,13 @@ class KubusOutlineButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final isEnabled = !isLoading && onPressed != null;
+
+    final radius = KubusRadius.circular(KubusRadius.sm);
+    final glassTint = colorScheme.surface.withValues(
+      alpha: isEnabled ? (isDark ? 0.16 : 0.10) : (isDark ? 0.10 : 0.06),
+    );
 
     Widget content = isLoading
         ? SizedBox(
@@ -130,20 +161,37 @@ class KubusOutlineButton extends StatelessWidget {
             ],
           );
           
-    final button = OutlinedButton(
-      onPressed: isLoading ? null : onPressed,
-      style: OutlinedButton.styleFrom(
-        foregroundColor: colorScheme.primary,
-        side: BorderSide(color: colorScheme.outline),
-        padding: const EdgeInsets.symmetric(
-          horizontal: KubusSpacing.lg,
-          vertical: KubusSpacing.md,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: KubusRadius.circular(KubusRadius.sm),
+    final button = Container(
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        border: Border.all(
+          color: colorScheme.outline.withValues(alpha: isEnabled ? 0.28 : 0.16),
         ),
       ),
-      child: content,
+      child: LiquidGlassPanel(
+        padding: EdgeInsets.zero,
+        margin: EdgeInsets.zero,
+        borderRadius: radius,
+        showBorder: false,
+        backgroundColor: glassTint,
+        child: OutlinedButton(
+          onPressed: isLoading ? null : onPressed,
+          style: OutlinedButton.styleFrom(
+            foregroundColor: colorScheme.primary,
+            backgroundColor: Colors.transparent,
+            shadowColor: Colors.transparent,
+            side: BorderSide.none,
+            padding: const EdgeInsets.symmetric(
+              horizontal: KubusSpacing.lg,
+              vertical: KubusSpacing.md,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: radius,
+            ),
+          ),
+          child: content,
+        ),
+      ),
     );
 
     if (isFullWidth) {

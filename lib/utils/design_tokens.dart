@@ -13,13 +13,19 @@ class KubusColors {
   static const Color primaryVariantLight = Color(0xFF0097A7);
   static const Color primaryVariantDark = Color(0xFF00ACC1); // Cyan 600
 
+  // --- Glass & Overlay ---
+  static const Color glassLight = Color(0x99FFFFFF); // 60% White
+  static const Color glassDark = Color(0xCC1A1A1A); // 80% Dark Grey
+  static const Color glassBorderLight = Color(0x40FFFFFF);
+  static const Color glassBorderDark = Color(0x40000000);
+
   // --- Secondary / Accents ---
   static const Color secondary = Color(0xCC00838F); // 80% opacity primary
-  
+
   // --- Semantic Colors ---
   static const Color error = Color(0xFFE53935); // Red 600
   static const Color errorDark = Color(0xFFFF6B6B); // Coral Red
-  
+
   static const Color success = Color(0xFF43A047); // Green 600
   static const Color successDark = Color(0xFF4CAF50); // Green 500
 
@@ -49,25 +55,25 @@ class KubusSpacing {
 
   /// 0.0
   static const double none = 0.0;
-  
+
   /// 2.0 - Tiny offsets
   static const double xxs = 2.0;
-  
+
   /// 4.0 - Tight grouping
   static const double xs = 4.0;
-  
+
   /// 8.0 - Standard inner spacing
   static const double sm = 8.0;
-  
+
   /// 16.0 - Standard padding/margin
   static const double md = 16.0;
-  
+
   /// 24.0 - Section separation
   static const double lg = 24.0;
-  
+
   /// 32.0 - Major separation
   static const double xl = 32.0;
-  
+
   /// 48.0 - Hero or large separation
   static const double xxl = 48.0;
 }
@@ -77,10 +83,10 @@ class KubusRadius {
 
   /// 4.0 - Small inner elements
   static const double xs = 4.0;
-  
+
   /// 8.0 - Buttons, Inputs
   static const double sm = 8.0;
-  
+
   /// 12.0 - Cards, Dialogs standard
   static const double md = 12.0;
 
@@ -89,32 +95,200 @@ class KubusRadius {
 
   /// 24.0 - Pills, large rounded edges
   static const double xl = 24.0;
-  
+
   /// Returns a circular border radius for a given value
   static BorderRadius circular(double radius) => BorderRadius.circular(radius);
 }
 
+/// Shared layout constants that need to stay consistent across screens.
+class KubusLayout {
+  KubusLayout._();
+
+  /// Approximate height of the app's custom bottom navigation bar (excluding
+  /// the device safe-area inset).
+  ///
+  /// Used to keep bottom-anchored UI (FABs, draggable sheets, overlays) above
+  /// the navbar when the root Scaffold uses `extendBody: true`.
+  static const double mainBottomNavBarHeight = 72.0;
+}
+
 class KubusTypography {
   KubusTypography._();
-  
+
   static TextTheme get textTheme {
     return GoogleFonts.interTextTheme().copyWith(
-      displayLarge: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 32),
-      displayMedium: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 28),
-      displaySmall: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 24),
-      
-      headlineMedium: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 20),
-      headlineSmall: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 18),
-      
+      displayLarge:
+          GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 32),
+      displayMedium:
+          GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 28),
+      displaySmall:
+          GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 24),
+      headlineMedium:
+          GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 20),
+      headlineSmall:
+          GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 18),
       titleLarge: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 18),
       titleMedium: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16),
-      
       bodyLarge: GoogleFonts.inter(fontWeight: FontWeight.w400, fontSize: 16),
       bodyMedium: GoogleFonts.inter(fontWeight: FontWeight.w400, fontSize: 14),
-      
       labelLarge: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
       labelMedium: GoogleFonts.inter(fontWeight: FontWeight.w500, fontSize: 12),
       labelSmall: GoogleFonts.inter(fontWeight: FontWeight.w500, fontSize: 10),
     );
   }
+}
+
+class KubusGradients {
+  KubusGradients._();
+
+  /// Builds a smooth 3-stop gradient from two endpoint colors.
+  ///
+  /// This is used by auth/onboarding surfaces where we want a subtle midpoint
+  /// highlight without hardcoding a third color.
+  static LinearGradient fromColors(
+    Color start,
+    Color end, {
+    Alignment begin = Alignment.topLeft,
+    Alignment finish = Alignment.bottomRight,
+    double midStop = 0.7,
+    double midT = 0.6,
+  }) {
+    final mid = Color.lerp(start, end, midT) ?? end;
+    return LinearGradient(
+      begin: begin,
+      end: finish,
+      colors: [start, mid, end],
+      stops: [0.0, midStop, 1.0],
+    );
+  }
+
+  static const LinearGradient primary = LinearGradient(
+    colors: [KubusColors.primary, KubusColors.primaryVariantDark],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static LinearGradient glass(Brightness brightness) {
+    if (brightness == Brightness.dark) {
+      return LinearGradient(
+        colors: [
+          KubusColors.surfaceDark.withValues(alpha: 0.7),
+          KubusColors.surfaceDark.withValues(alpha: 0.3),
+        ],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      );
+    } else {
+      return LinearGradient(
+        colors: [
+          Colors.white.withValues(alpha: 0.8),
+          Colors.white.withValues(alpha: 0.4),
+        ],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      );
+    }
+  }
+
+  static const LinearGradient darkBackground = LinearGradient(
+    colors: [
+      Color(0xFF05070A), // Near-black
+      Color(0xFF0B1D33), // Deep navy blue
+    ],
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+  );
+
+  static const LinearGradient authDark = LinearGradient(
+    colors: [
+      Color(0xFF05070A),
+      Color(0xFF102A43),
+    ],
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+  );
+
+  static const LinearGradient lightBackground = LinearGradient(
+    colors: [
+      Color(0xFFFFFFFF),
+      Color(0xFFE6F0FF), // Subtle blue-white wash (prevents flat whitinstancee look)
+    ],
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+  );
+
+  static BoxDecoration scaffoldDecoration(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return BoxDecoration(
+      gradient: isDark ? darkBackground : lightBackground,
+    );
+  }
+
+  // --- Animated Gradient Color Stops ---
+  // These are designed for smooth interpolation via AnimatedContainer or TweenSequence
+
+  /// Dark mode animated gradient - black to deep navy with subtle motion
+  static const List<Color> animatedDarkColors = [
+    Color(0xFF05070A), // Near-black
+    Color(0xFF060B12), // Black-blue
+    Color(0xFF081B2E), // Deep navy
+    Color(0xFF0B2A4A), // Navy highlight
+  ];
+
+  /// Light mode animated gradient - subtle white with a deep-blue tint
+  static const List<Color> animatedLightColors = [
+    Color(0xFFF9FBFF), // Cool white
+    Color(0xFFF1F7FF), // Very light blue
+    Color(0xFFE3EFFF), // Light blue wash
+    Color(0xFFF7FAFF), // Soft white
+  ];
+
+  /// Hero/accent gradient for feature highlights
+  static const LinearGradient heroGradient = LinearGradient(
+    colors: [
+      Color(0xFF0EA5E9), // Bright cyan
+      Color(0xFF8B5CF6), // Vibrant purple
+      Color(0xFFEC4899), // Pink accent
+    ],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  /// Shimmer overlay gradient for glass effects
+  static const LinearGradient glassShimmer = LinearGradient(
+    colors: [
+      Color(0x00FFFFFF),
+      Color(0x15FFFFFF),
+      Color(0x00FFFFFF),
+    ],
+    stops: [0.0, 0.5, 1.0],
+    begin: Alignment(-1.5, -1.5),
+    end: Alignment(1.5, 1.5),
+  );
+}
+
+/// Constants for glass/blur effects throughout the app
+class KubusGlassEffects {
+  KubusGlassEffects._();
+
+  /// Standard blur intensity for glass panels
+  static const double blurSigma = 12.0;
+
+  /// Light blur for subtle depth
+  static const double blurSigmaLight = 6.0;
+
+  /// Heavy blur for modal overlays
+  static const double blurSigmaHeavy = 20.0;
+
+  /// Glass panel opacity in dark mode
+  static const double glassOpacityDark = 0.75;
+
+  /// Glass panel opacity in light mode
+  static const double glassOpacityLight = 0.85;
+
+  /// Border opacity for glass panels
+  static const double glassBorderOpacity = 0.15;
+
+  /// Backdrop dimming for modals
+  static const double backdropDimming = 0.4;
 }

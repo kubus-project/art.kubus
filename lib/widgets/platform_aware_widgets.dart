@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/platform_provider.dart';
 import '../utils/kubus_color_roles.dart';
+import 'glass_components.dart';
 
 /// A helper widget that shows platform-aware buttons and features
 class PlatformAwareFeatureButton extends StatelessWidget {
@@ -28,35 +29,73 @@ class PlatformAwareFeatureButton extends StatelessWidget {
     return Consumer<PlatformProvider>(
       builder: (context, platformProvider, child) {
         final isSupported = platformProvider.capabilities[requiredCapability] ?? false;
+        final theme = Theme.of(context);
+        final scheme = theme.colorScheme;
+        final isDark = theme.brightness == Brightness.dark;
+
+        final baseColor = isSupported
+            ? (color ?? Theme.of(context).primaryColor)
+            : scheme.outline;
+
+        final radius = BorderRadius.circular(platformProvider.defaultBorderRadius);
+        final glassTint = baseColor.withValues(
+          alpha: isSupported ? (isDark ? 0.82 : 0.88) : (isDark ? 0.22 : 0.16),
+        );
+        final outlineColor = baseColor.withValues(alpha: isSupported ? 0.30 : 0.22);
         
-        return ElevatedButton.icon(
-          onPressed: isSupported ? onPressed : () => _showUnsupportedMessage(context, platformProvider),
-          icon: Icon(
-            icon,
-            color: isSupported 
-              ? (color ?? Theme.of(context).primaryColor)
-              : platformProvider.getUnsupportedFeatureColor(context),
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            border: Border.all(color: outlineColor),
+            boxShadow: platformProvider.isDesktop
+                ? [
+                    BoxShadow(
+                      color: baseColor.withValues(alpha: 0.12),
+                      blurRadius: 18,
+                      offset: const Offset(0, 6),
+                    ),
+                  ]
+                : null,
           ),
-          label: Text(
-            label,
-            style: GoogleFonts.inter(
-              color: isSupported 
-                ? Colors.white 
-                : platformProvider.getUnsupportedFeatureColor(context),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: isSupported 
-              ? (color ?? Theme.of(context).primaryColor)
-              : Theme.of(context).colorScheme.outline,
-            foregroundColor: Theme.of(context).colorScheme.onPrimary,
-            padding: EdgeInsets.symmetric(
-              horizontal: platformProvider.defaultPadding,
-              vertical: platformProvider.defaultPadding * 0.75,
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(platformProvider.defaultBorderRadius),
+          child: LiquidGlassPanel(
+            padding: EdgeInsets.zero,
+            margin: EdgeInsets.zero,
+            borderRadius: radius,
+            showBorder: false,
+            backgroundColor: glassTint,
+            child: ElevatedButton.icon(
+              onPressed: isSupported
+                  ? onPressed
+                  : () => _showUnsupportedMessage(context, platformProvider),
+              icon: Icon(
+                icon,
+                color: isSupported
+                    ? Colors.white
+                    : platformProvider.getUnsupportedFeatureColor(context),
+              ),
+              label: Text(
+                label,
+                style: GoogleFonts.inter(
+                  color: isSupported
+                      ? Colors.white
+                      : platformProvider.getUnsupportedFeatureColor(context),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                foregroundColor: scheme.onPrimary,
+                shadowColor: Colors.transparent,
+                disabledBackgroundColor: Colors.transparent,
+                padding: EdgeInsets.symmetric(
+                  horizontal: platformProvider.defaultPadding,
+                  vertical: platformProvider.defaultPadding * 0.75,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: radius,
+                ),
+                elevation: 0,
+              ),
             ),
           ),
         );
@@ -95,27 +134,40 @@ class PlatformAwareCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<PlatformProvider>(
       builder: (context, platformProvider, _) {
+        final theme = Theme.of(context);
+        final scheme = theme.colorScheme;
+        final isDark = theme.brightness == Brightness.dark;
+
+        final radius = BorderRadius.circular(platformProvider.defaultBorderRadius);
+        final glassTint = (backgroundColor ?? scheme.surface)
+            .withValues(alpha: isDark ? 0.16 : 0.10);
+
         return Container(
           margin: margin ?? platformProvider.defaultMargin,
-          padding: padding ?? EdgeInsets.all(platformProvider.defaultPadding),
           decoration: BoxDecoration(
-            color: backgroundColor ?? Theme.of(context).colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(platformProvider.defaultBorderRadius),
+            borderRadius: radius,
             border: Border.all(
-              color: Theme.of(context).colorScheme.outline,
+              color: scheme.outline.withValues(alpha: 0.18),
               width: platformProvider.isDesktop ? 1 : 0.5,
             ),
             boxShadow: platformProvider.isDesktop
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.10),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null,
           ),
-          child: child,
+          child: LiquidGlassPanel(
+            padding: padding ?? EdgeInsets.all(platformProvider.defaultPadding),
+            margin: EdgeInsets.zero,
+            borderRadius: radius,
+            showBorder: false,
+            backgroundColor: glassTint,
+            child: child,
+          ),
         );
       },
     );

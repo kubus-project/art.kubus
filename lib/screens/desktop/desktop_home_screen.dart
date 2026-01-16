@@ -31,11 +31,13 @@ import '../../widgets/institution_badge.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/artwork_creator_byline.dart';
 import '../../widgets/detail/detail_shell_components.dart';
+import '../../widgets/glass_components.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/activity_navigation.dart';
 import '../../utils/artwork_navigation.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/kubus_color_roles.dart';
+import '../../utils/design_tokens.dart';
 import 'components/desktop_widgets.dart';
 import '../web3/wallet/connectwallet_screen.dart';
 import 'web3/desktop_wallet_screen.dart';
@@ -309,12 +311,14 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final animationTheme = context.animationTheme;
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final screenWidth = MediaQuery.of(context).size.width;
     final isLarge = screenWidth >= 1200;
     final isMedium = screenWidth >= 900 && screenWidth < 1200;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: Colors.transparent,
       body: Stack(
         children: [
           Row(
@@ -326,21 +330,32 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                 child: _buildMainContent(animationTheme),
               ),
 
-              // Right sidebar (activity feed, trending, etc.)
+              // Right sidebar (activity feed, trending, etc.) with glass effect
               if (isMedium || isLarge)
-                Container(
+                SizedBox(
                   width: isLarge ? 380 : 320,
-                  decoration: BoxDecoration(
-                    border: Border(
-                      left: BorderSide(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .outline
-                            .withValues(alpha: 0.1),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border(
+                        left: BorderSide(
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.06)
+                              : scheme.outline.withValues(alpha: 0.10),
+                          width: 1,
+                        ),
                       ),
                     ),
+                    child: LiquidGlassPanel(
+                      padding: EdgeInsets.zero,
+                      margin: EdgeInsets.zero,
+                      borderRadius: BorderRadius.zero,
+                      blurSigma: KubusGlassEffects.blurSigmaLight,
+                      showBorder: false,
+                      backgroundColor:
+                          scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10),
+                      child: _buildRightSidebar(themeProvider),
+                    ),
                   ),
-                  child: _buildRightSidebar(themeProvider),
                 ),
             ],
           ),
@@ -1564,39 +1579,36 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
 
   Widget _buildRightSidebar(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
-    return Container(
-      color: Theme.of(context).colorScheme.surface,
-      child: ListView(
-        padding: const EdgeInsets.all(DetailSpacing.xxl),
-        children: [
-          Text(
-            l10n.homeActivityTitle,
-            style: GoogleFonts.inter(
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              color: Theme.of(context).colorScheme.onSurface,
-              letterSpacing: -0.3,
-            ),
+    return ListView(
+      padding: const EdgeInsets.all(DetailSpacing.xxl),
+      children: [
+        Text(
+          l10n.homeActivityTitle,
+          style: GoogleFonts.inter(
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+            color: Theme.of(context).colorScheme.onSurface,
+            letterSpacing: -0.3,
           ),
-          const SizedBox(height: DetailSpacing.xl),
+        ),
+        const SizedBox(height: DetailSpacing.xl),
 
-          // Recent activity from provider
-          _buildRecentActivitySection(themeProvider),
-          const SizedBox(height: DetailSpacing.xxl),
+        // Recent activity from provider
+        _buildRecentActivitySection(themeProvider),
+        const SizedBox(height: DetailSpacing.xxl),
 
-          // Trending Art Section
-          _buildTrendingArtSection(themeProvider),
-          const SizedBox(height: DetailSpacing.xxl),
+        // Trending Art Section
+        _buildTrendingArtSection(themeProvider),
+        const SizedBox(height: DetailSpacing.xxl),
 
-          // Top Creators Section
-          _buildTopCreatorsSection(themeProvider),
-          const SizedBox(height: DetailSpacing.xxl),
+        // Top Creators Section
+        _buildTopCreatorsSection(themeProvider),
+        const SizedBox(height: DetailSpacing.xxl),
 
-          // Platform Stats Section
-          _buildPlatformStatsSection(themeProvider),
-          const SizedBox(height: DetailSpacing.xl),
-        ],
-      ),
+        // Platform Stats Section
+        _buildPlatformStatsSection(themeProvider),
+        const SizedBox(height: DetailSpacing.xl),
+      ],
     );
   }
 

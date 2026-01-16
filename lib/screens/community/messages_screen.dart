@@ -20,6 +20,8 @@ import '../../services/event_bus.dart';
 import '../../utils/wallet_utils.dart';
 import '../../utils/media_url_resolver.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import '../../widgets/glass_components.dart';
+ 
 
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
@@ -553,14 +555,19 @@ class _MessagesScreenState extends State<MessagesScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
+    return AnimatedGradientBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
             icon: const Icon(Icons.close),
-            onPressed: () => Navigator.of(context).pop()),
-        title: Text(l10n.messagesTitle),
-      ),
-      body: Consumer<ChatProvider>(builder: (context, cp, _) {
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          title: Text(l10n.messagesTitle),
+        ),
+        body: Consumer<ChatProvider>(builder: (context, cp, _) {
         final convs = cp.conversations;
         if (convs.isEmpty) {
           return Center(
@@ -926,7 +933,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
             );
           },
         );
-      }),
+        }),
+      ),
     );
   }
 

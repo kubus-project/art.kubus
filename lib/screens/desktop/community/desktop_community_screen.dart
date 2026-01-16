@@ -39,6 +39,7 @@ import '../../../utils/media_url_resolver.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../../utils/community_subject_navigation.dart';
+import '../../../widgets/glass_components.dart';
 import '../components/desktop_widgets.dart';
 import '../desktop_shell.dart';
 import '../../community/group_feed_screen.dart';
@@ -669,6 +670,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     _maybeHandleComposerOpenRequest(hub);
     final themeProvider = Provider.of<ThemeProvider>(context);
     final animationTheme = context.animationTheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
     final screenWidth = MediaQuery.of(context).size.width;
     final isLarge = screenWidth >= 1200;
     final isMedium = screenWidth >= 900 && screenWidth < 1200;
@@ -682,9 +686,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         }
       },
       child: Scaffold(
-        backgroundColor: themeProvider.isDarkMode
-            ? Theme.of(context).scaffoldBackgroundColor
-            : const Color(0xFFF8F9FA),
+        backgroundColor: Colors.transparent,
         body: Stack(
           children: [
             Row(
@@ -698,19 +700,29 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
                 // Right sidebar
                 if (isMedium || isLarge)
-                  Container(
+                  SizedBox(
                     width: isLarge ? 360 : 300,
-                    decoration: BoxDecoration(
-                      border: Border(
-                        left: BorderSide(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .outline
-                              .withValues(alpha: 0.1),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        border: Border(
+                          left: BorderSide(
+                            color: isDark
+                                ? Colors.white.withValues(alpha: 0.06)
+                                : scheme.outline.withValues(alpha: 0.10),
+                            width: 1,
+                          ),
                         ),
                       ),
+                      child: LiquidGlassPanel(
+                        padding: EdgeInsets.zero,
+                        margin: EdgeInsets.zero,
+                        borderRadius: BorderRadius.zero,
+                        showBorder: false,
+                        backgroundColor:
+                            scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10),
+                        child: _buildRightSidebar(themeProvider),
+                      ),
                     ),
-                    child: _buildRightSidebar(themeProvider),
                   ),
               ],
             ),
@@ -2461,34 +2473,25 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   child: Row(
                     children: [
                       Expanded(
-                        child: TextField(
+                        child: DesktopSearchBar(
                           controller: _groupSearchController,
-                          decoration: InputDecoration(
-                            prefixIcon: const Icon(Icons.search),
-                            suffixIcon: _groupSearchController.text.isNotEmpty
-                                ? IconButton(
-                                    icon: const Icon(Icons.close),
-                                    onPressed: () {
-                                      _groupSearchController.clear();
-                                      communityProvider.loadGroups(
-                                          refresh: true);
-                                      setState(() {});
-                                    },
-                                  )
-                                : null,
-                            hintText: 'Search groups...',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
+                          hintText: 'Search groups...',
                           onChanged: (value) {
-                            setState(() {});
                             _groupSearchDebounce?.cancel();
                             _groupSearchDebounce =
                                 Timer(const Duration(milliseconds: 300), () {
                               communityProvider.loadGroups(
-                                  refresh: true, search: value.trim());
+                                refresh: true,
+                                search: value.trim(),
+                              );
                             });
+                          },
+                          onSubmitted: (value) {
+                            _groupSearchDebounce?.cancel();
+                            communityProvider.loadGroups(
+                              refresh: true,
+                              search: value.trim(),
+                            );
                           },
                         ),
                       ),
@@ -3988,10 +3991,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
   Widget _buildRightSidebar(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
-    return Container(
-      color: Theme.of(context).colorScheme.surface,
-      child: Column(
-        children: [
+    return Column(
+      children: [
           // Sidebar tabs
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -4046,8 +4047,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     ],
                   ),
           ),
-        ],
-      ),
+      ],
     );
   }
 
@@ -4147,6 +4147,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   Widget _buildMessagesPanel(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Consumer<ChatProvider>(
       builder: (context, chatProvider, _) {
         final conversations = chatProvider.conversations;
@@ -4167,58 +4169,82 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               child: Row(
                 children: [
                   Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: TextField(
-                        controller: _messageSearchController,
-                        textInputAction: TextInputAction.search,
-                        decoration: InputDecoration(
-                          hintText: 'Search messages...',
-                          hintStyle: GoogleFonts.inter(
-                            fontSize: 14,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.5),
+                    child: SizedBox(
+                      height: 44,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: scheme.outline.withValues(alpha: 0.18),
                           ),
-                          border: InputBorder.none,
-                          prefixIcon: Icon(
-                            Icons.search,
-                            size: 20,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.45),
-                          ),
-                          suffixIcon: trimmedQuery.isEmpty
-                              ? null
-                              : IconButton(
-                                  tooltip: 'Clear search',
-                                  icon: const Icon(Icons.close),
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.5),
-                                  onPressed: () =>
-                                      _messageSearchController.clear(),
-                                ),
                         ),
-                        style: GoogleFonts.inter(fontSize: 14),
+                        child: LiquidGlassPanel(
+                          // Keep the glass background full-bleed; spacing belongs to the input.
+                          padding: EdgeInsets.zero,
+                          margin: EdgeInsets.zero,
+                          borderRadius: BorderRadius.circular(12),
+                          showBorder: false,
+                          backgroundColor: scheme.primaryContainer.withValues(
+                            alpha: isDark ? 0.78 : 0.86,
+                          ),
+                          child: TextField(
+                            controller: _messageSearchController,
+                            textInputAction: TextInputAction.search,
+                            decoration: InputDecoration(
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 12,
+                              ),
+                              hintText: 'Search messages...',
+                              hintStyle: GoogleFonts.inter(
+                                fontSize: 14,
+                                color: scheme.onSurface.withValues(alpha: 0.5),
+                              ),
+                              border: InputBorder.none,
+                              prefixIcon: Icon(
+                                Icons.search,
+                                size: 20,
+                                color:
+                                    scheme.onSurface.withValues(alpha: 0.45),
+                              ),
+                              prefixIconConstraints: const BoxConstraints(
+                                minWidth: 40,
+                                minHeight: 40,
+                              ),
+                              suffixIcon: trimmedQuery.isEmpty
+                                  ? null
+                                  : IconButton(
+                                      tooltip: 'Clear search',
+                                      icon: const Icon(Icons.close),
+                                      color: scheme.onSurface
+                                          .withValues(alpha: 0.5),
+                                      onPressed: () =>
+                                          _messageSearchController.clear(),
+                                    ),
+                              suffixIconConstraints: const BoxConstraints(
+                                minWidth: 40,
+                                minHeight: 40,
+                              ),
+                            ),
+                            style: GoogleFonts.inter(fontSize: 14),
+                          ),
+                        ),
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
-                  IconButton(
-                    onPressed: _startNewConversation,
-                    icon: Icon(
-                      Icons.edit_square,
-                      color: AppColorUtils.tealAccent,
+                  SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: IconButton(
+                      onPressed: _startNewConversation,
+                      icon: Icon(
+                        Icons.edit_square,
+                        color: AppColorUtils.tealAccent,
+                      ),
+                      tooltip: l10n.messagesEmptyStartChatAction,
                     ),
-                    tooltip: l10n.messagesEmptyStartChatAction,
                   ),
                 ],
               ),
@@ -7989,36 +8015,57 @@ class _NewConversationDialogState extends State<_NewConversationDialog> {
             ),
             const SizedBox(height: 16),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
                 borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.18),
+                ),
               ),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Search users...',
-                  hintStyle: GoogleFonts.inter(
-                    fontSize: 14,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.5),
-                  ),
-                  border: InputBorder.none,
-                  icon: Icon(
-                    Icons.search,
-                    size: 20,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.5),
+              child: LiquidGlassPanel(
+                padding: EdgeInsets.zero,
+                margin: EdgeInsets.zero,
+                borderRadius: BorderRadius.circular(12),
+                showBorder: false,
+                backgroundColor: Theme.of(context)
+                    .colorScheme
+                    .primaryContainer
+                    .withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.78 : 0.86),
+                child: SizedBox(
+                  height: 44,
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 12,
+                      ),
+                      hintText: 'Search users...',
+                      hintStyle: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.5),
+                      ),
+                      border: InputBorder.none,
+                      prefixIcon: Icon(
+                        Icons.search,
+                        size: 20,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.5),
+                      ),
+                      prefixIconConstraints: const BoxConstraints(
+                        minWidth: 40,
+                        minHeight: 40,
+                      ),
+                    ),
+                    style: GoogleFonts.inter(fontSize: 14),
+                    onChanged: _onSearchChanged,
                   ),
                 ),
-                style: GoogleFonts.inter(fontSize: 14),
-                onChanged: (value) {
-                  _onSearchChanged(value);
-                },
               ),
             ),
             const SizedBox(height: 16),

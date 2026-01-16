@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -20,6 +21,7 @@ import '../../widgets/google_sign_in_button.dart';
 import '../web3/wallet/connectwallet_screen.dart';
 import '../desktop/auth/desktop_auth_shell.dart';
 import '../desktop/desktop_shell.dart';
+import '../../widgets/glass_components.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -48,10 +50,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final data = (payload['data'] as Map<String, dynamic>?) ?? payload;
     final user = (data['user'] as Map<String, dynamic>?) ?? data;
     String? walletAddress = user['walletAddress'] ?? user['wallet_address'];
-    final usernameFromUser = (user['username'] ?? _usernameController.text ?? '').toString();
+    final usernameFromUser =
+        (user['username'] ?? _usernameController.text ?? '').toString();
     final userId = user['id'];
     try {
-      walletAddress = await _ensureWalletProvisioned(walletAddress?.toString(), desiredUsername: usernameFromUser);
+      walletAddress = await _ensureWalletProvisioned(walletAddress?.toString(),
+          desiredUsername: usernameFromUser);
     } catch (e) {
       debugPrint('RegisterScreen: wallet provisioning failed: $e');
     }
@@ -89,14 +93,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _registerWithEmail() async {
     final l10n = AppLocalizations.of(context)!;
     if (!AppConfig.enableEmailAuth) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.authEmailRegistrationDisabled)));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.authEmailRegistrationDisabled)));
       return;
     }
     final email = _emailController.text.trim();
     final password = _passwordController.text;
     final username = _usernameController.text.trim();
     if (email.isEmpty || password.length < 8) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.authEnterValidEmailPassword)));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.authEnterValidEmailPassword)));
       return;
     }
     unawaited(TelemetryService().trackSignUpAttempt(method: 'email'));
@@ -111,15 +117,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
       await _handleAuthSuccess(result);
       unawaited(TelemetryService().trackSignUpSuccess(method: 'email'));
     } catch (e) {
-      unawaited(TelemetryService().trackSignUpFailure(method: 'email', errorClass: e.runtimeType.toString()));
+      unawaited(TelemetryService().trackSignUpFailure(
+          method: 'email', errorClass: e.runtimeType.toString()));
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.authRegistrationFailed)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10n.authRegistrationFailed)));
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
-  Future<String?> _ensureWalletProvisioned(String? existingWallet, {String? desiredUsername}) async {
+  Future<String?> _ensureWalletProvisioned(String? existingWallet,
+      {String? desiredUsername}) async {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final web3Provider = Provider.of<Web3Provider>(context, listen: false);
     final sanitizedExisting = existingWallet?.trim();
@@ -141,7 +150,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         }
       }
       try {
-        if (!web3Provider.isConnected || web3Provider.walletAddress != address) {
+        if (!web3Provider.isConnected ||
+            web3Provider.walletAddress != address) {
           await web3Provider.connectExistingWallet(address);
         }
       } catch (e) {
@@ -178,11 +188,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return address;
   }
 
-  Future<void> _upsertProfileWithUsername(String address, String? desiredUsername) async {
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
-    final effectiveUsername = (desiredUsername ?? '').isNotEmpty ? desiredUsername : null;
+  Future<void> _upsertProfileWithUsername(
+      String address, String? desiredUsername) async {
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
+    final effectiveUsername =
+        (desiredUsername ?? '').isNotEmpty ? desiredUsername : null;
     try {
-      await profileProvider.createProfileFromWallet(walletAddress: address, username: effectiveUsername);
+      await profileProvider.createProfileFromWallet(
+          walletAddress: address, username: effectiveUsername);
     } catch (e) {
       debugPrint('RegisterScreen: createProfileFromWallet failed: $e');
     }
@@ -201,7 +215,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _registerWithGoogle() async {
     final l10n = AppLocalizations.of(context)!;
     if (!AppConfig.enableGoogleAuth) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.authGoogleSignInDisabled)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10n.authGoogleSignInDisabled)));
       return;
     }
     unawaited(TelemetryService().trackSignUpAttempt(method: 'google'));
@@ -209,7 +224,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     try {
       final googleResult = await GoogleAuthService().signIn();
       if (googleResult == null) {
-        unawaited(TelemetryService().trackSignUpFailure(method: 'google', errorClass: 'cancelled'));
+        unawaited(TelemetryService()
+            .trackSignUpFailure(method: 'google', errorClass: 'cancelled'));
         setState(() => _isGoogleSubmitting = false);
         return;
       }
@@ -222,9 +238,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
       await _handleAuthSuccess(result);
       unawaited(TelemetryService().trackSignUpSuccess(method: 'google'));
     } catch (e) {
-      unawaited(TelemetryService().trackSignUpFailure(method: 'google', errorClass: e.runtimeType.toString()));
+      unawaited(TelemetryService().trackSignUpFailure(
+          method: 'google', errorClass: e.runtimeType.toString()));
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.authGoogleSignInFailed)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10n.authGoogleSignInFailed)));
     } finally {
       if (mounted) setState(() => _isGoogleSubmitting = false);
     }
@@ -233,15 +251,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void _showConnectWalletModal() {
     final l10n = AppLocalizations.of(context)!;
     if (!AppConfig.enableWalletConnect || !AppConfig.enableWeb3) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.authWalletConnectionDisabled)));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.authWalletConnectionDisabled)));
       return;
     }
     unawaited(TelemetryService().trackSignUpAttempt(method: 'wallet'));
-    final isDesktop = MediaQuery.of(context).size.width >= DesktopBreakpoints.medium;
+    final isDesktop =
+        MediaQuery.of(context).size.width >= DesktopBreakpoints.medium;
     if (isDesktop) {
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => const ConnectWallet(initialStep: 0, telemetryAuthFlow: 'signup'),
+          builder: (_) =>
+              const ConnectWallet(initialStep: 0, telemetryAuthFlow: 'signup'),
           settings: const RouteSettings(name: '/connect-wallet'),
         ),
       );
@@ -262,26 +283,40 @@ class _RegisterScreenState extends State<RegisterScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(sheetL10n.authConnectWalletModalTitle, style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700, color: colorScheme.onSurface)),
+                Text(sheetL10n.authConnectWalletModalTitle,
+                    style: GoogleFonts.inter(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: colorScheme.onSurface)),
                 const SizedBox(height: 6),
-                Text(sheetL10n.authConnectWalletModalDescriptionRegister, style: GoogleFonts.inter(fontSize: 14, color: colorScheme.onSurface.withValues(alpha: 0.7))),
+                Text(sheetL10n.authConnectWalletModalDescriptionRegister,
+                    style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: colorScheme.onSurface.withValues(alpha: 0.7))),
                 const SizedBox(height: 16),
                 const SizedBox(height: 8),
-                _walletOptionButton(ctx, sheetL10n.authWalletOptionWalletConnect, Icons.qr_code_2_outlined, () {
+                _walletOptionButton(
+                    ctx,
+                    sheetL10n.authWalletOptionWalletConnect,
+                    Icons.qr_code_2_outlined, () {
                   Navigator.of(ctx).pop();
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => const ConnectWallet(initialStep: 3, telemetryAuthFlow: 'signup'),
-                      settings: const RouteSettings(name: '/connect-wallet/walletconnect'),
+                      builder: (_) => const ConnectWallet(
+                          initialStep: 3, telemetryAuthFlow: 'signup'),
+                      settings: const RouteSettings(
+                          name: '/connect-wallet/walletconnect'),
                     ),
                   );
                 }),
                 const SizedBox(height: 8),
-                _walletOptionButton(ctx, sheetL10n.authWalletOptionOtherWallets, Icons.apps_outlined, () {
+                _walletOptionButton(ctx, sheetL10n.authWalletOptionOtherWallets,
+                    Icons.apps_outlined, () {
                   Navigator.of(ctx).pop();
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => const ConnectWallet(initialStep: 0, telemetryAuthFlow: 'signup'),
+                      builder: (_) => const ConnectWallet(
+                          initialStep: 0, telemetryAuthFlow: 'signup'),
                       settings: const RouteSettings(name: '/connect-wallet'),
                     ),
                   );
@@ -294,7 +329,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _walletOptionButton(BuildContext context, String label, IconData icon, VoidCallback onTap) {
+  Widget _walletOptionButton(
+      BuildContext context, String label, IconData icon, VoidCallback onTap) {
     final colorScheme = Theme.of(context).colorScheme;
     return ElevatedButton.icon(
       style: ElevatedButton.styleFrom(
@@ -307,7 +343,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
       onPressed: onTap,
       icon: Icon(icon, color: colorScheme.primary, size: 22),
-      label: Text(label, style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16)),
+      label: Text(label,
+          style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16)),
     );
   }
 
@@ -318,7 +355,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final enableWallet = AppConfig.enableWeb3 && AppConfig.enableWalletConnect;
     final enableEmail = AppConfig.enableEmailAuth;
     final enableGoogle = AppConfig.enableGoogleAuth;
-    final isDesktop = MediaQuery.of(context).size.width >= DesktopBreakpoints.medium;
+    final isDesktop =
+        MediaQuery.of(context).size.width >= DesktopBreakpoints.medium;
 
     final form = _buildRegisterForm(
       colorScheme: colorScheme,
@@ -352,7 +390,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         footer: Align(
           alignment: Alignment.centerLeft,
           child: TextButton(
-            onPressed: () => Navigator.of(context).pushReplacementNamed('/sign-in'),
+            onPressed: () =>
+                Navigator.of(context).pushReplacementNamed('/sign-in'),
             child: Text(
               l10n.authHaveAccountSignIn,
               style: GoogleFonts.inter(
@@ -366,29 +405,48 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     return Scaffold(
-      backgroundColor: colorScheme.surface,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 520),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: AnimatedGradientBackground(
+        duration: const Duration(seconds: 10),
+        intensity: 0.2,
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: Theme.of(context).brightness == Brightness.dark
+                ? KubusGradients.authDark
+                : KubusGradients.fromColors(
+                    const Color.fromARGB(255, 233, 120, 14)
+                        .withValues(alpha: 0.55),
+                    const Color.fromARGB(255, 185, 174, 16)
+                        .withValues(alpha: 0.50),
+                  ),
+          ),
+          child: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 520),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      const AppLogo(width: 48, height: 48),
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pushReplacementNamed('/sign-in'),
-                        child: Text(l10n.authHaveAccountSignIn, style: GoogleFonts.inter(color: colorScheme.onSurface.withValues(alpha: 0.7))),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const AppLogo(width: 48, height: 48),
+                          TextButton(
+                            onPressed: () => Navigator.of(context)
+                                .pushReplacementNamed('/sign-in'),
+                            child: Text(l10n.authHaveAccountSignIn,
+                                style: GoogleFonts.inter(
+                                    color: colorScheme.onSurface
+                                        .withValues(alpha: 0.7))),
+                          ),
+                        ],
                       ),
+                      const SizedBox(height: 12),
+                      form,
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  form,
-                ],
+                ),
               ),
             ),
           ),
@@ -424,11 +482,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   radius: 18,
                 ),
                 const SizedBox(height: 12),
-                Text(l10n.authRegisterTitle, style: GoogleFonts.inter(fontSize: 26, fontWeight: FontWeight.w800, color: colorScheme.onSurface)),
+                Text(l10n.authRegisterTitle,
+                    style: GoogleFonts.inter(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        color: colorScheme.onSurface)),
                 const SizedBox(height: 8),
                 Text(
                   l10n.authSignInSubtitle,
-                  style: GoogleFonts.inter(fontSize: 14, color: colorScheme.onSurface.withValues(alpha: 0.85)),
+                  style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: colorScheme.onSurface.withValues(alpha: 0.85)),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -441,12 +505,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
               backgroundColor: colorScheme.primary,
               foregroundColor: colorScheme.onPrimary,
               minimumSize: const Size.fromHeight(56),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
               elevation: 2,
             ),
             onPressed: _showConnectWalletModal,
-            icon: Icon(Icons.account_balance_wallet_outlined, size: 24, color: colorScheme.onPrimary),
-            label: Text(l10n.authConnectWalletButton, style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w700, color: colorScheme.onPrimary)),
+            icon: Icon(Icons.account_balance_wallet_outlined,
+                size: 24, color: colorScheme.onPrimary),
+            label: Text(l10n.authConnectWalletButton,
+                style: GoogleFonts.inter(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: colorScheme.onPrimary)),
           ),
         if (enableWallet) const SizedBox(height: 16),
         Container(
@@ -460,7 +530,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text(l10n.authOrUseEmail, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: colorScheme.onSurface)),
+              Text(l10n.authOrUseEmail,
+                  style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: colorScheme.onSurface)),
               const SizedBox(height: 12),
               if (enableEmail) _buildEmailForm(colorScheme),
               if (enableGoogle) ...[
@@ -513,17 +587,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
             backgroundColor: colorScheme.primary,
             foregroundColor: colorScheme.onPrimary,
             padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             elevation: 1,
             minimumSize: const Size.fromHeight(54),
           ),
           onPressed: _isSubmitting ? null : _registerWithEmail,
           icon: _isSubmitting
-              ? const SizedBox(width: 20, height: 20, child: InlineLoading(width: 20, height: 20, tileSize: 5))
-              : Icon(Icons.person_add_alt, color: colorScheme.onPrimary, size: 22),
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: InlineLoading(width: 20, height: 20, tileSize: 5))
+              : Icon(Icons.person_add_alt,
+                  color: colorScheme.onPrimary, size: 22),
           label: Text(
-            _isSubmitting ? AppLocalizations.of(context)!.commonWorking : AppLocalizations.of(context)!.authContinueWithEmail,
-            style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: colorScheme.onPrimary),
+            _isSubmitting
+                ? AppLocalizations.of(context)!.commonWorking
+                : AppLocalizations.of(context)!.authContinueWithEmail,
+            style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: colorScheme.onPrimary),
           ),
         ),
       ],

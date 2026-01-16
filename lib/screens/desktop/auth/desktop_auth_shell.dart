@@ -1,3 +1,4 @@
+import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -31,27 +32,22 @@ class DesktopAuthShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: !themeProvider.isDarkMode && (gradientStart != null && gradientEnd != null)
-              ? LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
+        body: Container(
+      decoration: BoxDecoration(
+        gradient: themeProvider.isDarkMode
+            ? KubusGradients.authDark
+            : (gradientStart != null && gradientEnd != null)
+                ? KubusGradients.fromColors(
                     gradientStart!.withValues(alpha: 0.55),
                     gradientEnd!.withValues(alpha: 0.50),
-                    const Color(0xFFF7F8FA),
-                  ],
-                  stops: const [0.0, 0.7, 1.0],
-                )
-              : null,
-          color: (gradientStart == null || gradientEnd == null)
-              ? (themeProvider.isDarkMode
-                  ? Theme.of(context).colorScheme.surface
-                  : const Color(0xFFF7F8FA))
-              : null,
-        ),
-        child: Padding(
+                  )
+                : null,
+        color: (themeProvider.isDarkMode ||
+                (gradientStart != null && gradientEnd != null))
+            ? null
+            : const Color(0xFFF7F8FA),
+      ),
+      child: Padding(
         padding: const EdgeInsets.all(32),
         child: Align(
           alignment: const Alignment(0, -0.382),
@@ -66,7 +62,10 @@ class DesktopAuthShell extends StatelessWidget {
                       child: Container(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(20),
-                          color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.5),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surface
+                              .withValues(alpha: 0.5),
                         ),
                         child: DesktopCard(
                           showBorder: false,
@@ -82,7 +81,8 @@ class DesktopAuthShell extends StatelessWidget {
                                 style: GoogleFonts.inter(
                                   fontSize: 32,
                                   fontWeight: FontWeight.w800,
-                                  color: Theme.of(context).colorScheme.onSurface,
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
                               const SizedBox(height: 8),
@@ -90,7 +90,10 @@ class DesktopAuthShell extends StatelessWidget {
                                 subtitle,
                                 style: GoogleFonts.inter(
                                   fontSize: 16,
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.7),
                                 ),
                               ),
                               const SizedBox(height: 24),
@@ -101,19 +104,24 @@ class DesktopAuthShell extends StatelessWidget {
                                   children: highlights
                                       .map(
                                         (item) => Padding(
-                                          padding: const EdgeInsets.only(bottom: 12),
+                                          padding:
+                                              const EdgeInsets.only(bottom: 12),
                                           child: Row(
                                             children: [
                                               Container(
                                                 width: 28,
                                                 height: 28,
                                                 decoration: BoxDecoration(
-                                                  color: themeProvider.accentColor.withValues(alpha: 0.18),
-                                                  borderRadius: BorderRadius.circular(8),
+                                                  color: themeProvider
+                                                      .accentColor
+                                                      .withValues(alpha: 0.18),
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
                                                 ),
                                                 child: Icon(
                                                   Icons.check,
-                                                  color: themeProvider.accentColor,
+                                                  color:
+                                                      themeProvider.accentColor,
                                                   size: 18,
                                                 ),
                                               ),
@@ -123,7 +131,9 @@ class DesktopAuthShell extends StatelessWidget {
                                                   item,
                                                   style: GoogleFonts.inter(
                                                     fontSize: 14,
-                                                    color: Theme.of(context).colorScheme.onSurface,
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .onSurface,
                                                   ),
                                                 ),
                                               ),
@@ -132,7 +142,7 @@ class DesktopAuthShell extends StatelessWidget {
                                         ),
                                       )
                                       .toList(),
-                              ),
+                                ),
                             ],
                           ),
                         ),
@@ -141,43 +151,47 @@ class DesktopAuthShell extends StatelessWidget {
                     const SizedBox(width: 24),
                     Expanded(
                       child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: double.infinity,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(20),
-                                color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.7),
-                                border: Border.all(
-                                  color: Theme.of(context).colorScheme.outlineVariant,
-                                ),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(24),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    form,
-                                    if (footer != null) ...[
-                                      const SizedBox(height: 16),
-                                      footer!,
-                                    ],
-                                  ],
-                                ),
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(20),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .surface
+                                  .withValues(alpha: 0.7),
+                              border: Border.all(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .outlineVariant,
                               ),
                             ),
-                          ],
-                        ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  form,
+                                  if (footer != null) ...[
+                                    const SizedBox(height: 16),
+                                    footer!,
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
         ),
-      )
-    );
+      ),
+    ));
   }
 }

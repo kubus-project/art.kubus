@@ -12,6 +12,8 @@ import '../../utils/artwork_media_resolver.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../widgets/detail/detail_shell_components.dart';
 import '../../widgets/inline_loading.dart';
+import '../../widgets/glass_components.dart';
+ 
 
 class ArtworkEditScreen extends StatefulWidget {
   final String artworkId;
@@ -315,44 +317,18 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
 
-    if (_loading) {
-      return Scaffold(
-        backgroundColor: scheme.surface,
-        appBar: widget.showAppBar ? AppBar(title: Text(l10n.commonEdit)) : null,
-        body: const Center(child: InlineLoading()),
-      );
-    }
-
     final provider = context.watch<ArtworkProvider>();
     final artwork = provider.getArtworkById(widget.artworkId);
     _seedFromArtworkIfReady();
 
-    if (_error != null) {
-      return Scaffold(
-        backgroundColor: scheme.surface,
-        appBar: widget.showAppBar ? AppBar(title: Text(l10n.commonEdit)) : null,
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(DetailSpacing.xl),
-            child: Text(_error!, textAlign: TextAlign.center),
-          ),
-        ),
-      );
-    }
+    final art = artwork;
+    final coverUrl = art == null ? null : ArtworkMediaResolver.resolveCover(artwork: art);
 
-    if (artwork == null) {
-      return Scaffold(
-        backgroundColor: scheme.surface,
-        appBar: widget.showAppBar ? AppBar(title: Text(l10n.commonEdit)) : null,
-        body: Center(child: Text(l10n.artworkNotFound)),
-      );
-    }
-
-    final coverUrl = ArtworkMediaResolver.resolveCover(artwork: artwork);
-
-    final body = ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-      children: [
+    final Widget? body = art == null
+        ? null
+        : ListView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            children: [
         DetailCard(
           padding: const EdgeInsets.all(DetailSpacing.md),
           child: Column(
@@ -527,7 +503,7 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
           const SizedBox(height: DetailSpacing.lg),
         ],
         if (AppConfig.isFeatureEnabled('collabInvites')) ...[
-          CollaborationPanel(entityType: 'artworks', entityId: artwork.id),
+          CollaborationPanel(entityType: 'artworks', entityId: art.id),
           const SizedBox(height: DetailSpacing.lg),
         ],
         FilledButton.icon(
@@ -535,26 +511,46 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
           icon: _isSaving ? const SizedBox(width: 18, height: 18, child: InlineLoading(tileSize: 6)) : const Icon(Icons.save),
           label: Text(l10n.commonSave),
         ),
-      ],
-    );
+            ],
+          );
 
-    if (!widget.showAppBar) {
-      return Container(color: scheme.surface, child: body);
+    Widget content;
+    if (_loading) {
+      content = const Center(child: InlineLoading());
+    } else if (_error != null) {
+      content = Center(
+        child: Padding(
+          padding: const EdgeInsets.all(DetailSpacing.xl),
+          child: Text(_error!, textAlign: TextAlign.center),
+        ),
+      );
+    } else if (artwork == null) {
+      content = Center(child: Text(l10n.artworkNotFound));
+    } else {
+      content = body!;
     }
 
-    return Scaffold(
-      backgroundColor: scheme.surface,
-      appBar: AppBar(
-        title: Text(l10n.commonEdit),
-        actions: [
-          IconButton(
-            onPressed: _isSaving ? null : _save,
-            icon: const Icon(Icons.check),
-            tooltip: l10n.commonSave,
-          ),
-        ],
+    if (!widget.showAppBar) {
+      return Container(color: scheme.surface, child: content);
+    }
+
+    return AnimatedGradientBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          title: Text(l10n.commonEdit),
+          actions: [
+            IconButton(
+              onPressed: _isSaving || _loading ? null : _save,
+              icon: const Icon(Icons.check),
+              tooltip: l10n.commonSave,
+            ),
+          ],
+        ),
+        body: content,
       ),
-      body: body,
     );
   }
 }

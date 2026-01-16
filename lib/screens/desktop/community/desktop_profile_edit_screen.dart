@@ -153,9 +153,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
     final isLarge = screenWidth >= 1200;
 
     return Scaffold(
-      backgroundColor: themeProvider.isDarkMode
-          ? Theme.of(context).scaffoldBackgroundColor
-          : const Color(0xFFF8F9FA),
+      backgroundColor: Colors.transparent,
       body: AnimatedBuilder(
         animation: _animationController,
         builder: (context, child) {
@@ -214,14 +212,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+        color: themeProvider.isDarkMode 
+            ? Colors.black.withValues(alpha: 0.4) 
+            : Colors.white.withValues(alpha: 0.4),
+        border: Border(
+          bottom: BorderSide(
+            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
           ),
-        ],
+        ),
       ),
       child: Row(
         children: [

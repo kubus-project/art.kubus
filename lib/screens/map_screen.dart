@@ -53,6 +53,7 @@ import '../services/search_service.dart';
 import '../services/backend_api_service.dart';
 import '../config/config.dart';
 import 'events/exhibition_detail_screen.dart';
+import '../widgets/glass_components.dart';
 
 /// Custom painter for the direction cone indicator
 class DirectionConePainter extends CustomPainter {
@@ -1537,27 +1538,30 @@ class _MapScreenState extends State<MapScreen>
     final theme = Theme.of(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
     final artworkProvider = Provider.of<ArtworkProvider>(context);
-    final taskProvider = Provider.of<TaskProvider?>(context);
+    final taskProvider = Provider.of<TaskProvider>(context);
 
     final artworks = artworkProvider.artworks;
     final filteredArtworks = _sortArtworks(_filterArtworks(artworks));
-    final discoveryProgress = taskProvider?.getOverallProgress() ?? 0.0;
+    final discoveryProgress = taskProvider.getOverallProgress();
     final isLoadingArtworks = artworkProvider.isLoading('load_artworks');
 
     return Scaffold(
-      body: Stack(
-        children: [
-          _buildMap(themeProvider),
-          _buildTopOverlays(theme, taskProvider),
-          _buildPrimaryControls(theme),
-          _buildBottomSheet(
-            theme,
-            filteredArtworks,
-            discoveryProgress,
-            isLoadingArtworks,
-          ),
-          if (_isSearching) _buildSuggestionSheet(theme),
-        ],
+      backgroundColor: Colors.transparent,
+      body: AnimatedGradientBackground(
+        child: Stack(
+          children: [
+            _buildMap(themeProvider), // This will likely be refactored into _buildMapLayer()
+            _buildTopOverlays(theme, taskProvider), // This will likely be refactored into _buildSearchAndFilters()
+            _buildPrimaryControls(theme), // This will likely be refactored into _buildSearchAndFilters()
+            _buildBottomSheet( // This will likely be refactored into _buildDraggablePanel()
+              theme,
+              filteredArtworks,
+              discoveryProgress,
+              isLoadingArtworks,
+            ),
+            if (_isSearching) _buildSuggestionSheet(theme), // This will likely be refactored into _buildSearchAndFilters()
+          ],
+        ),
       ),
     );
   }
@@ -2551,53 +2555,79 @@ class _MapScreenState extends State<MapScreen>
   Widget _buildSearchCard(ThemeData theme) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = theme.colorScheme;
-    return Material(
-      elevation: 8,
-      borderRadius: KubusRadius.circular(KubusRadius.lg),
-      color: scheme.surface,
-      child: TextField(
-        controller: _searchController,
-        focusNode: _searchFocusNode,
-        style: KubusTypography.textTheme.bodyMedium,
-        decoration: InputDecoration(
-          hintText: l10n.mapSearchHint,
-          prefixIcon: const Icon(Icons.search),
-          suffixIcon: _searchQuery.isNotEmpty
-              ? IconButton(
-                  tooltip: l10n.mapClearSearchTooltip,
-                  icon: const Icon(Icons.close),
-                  onPressed: () {
-                    setState(() {
-                      _searchQuery = '';
-                      _isSearching = false;
-                      _searchSuggestions = [];
-                      _isFetchingSuggestions = false;
-                      _searchController.clear();
-                      _searchFocusNode.unfocus();
-                    });
-                  },
-                )
-              : IconButton(
-                  icon: Icon(
-                    _filtersExpanded ? Icons.filter_alt_off : Icons.filter_alt,
-                  ),
-                  tooltip: _filtersExpanded
-                      ? l10n.mapHideFiltersTooltip
-                      : l10n.mapShowFiltersTooltip,
-                  onPressed: () {
-                    setState(() {
-                      _filtersExpanded = !_filtersExpanded;
-                    });
-                  },
-                ),
-          border: InputBorder.none,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
+    final radius = KubusRadius.circular(KubusRadius.lg);
+    final isDark = theme.brightness == Brightness.dark;
+    final glassTint = scheme.primaryContainer.withValues(alpha: isDark ? 0.70 : 0.82);
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.22 : 0.14),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
+        border: Border.all(
+          color: scheme.outline.withValues(alpha: 0.18),
         ),
-        onTap: () {
-          setState(() => _isSearching = true);
-        },
-        onChanged: _handleSearchChange,
+      ),
+      child: LiquidGlassPanel(
+        padding: EdgeInsets.zero,
+        margin: EdgeInsets.zero,
+        borderRadius: radius,
+        showBorder: false,
+        backgroundColor: glassTint,
+        child: SizedBox(
+          height: 52,
+          child: TextField(
+            controller: _searchController,
+            focusNode: _searchFocusNode,
+            style: KubusTypography.textTheme.bodyMedium,
+            decoration: InputDecoration(
+              isDense: true,
+              hintText: l10n.mapSearchHint,
+              prefixIcon: const Icon(Icons.search),
+              prefixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      tooltip: l10n.mapClearSearchTooltip,
+                      icon: const Icon(Icons.close),
+                      onPressed: () {
+                        setState(() {
+                          _searchQuery = '';
+                          _isSearching = false;
+                          _searchSuggestions = [];
+                          _isFetchingSuggestions = false;
+                          _searchController.clear();
+                          _searchFocusNode.unfocus();
+                        });
+                      },
+                    )
+                  : IconButton(
+                      icon: Icon(
+                        _filtersExpanded ? Icons.filter_alt_off : Icons.filter_alt,
+                      ),
+                      tooltip: _filtersExpanded
+                          ? l10n.mapHideFiltersTooltip
+                          : l10n.mapShowFiltersTooltip,
+                      onPressed: () {
+                        setState(() {
+                          _filtersExpanded = !_filtersExpanded;
+                        });
+                      },
+                    ),
+              suffixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+            ),
+            onTap: () {
+              setState(() => _isSearching = true);
+            },
+            onChanged: _handleSearchChange,
+          ),
+        ),
       ),
     );
   }
@@ -2973,9 +3003,10 @@ class _MapScreenState extends State<MapScreen>
 
   Widget _buildPrimaryControls(ThemeData theme) {
     final l10n = AppLocalizations.of(context)!;
+    final bottomOffset = 150.0 + KubusLayout.mainBottomNavBarHeight;
     return Positioned(
       right: 16,
-      bottom: 150,
+      bottom: bottomOffset,
       child: Column(
         children: [
           _MapIconButton(
@@ -3014,11 +3045,13 @@ class _MapScreenState extends State<MapScreen>
       alignment: Alignment.bottomCenter,
       child: DraggableScrollableSheet(
         controller: _sheetController,
-        initialChildSize: 0.1,
-        minChildSize: 0.1,
+        // Keep the collapsed state slightly more visible while still letting it sit
+        // behind the glass navbar.
+        initialChildSize: 0.13,
+        minChildSize: 0.13,
         maxChildSize: 0.85,
         snap: true,
-        snapSizes: const [0.2, 0.45, 0.85],
+        snapSizes: const [0.13, 0.2, 0.45, 0.85],
         builder: (context, scrollController) {
           final l10n = AppLocalizations.of(context)!;
           return Container(
@@ -3077,8 +3110,8 @@ class _MapScreenState extends State<MapScreen>
                               ],
                             ),
                             IconButton(
-                              tooltip: l10n.mapNearbyRadiusTooltip(
-                                  _markerRadiusKm.toInt()),
+                              tooltip:
+                                  l10n.mapNearbyRadiusTooltip(_markerRadiusKm.toInt()),
                               onPressed: _openMarkerRadiusDialog,
                               icon: const Icon(Icons.radar),
                             ),
@@ -3087,18 +3120,15 @@ class _MapScreenState extends State<MapScreen>
                               tooltip: _useGridLayout
                                   ? l10n.mapShowListViewTooltip
                                   : l10n.mapShowGridViewTooltip,
-                              onPressed: () => setState(
-                                  () => _useGridLayout = !_useGridLayout),
+                              onPressed: () =>
+                                  setState(() => _useGridLayout = !_useGridLayout),
                               icon: Icon(
-                                _useGridLayout
-                                    ? Icons.view_list
-                                    : Icons.grid_view,
+                                _useGridLayout ? Icons.view_list : Icons.grid_view,
                               ),
                             ),
                             PopupMenuButton<_ArtworkSort>(
                               tooltip: l10n.mapSortResultsTooltip,
-                              onSelected: (value) =>
-                                  setState(() => _sort = value),
+                              onSelected: (value) => setState(() => _sort = value),
                               itemBuilder: (context) => [
                                 for (final sort in _ArtworkSort.values)
                                   PopupMenuItem(
@@ -3107,8 +3137,7 @@ class _MapScreenState extends State<MapScreen>
                                       children: [
                                         Expanded(child: Text(sort.label(l10n))),
                                         if (sort == _sort)
-                                          Icon(Icons.check,
-                                              color: scheme.primary),
+                                          Icon(Icons.check, color: scheme.primary),
                                       ],
                                     ),
                                   ),
@@ -3130,7 +3159,11 @@ class _MapScreenState extends State<MapScreen>
                 else if (artworks.isEmpty)
                   SliverFillRemaining(
                     hasScrollBody: false,
-                    child: _buildEmptyState(theme),
+                    child: Padding(
+                      padding:
+                          EdgeInsets.only(bottom: KubusLayout.mainBottomNavBarHeight),
+                      child: _buildEmptyState(theme),
+                    ),
                   )
                 else if (_useGridLayout)
                   SliverPadding(
@@ -3149,8 +3182,7 @@ class _MapScreenState extends State<MapScreen>
                         },
                         childCount: artworks.length,
                       ),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
                         mainAxisSpacing: 12,
                         crossAxisSpacing: 12,
@@ -3171,8 +3203,7 @@ class _MapScreenState extends State<MapScreen>
                               artwork: artwork,
                               currentPosition: _currentPosition,
                               onOpenDetails: () => _openArtwork(artwork),
-                              onMarkDiscovered: () =>
-                                  _markAsDiscovered(artwork),
+                              onMarkDiscovered: () => _markAsDiscovered(artwork),
                             ),
                           );
                         },
@@ -3180,6 +3211,11 @@ class _MapScreenState extends State<MapScreen>
                       ),
                     ),
                   ),
+                // Let content scroll above the navbar when expanded, while still
+                // allowing the sheet itself to sit behind the glass navbar.
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: KubusLayout.mainBottomNavBarHeight),
+                ),
               ],
             ),
           );

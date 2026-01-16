@@ -148,9 +148,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     final isInstitution = _hasInstitutionRole(profileProvider, daoReview);
 
     return Scaffold(
-      backgroundColor: themeProvider.isDarkMode
-          ? Theme.of(context).scaffoldBackgroundColor
-          : const Color(0xFFF8F9FA),
+      backgroundColor: Colors.transparent,
       body: AnimatedBuilder(
         animation: _animationController,
         builder: (context, child) {

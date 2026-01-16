@@ -47,6 +47,7 @@ import 'art/desktop_artwork_detail_screen.dart';
 import '../events/exhibition_detail_screen.dart';
 import 'community/desktop_user_profile_screen.dart';
 import '../../services/search_service.dart';
+ 
 
 /// Desktop map screen with Google Maps-style presentation
 /// Features side panel for artwork details and filters
@@ -235,9 +236,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final animationTheme = context.animationTheme;
 
     return Scaffold(
-      backgroundColor: themeProvider.isDarkMode
-          ? Theme.of(context).scaffoldBackgroundColor
-          : const Color(0xFFF8F9FA),
+      backgroundColor: Colors.transparent,
       body: Stack(
         children: [
           // Map layer

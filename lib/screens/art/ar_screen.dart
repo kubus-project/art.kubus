@@ -6,6 +6,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../utils/app_animations.dart';
 import '../../widgets/app_loading.dart';
 import '../../utils/app_color_utils.dart';
+import '../../utils/design_tokens.dart';
 import 'package:provider/provider.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
@@ -313,8 +314,11 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     }
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      // Keep AR chrome transparent so the root gradient can still paint.
+      // (The AR view itself remains opaque and renders its own content.)
+      backgroundColor: Colors.transparent,
       body: SafeArea(
+        bottom: false,
         child: Stack(
           children: [
             // Main AR View - QR Scanner for 'scan' mode, camera view for others
@@ -369,7 +373,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             // Mode selector overlay for all modes (positioned at bottom)
             if (_isARReady)
               Positioned(
-                bottom: 20,
+                bottom: 20 + KubusLayout.mainBottomNavBarHeight,
                 left: 20,
                 right: 20,
                 child: Container(
@@ -880,7 +884,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       padding: const EdgeInsets.only(
           left: 24,
           right: 24,
-          bottom: 100,
+          bottom: 100 + KubusLayout.mainBottomNavBarHeight,
           top: 24), // Extra bottom padding for mode selector
       decoration: BoxDecoration(
         gradient: LinearGradient(

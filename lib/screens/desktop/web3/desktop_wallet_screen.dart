@@ -17,6 +17,8 @@ import '../components/desktop_widgets.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../web3/wallet/token_swap.dart';
 import '../../web3/wallet/connectwallet_screen.dart';
+import '../../../widgets/glass_components.dart';
+ 
 
 /// Desktop wallet screen with professional dashboard layout
 /// Web-optimized with hover states and keyboard shortcuts
@@ -62,13 +64,15 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final animationTheme = context.animationTheme;
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final screenWidth = MediaQuery.of(context).size.width;
     final isLarge = screenWidth >= 1200;
 
+    final sidebarGlassTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
+
     return Scaffold(
-      backgroundColor: themeProvider.isDarkMode
-          ? Theme.of(context).scaffoldBackgroundColor
-          : const Color(0xFFF8F9FA),
+      backgroundColor: Colors.transparent,
       body: Stack(
         children: [
           AnimatedBuilder(
@@ -85,21 +89,32 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                     // Main content
                     Expanded(
                       flex: isLarge ? 3 : 2,
-                      child: _buildMainContent(themeProvider, isLarge),
+                      child: LiquidGlassPanel(
+                        padding: EdgeInsets.zero,
+                        child: _buildMainContent(themeProvider, isLarge),
+                      ),
                     ),
 
                     // Right panel - Quick actions & recent
                     if (isLarge)
-                      Container(
+                      SizedBox(
                         width: 360,
-                        decoration: BoxDecoration(
-                          border: Border(
-                            left: BorderSide(
-                              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            border: Border(
+                              left: BorderSide(
+                                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+                              ),
                             ),
                           ),
+                          child: LiquidGlassPanel(
+                            padding: EdgeInsets.zero,
+                            borderRadius: BorderRadius.zero,
+                            showBorder: false,
+                            backgroundColor: sidebarGlassTint,
+                            child: _buildRightPanel(themeProvider),
+                          ),
                         ),
-                        child: _buildRightPanel(themeProvider),
                       ),
                   ],
                 ),
@@ -1089,11 +1104,11 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
   }
 
   Widget _buildRightPanel(ThemeProvider themeProvider) {
-    return Container(
-      color: Theme.of(context).colorScheme.surface,
-      child: ListView(
-        padding: EdgeInsets.all(DetailSpacing.xl),
-        children: [
+    final scheme = Theme.of(context).colorScheme;
+
+    return ListView(
+      padding: EdgeInsets.all(DetailSpacing.xl),
+      children: [
           Text(
             'Quick Actions',
             style: DetailTypography.sectionTitle(context),
@@ -1111,21 +1126,21 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
             'Receive',
             'Get your address',
             Icons.arrow_downward,
-            const Color(0xFF4ECDC4),
+            scheme.secondary,
             () => setState(() => _showReceiveDialog = true),
           ),
           _buildQuickActionTile(
             'Swap',
             'Exchange tokens',
             Icons.swap_horiz,
-            const Color(0xFFFF9A8B),
+            scheme.tertiary,
             () {},
           ),
           _buildQuickActionTile(
             'Buy Crypto',
             'Add funds',
             Icons.add_card,
-            const Color(0xFF667eea),
+            scheme.primary,
             () {},
           ),
 
@@ -1166,8 +1181,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
               ],
             ),
           ),
-        ],
-      ),
+      ],
     );
   }
 

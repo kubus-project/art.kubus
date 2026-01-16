@@ -13,6 +13,7 @@ import '../desktop/onboarding/desktop_onboarding_screen.dart';
 import 'permissions_screen.dart';
 import '../../utils/design_tokens.dart';
 import '../../widgets/kubus_button.dart';
+import '../../widgets/glass_components.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -130,28 +131,32 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
     final screenWidth = mediaQuery.size.width;
     final isSmallScreen = screenHeight < 700 || screenWidth < 375;
     
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(isSmallScreen),
-            Expanded(
-              child: PageView.builder(
-                controller: _pageController,
-                onPageChanged: (index) {
-                  setState(() {
-                    _currentPage = index;
-                  });
-                },
-                itemCount: _pages.length,
-                itemBuilder: (context, index) {
-                  return _buildPage(_pages[index], isSmallScreen);
-                },
+    return AnimatedGradientBackground(
+      duration: const Duration(seconds: 10),
+      intensity: 0.25,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
+          child: Column(
+            children: [
+              _buildHeader(isSmallScreen),
+              Expanded(
+                child: PageView.builder(
+                  controller: _pageController,
+                  onPageChanged: (index) {
+                    setState(() {
+                      _currentPage = index;
+                    });
+                  },
+                  itemCount: _pages.length,
+                  itemBuilder: (context, index) {
+                    return _buildPage(_pages[index], isSmallScreen);
+                  },
+                ),
               ),
-            ),
-            _buildBottomSection(isSmallScreen),
-          ],
+              _buildBottomSection(isSmallScreen),
+            ],
+          ),
         ),
       ),
     );

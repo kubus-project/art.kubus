@@ -11,6 +11,7 @@ import '../../../widgets/app_logo.dart';
 import '../../../widgets/gradient_icon_card.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../utils/app_animations.dart';
+import '../../../widgets/glass_components.dart';
 import 'desktop_permissions_screen.dart';
 import '../desktop_shell.dart';
 
@@ -178,49 +179,51 @@ class _DesktopOnboardingScreenState extends State<DesktopOnboardingScreen>
             ? 1100.0
             : 900.0;
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: Center(
-        child: Container(
-          width: contentWidth,
-          constraints: const BoxConstraints(maxWidth: 1400),
-          child: Column(
-            children: [
-              _buildHeader(accentColor),
-              Expanded(
-                child: Row(
-                  children: [
-                    // Left side - Content
-                    Expanded(
-                      flex: 5,
-                      child: PageView.builder(
-                        controller: _pageController,
-                        onPageChanged: (index) {
-                          setState(() {
-                            _currentPage = index;
-                          });
-                          _slideController.reset();
-                          _slideController.forward();
-                        },
-                        itemCount: pages.length,
-                        itemBuilder: (context, index) {
-                          return _buildPageContent(
-                            pages[index],
-                            animationTheme,
-                          );
-                        },
+    return AnimatedGradientBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Center(
+          child: Container(
+            width: contentWidth,
+            constraints: const BoxConstraints(maxWidth: 1400),
+            child: Column(
+              children: [
+                _buildHeader(accentColor),
+                Expanded(
+                  child: Row(
+                    children: [
+                      // Left side - Content
+                      Expanded(
+                        flex: 5,
+                        child: PageView.builder(
+                          controller: _pageController,
+                          onPageChanged: (index) {
+                            setState(() {
+                              _currentPage = index;
+                            });
+                            _slideController.reset();
+                            _slideController.forward();
+                          },
+                          itemCount: pages.length,
+                          itemBuilder: (context, index) {
+                            return _buildPageContent(
+                              pages[index],
+                              animationTheme,
+                            );
+                          },
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 40),
-                    // Right side - Navigation & Actions
-                    Expanded(
-                      flex: 3,
-                      child: _buildSidebar(accentColor, animationTheme),
-                    ),
-                  ],
+                      const SizedBox(width: 40),
+                      // Right side - Navigation & Actions
+                      Expanded(
+                        flex: 3,
+                        child: _buildSidebar(accentColor, animationTheme),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

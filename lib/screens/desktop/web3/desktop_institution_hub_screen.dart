@@ -27,6 +27,7 @@ import '../../events/exhibition_creator_screen.dart';
 import '../../events/exhibition_detail_screen.dart';
 import '../../events/exhibition_list_screen.dart';
 import '../../map_markers/manage_markers_screen.dart';
+import '../../../widgets/glass_components.dart';
 
 /// Desktop Institution Hub screen with split-panel layout
 /// Left: Mobile institution hub view
@@ -134,9 +135,7 @@ class _DesktopInstitutionHubScreenState
     final isLarge = screenWidth >= 1200;
 
     return Scaffold(
-      backgroundColor: themeProvider.isDarkMode
-          ? Theme.of(context).scaffoldBackgroundColor
-          : Theme.of(context).colorScheme.surface,
+      backgroundColor: Colors.transparent,
       body: AnimatedBuilder(
         animation: _animationController,
         builder: (context, child) {
@@ -153,7 +152,6 @@ class _DesktopInstitutionHubScreenState
                   flex: isLarge ? 2 : 3,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Theme.of(context).scaffoldBackgroundColor,
                       border: Border(
                         right: BorderSide(
                           color: Theme.of(context)
@@ -189,6 +187,9 @@ class _DesktopInstitutionHubScreenState
   }
 
   Widget _buildRightPanel(ThemeProvider themeProvider) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
     final persona = context.watch<ProfileProvider>().userPersona;
     final showCreateActions =
         persona == null || persona == UserPersona.institution;
@@ -223,10 +224,25 @@ class _DesktopInstitutionHubScreenState
     }
 
     return Container(
-      color: Theme.of(context).colorScheme.surface,
-      child: ListView(
-        padding: const EdgeInsets.all(24),
-        children: [
+      decoration: BoxDecoration(
+        border: Border(
+          left: BorderSide(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.06)
+                : scheme.outline.withValues(alpha: 0.10),
+            width: 1,
+          ),
+        ),
+      ),
+      child: LiquidGlassPanel(
+        padding: EdgeInsets.zero,
+        margin: EdgeInsets.zero,
+        borderRadius: BorderRadius.zero,
+        showBorder: false,
+        backgroundColor: scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10),
+        child: ListView(
+          padding: const EdgeInsets.all(24),
+          children: [
           // Header
           Text(
             sectionTitle(),
@@ -457,7 +473,8 @@ class _DesktopInstitutionHubScreenState
             const SizedBox(height: 12),
             _buildUpcomingEvents(themeProvider),
           ],
-        ],
+          ],
+        ),
       ),
     );
   }

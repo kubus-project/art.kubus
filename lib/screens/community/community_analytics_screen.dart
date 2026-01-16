@@ -14,6 +14,8 @@ import '../../services/stats_api_service.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../widgets/charts/stats_interactive_line_chart.dart';
 import '../../widgets/empty_state_card.dart';
+import '../../widgets/glass_components.dart';
+ 
 
 class CommunityAnalyticsScreen extends StatefulWidget {
   final String walletAddress;
@@ -45,31 +47,32 @@ class _CommunityAnalyticsScreenState extends State<CommunityAnalyticsScreen> {
     final analyticsFeatureEnabled = AppConfig.isFeatureEnabled('analytics');
     final analyticsPreferenceEnabled = context.watch<ConfigProvider>().enableAnalytics;
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
+    return AnimatedGradientBackground(
+      child: Scaffold(
         backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Text(
-          widget.title ?? 'Community analytics',
-          style: GoogleFonts.inter(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: scheme.onSurface,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          title: Text(
+            widget.title ?? 'Community analytics',
+            style: GoogleFonts.inter(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: scheme.onSurface,
+            ),
           ),
         ),
-      ),
-      body: !analyticsFeatureEnabled
-          ? const Center(
-              child: EmptyStateCard(
-                icon: Icons.analytics_outlined,
-                title: 'Analytics disabled',
-                description: 'This feature is currently turned off.',
-                showAction: false,
-              ),
-            )
-          : Consumer<StatsProvider>(
-              builder: (context, statsProvider, child) {
+        body: !analyticsFeatureEnabled
+            ? const Center(
+                child: EmptyStateCard(
+                  icon: Icons.analytics_outlined,
+                  title: 'Analytics disabled',
+                  description: 'This feature is currently turned off.',
+                  showAction: false,
+                ),
+              )
+            : Consumer<StatsProvider>(
+                builder: (context, statsProvider, child) {
                 final canFetch = StatsApiService.shouldFetchAnalytics(
                   analyticsFeatureEnabled: analyticsFeatureEnabled,
                   analyticsPreferenceEnabled: analyticsPreferenceEnabled,
@@ -219,8 +222,9 @@ class _CommunityAnalyticsScreenState extends State<CommunityAnalyticsScreen> {
                       ),
                   ],
                 );
-              },
-            ),
+                },
+              ),
+      ),
     );
   }
 

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/kubus_color_roles.dart';
+import '../../../widgets/glass_components.dart';
 
 /// Desktop content card with hover effects and animations
 class DesktopCard extends StatefulWidget {
@@ -17,6 +18,7 @@ class DesktopCard extends StatefulWidget {
   final BorderRadius? borderRadius;
   final Color? backgroundColor;
   final bool showBorder;
+  final bool isGlass;
 
   const DesktopCard({
     super.key,
@@ -30,6 +32,7 @@ class DesktopCard extends StatefulWidget {
     this.borderRadius,
     this.backgroundColor,
     this.showBorder = true,
+    this.isGlass = true,
   });
 
   @override
@@ -42,59 +45,72 @@ class _DesktopCardState extends State<DesktopCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
     final animationTheme = context.animationTheme;
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
+    final radius = widget.borderRadius ?? BorderRadius.circular(16);
+    final glassTint = widget.backgroundColor ??
+        scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
+
+    Widget content = AnimatedContainer(
+      duration: animationTheme.short,
+      curve: animationTheme.defaultCurve,
+      width: widget.width,
+      height: widget.height,
+      margin: widget.margin,
+      transform: _isHovered 
+          ? Matrix4.translationValues(0, -2, 0)
+          : Matrix4.identity(),
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        border: widget.showBorder
+            ? Border.all(
+                color: _isHovered
+                    ? themeProvider.accentColor.withValues(alpha: 0.22)
+                    : scheme.outline.withValues(alpha: 0.14),
+                width: _isHovered ? 1.25 : 1,
+              )
+            : null,
+        boxShadow: _isHovered
+            ? [
+                BoxShadow(
+                  color: theme.shadowColor.withValues(alpha: 0.10),
+                  blurRadius: 18,
+                  offset: const Offset(0, 6),
+                ),
+              ]
+            : null,
+      ),
+      child: widget.isGlass
+          ? LiquidGlassPanel(
+              padding: widget.padding ?? const EdgeInsets.all(20),
+              margin: EdgeInsets.zero,
+              borderRadius: radius,
+              showBorder: false,
+              backgroundColor: glassTint,
+              onTap: widget.onTap,
+              child: widget.child,
+            )
+          : Material(
+              color: scheme.primaryContainer,
+              borderRadius: radius,
+              child: InkWell(
+                onTap: widget.onTap,
+                borderRadius: radius,
+                child: Padding(
+                  padding: widget.padding ?? const EdgeInsets.all(20),
+                  child: widget.child,
+                ),
+              ),
+            ),
+    );
 
     return MouseRegion(
       onEnter: widget.enableHover ? (_) => setState(() => _isHovered = true) : null,
       onExit: widget.enableHover ? (_) => setState(() => _isHovered = false) : null,
-      child: AnimatedContainer(
-        duration: animationTheme.short,
-        curve: animationTheme.defaultCurve,
-        width: widget.width,
-        height: widget.height,
-        margin: widget.margin,
-        transform: _isHovered 
-            ? Matrix4.translationValues(0, -2, 0)
-            : Matrix4.identity(),
-        decoration: BoxDecoration(
-          color: widget.backgroundColor ?? theme.colorScheme.primaryContainer,
-          borderRadius: widget.borderRadius ?? BorderRadius.circular(16),
-          border: widget.showBorder
-              ? Border.all(
-                  color: _isHovered
-                      ? Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.3)
-                      : theme.colorScheme.outline.withValues(alpha: 0.2),
-                  width: _isHovered ? 1.5 : 1,
-                )
-              : null,
-          boxShadow: _isHovered
-              ? [
-                  BoxShadow(
-                    color: theme.shadowColor.withValues(alpha: 0.08),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : [
-                  BoxShadow(
-                    color: theme.shadowColor.withValues(alpha: 0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: widget.onTap,
-            borderRadius: widget.borderRadius ?? BorderRadius.circular(16),
-            child: Padding(
-              padding: widget.padding ?? const EdgeInsets.all(20),
-              child: widget.child,
-            ),
-          ),
-        ),
-      ),
+      child: content,
     );
   }
 }
@@ -251,6 +267,12 @@ class _DesktopStatCardState extends State<DesktopStatCard> {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final color = widget.color ?? themeProvider.accentColor;
     final animationTheme = context.animationTheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final radius = BorderRadius.circular(14);
+    final glassTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
@@ -258,14 +280,12 @@ class _DesktopStatCardState extends State<DesktopStatCard> {
       child: AnimatedContainer(
         duration: animationTheme.short,
         curve: animationTheme.defaultCurve,
-        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.primaryContainer,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: radius,
           border: Border.all(
             color: _isHovered
                 ? color.withValues(alpha: 0.3)
-                : Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+                : scheme.outline.withValues(alpha: 0.2),
           ),
           boxShadow: _isHovered
               ? [
@@ -277,90 +297,91 @@ class _DesktopStatCardState extends State<DesktopStatCard> {
                 ]
               : null,
         ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: widget.onTap,
-            borderRadius: BorderRadius.circular(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        widget.icon,
-                        color: color,
-                        size: 20,
-                      ),
+        child: LiquidGlassPanel(
+          padding: const EdgeInsets.all(16),
+          margin: EdgeInsets.zero,
+          borderRadius: radius,
+          showBorder: false,
+          backgroundColor: glassTint,
+          onTap: widget.onTap,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    if (widget.change != null)
-                      Builder(
-                        builder: (context) {
-                          final roles = KubusColorRoles.of(context);
-                          final changeColor = widget.isPositive
-                              ? roles.positiveAction
-                              : roles.negativeAction;
-                          return Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: changeColor.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  widget.isPositive
-                                      ? Icons.arrow_upward
-                                      : Icons.arrow_downward,
-                                  size: 14,
+                    child: Icon(
+                      widget.icon,
+                      color: color,
+                      size: 20,
+                    ),
+                  ),
+                  if (widget.change != null)
+                    Builder(
+                      builder: (context) {
+                        final roles = KubusColorRoles.of(context);
+                        final changeColor = widget.isPositive
+                            ? roles.positiveAction
+                            : roles.negativeAction;
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: changeColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                widget.isPositive
+                                    ? Icons.arrow_upward
+                                    : Icons.arrow_downward,
+                                size: 14,
+                                color: changeColor,
+                              ),
+                              const SizedBox(width: 2),
+                              Text(
+                                widget.change!,
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
                                   color: changeColor,
                                 ),
-                                const SizedBox(width: 2),
-                                Text(
-                                  widget.change!,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: changeColor,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                  ],
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                ],
+              ),
+              const Spacer(),
+              Text(
+                widget.value,
+                style: GoogleFonts.inter(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: scheme.onSurface,
                 ),
-                const Spacer(),
-                Text(
-                  widget.value,
-                  style: GoogleFonts.inter(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                widget.label,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: scheme.onSurface.withValues(alpha: 0.6),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  widget.label,
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -396,6 +417,19 @@ class _DesktopActionButtonState extends State<DesktopActionButton> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final animationTheme = context.animationTheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final radius = BorderRadius.circular(12);
+    // Buttons should stay more opaque (retain their color), but still get blur/edge treatment.
+    final glassTint = widget.isPrimary
+      ? themeProvider.accentColor.withValues(alpha: isDark ? 0.82 : 0.88)
+        : scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
+
+    final outlineColor = widget.isPrimary
+        ? themeProvider.accentColor.withValues(alpha: _isHovered ? 0.34 : 0.28)
+        : scheme.outline.withValues(alpha: _isHovered ? 0.22 : 0.16);
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
@@ -406,43 +440,69 @@ class _DesktopActionButtonState extends State<DesktopActionButton> {
         transform: _isHovered && !widget.isLoading
             ? Matrix4.translationValues(0, -2, 0)
             : Matrix4.identity(),
-        child: ElevatedButton.icon(
-          onPressed: widget.isLoading ? null : widget.onPressed,
-          icon: widget.isLoading
-              ? SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: widget.isPrimary 
-                        ? Colors.white 
-                        : themeProvider.accentColor,
-                  ),
-                )
-              : Icon(widget.icon, size: 20),
-          label: Text(
-            widget.label,
-            style: GoogleFonts.inter(
-              fontWeight: FontWeight.w600,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            border: Border.all(
+              color: outlineColor,
+              width: _isHovered ? 1.25 : 1,
             ),
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: widget.isPrimary
-                ? themeProvider.accentColor
-                : Theme.of(context).colorScheme.surface,
-            foregroundColor: widget.isPrimary
-                ? Colors.white
-                : Theme.of(context).colorScheme.onSurface,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: widget.isPrimary
-                  ? BorderSide.none
-                  : BorderSide(
-                      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+            boxShadow: _isHovered
+                ? [
+                    BoxShadow(
+                      color: (widget.isPrimary
+                              ? themeProvider.accentColor
+                              : theme.shadowColor)
+                          .withValues(alpha: 0.12),
+                      blurRadius: 18,
+                      offset: const Offset(0, 6),
                     ),
+                  ]
+                : null,
+          ),
+          child: LiquidGlassPanel(
+            padding: EdgeInsets.zero,
+            margin: EdgeInsets.zero,
+            borderRadius: radius,
+            showBorder: false,
+            backgroundColor: glassTint,
+            child: ElevatedButton.icon(
+              onPressed: widget.isLoading ? null : widget.onPressed,
+              icon: widget.isLoading
+                  ? SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: widget.isPrimary
+                            ? Colors.white
+                            : themeProvider.accentColor,
+                      ),
+                    )
+                  : Icon(widget.icon, size: 20),
+              label: Text(
+                widget.label,
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                foregroundColor:
+                    widget.isPrimary ? Colors.white : scheme.onSurface,
+                shadowColor: Colors.transparent,
+                disabledBackgroundColor: Colors.transparent,
+                disabledForegroundColor: widget.isPrimary
+                    ? Colors.white.withValues(alpha: 0.55)
+                    : scheme.onSurface.withValues(alpha: 0.55),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: radius,
+                ),
+                elevation: 0,
+              ),
             ),
-            elevation: _isHovered && widget.isPrimary ? 4 : 0,
           ),
         ),
       ),
@@ -507,17 +567,22 @@ class _DesktopSearchBarState extends State<DesktopSearchBar> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final animationTheme = context.animationTheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final radius = BorderRadius.circular(12);
+    final glassTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
 
     return AnimatedContainer(
       duration: animationTheme.short,
       curve: animationTheme.defaultCurve,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: radius,
         border: Border.all(
           color: _isFocused
               ? themeProvider.accentColor
-              : Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+              : scheme.outline.withValues(alpha: 0.18),
           width: _isFocused ? 2 : 1,
         ),
         boxShadow: _isFocused
@@ -529,42 +594,49 @@ class _DesktopSearchBarState extends State<DesktopSearchBar> {
               ]
             : null,
       ),
-      child: TextField(
-        controller: _controller,
-        focusNode: _focusNode,
-        autofocus: widget.autofocus,
-        onChanged: widget.onChanged,
-        onSubmitted: widget.onSubmitted,
-        style: GoogleFonts.inter(
-          color: Theme.of(context).colorScheme.onSurface,
-        ),
-        decoration: InputDecoration(
-          hintText: widget.hintText,
-          hintStyle: GoogleFonts.inter(
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+      child: LiquidGlassPanel(
+        padding: EdgeInsets.zero,
+        margin: EdgeInsets.zero,
+        borderRadius: radius,
+        showBorder: false,
+        backgroundColor: glassTint,
+        child: TextField(
+          controller: _controller,
+          focusNode: _focusNode,
+          autofocus: widget.autofocus,
+          onChanged: widget.onChanged,
+          onSubmitted: widget.onSubmitted,
+          style: GoogleFonts.inter(
+            color: scheme.onSurface,
           ),
-          prefixIcon: Icon(
-            Icons.search,
-            color: _isFocused
-                ? themeProvider.accentColor
-                : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-          ),
-          suffixIcon: _controller.text.isNotEmpty
-              ? IconButton(
-                  icon: Icon(
-                    Icons.clear,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                  ),
-                  onPressed: () {
-                    _controller.clear();
-                    widget.onChanged?.call('');
-                  },
-                )
-              : null,
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 14,
+          decoration: InputDecoration(
+            hintText: widget.hintText,
+            hintStyle: GoogleFonts.inter(
+              color: scheme.onSurface.withValues(alpha: 0.5),
+            ),
+            prefixIcon: Icon(
+              Icons.search,
+              color: _isFocused
+                  ? themeProvider.accentColor
+                  : scheme.onSurface.withValues(alpha: 0.5),
+            ),
+            suffixIcon: _controller.text.isNotEmpty
+                ? IconButton(
+                    icon: Icon(
+                      Icons.clear,
+                      color: scheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                    onPressed: () {
+                      _controller.clear();
+                      widget.onChanged?.call('');
+                    },
+                  )
+                : null,
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
           ),
         ),
       ),
@@ -596,61 +668,77 @@ class _DesktopTabBarState extends State<DesktopTabBar> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final animationTheme = context.animationTheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final radius = BorderRadius.circular(12);
+    final glassTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
 
     return Container(
-      padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: radius,
+        border: Border.all(
+          color: scheme.outline.withValues(alpha: 0.14),
+        ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: List.generate(widget.tabs.length, (index) {
-          final isSelected = widget.selectedIndex == index;
-          final isHovered = _hoveredIndex == index;
+      child: LiquidGlassPanel(
+        padding: const EdgeInsets.all(4),
+        margin: EdgeInsets.zero,
+        borderRadius: radius,
+        showBorder: false,
+        backgroundColor: glassTint,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(widget.tabs.length, (index) {
+            final isSelected = widget.selectedIndex == index;
+            final isHovered = _hoveredIndex == index;
 
-          return MouseRegion(
-            onEnter: (_) => setState(() => _hoveredIndex = index),
-            onExit: (_) => setState(() => _hoveredIndex = null),
-            child: AnimatedContainer(
-              duration: animationTheme.short,
-              curve: animationTheme.defaultCurve,
-              margin: const EdgeInsets.symmetric(horizontal: 2),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () => widget.onTabSelected(index),
-                  borderRadius: BorderRadius.circular(8),
-                  child: AnimatedContainer(
-                    duration: animationTheme.short,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? themeProvider.accentColor
-                          : isHovered
-                              ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05)
-                              : Colors.transparent,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      widget.tabs[index],
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+            return MouseRegion(
+              onEnter: (_) => setState(() => _hoveredIndex = index),
+              onExit: (_) => setState(() => _hoveredIndex = null),
+              child: AnimatedContainer(
+                duration: animationTheme.short,
+                curve: animationTheme.defaultCurve,
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => widget.onTabSelected(index),
+                    borderRadius: BorderRadius.circular(8),
+                    child: AnimatedContainer(
+                      duration: animationTheme.short,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
                         color: isSelected
-                            ? Colors.white
-                            : Theme.of(context).colorScheme.onSurface.withValues(alpha: isHovered ? 1.0 : 0.7),
+                            ? themeProvider.accentColor.withValues(alpha: 0.90)
+                            : isHovered
+                                ? scheme.onSurface.withValues(alpha: 0.06)
+                                : Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        widget.tabs[index],
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.w500,
+                          color: isSelected
+                              ? Colors.white
+                              : scheme.onSurface
+                                  .withValues(alpha: isHovered ? 1.0 : 0.7),
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-          );
-        }),
+            );
+          }),
+        ),
       ),
     );
   }

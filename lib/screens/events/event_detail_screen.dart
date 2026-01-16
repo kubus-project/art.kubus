@@ -13,6 +13,8 @@ import '../../services/share/share_types.dart';
 import '../../utils/map_navigation.dart';
 import '../../widgets/collaboration_panel.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import '../../widgets/glass_components.dart';
+ 
 
 class EventDetailScreen extends StatefulWidget {
   final String eventId;
@@ -63,90 +65,100 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
 
     final exhibitions = events.exhibitionsForEvent(widget.eventId);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(event.title, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-        actions: [
-          if (event.lat != null && event.lng != null)
+    return AnimatedGradientBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          title: Text(event.title, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+          actions: [
+            if (event.lat != null && event.lng != null)
+              IconButton(
+                tooltip: l10n.commonOpenOnMap,
+                onPressed: () {
+                  MapNavigation.open(
+                    context,
+                    center: LatLng(event.lat!, event.lng!),
+                    zoom: 16,
+                    autoFollow: false,
+                  );
+                },
+                icon: const Icon(Icons.map_outlined),
+              ),
             IconButton(
-              tooltip: l10n.commonOpenOnMap,
+              tooltip: l10n.commonShare,
               onPressed: () {
-                MapNavigation.open(
+                ShareService().showShareSheet(
                   context,
-                  center: LatLng(event.lat!, event.lng!),
-                  zoom: 16,
-                  autoFollow: false,
+                  target: ShareTarget.event(eventId: widget.eventId, title: event.title),
+                  sourceScreen: 'event_detail',
                 );
               },
-              icon: const Icon(Icons.map_outlined),
+              icon: const Icon(Icons.share_outlined),
             ),
-          IconButton(
-            tooltip: l10n.commonShare,
-            onPressed: () {
-              ShareService().showShareSheet(
-                context,
-                target: ShareTarget.event(eventId: widget.eventId, title: event.title),
-                sourceScreen: 'event_detail',
-              );
-            },
-            icon: const Icon(Icons.share_outlined),
-          ),
-          IconButton(
-            tooltip: 'Invites',
-            onPressed: () {
-              Navigator.of(context).push(MaterialPageRoute(builder: (_) => const InvitesInboxScreen()));
-            },
-            icon: const Icon(Icons.inbox_outlined),
-          ),
-          IconButton(
-            tooltip: 'Refresh',
-            onPressed: _load,
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
-      ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1100),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final isWide = constraints.maxWidth >= 900;
-                final details = _EventDetailsCard(event: event, exhibitionsCount: exhibitions.length);
-
-                final collab = CollaborationPanel(
-                  entityType: 'events',
-                  entityId: widget.eventId,
-                  myRole: event.myRole,
+            IconButton(
+              tooltip: 'Invites',
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const InvitesInboxScreen()),
                 );
+              },
+              icon: const Icon(Icons.inbox_outlined),
+            ),
+            IconButton(
+              tooltip: 'Refresh',
+              onPressed: _load,
+              icon: const Icon(Icons.refresh),
+            ),
+          ],
+        ),
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1100),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isWide = constraints.maxWidth >= 900;
+                  final details = _EventDetailsCard(
+                    event: event,
+                    exhibitionsCount: exhibitions.length,
+                  );
 
-                if (isWide) {
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  final collab = CollaborationPanel(
+                    entityType: 'events',
+                    entityId: widget.eventId,
+                    myRole: event.myRole,
+                  );
+
+                  if (isWide) {
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(flex: 6, child: details),
+                        const SizedBox(width: 16),
+                        Expanded(flex: 5, child: collab),
+                      ],
+                    );
+                  }
+
+                  return ListView(
                     children: [
-                      Expanded(flex: 6, child: details),
-                      const SizedBox(width: 16),
-                      Expanded(flex: 5, child: collab),
+                      details,
+                      const SizedBox(height: 14),
+                      collab,
+                      const SizedBox(height: 14),
+                      _ExhibitionsPreview(exhibitionsCount: exhibitions.length),
+                      if (events.isLoading)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 16),
+                          child: LinearProgressIndicator(color: scheme.primary),
+                        ),
                     ],
                   );
-                }
-
-                return ListView(
-                  children: [
-                    details,
-                    const SizedBox(height: 14),
-                    collab,
-                    const SizedBox(height: 14),
-                    _ExhibitionsPreview(exhibitionsCount: exhibitions.length),
-                    if (events.isLoading)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 16),
-                        child: LinearProgressIndicator(color: scheme.primary),
-                      ),
-                  ],
-                );
-              },
+                },
+              ),
             ),
           ),
         ),

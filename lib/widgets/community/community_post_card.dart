@@ -12,6 +12,7 @@ import '../../utils/kubus_color_roles.dart';
 import '../../utils/media_url_resolver.dart';
 import '../avatar_widget.dart';
 import '../inline_loading.dart';
+import '../glass_components.dart';
 import 'community_author_role_badges.dart';
 
 class CommunityPostCard extends StatelessWidget {
@@ -65,7 +66,11 @@ class CommunityPostCard extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isSmallScreen = constraints.maxWidth < 375;
-        final scheme = Theme.of(context).colorScheme;
+        final theme = Theme.of(context);
+        final scheme = theme.colorScheme;
+        final isDark = theme.brightness == Brightness.dark;
+        final radius = BorderRadius.circular(16);
+        final glassTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
 
         return Container(
           margin: const EdgeInsets.only(bottom: 20),
@@ -75,15 +80,21 @@ class CommunityPostCard extends StatelessWidget {
               behavior: HitTestBehavior.deferToChild,
               onTap: () => onOpenPostDetail(post),
               child: Container(
-                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: scheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: scheme.outline),
+                  borderRadius: radius,
+                  border: Border.all(
+                    color: scheme.outline.withValues(alpha: 0.18),
+                  ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+                child: LiquidGlassPanel(
+                  padding: const EdgeInsets.all(20),
+                  margin: EdgeInsets.zero,
+                  borderRadius: radius,
+                  showBorder: false,
+                  backgroundColor: glassTint,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                     Row(
                       children: [
                         AvatarWidget(
@@ -349,7 +360,8 @@ class CommunityPostCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -578,22 +590,33 @@ class _RepostInnerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
     final originalHandle = (post.authorUsername ?? '').trim();
+
+    final radius = BorderRadius.circular(12);
+    final glassTint = scheme.surface.withValues(alpha: isDark ? 0.14 : 0.09);
 
     return GestureDetector(
       onTap: () => onOpenPostDetail(post),
       child: Container(
         margin: const EdgeInsets.only(top: 8),
-        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: scheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: scheme.outline),
+          borderRadius: radius,
+          border: Border.all(
+            color: scheme.outline.withValues(alpha: 0.18),
+          ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+        child: LiquidGlassPanel(
+          padding: const EdgeInsets.all(12),
+          margin: EdgeInsets.zero,
+          borderRadius: radius,
+          showBorder: false,
+          backgroundColor: glassTint,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             Row(
               children: [
                 AvatarWidget(
@@ -671,7 +694,8 @@ class _RepostInnerCard extends StatelessWidget {
                 ),
               ),
             ],
-          ],
+            ],
+          ),
         ),
       ),
     );

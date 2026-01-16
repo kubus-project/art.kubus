@@ -14,6 +14,7 @@ import 'screens/auth/sign_in_screen.dart';
 import 'screens/desktop/desktop_shell.dart';
 import 'utils/app_animations.dart';
 import 'utils/design_tokens.dart';
+import 'widgets/glass_components.dart';
 import 'widgets/user_persona_onboarding_gate.dart';
 
 class MainApp extends StatefulWidget {
@@ -49,40 +50,48 @@ class _MainAppState extends State<MainApp> {
     }
 
     return UserPersonaOnboardingGate(
-      child: Stack(
-        children: [
-          Scaffold(
-            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-            body: IndexedStack(
-              index: _currentIndex,
-              // Keep heavy AR resources out of the tree unless the AR tab is active.
-              children: _buildScreens(),
+      child: AnimatedGradientBackground(
+        // The app's base gradient needs to paint behind BOTH the app bar area
+        // (status bar) and the bottom navigation bar. Screens should keep their
+        // scaffolds transparent so this background remains visible.
+        animate: true,
+        intensity: 0.22,
+        child: Stack(
+          children: [
+            Scaffold(
+              backgroundColor: Colors.transparent,
+              extendBody: true,
+              body: IndexedStack(
+                index: _currentIndex,
+                // Keep heavy AR resources out of the tree unless the AR tab is active.
+                children: _buildScreens(),
+              ),
+              bottomNavigationBar: _buildBottomNavigationBar(),
             ),
-            bottomNavigationBar: _buildBottomNavigationBar(),
-          ),
 
-          // Lock overlay with animated transitions
-          Positioned.fill(
-            child: IgnorePointer(
-              ignoring: !walletProvider.isLocked,
-              child: AnimatedSwitcher(
-                duration: animationTheme.medium,
-                switchInCurve: animationTheme.fadeCurve,
-                switchOutCurve: animationTheme.fadeCurve,
-                transitionBuilder: (child, animation) => FadeTransition(
-                  opacity: CurvedAnimation(parent: animation, curve: animationTheme.fadeCurve),
-                  child: child,
+            // Lock overlay with animated transitions
+            Positioned.fill(
+              child: IgnorePointer(
+                ignoring: !walletProvider.isLocked,
+                child: AnimatedSwitcher(
+                  duration: animationTheme.medium,
+                  switchInCurve: animationTheme.fadeCurve,
+                  switchOutCurve: animationTheme.fadeCurve,
+                  transitionBuilder: (child, animation) => FadeTransition(
+                    opacity: CurvedAnimation(parent: animation, curve: animationTheme.fadeCurve),
+                    child: child,
+                  ),
+                  child: walletProvider.isLocked
+                      ? _LockOverlay(
+                          key: const ValueKey('locked'),
+                          onUnlockRequested: _handleUnlock,
+                        )
+                      : const SizedBox(key: ValueKey('unlocked')),
                 ),
-                child: walletProvider.isLocked
-                    ? _LockOverlay(
-                        key: const ValueKey('locked'),
-                        onUnlockRequested: _handleUnlock,
-                      )
-                    : const SizedBox(key: ValueKey('unlocked')),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -108,33 +117,44 @@ class _MainAppState extends State<MainApp> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isSmallScreen = constraints.maxWidth < 375;
+        final theme = Theme.of(context);
+        final scheme = theme.colorScheme;
+        final isDark = theme.brightness == Brightness.dark;
+        final glassTint = scheme.surface.withValues(alpha: isDark ? 0.18 : 0.12);
         
         return Container(
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
             boxShadow: [
               BoxShadow(
-                color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
-                blurRadius: 20,
-                offset: const Offset(0, -5),
+                color: theme.shadowColor.withValues(alpha: 0.10),
+                blurRadius: 18,
+                offset: const Offset(0, -6),
               ),
             ],
           ),
-          child: SafeArea(
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: isSmallScreen ? KubusSpacing.xs : KubusSpacing.sm, 
-                vertical: isSmallScreen ? 2 : KubusSpacing.xs,
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildNavItem(0, Icons.explore, isSmallScreen),
-                  _buildNavItem(1, Icons.view_in_ar, isSmallScreen),
-                  _buildNavItem(2, Icons.people, isSmallScreen),
-                  _buildNavItem(3, Icons.home, isSmallScreen),
-                  _buildNavItem(4, Icons.person, isSmallScreen),
-                ],
+          child: LiquidGlassPanel(
+            margin: EdgeInsets.zero,
+            padding: EdgeInsets.zero,
+            borderRadius: BorderRadius.zero,
+            blurSigma: KubusGlassEffects.blurSigmaLight,
+            backgroundColor: glassTint,
+            child: SafeArea(
+              top: false,
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isSmallScreen ? KubusSpacing.xs : KubusSpacing.sm,
+                  vertical: isSmallScreen ? 2 : KubusSpacing.xs,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildNavItem(0, Icons.explore, isSmallScreen),
+                    _buildNavItem(1, Icons.view_in_ar, isSmallScreen),
+                    _buildNavItem(2, Icons.people, isSmallScreen),
+                    _buildNavItem(3, Icons.home, isSmallScreen),
+                    _buildNavItem(4, Icons.person, isSmallScreen),
+                  ],
+                ),
               ),
             ),
           ),

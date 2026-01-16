@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'inline_loading.dart';
+import 'glass_components.dart';
 import '../services/push_notification_service.dart';
 import '../utils/kubus_color_roles.dart';
 
@@ -176,6 +177,12 @@ class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
   @override
   Widget build(BuildContext context) {
     final roles = KubusColorRoles.of(context);
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final buttonRadius = BorderRadius.circular(16);
+    final buttonTint = scheme.primary.withValues(alpha: isDark ? 0.82 : 0.88);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
@@ -208,29 +215,52 @@ class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
           SizedBox(
             width: double.infinity,
             height: 56,
-            child: ElevatedButton(
-              onPressed: _isRequesting ? null : _requestAllPermissions,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: buttonRadius,
+                border: Border.all(
+                  color: scheme.primary.withValues(alpha: 0.30),
                 ),
               ),
-              child: _isRequesting
-                  ? SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: InlineLoading(expand: true, shape: BoxShape.circle, tileSize: 3.5, color: Colors.white),
-                    )
-                  : Text(
-                      'Grant Permissions',
-                      style: GoogleFonts.inter(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
+              child: LiquidGlassPanel(
+                padding: EdgeInsets.zero,
+                margin: EdgeInsets.zero,
+                borderRadius: buttonRadius,
+                showBorder: false,
+                backgroundColor: buttonTint,
+                child: ElevatedButton(
+                  onPressed: _isRequesting ? null : _requestAllPermissions,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    foregroundColor: Colors.white,
+                    shadowColor: Colors.transparent,
+                    disabledBackgroundColor: Colors.transparent,
+                    disabledForegroundColor: Colors.white.withValues(alpha: 0.55),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: buttonRadius,
                     ),
+                  ),
+                  child: _isRequesting
+                      ? SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: InlineLoading(
+                            expand: true,
+                            shape: BoxShape.circle,
+                            tileSize: 3.5,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          'Grant Permissions',
+                          style: GoogleFonts.inter(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -240,7 +270,7 @@ class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
               'Skip for Now',
               style: GoogleFonts.inter(
                 fontSize: 16,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                color: scheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
           ),
@@ -256,72 +286,84 @@ class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
     required bool isGranted,
     required Color color,
   }) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final radius = BorderRadius.circular(12);
+    final glassTint = isGranted
+        ? color.withValues(alpha: isDark ? 0.18 : 0.14)
+        : scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
+
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isGranted
-            ? color.withValues(alpha: 0.1)
-            : Theme.of(context).colorScheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: radius,
         border: Border.all(
           color: isGranted
-              ? color
-              : Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
-          width: 2,
+              ? color.withValues(alpha: 0.55)
+              : scheme.outline.withValues(alpha: 0.22),
+          width: 1.5,
         ),
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: isGranted ? color : Colors.grey,
-              borderRadius: BorderRadius.circular(12),
+      child: LiquidGlassPanel(
+        padding: const EdgeInsets.all(16),
+        margin: EdgeInsets.zero,
+        borderRadius: radius,
+        showBorder: false,
+        backgroundColor: glassTint,
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: isGranted ? color : Colors.grey,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                icon,
+                color: Colors.white,
+                size: 24,
+              ),
             ),
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: GoogleFonts.outfit(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onSurface,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: GoogleFonts.outfit(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: scheme.onSurface,
+                          ),
                         ),
                       ),
-                    ),
-                    if (isGranted)
-                      Icon(
-                        Icons.check_circle,
-                        color: color,
-                        size: 20,
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  description,
-                  style: GoogleFonts.outfit(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                      if (isGranted)
+                        Icon(
+                          Icons.check_circle,
+                          color: color,
+                          size: 20,
+                        ),
+                    ],
                   ),
-                ),
-              ],
+                  const SizedBox(height: 4),
+                  Text(
+                    description,
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      color: scheme.onSurface.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

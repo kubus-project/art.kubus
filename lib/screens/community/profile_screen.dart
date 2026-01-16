@@ -5,6 +5,7 @@ import '../../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
 import '../../utils/wallet_utils.dart';
 import '../../utils/kubus_color_roles.dart';
+import '../../utils/design_tokens.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/web3provider.dart';
@@ -168,10 +169,9 @@ class _ProfileScreenState extends State<ProfileScreen>
     final isInstitution = _hasInstitutionRole(profileProvider, daoReview);
 
     return Scaffold(
-      backgroundColor: themeProvider.isDarkMode
-          ? Theme.of(context).scaffoldBackgroundColor
-          : const Color(0xFFF8F9FA),
+      backgroundColor: Colors.transparent,
       body: SafeArea(
+        bottom: false,
         child: AnimatedBuilder(
           animation: _animationController,
           builder: (context, child) {
@@ -215,6 +215,11 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ],
                       const SliverToBoxAdapter(
                           child: SizedBox(height: DetailSpacing.xxl)),
+                      const SliverToBoxAdapter(
+                        child: SizedBox(
+                          height: KubusLayout.mainBottomNavBarHeight,
+                        ),
+                      ),
                     ],
                   ),
                 ),

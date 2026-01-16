@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'glass_components.dart';
+
 class TopBarIcon extends StatelessWidget {
   final Widget icon;
   final VoidCallback? onPressed;
@@ -23,6 +25,11 @@ class TopBarIcon extends StatelessWidget {
     final isSmallScreen = MediaQuery.of(context).size.width < 375;
     final containerSize = size ?? (isSmallScreen ? 40.0 : 44.0);
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final radius = BorderRadius.circular(10);
+    final glassTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
 
     Widget inner = IconButton(
       padding: EdgeInsets.zero,
@@ -35,14 +42,23 @@ class TopBarIcon extends StatelessWidget {
       inner = Tooltip(message: tooltip!, child: inner);
     }
 
-    return Container(
+    return SizedBox(
       width: containerSize,
       height: containerSize,
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Center(
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: radius,
+          border: Border.all(
+            color: scheme.outline.withValues(alpha: 0.16),
+          ),
+        ),
+        child: LiquidGlassPanel(
+          padding: EdgeInsets.zero,
+          margin: EdgeInsets.zero,
+          borderRadius: radius,
+          showBorder: false,
+          backgroundColor: glassTint,
+          child: Center(
         child: Stack(
           clipBehavior: Clip.none,
           children: [
@@ -68,6 +84,8 @@ class TopBarIcon extends StatelessWidget {
                 ),
               ),
           ],
+        ),
+          ),
         ),
       ),
     );
