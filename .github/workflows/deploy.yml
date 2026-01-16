@@ -1,4 +1,4 @@
-name: Deploy (manual)
+name: Deploy
 
 on:
   push:
@@ -103,6 +103,28 @@ jobs:
           flutter pub get
           flutter build web --release ${{ steps.defines.outputs.args }}
 
+      - name: Show runner public IP (for cPanel allowlist)
+        if: ${{ steps.ftp.outputs.ok == 'true' }}
+        shell: bash
+        run: |
+          echo "Runner public egress IP (best-effort):"
+
+          echo -n "ipify: "
+          curl -fsS https://api.ipify.org || true
+          echo
+
+          echo -n "ifconfig.me: "
+          curl -fsS https://ifconfig.me || true
+          echo
+
+          if command -v dig >/dev/null 2>&1; then
+            echo -n "opendns: "
+            dig +short myip.opendns.com @resolver1.opendns.com || true
+            echo
+          else
+            echo "dig not available on runner"
+          fi
+
       - name: Preflight FTP connectivity
         if: ${{ steps.ftp.outputs.ok == 'true' }}
         id: net
@@ -131,10 +153,10 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ${{ vars.FTP_PROTOCOL != '' && vars.FTP_PROTOCOL || 'ftps' }}
-          port: ${{ vars.FTP_PORT != '' && vars.FTP_PORT || 21 }}
-          security: ${{ vars.FTP_SECURITY != '' && vars.FTP_SECURITY || 'loose' }}
-          timeout: ${{ vars.FTP_TIMEOUT_MS != '' && vars.FTP_TIMEOUT_MS || 120000 }}
+          protocol: ${{ vars.FTP_PROTOCOL || 'ftps' }}
+          port: ${{ vars.FTP_PORT || 21 }}
+          security: ${{ vars.FTP_SECURITY || 'loose' }}
+          timeout: ${{ vars.FTP_TIMEOUT_MS || 120000 }}
           local-dir: build/web/
           server-dir: /app.kubus.site/
 
@@ -175,15 +197,28 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Accept Android licenses
+        shell: bash
+        run: |
+          # On GitHub Actions, bash runs with -e -o pipefail by default.
+          # When sdkmanager finishes, `yes` can hit a broken pipe (exit 141) which
+          # would fail the step even though licenses were accepted.
+          # We capture sdkmanager's exit code and ignore the `yes` exit code.
+          set +e
+          set +o pipefail
+          yes | sdkmanager --licenses > /dev/null
+          SDK_STATUS=${PIPESTATUS[1]}
+          set -o pipefail
+          set -e
+
+          if [ "$SDK_STATUS" -ne 0 ]; then
+            exit "$SDK_STATUS"
+          fi
+
       - name: Install Android SDK components
         shell: bash
         run: |
           sdkmanager --install "cmdline-tools;latest" "platforms;android-36" "build-tools;36.0.0" "platform-tools"
-
-      - name: Accept Android licenses
-        shell: bash
-        run: |
-          yes | sdkmanager --licenses > /dev/null
 
       - name: Flutter pub get
         run: flutter pub get

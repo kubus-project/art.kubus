@@ -8,8 +8,6 @@
 .buildlog/
 .history
 .svn/
-migrate_working_dir/
-docs/
 
 # IntelliJ related
 *.iml
