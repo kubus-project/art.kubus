@@ -295,12 +295,15 @@ jobs:
           host: ${{ secrets.SFTP_SERVER || steps.ftp_target.outputs.host }}
           username: ${{ secrets.SFTP_USERNAME || secrets.FTP_USERNAME }}
           port: ${{ vars.SFTP_PORT || 22 }}
+          timeout: ${{ vars.SFTP_TIMEOUT || '120s' }}
+          command_timeout: ${{ vars.SFTP_COMMAND_TIMEOUT || '120s' }}
           # Prefer SSH key auth (recommended for GitHub Actions). If SFTP_PRIVATE_KEY
           # is not set, the action will fall back to password auth below.
           key: ${{ secrets.SFTP_PRIVATE_KEY }}
           passphrase: ${{ secrets.SFTP_PRIVATE_KEY_PASSPHRASE }}
           password: ${{ secrets.SFTP_PASSWORD || secrets.FTP_PASSWORD }}
           fingerprint: ${{ secrets.SFTP_HOST_FINGERPRINT }}
+          debug: ${{ vars.SFTP_DEBUG || 'false' }}
           source: "build/web/*"
           target: ${{ vars.WEB_SERVER_DIR || '/app.kubus.site/' }}
 
