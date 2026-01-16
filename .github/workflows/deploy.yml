@@ -45,6 +45,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: false
 
       - name: Check FTP secrets
         id: ftp
@@ -67,11 +69,35 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Prepare Dart defines (optional)
+        id: defines
+        if: ${{ steps.ftp.outputs.ok == 'true' }}
+        shell: bash
+        env:
+          KUBUS_BACKEND_URL: ${{ secrets.KUBUS_BACKEND_URL }}
+          KUBUS_WALLETCONNECT_PROJECT_ID: ${{ secrets.KUBUS_WALLETCONNECT_PROJECT_ID }}
+          KUBUS_PINATA_API_KEY: ${{ secrets.KUBUS_PINATA_API_KEY }}
+          KUBUS_PINATA_SECRET_KEY: ${{ secrets.KUBUS_PINATA_SECRET_KEY }}
+        run: |
+          ARGS=""
+          add() {
+            local name="$1"
+            local value="$2"
+            if [ -n "$value" ]; then
+              ARGS="$ARGS --dart-define=${name}=${value}"
+            fi
+          }
+          add KUBUS_BACKEND_URL "$KUBUS_BACKEND_URL"
+          add KUBUS_WALLETCONNECT_PROJECT_ID "$KUBUS_WALLETCONNECT_PROJECT_ID"
+          add KUBUS_PINATA_API_KEY "$KUBUS_PINATA_API_KEY"
+          add KUBUS_PINATA_SECRET_KEY "$KUBUS_PINATA_SECRET_KEY"
+          echo "args=$ARGS" >> "$GITHUB_OUTPUT"
+
       - name: Build Flutter web
         if: ${{ steps.ftp.outputs.ok == 'true' }}
         run: |
           flutter pub get
-          flutter build web --release
+          flutter build web --release ${{ steps.defines.outputs.args }}
 
       - name: FTP Deploy (Flutter Web)
         if: ${{ steps.ftp.outputs.ok == 'true' }}
@@ -97,6 +123,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: false
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -125,8 +153,31 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
+      - name: Prepare Dart defines (optional)
+        id: apk_defines
+        shell: bash
+        env:
+          KUBUS_BACKEND_URL: ${{ secrets.KUBUS_BACKEND_URL }}
+          KUBUS_WALLETCONNECT_PROJECT_ID: ${{ secrets.KUBUS_WALLETCONNECT_PROJECT_ID }}
+          KUBUS_PINATA_API_KEY: ${{ secrets.KUBUS_PINATA_API_KEY }}
+          KUBUS_PINATA_SECRET_KEY: ${{ secrets.KUBUS_PINATA_SECRET_KEY }}
+        run: |
+          ARGS=""
+          add() {
+            local name="$1"
+            local value="$2"
+            if [ -n "$value" ]; then
+              ARGS="$ARGS --dart-define=${name}=${value}"
+            fi
+          }
+          add KUBUS_BACKEND_URL "$KUBUS_BACKEND_URL"
+          add KUBUS_WALLETCONNECT_PROJECT_ID "$KUBUS_WALLETCONNECT_PROJECT_ID"
+          add KUBUS_PINATA_API_KEY "$KUBUS_PINATA_API_KEY"
+          add KUBUS_PINATA_SECRET_KEY "$KUBUS_PINATA_SECRET_KEY"
+          echo "args=$ARGS" >> "$GITHUB_OUTPUT"
+
       - name: Build APK (release mode, current project signing)
-        run: flutter build apk --release
+        run: flutter build apk --release ${{ steps.apk_defines.outputs.args }}
 
       - name: Upload APK as workflow artifact
         uses: actions/upload-artifact@v4

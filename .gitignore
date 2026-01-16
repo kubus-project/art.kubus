@@ -47,7 +47,7 @@ app.*.map.json
 .env
 .env.*
 !.env.example
-/lib/config/api_keys.dart
+/lib/config/api_keys.local.dart
 /lib/config/secrets.dart
 /assets/config/
 /assets/keys/
