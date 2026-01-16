@@ -1,0 +1,136 @@
+name: Deploy (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_web:
+        description: 'Deploy Flutter web build to app server via FTP'
+        required: false
+        default: true
+        type: boolean
+      build_apk:
+        description: 'Build Android APK (debug-signed release mode)'
+        required: false
+        default: true
+        type: boolean
+      publish_github_release:
+        description: 'Create/Update a GitHub Release and upload the APK'
+        required: false
+        default: true
+        type: boolean
+      release_tag:
+        description: 'Release tag to create/use (leave empty to auto-generate)'
+        required: false
+        default: ''
+        type: string
+      prerelease:
+        description: 'Mark GitHub Release as a prerelease'
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy_web:
+    name: FTP deploy (Flutter web)
+    runs-on: ubuntu-latest
+    if: ${{ inputs.deploy_web && secrets.FTP_SERVER != '' && secrets.FTP_USERNAME != '' && secrets.FTP_PASSWORD != '' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Build Flutter web
+        run: |
+          flutter pub get
+          flutter build web --release
+
+      - name: FTP Deploy (Flutter Web)
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: build/web/
+          server-dir: /app.kubus.site/
+
+  apk:
+    name: Build APK + upload to GitHub Release
+    runs-on: ubuntu-latest
+    if: ${{ inputs.build_apk }}
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK components
+        shell: bash
+        run: |
+          sdkmanager --install "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+
+      - name: Accept Android licenses
+        shell: bash
+        run: yes | flutter doctor --android-licenses
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Build APK (release mode, current project signing)
+        run: flutter build apk --release
+
+      - name: Upload APK as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: build/app/outputs/flutter-apk/*.apk
+          if-no-files-found: error
+
+      - name: Choose release tag
+        id: release_tag
+        if: ${{ inputs.publish_github_release }}
+        shell: bash
+        run: |
+          TAG="${{ inputs.release_tag }}"
+          if [ -z "$TAG" ]; then
+            TAG="apk-${GITHUB_RUN_NUMBER}"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Publish GitHub Release + upload APK
+        if: ${{ inputs.publish_github_release }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release_tag.outputs.tag }}
+          name: ${{ steps.release_tag.outputs.tag }}
+          prerelease: ${{ inputs.prerelease }}
+          generate_release_notes: true
+          files: |
+            build/app/outputs/flutter-apk/*.apk

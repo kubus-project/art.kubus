@@ -3184,8 +3184,12 @@ class _MapScreenState extends State<MapScreen>
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: accent.withValues(alpha: 0.12),
+              color: accent.withValues(alpha: 0.22),
               borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: accent.withValues(alpha: 0.40),
+                width: 1.5,
+              ),
             ),
             child: Icon(task.icon, color: accent, size: 20),
           ),
@@ -3196,7 +3200,10 @@ class _MapScreenState extends State<MapScreen>
               children: [
                 Text(
                   task.name,
-                  style: KubusTypography.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                  style: KubusTypography.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurface,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 ClipRRect(
@@ -3215,8 +3222,8 @@ class _MapScreenState extends State<MapScreen>
           Text(
             '${(pct * 100).round()}%',
             style: KubusTypography.textTheme.labelMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: scheme.onSurfaceVariant,
+              fontWeight: FontWeight.w700,
+              color: scheme.onSurface,
             ),
           ),
         ],
