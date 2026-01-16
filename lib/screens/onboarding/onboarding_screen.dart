@@ -130,10 +130,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
     final screenHeight = mediaQuery.size.height;
     final screenWidth = mediaQuery.size.width;
     final isSmallScreen = screenHeight < 700 || screenWidth < 375;
+
+    final current = _pages[_currentPage.clamp(0, _pages.length - 1)];
+    final start = current.gradient.colors.first.withValues(alpha: 0.55);
+    final end = (current.gradient.colors.length > 1
+            ? current.gradient.colors[1]
+            : current.gradient.colors.first)
+        .withValues(alpha: 0.50);
+    final mid = Color.lerp(start, end, 0.55) ?? end;
     
     return AnimatedGradientBackground(
       duration: const Duration(seconds: 10),
       intensity: 0.25,
+      colors: <Color>[start, mid, end, start],
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: SafeArea(

@@ -704,74 +704,124 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final glassTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
+    final glassTint = scheme.surface.withValues(alpha: isDark ? 0.18 : 0.12);
+    final radius = BorderRadius.circular(16);
 
-    return LiquidGlassPanel(
-      onTap: onTap ?? () => _handleQuickAction(title),
-      padding: EdgeInsets.symmetric(
-        horizontal: isSmallScreen ? 16 : 20,
-        vertical: isSmallScreen ? 12 : 16,
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        border: Border.all(
+          color: color.withValues(alpha: 0.22),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: isDark ? 0.10 : 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
-      margin: EdgeInsets.zero,
-      borderRadius: BorderRadius.circular(16),
-      blurSigma: KubusGlassEffects.blurSigmaLight,
-      backgroundColor: glassTint,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                width: isSmallScreen ? 32 : 40,
-                height: isSmallScreen ? 32 : 40,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  icon,
-                  color: color,
-                  size: isSmallScreen ? 16 : 20,
-                ),
-              ),
-              if (visitCount > 0)
-                Positioned(
-                  top: -4,
-                  right: -4,
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      color: color,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 16,
-                      minHeight: 16,
-                    ),
-                    child: Text(
-                      visitCount.toString(),
-                      style: GoogleFonts.inter(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                      textAlign: TextAlign.center,
+      child: LiquidGlassPanel(
+        onTap: onTap ?? () => _handleQuickAction(title),
+        padding: EdgeInsets.symmetric(
+          horizontal: isSmallScreen ? 16 : 20,
+          vertical: isSmallScreen ? 12 : 16,
+        ),
+        margin: EdgeInsets.zero,
+        borderRadius: radius,
+        blurSigma: KubusGlassEffects.blurSigmaLight,
+        showBorder: false,
+        backgroundColor: glassTint,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        color.withValues(alpha: 0.12),
+                        Colors.transparent,
+                      ],
                     ),
                   ),
                 ),
-            ],
-          ),
-          SizedBox(width: isSmallScreen ? 10 : 14),
-          Text(
-            title,
-            style: GoogleFonts.inter(
-              fontSize: isSmallScreen ? 14 : 16,
-              fontWeight: FontWeight.w600,
-              color: scheme.onSurface,
+              ),
             ),
-          ),
-        ],
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      width: isSmallScreen ? 32 : 40,
+                      height: isSmallScreen ? 32 : 40,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            color.withValues(alpha: 0.26),
+                            color.withValues(alpha: 0.10),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: color.withValues(alpha: 0.25),
+                          width: 1,
+                        ),
+                      ),
+                      child: Icon(
+                        icon,
+                        color: color,
+                        size: isSmallScreen ? 16 : 20,
+                      ),
+                    ),
+                    if (visitCount > 0)
+                      Positioned(
+                        top: -4,
+                        right: -4,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: color,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 16,
+                            minHeight: 16,
+                          ),
+                          child: Text(
+                            visitCount.toString(),
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                SizedBox(width: isSmallScreen ? 10 : 14),
+                Text(
+                  title,
+                  style: GoogleFonts.inter(
+                    fontSize: isSmallScreen ? 14 : 16,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurface,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -922,7 +972,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       {Color? color,
       bool showIconOnly = false,
       bool isVerticalLayout = false}) {
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
     final statColor = color ?? AppColorUtils.featureColor(title, scheme);
     final l10n = AppLocalizations.of(context)!;
     final displayTitle = _getStatDisplayTitle(title, l10n);
@@ -930,130 +982,150 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isSmallScreen = constraints.maxWidth < 375;
+        final radius = BorderRadius.circular(isSmallScreen ? 10 : 12);
+        final glassTint = scheme.surface.withValues(alpha: isDark ? 0.18 : 0.12);
 
-        return GestureDetector(
-          onTap: () => _showStatsDialog(title, icon),
-          child: Container(
-            width: isVerticalLayout ? double.infinity : null,
-            padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
-              border: Border.all(
-                color: Theme.of(context).colorScheme.outline,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: statColor.withValues(alpha: 0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+        return Container(
+          width: isVerticalLayout ? double.infinity : null,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            border: Border.all(
+              color: statColor.withValues(alpha: 0.22),
+              width: 1,
             ),
-            child: showIconOnly
-                ? Column(
-                    children: [
-                      Icon(
-                        icon,
-                        color: statColor,
-                        size: 28, // Keep original icon size
+            boxShadow: [
+              BoxShadow(
+                color: statColor.withValues(alpha: isDark ? 0.10 : 0.08),
+                blurRadius: 14,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: LiquidGlassPanel(
+            onTap: () => _showStatsDialog(title, icon),
+            padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
+            margin: EdgeInsets.zero,
+            borderRadius: radius,
+            blurSigma: KubusGlassEffects.blurSigmaLight,
+            showBorder: false,
+            backgroundColor: glassTint,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            statColor.withValues(alpha: 0.14),
+                            Colors.transparent,
+                          ],
+                        ),
                       ),
-                      if (isSmallScreen) ...[
-                        SizedBox(height: isSmallScreen ? 4 : 6),
-                        Text(
-                          value,
-                          style: GoogleFonts.inter(
-                            fontSize: isSmallScreen ? 10 : 12,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                        ),
-                        Text(
-                          displayTitle,
-                          style: GoogleFonts.inter(
-                            fontSize: isSmallScreen ? 7 : 8,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.6),
-                          ),
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ],
-                  )
-                : isVerticalLayout
-                    ? Row(
+                    ),
+                  ),
+                ),
+                showIconOnly
+                    ? Column(
                         children: [
                           Icon(
                             icon,
                             color: statColor,
-                            size: 20, // Keep original icon size
+                            size: 28,
                           ),
-                          SizedBox(width: isSmallScreen ? 8 : 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  value,
-                                  style: GoogleFonts.inter(
-                                    fontSize: isSmallScreen ? 10 : 12,
-                                    fontWeight: FontWeight.bold,
-                                    color:
-                                        Theme.of(context).colorScheme.onSurface,
-                                  ),
-                                ),
-                                Text(
-                                  displayTitle,
-                                  style: GoogleFonts.inter(
-                                    fontSize: isSmallScreen ? 7 : 8,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.6),
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
+                          if (isSmallScreen) ...[
+                            SizedBox(height: isSmallScreen ? 4 : 6),
+                            Text(
+                              value,
+                              style: GoogleFonts.inter(
+                                fontSize: isSmallScreen ? 10 : 12,
+                                fontWeight: FontWeight.bold,
+                                color: scheme.onSurface,
+                              ),
                             ),
-                          ),
+                            Text(
+                              displayTitle,
+                              style: GoogleFonts.inter(
+                                fontSize: isSmallScreen ? 7 : 8,
+                                color: scheme.onSurface.withValues(alpha: 0.65),
+                              ),
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ],
                       )
-                    : Column(
-                        children: [
-                          Icon(
-                            icon,
-                            color: statColor,
-                            size: 24, // Keep original icon size
+                    : isVerticalLayout
+                        ? Row(
+                            children: [
+                              Icon(
+                                icon,
+                                color: statColor,
+                                size: 20,
+                              ),
+                              SizedBox(width: isSmallScreen ? 8 : 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      value,
+                                      style: GoogleFonts.inter(
+                                        fontSize: isSmallScreen ? 10 : 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: scheme.onSurface,
+                                      ),
+                                    ),
+                                    Text(
+                                      displayTitle,
+                                      style: GoogleFonts.inter(
+                                        fontSize: isSmallScreen ? 7 : 8,
+                                        color: scheme.onSurface
+                                            .withValues(alpha: 0.65),
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          )
+                        : Column(
+                            children: [
+                              Icon(
+                                icon,
+                                color: statColor,
+                                size: 24,
+                              ),
+                              SizedBox(height: isSmallScreen ? 4 : 6),
+                              Text(
+                                value,
+                                style: GoogleFonts.inter(
+                                  fontSize: isSmallScreen ? 10 : 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: scheme.onSurface,
+                                ),
+                              ),
+                              Text(
+                                displayTitle,
+                                style: GoogleFonts.inter(
+                                  fontSize: isSmallScreen ? 7 : 8,
+                                  color:
+                                      scheme.onSurface.withValues(alpha: 0.65),
+                                ),
+                                textAlign: TextAlign.center,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
                           ),
-                          SizedBox(height: isSmallScreen ? 4 : 6),
-                          Text(
-                            value,
-                            style: GoogleFonts.inter(
-                              fontSize: isSmallScreen ? 10 : 12,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                          ),
-                          Text(
-                            displayTitle,
-                            style: GoogleFonts.inter(
-                              fontSize: isSmallScreen ? 7 : 8,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.6),
-                            ),
-                            textAlign: TextAlign.center,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
+              ],
+            ),
           ),
         );
       },

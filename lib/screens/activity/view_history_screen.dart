@@ -23,15 +23,19 @@ class _ViewHistoryScreenState extends State<ViewHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: Text(
           'View History',
           style: GoogleFonts.inter(fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
         elevation: 0,
+        foregroundColor: scheme.onSurface,
       ),
       body: Consumer<ArtworkProvider>(
         builder: (context, artworkProvider, child) {

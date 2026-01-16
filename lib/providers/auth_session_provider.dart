@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../config/config.dart';
 import '../core/app_navigator.dart';
+import '../l10n/app_localizations.dart';
 import '../screens/auth/sign_in_screen.dart';
 import '../services/auth_session_coordinator.dart';
 
@@ -67,6 +68,42 @@ class AuthSessionProvider extends ChangeNotifier implements AuthSessionCoordinat
     notifyListeners();
 
     try {
+      final navContext = navigator.context;
+      final l10n = AppLocalizations.of(navContext);
+      if (l10n != null && navigator.mounted) {
+        final confirmed = await showDialog<bool>(
+          context: navContext,
+          builder: (dialogContext) {
+            return AlertDialog(
+              title: Text(l10n.authReauthDialogTitle),
+              content: Text(l10n.authReauthDialogMessage),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child: Text(l10n.commonCancel),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(true),
+                  child: Text(l10n.commonContinue),
+                ),
+              ],
+            );
+          },
+        );
+
+        if (!navigator.mounted) {
+          _cooldownUntil = DateTime.now().add(_promptCooldown);
+          completer.complete(const AuthReauthResult(AuthReauthOutcome.cancelled));
+          return completer.future;
+        }
+
+        if (confirmed != true) {
+          _cooldownUntil = DateTime.now().add(_promptCooldown);
+          completer.complete(const AuthReauthResult(AuthReauthOutcome.cancelled));
+          return completer.future;
+        }
+      }
+
       final result = await navigator.push<bool>(
         MaterialPageRoute(
           fullscreenDialog: true,

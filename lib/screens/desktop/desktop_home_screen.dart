@@ -749,7 +749,6 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     final activityProvider = Provider.of<RecentActivityProvider>(context);
     final statsProvider = context.watch<StatsProvider>();
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
     final isLoadingArtworks = artworkProvider.isLoading('load_artworks');
     final isLoadingActivity =
         activityProvider.isLoading && activityProvider.activities.isEmpty;
@@ -809,6 +808,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         ? kub8Token.formattedBalance
         : walletProvider.achievementTokenTotal.toStringAsFixed(2);
 
+    final roles = KubusColorRoles.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -841,6 +842,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                     label: l10n.desktopHomeStatArtworksDiscovered,
                     value: discoveredLoading ? '\u2026' : discoveredCount.toString(),
                     icon: Icons.explore,
+                    color: AppColorUtils.tealAccent,
                   ),
                 ),
                 SizedBox(
@@ -850,7 +852,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                     label: l10n.desktopHomeStatArSessions,
                     value: arSessions.toString(),
                     icon: Icons.view_in_ar,
-                    color: scheme.tertiary,
+                    color: AppColorUtils.purpleAccent,
                   ),
                 ),
                 SizedBox(
@@ -860,7 +862,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                     label: l10n.desktopHomeStatNftsCollected,
                     value: web3Provider.isConnected ? nftCount.toString() : '0',
                     icon: Icons.collections,
-                    color: scheme.secondary,
+                    color: AppColorUtils.coralAccent,
                   ),
                 ),
                 SizedBox(
@@ -870,7 +872,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                     label: l10n.desktopHomeStatKub8Earned,
                     value: kub8Earned,
                     icon: Icons.monetization_on,
-                    color: scheme.primary,
+                    color: roles.achievementGold,
                   ),
                 ),
               ],
@@ -2038,7 +2040,6 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
 
   Widget _buildPlatformStatsSection(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
 
     final statsProvider = context.watch<StatsProvider>();
     const metrics = <String>[
@@ -2119,33 +2120,29 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             ),
           )
         else
-          Container(
+          DesktopCard(
             padding: const EdgeInsets.all(DetailSpacing.lg),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(DetailRadius.md),
-            ),
             child: Column(
               children: [
                 _buildPlatformStatRow(
                   l10n.desktopHomePlatformStatsTotalArtworks,
                   totalArtworks.toString(),
                   Icons.view_in_ar,
-                  scheme.primary,
+                  AppColorUtils.tealAccent,
                 ),
                 const Divider(height: DetailSpacing.xl),
                 _buildPlatformStatRow(
                   l10n.desktopHomePlatformStatsArEnabled,
                   arEnabled.toString(),
                   Icons.visibility,
-                  scheme.tertiary,
+                  AppColorUtils.purpleAccent,
                 ),
                 const Divider(height: DetailSpacing.xl),
                 _buildPlatformStatRow(
                   l10n.desktopHomePlatformStatsCommunityPosts,
                   posts.toString(),
                   Icons.forum,
-                  scheme.secondary,
+                  AppColorUtils.coralAccent,
                 ),
                 const Divider(height: DetailSpacing.xl),
                 _buildPlatformStatRow(
@@ -2413,6 +2410,13 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     final configProvider = context.read<ConfigProvider>();
     if (configProvider.useMockData) {
       await _showMockNotificationsDialog(themeProvider);
+      return;
+    }
+
+    final shellScope = DesktopShellScope.of(context);
+    if (shellScope != null) {
+      // Prefer the in-sidebar notifications panel on desktop.
+      shellScope.openNotifications();
       return;
     }
 
@@ -3012,19 +3016,29 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
               link: _searchFieldLink,
               showWhenUnlinked: false,
               offset: const Offset(0, 48),
-              child: Material(
-                color: Theme.of(context).colorScheme.surface,
-                elevation: 10,
-                borderRadius: BorderRadius.circular(12),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    maxHeight: 320,
-                  ),
-                  child: SizedBox(
-                    width: _searchBarWidth,
-                    child: _buildSearchSuggestionContent(),
-                  ),
-                ),
+              child: Builder(
+                builder: (context) {
+                  final scheme = Theme.of(context).colorScheme;
+                  final isDark = Theme.of(context).brightness == Brightness.dark;
+                  final glassTint = scheme.surface.withValues(alpha: isDark ? 0.22 : 0.26);
+
+                  return LiquidGlassPanel(
+                    padding: EdgeInsets.zero,
+                    margin: EdgeInsets.zero,
+                    borderRadius: BorderRadius.circular(12),
+                    blurSigma: KubusGlassEffects.blurSigmaLight,
+                    backgroundColor: glassTint,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        maxHeight: 320,
+                      ),
+                      child: SizedBox(
+                        width: _searchBarWidth,
+                        child: _buildSearchSuggestionContent(),
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
           ],

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
@@ -47,6 +48,8 @@ import 'art/desktop_artwork_detail_screen.dart';
 import '../events/exhibition_detail_screen.dart';
 import 'community/desktop_user_profile_screen.dart';
 import '../../services/search_service.dart';
+import '../../utils/design_tokens.dart';
+import '../../widgets/glass_components.dart';
  
 
 /// Desktop map screen with Google Maps-style presentation
@@ -81,7 +84,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   ArtMarker? _activeMarker;
   bool _didOpenInitialMarker = false;
   bool _showFiltersPanel = false;
-  String _selectedFilter = 'all';
+  String _selectedFilter = 'nearby';
   double _searchRadius = 5.0; // km
   LatLng? _pendingMarkerLocation;
   bool _mapReady = false;
@@ -92,6 +95,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   LatLng? _userLocation;
   bool _autoFollow = true;
   bool _isLocating = false;
+  bool _isNearbyPanelOpen = false;
+  String? _nearbySidebarSignature;
   final Distance _distance = const Distance();
   StreamSubscription<ArtMarker>? _markerStreamSub;
   StreamSubscription<String>? _markerDeletedSub;
@@ -158,6 +163,60 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           widget.initialCenter == null && widget.autoFollow;
       _refreshUserLocation(animate: shouldAnimateToUser);
       _prefetchMarkerSubjects();
+
+      // Desktop UX: show the nearby list in the functions sidebar (right panel)
+      // instead of rendering a "nearby" card overlay on the map.
+      _openNearbyArtPanel();
+    });
+  }
+
+  void _openNearbyArtPanel() {
+    final shellScope = DesktopShellScope.of(context);
+    if (shellScope == null) return;
+
+    setState(() {
+      _isNearbyPanelOpen = true;
+      _nearbySidebarSignature = null;
+      _selectedArtwork = null;
+      _selectedExhibition = null;
+      _showFiltersPanel = false;
+    });
+
+    shellScope.openFunctionsPanel(DesktopFunctionsPanel.exploreNearby);
+  }
+
+  void _closeNearbyArtPanel() {
+    final shellScope = DesktopShellScope.of(context);
+    if (shellScope == null) return;
+    setState(() => _isNearbyPanelOpen = false);
+    _nearbySidebarSignature = null;
+    shellScope.closeFunctionsPanel();
+  }
+
+  void _syncNearbySidebarIfNeeded(
+      ThemeProvider themeProvider, List<Artwork> filteredArtworks) {
+    if (!_isNearbyPanelOpen) return;
+    final shellScope = DesktopShellScope.of(context);
+    if (shellScope == null) return;
+
+    // Build a compact signature so we only push sidebar updates when something
+    // meaningful changes (avoids setState->build feedback loops).
+    final base = _userLocation ?? _effectiveCenter;
+    final ids = filteredArtworks
+        .take(30)
+        .map((a) => a.id)
+        .join(',');
+    final sig = '${_searchRadius.toStringAsFixed(1)}|'
+        '${base.latitude.toStringAsFixed(4)},${base.longitude.toStringAsFixed(4)}|'
+        '${filteredArtworks.length}|$ids';
+    if (_nearbySidebarSignature == sig) return;
+    _nearbySidebarSignature = sig;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      shellScope.setFunctionsPanelContent(
+        _buildNearbyArtSidebar(themeProvider, filteredArtworks),
+      );
     });
   }
 
@@ -220,6 +279,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   @override
   void dispose() {
+    // Avoid leaving Explore-side panels open when navigating away.
+    try {
+      DesktopShellScope.of(context)?.closeFunctionsPanel();
+    } catch (_) {}
+
     _animationController.dispose();
     _panelController.dispose();
     _searchDebounce?.cancel();
@@ -274,14 +338,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 : 24,
             right: 24,
             bottom: 24,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                _buildMapControls(themeProvider),
-                const SizedBox(height: 12),
-                _buildBottomInfoBar(themeProvider),
-              ],
+            child: Align(
+              alignment: Alignment.bottomRight,
+              child: _buildMapControls(themeProvider),
             ),
           ),
         ],
@@ -292,7 +351,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   Widget _buildMapLayer(ThemeProvider themeProvider) {
     return Consumer<ArtworkProvider>(
       builder: (context, artworkProvider, _) {
-        _getFilteredArtworks(artworkProvider.artworks);
+        final filteredArtworks = _getFilteredArtworks(artworkProvider.artworks);
+
+        _syncNearbySidebarIfNeeded(themeProvider, filteredArtworks);
         // TileProviders centralizes tile logic (tiles + optional grid overlay) just like mobile MapScreen
         final tileProviders =
             Provider.of<TileProviders?>(context, listen: false);
@@ -387,14 +448,145 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         _moveCamera(current, math.max(_effectiveZoom, 15));
       }
     } catch (e) {
-      debugPrint('DesktopMapScreen: location fetch failed: $e');
+      if (kDebugMode) {
+        debugPrint('DesktopMapScreen: location fetch failed: $e');
+      }
     } finally {
       if (mounted) setState(() => _isLocating = false);
     }
   }
 
+  Widget _buildGlassChip({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+    required ThemeProvider themeProvider,
+  }) {
+    final animationTheme = context.animationTheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final accent = themeProvider.accentColor;
+
+    final radius = BorderRadius.circular(20);
+    final idleTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.12);
+    final selectedTint = accent.withValues(alpha: isDark ? 0.14 : 0.16);
+
+    return AnimatedContainer(
+      duration: animationTheme.short,
+      curve: animationTheme.defaultCurve,
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        border: Border.all(
+          color: isSelected
+              ? accent.withValues(alpha: 0.85)
+              : scheme.outline.withValues(alpha: 0.18),
+          width: isSelected ? 1.25 : 1,
+        ),
+        boxShadow: isSelected
+            ? [
+                BoxShadow(
+                  color: accent.withValues(alpha: 0.12),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : null,
+      ),
+      child: LiquidGlassPanel(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        margin: EdgeInsets.zero,
+        borderRadius: radius,
+        blurSigma: KubusGlassEffects.blurSigmaLight,
+        showBorder: false,
+        backgroundColor: isSelected ? selectedTint : idleTint,
+        onTap: onTap,
+        child: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+            color: isSelected ? accent : scheme.onSurface,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGlassIconButton({
+    required IconData icon,
+    required VoidCallback onTap,
+    required ThemeProvider themeProvider,
+    bool isActive = false,
+    String? tooltip,
+    double size = 42,
+    BorderRadius? borderRadius,
+    Color? activeTint,
+    Color? iconColor,
+    Color? activeIconColor,
+  }) {
+    final animationTheme = context.animationTheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final accent = themeProvider.accentColor;
+
+    final radius = borderRadius ?? BorderRadius.circular(12);
+    final idleTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.12);
+    final selectedTint = activeTint ?? accent.withValues(alpha: isDark ? 0.14 : 0.16);
+
+    final resolvedIconColor = isActive
+        ? (activeIconColor ?? accent)
+        : (iconColor ?? scheme.onSurface);
+
+    final child = SizedBox(
+      width: size,
+      height: size,
+      child: Center(
+        child: Icon(
+          icon,
+          size: 20,
+          color: resolvedIconColor,
+        ),
+      ),
+    );
+
+    return AnimatedContainer(
+      duration: animationTheme.short,
+      curve: animationTheme.defaultCurve,
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        border: Border.all(
+          color: isActive
+              ? accent.withValues(alpha: 0.85)
+              : scheme.outline.withValues(alpha: 0.18),
+          width: isActive ? 1.25 : 1,
+        ),
+        boxShadow: isActive
+            ? [
+                BoxShadow(
+                  color: accent.withValues(alpha: 0.12),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : null,
+      ),
+      child: LiquidGlassPanel(
+        padding: EdgeInsets.zero,
+        margin: EdgeInsets.zero,
+        borderRadius: radius,
+        blurSigma: KubusGlassEffects.blurSigmaLight,
+        showBorder: false,
+        backgroundColor: isActive ? selectedTint : idleTint,
+        onTap: onTap,
+        child: tooltip == null ? child : Tooltip(message: tooltip, child: child),
+      ),
+    );
+  }
+
   Marker _buildUserLocationMarker(ThemeProvider themeProvider) {
-    const accent = AppColorUtils.tealAccent;
+    final accent = themeProvider.accentColor;
     final position = _userLocation ?? _cameraCenter;
     return Marker(
       point: position,
@@ -422,115 +614,100 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   Widget _buildTopBar(
       ThemeProvider themeProvider, AppAnimationTheme animationTheme) {
     final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
     return Positioned(
       top: 0,
       left: 0,
       right: 0,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Theme.of(context).colorScheme.surface,
-              Theme.of(context).colorScheme.surface.withValues(alpha: 0),
-            ],
-          ),
-        ),
-        child: Row(
-          children: [
-            // Logo and title
-            Row(
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
+          child: LiquidGlassPanel(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            margin: EdgeInsets.zero,
+            borderRadius: BorderRadius.circular(18),
+            blurSigma: KubusGlassEffects.blurSigmaLight,
+            backgroundColor:
+                scheme.surface.withValues(alpha: isDark ? 0.20 : 0.14),
+            showBorder: true,
+            child: Row(
               children: [
-                const AppLogo(width: 36, height: 36),
-                const SizedBox(width: 12),
-                Text(
-                  l10n.desktopMapTitleDiscover,
-                  style: GoogleFonts.inter(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
+                // Logo and title
+                Row(
+                  children: [
+                    const AppLogo(width: 36, height: 36),
+                    const SizedBox(width: 12),
+                    Text(
+                      l10n.desktopMapTitleDiscover,
+                      style: GoogleFonts.inter(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: scheme.onSurface,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(width: 40),
+
+                // Search bar
+                Expanded(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 480),
+                    child: CompositedTransformTarget(
+                      link: _searchFieldLink,
+                      child: DesktopSearchBar(
+                        controller: _searchController,
+                        hintText: l10n.mapSearchHint,
+                        onChanged: _handleSearchChange,
+                        onSubmitted: _handleSearchSubmit,
+                      ),
+                    ),
                   ),
+                ),
+
+                const SizedBox(width: 20),
+
+                // Filter chips
+                Row(
+                  children: _filterOptions.map((filter) {
+                    final isActive = _selectedFilter == filter;
+                    return Padding(
+                      padding: const EdgeInsets.only(left: 8),
+                      child: _buildGlassChip(
+                        label: _getFilterLabel(filter),
+                        isSelected: isActive,
+                        themeProvider: themeProvider,
+                        onTap: () {
+                          setState(() => _selectedFilter = filter);
+                        },
+                      ),
+                    );
+                  }).toList(),
+                ),
+
+                const SizedBox(width: 12),
+
+                // Filters button
+                _buildGlassIconButton(
+                  icon: _showFiltersPanel ? Icons.close : Icons.tune,
+                  themeProvider: themeProvider,
+                  isActive: _showFiltersPanel,
+                  tooltip: _showFiltersPanel ? l10n.commonClose : l10n.mapFiltersTitle,
+                  onTap: () {
+                    setState(() {
+                      _showFiltersPanel = !_showFiltersPanel;
+                      _selectedArtwork = null;
+                      _selectedExhibition = null;
+                    });
+                  },
                 ),
               ],
             ),
-
-            const SizedBox(width: 48),
-
-            // Search bar
-            Expanded(
-              child: Container(
-                constraints: const BoxConstraints(maxWidth: 480),
-                child: CompositedTransformTarget(
-                  link: _searchFieldLink,
-                  child: DesktopSearchBar(
-                    controller: _searchController,
-                    hintText: l10n.mapSearchHint,
-                    onChanged: _handleSearchChange,
-                    onSubmitted: _handleSearchSubmit,
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(width: 24),
-
-            // Filter chips
-            Row(
-              children: _filterOptions.map((filter) {
-                final isActive = _selectedFilter == filter;
-                return Padding(
-                  padding: const EdgeInsets.only(left: 8),
-                  child: ChoiceChip(
-                    label: Text(_getFilterLabel(filter)),
-                    selected: isActive,
-                    onSelected: (selected) {
-                      setState(() => _selectedFilter = filter);
-                    },
-                    selectedColor: AppColorUtils.tealAccent,
-                    labelStyle: GoogleFonts.inter(
-                      fontSize: 13,
-                      fontWeight:
-                          isActive ? FontWeight.w600 : FontWeight.normal,
-                      color: isActive
-                          ? Colors.white
-                          : Theme.of(context).colorScheme.onSurface,
-                    ),
-                    backgroundColor:
-                        Theme.of(context).colorScheme.primaryContainer,
-                    side: BorderSide.none,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-
-            const SizedBox(width: 16),
-
-            // Filters button
-            IconButton(
-              onPressed: () {
-                setState(() {
-                  _showFiltersPanel = !_showFiltersPanel;
-                  _selectedArtwork = null;
-                  _selectedExhibition = null;
-                });
-              },
-              icon: Icon(
-                _showFiltersPanel ? Icons.close : Icons.tune,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-              style: IconButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -540,6 +717,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final trimmedQuery = _searchQuery.trim();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final glassTint = scheme.surface.withValues(alpha: isDark ? 0.22 : 0.26);
     if (!_isFetchingSearch &&
         _searchSuggestions.isEmpty &&
         trimmedQuery.length < 2) {
@@ -556,92 +735,89 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             maxWidth: 520,
             maxHeight: 360,
           ),
-          child: Material(
-            elevation: 12,
+          child: LiquidGlassPanel(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            margin: EdgeInsets.zero,
             borderRadius: BorderRadius.circular(12),
-            color: scheme.surface,
-            shadowColor: AppColorUtils.tealAccent.withValues(alpha: 0.15),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Builder(
-                builder: (context) {
-                  if (trimmedQuery.length < 2) {
-                    return Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Text(
-                        l10n.mapSearchMinCharsHint,
-                        style: GoogleFonts.inter(
-                          color: scheme.onSurface.withValues(alpha: 0.6),
-                        ),
+            blurSigma: KubusGlassEffects.blurSigmaLight,
+            backgroundColor: glassTint,
+            child: Builder(
+              builder: (context) {
+                if (trimmedQuery.length < 2) {
+                  return Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      l10n.mapSearchMinCharsHint,
+                      style: GoogleFonts.inter(
+                        color: scheme.onSurface.withValues(alpha: 0.6),
                       ),
-                    );
-                  }
-
-                  if (_isFetchingSearch) {
-                    return const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Center(child: CircularProgressIndicator()),
-                    );
-                  }
-
-                  if (_searchSuggestions.isEmpty) {
-                    return Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.search_off,
-                            color: scheme.onSurface.withValues(alpha: 0.4),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            l10n.commonNoResultsFound,
-                            style: GoogleFonts.inter(
-                              color: scheme.onSurface.withValues(alpha: 0.6),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-
-                  return ListView.separated(
-                    shrinkWrap: true,
-                    itemCount: _searchSuggestions.length,
-                    separatorBuilder: (_, __) => Divider(
-                      height: 1,
-                      color: scheme.outlineVariant,
                     ),
-                    itemBuilder: (context, index) {
-                      final suggestion = _searchSuggestions[index];
-                      return ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor:
-                              AppColorUtils.tealAccent.withValues(alpha: 0.1),
-                          child: Icon(
-                            suggestion.icon,
-                            color: AppColorUtils.tealAccent,
+                  );
+                }
+
+                if (_isFetchingSearch) {
+                  return const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+
+                if (_searchSuggestions.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.search_off,
+                          color: scheme.onSurface.withValues(alpha: 0.4),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          l10n.commonNoResultsFound,
+                          style: GoogleFonts.inter(
+                            color: scheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
-                        title: Text(
-                          suggestion.label,
-                          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-                        ),
-                        subtitle: suggestion.subtitle == null
-                            ? null
-                            : Text(
-                                suggestion.subtitle!,
-                                style: GoogleFonts.inter(
-                                  color:
-                                      scheme.onSurface.withValues(alpha: 0.6),
-                                ),
-                              ),
-                        onTap: () => _handleSuggestionTap(suggestion),
-                      );
-                    },
+                      ],
+                    ),
                   );
-                },
-              ),
+                }
+
+                return ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: _searchSuggestions.length,
+                  separatorBuilder: (_, __) => Divider(
+                    height: 1,
+                    color: scheme.outlineVariant,
+                  ),
+                  itemBuilder: (context, index) {
+                    final suggestion = _searchSuggestions[index];
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor:
+                            themeProvider.accentColor.withValues(alpha: 0.10),
+                        child: Icon(
+                          suggestion.icon,
+                          color: themeProvider.accentColor,
+                        ),
+                      ),
+                      title: Text(
+                        suggestion.label,
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                      ),
+                      subtitle: suggestion.subtitle == null
+                          ? null
+                          : Text(
+                              suggestion.subtitle!,
+                              style: GoogleFonts.inter(
+                                color: scheme.onSurface.withValues(alpha: 0.6),
+                              ),
+                            ),
+                      onTap: () => _handleSuggestionTap(suggestion),
+                    );
+                  },
+                );
+              },
             ),
           ),
         ),
@@ -653,25 +829,23 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       ThemeProvider themeProvider, AppAnimationTheme animationTheme) {
     final artwork = _selectedArtwork!;
     final scheme = Theme.of(context).colorScheme;
+    final accent = themeProvider.accentColor;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final coverUrl = ArtworkMediaResolver.resolveCover(
       artwork: artwork,
       metadata: _activeMarker?.metadata ?? artwork.metadata,
     );
     final distanceLabel = _formatDistanceToArtwork(artwork);
 
-    return Container(
+    final artworkProvider = context.read<ArtworkProvider>();
+
+    return LiquidGlassPanel(
       margin: const EdgeInsets.only(left: 24),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      padding: EdgeInsets.zero,
+      borderRadius: BorderRadius.circular(20),
+      blurSigma: KubusGlassEffects.blurSigmaLight,
+      backgroundColor: scheme.surface.withValues(alpha: isDark ? 0.20 : 0.14),
+      showBorder: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -691,8 +865,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              AppColorUtils.tealAccent,
-                              AppColorUtils.tealAccent.withValues(alpha: 0.7),
+                              accent,
+                              accent.withValues(alpha: 0.7),
                             ],
                           ),
                         ),
@@ -709,8 +883,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
-                            AppColorUtils.tealAccent,
-                            AppColorUtils.tealAccent.withValues(alpha: 0.7),
+                            accent,
+                            accent.withValues(alpha: 0.7),
                           ],
                         ),
                       ),
@@ -734,14 +908,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   Positioned(
                     top: 12,
                     right: 12,
-                    child: IconButton(
-                      onPressed: () {
+                    child: _buildGlassIconButton(
+                      icon: Icons.close,
+                      themeProvider: themeProvider,
+                      iconColor: Colors.white,
+                      tooltip: AppLocalizations.of(context)!.commonClose,
+                      onTap: () {
                         setState(() => _selectedArtwork = null);
                       },
-                      icon: const Icon(Icons.close, color: Colors.white),
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.black.withValues(alpha: 0.2),
-                      ),
                     ),
                   ),
                   if (artwork.arEnabled)
@@ -761,7 +935,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                             Icon(
                               Icons.view_in_ar,
                               size: 16,
-                              color: AppColorUtils.tealAccent,
+                              color: accent,
                             ),
                             const SizedBox(width: 6),
                             Text(
@@ -769,7 +943,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                               style: GoogleFonts.inter(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
-                                color: AppColorUtils.tealAccent,
+                                color: accent,
                               ),
                             ),
                           ],
@@ -847,77 +1021,136 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   const SizedBox(height: 24),
 
                   // Action buttons
-                  Row(
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
                     children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () async {
-                            final modelUrl = artwork.model3DURL ??
-                                (artwork.model3DCID != null
-                                    ? 'ipfs://${artwork.model3DCID}'
-                                    : null);
-                            if (modelUrl == null) {
-                              final l10n = AppLocalizations.of(context)!;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(l10n.desktopMapNoArAssetToast),
-                                  behavior: SnackBarBehavior.floating,
-                                ),
-                              );
-                              return;
-                            }
-                            unawaited(ARService().launchARViewer(
-                              modelUrl: modelUrl,
-                              title: artwork.title,
-                            ));
+                      if (artwork.arEnabled)
+                        SizedBox(
+                          width: 170,
+                          child: ElevatedButton.icon(
+                            onPressed: () async {
+                              final messenger = ScaffoldMessenger.of(context);
+                              final modelUrl = artwork.model3DURL ??
+                                  (artwork.model3DCID != null
+                                      ? 'ipfs://${artwork.model3DCID}'
+                                      : null);
+                              if (modelUrl == null) {
+                                final l10n = AppLocalizations.of(context)!;
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    content:
+                                        Text(l10n.desktopMapNoArAssetToast),
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                                return;
+                              }
+                              unawaited(ARService().launchARViewer(
+                                modelUrl: modelUrl,
+                                title: artwork.title,
+                              ));
+                            },
+                            icon: const Icon(Icons.view_in_ar, size: 20),
+                            label: Text(
+                                AppLocalizations.of(context)!.commonViewInAr),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: accent,
+                              foregroundColor: AppColorUtils.contrastText(accent),
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 14, horizontal: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+
+                      SizedBox(
+                        width: 170,
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            unawaited(openArtwork(context, artwork.id,
+                                source: 'desktop_map'));
                           },
-                          icon: const Icon(Icons.view_in_ar, size: 20),
+                          icon: const Icon(Icons.info_outline, size: 18),
                           label: Text(
-                              AppLocalizations.of(context)!.commonViewInAr),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColorUtils.tealAccent,
-                            foregroundColor: Colors.white,
+                              AppLocalizations.of(context)!.commonViewDetails),
+                          style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(
                                 vertical: 14, horizontal: 12),
+                            side: BorderSide(
+                              color: accent.withValues(alpha: 0.75),
+                              width: 1.2,
+                            ),
+                            foregroundColor: accent,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        onPressed: () {
-                          unawaited(openArtwork(context, artwork.id, source: 'desktop_map'));
-                        },
-                        icon: const Icon(Icons.favorite_border, size: 20),
-                        style: IconButton.styleFrom(
-                          backgroundColor:
-                              Theme.of(context).colorScheme.primaryContainer,
-                          padding: const EdgeInsets.all(12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+
+                      SizedBox(
+                        width: 170,
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            unawaited(artworkProvider.toggleFavorite(artwork.id));
+                          },
+                          icon: Icon(
+                            artwork.isFavoriteByCurrentUser || artwork.isFavorite
+                                ? Icons.bookmark
+                                : Icons.bookmark_border,
+                            size: 18,
+                          ),
+                          label: Text(
+                            (artwork.isFavoriteByCurrentUser || artwork.isFavorite)
+                                ? AppLocalizations.of(context)!.commonSavedToast
+                                : AppLocalizations.of(context)!.commonSave,
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 14, horizontal: 12),
+                            side: BorderSide(
+                              color: accent.withValues(alpha: 0.55),
+                              width: 1.1,
+                            ),
+                            foregroundColor: scheme.onSurface,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        onPressed: () {
+
+                      _buildGlassIconButton(
+                        icon: artwork.isLikedByCurrentUser
+                            ? Icons.favorite
+                            : Icons.favorite_border,
+                        themeProvider: themeProvider,
+                        tooltip: artwork.isLikedByCurrentUser
+                            ? AppLocalizations.of(context)!.artworkDetailLiked
+                            : AppLocalizations.of(context)!.artworkDetailLike,
+                        isActive: artwork.isLikedByCurrentUser,
+                        activeIconColor: AppColorUtils.contrastText(accent),
+                        onTap: () {
+                          unawaited(artworkProvider.toggleLike(artwork.id));
+                        },
+                      ),
+                      _buildGlassIconButton(
+                        icon: Icons.share,
+                        themeProvider: themeProvider,
+                        tooltip: AppLocalizations.of(context)!.commonShare,
+                        onTap: () {
                           ShareService().showShareSheet(
                             context,
-                            target: ShareTarget.artwork(artworkId: artwork.id, title: artwork.title),
+                            target: ShareTarget.artwork(
+                              artworkId: artwork.id,
+                              title: artwork.title,
+                            ),
                             sourceScreen: 'desktop_map',
                           );
                         },
-                        icon: const Icon(Icons.share, size: 20),
-                        style: IconButton.styleFrom(
-                          backgroundColor:
-                              Theme.of(context).colorScheme.primaryContainer,
-                          padding: const EdgeInsets.all(12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
                       ),
                     ],
                   ),
@@ -938,7 +1171,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                         Text(AppLocalizations.of(context)!.commonGetDirections),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      side: BorderSide(color: AppColorUtils.tealAccent),
+                      side: BorderSide(color: accent),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -980,6 +1213,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final exhibitionAccent = AppColorUtils.exhibitionColor;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // Format date range
     String? dateRange;
@@ -999,19 +1233,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         : null;
     final coverUrl = MediaUrlResolver.resolve(exhibition.coverUrl);
 
-    return Container(
+    return LiquidGlassPanel(
       margin: const EdgeInsets.only(left: 24),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      padding: EdgeInsets.zero,
+      borderRadius: BorderRadius.circular(20),
+      blurSigma: KubusGlassEffects.blurSigmaLight,
+      backgroundColor: scheme.surface.withValues(alpha: isDark ? 0.20 : 0.14),
+      showBorder: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1074,14 +1302,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   Positioned(
                     top: 12,
                     right: 12,
-                    child: IconButton(
-                      onPressed: () {
+                    child: _buildGlassIconButton(
+                      icon: Icons.close,
+                      themeProvider: themeProvider,
+                      iconColor: Colors.white,
+                      tooltip: l10n.commonClose,
+                      onTap: () {
                         setState(() => _selectedExhibition = null);
                       },
-                      icon: const Icon(Icons.close, color: Colors.white),
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.black.withValues(alpha: 0.2),
-                      ),
                     ),
                   ),
                   // Exhibition badge
@@ -1282,54 +1510,50 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   Widget _buildFiltersPanel(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
-    return Container(
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    return LiquidGlassPanel(
       margin: const EdgeInsets.only(left: 24),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      padding: EdgeInsets.zero,
+      borderRadius: BorderRadius.circular(20),
+      blurSigma: KubusGlassEffects.blurSigmaLight,
+      backgroundColor: scheme.surface.withValues(alpha: isDark ? 0.20 : 0.14),
+      showBorder: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .outline
-                      .withValues(alpha: 0.1),
-                ),
-              ),
-            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 16, 16),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  l10n.mapFiltersTitle,
-                  style: GoogleFonts.inter(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
+                Expanded(
+                  child: Text(
+                    l10n.mapFiltersTitle,
+                    style: GoogleFonts.inter(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: scheme.onSurface,
+                    ),
                   ),
                 ),
-                IconButton(
-                  onPressed: () {
+                _buildGlassIconButton(
+                  icon: Icons.close,
+                  themeProvider: themeProvider,
+                  tooltip: l10n.commonClose,
+                  onTap: () {
                     setState(() => _showFiltersPanel = false);
                   },
-                  icon: const Icon(Icons.close),
                 ),
               ],
             ),
+          ),
+
+          Divider(
+            height: 1,
+            color: scheme.outline.withValues(alpha: 0.14),
           ),
 
           // Filter options
@@ -1360,22 +1584,25 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                           onChanged: (value) {
                             setState(() => _searchRadius = value);
                           },
-                          activeColor: AppColorUtils.tealAccent,
+                          activeColor: themeProvider.accentColor,
                         ),
                       ),
-                      Container(
+                      LiquidGlassPanel(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primaryContainer,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
+                        margin: EdgeInsets.zero,
+                        borderRadius: BorderRadius.circular(10),
+                        blurSigma: KubusGlassEffects.blurSigmaLight,
+                        backgroundColor:
+                            scheme.surface.withValues(alpha: isDark ? 0.16 : 0.12),
+                        showBorder: true,
                         child: Text(
                           l10n.commonDistanceKm(
                               _searchRadius.toInt().toString()),
                           style: GoogleFonts.inter(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
+                            color: scheme.onSurface,
                           ),
                         ),
                       ),
@@ -1397,15 +1624,31 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      _buildFilterChip(l10n.mapFilterAll, true, themeProvider),
-                      _buildFilterChip(l10n.desktopMapArtworkTypeArArt, false,
-                          themeProvider),
-                      _buildFilterChip(
-                          l10n.desktopMapArtworkTypeNfts, false, themeProvider),
-                      _buildFilterChip(l10n.desktopMapArtworkTypeModels3d,
-                          false, themeProvider),
-                      _buildFilterChip(l10n.desktopMapArtworkTypeSculptures,
-                          false, themeProvider),
+                      _buildTypeFilterChip(
+                        label: l10n.mapFilterAll,
+                        filterKey: 'all',
+                        themeProvider: themeProvider,
+                      ),
+                      _buildTypeFilterChip(
+                        label: l10n.desktopMapArtworkTypeArArt,
+                        filterKey: 'ar',
+                        themeProvider: themeProvider,
+                      ),
+                      _buildTypeFilterChip(
+                        label: l10n.desktopMapArtworkTypeNfts,
+                        filterKey: 'nfts',
+                        themeProvider: themeProvider,
+                      ),
+                      _buildTypeFilterChip(
+                        label: l10n.desktopMapArtworkTypeModels3d,
+                        filterKey: 'models3d',
+                        themeProvider: themeProvider,
+                      ),
+                      _buildTypeFilterChip(
+                        label: l10n.desktopMapArtworkTypeSculptures,
+                        filterKey: 'sculptures',
+                        themeProvider: themeProvider,
+                      ),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -1421,37 +1664,41 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   ),
                   const SizedBox(height: 12),
                   _buildSortOption(
-                      l10n.desktopMapSortDistance,
-                      _selectedSort == 'distance',
-                      Icons.near_me,
-                      themeProvider),
+                    label: l10n.desktopMapSortDistance,
+                    sortKey: 'distance',
+                    icon: Icons.near_me,
+                    themeProvider: themeProvider,
+                  ),
                   _buildSortOption(
-                      l10n.desktopMapSortPopularity,
-                      _selectedSort == 'popularity',
-                      Icons.trending_up,
-                      themeProvider),
-                  _buildSortOption(l10n.desktopMapSortNewest,
-                      _selectedSort == 'newest', Icons.schedule, themeProvider),
-                  _buildSortOption(l10n.desktopMapSortRating,
-                      _selectedSort == 'rating', Icons.star, themeProvider),
+                    label: l10n.desktopMapSortPopularity,
+                    sortKey: 'popularity',
+                    icon: Icons.trending_up,
+                    themeProvider: themeProvider,
+                  ),
+                  _buildSortOption(
+                    label: l10n.desktopMapSortNewest,
+                    sortKey: 'newest',
+                    icon: Icons.schedule,
+                    themeProvider: themeProvider,
+                  ),
+                  _buildSortOption(
+                    label: l10n.desktopMapSortRating,
+                    sortKey: 'rating',
+                    icon: Icons.star,
+                    themeProvider: themeProvider,
+                  ),
                 ],
               ),
             ),
           ),
 
           // Apply button
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .outline
-                      .withValues(alpha: 0.1),
-                ),
-              ),
-            ),
+          Divider(
+            height: 1,
+            color: scheme.outline.withValues(alpha: 0.14),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(20),
             child: Row(
               children: [
                 Expanded(
@@ -1459,7 +1706,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     onPressed: () {
                       setState(() {
                         _searchRadius = 5.0;
-                        _selectedFilter = 'all';
+                        _selectedFilter = 'nearby';
                         _selectedSort = 'distance';
                       });
                       _loadMarkers(force: true);
@@ -1481,7 +1728,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                       _loadMarkers(force: true);
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColorUtils.tealAccent,
+                      backgroundColor: themeProvider.accentColor,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
@@ -1499,80 +1746,85 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     );
   }
 
-  Widget _buildFilterChip(
-      String label, bool isSelected, ThemeProvider themeProvider) {
-    return FilterChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (selected) {
-        final normalized = label.toLowerCase();
-        final filterKey = normalized.contains('ar')
-            ? 'ar'
-            : normalized.contains('all')
-                ? 'all'
-                : _selectedFilter;
+  Widget _buildTypeFilterChip({
+    required String label,
+    required String filterKey,
+    required ThemeProvider themeProvider,
+  }) {
+    final isSelected = _selectedFilter == filterKey;
+    return _buildGlassChip(
+      label: label,
+      isSelected: isSelected,
+      themeProvider: themeProvider,
+      onTap: () {
         setState(() {
           _selectedFilter = filterKey;
         });
       },
-      selectedColor: AppColorUtils.tealAccent.withValues(alpha: 0.2),
-      checkmarkColor: AppColorUtils.tealAccent,
-      labelStyle: GoogleFonts.inter(
-        fontSize: 13,
-        color: isSelected
-            ? AppColorUtils.tealAccent
-            : Theme.of(context).colorScheme.onSurface,
-      ),
-      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-      side: BorderSide(
-        color: isSelected ? AppColorUtils.tealAccent : Colors.transparent,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
     );
   }
 
-  Widget _buildSortOption(String label, bool isSelected, IconData icon,
-      ThemeProvider themeProvider) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
+  Widget _buildSortOption({
+    required String label,
+    required String sortKey,
+    required IconData icon,
+    required ThemeProvider themeProvider,
+  }) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final accent = themeProvider.accentColor;
+    final isSelected = _selectedSort == sortKey;
+
+    final radius = BorderRadius.circular(12);
+    final idleTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.12);
+    final selectedTint = accent.withValues(alpha: isDark ? 0.12 : 0.14);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: AnimatedContainer(
+        duration: context.animationTheme.short,
+        curve: context.animationTheme.defaultCurve,
+        decoration: BoxDecoration(
+          borderRadius: radius,
+          border: Border.all(
+            color: isSelected
+                ? accent.withValues(alpha: 0.85)
+                : scheme.outline.withValues(alpha: 0.18),
+            width: isSelected ? 1.25 : 1,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: accent.withValues(alpha: 0.12),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : null,
+        ),
+        child: LiquidGlassPanel(
+          padding: EdgeInsets.zero,
+          margin: EdgeInsets.zero,
+          borderRadius: radius,
+          blurSigma: KubusGlassEffects.blurSigmaLight,
+          showBorder: false,
+          backgroundColor: isSelected ? selectedTint : idleTint,
           onTap: () {
             setState(() {
-              _selectedSort = label.toLowerCase();
+              _selectedSort = sortKey;
             });
           },
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
+          child: Padding(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? AppColorUtils.tealAccent.withValues(alpha: 0.1)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: isSelected
-                    ? AppColorUtils.tealAccent
-                    : Theme.of(context)
-                        .colorScheme
-                        .outline
-                        .withValues(alpha: 0.2),
-              ),
-            ),
             child: Row(
               children: [
                 Icon(
                   icon,
                   size: 20,
                   color: isSelected
-                      ? AppColorUtils.tealAccent
-                      : Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.6),
+                      ? accent
+                      : scheme.onSurface.withValues(alpha: 0.6),
                 ),
                 const SizedBox(width: 12),
                 Text(
@@ -1581,9 +1833,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     fontSize: 14,
                     fontWeight:
                         isSelected ? FontWeight.w600 : FontWeight.normal,
-                    color: isSelected
-                        ? AppColorUtils.tealAccent
-                        : Theme.of(context).colorScheme.onSurface,
+                    color: isSelected ? accent : scheme.onSurface,
                   ),
                 ),
                 const Spacer(),
@@ -1591,7 +1841,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   Icon(
                     Icons.check_circle,
                     size: 20,
-                    color: AppColorUtils.tealAccent,
+                    color: accent,
                   ),
               ],
             ),
@@ -1606,200 +1856,216 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     final scheme = Theme.of(context).colorScheme;
 
-    return Material(
-      color: scheme.surface,
-      elevation: 6,
+    final accent = themeProvider.accentColor;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return LiquidGlassPanel(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       borderRadius: BorderRadius.circular(14),
-      shadowColor: Colors.black.withValues(alpha: 0.18),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Zoom - / +
-            IconButton(
-              onPressed: () {
-                final nextZoom = (_effectiveZoom - 1).clamp(3.0, 18.0);
-                _moveCamera(_effectiveCenter, nextZoom);
-              },
-              tooltip: l10n.mapEmptyZoomOutAction,
-              icon: const Icon(Icons.remove),
+      blurSigma: KubusGlassEffects.blurSigmaLight,
+      backgroundColor: scheme.surface.withValues(alpha: isDark ? 0.18 : 0.14),
+      showBorder: true,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Nearby list (functions sidebar)
+          IconButton(
+            onPressed:
+                _isNearbyPanelOpen ? _closeNearbyArtPanel : _openNearbyArtPanel,
+            tooltip: _isNearbyPanelOpen
+                ? l10n.commonClose
+                : l10n.arNearbyArtworksTitle,
+            icon: Icon(
+              Icons.view_list,
+              color: _isNearbyPanelOpen ? accent : scheme.onSurface,
             ),
-            IconButton(
-              onPressed: () {
-                final nextZoom = (_effectiveZoom + 1).clamp(3.0, 18.0);
-                _moveCamera(_effectiveCenter, nextZoom);
-              },
-              tooltip: 'Zoom in',
-              icon: const Icon(Icons.add),
-            ),
-            Container(
-              width: 1,
-              height: 26,
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              color: scheme.outline.withValues(alpha: 0.22),
-            ),
+          ),
+          Container(
+            width: 1,
+            height: 26,
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            color: scheme.outline.withValues(alpha: 0.22),
+          ),
 
-            // Create marker
-            Material(
-              color: scheme.primary,
-              shape: const CircleBorder(),
-              elevation: 0,
-              child: IconButton(
-                onPressed: () {
-                  final target = _pendingMarkerLocation ?? _effectiveCenter;
-                  _startMarkerCreationFlow(position: target);
-                },
-                icon: const Icon(Icons.add_location_alt_outlined,
-                    color: Colors.white),
-                tooltip: l10n.mapCreateMarkerHereTooltip,
-              ),
-            ),
-            const SizedBox(width: 6),
+          // Zoom - / +
+          IconButton(
+            onPressed: () {
+              final nextZoom = (_effectiveZoom - 1).clamp(3.0, 18.0);
+              _moveCamera(_effectiveCenter, nextZoom);
+            },
+            tooltip: l10n.mapEmptyZoomOutAction,
+            icon: const Icon(Icons.remove),
+          ),
+          IconButton(
+            onPressed: () {
+              final nextZoom = (_effectiveZoom + 1).clamp(3.0, 18.0);
+              _moveCamera(_effectiveCenter, nextZoom);
+            },
+            tooltip: 'Zoom in',
+            icon: const Icon(Icons.add),
+          ),
+          Container(
+            width: 1,
+            height: 26,
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            color: scheme.outline.withValues(alpha: 0.22),
+          ),
 
-            // My location / follow
-            Container(
-              decoration: BoxDecoration(
-                color: _autoFollow
-                    ? AppColorUtils.tealAccent.withValues(alpha: 0.15)
-                    : scheme.surface,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: IconButton(
-                onPressed: () {
-                  setState(() => _autoFollow = true);
-                  _refreshUserLocation(animate: true);
-                  if (_userLocation == null) {
-                    _moveCamera(const LatLng(46.0569, 14.5058), 15.0);
-                  }
-                },
-                tooltip: l10n.mapCenterOnMeTooltip,
-                icon: Icon(
-                  Icons.my_location,
-                  color: _autoFollow ? Colors.white : AppColorUtils.tealAccent,
-                ),
-                color: _autoFollow ? AppColorUtils.tealAccent : null,
-              ),
-            ),
-          ],
-        ),
+          // Create marker
+          _buildGlassIconButton(
+            icon: Icons.add_location_alt_outlined,
+            themeProvider: themeProvider,
+            tooltip: l10n.mapCreateMarkerHereTooltip,
+            borderRadius: BorderRadius.circular(999),
+            activeTint: accent.withValues(alpha: isDark ? 0.24 : 0.20),
+            activeIconColor: AppColorUtils.contrastText(accent),
+            isActive: true,
+            onTap: () {
+              final target = _pendingMarkerLocation ?? _effectiveCenter;
+              _startMarkerCreationFlow(position: target);
+            },
+          ),
+          const SizedBox(width: 6),
+
+          // My location / follow
+          _buildGlassIconButton(
+            icon: Icons.my_location,
+            themeProvider: themeProvider,
+            tooltip: l10n.mapCenterOnMeTooltip,
+            isActive: _autoFollow,
+            activeIconColor: AppColorUtils.contrastText(accent),
+            onTap: () {
+              setState(() => _autoFollow = true);
+              _refreshUserLocation(animate: true);
+              if (_userLocation == null) {
+                _moveCamera(const LatLng(46.0569, 14.5058), 15.0);
+              }
+            },
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildBottomInfoBar(ThemeProvider themeProvider) {
-    return Consumer<ArtworkProvider>(
-      builder: (context, artworkProvider, _) {
-        final artworks = _getFilteredArtworks(artworkProvider.artworks);
-        final displayArtworks = artworks.take(5).toList();
+  Widget _buildNearbyArtSidebar(
+      ThemeProvider themeProvider, List<Artwork> artworks) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final accent = themeProvider.accentColor;
 
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.auto_awesome,
-                      color: AppColorUtils.tealAccent, size: 18),
-                  const SizedBox(width: 8),
-                  Text(
-                    AppLocalizations.of(context)!.arNearbyArtworksTitle,
+    final basePosition = _userLocation ?? _effectiveCenter;
+    final sorted = List<Artwork>.of(artworks)
+      ..sort((a, b) {
+        final da = _calculateDistance(basePosition, a.position);
+        final db = _calculateDistance(basePosition, b.position);
+        return da.compareTo(db);
+      });
+
+    return SafeArea(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+            child: Row(
+              children: [
+                Icon(Icons.auto_awesome, color: accent, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    l10n.arNearbyArtworksTitle,
                     style: GoogleFonts.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: scheme.onSurface,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const Spacer(),
-                  if (artworks.isNotEmpty)
-                    IconButton(
-                      tooltip: AppLocalizations.of(context)!.commonViewAll,
-                      icon: const Icon(Icons.arrow_forward, size: 16),
-                      onPressed: () => _showArtworksList(context, artworks),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      iconSize: 16,
-                    ),
-                ],
+                ),
+                IconButton(
+                  tooltip: l10n.commonClose,
+                  onPressed: _closeNearbyArtPanel,
+                  icon: Icon(Icons.close, color: scheme.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Text(
+              '${l10n.mapNearbyRadiusTitle}: ${_searchRadius.toStringAsFixed(1)} km',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: scheme.onSurfaceVariant,
               ),
-              const SizedBox(height: 8),
-              if (displayArtworks.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: Center(
+            ),
+          ),
+          Expanded(
+            child: sorted.isEmpty
+                ? Center(
                     child: Text(
-                      AppLocalizations.of(context)!.mapEmptyNoArtworksTitle,
+                      l10n.mapEmptyNoArtworksTitle,
                       style: GoogleFonts.inter(
                         fontSize: 13,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.6),
+                        color: scheme.onSurface.withValues(alpha: 0.65),
                       ),
                     ),
-                  ),
-                )
-              else
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: displayArtworks.take(10).map((artwork) {
-                    final cover =
-                        ArtworkMediaResolver.resolveCover(artwork: artwork);
-                    final distance = _userLocation != null
-                        ? _calculateDistance(_userLocation!, artwork.position)
-                        : null;
-                    final distanceText =
-                        distance != null ? _formatDistance(distance) : null;
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                    itemCount: sorted.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    itemBuilder: (context, index) {
+                      final artwork = sorted[index];
+                      final cover =
+                          ArtworkMediaResolver.resolveCover(artwork: artwork);
+                      final meters =
+                          _calculateDistance(basePosition, artwork.position);
+                      final distanceText = _formatDistance(meters);
 
-                    return SizedBox(
-                      width: (380 - 32 - 10) /
-                          2, // Half panel width minus padding and spacing
-                      child: Material(
-                        color: Theme.of(context).colorScheme.surface,
-                        borderRadius: BorderRadius.circular(8),
-                        elevation: 1,
-                        child: InkWell(
-                          onTap: () {
-                            // Find the corresponding marker for this artwork
-                            final marker = _artMarkers.firstWhere(
-                              (m) => m.artworkId == artwork.id,
-                              orElse: () => _artMarkers.first,
-                            );
-                            // Center on marker and show floating card only
-                            _moveCamera(artwork.position,
-                                math.max(_effectiveZoom, 15.0));
-                            setState(() => _activeMarker = marker);
-                          },
-                          borderRadius: BorderRadius.circular(8),
-                          child: Padding(
-                            padding: const EdgeInsets.all(8),
-                            child: Column(
+                      return LiquidGlassPanel(
+                        padding: const EdgeInsets.all(10),
+                        borderRadius: BorderRadius.circular(14),
+                        showBorder: true,
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () {
+                              ArtMarker? marker;
+                              for (final m in _artMarkers) {
+                                if (m.artworkId == artwork.id) {
+                                  marker = m;
+                                  break;
+                                }
+                              }
+
+                              _moveCamera(artwork.position,
+                                  math.max(_effectiveZoom, 15.0));
+
+                              if (marker != null) {
+                                setState(() => _activeMarker = marker);
+                              } else {
+                                unawaited(_selectArtwork(
+                                  artwork,
+                                  focusPosition: artwork.position,
+                                ));
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(14),
+                            child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                // Thumbnail with AR badge
-                                Stack(
+                              SizedBox(
+                                width: 88,
+                                child: Stack(
                                   children: [
                                     _buildArtworkThumbnail(
                                       cover,
-                                      width: double.infinity,
-                                      height: 80,
-                                      borderRadius: 6,
-                                      iconSize: 28,
+                                      width: 88,
+                                      height: 66,
+                                      borderRadius: 10,
+                                      iconSize: 24,
                                     ),
                                     if (artwork.arMarkerId != null)
                                       Positioned(
@@ -1808,9 +2074,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                                         child: Container(
                                           padding: const EdgeInsets.all(4),
                                           decoration: BoxDecoration(
-                                            color: AppColorUtils.tealAccent,
+                                            color: accent,
                                             borderRadius:
-                                                BorderRadius.circular(4),
+                                                BorderRadius.circular(6),
                                           ),
                                           child: const Icon(
                                             Icons.view_in_ar,
@@ -1821,115 +2087,78 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                                       ),
                                   ],
                                 ),
-                                const SizedBox(height: 6),
-                                // Title
-                                Text(
-                                  artwork.title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color:
-                                        Theme.of(context).colorScheme.onSurface,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                // Artist
-                                Text(
-                                  artwork.artist.isNotEmpty
-                                      ? artwork.artist
-                                      : AppLocalizations.of(context)!
-                                          .commonUnknown,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 10,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
-                                  ),
-                                ),
-                                if (distanceText != null) ...[
-                                  const SizedBox(height: 4),
-                                  // Distance badge
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: AppColorUtils.tealAccent
-                                          .withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(3),
-                                    ),
-                                    child: Text(
-                                      distanceText,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      artwork.title,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                       style: GoogleFonts.inter(
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w500,
-                                        color: AppColorUtils.tealAccent,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: scheme.onSurface,
                                       ),
                                     ),
-                                  ),
-                                ],
-                              ],
-                            ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      artwork.artist.isNotEmpty
+                                          ? artwork.artist
+                                          : l10n.commonUnknown,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        color: scheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color:
+                                                accent.withValues(alpha: 0.12),
+                                            borderRadius:
+                                                BorderRadius.circular(999),
+                                          ),
+                                          child: Text(
+                                            distanceText,
+                                            style: GoogleFonts.inter(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                              color: accent,
+                                            ),
+                                          ),
+                                        ),
+                                        const Spacer(),
+                                        Text(
+                                          '${artwork.rewards} KUB8',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: scheme.onSurfaceVariant,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
                     );
-                  }).toList(),
-                ),
-            ],
+                    },
+                  ),
           ),
-        );
-      },
-    );
-  }
-
-  void _showArtworksList(BuildContext context, List<Artwork> artworks) {
-    if (artworks.isEmpty) return;
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.5,
-        minChildSize: 0.3,
-        maxChildSize: 0.9,
-        builder: (context, controller) {
-          return ListView.builder(
-            controller: controller,
-            itemCount: artworks.length,
-            itemBuilder: (context, index) {
-              final artwork = artworks[index];
-              return ListTile(
-                leading: Icon(Icons.auto_awesome,
-                    color: Theme.of(context).colorScheme.primary),
-                title: Text(artwork.title,
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-                subtitle: Text(
-                  artwork.artist.isNotEmpty
-                      ? artwork.artist
-                      : AppLocalizations.of(context)!.commonUnknown,
-                  style: GoogleFonts.inter(fontSize: 12),
-                ),
-                trailing: Text('${artwork.rewards} KUB8',
-                    style: GoogleFonts.inter(fontSize: 12)),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  unawaited(_selectArtwork(
-                    artwork,
-                    focusPosition: artwork.position,
-                  ));
-                },
-              );
-            },
-          );
-        },
+        ],
       ),
     );
   }
@@ -2220,6 +2449,43 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       case 'ar':
         filtered = filtered.where((artwork) => artwork.arEnabled).toList();
         break;
+      case 'nfts':
+        filtered = filtered.where((artwork) {
+          final category = artwork.category.toLowerCase();
+          final tags = artwork.tags.map((t) => t.toLowerCase());
+          final metaType = (artwork.metadata?['type'] ??
+                  artwork.metadata?['assetType'] ??
+                  artwork.metadata?['kind'])
+              ?.toString()
+              .toLowerCase();
+
+          return category.contains('nft') ||
+              category.contains('token') ||
+              tags.any((t) => t.contains('nft') || t.contains('token')) ||
+              (metaType?.contains('nft') ?? false);
+        }).toList();
+        break;
+      case 'models3d':
+        filtered = filtered.where((artwork) {
+          final category = artwork.category.toLowerCase();
+          final tags = artwork.tags.map((t) => t.toLowerCase());
+          final has3dModel =
+              artwork.model3DCID != null || artwork.model3DURL != null;
+
+          return has3dModel ||
+              category.contains('3d') ||
+              category.contains('model') ||
+              tags.any((t) => t.contains('3d') || t.contains('model'));
+        }).toList();
+        break;
+      case 'sculptures':
+        filtered = filtered.where((artwork) {
+          final category = artwork.category.toLowerCase();
+          final tags = artwork.tags.map((t) => t.toLowerCase());
+          return category.contains('sculpt') ||
+              tags.any((t) => t.contains('sculpt') || t.contains('statue'));
+        }).toList();
+        break;
       case 'favorites':
         filtered = filtered
             .where((artwork) =>
@@ -2334,6 +2600,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   Marker _buildPendingMarker(LatLng point, ThemeProvider themeProvider) {
+    final accent = themeProvider.accentColor;
     return Marker(
       point: point,
       width: 42,
@@ -2341,12 +2608,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
-          color: AppColorUtils.tealAccent.withValues(alpha: 0.85),
+          color: accent.withValues(alpha: 0.85),
           shape: BoxShape.rectangle,
           border: Border.all(color: Colors.white, width: 3),
           boxShadow: [
             BoxShadow(
-              color: AppColorUtils.tealAccent.withValues(alpha: 0.35),
+              color: accent.withValues(alpha: 0.35),
               blurRadius: 10,
               spreadRadius: 2,
             ),
@@ -2591,202 +2858,227 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           child: Container(
             width: 240,
             margin: const EdgeInsets.only(bottom: 48),
-            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: scheme.surface.withValues(alpha: 0.96),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(color: baseColor.withValues(alpha: 0.35)),
               boxShadow: [
                 BoxShadow(
-                  color: baseColor.withValues(alpha: 0.28),
-                  blurRadius: 16,
-                  offset: const Offset(0, 10),
+                  color: baseColor.withValues(alpha: 0.24),
+                  blurRadius: 18,
+                  offset: const Offset(0, 12),
                 ),
               ],
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header row: Title + distance + close button
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (canPresentExhibition) ...[
-                            Text(
-                              'Exhibition',
-                              style: GoogleFonts.inter(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                color: baseColor,
-                                height: 1.0,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                          ],
-                          Text(
-                            displayTitle,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.inter(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 14,
-                              height: 1.2,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    if (distanceText != null) ...[
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: baseColor.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
+            child: LiquidGlassPanel(
+              padding: const EdgeInsets.all(12),
+              borderRadius: BorderRadius.circular(16),
+              showBorder: false,
+              backgroundColor: scheme.surface.withValues(alpha: 0.45),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header row: Title + distance + close button
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(Icons.near_me, size: 10, color: baseColor),
-                            const SizedBox(width: 3),
+                            if (canPresentExhibition) ...[
+                              Text(
+                                'Exhibition',
+                                style: GoogleFonts.inter(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: baseColor,
+                                  height: 1.0,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                            ],
                             Text(
-                              distanceText,
+                              displayTitle,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.inter(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: baseColor,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14,
+                                height: 1.2,
                               ),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 8),
+                      if (distanceText != null) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: baseColor.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.near_me, size: 10, color: baseColor),
+                              const SizedBox(width: 3),
+                              Text(
+                                distanceText,
+                                style: GoogleFonts.inter(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: baseColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                      ],
+                      InkWell(
+                        onTap: () => setState(() => _activeMarker = null),
+                        borderRadius: BorderRadius.circular(4),
+                        child: Icon(
+                          Icons.close,
+                          size: 18,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
                     ],
-                    InkWell(
-                      onTap: () => setState(() => _activeMarker = null),
-                      borderRadius: BorderRadius.circular(4),
-                      child: Icon(Icons.close,
-                          size: 18, color: scheme.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Image
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: SizedBox(
+                      height: 90,
+                      width: double.infinity,
+                      child: imageUrl != null
+                          ? Image.network(
+                              imageUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) =>
+                                  _markerImageFallback(baseColor, scheme, marker),
+                              loadingBuilder: (context, child, progress) {
+                                if (progress == null) return child;
+                                return Container(
+                                  color: baseColor.withValues(alpha: 0.12),
+                                  child: const Center(
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
+                                  ),
+                                );
+                              },
+                            )
+                          : _markerImageFallback(baseColor, scheme, marker),
+                    ),
+                  ),
+
+                  // Description (only if available)
+                  if (description.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      description.length > 180
+                          ? '${description.substring(0, 180)}...'
+                          : description,
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: scheme.onSurfaceVariant,
+                        height: 1.4,
+                      ),
                     ),
                   ],
-                ),
-                const SizedBox(height: 10),
-                // Image
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: SizedBox(
-                    height: 90,
+
+                  // Metadata chips
+                  if (showChips) ...[
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        if (canPresentExhibition)
+                          _attendanceProofChip(scheme, baseColor),
+                        if (artwork != null &&
+                            artwork.category.isNotEmpty &&
+                            artwork.category != 'General')
+                          _compactChip(
+                            scheme,
+                            Icons.palette,
+                            artwork.category,
+                            baseColor,
+                          ),
+                        if (marker.metadata?['subjectCategory'] != null ||
+                            marker.metadata?['subject_category'] != null)
+                          _compactChip(
+                            scheme,
+                            Icons.category_outlined,
+                            (marker.metadata!['subjectCategory'] ??
+                                    marker.metadata!['subject_category'])
+                                .toString(),
+                            baseColor,
+                          ),
+                        if (marker.metadata?['locationName'] != null ||
+                            marker.metadata?['location'] != null)
+                          _compactChip(
+                            scheme,
+                            Icons.place_outlined,
+                            (marker.metadata!['locationName'] ??
+                                    marker.metadata!['location'])
+                                .toString(),
+                            baseColor,
+                          ),
+                        if (artwork != null && artwork.rewards > 0)
+                          _compactChip(
+                            scheme,
+                            Icons.card_giftcard,
+                            '+${artwork.rewards}',
+                            baseColor,
+                          ),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 10),
+
+                  // Action button
+                  SizedBox(
                     width: double.infinity,
-                    child: imageUrl != null
-                        ? Image.network(
-                            imageUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
-                                _markerImageFallback(baseColor, scheme, marker),
-                            loadingBuilder: (context, child, progress) {
-                              if (progress == null) return child;
-                              return Container(
-                                color: baseColor.withValues(alpha: 0.12),
-                                child: const Center(
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2),
-                                ),
-                              );
-                            },
-                          )
-                        : _markerImageFallback(baseColor, scheme, marker),
-                  ),
-                ),
-                // Description (only if available)
-                if (description.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  Text(
-                    description.length > 180
-                        ? '${description.substring(0, 180)}...'
-                        : description,
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      color: scheme.onSurfaceVariant,
-                      height: 1.4,
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: baseColor,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                      ),
+                      onPressed: canPresentExhibition
+                          ? () => _openExhibitionFromMarker(
+                              marker, primaryExhibition, artwork)
+                          : () => _openMarkerDetail(marker, artwork),
+                      icon: Icon(
+                        canPresentExhibition
+                            ? Icons.museum_outlined
+                            : Icons.arrow_forward,
+                        size: 16,
+                      ),
+                      label: Text(
+                        canPresentExhibition
+                            ? 'Open exhibition'
+                            : l10n.commonViewDetails,
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
+                      ),
                     ),
                   ),
                 ],
-                // Metadata chips
-                if (showChips) ...[
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: [
-                      if (canPresentExhibition)
-                        _attendanceProofChip(scheme, baseColor),
-                      if (artwork != null &&
-                          artwork.category.isNotEmpty &&
-                          artwork.category != 'General')
-                        _compactChip(
-                            scheme, Icons.palette, artwork.category, baseColor),
-                      if (marker.metadata?['subjectCategory'] != null ||
-                          marker.metadata?['subject_category'] != null)
-                        _compactChip(
-                          scheme,
-                          Icons.category_outlined,
-                          (marker.metadata!['subjectCategory'] ??
-                                  marker.metadata!['subject_category'])
-                              .toString(),
-                          baseColor,
-                        ),
-                      if (marker.metadata?['locationName'] != null ||
-                          marker.metadata?['location'] != null)
-                        _compactChip(
-                          scheme,
-                          Icons.place_outlined,
-                          (marker.metadata!['locationName'] ??
-                                  marker.metadata!['location'])
-                              .toString(),
-                          baseColor,
-                        ),
-                      if (artwork != null && artwork.rewards > 0)
-                        _compactChip(scheme, Icons.card_giftcard,
-                            '+${artwork.rewards}', baseColor),
-                    ],
-                  ),
-                ],
-                const SizedBox(height: 10),
-                // Action button
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: baseColor,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
-                    ),
-                    onPressed: canPresentExhibition
-                        ? () => _openExhibitionFromMarker(
-                            marker, primaryExhibition, artwork)
-                        : () => _openMarkerDetail(marker, artwork),
-                    icon: Icon(
-                      canPresentExhibition
-                          ? Icons.museum_outlined
-                          : Icons.arrow_forward,
-                      size: 16,
-                    ),
-                    label: Text(
-                      canPresentExhibition
-                          ? 'Open exhibition'
-                          : l10n.commonViewDetails,
-                      style: GoogleFonts.inter(
-                          fontWeight: FontWeight.w600, fontSize: 12),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),

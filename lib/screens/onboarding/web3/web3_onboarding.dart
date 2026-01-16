@@ -7,6 +7,7 @@ import '../../../services/onboarding_state_service.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../widgets/gradient_icon_card.dart';
+import '../../../widgets/glass_components.dart';
 import '../../desktop/desktop_shell.dart';
 import '../../desktop/onboarding/desktop_web3_onboarding.dart' show DesktopWeb3OnboardingScreen, Web3OnboardingPage;
 
@@ -135,39 +136,64 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
       });
     }
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SafeArea(
-        child: AnimatedBuilder(
-          animation: _animationController,
-          builder: (context, child) {
-            return FadeTransition(
-              opacity: _fadeAnimation,
-              child: SlideTransition(
-                position: _slideAnimation,
-                child: Column(
-                  children: [
-                    _buildHeader(),
-                    Expanded(
-                      child: PageView.builder(
-                        controller: _pageController,
-                        onPageChanged: (index) {
-                          setState(() {
-                            _currentPage = index;
-                          });
-                        },
-                        itemCount: widget.pages.length,
-                        itemBuilder: (context, index) {
-                          return _buildPage(widget.pages[index]);
-                        },
+    final fallbackStart = Theme.of(context).colorScheme.primary;
+    final fallbackEnd = Provider.of<ThemeProvider>(context).accentColor;
+    final currentPage = widget.pages.isEmpty
+        ? null
+        : widget.pages[_currentPage.clamp(0, widget.pages.length - 1)];
+    final start = (currentPage?.gradientColors.isNotEmpty ?? false)
+        ? currentPage!.gradientColors.first
+        : fallbackStart;
+    final end = (currentPage?.gradientColors.length ?? 0) > 1
+        ? currentPage!.gradientColors[1]
+        : (currentPage?.gradientColors.isNotEmpty ?? false)
+            ? currentPage!.gradientColors.first
+            : fallbackEnd;
+
+    final bgStart = start.withValues(alpha: 0.55);
+    final bgEnd = end.withValues(alpha: 0.50);
+    final bgMid = (Color.lerp(bgStart, bgEnd, 0.55) ?? bgEnd)
+        .withValues(alpha: 0.52);
+    final bgColors = <Color>[bgStart, bgMid, bgEnd, bgStart];
+
+    return AnimatedGradientBackground(
+      duration: const Duration(seconds: 10),
+      intensity: 0.22,
+      colors: bgColors,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
+          child: AnimatedBuilder(
+            animation: _animationController,
+            builder: (context, child) {
+              return FadeTransition(
+                opacity: _fadeAnimation,
+                child: SlideTransition(
+                  position: _slideAnimation,
+                  child: Column(
+                    children: [
+                      _buildHeader(),
+                      Expanded(
+                        child: PageView.builder(
+                          controller: _pageController,
+                          onPageChanged: (index) {
+                            setState(() {
+                              _currentPage = index;
+                            });
+                          },
+                          itemCount: widget.pages.length,
+                          itemBuilder: (context, index) {
+                            return _buildPage(widget.pages[index]);
+                          },
+                        ),
                       ),
-                    ),
-                    _buildBottomNavigation(),
-                  ],
+                      _buildBottomNavigation(),
+                    ],
+                  ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );

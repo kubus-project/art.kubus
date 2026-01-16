@@ -13,6 +13,7 @@ import '../../config/config.dart';
 import '../../models/recent_activity.dart';
 import '../../utils/activity_navigation.dart';
 import '../../services/telemetry/telemetry_service.dart';
+import '../../utils/kubus_color_roles.dart';
 import 'desktop_home_screen.dart';
 import 'desktop_map_screen.dart';
 import 'community/desktop_community_screen.dart';
@@ -48,6 +49,11 @@ class DesktopShellScope extends InheritedWidget {
   final void Function(Widget screen) pushScreen;
   final VoidCallback popScreen;
   final void Function(String route) navigateToRoute;
+  final VoidCallback openNotifications;
+  final void Function(DesktopFunctionsPanel panel, {Widget? content})
+      openFunctionsPanel;
+  final void Function(Widget content) setFunctionsPanelContent;
+  final VoidCallback closeFunctionsPanel;
   final bool canPop;
 
   const DesktopShellScope({
@@ -55,6 +61,10 @@ class DesktopShellScope extends InheritedWidget {
     required this.pushScreen,
     required this.popScreen,
     required this.navigateToRoute,
+    required this.openNotifications,
+    required this.openFunctionsPanel,
+    required this.setFunctionsPanelContent,
+    required this.closeFunctionsPanel,
     required this.canPop,
     required super.child,
   });
@@ -67,6 +77,12 @@ class DesktopShellScope extends InheritedWidget {
   bool updateShouldNotify(DesktopShellScope oldWidget) {
     return canPop != oldWidget.canPop;
   }
+}
+
+enum DesktopFunctionsPanel {
+  none,
+  notifications,
+  exploreNearby,
 }
 
 /// Responsive breakpoints for layout switching
@@ -109,6 +125,9 @@ class _DesktopShellState extends State<DesktopShell>
   bool _isNavigationExpanded = true;
   late AnimationController _navExpandController;
   late Animation<double> _navExpandAnimation;
+
+  DesktopFunctionsPanel _functionsPanel = DesktopFunctionsPanel.none;
+  Widget? _functionsPanelContent;
 
   /// Stack of screens pushed via DesktopShellScope.pushScreen
   /// When empty, shows the route-based screen from _buildCurrentScreen
@@ -218,6 +237,12 @@ class _DesktopShellState extends State<DesktopShell>
 
   /// Push a screen onto the in-shell stack (stays within main content area)
   void _pushScreenToStack(Widget screen) {
+    // If we are leaving the Explore map surface, make sure the map-specific
+    // functions panel (Nearby) does not linger.
+    if (_activeRoute == '/explore' &&
+        _functionsPanel == DesktopFunctionsPanel.exploreNearby) {
+      _closeFunctionsPanel();
+    }
     setState(() {
       _screenStack.add(screen);
     });
@@ -236,6 +261,11 @@ class _DesktopShellState extends State<DesktopShell>
 
   /// Navigate to a specific route within the shell (clears screen stack)
   void _navigateToRoute(String route) {
+    final leavingExplore = _activeRoute == '/explore' && route != '/explore';
+    if (leavingExplore &&
+        _functionsPanel == DesktopFunctionsPanel.exploreNearby) {
+      _closeFunctionsPanel();
+    }
     setState(() {
       _activeRoute = route;
       _screenStack.clear();
@@ -254,6 +284,65 @@ class _DesktopShellState extends State<DesktopShell>
     }
   }
 
+  void _closeFunctionsPanel() {
+    if (_functionsPanel == DesktopFunctionsPanel.none) return;
+    setState(() {
+      _functionsPanel = DesktopFunctionsPanel.none;
+      _functionsPanelContent = null;
+    });
+    try {
+      context.read<RecentActivityProvider>().markAllReadLocally();
+    } catch (_) {}
+  }
+
+  Future<void> _toggleNotificationsPanel() async {
+    if (_functionsPanel == DesktopFunctionsPanel.notifications) {
+      _closeFunctionsPanel();
+      return;
+    }
+
+    final activityProvider = context.read<RecentActivityProvider>();
+    final notificationProvider = context.read<NotificationProvider>();
+
+    if (activityProvider.initialized) {
+      await activityProvider.refresh(force: true);
+    } else {
+      await activityProvider.initialize(force: true);
+    }
+
+    if (!mounted) return;
+    await notificationProvider.markViewed();
+    if (!mounted) return;
+
+    setState(() {
+      _functionsPanel = DesktopFunctionsPanel.notifications;
+      _functionsPanelContent = null;
+    });
+  }
+
+  void _openFunctionsPanel(DesktopFunctionsPanel panel, {Widget? content}) {
+    if (panel == DesktopFunctionsPanel.none) {
+      _closeFunctionsPanel();
+      return;
+    }
+
+    setState(() {
+      _functionsPanel = panel;
+      if (panel == DesktopFunctionsPanel.exploreNearby) {
+        _functionsPanelContent = content ?? _functionsPanelContent;
+      } else {
+        _functionsPanelContent = null;
+      }
+    });
+  }
+
+  void _setFunctionsPanelContent(Widget content) {
+    if (_functionsPanel != DesktopFunctionsPanel.exploreNearby) return;
+    setState(() {
+      _functionsPanelContent = content;
+    });
+  }
+
   void _onNavItemSelected(
       int index, List<DesktopNavItem> navItems, bool isSignedIn) {
     if (index < 0 || index >= navItems.length) return;
@@ -264,12 +353,86 @@ class _DesktopShellState extends State<DesktopShell>
       return;
     }
 
+    final leavingExplore = _activeRoute == '/explore' && item.route != '/explore';
+    if (leavingExplore &&
+        _functionsPanel == DesktopFunctionsPanel.exploreNearby) {
+      _closeFunctionsPanel();
+    }
+
     setState(() {
       _activeRoute = item.route;
       // Clear any pushed subscreens when navigating to a new main tab
       _screenStack.clear();
     });
     _syncTelemetry();
+  }
+
+  List<Color>? _backgroundColorsForRoute(BuildContext context, String route) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final scheme = theme.colorScheme;
+    final roles = KubusColorRoles.of(context);
+    final themeProvider = context.read<ThemeProvider>();
+
+    Color? accent;
+    switch (route) {
+      case '/artist-studio':
+        accent = roles.web3ArtistStudioAccent;
+        break;
+      case '/governance':
+        accent = roles.web3DaoAccent;
+        break;
+      case '/institution':
+        accent = roles.web3InstitutionAccent;
+        break;
+      case '/marketplace':
+        accent = roles.web3MarketplaceAccent;
+        break;
+      case '/community':
+        accent = themeProvider.accentColor;
+        break;
+      case _walletRoute:
+        accent = scheme.primary;
+        break;
+      case _web3EntryRoute:
+        accent = scheme.secondary;
+        break;
+      default:
+        accent = null;
+        break;
+    }
+
+    if (accent == null) return null;
+    return _blendAccentIntoAnimatedBase(
+      base: isDark
+          ? KubusGradients.animatedDarkColors
+          : KubusGradients.animatedLightColors,
+      accent: accent,
+      isDark: isDark,
+    );
+  }
+
+  List<Color> _blendAccentIntoAnimatedBase({
+    required List<Color> base,
+    required Color accent,
+    required bool isDark,
+  }) {
+    if (base.isEmpty) return <Color>[accent];
+    if (base.length == 1) return <Color>[base.first, accent];
+
+    // Blend factors tuned to keep the background subtle while still matching
+    // the screen's accent.
+    final f1 = isDark ? 0.16 : 0.10;
+    final f2 = isDark ? 0.22 : 0.14;
+    final f3 = isDark ? 0.14 : 0.10;
+
+    Color lerp(Color a, Color b, double t) => Color.lerp(a, b, t) ?? b;
+
+    final c0 = base[0];
+    final c1 = lerp(base.length > 1 ? base[1] : base[0], accent, f1);
+    final c2 = lerp(base.length > 2 ? base[2] : base.last, accent, f2);
+    final c3 = lerp(base.length > 3 ? base[3] : base.last, accent, f3);
+    return <Color>[c0, c1, c2, c3];
   }
 
   Widget _buildCurrentScreen(String route) {
@@ -397,6 +560,10 @@ class _DesktopShellState extends State<DesktopShell>
         pushScreen: _pushScreenToStack,
         popScreen: _popScreenFromStack,
         navigateToRoute: _navigateToRoute,
+        openNotifications: () => unawaited(_toggleNotificationsPanel()),
+        openFunctionsPanel: _openFunctionsPanel,
+        setFunctionsPanelContent: _setFunctionsPanelContent,
+        closeFunctionsPanel: _closeFunctionsPanel,
         canPop: _screenStack.isNotEmpty,
         child: Stack(
           children: [
@@ -404,6 +571,7 @@ class _DesktopShellState extends State<DesktopShell>
               child: AnimatedGradientBackground(
                 duration: const Duration(seconds: 12),
                 intensity: 0.25,
+                colors: _backgroundColorsForRoute(context, effectiveRoute),
                 child: const SizedBox.expand(),
               ),
             ),
@@ -417,6 +585,86 @@ class _DesktopShellState extends State<DesktopShell>
                         ? _screenStack.last
                         : _buildCurrentScreen(effectiveRoute),
                   ),
+
+                  // Functions sidebar (contextual panels like Notifications)
+                  if (isExpanded || isLarge)
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOutCubic,
+                      width: _functionsPanel == DesktopFunctionsPanel.none
+                          ? 0
+                          : (isLarge ? 380 : 320),
+                      child: ClipRect(
+                        child: IgnorePointer(
+                          ignoring:
+                              _functionsPanel == DesktopFunctionsPanel.none,
+                          child: AnimatedOpacity(
+                            opacity:
+                                _functionsPanel == DesktopFunctionsPanel.none
+                                    ? 0
+                                    : 1,
+                            duration: const Duration(milliseconds: 150),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                border: Border(
+                                  left: BorderSide(
+                                    color: theme.brightness == Brightness.dark
+                                        ? Colors.white.withValues(alpha: 0.06)
+                                        : theme.colorScheme.outline
+                                            .withValues(alpha: 0.10),
+                                    width: 1,
+                                  ),
+                                ),
+                              ),
+                              child: LiquidGlassPanel(
+                                padding: EdgeInsets.zero,
+                                margin: EdgeInsets.zero,
+                                borderRadius: BorderRadius.zero,
+                                blurSigma: KubusGlassEffects.blurSigmaLight,
+                                showBorder: false,
+                                backgroundColor:
+                                    theme.colorScheme.surface.withValues(
+                                  alpha: theme.brightness == Brightness.dark
+                                      ? 0.16
+                                      : 0.10,
+                                ),
+                                child: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 220),
+                                  switchInCurve: Curves.easeOutCubic,
+                                  switchOutCurve: Curves.easeInCubic,
+                                  child: switch (_functionsPanel) {
+                                    DesktopFunctionsPanel.notifications =>
+                                      _NotificationsPanel(
+                                        key: const ValueKey<String>(
+                                            'functions_notifications'),
+                                        onClose: _closeFunctionsPanel,
+                                        onActivitySelected: (activity) async {
+                                          final parentContext = context;
+                                          _closeFunctionsPanel();
+                                          await ActivityNavigation.open(
+                                            parentContext,
+                                            activity,
+                                          );
+                                        },
+                                      ),
+                                    DesktopFunctionsPanel.exploreNearby =>
+                                      _functionsPanelContent ??
+                                          const SizedBox.shrink(
+                                            key: ValueKey<String>(
+                                                'functions_explore_nearby_empty'),
+                                          ),
+                                    DesktopFunctionsPanel.none =>
+                                      const SizedBox.shrink(
+                                        key: ValueKey<String>('functions_empty'),
+                                      ),
+                                  },
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
 
                   // Right sidebar navigation (Twitter/X style) with glass effect
                   AnimatedBuilder(
@@ -466,7 +714,7 @@ class _DesktopShellState extends State<DesktopShell>
                               onProfileTap: () => _showProfileMenu(context),
                               onSettingsTap: () => _showSettingsScreen(context),
                               onNotificationsTap: () =>
-                                  unawaited(_showNotificationsPanel(context)),
+                                  unawaited(_toggleNotificationsPanel()),
                               onWalletTap: () => _handleWalletTap(isSignedIn),
                               onCollabInvitesTap: isSignedIn &&
                                       AppConfig.isFeatureEnabled('collabInvites')
@@ -515,56 +763,7 @@ class _DesktopShellState extends State<DesktopShell>
     );
   }
 
-  Future<void> _showNotificationsPanel(BuildContext context) async {
-    final parentContext = context;
-    final activityProvider = parentContext.read<RecentActivityProvider>();
-    final notificationProvider = parentContext.read<NotificationProvider>();
-
-    if (activityProvider.initialized) {
-      await activityProvider.refresh(force: true);
-    } else {
-      await activityProvider.initialize(force: true);
-    }
-
-    if (!parentContext.mounted) return;
-
-    await notificationProvider.markViewed();
-
-    if (!parentContext.mounted) return;
-
-    await showDialog(
-      context: parentContext,
-      barrierColor: Colors.black26,
-      builder: (dialogContext) => Align(
-        alignment: Alignment.centerRight,
-        child: Container(
-          width: 400,
-          height: double.infinity,
-          margin: const EdgeInsets.only(right: 80),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.15),
-                blurRadius: 24,
-                offset: const Offset(-4, 0),
-              ),
-            ],
-          ),
-          child: _NotificationsPanel(
-            onClose: () => Navigator.of(dialogContext).pop(),
-            onActivitySelected: (activity) async {
-              Navigator.of(dialogContext).pop();
-              await ActivityNavigation.open(parentContext, activity);
-            },
-          ),
-        ),
-      ),
-    );
-
-    if (!parentContext.mounted) return;
-    activityProvider.markAllReadLocally();
-  }
+  // Notifications are handled in the functions sidebar via [_toggleNotificationsPanel].
 
   void _showCollabInvites() {
     _pushScreenToStack(
@@ -633,6 +832,7 @@ class _NotificationsPanel extends StatelessWidget {
   final Future<void> Function(RecentActivity activity) onActivitySelected;
 
   const _NotificationsPanel({
+    super.key,
     required this.onClose,
     required this.onActivitySelected,
   });

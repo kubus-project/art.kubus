@@ -90,7 +90,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
               artworkProvider.isLoading('create_artwork');
 
           return Container(
-            color: Theme.of(context).scaffoldBackgroundColor,
+            color: Colors.transparent,
             child: Column(
               children: [
                 _buildHeader(artworks.length, isBusy),

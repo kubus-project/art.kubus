@@ -158,6 +158,14 @@
   "authHighlightKeysLocal": "Ključi ostanejo na tvoji napravi",
   "authHighlightOptionalWeb3": "Neobvezne Web3 funkcije",
   "authSignedInProfileRefreshSoon": "Prijava je uspela. Profil se bo kmalu osvežil.",
+  "authReauthDialogTitle": "Ponovna prijava",
+  "@authReauthDialogTitle": {
+    "description": "Naslov dialoga, prikazanega ob poteku seje, ko se mora uporabnik ponovno avtenticirati."
+  },
+  "authReauthDialogMessage": "Tvoja seja je potekla. Za nadaljevanje potrdi svoje poverilnice.",
+  "@authReauthDialogMessage": {
+    "description": "Sporočilo v dialogu, prikazanem ob poteku seje, ko se mora uporabnik ponovno avtenticirati."
+  },
   "authAccountCreatedProfileLoading": "Račun je ustvarjen. Profil se nalaga v ozadju.",
   "authEmailSignInDisabled": "Prijava z e-pošto je onemogočena.",
   "authEmailRegistrationDisabled": "Registracija z e-pošto je onemogočena.",
@@ -2819,7 +2827,7 @@
   "artworkCommentAddedToast": "Komentar je dodan!",
   "profileFieldOfWorkLabel": "Področje dela",
   "profileYearsActiveLabel": "Leta delovanja",
-  "profileYearsActiveValue": "{count, plural, one {# leto} two {# leti} few {# leta} other {# let}}",
+  "profileYearsActiveValue": "{count, plural, one {{count} leto} two {{count} leti} few {{count} leta} other {{count} let}}",
   "@profileYearsActiveValue": {
     "description": "Humanized years active value for profile display.",
     "placeholders": {

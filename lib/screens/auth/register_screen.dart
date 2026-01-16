@@ -1,11 +1,11 @@
 import 'dart:async';
 
-import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../utils/kubus_color_roles.dart';
 import '../../config/config.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/wallet_provider.dart';
@@ -352,11 +352,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
+    final roles = KubusColorRoles.of(context);
+    final accentStart = roles.lockedFeature;
+    final accentEnd = roles.likeAction;
     final enableWallet = AppConfig.enableWeb3 && AppConfig.enableWalletConnect;
     final enableEmail = AppConfig.enableEmailAuth;
     final enableGoogle = AppConfig.enableGoogleAuth;
     final isDesktop =
         MediaQuery.of(context).size.width >= DesktopBreakpoints.medium;
+
+    final bgStart = accentStart.withValues(alpha: 0.55);
+    final bgEnd = accentEnd.withValues(alpha: 0.50);
+    final bgMid = (Color.lerp(bgStart, bgEnd, 0.55) ?? bgEnd)
+        .withValues(alpha: 0.52);
+    final bgColors = <Color>[bgStart, bgMid, bgEnd, bgStart];
 
     final form = _buildRegisterForm(
       colorScheme: colorScheme,
@@ -376,16 +385,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
           l10n.authHighlightOptionalWeb3,
         ],
         icon: GradientIconCard(
-          start: const Color(0xFFF59E0B),
-          end: const Color(0xFFEF4444),
+          start: accentStart,
+          end: accentEnd,
           icon: Icons.person_add_alt_rounded,
           iconSize: 48,
           width: 96,
           height: 96,
           radius: 18,
         ),
-        gradientStart: const Color(0xFFF59E0B),
-        gradientEnd: const Color(0xFFEF4444),
+        gradientStart: accentStart,
+        gradientEnd: accentEnd,
         form: form,
         footer: Align(
           alignment: Alignment.centerLeft,
@@ -405,52 +414,59 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     return Scaffold(
-      body: AnimatedGradientBackground(
-        duration: const Duration(seconds: 10),
-        intensity: 0.2,
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: Theme.of(context).brightness == Brightness.dark
-                ? KubusGradients.authDark
-                : KubusGradients.fromColors(
-                    const Color.fromARGB(255, 233, 120, 14)
-                        .withValues(alpha: 0.55),
-                    const Color.fromARGB(255, 185, 174, 16)
-                        .withValues(alpha: 0.50),
-                  ),
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        titleSpacing: 16,
+        title: const AppLogo(width: 36, height: 36),
+        actions: [
+          TextButton(
+            onPressed: () =>
+                Navigator.of(context).pushReplacementNamed('/sign-in'),
+            child: Text(
+              l10n.authHaveAccountSignIn,
+              style: GoogleFonts.inter(
+                color: colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
           ),
-          child: SafeArea(
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          AnimatedGradientBackground(
+            duration: const Duration(seconds: 10),
+            intensity: 0.2,
+            colors: bgColors,
+            child: const SizedBox.expand(),
+          ),
+          SafeArea(
+            top: false,
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 520),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const AppLogo(width: 48, height: 48),
-                          TextButton(
-                            onPressed: () => Navigator.of(context)
-                                .pushReplacementNamed('/sign-in'),
-                            child: Text(l10n.authHaveAccountSignIn,
-                                style: GoogleFonts.inter(
-                                    color: colorScheme.onSurface
-                                        .withValues(alpha: 0.7))),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      form,
-                    ],
+              child: Padding(
+                padding: const EdgeInsets.only(top: kToolbarHeight + 12),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 520),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        form,
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -463,39 +479,47 @@ class _RegisterScreenState extends State<RegisterScreen> {
     required bool isDesktop,
   }) {
     final l10n = AppLocalizations.of(context)!;
+    final roles = KubusColorRoles.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         if (!isDesktop)
-          Container(
+          SizedBox(
             width: double.infinity,
-            padding: const EdgeInsets.all(18),
-            child: Column(
-              children: [
-                GradientIconCard(
-                  start: const Color(0xFFF59E0B),
-                  end: const Color(0xFFEF4444),
-                  icon: Icons.person_add_alt_rounded,
-                  iconSize: 48,
-                  width: 96,
-                  height: 96,
-                  radius: 18,
-                ),
-                const SizedBox(height: 12),
-                Text(l10n.authRegisterTitle,
+            child: LiquidGlassPanel(
+              padding: const EdgeInsets.all(18),
+              borderRadius: BorderRadius.circular(20),
+              child: Column(
+                children: [
+                  GradientIconCard(
+                    start: roles.lockedFeature,
+                    end: roles.likeAction,
+                    icon: Icons.person_add_alt_rounded,
+                    iconSize: 48,
+                    width: 96,
+                    height: 96,
+                    radius: 18,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    l10n.authRegisterTitle,
                     style: GoogleFonts.inter(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
-                        color: colorScheme.onSurface)),
-                const SizedBox(height: 8),
-                Text(
-                  l10n.authSignInSubtitle,
-                  style: GoogleFonts.inter(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w800,
+                      color: colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    l10n.authSignInSubtitle,
+                    style: GoogleFonts.inter(
                       fontSize: 14,
-                      color: colorScheme.onSurface.withValues(alpha: 0.85)),
-                  textAlign: TextAlign.center,
-                ),
-              ],
+                      color: colorScheme.onSurface.withValues(alpha: 0.85),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
             ),
           ),
         if (!isDesktop) const SizedBox(height: 20),

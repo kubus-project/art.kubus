@@ -15,6 +15,16 @@ class AnimatedGradientBackground extends StatefulWidget {
   
   /// Optional custom colors (defaults to theme-appropriate colors)
   final List<Color>? colors;
+
+  /// Duration for smooth transitions when [colors] (or theme brightness)
+  /// changes.
+  final Duration paletteTransitionDuration;
+
+  /// Optional hue shift in degrees applied subtly over time.
+  ///
+  /// This helps gradients feel more “alive” without requiring hardcoded
+  /// multi-palette animations.
+  final double hueShiftDegrees;
   
   /// Intensity of the animation (0.0 - 1.0)
   final double intensity;
@@ -26,6 +36,8 @@ class AnimatedGradientBackground extends StatefulWidget {
     this.animate = true,
     this.colors,
     this.intensity = 0.3,
+    this.paletteTransitionDuration = const Duration(milliseconds: 900),
+    this.hueShiftDegrees = 10.0,
   });
 
   @override
@@ -33,56 +45,80 @@ class AnimatedGradientBackground extends StatefulWidget {
 }
 
 class _AnimatedGradientBackgroundState extends State<AnimatedGradientBackground>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
+    with TickerProviderStateMixin {
+  late AnimationController _motionController;
+  late Animation<double> _motion;
+
+  late AnimationController _paletteController;
+  List<Color> _paletteFrom = const <Color>[];
+  List<Color> _paletteTo = const <Color>[];
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
+    _motionController = AnimationController(
       duration: widget.duration,
       vsync: this,
     );
     
-    _animation = CurvedAnimation(
-      parent: _controller,
+    _motion = CurvedAnimation(
+      parent: _motionController,
       curve: Curves.easeInOut,
     );
+
+    _paletteController = AnimationController(
+      duration: widget.paletteTransitionDuration,
+      vsync: this,
+    )..value = 1.0;
     
     if (widget.animate) {
-      _controller.repeat(reverse: true);
+      _motionController.repeat(reverse: true);
     }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncPaletteIfNeeded();
   }
 
   @override
   void didUpdateWidget(AnimatedGradientBackground oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.duration != oldWidget.duration) {
+      _motionController.duration = widget.duration;
+    }
+    if (widget.paletteTransitionDuration != oldWidget.paletteTransitionDuration) {
+      _paletteController.duration = widget.paletteTransitionDuration;
+    }
     if (widget.animate != oldWidget.animate) {
       if (widget.animate) {
-        _controller.repeat(reverse: true);
+        _motionController.repeat(reverse: true);
       } else {
-        _controller.stop();
+        _motionController.stop();
       }
+    }
+
+    // Palette transitions can be triggered by widget updates.
+    if (!_listEquals(widget.colors, oldWidget.colors)) {
+      _syncPaletteIfNeeded(force: true);
     }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _motionController.dispose();
+    _paletteController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final baseColors = widget.colors ??
-        (isDark ? KubusGradients.animatedDarkColors : KubusGradients.animatedLightColors);
-
     return AnimatedBuilder(
-      animation: _animation,
+      animation: Listenable.merge(<Listenable>[_motion, _paletteController]),
       builder: (context, child) {
-        final progress = _animation.value * widget.intensity;
+        final motionT = _motion.value;
+        final progress = motionT * widget.intensity;
         
         // Animate alignment for subtle movement
         final beginOffset = Alignment(
@@ -94,13 +130,22 @@ class _AnimatedGradientBackgroundState extends State<AnimatedGradientBackground>
           1.0 - (progress * 0.5),
         );
 
+        final paletteT = Curves.easeInOut.transform(_paletteController.value);
+        final basePalette = _lerpColorLists(_paletteFrom, _paletteTo, paletteT);
+        final effectivePalette = _applyHueShift(
+          basePalette,
+          degrees: widget.hueShiftDegrees,
+          t: motionT,
+          intensity: widget.intensity,
+        );
+
         return Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: baseColors,
+              colors: effectivePalette,
               begin: beginOffset,
               end: endOffset,
-              stops: _calculateStops(baseColors.length, progress),
+              stops: _calculateStops(effectivePalette.length, progress),
             ),
           ),
           child: child,
@@ -111,7 +156,8 @@ class _AnimatedGradientBackgroundState extends State<AnimatedGradientBackground>
   }
 
   List<double> _calculateStops(int count, double progress) {
-    final List<double> stops = [];
+    if (count <= 1) return const <double>[0.0];
+    final List<double> stops = <double>[];
     for (int i = 0; i < count; i++) {
       final baseStop = i / (count - 1);
       // Add subtle movement to stops
@@ -119,6 +165,99 @@ class _AnimatedGradientBackgroundState extends State<AnimatedGradientBackground>
       stops.add((baseStop + offset).clamp(0.0, 1.0));
     }
     return stops;
+  }
+
+  void _syncPaletteIfNeeded({bool force = false}) {
+    final desired = _resolveDesiredBasePalette(context);
+    if (!force && _listEquals(desired, _paletteTo)) return;
+
+    // Capture current palette as the starting point for a smooth transition.
+    final current = _paletteFrom.isEmpty
+        ? desired
+        : _lerpColorLists(
+            _paletteFrom,
+            _paletteTo,
+            Curves.easeInOut.transform(_paletteController.value),
+          );
+
+    _paletteFrom = current;
+    _paletteTo = desired;
+    _paletteController.forward(from: 0.0);
+  }
+
+  List<Color> _resolveDesiredBasePalette(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = widget.colors ??
+        (isDark
+            ? KubusGradients.animatedDarkColors
+            : KubusGradients.animatedLightColors);
+
+    if (colors.isEmpty) {
+      return isDark
+          ? KubusGradients.animatedDarkColors
+          : KubusGradients.animatedLightColors;
+    }
+    return colors;
+  }
+
+  static bool _listEquals(List<Color>? a, List<Color>? b) {
+    if (identical(a, b)) return true;
+    if (a == null || b == null) return false;
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i].toARGB32() != b[i].toARGB32()) return false;
+    }
+    return true;
+  }
+
+  static List<Color> _lerpColorLists(List<Color> a, List<Color> b, double t) {
+    if (a.isEmpty && b.isEmpty) return const <Color>[];
+    if (a.isEmpty) return b;
+    if (b.isEmpty) return a;
+
+    final length = a.length > b.length ? a.length : b.length;
+    final aPad = _padToLength(a, length);
+    final bPad = _padToLength(b, length);
+    return List<Color>.generate(length, (index) {
+      return Color.lerp(aPad[index], bPad[index], t) ?? bPad[index];
+    }, growable: false);
+  }
+
+  static List<Color> _padToLength(List<Color> colors, int length) {
+    if (colors.length == length) return colors;
+    if (colors.isEmpty) {
+      return List<Color>.filled(length, Colors.transparent, growable: false);
+    }
+    final last = colors.last;
+    return List<Color>.generate(
+      length,
+      (i) => i < colors.length ? colors[i] : last,
+      growable: false,
+    );
+  }
+
+  static List<Color> _applyHueShift(
+    List<Color> colors, {
+    required double degrees,
+    required double t,
+    required double intensity,
+  }) {
+    if (colors.isEmpty) return colors;
+    if (degrees.abs() < 0.001) return colors;
+    if (intensity <= 0.0) return colors;
+
+    // Shift is subtle and oscillates with motion.
+    final shift = (t - 0.5) * 2.0 * degrees * intensity;
+    return colors
+        .map((c) => _shiftHue(c, shift))
+        .toList(growable: false);
+  }
+
+  static Color _shiftHue(Color color, double degrees) {
+    if (color.a <= 0.0) return color;
+    final hsl = HSLColor.fromColor(color);
+    final newHue = (hsl.hue + degrees) % 360.0;
+    return hsl.withHue(newHue < 0 ? newHue + 360.0 : newHue).toColor();
   }
 }
 

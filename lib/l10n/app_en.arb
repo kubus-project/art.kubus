@@ -158,6 +158,14 @@
   "authHighlightKeysLocal": "Keys stay on your device",
   "authHighlightOptionalWeb3": "Optional Web3 features available",
   "authSignedInProfileRefreshSoon": "Signed in. Your profile will refresh shortly.",
+  "authReauthDialogTitle": "Sign in again",
+  "@authReauthDialogTitle": {
+    "description": "Title shown in a dialog when the user's session has expired and they need to re-authenticate."
+  },
+  "authReauthDialogMessage": "Your session has expired. Please verify your credentials to continue.",
+  "@authReauthDialogMessage": {
+    "description": "Message shown in a dialog when the user's session has expired and they need to re-authenticate."
+  },
   "authAccountCreatedProfileLoading": "Account created. Loading your profile in the background.",
   "authEmailSignInDisabled": "Email sign-in is disabled.",
   "authEmailRegistrationDisabled": "Email registration is disabled.",
@@ -2992,7 +3000,7 @@
 
   "profileFieldOfWorkLabel": "Field of work",
   "profileYearsActiveLabel": "Years active",
-  "profileYearsActiveValue": "{count, plural, one {# year} other {# years}}",
+  "profileYearsActiveValue": "{count, plural, one {{count} year} other {{count} years}}",
   "@profileYearsActiveValue": {
     "description": "Humanized years active value for profile display.",
     "placeholders": {

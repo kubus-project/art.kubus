@@ -58,7 +58,7 @@ class _EventManagerState extends State<EventManager>
     return FadeTransition(
       opacity: _fadeAnimation,
       child: Container(
-        color: Theme.of(context).scaffoldBackgroundColor,
+        color: Colors.transparent,
         child: Column(
           children: [
             _buildHeader(),

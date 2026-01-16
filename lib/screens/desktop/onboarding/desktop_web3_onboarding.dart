@@ -6,6 +6,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../widgets/gradient_icon_card.dart';
 import '../../../utils/app_animations.dart';
+import '../../../widgets/glass_components.dart';
 import '../desktop_shell.dart';
 
 /// Desktop-optimized Web3 feature onboarding
@@ -117,69 +118,97 @@ class _DesktopWeb3OnboardingScreenState
     final animationTheme = context.animationTheme;
     final screenWidth = MediaQuery.of(context).size.width;
 
+    final current = widget.pages.isEmpty
+      ? null
+      : widget.pages[_currentPage.clamp(0, widget.pages.length - 1)];
+    final fallbackStart = Theme.of(context).colorScheme.primary;
+    final fallbackEnd = accentColor;
+    final start = (current?.gradientColors.isNotEmpty ?? false)
+      ? current!.gradientColors.first
+      : fallbackStart;
+    final end = (current?.gradientColors.length ?? 0) > 1
+      ? current!.gradientColors[1]
+      : (current?.gradientColors.isNotEmpty ?? false)
+        ? current!.gradientColors.first
+        : fallbackEnd;
+
+    final bgStart = start.withValues(alpha: 0.55);
+    final bgEnd = end.withValues(alpha: 0.50);
+    final bgMid = (Color.lerp(bgStart, bgEnd, 0.55) ?? bgEnd)
+      .withValues(alpha: 0.52);
+    final bgColors = <Color>[bgStart, bgMid, bgEnd, bgStart];
+
     final contentWidth = screenWidth > DesktopBreakpoints.large
         ? 1400.0
         : screenWidth > DesktopBreakpoints.expanded
             ? 1100.0
             : 900.0;
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
+    return AnimatedGradientBackground(
+      duration: const Duration(seconds: 10),
+      intensity: 0.25,
+      colors: bgColors,
+      child: Scaffold(
         backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: _skipOnboarding,
-            child: Text(
-              l10n.commonSkip,
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.6),
-              ),
+        extendBodyBehindAppBar: true,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          leading: IconButton(
+            icon: Icon(
+              Icons.arrow_back,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
+            onPressed: () => Navigator.of(context).pop(),
           ),
-          const SizedBox(width: 16),
-        ],
-      ),
-      body: Center(
-        child: Container(
-          width: contentWidth,
-          constraints: const BoxConstraints(maxWidth: 1400),
-          child: Row(
-            children: [
-              // Left side - Content
-              Expanded(
-                flex: 5,
-                child: PageView.builder(
-                  controller: _pageController,
-                  onPageChanged: (index) {
-                    setState(() => _currentPage = index);
-                    _animationController.reset();
-                    _animationController.forward();
-                  },
-                  itemCount: widget.pages.length,
-                  itemBuilder: (context, index) =>
-                      _buildPageContent(widget.pages[index]),
+          actions: [
+            TextButton(
+              onPressed: _skipOnboarding,
+              child: Text(
+                l10n.commonSkip,
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
                 ),
               ),
-              const SizedBox(width: 40),
-              // Right side - Navigation & Actions
-              Expanded(
-                flex: 3,
-                child: _buildSidebar(accentColor, animationTheme),
-              ),
-            ],
+            ),
+            const SizedBox(width: 16),
+          ],
+        ),
+        body: Center(
+          child: Container(
+            width: contentWidth,
+            constraints: const BoxConstraints(maxWidth: 1400),
+            child: Row(
+              children: [
+                // Left side - Content
+                Expanded(
+                  flex: 5,
+                  child: PageView.builder(
+                    controller: _pageController,
+                    onPageChanged: (index) {
+                      setState(() => _currentPage = index);
+                      _animationController.reset();
+                      _animationController.forward();
+                    },
+                    itemCount: widget.pages.length,
+                    itemBuilder: (context, index) =>
+                        _buildPageContent(widget.pages[index]),
+                  ),
+                ),
+                const SizedBox(width: 40),
+                // Right side - Navigation & Actions
+                Expanded(
+                  flex: 3,
+                  child: _buildSidebar(accentColor, animationTheme),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -239,20 +268,10 @@ class _DesktopWeb3OnboardingScreenState
                 ),
                 const SizedBox(height: 40),
                 // Features list
-                Container(
+                LiquidGlassPanel(
                   padding: const EdgeInsets.all(28),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .surfaceContainerHighest
-                        .withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: page.gradientColors.first.withValues(alpha: 0.2),
-                      width: 1,
-                    ),
-                  ),
-                      child: Column(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(

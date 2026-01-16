@@ -61,10 +61,12 @@ class _ProfileAnalyticsScreenState extends State<ProfileAnalyticsScreen> {
     }
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
         title: Text(
           widget.title ?? 'Profile analytics',
           style: GoogleFonts.inter(

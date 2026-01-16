@@ -573,10 +573,12 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     final l10n = AppLocalizations.of(context)!;
      
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        backgroundColor: Colors.transparent,
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
           onPressed: () => Navigator.pop(context),
@@ -745,7 +747,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                 color: themeProvider.accentColor,
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: Theme.of(context).scaffoldBackgroundColor,
+                                  color: Theme.of(context).colorScheme.surface,
                                   width: 2,
                                 ),
                               ),

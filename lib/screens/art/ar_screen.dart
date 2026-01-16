@@ -461,7 +461,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   Widget _buildLoadingOverlay() {
     final l10n = AppLocalizations.of(context)!;
     return Container(
-      color: Theme.of(context).scaffoldBackgroundColor,
+      color: Colors.transparent,
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -498,7 +498,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   Widget _buildViewMode(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
     return Container(
-      color: Theme.of(context).scaffoldBackgroundColor,
+      color: Colors.transparent,
       child: _placedObjects.isEmpty
           ? Center(
               child: Column(

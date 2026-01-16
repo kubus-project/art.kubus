@@ -212,10 +212,12 @@ class _ArtistStudioState extends State<ArtistStudio> {
     ];
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
+        scrolledUnderElevation: 0,
         title: Text(
           l10n.artistStudioTitle,
           style: GoogleFonts.inter(

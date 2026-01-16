@@ -52,10 +52,12 @@ class _AchievementsPageState extends State<AchievementsPage> {
     };
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
         title: Text(
           'Achievements & POAPs',
           style: GoogleFonts.inter(

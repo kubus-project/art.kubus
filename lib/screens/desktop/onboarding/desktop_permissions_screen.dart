@@ -15,6 +15,7 @@ import '../../../providers/themeprovider.dart';
 import '../../../services/push_notification_service.dart';
 import '../../../utils/app_animations.dart';
 import '../desktop_shell.dart';
+import '../../../widgets/glass_components.dart';
 
 /// Desktop-optimized permissions screen with side-by-side layout
 class DesktopPermissionsScreen extends StatefulWidget {
@@ -351,8 +352,13 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isCheckingPermissions) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return AnimatedGradientBackground(
+        duration: const Duration(seconds: 10),
+        intensity: 0.25,
+        child: const Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Center(child: CircularProgressIndicator()),
+        ),
       );
     }
 
@@ -361,47 +367,61 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
     final animationTheme = context.animationTheme;
     final screenWidth = MediaQuery.of(context).size.width;
 
+    final current = _pages[_currentPage.clamp(0, _pages.length - 1)];
+    final start = current.gradient.colors.first.withValues(alpha: 0.55);
+    final end = (current.gradient.colors.length > 1
+            ? current.gradient.colors[1]
+            : current.gradient.colors.first)
+        .withValues(alpha: 0.50);
+    final mid = (Color.lerp(start, end, 0.55) ?? end).withValues(alpha: 0.52);
+    final bgColors = <Color>[start, mid, end, start];
+
     final contentWidth = screenWidth > DesktopBreakpoints.large
         ? 1400.0
         : screenWidth > DesktopBreakpoints.expanded
             ? 1100.0
             : 900.0;
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: Center(
-        child: Container(
-          width: contentWidth,
-          constraints: const BoxConstraints(maxWidth: 1400),
-          child: Column(
-            children: [
-              _buildHeader(),
-              Expanded(
-                child: Row(
-                  children: [
-                    // Left side - Content
-                    Expanded(
-                      flex: 5,
-                      child: PageView.builder(
-                        controller: _pageController,
-                        onPageChanged: (index) {
-                          setState(() => _currentPage = index);
-                        },
-                        itemCount: _pages.length,
-                        itemBuilder: (context, index) =>
-                            _buildPageContent(_pages[index]),
+    return AnimatedGradientBackground(
+      duration: const Duration(seconds: 10),
+      intensity: 0.25,
+      colors: bgColors,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Center(
+          child: Container(
+            width: contentWidth,
+            constraints: const BoxConstraints(maxWidth: 1400),
+            child: Column(
+              children: [
+                _buildHeader(),
+                Expanded(
+                  child: Row(
+                    children: [
+                      // Left side - Content
+                      Expanded(
+                        flex: 5,
+                        child: PageView.builder(
+                          controller: _pageController,
+                          onPageChanged: (index) {
+                            setState(() => _currentPage = index);
+                          },
+                          itemCount: _pages.length,
+                          itemBuilder: (context, index) =>
+                              _buildPageContent(_pages[index]),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 40),
-                    // Right side - Navigation & Actions
-                    Expanded(
-                      flex: 3,
-                      child: _buildSidebar(accentColor, animationTheme),
-                    ),
-                  ],
+                      const SizedBox(width: 40),
+                      // Right side - Navigation & Actions
+                      Expanded(
+                        flex: 3,
+                        child: _buildSidebar(accentColor, animationTheme),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

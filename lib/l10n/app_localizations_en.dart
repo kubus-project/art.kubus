@@ -426,6 +426,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authSignedInProfileRefreshSoon => 'Signed in. Your profile will refresh shortly.';
 
   @override
+  String get authReauthDialogTitle => 'Sign in again';
+
+  @override
+  String get authReauthDialogMessage => 'Your session has expired. Please verify your credentials to continue.';
+
+  @override
   String get authAccountCreatedProfileLoading => 'Account created. Loading your profile in the background.';
 
   @override
@@ -2596,8 +2602,8 @@ class AppLocalizationsEn extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count discoveries',
-      one: '$count discovery',
+      other: '# discoveries',
+      one: '# discovery',
     );
     return '$_temp0';
   }
