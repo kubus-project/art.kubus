@@ -113,3 +113,6 @@ docker-compose.yml
 .pm2/
 pm2-logs/
 ecosystem.config.js
+
+# Developer-only documentation (internal/technical)
+/dev.docs/
