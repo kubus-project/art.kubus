@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>art.kubus docs</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #0b1220;
+        --card: rgba(255, 255, 255, 0.06);
+        --text: rgba(255, 255, 255, 0.92);
+        --muted: rgba(255, 255, 255, 0.7);
+        --link: #7dd3fc;
+        --border: rgba(255, 255, 255, 0.14);
+      }
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg: #f7fafc;
+          --card: #ffffff;
+          --text: #0f172a;
+          --muted: #475569;
+          --link: #0369a1;
+          --border: rgba(2, 6, 23, 0.12);
+        }
+      }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+        background: var(--bg);
+        color: var(--text);
+      }
+      header {
+        padding: 28px 20px 8px;
+        max-width: 960px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 6px;
+        font-size: 22px;
+        letter-spacing: 0.2px;
+      }
+      p {
+        margin: 0;
+        color: var(--muted);
+      }
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 16px 20px 44px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 12px;
+      }
+      .card {
+        border: 1px solid var(--border);
+        background: var(--card);
+        border-radius: 12px;
+        padding: 14px 14px;
+      }
+      .card h2 {
+        margin: 0 0 8px;
+        font-size: 15px;
+      }
+      ul {
+        margin: 0;
+        padding-left: 18px;
+      }
+      li {
+        margin: 6px 0;
+      }
+      a {
+        color: var(--link);
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      footer {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 0 20px 28px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New";
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>art.kubus docs</h1>
+      <p>Static docs index (no Jekyll). Files are served as-is from <code>/docs</code>.</p>
+    </header>
+
+    <main>
+      <div class="grid">
+        <section class="card">
+          <h2>Documentation</h2>
+          <ul>
+            <li><a href="APP_TELEMETRY.md">APP_TELEMETRY.md</a></li>
+            <li><a href="AUDIT.md">AUDIT.md</a></li>
+            <li><a href="backend_route_map.md">backend_route_map.md</a></li>
+            <li><a href="CODEX_GUARDRAILS.md">CODEX_GUARDRAILS.md</a></li>
+            <li><a href="PHASE1_WIRING_MAP.md">PHASE1_WIRING_MAP.md</a></li>
+            <li><a href="SEASON0_CONTRACT.md">SEASON0_CONTRACT.md</a></li>
+            <li><a href="WEB_DEPLOYMENT_CSP.md">WEB_DEPLOYMENT_CSP.md</a></li>
+          </ul>
+        </section>
+
+        <section class="card">
+          <h2>Notes</h2>
+          <ul>
+            <li>GitHub Pages does not render Markdown to HTML by default when served as static assets.</li>
+            <li>If you want rendered docs, we can switch this workflow to MkDocs or Docusaurus.</li>
+          </ul>
+        </section>
+      </div>
+    </main>
+
+    <footer>
+      <div>Generated/maintained in-repo. Last updated automatically by CI workflow changes.</div>
+    </footer>
+  </body>
+</html>

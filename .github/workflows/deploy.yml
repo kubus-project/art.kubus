@@ -202,23 +202,32 @@ jobs:
 
           # Extra diagnostics (non-fatal): also check common alternatives so logs
           # hint whether you actually need SFTP (22) or implicit FTPS (990).
-          check_port() {
-            local p="$1"
-            local label="$2"
-            echo "Probing ${FTP_HOST}:${p} (${label})..."
-            if nc -vz -w 10 "$FTP_HOST" "$p"; then
-              echo "  reachable"
-              return 0
-            else
-              echo "  not reachable"
-              return 1
-            fi
-          }
+          echo "Probing ${FTP_HOST}:21 (FTP/explicit FTPS control)..."
+          if nc -vz -w 10 "$FTP_HOST" 21; then
+            echo "  reachable"
+            echo "reach_21=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "  not reachable"
+            echo "reach_21=false" >> "$GITHUB_OUTPUT"
+          fi
 
-          # Probe the configured port first, then common alternates.
-          check_port "$PORT" "configured" || true
-          if [ "$PORT" != "22" ]; then check_port 22 "SFTP/SSH" || true; fi
-          if [ "$PORT" != "990" ]; then check_port 990 "implicit FTPS" || true; fi
+          echo "Probing ${FTP_HOST}:22 (SFTP/SSH)..."
+          if nc -vz -w 10 "$FTP_HOST" 22; then
+            echo "  reachable"
+            echo "reach_22=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "  not reachable"
+            echo "reach_22=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "Probing ${FTP_HOST}:990 (implicit FTPS)..."
+          if nc -vz -w 10 "$FTP_HOST" 990; then
+            echo "  reachable"
+            echo "reach_990=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "  not reachable"
+            echo "reach_990=false" >> "$GITHUB_OUTPUT"
+          fi
           # nc is available on ubuntu-latest
           if nc -vz -w 10 "$FTP_HOST" "$PORT"; then
             echo "FTP port reachable."
@@ -243,7 +252,30 @@ jobs:
           security: ${{ vars.FTP_SECURITY || 'loose' }}
           timeout: ${{ vars.FTP_TIMEOUT_MS || 120000 }}
           local-dir: build/web/
-          server-dir: /app.kubus.site/
+          server-dir: ${{ vars.WEB_SERVER_DIR || '/app.kubus.site/' }}
+
+      - name: SFTP Deploy (Flutter Web)
+        # Fallback for hosts that block FTP/FTPS (21/990) but allow SFTP (22).
+        if: ${{ steps.ftp.outputs.ok == 'true' && steps.ftp_target.outputs.ok == 'true' && steps.net.outputs.ok != 'true' && steps.net.outputs.reach_22 == 'true' }}
+        id: sftp
+        continue-on-error: true
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SFTP_SERVER || steps.ftp_target.outputs.host }}
+          username: ${{ secrets.SFTP_USERNAME || secrets.FTP_USERNAME }}
+          password: ${{ secrets.SFTP_PASSWORD || secrets.FTP_PASSWORD }}
+          port: ${{ vars.SFTP_PORT || 22 }}
+          source: "build/web/*"
+          target: ${{ vars.WEB_SERVER_DIR || '/app.kubus.site/' }}
+
+      - name: SFTP deploy note
+        if: ${{ steps.ftp.outputs.ok == 'true' && steps.ftp_target.outputs.ok == 'true' && steps.net.outputs.ok != 'true' && steps.net.outputs.reach_22 == 'true' && steps.sftp.outcome != 'success' }}
+        run: |
+          echo "SFTP port 22 is reachable, but SFTP upload failed (kept non-fatal to avoid a red deploy)."
+          echo "Common causes:"
+          echo "- Wrong SSH username (often NOT the same as FTP user on some hosts)"
+          echo "- Wrong remote path. Try setting repo variable WEB_SERVER_DIR to something like: public_html/app.kubus.site/"
+          echo "- Password SFTP disabled; you may need SSH key auth"
 
       - name: Skip deploy (invalid FTP_SERVER)
         if: ${{ steps.ftp.outputs.ok == 'true' && steps.ftp_target.outputs.ok != 'true' }}

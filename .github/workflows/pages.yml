@@ -36,6 +36,11 @@ jobs:
             echo "docs/ folder not found at repo root" >&2
             exit 1
           fi
+          if [ ! -f "docs/index.html" ] && [ ! -f "docs/index.md" ]; then
+            echo "docs/ is missing an index file." >&2
+            echo "Add docs/index.html (recommended for static Pages) or docs/index.md." >&2
+            exit 1
+          fi
           echo "Docs files:";
           ls -la docs | head -n 50
 
