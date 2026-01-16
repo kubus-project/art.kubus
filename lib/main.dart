@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:art_kubus/widgets/app_loading.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:logger/logger.dart';
@@ -46,6 +45,7 @@ import 'providers/deep_link_provider.dart';
 import 'providers/platform_deep_link_listener_provider.dart';
 import 'core/app_initializer.dart';
 import 'core/app_navigator.dart';
+import 'core/url_strategy.dart';
 import 'core/deep_link_bootstrap_screen.dart';
 import 'main_app.dart';
 import 'screens/auth/sign_in_screen.dart';
@@ -108,9 +108,7 @@ void main() {
         // path-based routing on Flutter web. Without this, Flutter defaults to a
         // hash-based strategy and a direct visit to /marker/<id> is treated as
         // route '/' (Home).
-        if (kIsWeb) {
-          usePathUrlStrategy();
-        }
+        configureUrlStrategy();
 
         // Now forward Flutter framework errors to this zone so the runZonedGuarded
         // error handler receives them.
