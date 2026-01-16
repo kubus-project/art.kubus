@@ -188,9 +188,11 @@ jobs:
         env:
           FTP_HOST: ${{ steps.ftp_target.outputs.host }}
           FTP_PORT: ${{ steps.ftp_target.outputs.port }}
+          FTP_PROTOCOL: ${{ vars.FTP_PROTOCOL }}
         run: |
           PORT="${FTP_PORT:-21}"
-          echo "Checking TCP connectivity to ${FTP_HOST}:${PORT}..."
+          PROTOCOL="${FTP_PROTOCOL:-ftps}"
+          echo "Checking connectivity to ${FTP_HOST} (configured protocol=${PROTOCOL}, port=${PORT})..."
 
           if ! getent hosts "$FTP_HOST" >/dev/null 2>&1; then
             echo "DNS lookup failed for the configured FTP host." >&2
@@ -214,9 +216,11 @@ jobs:
           echo "Probing ${FTP_HOST}:22 (SFTP/SSH)..."
           if nc -vz -w 10 "$FTP_HOST" 22; then
             echo "  reachable"
+            REACH22=true
             echo "reach_22=true" >> "$GITHUB_OUTPUT"
           else
             echo "  not reachable"
+            REACH22=false
             echo "reach_22=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -228,20 +232,47 @@ jobs:
             echo "  not reachable"
             echo "reach_990=false" >> "$GITHUB_OUTPUT"
           fi
-          # nc is available on ubuntu-latest
+
+          # Probe the configured port explicitly (it might be something custom).
+          echo "Probing ${FTP_HOST}:${PORT} (configured)..."
           if nc -vz -w 10 "$FTP_HOST" "$PORT"; then
-            echo "FTP port reachable."
-            echo "ok=true" >> "$GITHUB_OUTPUT"
+            echo "  reachable"
+            REACH_CFG=true
           else
-            echo "Unable to reach ${FTP_HOST}:${PORT} from this runner."
-            echo "If your host requires allowlisting GitHub Actions runner IPs, add them in your hosting firewall." 
-            echo "If your host only supports SFTP, FTP deploy won't work; switch to an SFTP-based deploy." 
-            echo "If port 21 is blocked but 990 is open, you may need implicit FTPS (different port/protocol)." 
-            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "  not reachable"
+            REACH_CFG=false
+          fi
+          echo "reach_configured=${REACH_CFG}" >> "$GITHUB_OUTPUT"
+
+          # Decide which deploy methods are feasible.
+          # IMPORTANT: Port 22 is SFTP/SSH, not FTP/FTPS. If someone sets FTP_PORT=22,
+          # we must NOT run the FTP deploy action, or it will hang/time out.
+          FTP_OK=false
+          if [ "$PORT" = "22" ]; then
+            echo "Configured FTP_PORT is 22 (SSH). Skipping FTP/FTPS deploy. Use SFTP instead." >&2
+          else
+            if [ "$REACH_CFG" = "true" ]; then
+              FTP_OK=true
+            fi
+          fi
+
+          SFTP_OK=false
+          if [ "${REACH22:-false}" = "true" ]; then
+            SFTP_OK=true
+          fi
+
+          echo "ftp_ok=${FTP_OK}" >> "$GITHUB_OUTPUT"
+          echo "sftp_ok=${SFTP_OK}" >> "$GITHUB_OUTPUT"
+
+          if [ "$FTP_OK" != "true" ]; then
+            echo "FTP/FTPS not reachable on configured port (${PORT})." >&2
+            echo "- If your host requires allowlisting GitHub Actions IPs, allowlist the runner egress IP." >&2
+            echo "- If port 21 is blocked but 990 is open, you may need implicit FTPS (set FTP_PORT=990)." >&2
+            echo "- If port 22 is open, prefer SFTP." >&2
           fi
 
       - name: FTP Deploy (Flutter Web)
-        if: ${{ steps.ftp.outputs.ok == 'true' && steps.ftp_target.outputs.ok == 'true' && steps.net.outputs.ok == 'true' }}
+        if: ${{ steps.ftp.outputs.ok == 'true' && steps.ftp_target.outputs.ok == 'true' && steps.net.outputs.ftp_ok == 'true' }}
         uses: SamKirkland/FTP-Deploy-Action@v4.3.6
         with:
           server: ${{ steps.ftp_target.outputs.host }}
@@ -256,7 +287,7 @@ jobs:
 
       - name: SFTP Deploy (Flutter Web)
         # Fallback for hosts that block FTP/FTPS (21/990) but allow SFTP (22).
-        if: ${{ steps.ftp.outputs.ok == 'true' && steps.ftp_target.outputs.ok == 'true' && steps.net.outputs.ok != 'true' && steps.net.outputs.reach_22 == 'true' }}
+        if: ${{ steps.ftp.outputs.ok == 'true' && steps.ftp_target.outputs.ok == 'true' && steps.net.outputs.ftp_ok != 'true' && steps.net.outputs.sftp_ok == 'true' }}
         id: sftp
         continue-on-error: true
         uses: appleboy/scp-action@v0.1.7
@@ -274,7 +305,7 @@ jobs:
           target: ${{ vars.WEB_SERVER_DIR || '/app.kubus.site/' }}
 
       - name: SFTP deploy note
-        if: ${{ steps.ftp.outputs.ok == 'true' && steps.ftp_target.outputs.ok == 'true' && steps.net.outputs.ok != 'true' && steps.net.outputs.reach_22 == 'true' && steps.sftp.outcome != 'success' }}
+        if: ${{ steps.ftp.outputs.ok == 'true' && steps.ftp_target.outputs.ok == 'true' && steps.net.outputs.ftp_ok != 'true' && steps.net.outputs.sftp_ok == 'true' && steps.sftp.outcome != 'success' }}
         run: |
           echo "SFTP port 22 is reachable, but SFTP upload failed (kept non-fatal to avoid a red deploy)."
           echo "Common causes:"
@@ -288,10 +319,10 @@ jobs:
           echo "FTP secrets are present, but FTP_SERVER could not be parsed into a hostname."
           echo "Set FTP_SERVER to something like: ftp.kubus.site (no ftps://, no path, no spaces)."
 
-      - name: Skip deploy (FTP not reachable)
-        if: ${{ steps.ftp.outputs.ok == 'true' && steps.net.outputs.ok != 'true' }}
+      - name: Skip deploy (no reachable deploy method)
+        if: ${{ steps.ftp.outputs.ok == 'true' && steps.ftp_target.outputs.ok == 'true' && steps.net.outputs.ftp_ok != 'true' && steps.net.outputs.sftp_ok != 'true' }}
         run: |
-          echo "FTP server is not reachable from this GitHub runner; skipping web deploy to avoid a failed workflow."
+          echo "Neither FTP/FTPS nor SFTP appears reachable from this GitHub runner; skipping web deploy to avoid a failed workflow."
 
       - name: Skip deploy (missing FTP secrets)
         if: ${{ steps.ftp.outputs.ok != 'true' }}
