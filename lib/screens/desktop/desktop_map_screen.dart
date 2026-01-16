@@ -48,8 +48,14 @@ import 'art/desktop_artwork_detail_screen.dart';
 import '../events/exhibition_detail_screen.dart';
 import 'community/desktop_user_profile_screen.dart';
 import '../../services/search_service.dart';
+import '../../services/task_service.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/category_accent_color.dart';
+import '../../utils/kubus_color_roles.dart';
 import '../../widgets/glass_components.dart';
+import '../../widgets/inline_progress.dart';
+import '../../providers/task_provider.dart';
+import '../../models/task.dart';
  
 
 /// Desktop map screen with Google Maps-style presentation
@@ -85,6 +91,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   bool _markerOverlayExpanded = false;
   bool _didOpenInitialMarker = false;
   bool _showFiltersPanel = false;
+  bool _isDiscoveryExpanded = false;
   String _selectedFilter = 'nearby';
   double _searchRadius = 5.0; // km
   LatLng? _pendingMarkerLocation;
@@ -343,6 +350,23 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               alignment: Alignment.bottomRight,
               child: _buildMapControls(themeProvider),
             ),
+          ),
+
+          // Discovery path card (bottom-left when no panel is open)
+          Consumer<TaskProvider>(
+            builder: (context, taskProvider, _) {
+              final activeProgress = taskProvider.getActiveTaskProgress();
+              if (activeProgress.isEmpty) return const SizedBox.shrink();
+              final leftOffset =
+                  (_selectedArtwork != null || _selectedExhibition != null || _showFiltersPanel)
+                      ? 400.0
+                      : 24.0;
+              return Positioned(
+                left: leftOffset,
+                bottom: 24,
+                child: _buildDiscoveryCard(themeProvider, taskProvider),
+              );
+            },
           ),
         ],
       ),
@@ -1956,6 +1980,184 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 _moveCamera(const LatLng(46.0569, 14.5058), 15.0);
               }
             },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDiscoveryCard(ThemeProvider themeProvider, TaskProvider taskProvider) {
+    final l10n = AppLocalizations.of(context)!;
+    final activeProgress = taskProvider.getActiveTaskProgress();
+    if (activeProgress.isEmpty) return const SizedBox.shrink();
+
+    final showTasks = _isDiscoveryExpanded;
+    final tasksToRender = showTasks ? activeProgress : const <TaskProgress>[];
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final overall = taskProvider.getOverallProgress();
+    final roles = KubusColorRoles.of(context);
+    final badgeGradient = LinearGradient(
+      colors: [
+        AppColorUtils.tealAccent,
+        roles.statAmber,
+        roles.statCoral,
+      ],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    );
+
+    final isDark = theme.brightness == Brightness.dark;
+    final radius = BorderRadius.circular(18);
+    final glassTint = scheme.surface.withValues(alpha: isDark ? 0.40 : 0.52);
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      constraints: const BoxConstraints(maxWidth: 340),
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.30)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.16 : 0.10),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: LiquidGlassPanel(
+        padding: const EdgeInsets.all(16),
+        margin: EdgeInsets.zero,
+        borderRadius: radius,
+        showBorder: false,
+        backgroundColor: glassTint,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                ShaderMask(
+                  shaderCallback: (rect) => badgeGradient.createShader(rect),
+                  blendMode: BlendMode.srcIn,
+                  child: InlineProgress(
+                    progress: overall,
+                    rows: 3,
+                    cols: 5,
+                    color: Colors.white,
+                    backgroundColor:
+                        scheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.mapDiscoveryPathTitle,
+                        style: GoogleFonts.outfit(
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSurface,
+                        ),
+                      ),
+                      Text(
+                        l10n.commonPercentComplete((overall * 100).round()),
+                        style: KubusTypography.textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurface.withValues(alpha: 0.75),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                _buildGlassIconButton(
+                  icon: _isDiscoveryExpanded
+                      ? Icons.keyboard_arrow_up
+                      : Icons.keyboard_arrow_down,
+                  themeProvider: themeProvider,
+                  tooltip: _isDiscoveryExpanded
+                      ? l10n.commonCollapse
+                      : l10n.commonExpand,
+                  onTap: () => setState(
+                      () => _isDiscoveryExpanded = !_isDiscoveryExpanded),
+                ),
+              ],
+            ),
+            AnimatedCrossFade(
+              crossFadeState: showTasks
+                  ? CrossFadeState.showFirst
+                  : CrossFadeState.showSecond,
+              duration: const Duration(milliseconds: 200),
+              firstChild: Column(
+                children: [
+                  const SizedBox(height: 12),
+                  for (final progress in tasksToRender)
+                    _buildTaskProgressRow(progress),
+                ],
+              ),
+              secondChild: const SizedBox.shrink(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTaskProgressRow(TaskProgress progress) {
+    final task = TaskService().getTaskById(progress.taskId);
+    if (task == null) return const SizedBox.shrink();
+    final scheme = Theme.of(context).colorScheme;
+    final pct = progress.progressPercentage;
+    final accent = CategoryAccentColor.resolve(context, task.category);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.22),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: accent.withValues(alpha: 0.40),
+                width: 1.5,
+              ),
+            ),
+            child: Icon(task.icon, color: accent, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  task.name,
+                  style: KubusTypography.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: pct,
+                    minHeight: 6,
+                    backgroundColor: scheme.surfaceContainerHighest,
+                    valueColor: AlwaysStoppedAnimation<Color>(accent),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            '${(pct * 100).round()}%',
+            style: KubusTypography.textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: scheme.onSurface,
+            ),
           ),
         ],
       ),
