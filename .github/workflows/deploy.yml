@@ -304,6 +304,8 @@ jobs:
         run: |
           set -euo pipefail
 
+          echo "Preparing SFTP auth for ${SFTP_USERNAME}@${SFTP_HOST}:${SFTP_PORT}"
+
           # Most cPanel SSH/SFTP servers have PasswordAuthentication disabled.
           # If you hit "attempted methods [none publickey]", it means you MUST use an SSH private key.
           if [ -z "${SFTP_PRIVATE_KEY:-}" ]; then
@@ -338,6 +340,16 @@ jobs:
             printf '%s' "$SFTP_PRIVATE_KEY" > "$KEY_PATH"
           fi
           chmod 600 "$KEY_PATH"
+
+          # If the key is passphrase-protected but no passphrase is configured, fail early with a clear message.
+          # We only test this when no passphrase was provided, because ssh-keygen would otherwise prompt.
+          if [ -z "${SFTP_PRIVATE_KEY_PASSPHRASE:-}" ] && command -v ssh-keygen >/dev/null 2>&1 && command -v timeout >/dev/null 2>&1; then
+            if ! timeout 3 ssh-keygen -y -f "$KEY_PATH" >/dev/null 2>&1; then
+              echo "The SSH private key appears to be passphrase-protected (or unreadable) and SFTP_PRIVATE_KEY_PASSPHRASE is not set." >&2
+              echo "Either provide secret SFTP_PRIVATE_KEY_PASSPHRASE, or use a dedicated deploy key without a passphrase." >&2
+              exit 1
+            fi
+          fi
 
           # Create known_hosts and (optionally) verify the pinned fingerprint matches what the runner sees.
           KNOWN_HOSTS=~/.ssh/known_hosts
@@ -427,6 +439,7 @@ jobs:
           echo "- Wrong SSH username (often NOT the same as FTP user on some hosts)"
           echo "- Wrong remote path. Try setting repo variable WEB_SERVER_DIR to something like: public_html/app.kubus.site/"
           echo "- Password SFTP disabled; you may need SSH key auth"
+          echo "- SSH key is passphrase-protected; set secret SFTP_PRIVATE_KEY_PASSPHRASE"
 
       - name: Skip deploy (invalid FTP_SERVER)
         if: ${{ steps.ftp.outputs.ok == 'true' && steps.ftp_target.outputs.ok != 'true' }}
