@@ -425,6 +425,7 @@ jobs:
           debug: ${{ vars.SFTP_DEBUG || 'true' }}
           capture_stdout: true
           source: "build/web/*"
+          strip_components: 2
           target: ${{ steps.sftp_prep.outputs.web_server_dir }}
 
       - name: Show SSH host fingerprints (for pinning)
