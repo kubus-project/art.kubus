@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../providers/themeprovider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 /// Screen shown to web users encouraging them to download the mobile app for AR features
 class DownloadAppScreen extends StatefulWidget {
@@ -67,7 +68,7 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
             content: Text(l10n.downloadAppCouldNotOpenStoreToast(url)),
             backgroundColor: Theme.of(context).colorScheme.errorContainer,

@@ -28,6 +28,7 @@ import '../../providers/locale_provider.dart';
 import '../../utils/app_color_utils.dart';
 import '../../widgets/glass_components.dart';
 import '../../utils/design_tokens.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
  
 
 
@@ -1040,7 +1041,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             onPressed: () {
               Navigator.pop(context);
               Provider.of<Web3Provider>(context, listen: false).disconnectWallet();
-              ScaffoldMessenger.of(context).showSnackBar(
+              ScaffoldMessenger.of(context).showKubusSnackBar(
                 SnackBar(content: Text(l10n.desktopSettingsWalletDisconnectedToast)),
               );
             },
@@ -1139,7 +1140,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
               style: ElevatedButton.styleFrom(backgroundColor: Theme.of(dialogContext).colorScheme.secondary, foregroundColor: Colors.white),
               onPressed: () {
                 Navigator.pop(dialogContext);
-                ScaffoldMessenger.of(rootContext).showSnackBar(SnackBar(content: Text(l10n.settingsOpeningFaqToast)));
+                ScaffoldMessenger.of(rootContext).showKubusSnackBar(SnackBar(content: Text(l10n.settingsOpeningFaqToast)));
               },
               icon: const Icon(Icons.help_outline),
               label: Text(l10n.settingsViewFaqButton),
@@ -1152,7 +1153,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                 Navigator.pop(dialogContext);
 
                 if (!AppConfig.isFeatureEnabled('supportTickets')) {
-                  messenger.showSnackBar(SnackBar(content: Text(l10n.settingsOpeningEmailClientToast)));
+                  messenger.showKubusSnackBar(SnackBar(content: Text(l10n.settingsOpeningEmailClientToast)));
                   return;
                 }
 
@@ -1213,7 +1214,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
           TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.settingsMaybeLaterButton)),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.secondary, foregroundColor: Colors.white),
-            onPressed: () { Navigator.pop(context); ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.settingsOpeningAppStoreToast))); },
+            onPressed: () { Navigator.pop(context); ScaffoldMessenger.of(context).showKubusSnackBar(SnackBar(content: Text(l10n.settingsOpeningAppStoreToast))); },
             child: Text(l10n.settingsRateNowButton),
           ),
         ],
@@ -1279,7 +1280,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             ),
             onPressed: () {
               Navigator.pop(dialogContext);
-              ScaffoldMessenger.of(context).showSnackBar(
+              ScaffoldMessenger.of(context).showKubusSnackBar(
                 SnackBar(content: Text(l10n.settingsPasswordUpdatedToast)),
               );
             },
@@ -1319,7 +1320,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                 profileProvider: profileProvider,
               );
               navigator.pop();
-              messenger.showSnackBar(SnackBar(content: Text(l10n.settingsAppResetSuccessToast), duration: const Duration(seconds: 3)));
+              messenger.showKubusSnackBar(SnackBar(content: Text(l10n.settingsAppResetSuccessToast), duration: const Duration(seconds: 3)));
               _restartToOnboarding();
             },
             child: Text(l10n.settingsResetButton),
@@ -1361,7 +1362,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                 await BackendApiService().deleteMyAccountData(walletAddress: wallet);
               } catch (e) {
                 debugPrint('DesktopSettingsScreen: backend deletion failed: $e');
-                messenger.showSnackBar(SnackBar(content: Text(l10n.settingsDeleteAccountBackendFailedToast)));
+                messenger.showKubusSnackBar(SnackBar(content: Text(l10n.settingsDeleteAccountBackendFailedToast)));
               }
 
               await SettingsService.resetApp(
@@ -1372,7 +1373,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
               );
               if (!mounted) return;
               navigator.pop();
-              messenger.showSnackBar(SnackBar(content: Text(l10n.settingsAccountDeletedToast)));
+              messenger.showKubusSnackBar(SnackBar(content: Text(l10n.settingsAccountDeletedToast)));
               _restartToOnboarding();
             },
             child: Text(l10n.settingsDeleteForeverButton),
@@ -1396,7 +1397,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             style: ElevatedButton.styleFrom(backgroundColor: Provider.of<ThemeProvider>(context, listen: false).accentColor, foregroundColor: Colors.white),
             onPressed: () {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.desktopSettingsExportingDataToast)));
+              ScaffoldMessenger.of(context).showKubusSnackBar(SnackBar(content: Text(l10n.desktopSettingsExportingDataToast)));
             },
             child: Text(l10n.settingsExportButton),
           ),
@@ -1423,7 +1424,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
               await SettingsService.clearNonCriticalCaches();
               if (!mounted) return;
               navigator.pop();
-              messenger.showSnackBar(SnackBar(content: Text(l10n.settingsCacheClearedToast)));
+              messenger.showKubusSnackBar(SnackBar(content: Text(l10n.settingsCacheClearedToast)));
             },
             child: Text(l10n.settingsClearButton),
           ),
@@ -1461,7 +1462,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
               Navigator.pop(dialogContext);
               await _resetPermissionFlags();
               if (!mounted) return;
-              messenger.showSnackBar(SnackBar(content: Text(l10n.settingsPermissionFlagsResetToast)));
+              messenger.showKubusSnackBar(SnackBar(content: Text(l10n.settingsPermissionFlagsResetToast)));
             },
             child: Text(l10n.settingsResetButton),
           ),
@@ -1587,7 +1588,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       if (!granted) {
         if (mounted) {
           setState(() => _pushNotifications = false);
-          ScaffoldMessenger.of(context).showSnackBar(
+          ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(content: Text(l10n.settingsEnableNotificationsInSystemToast)),
           );
         }
@@ -1612,7 +1613,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       if (!canUse) {
         if (mounted) {
           setState(() => _biometricAuth = false);
-          ScaffoldMessenger.of(context).showSnackBar(
+          ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(content: Text(l10n.settingsBiometricUnavailableToast)),
           );
         }
@@ -1623,7 +1624,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       if (!ok) {
         if (mounted) {
           setState(() => _biometricAuth = false);
-          ScaffoldMessenger.of(context).showSnackBar(
+          ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(content: Text(l10n.settingsBiometricFailedToast)),
           );
         }
@@ -2571,7 +2572,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             l10n.desktopSettingsReportBugTileSubtitle,
             Icons.bug_report_outlined,
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
+              ScaffoldMessenger.of(context).showKubusSnackBar(
                 SnackBar(content: Text(l10n.desktopSettingsOpeningBugReportToast)),
               );
             },

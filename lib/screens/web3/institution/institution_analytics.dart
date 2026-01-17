@@ -22,6 +22,7 @@ import '../../../utils/wallet_utils.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../utils/app_animations.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class InstitutionAnalytics extends StatefulWidget {
   const InstitutionAnalytics({super.key});
@@ -1426,7 +1427,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                   await _exportAnalyticsCsv();
                 } catch (_) {
                   if (!mounted) return;
-                  messenger.showSnackBar(
+                  messenger.showKubusSnackBar(
                     SnackBar(
                       content: const Text('Unable to export analytics.'),
                       backgroundColor: scheme.error,
@@ -1450,7 +1451,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
     final walletAddress = _resolveWalletAddress(listen: false);
 
     if (walletAddress.isEmpty) {
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: const Text('Connect your wallet to export analytics.'),
           backgroundColor: scheme.error,
@@ -1460,7 +1461,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
     }
 
     if (!statsProvider.analyticsEnabled) {
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: const Text('Analytics is disabled. Enable it in Settings to export.'),
           backgroundColor: scheme.error,
@@ -1499,7 +1500,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
 
     final points = (series?.series ?? const <StatsSeriesPoint>[]).toList();
     if (points.isEmpty) {
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: const Text('No analytics data available to export.'),
           backgroundColor: scheme.error,

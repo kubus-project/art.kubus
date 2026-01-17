@@ -13,6 +13,7 @@ import '../../../providers/profile_provider.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../services/backend_api_service.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class ArtworkCreator extends StatefulWidget {
   final VoidCallback? onCreated;
@@ -1017,7 +1018,7 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
         _selectedImageName = file.name.isNotEmpty ? file.name : path.basename(file.path);
       });
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(content: Text(l10n.artistCreatorCoverSelectedToast)),
       );
     } catch (e) {
@@ -1025,7 +1026,7 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
         debugPrint('ArtworkCreator: Failed to pick cover image: $e');
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(content: Text(l10n.artistCreatorPickImageFailedToast)),
       );
     }
@@ -1049,7 +1050,7 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
         _selectedModelName = file.name;
       });
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(content: Text(l10n.artistCreatorModelSelectedToast)),
       );
     } catch (e) {
@@ -1057,7 +1058,7 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
         debugPrint('ArtworkCreator: Failed to pick 3D model: $e');
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(content: Text(l10n.artistCreatorPickModelFailedToast)),
       );
     }
@@ -1076,7 +1077,7 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
     switch (_currentStep) {
       case 0:
         if (_selectedImageBytes == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(content: Text(l10n.artistCreatorSelectImageToast)),
           );
           return false;
@@ -1109,21 +1110,21 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
 
     final wallet = (profileProvider.currentUser?.walletAddress ?? web3Provider.walletAddress).trim();
     if (wallet.isEmpty) {
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.artistCreatorConnectWalletToPublishToast)),
       );
       return;
     }
 
     if (_selectedImageBytes == null) {
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.artistCreatorSelectCoverImageToast)),
       );
       return;
     }
 
     if (_enableAR && _selectedModelBytes == null) {
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.artistCreatorUploadModelToEnableArToast)),
       );
       return;
@@ -1138,7 +1139,7 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
       final lngText = _longitudeController.text.trim();
 
       if (latText.isEmpty || lngText.isEmpty) {
-        messenger.showSnackBar(
+        messenger.showKubusSnackBar(
           SnackBar(content: Text(l10n.artistCreatorEnterLatLngOrDisableToast)),
         );
         return;
@@ -1151,7 +1152,7 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
       final withinLngRange = longitude != null && longitude >= -180 && longitude <= 180;
 
       if (latitude == null || longitude == null || !withinLatRange || !withinLngRange) {
-        messenger.showSnackBar(
+        messenger.showKubusSnackBar(
           SnackBar(content: Text(l10n.artistCreatorInvalidCoordinatesToast)),
         );
         return;
@@ -1181,7 +1182,7 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
 
       final coverUrl = coverUpload['uploadedUrl'] as String? ?? coverUpload['data']?['url'] as String?;
       if (coverUrl == null || coverUrl.isEmpty) {
-        messenger.showSnackBar(
+        messenger.showKubusSnackBar(
           SnackBar(content: Text(l10n.artistCreatorCoverUrlMissingToast)),
         );
         setState(() => _isSubmitting = false);
@@ -1289,7 +1290,7 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
         artworkProvider.addOrUpdateArtwork(artwork);
       } else {
         // If backend didn't return data, still treat as success per requirement
-        messenger.showSnackBar(
+        messenger.showKubusSnackBar(
           SnackBar(
             content: Text(l10n.artistCreatorSubmittedPendingToast),
             backgroundColor: themeProvider.accentColor,
@@ -1340,7 +1341,7 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
       if (kDebugMode) {
         debugPrint('ArtworkCreator: Failed to create artwork: $e');
       }
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(l10n.artistCreatorCreateFailedToast),
           backgroundColor: Theme.of(context).colorScheme.error,

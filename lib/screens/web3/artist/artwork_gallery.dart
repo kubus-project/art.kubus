@@ -8,6 +8,7 @@ import '../../../providers/themeprovider.dart';
 import '../../../utils/artwork_media_resolver.dart';
 import '../../../utils/artwork_navigation.dart';
 import '../../../utils/artwork_edit_navigation.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class ArtworkGallery extends StatefulWidget {
   final VoidCallback? onCreateRequested;
@@ -713,7 +714,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
       case 'publish':
         final updated = await provider.publishArtwork(artwork.id);
         if (!mounted) return;
-        messenger.showSnackBar(
+        messenger.showKubusSnackBar(
           SnackBar(
             content: Text(
               updated != null
@@ -726,7 +727,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
       case 'unpublish':
         final updated = await provider.unpublishArtwork(artwork.id);
         if (!mounted) return;
-        messenger.showSnackBar(
+        messenger.showKubusSnackBar(
           SnackBar(
             content: Text(
               updated != null
@@ -740,7 +741,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
         await openArtworkEditor(context, artwork.id, source: 'artist_gallery_menu');
         break;
       case 'share':
-        messenger.showSnackBar(
+        messenger.showKubusSnackBar(
           SnackBar(content: Text(l10n.artistGallerySharingToast(title))),
         );
         break;
@@ -777,7 +778,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
             onPressed: () {
               provider.removeArtwork(artwork.id);
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
+              ScaffoldMessenger.of(context).showKubusSnackBar(
                 SnackBar(
                     content:
                         Text(l10n.artistGalleryDeletedToast(artwork.title))),

@@ -25,6 +25,7 @@ import '../../widgets/inline_loading.dart';
 import '../../utils/wallet_utils.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/app_color_utils.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 // Use AvatarWidget from widgets to render avatars safely
 
@@ -1389,7 +1390,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 if (!mounted) return;
                 if (newConversation != null &&
                     newConversation.id != widget.conversation.id) {
-                  scaffold.showSnackBar(SnackBar(
+                  scaffold.showKubusSnackBar(SnackBar(
                       content: Text(l10n.messagesCreatedNewGroupChatToast)));
                   if (!mounted) return;
                   await navigator.pushReplacement(
@@ -1417,7 +1418,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
                 // Show loading indicator
                 if (!mounted) return;
-                scaffold.showSnackBar(
+                scaffold.showKubusSnackBar(
                     SnackBar(content: Text(l10n.messagesUploadingAvatarToast)));
 
                 await _chatProvider.uploadConversationAvatar(
@@ -1436,7 +1437,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 await _load();
 
                 if (!mounted) return;
-                scaffold.showSnackBar(
+                scaffold.showKubusSnackBar(
                     SnackBar(content: Text(l10n.messagesAvatarUpdatedToast)));
                 setState(() {}); // Force rebuild with new avatar
               } catch (e) {
@@ -1447,7 +1448,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                       'ConversationScreen: change group avatar exception: $e');
                 }
                 if (!mounted) return;
-                scaffold.showSnackBar(SnackBar(
+                scaffold.showKubusSnackBar(SnackBar(
                     content: Text(l10n.messagesUpdateAvatarFailedToast)));
               }
               break;
@@ -2538,7 +2539,7 @@ class MembersDialog extends StatelessWidget {
                               await chatProvider.transferOwnership(
                                   conversationId, wallet);
                               if (!context.mounted) return;
-                              scaffold.showSnackBar(SnackBar(
+                              scaffold.showKubusSnackBar(SnackBar(
                                   content: Text(
                                       l10n.messagesOwnershipTransferredToast)));
                               // Close members dialog to surface updated ownership state
@@ -2549,7 +2550,7 @@ class MembersDialog extends StatelessWidget {
                                     'MembersDialog: transfer ownership failed: $e');
                               }
                               if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                ScaffoldMessenger.of(context).showKubusSnackBar(
                                   SnackBar(
                                       content: Text(
                                           l10n.messagesTransferFailedToast)),

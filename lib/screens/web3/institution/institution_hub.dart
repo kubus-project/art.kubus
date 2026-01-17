@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/widgets/glass_components.dart';
+import 'package:art_kubus/widgets/kubus_button.dart';
+import 'package:art_kubus/utils/design_tokens.dart';
+import 'package:art_kubus/utils/kubus_color_roles.dart';
 import '../../onboarding/web3/web3_onboarding.dart';
 import '../../onboarding/web3/onboarding_data.dart';
 import 'event_creator.dart';
@@ -18,6 +21,7 @@ import '../../../utils/wallet_utils.dart';
 import '../../collab/invites_inbox_screen.dart';
 import '../../events/exhibition_list_screen.dart';
 import '../../map_markers/manage_markers_screen.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class InstitutionHub extends StatefulWidget {
   final ValueChanged<int>? onTabChanged;
@@ -184,9 +188,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
         scrolledUnderElevation: 0,
         title: Text(
           'Institution Hub',
-          style: GoogleFonts.inter(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
+          style: KubusTextStyles.screenTitle.copyWith(
             color: Theme.of(context).colorScheme.onSurface,
           ),
           overflow: TextOverflow.ellipsis,
@@ -223,20 +225,19 @@ class _InstitutionHubState extends State<InstitutionHub> {
                     ),
                     if (pendingCount > 0)
                       Positioned(
-                        right: 8,
-                        top: 6,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.error,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Theme.of(context).colorScheme.surface, width: 1.5),
+                        right: KubusSpacing.sm,
+                        top: KubusSpacing.xs + KubusSpacing.xxs,
+                        child: FrostedContainer(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: KubusSpacing.xs + KubusSpacing.xxs,
+                            vertical: KubusSpacing.xxs,
                           ),
+                          borderRadius: BorderRadius.circular(KubusRadius.sm),
+                          showBorder: true,
+                          backgroundColor: Theme.of(context).colorScheme.error,
                           child: Text(
                             pendingCount > 99 ? '99+' : pendingCount.toString(),
-                            style: GoogleFonts.inter(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
+                            style: KubusTextStyles.badgeCount.copyWith(
                               color: Theme.of(context).colorScheme.onError,
                             ),
                           ),
@@ -299,8 +300,11 @@ class _InstitutionHubState extends State<InstitutionHub> {
     };
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(
+        horizontal: KubusSpacing.md,
+        vertical: KubusSpacing.sm,
+      ),
+      padding: const EdgeInsets.all(KubusSpacing.md),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -310,85 +314,89 @@ class _InstitutionHubState extends State<InstitutionHub> {
             scheme.primary.withValues(alpha: 0.75),
           ],
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
       ),
       child: Row(
         children: [
           Container(
-            width: 50,
-            height: 50,
+            width: KubusSpacing.xxl,
+            height: KubusSpacing.xxl,
             decoration: BoxDecoration(
               color: scheme.onSurface.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(25),
+              borderRadius: BorderRadius.circular(KubusRadius.xl),
             ),
             child: Icon(
               Icons.location_city,
               color: scheme.onSurface,
-              size: 26,
+              size: KubusSpacing.lg,
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: KubusSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'Institution Dashboard',
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: scheme.onSurface,
-                  ),
+                  style: KubusTextStyles.sectionTitle
+                      .copyWith(color: scheme.onSurface),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: KubusSpacing.xs),
                 Text(
                   subtitle,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
+                  style: KubusTextStyles.actionTileSubtitle.copyWith(
                     color: scheme.onSurface.withValues(alpha: 0.9),
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
                 if (isApprovedInstitution) ...[
-                  const SizedBox(height: 12),
+                  const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
                   Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
+                    spacing: KubusSpacing.sm,
+                    runSpacing: KubusSpacing.sm,
                     children: [
                       if (AppConfig.isFeatureEnabled('events'))
                         OutlinedButton.icon(
                           // "Create" tab index depends on exhibitions feature
                           onPressed: () => setState(() => _selectedIndex = AppConfig.isFeatureEnabled('exhibitions') ? 2 : 1),
-                          icon: Icon(Icons.add, size: 16, color: scheme.onSurface),
+                          icon: Icon(
+                            Icons.add,
+                            size: KubusSizes.trailingChevron,
+                            color: scheme.onSurface,
+                          ),
                           label: Text(
                             'Create event',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: scheme.onSurface,
-                            ),
+                            style: KubusTextStyles.actionTileTitle
+                                .copyWith(color: scheme.onSurface),
                           ),
                           style: OutlinedButton.styleFrom(
                             side: BorderSide(color: scheme.onSurface.withValues(alpha: 0.35)),
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: KubusSpacing.md - KubusSpacing.xs,
+                              vertical: KubusSpacing.sm + KubusSpacing.xs,
+                            ),
                           ),
                         ),
                       if (AppConfig.isFeatureEnabled('exhibitions'))
                         OutlinedButton.icon(
                           onPressed: () => setState(() => _selectedIndex = 1),
-                          icon: Icon(Icons.collections_bookmark_outlined, size: 16, color: scheme.onSurface),
+                          icon: Icon(
+                            Icons.collections_bookmark_outlined,
+                            size: KubusSizes.trailingChevron,
+                            color: scheme.onSurface,
+                          ),
                           label: Text(
                             'Exhibitions',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: scheme.onSurface,
-                            ),
+                            style: KubusTextStyles.actionTileTitle
+                                .copyWith(color: scheme.onSurface),
                           ),
                           style: OutlinedButton.styleFrom(
                             side: BorderSide(color: scheme.onSurface.withValues(alpha: 0.35)),
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: KubusSpacing.md - KubusSpacing.xs,
+                              vertical: KubusSpacing.sm + KubusSpacing.xs,
+                            ),
                           ),
                         ),
                     ],
@@ -429,8 +437,11 @@ class _InstitutionHubState extends State<InstitutionHub> {
       );
     }
 
-    final surface = Theme.of(context).colorScheme.surface;
-    final accent = Theme.of(context).colorScheme.primary;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final roles = KubusColorRoles.of(context);
+    final surface = scheme.surface;
+    final accent = roles.web3InstitutionAccent;
     final wallet = _resolveWalletAddress();
     final status = review?.status.toLowerCase() ?? '';
     final isPending = status == 'pending';
@@ -441,9 +452,9 @@ class _InstitutionHubState extends State<InstitutionHub> {
             ? status.toUpperCase()
             : 'NOT APPLIED';
     final statusColor = isApprovedInstitution
-        ? Colors.green
+        ? roles.positiveAction
         : isRejected
-            ? Theme.of(context).colorScheme.error
+            ? roles.negativeAction
             : accent;
     final canSubmit = wallet.isNotEmpty &&
       !_reviewLoading &&
@@ -461,47 +472,53 @@ class _InstitutionHubState extends State<InstitutionHub> {
             ? Icons.hourglass_bottom
             : Icons.send_rounded;
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: accent.withValues(alpha: 0.3)),
+    final cardRadius = BorderRadius.circular(KubusRadius.lg);
+    return LiquidGlassCard(
+      margin: const EdgeInsets.symmetric(
+        horizontal: KubusSpacing.md,
+        vertical: KubusSpacing.sm,
       ),
-      child: Column(
+      padding: EdgeInsets.zero,
+      borderRadius: cardRadius,
+      showBorder: false,
+      backgroundColor: surface.withValues(alpha: theme.brightness == Brightness.dark ? 0.22 : 0.14),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: cardRadius,
+          border: Border.all(color: accent.withValues(alpha: 0.3)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(KubusSpacing.md),
+          child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Container(
-                width: 42,
-                height: 42,
+                width: KubusSizes.sidebarActionIconBox,
+                height: KubusSizes.sidebarActionIconBox,
                 decoration: BoxDecoration(
                   color: accent.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
                 ),
                 child: Icon(Icons.domain_add_rounded, color: accent),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Institution application',
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.onSurface,
+                      style: KubusTextStyles.sectionTitle.copyWith(
+                        color: scheme.onSurface,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: KubusSpacing.xs),
                     Text(
                       'Submit your organization for DAO review and unlock institutional tooling.',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                      style: KubusTextStyles.actionTileSubtitle.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -510,25 +527,24 @@ class _InstitutionHubState extends State<InstitutionHub> {
             ],
           ),
           if (review != null || _reviewLoading) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: KubusSpacing.sm + KubusSpacing.xs - KubusSpacing.xxs,
+                    vertical: KubusSpacing.xs + KubusSpacing.xxs,
+                  ),
                   decoration: BoxDecoration(
                     color: statusColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(KubusRadius.md),
                   ),
                   child: Text(
                     statusLabel,
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: statusColor,
-                    ),
+                    style: KubusTextStyles.badgeCount.copyWith(color: statusColor),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: KubusSpacing.sm),
                 if (_reviewLoading)
                   SizedBox(
                     height: 18,
@@ -541,18 +557,22 @@ class _InstitutionHubState extends State<InstitutionHub> {
                 else if (review != null)
                   Text(
                     'Status synced from DAO',
-                    style: GoogleFonts.inter(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+                    style: KubusTextStyles.badgeCount.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.6),
+                    ),
                   ),
               ],
             ),
             if ((review?.reviewerNotes ?? '').isNotEmpty) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: KubusSpacing.sm),
               Text(
                 review!.reviewerNotes!,
-                style: GoogleFonts.inter(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.75)),
+                style: KubusTextStyles.actionTileSubtitle.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.75),
+                ),
               ),
             ] else if (review != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: KubusSpacing.sm),
               Text(
                 isPending
                     ? 'Your submission is in the DAO review queue.'
@@ -561,42 +581,58 @@ class _InstitutionHubState extends State<InstitutionHub> {
                         : isRejected
                             ? 'Your last submission was rejected. You can resubmit with updates.'
                             : '',
-                style: GoogleFonts.inter(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
+                style: KubusTextStyles.actionTileSubtitle.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.7),
+                ),
               ),
             ],
           ],
-          const SizedBox(height: 16),
+          const SizedBox(height: KubusSpacing.md),
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
               onPressed: canSubmit ? _showInstitutionApplicationModal : null,
-              icon: Icon(ctaIcon, color: canSubmit ? accent : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+              icon: Icon(
+                ctaIcon,
+                color: canSubmit
+                    ? accent
+                    : scheme.onSurface.withValues(alpha: 0.6),
+              ),
               label: Text(
                 ctaLabel,
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.w600,
-                  color: canSubmit ? accent : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                style: KubusTextStyles.actionTileTitle.copyWith(
+                  color: canSubmit
+                      ? accent
+                      : scheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
               style: OutlinedButton.styleFrom(
                 side: BorderSide(color: accent.withValues(alpha: 0.4)),
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(
+                  vertical: KubusSpacing.sm + KubusSpacing.xs,
+                  horizontal: KubusSpacing.md,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
+                ),
               ),
             ),
           ),
         ],
       ),
+        ),
+      ),
     );
   }
 
   Widget _buildNavigationTabs(bool enabled) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
-      ),
+    final scheme = Theme.of(context).colorScheme;
+    return LiquidGlassCard(
+      margin: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
+      padding: const EdgeInsets.all(KubusSpacing.xs),
+      borderRadius: BorderRadius.circular(KubusRadius.md),
+      blurSigma: KubusGlassEffects.blurSigmaLight,
+      backgroundColor: scheme.surfaceContainerHighest.withValues(alpha: 0.18),
       child: Row(
         children: [
           Expanded(child: _buildTabButton('Events', Icons.event, 0, enabled)),
@@ -615,15 +651,18 @@ class _InstitutionHubState extends State<InstitutionHub> {
     return GestureDetector(
       onTap: enabled
           ? () => _setSelectedIndex(index)
-          : () => ScaffoldMessenger.of(context).showSnackBar(
+          : () => ScaffoldMessenger.of(context).showKubusSnackBar(
                 const SnackBar(content: Text('Institution tools unlock after DAO approval.')),
               ),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-        margin: const EdgeInsets.symmetric(horizontal: 2),
+        padding: const EdgeInsets.symmetric(
+          vertical: KubusSpacing.md,
+          horizontal: KubusSpacing.sm,
+        ),
+        margin: const EdgeInsets.symmetric(horizontal: KubusSpacing.xxs),
         decoration: BoxDecoration(
           color: enabled && isSelected ? scheme.primaryContainer : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(KubusRadius.sm),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -633,14 +672,12 @@ class _InstitutionHubState extends State<InstitutionHub> {
               color: enabled && isSelected
                   ? scheme.onPrimaryContainer
                   : scheme.onSurface.withValues(alpha: enabled ? 0.6 : 0.35),
-              size: 20,
+              size: KubusSizes.sidebarActionIcon,
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: KubusSpacing.xs),
             Text(
               label,
-              style: GoogleFonts.inter(
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
+              style: KubusTypography.textTheme.labelSmall?.copyWith(
                 color: enabled && isSelected
                     ? scheme.onPrimaryContainer
                     : scheme.onSurface.withValues(alpha: enabled ? 0.6 : 0.35),
@@ -666,48 +703,58 @@ class _InstitutionHubState extends State<InstitutionHub> {
     required String message,
     required ColorScheme scheme,
   }) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: scheme.error.withValues(alpha: 0.25)),
+    final radius = BorderRadius.circular(KubusRadius.lg);
+    return LiquidGlassCard(
+      margin: const EdgeInsets.symmetric(
+        horizontal: KubusSpacing.md,
+        vertical: KubusSpacing.sm,
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: scheme.error.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: scheme.error),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: GoogleFonts.inter(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: scheme.onSurface,
-                  ),
+      padding: EdgeInsets.zero,
+      borderRadius: radius,
+      showBorder: false,
+      backgroundColor: scheme.surface.withValues(alpha: 0.18),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: radius,
+          border: Border.all(color: scheme.error.withValues(alpha: 0.25)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(KubusSpacing.md),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: KubusSizes.sidebarActionIconBox,
+                height: KubusSizes.sidebarActionIconBox,
+                decoration: BoxDecoration(
+                  color: scheme.error.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  message,
-                  style: GoogleFonts.inter(fontSize: 13, color: scheme.onSurface.withValues(alpha: 0.75)),
+                child: Icon(icon, color: scheme.error),
+              ),
+              const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: KubusTextStyles.sectionTitle
+                          .copyWith(color: scheme.onSurface),
+                    ),
+                    const SizedBox(height: KubusSpacing.xs + KubusSpacing.xxs),
+                    Text(
+                      message,
+                      style: KubusTextStyles.actionTileSubtitle.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.75),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -720,34 +767,43 @@ class _InstitutionHubState extends State<InstitutionHub> {
     final scheme = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(KubusSpacing.lg),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(KubusSpacing.md),
               decoration: BoxDecoration(
                 color: scheme.secondaryContainer,
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: scheme.onSecondaryContainer, size: 30),
+              child: Icon(
+                icon,
+                color: scheme.onSecondaryContainer,
+                size: KubusSpacing.lg + KubusSpacing.xs,
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: KubusSpacing.md),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700, color: scheme.onSurface),
+              style: KubusTypography.textTheme.titleLarge
+                  ?.copyWith(color: scheme.onSurface),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: KubusSpacing.sm),
             Text(
               description,
-              style: GoogleFonts.inter(fontSize: 14, color: scheme.onSurface.withValues(alpha: 0.7)),
+              style: KubusTextStyles.actionTileTitle.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.7),
+              ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: KubusSpacing.md + KubusSpacing.xs),
             Text(
               'Tip: Keep artist and institution roles on separate wallets to avoid DAO conflicts.',
-              style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.6)),
+              style: KubusTextStyles.actionTileSubtitle.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.6),
+              ),
               textAlign: TextAlign.center,
             ),
           ],
@@ -760,28 +816,26 @@ class _InstitutionHubState extends State<InstitutionHub> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Notifications',
-              style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
+      builder: (context) {
+        final scheme = Theme.of(context).colorScheme;
+        return BackdropGlassSheet(
+          padding: const EdgeInsets.all(KubusSpacing.lg),
+          backgroundColor:
+              scheme.surfaceContainerHighest.withValues(alpha: 0.18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Notifications',
+                style: KubusTextStyles.screenTitle
+                    .copyWith(color: scheme.onSurface),
               ),
-            ),
-            const SizedBox(height: 24),
-            // Add notifications here
-          ],
-        ),
-      ),
+              const SizedBox(height: KubusSpacing.lg),
+              // Add notifications here
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -795,50 +849,37 @@ class _InstitutionHubState extends State<InstitutionHub> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (sheetContext) {
         final viewInsets = MediaQuery.of(sheetContext).viewInsets.bottom;
+        final scheme = Theme.of(context).colorScheme;
+        final roles = KubusColorRoles.of(context);
         return Padding(
           padding: EdgeInsets.only(bottom: viewInsets),
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-            child: Form(
-              key: _applicationFormKey,
-              child: Column(
+            child: BackdropGlassSheet(
+              padding: const EdgeInsets.all(KubusSpacing.lg),
+              backgroundColor:
+                  scheme.surfaceContainerHighest.withValues(alpha: 0.18),
+              child: Form(
+                key: _applicationFormKey,
+                child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
                   Text(
                     'Institution application',
-                    style: GoogleFonts.inter(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
+                    style: KubusTextStyles.screenTitle
+                        .copyWith(color: scheme.onSurface),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: KubusSpacing.sm),
                   Text(
                     'Share your mission, programming focus, and how you plan to collaborate with the DAO.',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                    style: KubusTextStyles.actionTileTitle.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: KubusSpacing.lg),
                   TextFormField(
                     controller: _organizationController,
                     decoration: const InputDecoration(
@@ -849,7 +890,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
                         ? 'Please provide your organization name'
                         : null,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: KubusSpacing.md),
                   TextFormField(
                     controller: _contactController,
                     decoration: const InputDecoration(
@@ -860,7 +901,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
                         ? 'Share a website or contact email'
                         : null,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: KubusSpacing.md),
                   TextFormField(
                     controller: _focusController,
                     decoration: const InputDecoration(
@@ -871,7 +912,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
                         ? 'Let us know your programming focus'
                         : null,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: KubusSpacing.md),
                   TextFormField(
                     controller: _missionController,
                     maxLines: 4,
@@ -884,10 +925,10 @@ class _InstitutionHubState extends State<InstitutionHub> {
                         ? 'Describe your mission in at least 20 characters'
                         : null,
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: KubusSpacing.lg),
                   SizedBox(
                     width: double.infinity,
-                    child: ElevatedButton(
+                    child: KubusButton(
                       onPressed: () async {
                         if (!_applicationFormKey.currentState!.validate()) return;
                         final profileProvider = context.read<ProfileProvider>();
@@ -895,7 +936,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
                         final daoProvider = context.read<DAOProvider>();
                         final wallet = profileProvider.currentUser?.walletAddress ?? web3Provider.walletAddress;
                         if (wallet.isEmpty) {
-                          scaffold.showSnackBar(
+                          scaffold.showKubusSnackBar(
                             const SnackBar(content: Text('Connect your wallet before submitting.')),
                           );
                           return;
@@ -914,42 +955,37 @@ class _InstitutionHubState extends State<InstitutionHub> {
                             await _loadInstitutionReviewStatus(forceRefresh: true);
                           }
                           if (!mounted) return;
-                          scaffold.showSnackBar(
+                          scaffold.showKubusSnackBar(
                             SnackBar(
                               content: Text(review != null
                                   ? 'Application submitted to DAO reviewers.'
                                   : 'Unable to submit application right now.'),
                               backgroundColor: review != null
-                                  ? Colors.green
-                                  : Theme.of(context).colorScheme.error,
+                                  ? roles.positiveAction
+                                  : roles.negativeAction,
                             ),
                           );
                         } catch (e) {
                           if (!mounted) return;
-                          scaffold.showSnackBar(
+                          scaffold.showKubusSnackBar(
                             SnackBar(
                               content: Text('Submission failed: $e'),
-                              backgroundColor: Theme.of(context).colorScheme.error,
+                              backgroundColor: roles.negativeAction,
                             ),
                           );
                         }
                       },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Theme.of(context).colorScheme.onSurface,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: Text(
-                        'Submit application',
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-                      ),
+                      label: 'Submit application',
+                      isFullWidth: true,
+                      backgroundColor: scheme.primary,
+                      foregroundColor: scheme.onPrimary,
                     ),
                   ),
                 ],
               ),
             ),
           ),
+        ),
         );
       },
     );
@@ -959,30 +995,37 @@ class _InstitutionHubState extends State<InstitutionHub> {
     final scheme = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(KubusSpacing.lg),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(KubusSpacing.md),
               decoration: BoxDecoration(
                 color: scheme.secondaryContainer,
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.lock_outline, color: scheme.onSecondaryContainer, size: 28),
+              child: Icon(
+                Icons.lock_outline,
+                color: scheme.onSecondaryContainer,
+                size: KubusSpacing.lg + KubusSpacing.xs,
+              ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
             Text(
               'Institution tools are locked',
-              style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700, color: scheme.onSurface),
+              style: KubusTypography.textTheme.titleLarge
+                  ?.copyWith(color: scheme.onSurface),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: KubusSpacing.sm),
             Text(
               'Apply for DAO review to unlock events, creation tools, and analytics.',
-              style: GoogleFonts.inter(fontSize: 14, color: scheme.onSurface.withValues(alpha: 0.7)),
+              style: KubusTextStyles.actionTileTitle.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.7),
+              ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: KubusSpacing.md),
             OutlinedButton.icon(
               onPressed: () => _showInstitutionApplicationModal(),
               icon: const Icon(Icons.send_rounded),

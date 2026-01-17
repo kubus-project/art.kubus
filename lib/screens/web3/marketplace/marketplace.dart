@@ -22,6 +22,7 @@ import '../../../utils/app_color_utils.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class Marketplace extends StatefulWidget {
   const Marketplace({super.key});
@@ -1259,7 +1260,7 @@ class _MarketplaceState extends State<Marketplace>
       );
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text(l10n.marketplaceListForSaleSuccessToast),
           backgroundColor: scheme.primary,
@@ -1270,7 +1271,7 @@ class _MarketplaceState extends State<Marketplace>
         debugPrint('Marketplace: list for sale failed: $e');
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text(l10n.marketplaceListForSaleFailedToast),
           backgroundColor: scheme.error,
@@ -1316,7 +1317,7 @@ class _MarketplaceState extends State<Marketplace>
             onPressed: () {
               Navigator.of(context).pop();
               // In real app, implement remove from sale logic
-              ScaffoldMessenger.of(context).showSnackBar(
+              ScaffoldMessenger.of(context).showKubusSnackBar(
                 SnackBar(
                   content: Text(l10n.marketplaceRemoveFromSaleSuccessToast),
                   backgroundColor: scheme.surfaceContainerHighest,

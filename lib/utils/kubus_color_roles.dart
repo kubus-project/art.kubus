@@ -126,37 +126,37 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
   /// Default dark theme roles
   static const dark = KubusColorRoles(
     likeAction: KubusColors.errorDark, // Coral red - consistent across app
-    tagChipBackground: Color(0xFF9575CD), // Keep custom purple for now or migrate if token exists
+    tagChipBackground: KubusColors.accentPurpleDark,
     tagChipForeground: KubusColors.textPrimaryDark,
     positiveAction: KubusColors.successDark,
     negativeAction: KubusColors.errorDark,
     warningAction: KubusColors.warningDark,
-    lockedFeature: Color(0xFFFF9800), // Orange
-    statTeal: Color(0xFF4ECDC4),
+    lockedFeature: KubusColors.accentOrangeDark,
+    statTeal: KubusColors.accentTealDark,
     statCoral: KubusColors.errorDark,
     statGreen: KubusColors.successDark,
     statAmber: KubusColors.warningDark,
-    statPurple: Color(0xFF9575CD),
-    achievementGold: Color(0xFFFFD700),
-    artistStudioRed: Colors.red,
+    statPurple: KubusColors.accentPurpleDark,
+    achievementGold: KubusColors.achievementGoldDark,
+    artistStudioRed: KubusColors.errorDark,
   );
 
   /// Default light theme roles
   static const light = KubusColorRoles(
     likeAction: KubusColors.error, // Material red 600
-    tagChipBackground: Color(0xFF7E57C2), // Deep purple 400
+    tagChipBackground: KubusColors.accentPurpleLight,
     tagChipForeground: KubusColors.textPrimaryLight,
     positiveAction: KubusColors.success, // Green 600
     negativeAction: KubusColors.error, // Red 600
     warningAction: KubusColors.warning, // Amber 700
-    lockedFeature: Color(0xFFFB8C00), // Orange 600
-    statTeal: Color(0xFF00897B), // Teal 600
+    lockedFeature: KubusColors.accentOrangeLight,
+    statTeal: KubusColors.accentTealLight,
     statCoral: KubusColors.error, // Red 600
     statGreen: KubusColors.success, // Green 600
     statAmber: KubusColors.warning, // Amber 700
-    statPurple: Color(0xFF7E57C2), // Deep purple 400
-    achievementGold: Color(0xFFFFC107), // Amber 500
-    artistStudioRed: Colors.red,
+    statPurple: KubusColors.accentPurpleLight,
+    achievementGold: KubusColors.achievementGoldLight,
+    artistStudioRed: KubusColors.error,
   );
   
 

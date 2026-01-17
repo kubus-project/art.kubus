@@ -22,6 +22,7 @@ import '../web3/wallet/connectwallet_screen.dart';
 import '../desktop/auth/desktop_auth_shell.dart';
 import '../desktop/desktop_shell.dart';
 import '../../widgets/glass_components.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -81,7 +82,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } catch (e) {
       debugPrint('RegisterScreen: profile load skipped/failed: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(content: Text(l10n.authAccountCreatedProfileLoading)),
         );
       }
@@ -93,7 +94,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _registerWithEmail() async {
     final l10n = AppLocalizations.of(context)!;
     if (!AppConfig.enableEmailAuth) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(content: Text(l10n.authEmailRegistrationDisabled)));
       return;
     }
@@ -101,7 +102,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final password = _passwordController.text;
     final username = _usernameController.text.trim();
     if (email.isEmpty || password.length < 8) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(content: Text(l10n.authEnterValidEmailPassword)));
       return;
     }
@@ -121,7 +122,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           method: 'email', errorClass: e.runtimeType.toString()));
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(l10n.authRegistrationFailed)));
+          .showKubusSnackBar(SnackBar(content: Text(l10n.authRegistrationFailed)));
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -216,7 +217,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final l10n = AppLocalizations.of(context)!;
     if (!AppConfig.enableGoogleAuth) {
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(l10n.authGoogleSignInDisabled)));
+          .showKubusSnackBar(SnackBar(content: Text(l10n.authGoogleSignInDisabled)));
       return;
     }
     unawaited(TelemetryService().trackSignUpAttempt(method: 'google'));
@@ -242,7 +243,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           method: 'google', errorClass: e.runtimeType.toString()));
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(l10n.authGoogleSignInFailed)));
+          .showKubusSnackBar(SnackBar(content: Text(l10n.authGoogleSignInFailed)));
     } finally {
       if (mounted) setState(() => _isGoogleSubmitting = false);
     }
@@ -251,7 +252,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void _showConnectWalletModal() {
     final l10n = AppLocalizations.of(context)!;
     if (!AppConfig.enableWalletConnect || !AppConfig.enableWeb3) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(content: Text(l10n.authWalletConnectionDisabled)));
       return;
     }

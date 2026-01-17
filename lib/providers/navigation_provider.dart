@@ -14,6 +14,7 @@ import '../screens/web3/achievements/achievements_page.dart';
 import '../screens/web3/dao/governance_hub.dart';
 import '../screens/web3/artist/artist_studio.dart';
 import '../screens/web3/institution/institution_hub.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 @immutable
 class ScreenDefinition {
@@ -309,7 +310,7 @@ class NavigationProvider with ChangeNotifier {
     final definition = screenDefinitions[screenKey];
     if (definition == null) return;
     final l10n = AppLocalizations.of(context)!;
-    ScaffoldMessenger.of(context).showSnackBar(
+    ScaffoldMessenger.of(context).showKubusSnackBar(
       SnackBar(content: Text(l10n.navigationUnableToNavigateToScreen(definition.name))),
     );
   }

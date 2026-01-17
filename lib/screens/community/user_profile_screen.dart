@@ -37,6 +37,7 @@ import '../../services/socket_service.dart';
 import 'profile_screen_methods.dart';
 import '../../models/dao.dart';
 import '../../widgets/glass_components.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
  
 
 class UserProfileScreen extends StatefulWidget {
@@ -359,7 +360,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
       final message = e.toString().contains('401')
           ? l10n.userProfileSignInToFollowToast
           : l10n.userProfileFollowUpdateFailedToast;
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(message),
           duration: const Duration(seconds: 3),
@@ -383,7 +384,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
 
     // Show feedback
     if (mounted) {
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(
             newFollowState 
@@ -941,18 +942,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                   // use pre-captured chatAuth variable
                   if (!chatAuth) {
                     if (mounted) {
-                      messenger.showSnackBar(SnackBar(content: Text(l10n.userProfileMessageLoginRequiredToast)));
+                      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.userProfileMessageLoginRequiredToast)));
                     }
                   } else {
                     if (mounted) {
-                      messenger.showSnackBar(SnackBar(content: Text(l10n.userProfileConversationOpenFailedToast)));
+                      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.userProfileConversationOpenFailedToast)));
                     }
                   }
                 }
               } catch (e) {
                 debugPrint('UserProfileScreen: failed to open conversation: $e');
                 if (!mounted) return;
-                messenger.showSnackBar(SnackBar(content: Text(l10n.userProfileConversationOpenGenericErrorToast)));
+                messenger.showKubusSnackBar(SnackBar(content: Text(l10n.userProfileConversationOpenGenericErrorToast)));
               }
             },
             style: ElevatedButton.styleFrom(
@@ -1798,7 +1799,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
               if (targetWallet.isEmpty) {
                 if (!mounted) return;
                 Navigator.pop(context);
-                messenger.showSnackBar(SnackBar(content: Text(l10n.userProfileUnableToBlockToast)));
+                messenger.showKubusSnackBar(SnackBar(content: Text(l10n.userProfileUnableToBlockToast)));
                 return;
               }
 
@@ -1808,13 +1809,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                 debugPrint('UserProfileScreen: failed to block user: $e');
                 if (!mounted) return;
                 Navigator.pop(context);
-                messenger.showSnackBar(SnackBar(content: Text(l10n.userProfileBlockFailedToast)));
+                messenger.showKubusSnackBar(SnackBar(content: Text(l10n.userProfileBlockFailedToast)));
                 return;
               }
 
               if (!mounted) return;
               Navigator.pop(context);
-              messenger.showSnackBar(
+              messenger.showKubusSnackBar(
                 SnackBar(content: Text(l10n.userProfileBlockedToast(user?.name ?? targetWallet))),
               );
             },
@@ -1879,7 +1880,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
         Navigator.pop(dialogContext);
 
         if (targetWallet.isEmpty) {
-          messenger.showSnackBar(
+          messenger.showKubusSnackBar(
             SnackBar(content: Text(l10n.commonActionFailedToast), duration: const Duration(seconds: 2)),
           );
           return;
@@ -1892,12 +1893,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
             details: user?.name,
           );
           if (!mounted) return;
-          messenger.showSnackBar(
+          messenger.showKubusSnackBar(
             SnackBar(content: Text(l10n.userProfileReportSubmittedToast), duration: const Duration(seconds: 2)),
           );
         } catch (_) {
           if (!mounted) return;
-          messenger.showSnackBar(
+          messenger.showKubusSnackBar(
             SnackBar(content: Text(l10n.commonActionFailedToast), duration: const Duration(seconds: 2)),
           );
         }

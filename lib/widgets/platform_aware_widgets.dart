@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../providers/platform_provider.dart';
 import '../utils/kubus_color_roles.dart';
 import 'glass_components.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 /// A helper widget that shows platform-aware buttons and features
 class PlatformAwareFeatureButton extends StatelessWidget {
@@ -104,7 +105,7 @@ class PlatformAwareFeatureButton extends StatelessWidget {
   }
 
   void _showUnsupportedMessage(BuildContext context, PlatformProvider platformProvider) {
-    ScaffoldMessenger.of(context).showSnackBar(
+    ScaffoldMessenger.of(context).showKubusSnackBar(
       SnackBar(
         content: Text(platformProvider.getUnsupportedFeatureMessage(feature)),
         behavior: SnackBarBehavior.floating,

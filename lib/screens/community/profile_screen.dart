@@ -45,6 +45,7 @@ import '../../models/dao.dart';
 import '../../config/config.dart';
 import 'community_analytics_screen.dart';
 import 'profile_analytics_screen.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -2543,7 +2544,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   void _handleHelpOptionTap(String option) {
     switch (option) {
       case 'Documentation':
-        ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
             content: Text('Opening documentation...'),
             duration: const Duration(seconds: 2),
@@ -2681,7 +2682,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
             onPressed: () {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
+              ScaffoldMessenger.of(context).showKubusSnackBar(
                 const SnackBar(
                   content: Text('Bug report submitted. Thank you!'),
                   duration: Duration(seconds: 2),

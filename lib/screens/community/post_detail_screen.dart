@@ -25,6 +25,7 @@ import '../../widgets/community/community_subject_picker.dart';
 import '../../models/community_subject.dart';
 import '../../utils/community_subject_navigation.dart';
 import '../../utils/media_url_resolver.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
  
 
 enum PostDetailInitialAction { edit, delete, report, options }
@@ -234,7 +235,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       if (!mounted) return;
       _maybeRunInitialAction();
       final roles = KubusColorRoles.of(context);
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text(_post!.isLiked ? l10n.postDetailPostLikedToast : l10n.postDetailLikeRemovedToast),
           action: SnackBarAction(
@@ -253,7 +254,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   debugPrint('PostDetailScreen: undo like failed: $e');
                 }
                 if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.postDetailUndoLikeFailedToast)));
+                ScaffoldMessenger.of(context).showKubusSnackBar(SnackBar(content: Text(l10n.postDetailUndoLikeFailedToast)));
               }
             },
           ),
@@ -269,7 +270,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       } catch (_) {}
       if (!mounted) return;
       final retryRoles = KubusColorRoles.of(context);
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text(l10n.postDetailUpdateLikeFailedToast),
           action: SnackBarAction(
@@ -288,7 +289,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   debugPrint('PostDetailScreen: retry like failed: $e');
                 }
                 if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.postDetailRetryLikeFailedToast)));
+                ScaffoldMessenger.of(context).showKubusSnackBar(SnackBar(content: Text(l10n.postDetailRetryLikeFailedToast)));
               }
             },
           ),
@@ -317,7 +318,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             parentCommentId: parentId,
           );
       if (!mounted) return;
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.postDetailCommentAddedToast)),
       );
       setState(() {});
@@ -327,7 +328,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       }
       if (!mounted) return;
       // Backend can reject unauthenticated requests.
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.postDetailAddCommentFailedToast)),
       );
     }
@@ -778,7 +779,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         } catch (_) {}
         if (!mounted) return;
         final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
             content: Text(l10n.userProfileReportSubmittedToast),
             duration: const Duration(seconds: 2),
@@ -1061,7 +1062,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                             ? subjectIdPayload
                                             : null;
                                     if (content.isEmpty && existingMediaUrls.isEmpty) {
-                                      messenger.showSnackBar(
+                                      messenger.showKubusSnackBar(
                                         SnackBar(
                                           content: Text(
                                             l10n.communityComposerAddContentToast,
@@ -1107,7 +1108,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                       });
                                       appRefresh?.triggerCommunity();
                                       navigator.pop();
-                                      messenger.showSnackBar(
+                                      messenger.showKubusSnackBar(
                                         SnackBar(
                                           content:
                                               Text(l10n.postDetailPostUpdatedToast),
@@ -1120,7 +1121,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                       }
                                       if (!mounted) return;
                                       setModalState(() => saving = false);
-                                      messenger.showSnackBar(
+                                      messenger.showKubusSnackBar(
                                         SnackBar(
                                           content: Text(
                                             l10n.postDetailUpdatePostFailedToast,
@@ -1198,7 +1199,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         if (!mounted) return;
                         appRefresh?.triggerCommunity();
                         dialogNavigator.pop();
-                        messenger.showSnackBar(
+                        messenger.showKubusSnackBar(
                           SnackBar(content: Text(l10n.postDetailPostDeletedToast)),
                         );
                         if (onClose != null) {
@@ -1212,7 +1213,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         }
                         if (!mounted) return;
                         setDialogState(() => deleting = false);
-                        messenger.showSnackBar(
+                        messenger.showKubusSnackBar(
                           SnackBar(content: Text(l10n.postDetailDeletePostFailedToast)),
                         );
                       }
@@ -1294,7 +1295,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                 await _fetchPost(widget.postId!);
                                 if (!mounted) return;
                               }
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              ScaffoldMessenger.of(context).showKubusSnackBar(
                                 SnackBar(
                                   content: Text(
                                     content.isEmpty
@@ -1308,7 +1309,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                 debugPrint('PostDetailScreen: repost failed: $e');
                               }
                               if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                ScaffoldMessenger.of(context).showKubusSnackBar(
                                   SnackBar(content: Text(AppLocalizations.of(context)!.postDetailRepostFailedToast)),
                                 );
                               }
@@ -1586,10 +1587,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                                     if (!mounted) return;
                                                     if (!dialogContext.mounted) return;
                                                     Navigator.of(dialogContext).pop();
-                                                    messenger.showSnackBar(SnackBar(content: Text(l10n.commentUpdatedToast)));
+                                                    messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commentUpdatedToast)));
                                                   } catch (_) {
                                                     if (!mounted) return;
-                                                    messenger.showSnackBar(
+                                                    messenger.showKubusSnackBar(
                                                       SnackBar(
                                                         content: Text(l10n.commentEditFailedToast),
                                                         backgroundColor: scheme.errorContainer,
@@ -1641,10 +1642,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                             try {
                               await commentsProvider.deleteComment(postId: post.id, commentId: c.id);
                               if (!mounted) return;
-                              messenger.showSnackBar(SnackBar(content: Text(l10n.commentDeletedToast)));
+                              messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commentDeletedToast)));
                             } catch (_) {
                               if (!mounted) return;
-                              messenger.showSnackBar(
+                              messenger.showKubusSnackBar(
                                 SnackBar(
                                   content: Text(l10n.commentDeleteFailedToast),
                                   backgroundColor: scheme.errorContainer,
@@ -1772,7 +1773,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                                     c.isLiked = prevLiked;
                                                     c.likeCount = prevCount;
                                                   });
-                                                  messenger.showSnackBar(
+                                                  messenger.showKubusSnackBar(
                                                     SnackBar(content: Text(l10n.postDetailUpdateCommentLikeFailedToast)),
                                                   );
                                                 }

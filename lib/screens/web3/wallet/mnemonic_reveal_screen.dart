@@ -6,6 +6,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../widgets/app_loading.dart';
 import '../../../utils/app_color_utils.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class MnemonicRevealScreen extends StatefulWidget {
   const MnemonicRevealScreen({super.key});
@@ -100,7 +101,7 @@ class _MnemonicRevealScreenState extends State<MnemonicRevealScreen> {
     Clipboard.setData(ClipboardData(text: m));
     if (!mounted) return;
     messenger
-        .showSnackBar(SnackBar(content: Text(l10n.mnemonicRevealCopiedToast)));
+        .showKubusSnackBar(SnackBar(content: Text(l10n.mnemonicRevealCopiedToast)));
   }
 
   @override
@@ -229,7 +230,7 @@ class _MnemonicRevealScreenState extends State<MnemonicRevealScreen> {
                               final rem =
                                   await wallet.getPinLockoutRemainingSeconds();
                               if (!mounted) return;
-                              messenger.showSnackBar(
+                              messenger.showKubusSnackBar(
                                 SnackBar(
                                   content: Text(rem > 0
                                       ? l10n.mnemonicRevealPinLockedError(rem)

@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/app_loading.dart';
 import '../config/config.dart';
 import '../services/onboarding_state_service.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 /// Developer tool to reset app onboarding state
 /// This screen can be accessed from the settings or profile menu during development
@@ -109,7 +110,7 @@ class _OnboardingResetScreenState extends State<OnboardingResetScreen> {
 
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
+    ScaffoldMessenger.of(context).showKubusSnackBar(
       SnackBar(
         content: Text(l10n.onboardingResetSnackBarMessage),
         duration: const Duration(seconds: 3),

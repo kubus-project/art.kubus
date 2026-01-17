@@ -40,6 +40,7 @@ import '../desktop_shell.dart';
 import '../../../config/config.dart';
 import 'desktop_community_analytics_screen.dart';
 import 'desktop_profile_analytics_screen.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 /// Desktop user profile screen - viewing another user's profile
 /// Clean card-based layout with follow/message actions
@@ -1596,7 +1597,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     } catch (e) {
       debugPrint('Failed to toggle follow: $e');
       if (!mounted) return;
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(
             e.toString().contains('401')
@@ -1621,7 +1622,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     });
 
     if (mounted) {
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(
             newFollowState
@@ -1673,7 +1674,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         );
       } else {
         if (mounted) {
-          messenger.showSnackBar(
+          messenger.showKubusSnackBar(
             SnackBar(
               content: Text(
                 chatAuth
@@ -1687,7 +1688,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     } catch (e) {
       debugPrint('DesktopUserProfileScreen: failed to open conversation: $e');
       if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(l10n.userProfileConversationOpenGenericErrorToast)));
+      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.userProfileConversationOpenGenericErrorToast)));
     }
   }
 
@@ -1734,7 +1735,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               title: Text(l10n.userProfileMoreOptionsCopyLink),
               onTap: () {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
+                ScaffoldMessenger.of(context).showKubusSnackBar(
                   SnackBar(
                     content: Text(l10n.userProfileLinkCopiedToast),
                     duration: Duration(seconds: 2),
@@ -1752,7 +1753,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     final l10n = AppLocalizations.of(context)!;
     final targetWallet = WalletUtils.canonical(user?.id ?? widget.userId);
     if (targetWallet.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(content: Text(l10n.userProfileUnableToBlockToast)),
       );
       return;
@@ -1790,13 +1791,13 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                 debugPrint('DesktopUserProfileScreen: failed to block user: $e');
                 if (!mounted) return;
                 Navigator.pop(context);
-                messenger.showSnackBar(SnackBar(content: Text(l10n.userProfileBlockFailedToast)));
+                messenger.showKubusSnackBar(SnackBar(content: Text(l10n.userProfileBlockFailedToast)));
                 return;
               }
 
               if (!mounted) return;
               Navigator.pop(context);
-              messenger.showSnackBar(
+              messenger.showKubusSnackBar(
                 SnackBar(
                   content: Text(l10n.userProfileBlockedToast(user?.name ?? targetWallet)),
                   action: SnackBarAction(
@@ -1857,17 +1858,17 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     Navigator.pop(dialogContext);
 
     if (targetWallet.isEmpty) {
-      messenger.showSnackBar(SnackBar(content: Text(l10n.commonActionFailedToast)));
+      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commonActionFailedToast)));
       return;
     }
 
     try {
       await CommunityService.reportUser(targetWallet, reason, details: user?.name);
       if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(l10n.userProfileReportSubmittedToast)));
+      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.userProfileReportSubmittedToast)));
     } catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(l10n.commonActionFailedToast)));
+      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commonActionFailedToast)));
     }
   }
 

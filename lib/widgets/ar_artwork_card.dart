@@ -7,6 +7,7 @@ import '../models/artwork.dart';
 import '../services/ar_integration_service.dart';
 import 'artwork_creator_byline.dart';
 import 'glass_components.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 /// Card widget displaying AR-enabled artwork with interaction options
 class ARArtworkCard extends StatefulWidget {
@@ -69,7 +70,7 @@ class _ARArtworkCardState extends State<ARArtworkCard> {
       }
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(content: Text(l10n.arArtworkCardLaunchFailedToast)),
         );
       }

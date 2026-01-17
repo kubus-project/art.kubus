@@ -67,6 +67,9 @@ class AppConfig {
   // Auth UX: re-prompt login when backend token expires.
   static const bool enableRePromptLoginOnExpiry = true;
 
+  /// Map: allow expanding marker radius via "Travel mode".
+  static const bool enableMapTravelMode = true;
+
   /// Collaboration (events/exhibitions)
   static const bool enableCollabInvites = true;
   static const bool enableCollabInviteNotifications = true;
@@ -282,6 +285,7 @@ class AppConfig {
       case 'presenceLastVisitedLocation': return enablePresenceLastVisitedLocation;
       case 'externalImageProxy': return enableExternalImageProxy;
       case 'rePromptLoginOnExpiry': return enableRePromptLoginOnExpiry;
+      case 'mapTravelMode': return enableMapTravelMode;
       default: return false;
     }
   }
@@ -351,4 +355,12 @@ class PreferenceKeys {
   static const String selectedLanguage = 'selected_language';
   static const String lastSync = 'last_sync';
   static const String userProfile = 'user_profile';
+
+  /// Map UX
+  static const String mapTravelModeEnabledV1 = 'map_travel_mode_enabled_v1';
+  static const String mapTravelTutorialSeenV1 = 'map_travel_tutorial_seen_v1';
+
+  /// Interactive map onboarding tutorial (coach marks)
+  static const String mapOnboardingMobileSeenV2 = 'map_onboarding_mobile_seen_v2';
+  static const String mapOnboardingDesktopSeenV2 = 'map_onboarding_desktop_seen_v2';
 }

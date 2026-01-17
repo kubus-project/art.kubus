@@ -11,6 +11,7 @@ import '../../../utils/media_url_resolver.dart';
 import '../../../utils/artwork_edit_navigation.dart';
 import '../../art/collection_detail_screen.dart';
 import '../../events/exhibition_detail_screen.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class ArtistPortfolioScreen extends StatefulWidget {
   final String walletAddress;
@@ -450,17 +451,17 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
         return;
       case 'publish':
         await provider.publishArtwork(artwork.id);
-        messenger.showSnackBar(SnackBar(content: Text(l10n.commonSavedToast)));
+        messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commonSavedToast)));
         return;
       case 'unpublish':
         await provider.unpublishArtwork(artwork.id);
-        messenger.showSnackBar(SnackBar(content: Text(l10n.commonSavedToast)));
+        messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commonSavedToast)));
         return;
       case 'delete':
         final confirmed = await _confirmDeleteArtwork(context, artwork.title);
         if (confirmed != true) return;
         await provider.deleteArtwork(artwork.id);
-        messenger.showSnackBar(
+        messenger.showKubusSnackBar(
           SnackBar(content: Text(l10n.artistGalleryDeletedToast(artwork.title))),
         );
         return;

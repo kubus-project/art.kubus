@@ -18,6 +18,7 @@ import '../../widgets/charts/stats_interactive_bar_chart.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/stats_provider.dart';
 import '../../providers/web3provider.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class AdvancedAnalyticsScreen extends StatefulWidget {
   final String statType;
@@ -1660,7 +1661,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       );
     } catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: const Text('Unable to share analytics on this device.'),
           backgroundColor: scheme.error,

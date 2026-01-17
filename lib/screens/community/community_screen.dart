@@ -61,6 +61,7 @@ import '../../utils/community_subject_navigation.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/media_url_resolver.dart';
 import '../season0/season0_screen.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 enum CommunityFeedType {
   following,
@@ -347,7 +348,7 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   void _showSnack(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
+    ScaffoldMessenger.of(context).showKubusSnackBar(
       SnackBar(content: Text(message)),
     );
   }
@@ -5899,7 +5900,7 @@ class _CommunityScreenState extends State<CommunityScreen>
     final l10n = AppLocalizations.of(sheetContext)!;
     var content = _newPostController.text.trim();
     if (content.isEmpty && !_hasSelectedMedia) {
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.communityComposerAddContentToast)),
       );
       return;
@@ -5932,7 +5933,7 @@ class _CommunityScreenState extends State<CommunityScreen>
 
       _handlePostSuccess(createdPost, isGroupPost: isGroupPost);
       navigator.pop();
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(
             isGroupPost
@@ -5947,7 +5948,7 @@ class _CommunityScreenState extends State<CommunityScreen>
         debugPrint('CommunityScreen: create post failed: $e');
       }
       if (!mounted) return;
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.communityComposerCreatePostFailedToast)),
       );
     }
@@ -6037,7 +6038,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       setState(() {});
 
       // Show feedback message
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text(!wasLiked ? l10n.postDetailPostLikedToast : l10n.postDetailLikeRemovedToast),
           duration: const Duration(seconds: 1),
@@ -6051,7 +6052,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       setState(() {});
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text(l10n.communityToggleLikeFailedToast),
           duration: const Duration(seconds: 2),
@@ -6318,7 +6319,7 @@ class _CommunityScreenState extends State<CommunityScreen>
         _bookmarkedPosts[index] = post.isBookmarked;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text(
             post.isBookmarked
@@ -6334,7 +6335,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       }
       if (!mounted) return;
       final l10n = AppLocalizations.of(context)!;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text(l10n.communityBookmarkUpdateFailedToast),
           duration: const Duration(seconds: 2),
@@ -6500,9 +6501,9 @@ class _CommunityScreenState extends State<CommunityScreen>
                                               if (mounted) setState(() {});
                                               if (!dialogContext.mounted) return;
                                               Navigator.of(dialogContext).pop();
-                                              messenger.showSnackBar(SnackBar(content: Text(l10n.commentUpdatedToast)));
+                                              messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commentUpdatedToast)));
                                             } catch (_) {
-                                              messenger.showSnackBar(
+                                              messenger.showKubusSnackBar(
                                                 SnackBar(
                                                   content: Text(l10n.commentEditFailedToast),
                                                   backgroundColor: scheme.errorContainer,
@@ -6555,9 +6556,9 @@ class _CommunityScreenState extends State<CommunityScreen>
                         await commentsProvider.deleteComment(postId: post.id, commentId: c.id);
                         post.commentCount = commentsProvider.totalCountForPost(post.id);
                         if (mounted) setState(() {});
-                        messenger.showSnackBar(SnackBar(content: Text(l10n.commentDeletedToast)));
+                        messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commentDeletedToast)));
                       } catch (_) {
-                        messenger.showSnackBar(
+                        messenger.showKubusSnackBar(
                           SnackBar(
                             content: Text(l10n.commentDeleteFailedToast),
                             backgroundColor: scheme.errorContainer,
@@ -6683,7 +6684,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                               c.likeCount += c.isLiked ? 1 : -1;
                                             });
                                             if (context.mounted) {
-                                              ScaffoldMessenger.of(context).showSnackBar(
+                                              ScaffoldMessenger.of(context).showKubusSnackBar(
                                                 SnackBar(
                                                   content: Text(l10n.postDetailUpdateCommentLikeFailedToast),
                                                   backgroundColor: scheme.errorContainer,
@@ -6950,7 +6951,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                       await _resolveCommentAuthorContext();
                                   if (authorContext == null) {
                                     if (!mounted) return;
-                                    messenger.showSnackBar(
+                                    messenger.showKubusSnackBar(
                                       SnackBar(
                                         content: Text(l10n.communityCommentAuthRequiredToast),
                                         duration: const Duration(seconds: 2),
@@ -6971,7 +6972,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                   setState(() {});
                                   commentController.clear();
 
-                                  messenger.showSnackBar(
+                                  messenger.showKubusSnackBar(
                                     SnackBar(
                                       content: Text(l10n.postDetailCommentAddedToast),
                                       duration: const Duration(seconds: 2),
@@ -6982,7 +6983,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                     debugPrint('CommunityScreen: add comment (submit) failed: $e');
                                   }
                                   if (!mounted) return;
-                                  messenger.showSnackBar(
+                                  messenger.showKubusSnackBar(
                                     SnackBar(
                                       content: Text(l10n.postDetailAddCommentFailedToast),
                                       duration: const Duration(seconds: 2),
@@ -7018,7 +7019,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                       await _resolveCommentAuthorContext();
                                   if (authorContext == null) {
                                     if (!mounted) return;
-                                    messenger.showSnackBar(
+                                    messenger.showKubusSnackBar(
                                       SnackBar(
                                         content: Text(l10n.communityCommentAuthRequiredToast),
                                         duration: const Duration(seconds: 2),
@@ -7040,7 +7041,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                   setState(() {});
                                   commentController.clear();
 
-                                  messenger.showSnackBar(
+                                  messenger.showKubusSnackBar(
                                     SnackBar(
                                       content: Text(l10n.postDetailCommentAddedToast),
                                       duration: const Duration(seconds: 2),
@@ -7051,7 +7052,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                     debugPrint('CommunityScreen: add comment (button) failed: $e');
                                   }
                                   if (!mounted) return;
-                                  messenger.showSnackBar(
+                                  messenger.showKubusSnackBar(
                                     SnackBar(
                                       content: Text(l10n.postDetailAddCommentFailedToast),
                                       duration: const Duration(seconds: 2),
@@ -7185,7 +7186,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                               setState(() {
                                 _communityPosts.insert(0, createdRepost);
                               });
-                              messenger.showSnackBar(
+                              messenger.showKubusSnackBar(
                                 SnackBar(
                                   content: Text(content.isEmpty
                                       ? l10n.postDetailRepostSuccessToast
@@ -7197,7 +7198,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                 debugPrint('CommunityScreen: repost failed: $e');
                               }
                               if (!mounted) return;
-                              messenger.showSnackBar(
+                              messenger.showKubusSnackBar(
                                 SnackBar(
                                   content: Text(l10n.postDetailRepostFailedToast),
                                 ),
@@ -7517,7 +7518,7 @@ class _CommunityScreenState extends State<CommunityScreen>
 
       await _loadCommunityData();
       if (!mounted) return;
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.communityRepostRemovedToast)),
       );
     } catch (e) {
@@ -7525,7 +7526,7 @@ class _CommunityScreenState extends State<CommunityScreen>
         debugPrint('CommunityScreen: unrepost failed: $e');
       }
       if (!mounted) return;
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.communityUnrepostFailedToast)),
       );
     }

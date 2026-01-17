@@ -14,6 +14,7 @@ import '../../widgets/share/share_message_sheet.dart';
 import '../../widgets/share/share_sheet.dart';
 import 'share_link_builder.dart';
 import 'share_types.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class ShareService {
   ShareService({
@@ -112,7 +113,7 @@ class ShareService {
               await Clipboard.setData(ClipboardData(text: shareUrl));
               if (!context.mounted) return;
               sheetNavigator.pop();
-              messenger.showSnackBar(SnackBar(content: Text(l10n.shareLinkCopiedToast)));
+              messenger.showKubusSnackBar(SnackBar(content: Text(l10n.shareLinkCopiedToast)));
               unawaited(bumpPostShareCountIfNeeded());
               unawaited(_trackShareEventIfEnabled(
                 analyticsEnabled,
@@ -165,12 +166,12 @@ class ShareService {
                         sourceScreen: sourceScreen,
                       ));
                       if (!outerNavigator.mounted) return;
-                      outerMessenger.showSnackBar(
+                      outerMessenger.showKubusSnackBar(
                         SnackBar(content: Text(outerL10n.shareMessageSentToast(recipientWallet))),
                       );
                     } catch (_) {
                       if (!outerNavigator.mounted) return;
-                      outerMessenger.showSnackBar(
+                      outerMessenger.showKubusSnackBar(
                         SnackBar(content: Text(outerL10n.shareMessageFailedToast)),
                       );
                       rethrow;

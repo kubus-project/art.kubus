@@ -20,6 +20,7 @@ import '../../utils/wallet_utils.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../widgets/detail/detail_shell_components.dart';
 import '../../config/config.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class CollectionDetailScreen extends StatefulWidget {
   final String collectionId;
@@ -406,7 +407,7 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
       if (!mounted) return;
 
       if (bytes == null || bytes.isEmpty) {
-        messenger.showSnackBar(
+        messenger.showKubusSnackBar(
           SnackBar(content: Text(l10n.commonActionFailedToast)),
         );
         return;
@@ -419,7 +420,7 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
       if (!mounted) return;
 
       if (url == null || url.isEmpty) {
-        messenger.showSnackBar(
+        messenger.showKubusSnackBar(
           SnackBar(content: Text(l10n.commonActionFailedToast)),
         );
         return;
@@ -431,12 +432,12 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
       );
       if (!mounted) return;
 
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.commonSavedToast)),
       );
     } catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(l10n.commonActionFailedToast),
           backgroundColor: scheme.error,
@@ -466,7 +467,7 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
         isPublic: _isPublic,
       );
       if (!mounted) return;
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(
               l10n.collectionSettingsSavedToast(_nameController.text.trim())),
@@ -475,7 +476,7 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
       Navigator.of(context).maybePop();
     } catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.collectionSettingsSaveFailedToast)),
       );
     } finally {
@@ -500,7 +501,7 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
       );
     } catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.collectionDetailRemoveArtworkFailedToast)),
       );
     }
@@ -513,7 +514,7 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
     final walletProvider = context.read<WalletProvider>();
     final walletAddress = walletProvider.currentWalletAddress ?? '';
     if (walletAddress.isEmpty) {
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.collectionDetailNoArtworksYet)),
       );
       return;
@@ -525,7 +526,7 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
       await artworkProvider.loadArtworksForWallet(walletAddress, force: true);
     } catch (_) {
       if (mounted) {
-        messenger.showSnackBar(
+        messenger.showKubusSnackBar(
           SnackBar(content: Text(l10n.collectionDetailAddArtworkFailedToast)),
         );
       }
@@ -543,7 +544,7 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
     final available = owned.where((a) => !existingIds.contains(a.id)).toList();
 
     if (available.isEmpty) {
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.collectionDetailNoArtworksYet)),
       );
       return;
@@ -662,7 +663,7 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
       );
     } catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.collectionDetailAddArtworkFailedToast)),
       );
     }

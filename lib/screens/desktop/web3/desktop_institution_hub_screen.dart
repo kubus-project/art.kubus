@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
 import '../../../providers/themeprovider.dart';
 import '../../../utils/kubus_color_roles.dart';
+import '../../../utils/design_tokens.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/dao_provider.dart';
 import '../../../providers/web3provider.dart';
@@ -28,6 +28,7 @@ import '../../events/exhibition_detail_screen.dart';
 import '../../events/exhibition_list_screen.dart';
 import '../../map_markers/manage_markers_screen.dart';
 import '../../../widgets/glass_components.dart';
+import '../../../widgets/kubus_action_sidebar.dart';
 
 /// Desktop Institution Hub screen with split-panel layout
 /// Left: Mobile institution hub view
@@ -241,69 +242,55 @@ class _DesktopInstitutionHubScreenState
         showBorder: false,
         backgroundColor: scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10),
         child: ListView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(KubusSpacing.lg),
           children: [
           // Header
           Text(
             sectionTitle(),
-            style: GoogleFonts.inter(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+            style: KubusTextStyles.screenTitle.copyWith(color: scheme.onSurface),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: KubusSpacing.lg),
 
           // Verification status
           _buildVerificationStatusCard(themeProvider),
-          const SizedBox(height: 20),
+          const SizedBox(height: KubusSpacing.md + KubusSpacing.xs),
 
           // Quick actions
           Text(
             'Quick Actions',
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+            style: KubusTextStyles.sectionTitle.copyWith(color: scheme.onSurface),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
           if (AppConfig.isFeatureEnabled('collabInvites'))
             Consumer<CollabProvider>(
               builder: (context, collabProvider, _) {
                 final pending = collabProvider.pendingInviteCount;
-                final scheme = Theme.of(context).colorScheme;
                 final badge = pending > 0
-                    ? Container(
+                    ? FrostedContainer(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: scheme.error,
-                          borderRadius: BorderRadius.circular(999),
+                          horizontal: KubusSpacing.sm,
+                          vertical: KubusSpacing.xs,
                         ),
+                        borderRadius: BorderRadius.circular(KubusRadius.xl),
+                        showBorder: false,
+                        backgroundColor:
+                            scheme.error.withValues(alpha: isDark ? 0.30 : 0.22),
                         child: Text(
                           pending > 99 ? '99+' : pending.toString(),
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: scheme.onError,
-                          ),
+                          style: KubusTextStyles.badgeCount
+                              .copyWith(color: scheme.onError),
                         ),
                       )
-                    : Icon(
-                        Icons.arrow_forward_ios,
-                        size: 16,
-                        color: scheme.onSurface.withValues(alpha: 0.4),
-                      );
+                    : null;
 
-                return _buildQuickActionTile(
-                  'Invites',
-                  pending > 0
+                return KubusActionSidebarTile(
+                  title: 'Invites',
+                  subtitle: pending > 0
                       ? 'You have pending collaboration invites'
                       : 'View collaboration invites',
-                  Icons.inbox_outlined,
-                  scheme.primary,
-                  () {
+                  icon: Icons.inbox_outlined,
+                  semantic: KubusActionSemantic.invite,
+                  onTap: () {
                     DesktopShellScope.of(context)?.pushScreen(
                       DesktopSubScreen(
                         title: 'Collaboration Invites',
@@ -319,12 +306,12 @@ class _DesktopInstitutionHubScreenState
               isApprovedInstitution &&
               showCreateActions &&
               AppConfig.isFeatureEnabled('events'))
-            _buildQuickActionTile(
-              'Create Event',
-              'Schedule a new event',
-              Icons.event_outlined,
-              Theme.of(context).colorScheme.tertiary,
-              () {
+            KubusActionSidebarTile(
+              title: 'Create Event',
+              subtitle: 'Schedule a new event',
+              icon: Icons.event_outlined,
+              semantic: KubusActionSemantic.create,
+              onTap: () {
                 DesktopShellScope.of(context)?.pushScreen(
                   DesktopSubScreen(
                     title: 'Create Event',
@@ -337,12 +324,12 @@ class _DesktopInstitutionHubScreenState
               isApprovedInstitution &&
               showCreateActions &&
               showExhibitions)
-            _buildQuickActionTile(
-              'Create Exhibition',
-              'Publish a new exhibition',
-              Icons.museum_outlined,
-              Theme.of(context).colorScheme.secondary,
-              () {
+            KubusActionSidebarTile(
+              title: 'Create Exhibition',
+              subtitle: 'Publish a new exhibition',
+              icon: Icons.museum_outlined,
+              semantic: KubusActionSemantic.publish,
+              onTap: () {
                 DesktopShellScope.of(context)?.pushScreen(
                   DesktopSubScreen(
                     title: 'Create Exhibition',
@@ -354,12 +341,12 @@ class _DesktopInstitutionHubScreenState
           if (section == DesktopInstitutionSection.create &&
               isApprovedInstitution &&
               showCreateActions)
-            _buildQuickActionTile(
-              'Manage Markers',
-              'Create, publish, and edit map markers',
-              Icons.place_outlined,
-              Theme.of(context).colorScheme.primary,
-              () {
+            KubusActionSidebarTile(
+              title: 'Manage Markers',
+              subtitle: 'Create, publish, and edit map markers',
+              icon: Icons.place_outlined,
+              semantic: KubusActionSemantic.manage,
+              onTap: () {
                 DesktopShellScope.of(context)?.pushScreen(
                   DesktopSubScreen(
                     title: 'Manage Markers',
@@ -369,12 +356,12 @@ class _DesktopInstitutionHubScreenState
               },
             ),
           if (section == DesktopInstitutionSection.events && isApprovedInstitution)
-            _buildQuickActionTile(
-              'Manage Events',
-              'View all events',
-              Icons.event_note_outlined,
-              Theme.of(context).colorScheme.secondary,
-              () {
+            KubusActionSidebarTile(
+              title: 'Manage Events',
+              subtitle: 'View all events',
+              icon: Icons.event_note_outlined,
+              semantic: KubusActionSemantic.manage,
+              onTap: () {
                 DesktopShellScope.of(context)?.pushScreen(
                   DesktopSubScreen(
                     title: 'Manage Events',
@@ -386,12 +373,12 @@ class _DesktopInstitutionHubScreenState
           if (section == DesktopInstitutionSection.exhibitions &&
               isApprovedInstitution &&
               showExhibitions)
-            _buildQuickActionTile(
-              'My Exhibitions',
-              'View hosted and collaborating exhibitions',
-              Icons.collections_bookmark_outlined,
-              Theme.of(context).colorScheme.primary,
-              () {
+            KubusActionSidebarTile(
+              title: 'My Exhibitions',
+              subtitle: 'View hosted and collaborating exhibitions',
+              icon: Icons.collections_bookmark_outlined,
+              semantic: KubusActionSemantic.view,
+              onTap: () {
                 DesktopShellScope.of(context)?.pushScreen(
                   DesktopSubScreen(
                     title: 'My Exhibitions',
@@ -423,12 +410,12 @@ class _DesktopInstitutionHubScreenState
               },
             ),
           if (section == DesktopInstitutionSection.analytics && isApprovedInstitution)
-            _buildQuickActionTile(
-              'Analytics',
-              'View performance stats',
-              Icons.analytics_outlined,
-              Theme.of(context).colorScheme.tertiary,
-              () {
+            KubusActionSidebarTile(
+              title: 'Analytics',
+              subtitle: 'View performance stats',
+              icon: Icons.analytics_outlined,
+              semantic: KubusActionSemantic.analytics,
+              onTap: () {
                 DesktopShellScope.of(context)?.pushScreen(
                   DesktopSubScreen(
                     title: 'Analytics',
@@ -438,39 +425,32 @@ class _DesktopInstitutionHubScreenState
               },
             ),
           if (section == DesktopInstitutionSection.analytics) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: KubusSpacing.sm),
             _buildAnalyticsTimeframeSelector(
               title: 'Timeframe',
               value: context.watch<AnalyticsFiltersProvider>().institutionTimeframe,
               onChanged: (v) => context.read<AnalyticsFiltersProvider>().setInstitutionTimeframe(v),
             ),
           ],
-          const SizedBox(height: 24),
+          const SizedBox(height: KubusSpacing.lg),
 
           // Stats
           Text(
             'Institution Statistics',
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+            style: KubusTextStyles.sectionTitle.copyWith(color: scheme.onSurface),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
           _buildStatsGrid(themeProvider),
-          const SizedBox(height: 24),
+          const SizedBox(height: KubusSpacing.lg),
 
           // Upcoming events
           if (section == DesktopInstitutionSection.events) ...[
             Text(
               'Upcoming Events',
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
+              style:
+                  KubusTextStyles.sectionTitle.copyWith(color: scheme.onSurface),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
             _buildUpcomingEvents(themeProvider),
           ],
           ],
@@ -488,29 +468,26 @@ class _DesktopInstitutionHubScreenState
     final normalized = value.trim().toLowerCase();
     final effective = AnalyticsFiltersProvider.allowedTimeframes.contains(normalized) ? normalized : '30d';
 
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest.withValues(alpha: 0.25),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
-      ),
+    return LiquidGlassCard(
+      padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
+      borderRadius: BorderRadius.circular(KubusRadius.md),
+      blurSigma: KubusGlassEffects.blurSigmaLight,
+      backgroundColor: scheme.surfaceContainerHighest.withValues(alpha: 0.18),
       child: Row(
         children: [
           Expanded(
             child: Text(
               title,
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: scheme.onSurface,
-              ),
+              style: KubusTextStyles.actionTileTitle
+                  .copyWith(color: scheme.onSurface),
             ),
           ),
           DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: effective,
               dropdownColor: scheme.surfaceContainerHighest,
+              style: KubusTextStyles.actionTileSubtitle
+                  .copyWith(color: scheme.onSurface),
               items: AnalyticsFiltersProvider.allowedTimeframes
                   .map(
                     (tf) => DropdownMenuItem<String>(
@@ -536,9 +513,11 @@ class _DesktopInstitutionHubScreenState
     final isApproved = status == 'approved';
     final isPending = status == 'pending';
     final isRejected = status == 'rejected';
+    final roles = KubusColorRoles.of(context);
+    final scheme = Theme.of(context).colorScheme;
 
     Color statusColor =
-        Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6);
+        scheme.onSurface.withValues(alpha: 0.6);
     IconData statusIcon = Icons.help_outline;
     String statusText = 'Not Applied';
     String statusDescription = 'Apply for institution verification';
@@ -547,17 +526,17 @@ class _DesktopInstitutionHubScreenState
       statusText = 'Loading...';
       statusDescription = 'Checking verification status';
     } else if (isApproved) {
-      statusColor = Colors.green;
+      statusColor = roles.positiveAction;
       statusIcon = Icons.verified;
       statusText = 'Verified Institution';
       statusDescription = 'Your organization is verified';
     } else if (isPending) {
-      statusColor = Colors.orange;
+      statusColor = roles.warningAction;
       statusIcon = Icons.pending;
       statusText = 'Pending Review';
       statusDescription = 'Application under review';
     } else if (isRejected) {
-      statusColor = Colors.red;
+      statusColor = roles.negativeAction;
       statusIcon = Icons.cancel;
       statusText = 'Application Rejected';
       statusDescription = 'Please resubmit with improvements';
@@ -570,36 +549,33 @@ class _DesktopInstitutionHubScreenState
           Row(
             children: [
               Container(
-                width: 48,
-                height: 48,
+                width: KubusSpacing.xxl,
+                height: KubusSpacing.xxl,
                 decoration: BoxDecoration(
                   color: statusColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
                 ),
-                child: Icon(statusIcon, color: statusColor, size: 24),
+                child: Icon(
+                  statusIcon,
+                  color: statusColor,
+                  size: KubusSpacing.lg,
+                ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: KubusSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       statusText,
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
+                      style: KubusTextStyles.sectionTitle
+                          .copyWith(color: scheme.onSurface),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: KubusSpacing.xs),
                     Text(
                       statusDescription,
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.6),
+                      style: KubusTextStyles.actionTileSubtitle.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                   ],
@@ -608,104 +584,15 @@ class _DesktopInstitutionHubScreenState
             ],
           ),
           if (!isApproved && !isPending && wallet.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  // Apply functionality handled by mobile view
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      KubusColorRoles.of(context).web3InstitutionAccent,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: Text(
-                  'Apply for Verification',
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-                ),
+            const SizedBox(height: KubusSpacing.md),
+            Text(
+              'Use the Institution Hub panel to submit verification.',
+              style: KubusTextStyles.actionTileSubtitle.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ],
         ],
-      ),
-    );
-  }
-
-  Widget _buildQuickActionTile(String title, String subtitle, IconData icon,
-      Color color, VoidCallback onTap,
-      {Widget? trailing}) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final radius = BorderRadius.circular(12);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: LiquidGlassPanel(
-        padding: EdgeInsets.zero,
-        borderRadius: radius,
-        showBorder: false,
-        backgroundColor: color.withValues(alpha: isDark ? 0.16 : 0.10),
-        onTap: onTap,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: radius,
-            border: Border.all(color: color.withValues(alpha: 0.20)),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(icon, color: color, size: 20),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                      Text(
-                        subtitle,
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.6),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                trailing ??
-                    Icon(
-                      Icons.arrow_forward_ios,
-                      size: 16,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.4),
-                    ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -810,73 +697,68 @@ class _DesktopInstitutionHubScreenState
   Widget _buildStatCard(
       String label, String value, IconData icon, Color color) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final radius = BorderRadius.circular(12);
-    return LiquidGlassPanel(
-      padding: const EdgeInsets.all(16),
+    final radius = BorderRadius.circular(KubusRadius.md);
+    return LiquidGlassCard(
+      padding: EdgeInsets.zero,
       borderRadius: radius,
       showBorder: false,
       backgroundColor: color.withValues(alpha: isDark ? 0.15 : 0.10),
       child: DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: radius,
-          border: Border.all(color: color.withValues(alpha: 0.18)),
+          border: Border.all(
+            color: color.withValues(alpha: 0.18),
+            width: KubusSizes.hairline,
+          ),
         ),
-        child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+        child: Padding(
+          padding: const EdgeInsets.all(KubusSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, color: color, size: KubusSizes.sidebarActionIcon),
+              const SizedBox(height: KubusSpacing.sm),
+              Text(
+                value,
+                style: KubusTypography.textTheme.titleLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              Text(
+                label,
+                style: KubusTextStyles.actionTileSubtitle.copyWith(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
+                ),
+              ),
+            ],
           ),
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.6),
-            ),
-          ),
-        ],
         ),
       ),
     );
   }
 
   Widget _buildUpcomingEvents(ThemeProvider themeProvider) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context)
-            .colorScheme
-            .primaryContainer
-            .withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(12),
-      ),
+    final scheme = Theme.of(context).colorScheme;
+    return LiquidGlassCard(
+      padding: const EdgeInsets.all(KubusSpacing.md),
+      borderRadius: BorderRadius.circular(KubusRadius.md),
+      blurSigma: KubusGlassEffects.blurSigmaLight,
+      backgroundColor: scheme.primaryContainer.withValues(alpha: 0.18),
       child: Column(
         children: [
           Icon(
             Icons.event_available,
-            size: 40,
-            color:
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+            size: KubusSizes.sidebarActionIconBox,
+            color: scheme.onSurface.withValues(alpha: 0.3),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: KubusSpacing.sm),
           Text(
             'No upcoming events',
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.6),
+            style: KubusTextStyles.actionTileTitle.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
         ],

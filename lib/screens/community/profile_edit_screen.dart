@@ -16,6 +16,7 @@ import '../../services/event_bus.dart';
 import '../../providers/themeprovider.dart';
 import '../../widgets/inline_loading.dart';
 import '../../utils/media_url_resolver.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class ProfileEditScreen extends StatefulWidget {
   const ProfileEditScreen({super.key});
@@ -169,7 +170,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           if (wallet.isEmpty) {
             setState(() => _isLoading = false);
             if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
+            ScaffoldMessenger.of(context).showKubusSnackBar(
               SnackBar(
                 content: const Text('No wallet connected. Connect your wallet to upload avatar.'),
                 backgroundColor: Theme.of(context).colorScheme.error,
@@ -206,7 +207,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           // Show resolved URL with actions: copy and open in browser
           if (!mounted) return;
           final uri = Uri.tryParse(uploadedUrl);
-          ScaffoldMessenger.of(context).showSnackBar(
+          ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(
               duration: const Duration(seconds: 6),
               content: Row(
@@ -222,7 +223,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                     onPressed: () async {
                       await Clipboard.setData(ClipboardData(text: uploadedUrl));
                       if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      ScaffoldMessenger.of(context).showKubusSnackBar(
                         const SnackBar(content: Text('Copied avatar URL to clipboard'), duration: Duration(seconds: 1)),
                       );
                     },
@@ -243,7 +244,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           );
 
           if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
+          ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(
               content: Text(saved ? 'Avatar uploaded and saved!' : 'Avatar uploaded locally (save failed)'),
               backgroundColor: saved
@@ -257,7 +258,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           if (!mounted) return;
           final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
           // Show snackbar
-          ScaffoldMessenger.of(context).showSnackBar(
+          ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(
               content: Text('Upload failed: $e'),
               backgroundColor: Theme.of(context).colorScheme.error,
@@ -287,7 +288,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                       await Clipboard.setData(ClipboardData(text: pretty));
                       if (!mounted) return;
                       navigator.pop();
-                      messenger.showSnackBar(
+                      messenger.showKubusSnackBar(
                         const SnackBar(content: Text('Debug info copied to clipboard')),
                       );
                     },
@@ -301,7 +302,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text('Error picking image: $e'),
           backgroundColor: Theme.of(context).colorScheme.error,
@@ -334,7 +335,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           if (wallet.isEmpty) {
             if (mounted) setState(() => _isLoading = false);
             if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
+            ScaffoldMessenger.of(context).showKubusSnackBar(
               SnackBar(
                 content: const Text('No wallet connected. Connect your wallet to upload cover image.'),
                 backgroundColor: Theme.of(context).colorScheme.error,
@@ -379,7 +380,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           }
 
           if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
+          ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(
               content: Text(saved ? 'Cover image uploaded!' : 'Cover image uploaded locally'),
               backgroundColor: saved
@@ -391,7 +392,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         } catch (e) {
           if (mounted) setState(() => _isLoading = false);
           if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
+          ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(
               content: Text('Cover upload failed: $e'),
               backgroundColor: Theme.of(context).colorScheme.error,
@@ -401,7 +402,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text('Error picking cover image: $e'),
           backgroundColor: Theme.of(context).colorScheme.error,
@@ -455,7 +456,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       if (!mounted) return;
 
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
             content: const Text('Profile updated successfully!'),
             backgroundColor: Theme.of(context).colorScheme.primary,
@@ -490,7 +491,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text('Error: $e'),
           backgroundColor: Theme.of(context).colorScheme.error,

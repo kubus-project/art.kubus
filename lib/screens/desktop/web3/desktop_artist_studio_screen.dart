@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'dart:async';
@@ -15,6 +14,7 @@ import '../../../config/config.dart';
 import '../../../models/dao.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/kubus_color_roles.dart';
+import '../../../utils/design_tokens.dart';
 import '../../../utils/wallet_utils.dart';
 import '../components/desktop_widgets.dart';
 import '../desktop_shell.dart';
@@ -30,6 +30,7 @@ import '../../events/exhibition_detail_screen.dart';
 import '../../events/exhibition_list_screen.dart';
 import '../../map_markers/manage_markers_screen.dart';
 import '../../../widgets/glass_components.dart';
+import '../../../widgets/kubus_action_sidebar.dart';
 
 /// Desktop Artist Studio screen with split-panel layout
 /// Left: Mobile artist studio view
@@ -314,67 +315,55 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
         showBorder: false,
         backgroundColor: glassTint,
         child: ListView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(KubusSpacing.lg),
           children: [
           // Header
           Text(
             sectionTitle(),
-            style: GoogleFonts.inter(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: scheme.onSurface,
-            ),
+            style: KubusTextStyles.screenTitle.copyWith(color: scheme.onSurface),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: KubusSpacing.lg),
 
           // Verification status
           _buildVerificationStatusCard(themeProvider),
-          const SizedBox(height: 20),
+          const SizedBox(height: KubusSpacing.md + KubusSpacing.xs),
 
           // Contextual sidebar actions
           Text(
             l10n.desktopArtistStudioQuickActionsTitle,
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: scheme.onSurface,
-            ),
+            style: KubusTextStyles.sectionTitle.copyWith(color: scheme.onSurface),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
           if (AppConfig.isFeatureEnabled('collabInvites'))
             Consumer<CollabProvider>(
               builder: (context, collabProvider, _) {
                 final pending = collabProvider.pendingInviteCount;
                 final badge = pending > 0
-                    ? Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: scheme.error,
-                          borderRadius: BorderRadius.circular(999),
+                    ? FrostedContainer(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: KubusSpacing.sm,
+                          vertical: KubusSpacing.xs,
                         ),
+                        borderRadius: BorderRadius.circular(KubusRadius.xl),
+                        showBorder: false,
+                        backgroundColor: scheme.error
+                            .withValues(alpha: isDark ? 0.30 : 0.22),
                         child: Text(
                           pending > 99 ? '99+' : pending.toString(),
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: scheme.onError,
-                          ),
+                          style: KubusTextStyles.badgeCount
+                              .copyWith(color: scheme.onError),
                         ),
                       )
-                    : Icon(
-                        Icons.arrow_forward_ios,
-                        size: 16,
-                        color: scheme.onSurface.withValues(alpha: 0.4),
-                      );
+                    : null;
 
-                return _buildQuickActionTile(
-                  l10n.desktopArtistStudioQuickActionInvitesTitle,
-                  pending > 0
+                return KubusActionSidebarTile(
+                  title: l10n.desktopArtistStudioQuickActionInvitesTitle,
+                  subtitle: pending > 0
                       ? l10n.desktopArtistStudioQuickActionInvitesPendingSubtitle
                       : l10n.desktopArtistStudioQuickActionInvitesSubtitle,
-                  Icons.inbox_outlined,
-                  scheme.primary,
-                  () {
+                  icon: Icons.inbox_outlined,
+                  semantic: KubusActionSemantic.invite,
+                  onTap: () {
                     DesktopShellScope.of(context)?.pushScreen(
                       DesktopSubScreen(
                         title: l10n.desktopArtistStudioQuickActionCollaborationInvitesTitle,
@@ -388,12 +377,12 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
             ),
 
           if (isApprovedArtist && section == DesktopArtistStudioSection.create)
-            _buildQuickActionTile(
-              l10n.desktopArtistStudioQuickActionCreateArtworkTitle,
-              l10n.desktopArtistStudioQuickActionCreateArtworkSubtitle,
-              Icons.add_photo_alternate_outlined,
-              scheme.tertiary,
-              () {
+            KubusActionSidebarTile(
+              title: l10n.desktopArtistStudioQuickActionCreateArtworkTitle,
+              subtitle: l10n.desktopArtistStudioQuickActionCreateArtworkSubtitle,
+              icon: Icons.add_photo_alternate_outlined,
+              semantic: KubusActionSemantic.create,
+              onTap: () {
                 DesktopShellScope.of(context)?.pushScreen(
                   DesktopSubScreen(
                     title: l10n.desktopArtistStudioQuickActionCreateArtworkTitle,
@@ -403,12 +392,12 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
               },
             ),
           if (isApprovedArtist && section == DesktopArtistStudioSection.create)
-            _buildQuickActionTile(
-              l10n.collectionCreatorTitle,
-              l10n.artistStudioCreateOptionCollectionSubtitle,
-              Icons.collections_bookmark_outlined,
-              scheme.secondary,
-              () {
+            KubusActionSidebarTile(
+              title: l10n.collectionCreatorTitle,
+              subtitle: l10n.artistStudioCreateOptionCollectionSubtitle,
+              icon: Icons.collections_bookmark_outlined,
+              semantic: KubusActionSemantic.create,
+              onTap: () {
                 final shellScope = DesktopShellScope.of(context);
                 if (shellScope == null) return;
                 shellScope.pushScreen(
@@ -432,12 +421,12 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
               },
             ),
           if (isApprovedArtist && section == DesktopArtistStudioSection.create)
-            _buildQuickActionTile(
-              l10n.manageMarkersTitle,
-              l10n.manageMarkersQuickActionSubtitle,
-              Icons.place_outlined,
-              scheme.primary,
-              () {
+            KubusActionSidebarTile(
+              title: l10n.manageMarkersTitle,
+              subtitle: l10n.manageMarkersQuickActionSubtitle,
+              icon: Icons.place_outlined,
+              semantic: KubusActionSemantic.manage,
+              onTap: () {
                 DesktopShellScope.of(context)?.pushScreen(
                   DesktopSubScreen(
                     title: l10n.manageMarkersTitle,
@@ -447,12 +436,12 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
               },
             ),
           if (isApprovedArtist && section == DesktopArtistStudioSection.gallery)
-            _buildQuickActionTile(
-              l10n.desktopArtistStudioQuickActionMyGalleryTitle,
-              l10n.desktopArtistStudioQuickActionMyGallerySubtitle,
-              Icons.collections_outlined,
-              scheme.secondary,
-              () {
+            KubusActionSidebarTile(
+              title: l10n.desktopArtistStudioQuickActionMyGalleryTitle,
+              subtitle: l10n.desktopArtistStudioQuickActionMyGallerySubtitle,
+              icon: Icons.collections_outlined,
+              semantic: KubusActionSemantic.view,
+              onTap: () {
                 final wallet = _resolveWalletAddress(listen: false);
                 DesktopShellScope.of(context)?.pushScreen(
                   DesktopSubScreen(
@@ -463,12 +452,12 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
               },
             ),
           if (isApprovedArtist && showExhibitions && section == DesktopArtistStudioSection.exhibitions)
-            _buildQuickActionTile(
-              l10n.desktopArtistStudioQuickActionExhibitionsTitle,
-              l10n.desktopArtistStudioQuickActionExhibitionsSubtitle,
-              Icons.collections_bookmark_outlined,
-              scheme.primary,
-              () {
+            KubusActionSidebarTile(
+              title: l10n.desktopArtistStudioQuickActionExhibitionsTitle,
+              subtitle: l10n.desktopArtistStudioQuickActionExhibitionsSubtitle,
+              icon: Icons.collections_bookmark_outlined,
+              semantic: KubusActionSemantic.view,
+              onTap: () {
                 DesktopShellScope.of(context)?.pushScreen(
                   DesktopSubScreen(
                     title: l10n.desktopArtistStudioQuickActionExhibitionsTitle,
@@ -500,12 +489,12 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
               },
             ),
           if (isApprovedArtist && section == DesktopArtistStudioSection.analytics)
-            _buildQuickActionTile(
-              l10n.desktopArtistStudioQuickActionAnalyticsTitle,
-              l10n.desktopArtistStudioQuickActionAnalyticsSubtitle,
-              Icons.analytics_outlined,
-              scheme.tertiary,
-              () {
+            KubusActionSidebarTile(
+              title: l10n.desktopArtistStudioQuickActionAnalyticsTitle,
+              subtitle: l10n.desktopArtistStudioQuickActionAnalyticsSubtitle,
+              icon: Icons.analytics_outlined,
+              semantic: KubusActionSemantic.analytics,
+              onTap: () {
                 DesktopShellScope.of(context)?.pushScreen(
                   DesktopSubScreen(
                     title: l10n.desktopArtistStudioQuickActionAnalyticsTitle,
@@ -515,38 +504,30 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
               },
             ),
           if (section == DesktopArtistStudioSection.analytics) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: KubusSpacing.sm),
             _buildAnalyticsTimeframeSelector(
               title: 'Timeframe',
               value: context.watch<AnalyticsFiltersProvider>().artistTimeframe,
               onChanged: (v) => context.read<AnalyticsFiltersProvider>().setArtistTimeframe(v),
             ),
           ],
-          const SizedBox(height: 24),
+          const SizedBox(height: KubusSpacing.lg),
 
           // Stats
           Text(
             l10n.desktopArtistStudioStatisticsTitle,
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: scheme.onSurface,
-            ),
+            style: KubusTextStyles.sectionTitle.copyWith(color: scheme.onSurface),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
           _buildStatsGrid(themeProvider),
-          const SizedBox(height: 24),
+          const SizedBox(height: KubusSpacing.lg),
 
           if (section == DesktopArtistStudioSection.gallery) ...[
             Text(
               l10n.desktopArtistStudioRecentActivityTitle,
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: scheme.onSurface,
-              ),
+              style: KubusTextStyles.sectionTitle.copyWith(color: scheme.onSurface),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
             _buildRecentActivity(themeProvider),
           ],
           ],
@@ -578,29 +559,26 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
       }
     }
 
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest.withValues(alpha: 0.25),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
-      ),
+    return LiquidGlassCard(
+      padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
+      borderRadius: BorderRadius.circular(KubusRadius.md),
+      blurSigma: KubusGlassEffects.blurSigmaLight,
+      backgroundColor: scheme.surfaceContainerHighest.withValues(alpha: 0.18),
       child: Row(
         children: [
           Expanded(
             child: Text(
               title,
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: scheme.onSurface,
-              ),
+              style: KubusTextStyles.actionTileTitle
+                  .copyWith(color: scheme.onSurface),
             ),
           ),
           DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: effective,
               dropdownColor: scheme.surfaceContainerHighest,
+              style: KubusTextStyles.actionTileSubtitle
+                  .copyWith(color: scheme.onSurface),
               items: AnalyticsFiltersProvider.allowedTimeframes
                   .map(
                     (tf) => DropdownMenuItem<String>(
@@ -623,6 +601,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
   Widget _buildVerificationStatusCard(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
     final wallet = _resolveWalletAddress();
     final status = _artistReview?.status.toLowerCase() ?? '';
     final isApproved = status == 'approved';
@@ -640,19 +619,19 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
       statusDescription =
           l10n.desktopArtistStudioVerificationLoadingDescription;
     } else if (isApproved) {
-      statusColor = scheme.primary;
+      statusColor = roles.positiveAction;
       statusIcon = Icons.verified;
       statusText = l10n.desktopArtistStudioVerificationApprovedTitle;
       statusDescription =
           l10n.desktopArtistStudioVerificationApprovedDescription;
     } else if (isPending) {
-      statusColor = scheme.tertiary;
+      statusColor = roles.warningAction;
       statusIcon = Icons.pending;
       statusText = l10n.desktopArtistStudioVerificationPendingTitle;
       statusDescription =
           l10n.desktopArtistStudioVerificationPendingDescription;
     } else if (isRejected) {
-      statusColor = scheme.error;
+      statusColor = roles.negativeAction;
       statusIcon = Icons.cancel;
       statusText = l10n.desktopArtistStudioVerificationRejectedTitle;
       statusDescription =
@@ -666,32 +645,32 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
           Row(
             children: [
               Container(
-                width: 48,
-                height: 48,
+                width: KubusSpacing.xxl,
+                height: KubusSpacing.xxl,
                 decoration: BoxDecoration(
                   color: statusColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
                 ),
-                child: Icon(statusIcon, color: statusColor, size: 24),
+                child: Icon(
+                  statusIcon,
+                  color: statusColor,
+                  size: KubusSpacing.lg,
+                ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: KubusSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       statusText,
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: scheme.onSurface,
-                      ),
+                      style: KubusTextStyles.sectionTitle
+                          .copyWith(color: scheme.onSurface),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: KubusSpacing.xs),
                     Text(
                       statusDescription,
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
+                      style: KubusTextStyles.actionTileSubtitle.copyWith(
                         color: scheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
@@ -701,104 +680,15 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
             ],
           ),
           if (!isApproved && !isPending && wallet.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  // Apply functionality handled by mobile view
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      KubusColorRoles.of(context).web3ArtistStudioAccent,
-                  foregroundColor: scheme.onPrimary,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: Text(
-                  l10n.desktopArtistStudioApplyForVerificationButton,
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-                ),
+            const SizedBox(height: KubusSpacing.md),
+            Text(
+              l10n.desktopArtistStudioApplyForVerificationButton,
+              style: KubusTextStyles.actionTileSubtitle.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ],
         ],
-      ),
-    );
-  }
-
-  Widget _buildQuickActionTile(String title, String subtitle, IconData icon,
-      Color color, VoidCallback onTap,
-      {Widget? trailing}) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final radius = BorderRadius.circular(12);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: LiquidGlassPanel(
-        padding: EdgeInsets.zero,
-        borderRadius: radius,
-        showBorder: false,
-        backgroundColor: color.withValues(alpha: isDark ? 0.16 : 0.10),
-        onTap: onTap,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: radius,
-            border: Border.all(color: color.withValues(alpha: 0.20)),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(icon, color: color, size: 20),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                      Text(
-                        subtitle,
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.6),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                trailing ??
-                    Icon(
-                      Icons.arrow_forward_ios,
-                      size: 16,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.4),
-                    ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -893,36 +783,45 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
 
   Widget _buildStatCard(
       String label, String value, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: color.withValues(alpha: 0.2),
-        ),
-      ),
+    final scheme = Theme.of(context).colorScheme;
+    final radius = BorderRadius.circular(KubusRadius.md);
+    return LiquidGlassCard(
+      padding: EdgeInsets.zero,
+      borderRadius: radius,
+      showBorder: false,
+      blurSigma: KubusGlassEffects.blurSigmaLight,
+      backgroundColor: color.withValues(alpha: 0.10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
+          DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: radius,
+              border: Border.all(
+                color: color.withValues(alpha: 0.20),
+                width: KubusSizes.hairline,
+              ),
             ),
-          ),
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.6),
+            child: Padding(
+              padding: const EdgeInsets.all(KubusSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(icon, color: color, size: KubusSizes.sidebarActionIcon),
+                  const SizedBox(height: KubusSpacing.sm),
+                  Text(
+                    value,
+                    style: KubusTypography.textTheme.titleLarge
+                        ?.copyWith(color: scheme.onSurface),
+                  ),
+                  Text(
+                    label,
+                    style: KubusTextStyles.actionTileSubtitle.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -932,32 +831,24 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
 
   Widget _buildRecentActivity(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context)
-            .colorScheme
-            .primaryContainer
-            .withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(12),
-      ),
+    final scheme = Theme.of(context).colorScheme;
+    return LiquidGlassCard(
+      padding: const EdgeInsets.all(KubusSpacing.md),
+      borderRadius: BorderRadius.circular(KubusRadius.md),
+      blurSigma: KubusGlassEffects.blurSigmaLight,
+      backgroundColor: scheme.primaryContainer.withValues(alpha: 0.18),
       child: Column(
         children: [
           Icon(
             Icons.history,
-            size: 40,
-            color:
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+            size: KubusSizes.sidebarActionIconBox,
+            color: scheme.onSurface.withValues(alpha: 0.3),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: KubusSpacing.sm),
           Text(
             l10n.desktopArtistStudioNoRecentActivityLabel,
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.6),
+            style: KubusTextStyles.actionTileTitle.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
         ],
