@@ -397,6 +397,9 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.build_apk) }}
     timeout-minutes: 30
+    env:
+      # Keep Gradle caches inside the workspace so we can cache them across runs.
+      GRADLE_USER_HOME: ${{ github.workspace }}/.gradle
 
     steps:
       - name: Checkout
@@ -404,22 +407,85 @@ jobs:
         with:
           submodules: false
 
+      - name: Detect Flutter changes (skip APK when unchanged)
+        id: changes
+        if: ${{ github.event_name == 'push' }}
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            flutter:
+              - 'lib/**'
+              - 'test/**'
+              - 'assets/**'
+              - 'pubspec.yaml'
+              - 'pubspec.lock'
+              - 'analysis_options.yaml'
+              - 'android/**'
+              - 'ios/**'
+              - 'macos/**'
+              - 'linux/**'
+              - 'windows/**'
+              - 'web/**'
+
+      - name: Decide whether to build APK
+        id: apk_gate
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "${{ steps.changes.outputs.flutter || 'false' }}" = "true" ]; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "build=false" >> "$GITHUB_OUTPUT"
+            echo "No Flutter/Android changes detected on this push; skipping APK build to save runner minutes." 
+          fi
+
+      - name: Cache Gradle
+        if: ${{ steps.apk_gate.outputs.build == 'true' }}
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ github.workspace }}/.gradle/caches
+            ${{ github.workspace }}/.gradle/wrapper
+            android/.gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/gradle-wrapper.properties', 'android/**/build.gradle*', 'android/**/settings.gradle*', 'android/**/gradle.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Cache Dart/Flutter packages
+        if: ${{ steps.apk_gate.outputs.build == 'true' }}
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            .dart_tool
+          key: ${{ runner.os }}-pub-${{ hashFiles('pubspec.lock', 'pubspec.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
       - name: Set up Java
+        if: ${{ steps.apk_gate.outputs.build == 'true' }}
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
       - name: Set up Flutter
+        if: ${{ steps.apk_gate.outputs.build == 'true' }}
         uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
 
       - name: Set up Android SDK
+        if: ${{ steps.apk_gate.outputs.build == 'true' }}
         uses: android-actions/setup-android@v3
 
       - name: Accept Android licenses
+        if: ${{ steps.apk_gate.outputs.build == 'true' }}
         shell: bash
         run: |
           # On GitHub Actions, bash runs with -e -o pipefail by default.
@@ -438,15 +504,18 @@ jobs:
           fi
 
       - name: Install Android SDK components
+        if: ${{ steps.apk_gate.outputs.build == 'true' }}
         shell: bash
         run: |
           sdkmanager --install "cmdline-tools;latest" "platforms;android-36" "build-tools;36.0.0" "platform-tools"
 
       - name: Flutter pub get
+        if: ${{ steps.apk_gate.outputs.build == 'true' }}
         run: flutter pub get
 
       - name: Prepare Dart defines (optional)
         id: apk_defines
+        if: ${{ steps.apk_gate.outputs.build == 'true' }}
         shell: bash
         env:
           KUBUS_BACKEND_URL: ${{ secrets.KUBUS_BACKEND_URL }}
@@ -469,10 +538,12 @@ jobs:
           echo "args=$ARGS" >> "$GITHUB_OUTPUT"
 
       - name: Build APK (release mode, current project signing)
+        if: ${{ steps.apk_gate.outputs.build == 'true' }}
         run: flutter build apk --release ${{ steps.apk_defines.outputs.args }}
 
       - name: Compute release metadata
         id: meta
+        if: ${{ steps.apk_gate.outputs.build == 'true' }}
         shell: bash
         run: |
           VERSION=$(grep -E '^version:\s*' pubspec.yaml | awk '{print $2}' | cut -d+ -f1)
@@ -511,6 +582,7 @@ jobs:
 
       - name: Rename APK asset
         id: rename
+        if: ${{ steps.apk_gate.outputs.build == 'true' }}
         shell: bash
         run: |
           SRC="build/app/outputs/flutter-apk/app-release.apk"
@@ -524,6 +596,7 @@ jobs:
           echo "dest=$DEST" >> "$GITHUB_OUTPUT"
 
       - name: Upload APK as workflow artifact
+        if: ${{ steps.apk_gate.outputs.build == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.meta.outputs.apk_name }}
@@ -531,7 +604,7 @@ jobs:
           if-no-files-found: error
 
       - name: Create/Update GitHub Release + upload APK
-        if: ${{ steps.meta.outputs.publish == 'true' }}
+        if: ${{ steps.apk_gate.outputs.build == 'true' && steps.meta.outputs.publish == 'true' }}
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ steps.meta.outputs.tag }}
