@@ -1,6 +1,7 @@
 // NOTE: use_build_context_synchronously lint handled per-instance; avoid file-level ignore
 import 'dart:async';
 
+import 'package:art_kubus/services/share/share_types.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -23,7 +24,6 @@ import '../screens/onboarding/onboarding_screen.dart';
 import '../screens/desktop/onboarding/desktop_onboarding_screen.dart';
 import '../screens/desktop/desktop_shell.dart';
 import '../widgets/app_loading.dart';
-import '../utils/share_deep_link_navigation.dart';
 import 'app_navigator.dart';
 
 class AppInitializer extends StatefulWidget {
@@ -230,12 +230,15 @@ class _AppInitializerState extends State<AppInitializer> {
       walletAddress: walletAddress,
     );
 
-    // If a share/deep link landed the user on this initializer, open the target
-    // once the main shell is ready. Deep links should not be blocked by
-    // onboarding/sign-in gates (users can still browse public content).
+    // If a share/deep link landed the user on this initializer, route into the
+    // shell first. The shell (MainApp/DesktopShell) will consume & open the
+    // pending target using an in-shell context so sidebars/tabs remain visible.
+    //
+    // NOTE: We intentionally do NOT consume the pending target here because
+    // AppInitializer's navigator context does not have DesktopShellScope.
     final pendingDeepLink = (() {
       try {
-        return Provider.of<DeepLinkProvider>(context, listen: false).consumePending();
+        return Provider.of<DeepLinkProvider>(context, listen: false).pending;
       } catch (_) {
         return null;
       }
@@ -256,22 +259,10 @@ class _AppInitializerState extends State<AppInitializer> {
       } catch (_) {}
       if (!mounted) return;
       _didNavigate = true;
-      navigator.pushReplacementNamed('/main');
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        final linkContext = appNavigatorKey.currentContext;
-        if (linkContext == null) return;
-        DeferredOnboardingProvider? deferredOnboarding;
-        try {
-          deferredOnboarding = Provider.of<DeferredOnboardingProvider>(
-            linkContext,
-            listen: false,
-          );
-        } catch (_) {
-          deferredOnboarding = null;
-        }
-        await ShareDeepLinkNavigation.open(linkContext, pendingDeepLink);
-        deferredOnboarding?.markInitialDeepLinkHandled();
-      });
+      // Preserve a semantically useful URL on web (e.g. /map for marker deep links)
+      // while still landing inside the shell.
+      final destination = pendingDeepLink.type == ShareEntityType.marker ? '/map' : '/main';
+      navigator.pushReplacementNamed(destination);
       return;
     }
     

@@ -9,6 +9,8 @@ import '../../providers/themeprovider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/recent_activity_provider.dart';
+import '../../providers/deep_link_provider.dart';
+import '../../providers/deferred_onboarding_provider.dart';
 import '../../config/config.dart';
 import '../../models/recent_activity.dart';
 import '../../utils/activity_navigation.dart';
@@ -33,6 +35,8 @@ import '../collab/invites_inbox_screen.dart';
 import '../../widgets/user_persona_onboarding_gate.dart';
 import '../../widgets/recent_activity_tile.dart';
 import '../../widgets/glass_components.dart';
+import '../../utils/share_deep_link_navigation.dart';
+import '../../services/share/share_deep_link_parser.dart';
 
 /// Provides in-shell navigation for subscreens that should appear in the main
 /// content area instead of pushing a fullscreen route.
@@ -132,6 +136,9 @@ class _DesktopShellState extends State<DesktopShell>
   /// Stack of screens pushed via DesktopShellScope.pushScreen
   /// When empty, shows the route-based screen from _buildCurrentScreen
   final List<Widget> _screenStack = [];
+
+  BuildContext? _shellScopeContext;
+  bool _didConsumeInitialDeepLink = false;
 
   static const List<DesktopNavItem> _signedInNavItems = [
     DesktopNavItem(
@@ -565,53 +572,49 @@ class _DesktopShellState extends State<DesktopShell>
         setFunctionsPanelContent: _setFunctionsPanelContent,
         closeFunctionsPanel: _closeFunctionsPanel,
         canPop: _screenStack.isNotEmpty,
-        child: Stack(
-          children: [
-             Positioned.fill(
-              child: AnimatedGradientBackground(
-                duration: const Duration(seconds: 12),
-                intensity: 0.25,
-                colors: _backgroundColorsForRoute(context, effectiveRoute),
-                child: const SizedBox.expand(),
-              ),
-            ),
-            Scaffold(
-              backgroundColor: Colors.transparent,
-              body: Row(
-                children: [
-                  // Main content area (takes most space)
-                  Expanded(
-                    child: _screenStack.isNotEmpty
-                        ? _screenStack.last
-                        : _buildCurrentScreen(effectiveRoute),
-                  ),
+        child: Builder(
+          builder: (shellContext) {
+            _shellScopeContext ??= shellContext;
+            _maybeConsumePendingDeepLink(shellContext);
 
-                  // Functions sidebar (contextual panels like Notifications)
-                  if (isExpanded || isLarge)
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 220),
-                      curve: Curves.easeOutCubic,
-                      width: _functionsPanel == DesktopFunctionsPanel.none
-                          ? 0
-                          : (isLarge ? 380 : 320),
-                      child: ClipRect(
-                        child: IgnorePointer(
-                          ignoring:
-                              _functionsPanel == DesktopFunctionsPanel.none,
-                          child: AnimatedOpacity(
-                            opacity:
-                                _functionsPanel == DesktopFunctionsPanel.none
-                                    ? 0
-                                    : 1,
-                            duration: const Duration(milliseconds: 150),
+            return Stack(
+              children: [
+                Positioned.fill(
+                  child: AnimatedGradientBackground(
+                    duration: const Duration(seconds: 12),
+                    intensity: 0.25,
+                    colors: _backgroundColorsForRoute(context, effectiveRoute),
+                    child: const SizedBox.expand(),
+                  ),
+                ),
+                Scaffold(
+                  backgroundColor: Colors.transparent,
+                  body: Row(
+                    children: [
+                      AnimatedBuilder(
+                        animation: _navExpandAnimation,
+                        builder: (context, child) {
+                          final expandedWidth = isLarge
+                              ? DesktopNavigation.expandedWidthLarge
+                              : DesktopNavigation.expandedWidthMedium;
+                          final collapsedWidth = DesktopNavigation.collapsedWidth;
+                          final currentWidth = collapsedWidth +
+                              (expandedWidth - collapsedWidth) * _navExpandAnimation.value;
+
+                          final scheme = theme.colorScheme;
+                          final glassTint = theme.brightness == Brightness.dark
+                              ? Colors.black.withValues(alpha: 0.22)
+                              : Colors.white.withValues(alpha: 0.26);
+
+                          return ClipRRect(
                             child: Container(
+                              width: currentWidth,
                               decoration: BoxDecoration(
                                 border: Border(
-                                  left: BorderSide(
+                                  right: BorderSide(
                                     color: theme.brightness == Brightness.dark
                                         ? Colors.white.withValues(alpha: 0.06)
-                                        : theme.colorScheme.outline
-                                            .withValues(alpha: 0.10),
+                                        : scheme.outline.withValues(alpha: 0.15),
                                     width: 1,
                                   ),
                                 ),
@@ -622,117 +625,141 @@ class _DesktopShellState extends State<DesktopShell>
                                 borderRadius: BorderRadius.zero,
                                 blurSigma: KubusGlassEffects.blurSigmaLight,
                                 showBorder: false,
-                                backgroundColor:
-                                    theme.colorScheme.surface.withValues(
-                                  alpha: theme.brightness == Brightness.dark
-                                      ? 0.16
-                                      : 0.10,
-                                ),
-                                child: AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 220),
-                                  switchInCurve: Curves.easeOutCubic,
-                                  switchOutCurve: Curves.easeInCubic,
-                                  child: switch (_functionsPanel) {
-                                    DesktopFunctionsPanel.notifications =>
-                                      _NotificationsPanel(
-                                        key: const ValueKey<String>(
-                                            'functions_notifications'),
-                                        onClose: _closeFunctionsPanel,
-                                        onActivitySelected: (activity) async {
-                                          final parentContext = context;
-                                          _closeFunctionsPanel();
-                                          await ActivityNavigation.open(
-                                            parentContext,
-                                            activity,
-                                          );
-                                        },
-                                      ),
-                                    DesktopFunctionsPanel.exploreNearby =>
-                                      _functionsPanelContent ??
-                                          const SizedBox.shrink(
-                                            key: ValueKey<String>(
-                                                'functions_explore_nearby_empty'),
-                                          ),
-                                    DesktopFunctionsPanel.none =>
-                                      const SizedBox.shrink(
-                                        key: ValueKey<String>('functions_empty'),
-                                      ),
-                                  },
+                                backgroundColor: glassTint,
+                                child: DesktopNavigation(
+                                  items: navItems,
+                                  selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
+                                  onItemSelected: (index) =>
+                                      _onNavItemSelected(index, navItems, isSignedIn),
+                                  isExpanded: _isNavigationExpanded,
+                                  expandAnimation: _navExpandAnimation,
+                                  onToggleExpand: _toggleNavigation,
+                                  onProfileTap: () => _showProfileMenu(context),
+                                  onSettingsTap: () => _showSettingsScreen(context),
+                                  onNotificationsTap: () =>
+                                      unawaited(_toggleNotificationsPanel()),
+                                  onWalletTap: () => _handleWalletTap(isSignedIn),
+                                  onCollabInvitesTap: isSignedIn &&
+                                          AppConfig.isFeatureEnabled('collabInvites')
+                                      ? () => _showCollabInvites()
+                                      : null,
                                 ),
                               ),
                             ),
-                          ),
-                        ),
+                          );
+                        },
                       ),
-                    ),
 
-                  // Right sidebar navigation (Twitter/X style) with glass effect
-                  AnimatedBuilder(
-                    animation: _navExpandAnimation,
-                    builder: (context, child) {
-                      final expandedWidth = isLarge
-                          ? DesktopNavigation.expandedWidthLarge
-                          : DesktopNavigation.expandedWidthMedium;
-                      final collapsedWidth = DesktopNavigation.collapsedWidth;
-                      final currentWidth = collapsedWidth +
-                          (expandedWidth - collapsedWidth) *
-                              _navExpandAnimation.value;
+                      // Main content area (takes most space)
+                      Expanded(
+                        child: _screenStack.isNotEmpty
+                            ? _screenStack.last
+                            : _buildCurrentScreen(effectiveRoute),
+                      ),
 
-                      final scheme = theme.colorScheme;
-                      final glassTint = theme.brightness == Brightness.dark
-                          ? Colors.black.withValues(alpha: 0.22)
-                          : Colors.white.withValues(alpha: 0.26);
-
-                      return ClipRRect(
-                        child: Container(
-                          width: currentWidth,
-                          decoration: BoxDecoration(
-                            border: Border(
-                              left: BorderSide(
-                                color: theme.brightness == Brightness.dark
-                                    ? Colors.white.withValues(alpha: 0.06)
-                                    : scheme.outline.withValues(alpha: 0.15),
-                                width: 1,
+                      // Functions sidebar (contextual panels like Notifications)
+                      if (isExpanded || isLarge)
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 220),
+                          curve: Curves.easeOutCubic,
+                          width: _functionsPanel == DesktopFunctionsPanel.none
+                              ? 0
+                              : (isLarge ? 380 : 320),
+                          child: ClipRect(
+                            child: IgnorePointer(
+                              ignoring: _functionsPanel == DesktopFunctionsPanel.none,
+                              child: AnimatedOpacity(
+                                opacity: _functionsPanel == DesktopFunctionsPanel.none ? 0 : 1,
+                                duration: const Duration(milliseconds: 150),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    border: Border(
+                                      left: BorderSide(
+                                        color: theme.brightness == Brightness.dark
+                                            ? Colors.white.withValues(alpha: 0.06)
+                                            : theme.colorScheme.outline.withValues(alpha: 0.10),
+                                        width: 1,
+                                      ),
+                                    ),
+                                  ),
+                                  child: LiquidGlassPanel(
+                                    padding: EdgeInsets.zero,
+                                    margin: EdgeInsets.zero,
+                                    borderRadius: BorderRadius.zero,
+                                    blurSigma: KubusGlassEffects.blurSigmaLight,
+                                    showBorder: false,
+                                    backgroundColor: theme.colorScheme.surface.withValues(
+                                      alpha: theme.brightness == Brightness.dark ? 0.16 : 0.10,
+                                    ),
+                                    child: AnimatedSwitcher(
+                                      duration: const Duration(milliseconds: 220),
+                                      switchInCurve: Curves.easeOutCubic,
+                                      switchOutCurve: Curves.easeInCubic,
+                                      child: switch (_functionsPanel) {
+                                        DesktopFunctionsPanel.notifications => _NotificationsPanel(
+                                            key: const ValueKey<String>('functions_notifications'),
+                                            onClose: _closeFunctionsPanel,
+                                            onActivitySelected: (activity) async {
+                                              final parentContext = context;
+                                              _closeFunctionsPanel();
+                                              await ActivityNavigation.open(parentContext, activity);
+                                            },
+                                          ),
+                                        DesktopFunctionsPanel.exploreNearby =>
+                                          _functionsPanelContent ?? const SizedBox.shrink(
+                                            key: ValueKey<String>('functions_explore_nearby_empty'),
+                                          ),
+                                        DesktopFunctionsPanel.none => const SizedBox.shrink(
+                                          key: ValueKey<String>('functions_empty'),
+                                        ),
+                                      },
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
-                          child: LiquidGlassPanel(
-                            padding: EdgeInsets.zero,
-                            margin: EdgeInsets.zero,
-                            borderRadius: BorderRadius.zero,
-                            blurSigma: KubusGlassEffects.blurSigmaLight,
-                            showBorder: false,
-                            backgroundColor: glassTint,
-                            child: DesktopNavigation(
-                              items: navItems,
-                              selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
-                              onItemSelected: (index) =>
-                                  _onNavItemSelected(index, navItems, isSignedIn),
-                              isExpanded: _isNavigationExpanded,
-                              expandAnimation: _navExpandAnimation,
-                              onToggleExpand: _toggleNavigation,
-                              onProfileTap: () => _showProfileMenu(context),
-                              onSettingsTap: () => _showSettingsScreen(context),
-                              onNotificationsTap: () =>
-                                  unawaited(_toggleNotificationsPanel()),
-                              onWalletTap: () => _handleWalletTap(isSignedIn),
-                              onCollabInvitesTap: isSignedIn &&
-                                      AppConfig.isFeatureEnabled('collabInvites')
-                                  ? () => _showCollabInvites()
-                                  : null,
-                            ),
-                          ),
                         ),
-                      );
-                    },
+                    ],
                   ),
-                ],
-              ),
-            ),
-          ],
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
+  }
+
+  void _maybeConsumePendingDeepLink(BuildContext shellContext) {
+    if (_didConsumeInitialDeepLink) return;
+
+    final ShareDeepLinkTarget? pending;
+    try {
+      pending = shellContext.read<DeepLinkProvider>().consumePending();
+    } catch (_) {
+      return;
+    }
+    if (pending == null) return;
+
+    final ShareDeepLinkTarget target = pending;
+
+    _didConsumeInitialDeepLink = true;
+    final DeferredOnboardingProvider? deferredOnboardingProvider = (() {
+      try {
+        return shellContext.read<DeferredOnboardingProvider>();
+      } catch (_) {
+        return null;
+      }
+    })();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      await ShareDeepLinkNavigation.open(shellContext, target);
+      if (!mounted) return;
+      try {
+        deferredOnboardingProvider?.markInitialDeepLinkHandled();
+      } catch (_) {}
+    });
   }
 
   void _showProfileMenu(BuildContext context) {

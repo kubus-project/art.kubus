@@ -1,12 +1,15 @@
+import 'package:art_kubus/services/share/share_deep_link_parser.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'providers/themeprovider.dart';
 import 'providers/wallet_provider.dart';
 import 'providers/profile_provider.dart';
+import 'providers/deep_link_provider.dart';
 import 'providers/deferred_onboarding_provider.dart';
 import 'providers/main_tab_provider.dart';
 import 'services/telemetry/telemetry_service.dart';
+import 'utils/share_deep_link_navigation.dart';
 import 'screens/home_screen.dart';
 import 'screens/map_screen.dart';
 import 'screens/art/ar_screen.dart';
@@ -29,6 +32,7 @@ class MainApp extends StatefulWidget {
 class _MainAppState extends State<MainApp> {
   MainTabProvider? _tabProvider;
   int _lastTelemetryIndex = -1;
+  bool _didConsumeInitialDeepLink = false;
 
   @override
   void initState() {
@@ -38,6 +42,30 @@ class _MainAppState extends State<MainApp> {
       final index = context.read<MainTabProvider>().currentIndex;
       _syncTelemetryForIndex(index);
       _lastTelemetryIndex = index;
+    });
+
+    // If we arrived via a cold-start deep link, AppInitializer leaves the
+    // target pending so the shell can open it using an in-shell context.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      // Desktop is handled inside DesktopShell (it needs DesktopShellScope).
+      if (DesktopBreakpoints.isDesktop(context)) return;
+      if (_didConsumeInitialDeepLink) return;
+      _didConsumeInitialDeepLink = true;
+
+      ShareDeepLinkTarget? target;
+      try {
+        target = context.read<DeepLinkProvider>().consumePending();
+      } catch (_) {
+        target = null;
+      }
+      if (target == null) return;
+
+      // ignore: discarded_futures
+      ShareDeepLinkNavigation.open(context, target);
+      try {
+        context.read<DeferredOnboardingProvider>().markInitialDeepLinkHandled();
+      } catch (_) {}
     });
   }
 
