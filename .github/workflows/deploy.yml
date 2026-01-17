@@ -290,7 +290,7 @@ jobs:
         if: ${{ steps.ftp.outputs.ok == 'true' && steps.ftp_target.outputs.ok == 'true' && steps.net.outputs.ftp_ok != 'true' && steps.net.outputs.sftp_ok == 'true' }}
         id: sftp
         continue-on-error: true
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@v1
         with:
           host: ${{ secrets.SFTP_SERVER || steps.ftp_target.outputs.host }}
           username: ${{ secrets.SFTP_USERNAME || secrets.FTP_USERNAME }}
