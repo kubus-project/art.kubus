@@ -2527,6 +2527,90 @@ class AppLocalizationsSl extends AppLocalizations {
   String get mapAddMapMarkerTooltip => 'Dodaj označevalec';
 
   @override
+  String get mapTravelModeTooltip => 'Način potovanja';
+
+  @override
+  String get mapTravelModeEnableTooltip => 'Vklopi način potovanja';
+
+  @override
+  String get mapTravelModeDisableTooltip => 'Izklopi način potovanja';
+
+  @override
+  String get mapTutorialStepMapTitle => 'Zemljevid';
+
+  @override
+  String get mapTutorialStepMapBody => 'Premikaj in približuj za raziskovanje. Tapni označevalec za podrobnosti in dejanja.';
+
+  @override
+  String get mapTutorialStepMarkersTitle => 'Označevalci in vrste';
+
+  @override
+  String get mapTutorialStepMarkersBody => 'Označevalci lahko predstavljajo umetnine, razstave, dogodke, institucije in drugo. Barve/ikone pomagajo razlikovati vrste.';
+
+  @override
+  String get mapTutorialStepCreateMarkerTitle => 'Ustvari označevalec';
+
+  @override
+  String get mapTutorialStepCreateMarkerBody => 'Tapni za dodajanje označevalca na trenutno lokacijo (ali zadnjo točko z dolgim pritiskom).';
+
+  @override
+  String get mapTutorialStepNearbyTitle => 'Umetnost v bližini';
+
+  @override
+  String get mapTutorialStepNearbyBody => 'Prebrskaj umetnine v bližini. Seznam se posodablja, ko se premikaš in spreminjaš filtre.';
+
+  @override
+  String get mapTutorialStepNearbyDesktopBody => 'Odpri panel »V bližini« za hiter pregled rezultatov in podrobnosti.';
+
+  @override
+  String get mapTutorialStepTypesTitle => 'Vrste označevalcev';
+
+  @override
+  String get mapTutorialStepTypesDesktopBody => 'S temi čipi hitro izbereš kategorijo (umetnine, dogodki, institucije …).';
+
+  @override
+  String get mapTutorialStepFiltersTitle => 'Filtri';
+
+  @override
+  String get mapTutorialStepFiltersBody => 'S filtri zoži, kaj vidiš na zemljevidu in v seznamu.';
+
+  @override
+  String get mapTutorialStepFiltersDesktopBody => 'Odpri panel s filtri za natančnejšo izbiro (vrsta, razdalja, odkrito/neodkrito …).';
+
+  @override
+  String get mapTutorialStepTravelTitle => 'Način potovanja';
+
+  @override
+  String get mapTutorialStepTravelBody => 'Način potovanja razširi radij nalaganja, da lahko brskaš tudi daleč stran.';
+
+  @override
+  String get mapTutorialStepRecenterTitle => 'Nazaj na mojo lokacijo';
+
+  @override
+  String get mapTutorialStepRecenterBody => 'Tapni za vrnitev na tvojo lokacijo in nadaljevanje sledenja.';
+
+  @override
+  String get mapTutorialStepSearchTitle => 'Iskanje';
+
+  @override
+  String get mapTutorialStepSearchBody => 'Poišči umetnine, umetnike, institucije ali kraje in hitro skoči na rezultat.';
+
+  @override
+  String get mapTravelModeTutorialTitle => 'Razišči širše območje';
+
+  @override
+  String get mapTravelModeTutorialBody => 'Način potovanja ti omogoča ogled označevalcev tudi izven običajnega radija v bližini. Dotakni se gumba Način potovanja na zemljevidu za vklop/izklop.';
+
+  @override
+  String get mapTravelModeTutorialHint => 'Namig: Ko je način potovanja vklopljen, se naložijo označevalci z veliko širšega območja.';
+
+  @override
+  String get mapTravelModeTutorialGotIt => 'Razumem';
+
+  @override
+  String get mapTravelModeTutorialEnable => 'Vključi način potovanja';
+
+  @override
   String get mapNearbyArtTitle => 'Umetnost v bližini';
 
   @override

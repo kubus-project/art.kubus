@@ -999,6 +999,100 @@
   "mapSortResultsTooltip": "Razvrsti rezultate",
   "mapCenterOnMeTooltip": "Središči na meni",
   "mapAddMapMarkerTooltip": "Dodaj označevalec",
+  "mapTravelModeTooltip": "Način potovanja",
+  "mapTravelModeEnableTooltip": "Vklopi način potovanja",
+  "@mapTravelModeEnableTooltip": {
+    "description": "Namig (tooltip) za preklop načina potovanja, ko je trenutno IZKLOPLJEN."
+  },
+  "mapTravelModeDisableTooltip": "Izklopi način potovanja",
+  "@mapTravelModeDisableTooltip": {
+    "description": "Namig (tooltip) za preklop načina potovanja, ko je trenutno VKLOPLJEN."
+  },
+  "mapTutorialStepMapTitle": "Zemljevid",
+  "@mapTutorialStepMapTitle": {
+    "description": "Naslov prvega koraka interaktivnega vodiča po zemljevidu (coach marks)."
+  },
+  "mapTutorialStepMapBody": "Premikaj in približuj za raziskovanje. Tapni označevalec za podrobnosti in dejanja.",
+  "@mapTutorialStepMapBody": {
+    "description": "Opis prvega koraka interaktivnega vodiča po zemljevidu (coach marks)."
+  },
+  "mapTutorialStepMarkersTitle": "Označevalci in vrste",
+  "@mapTutorialStepMarkersTitle": {
+    "description": "Naslov koraka o označevalcih/vrstah v interaktivnem vodiču po zemljevidu."
+  },
+  "mapTutorialStepMarkersBody": "Označevalci lahko predstavljajo umetnine, razstave, dogodke, institucije in drugo. Barve/ikone pomagajo razlikovati vrste.",
+  "@mapTutorialStepMarkersBody": {
+    "description": "Opis koraka o označevalcih/vrstah v interaktivnem vodiču po zemljevidu."
+  },
+  "mapTutorialStepCreateMarkerTitle": "Ustvari označevalec",
+  "@mapTutorialStepCreateMarkerTitle": {
+    "description": "Naslov koraka za ustvarjanje označevalca v interaktivnem vodiču po zemljevidu."
+  },
+  "mapTutorialStepCreateMarkerBody": "Tapni za dodajanje označevalca na trenutno lokacijo (ali zadnjo točko z dolgim pritiskom).",
+  "@mapTutorialStepCreateMarkerBody": {
+    "description": "Opis koraka za ustvarjanje označevalca v interaktivnem vodiču po zemljevidu."
+  },
+  "mapTutorialStepNearbyTitle": "Umetnost v bližini",
+  "@mapTutorialStepNearbyTitle": {
+    "description": "Naslov koraka o umetnosti v bližini v interaktivnem vodiču po zemljevidu."
+  },
+  "mapTutorialStepNearbyBody": "Prebrskaj umetnine v bližini. Seznam se posodablja, ko se premikaš in spreminjaš filtre.",
+  "@mapTutorialStepNearbyBody": {
+    "description": "Opis koraka o umetnosti v bližini (mobilno) v interaktivnem vodiču po zemljevidu."
+  },
+  "mapTutorialStepNearbyDesktopBody": "Odpri panel »V bližini« za hiter pregled rezultatov in podrobnosti.",
+  "@mapTutorialStepNearbyDesktopBody": {
+    "description": "Opis koraka o umetnosti v bližini (namizno) v interaktivnem vodiču po zemljevidu."
+  },
+  "mapTutorialStepTypesTitle": "Vrste označevalcev",
+  "@mapTutorialStepTypesTitle": {
+    "description": "Naslov koraka o vrstah označevalcev (namizno) v interaktivnem vodiču po zemljevidu."
+  },
+  "mapTutorialStepTypesDesktopBody": "S temi čipi hitro izbereš kategorijo (umetnine, dogodki, institucije …).",
+  "@mapTutorialStepTypesDesktopBody": {
+    "description": "Opis koraka o vrstah označevalcev (namizno) v interaktivnem vodiču po zemljevidu."
+  },
+  "mapTutorialStepFiltersTitle": "Filtri",
+  "@mapTutorialStepFiltersTitle": {
+    "description": "Naslov koraka o filtrih v interaktivnem vodiču po zemljevidu."
+  },
+  "mapTutorialStepFiltersBody": "S filtri zoži, kaj vidiš na zemljevidu in v seznamu.",
+  "@mapTutorialStepFiltersBody": {
+    "description": "Opis koraka o filtrih (mobilno) v interaktivnem vodiču po zemljevidu."
+  },
+  "mapTutorialStepFiltersDesktopBody": "Odpri panel s filtri za natančnejšo izbiro (vrsta, razdalja, odkrito/neodkrito …).",
+  "@mapTutorialStepFiltersDesktopBody": {
+    "description": "Opis koraka o filtrih (namizno) v interaktivnem vodiču po zemljevidu."
+  },
+  "mapTutorialStepTravelTitle": "Način potovanja",
+  "@mapTutorialStepTravelTitle": {
+    "description": "Naslov koraka o načinu potovanja v interaktivnem vodiču po zemljevidu."
+  },
+  "mapTutorialStepTravelBody": "Način potovanja razširi radij nalaganja, da lahko brskaš tudi daleč stran.",
+  "@mapTutorialStepTravelBody": {
+    "description": "Opis koraka o načinu potovanja v interaktivnem vodiču po zemljevidu."
+  },
+  "mapTutorialStepRecenterTitle": "Nazaj na mojo lokacijo",
+  "@mapTutorialStepRecenterTitle": {
+    "description": "Naslov koraka za ponovni center (mobilno) v interaktivnem vodiču po zemljevidu."
+  },
+  "mapTutorialStepRecenterBody": "Tapni za vrnitev na tvojo lokacijo in nadaljevanje sledenja.",
+  "@mapTutorialStepRecenterBody": {
+    "description": "Opis koraka za ponovni center (mobilno) v interaktivnem vodiču po zemljevidu."
+  },
+  "mapTutorialStepSearchTitle": "Iskanje",
+  "@mapTutorialStepSearchTitle": {
+    "description": "Naslov koraka o iskanju (namizno) v interaktivnem vodiču po zemljevidu."
+  },
+  "mapTutorialStepSearchBody": "Poišči umetnine, umetnike, institucije ali kraje in hitro skoči na rezultat.",
+  "@mapTutorialStepSearchBody": {
+    "description": "Opis koraka o iskanju (namizno) v interaktivnem vodiču po zemljevidu."
+  },
+  "mapTravelModeTutorialTitle": "Razišči širše območje",
+  "mapTravelModeTutorialBody": "Način potovanja ti omogoča ogled označevalcev tudi izven običajnega radija v bližini. Dotakni se gumba Način potovanja na zemljevidu za vklop/izklop.",
+  "mapTravelModeTutorialHint": "Namig: Ko je način potovanja vklopljen, se naložijo označevalci z veliko širšega območja.",
+  "mapTravelModeTutorialGotIt": "Razumem",
+  "mapTravelModeTutorialEnable": "Vključi način potovanja",
   "mapNearbyArtTitle": "Umetnost v bližini",
   "mapResultsDiscoveredLabel": "{count} rezultatov · {percent}% odkrito",
   "@mapResultsDiscoveredLabel": {

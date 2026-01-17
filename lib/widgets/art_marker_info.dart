@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../models/art_marker.dart';
 import '../models/artwork.dart';
 import '../utils/app_color_utils.dart';
 import '../utils/artwork_media_resolver.dart';
+import '../utils/design_tokens.dart';
+import 'glass_components.dart';
 
 Future<void> showArtMarkerInfoDialog({
   required BuildContext context,
@@ -42,25 +43,25 @@ Future<void> showArtMarkerInfoDialog({
   final poapCount = (marker.metadata?['poapCount'] as num?)?.toInt() ?? 0;
   final badgeCount = (marker.metadata?['badgeCount'] as num?)?.toInt() ?? 0;
 
-  return showDialog(
+  return showKubusDialog(
     context: context,
-    builder: (_) => AlertDialog(
-      backgroundColor: scheme.surface,
+    builder: (dialogContext) => KubusAlertDialog(
       title: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: baseColor.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(8),
-            ),
+          LiquidGlassPanel(
+            padding: const EdgeInsets.all(KubusSpacing.sm),
+            margin: EdgeInsets.zero,
+            borderRadius: BorderRadius.circular(KubusRadius.sm),
+            blurSigma: KubusGlassEffects.blurSigmaLight,
+            showBorder: false,
+            backgroundColor: baseColor.withValues(alpha: 0.14),
             child: Icon(
               hasExhibitions ? AppColorUtils.exhibitionIcon : Icons.location_on,
               color: baseColor,
-              size: 20,
+              size: KubusSizes.sidebarActionIcon,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -68,16 +69,15 @@ Future<void> showArtMarkerInfoDialog({
                 if (hasExhibitions) ...[
                   Text(
                     'Exhibition',
-                    style: GoogleFonts.outfit(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: baseColor,
-                    ),
+                    style:
+                        KubusTextStyles.detailLabel.copyWith(color: baseColor),
                   ),
                 ],
                 Text(
                   displayTitle,
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
+                  style: KubusTextStyles.detailCardTitle.copyWith(
+                    color: scheme.onSurface,
+                  ),
                 ),
               ],
             ),
@@ -85,14 +85,14 @@ Future<void> showArtMarkerInfoDialog({
         ],
       ),
       content: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 420),
+        constraints: const BoxConstraints(maxWidth: KubusSizes.dialogWidthMd),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (coverUrl != null && coverUrl.isNotEmpty)
               ClipRRect(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
                 child: AspectRatio(
                   aspectRatio: 16 / 9,
                   child: Image.network(
@@ -104,44 +104,44 @@ Future<void> showArtMarkerInfoDialog({
               )
             else
               ClipRRect(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
                 child: AspectRatio(
                   aspectRatio: 16 / 9,
                   child: _imageFallback(baseColor, scheme, marker),
                 ),
               ),
-            const SizedBox(height: 12),
+            const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
             if (artwork != null && !hasExhibitions)
               Text(
                 artwork.title,
-                style: GoogleFonts.outfit(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 15,
+                style: KubusTextStyles.detailCardTitle.copyWith(
+                  color: scheme.onSurface,
                 ),
               ),
             if (artwork?.description.isNotEmpty == true) ...[
-              const SizedBox(height: 4),
+              const SizedBox(height: KubusSpacing.xs),
               Text(
                 artwork!.description,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.outfit(
-                  fontSize: 12,
+                style: KubusTextStyles.detailLabel.copyWith(
                   color: scheme.onSurfaceVariant,
                 ),
               ),
             ],
             if (marker.description.isNotEmpty) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: KubusSpacing.sm),
               Text(
                 marker.description,
-                style: GoogleFonts.outfit(fontSize: 13),
+                style: KubusTextStyles.detailCaption.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.85),
+                ),
               ),
             ],
-            const SizedBox(height: 10),
+            const SizedBox(height: KubusSpacing.sm + KubusSpacing.xxs),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: KubusSpacing.sm,
+              runSpacing: KubusSpacing.sm,
               children: [
                 if (distanceText != null)
                   _chip(scheme, Icons.near_me, distanceText, baseColor),
@@ -160,8 +160,8 @@ Future<void> showArtMarkerInfoDialog({
                     '+${artwork.rewards}',
                     baseColor,
                   ),
-                  if (poapCount > 0 || badgeCount > 0)
-                    _chip(
+                if (poapCount > 0 || badgeCount > 0)
+                  _chip(
                     scheme,
                     Icons.emoji_events_outlined,
                     '$poapCount POAP • $badgeCount badges',
@@ -174,8 +174,11 @@ Future<void> showArtMarkerInfoDialog({
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text('Close', style: GoogleFonts.outfit()),
+          onPressed: () => Navigator.of(dialogContext).pop(),
+          child: Text(
+            'Close',
+            style: KubusTextStyles.detailButton.copyWith(color: scheme.primary),
+          ),
         ),
       ],
     ),
@@ -206,23 +209,31 @@ Widget _imageFallback(Color baseColor, ColorScheme scheme, ArtMarker marker) {
 }
 
 Widget _chip(ColorScheme scheme, IconData icon, String label, Color accentColor) {
-  return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+  return DecoratedBox(
     decoration: BoxDecoration(
-      color: accentColor.withValues(alpha: 0.12),
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(KubusRadius.xl),
       border: Border.all(color: accentColor.withValues(alpha: 0.25)),
     ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 14, color: accentColor),
-        const SizedBox(width: 6),
-        Text(
-          label,
-          style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w500),
-        ),
-      ],
+    child: FrostedContainer(
+      padding: const EdgeInsets.symmetric(
+        horizontal: KubusSpacing.sm + KubusSpacing.xxs,
+        vertical: KubusSpacing.xs + KubusSpacing.xxs,
+      ),
+      borderRadius: BorderRadius.circular(KubusRadius.xl),
+      showBorder: false,
+      backgroundColor: accentColor.withValues(alpha: 0.12),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: KubusSizes.trailingChevron, color: accentColor),
+          const SizedBox(width: KubusSpacing.xs + KubusSpacing.xxs),
+          Text(
+            label,
+            style:
+                KubusTextStyles.detailLabel.copyWith(color: scheme.onSurface),
+          ),
+        ],
+      ),
     ),
   );
 }

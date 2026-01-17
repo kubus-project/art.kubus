@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'package:art_kubus/screens/events/event_detail_screen.dart';
+import 'package:art_kubus/screens/events/exhibition_detail_screen.dart';
 import 'package:art_kubus/widgets/app_loading.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -43,6 +45,9 @@ import 'providers/marker_management_provider.dart';
 import 'providers/auth_session_provider.dart';
 import 'providers/deep_link_provider.dart';
 import 'providers/platform_deep_link_listener_provider.dart';
+import 'providers/main_tab_provider.dart';
+import 'providers/map_deep_link_provider.dart';
+import 'providers/deferred_onboarding_provider.dart';
 import 'core/app_initializer.dart';
 import 'core/app_navigator.dart';
 import 'core/url_strategy.dart';
@@ -67,8 +72,6 @@ import 'services/telemetry/telemetry_service.dart';
 import 'widgets/glass_components.dart';
 
 import 'screens/collab/invites_inbox_screen.dart';
-import 'screens/events/event_detail_screen.dart';
-import 'screens/events/exhibition_detail_screen.dart';
 import 'services/share/share_deep_link_parser.dart';
 
 void main() {
@@ -232,6 +235,12 @@ class _AppLauncherState extends State<AppLauncher> {
               Provider<SolanaWalletService>(
                 create: (_) => SolanaWalletService(),
               ),
+              // Main mobile shell tab state (also used by deep-link flows).
+              ChangeNotifierProvider(create: (context) => MainTabProvider()),
+              // Marker deep links open inside the already-mounted MapScreen.
+              ChangeNotifierProvider(create: (context) => MapDeepLinkProvider()),
+              // Session-scoped onboarding deferral for deep-link cold starts.
+              ChangeNotifierProvider(create: (context) => DeferredOnboardingProvider()),
               ChangeNotifierProvider(create: (context) => AppRefreshProvider()),
               ChangeNotifierProvider(create: (context) => ConfigProvider()),
               ProxyProvider<ConfigProvider, TelemetryService>(

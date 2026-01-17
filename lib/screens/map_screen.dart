@@ -55,7 +55,7 @@ import '../services/backend_api_service.dart';
 import '../config/config.dart';
 import 'events/exhibition_detail_screen.dart';
 import '../widgets/glass_components.dart';
-import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import '../widgets/tutorial/interactive_tutorial_overlay.dart';
 
 /// Custom painter for the direction cone indicator
 class DirectionConePainter extends CustomPainter {
@@ -203,6 +203,23 @@ class _MapScreenState extends State<MapScreen>
       DraggableScrollableController();
   double _markerRadiusKm = 5.0;
 
+  static const double _travelModeRadiusKm = 50.0;
+  bool _travelModeEnabled = false;
+
+  double get _effectiveMarkerRadiusKm =>
+      _travelModeEnabled ? _travelModeRadiusKm : _markerRadiusKm;
+
+  // Interactive onboarding tutorial (coach marks)
+  final GlobalKey _tutorialMapKey = GlobalKey();
+  final GlobalKey _tutorialFilterButtonKey = GlobalKey();
+  final GlobalKey _tutorialNearbyTitleKey = GlobalKey();
+  final GlobalKey _tutorialTravelButtonKey = GlobalKey();
+  final GlobalKey _tutorialCenterButtonKey = GlobalKey();
+  final GlobalKey _tutorialAddMarkerButtonKey = GlobalKey();
+
+  bool _showMapTutorial = false;
+  int _mapTutorialIndex = 0;
+
   // Discovery and Progress
   bool _isDiscoveryExpanded = false;
   bool _filtersExpanded = false;
@@ -220,7 +237,10 @@ class _MapScreenState extends State<MapScreen>
       Duration(minutes: 5); // Increased from 150s to 5 min
   bool _isLoadingMarkers = false; // Prevent concurrent fetches
 
-  MarkerSubjectLoader get _subjectLoader => MarkerSubjectLoader(context);
+  /// NOTE: Do not cache a BuildContext-backed loader as a field/getter.
+  /// Timer/async callbacks can outlive this State, and reading providers via a
+  /// deactivated context triggers "Looking up a deactivated widget's ancestor".
+  MarkerSubjectLoader _createSubjectLoader() => MarkerSubjectLoader(context);
 
   @override
   void initState() {
@@ -236,6 +256,10 @@ class _MapScreenState extends State<MapScreen>
 
       await _loadPersistedPermissionFlags();
       if (!mounted) return;
+
+      await _loadMapTravelPrefs();
+      if (!mounted) return;
+
       _initializeMap();
 
       if (!mounted) return;
@@ -269,7 +293,170 @@ class _MapScreenState extends State<MapScreen>
 
       if (!mounted) return;
       _calculateProgress(); // Calculate progress after providers are ready
+
+      unawaited(_maybeShowInteractiveMapTutorial());
     });
+  }
+
+  Future<void> _loadMapTravelPrefs() async {
+    if (!AppConfig.isFeatureEnabled('mapTravelMode')) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final enabled = prefs.getBool(PreferenceKeys.mapTravelModeEnabledV1) ?? false;
+      if (!mounted) return;
+      setState(() {
+        _travelModeEnabled = enabled;
+      });
+    } catch (_) {
+      // Best-effort.
+    }
+  }
+
+  Future<void> _setTravelModeEnabled(bool enabled) async {
+    if (!AppConfig.isFeatureEnabled('mapTravelMode')) return;
+    if (!mounted) return;
+
+    setState(() {
+      _travelModeEnabled = enabled;
+    });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(PreferenceKeys.mapTravelModeEnabledV1, enabled);
+    } catch (_) {
+      // Best-effort.
+    }
+
+    unawaited(_loadArtMarkers(forceRefresh: true));
+  }
+
+  Future<void> _maybeShowInteractiveMapTutorial() async {
+    if (!mounted) return;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final seen = prefs.getBool(PreferenceKeys.mapOnboardingMobileSeenV2) ?? false;
+      if (seen) return;
+
+      // Wait until the UI is laid out so we can compute highlight rects.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        setState(() {
+          _showMapTutorial = true;
+          _mapTutorialIndex = 0;
+        });
+      });
+    } catch (_) {
+      // Best-effort.
+    }
+  }
+
+  Future<void> _setMapTutorialSeen() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(PreferenceKeys.mapOnboardingMobileSeenV2, true);
+    } catch (_) {
+      // Best-effort.
+    }
+  }
+
+  void _dismissMapTutorial() {
+    if (!mounted) return;
+    setState(() {
+      _showMapTutorial = false;
+    });
+    unawaited(_setMapTutorialSeen());
+  }
+
+  void _tutorialNext() {
+    if (!mounted) return;
+    final steps = _buildMapTutorialSteps(AppLocalizations.of(context)!);
+    if (_mapTutorialIndex >= steps.length - 1) {
+      _dismissMapTutorial();
+      return;
+    }
+    setState(() => _mapTutorialIndex += 1);
+  }
+
+  void _tutorialBack() {
+    if (!mounted) return;
+    if (_mapTutorialIndex <= 0) return;
+    setState(() => _mapTutorialIndex -= 1);
+  }
+
+  List<TutorialStepDefinition> _buildMapTutorialSteps(AppLocalizations l10n) {
+    final steps = <TutorialStepDefinition>[
+      TutorialStepDefinition(
+        targetKey: _tutorialMapKey,
+        icon: Icons.map_outlined,
+        title: l10n.mapTutorialStepMapTitle,
+        body: l10n.mapTutorialStepMapBody,
+      ),
+      TutorialStepDefinition(
+        targetKey: _tutorialMapKey,
+        icon: Icons.place_outlined,
+        title: l10n.mapTutorialStepMarkersTitle,
+        body: l10n.mapTutorialStepMarkersBody,
+      ),
+      TutorialStepDefinition(
+        targetKey: _tutorialAddMarkerButtonKey,
+        icon: Icons.add_location_alt,
+        title: l10n.mapTutorialStepCreateMarkerTitle,
+        body: l10n.mapTutorialStepCreateMarkerBody,
+      ),
+      TutorialStepDefinition(
+        targetKey: _tutorialNearbyTitleKey,
+        icon: Icons.view_list,
+        title: l10n.mapTutorialStepNearbyTitle,
+        body: l10n.mapTutorialStepNearbyBody,
+        onTargetTap: () {
+          // Expand the sheet a bit so users see the list.
+          try {
+            _sheetController.animateTo(
+              0.50,
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOutCubic,
+            );
+          } catch (_) {}
+        },
+      ),
+      TutorialStepDefinition(
+        targetKey: _tutorialFilterButtonKey,
+        icon: Icons.filter_alt_outlined,
+        title: l10n.mapTutorialStepFiltersTitle,
+        body: l10n.mapTutorialStepFiltersBody,
+        onTargetTap: () {
+          if (!mounted) return;
+          setState(() {
+            _filtersExpanded = true;
+          });
+        },
+      ),
+    ];
+
+    if (AppConfig.isFeatureEnabled('mapTravelMode')) {
+      steps.add(
+        TutorialStepDefinition(
+          targetKey: _tutorialTravelButtonKey,
+          icon: Icons.travel_explore,
+          title: l10n.mapTutorialStepTravelTitle,
+          body: l10n.mapTutorialStepTravelBody,
+          onTargetTap: () => unawaited(_setTravelModeEnabled(true)),
+        ),
+      );
+    }
+
+    // Optional: end on the recenter control so users know how to get back.
+    steps.add(
+      TutorialStepDefinition(
+        targetKey: _tutorialCenterButtonKey,
+        icon: Icons.my_location,
+        title: l10n.mapTutorialStepRecenterTitle,
+        body: l10n.mapTutorialStepRecenterBody,
+      ),
+    );
+
+    return steps;
   }
 
   Future<void> _loadPersistedPermissionFlags() async {
@@ -461,7 +648,7 @@ class _MapScreenState extends State<MapScreen>
         context: context,
         mapMarkerService: _mapMarkerService,
         center: queryCenter,
-        radiusKm: _markerRadiusKm,
+        radiusKm: _effectiveMarkerRadiusKm,
         forceRefresh: forceRefresh,
       );
 
@@ -681,7 +868,7 @@ class _MapScreenState extends State<MapScreen>
     }
 
     // Also show in-app SnackBar
-    ScaffoldMessenger.of(context).showKubusSnackBar(
+    ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
@@ -811,7 +998,7 @@ class _MapScreenState extends State<MapScreen>
       debugPrint('Error launching AR experience: $e');
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showKubusSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(l10n.mapFailedToLaunchAr),
             backgroundColor: Colors.red,
@@ -882,11 +1069,21 @@ class _MapScreenState extends State<MapScreen>
   }
 
   MarkerSubjectData _snapshotMarkerSubjectData() {
-    return _subjectLoader.snapshot();
+    if (!mounted) {
+      return const MarkerSubjectData(
+        artworks: [],
+        exhibitions: [],
+        institutions: [],
+        events: [],
+        delegates: [],
+      );
+    }
+    return _createSubjectLoader().snapshot();
   }
 
   Future<MarkerSubjectData?> _refreshMarkerSubjectData({bool force = false}) {
-    return _subjectLoader.refresh(force: force);
+    if (!mounted) return Future<MarkerSubjectData?>.value(null);
+    return _createSubjectLoader().refresh(force: force);
   }
 
   Future<void> _startMarkerCreationFlow() async {
@@ -898,7 +1095,7 @@ class _MapScreenState extends State<MapScreen>
     final l10n = AppLocalizations.of(context)!;
     final wallet = context.read<WalletProvider>().currentWalletAddress;
     if (wallet == null || wallet.isEmpty) {
-      ScaffoldMessenger.of(context).showKubusSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             l10n.mapMarkerCreateWalletRequired,
@@ -952,7 +1149,7 @@ class _MapScreenState extends State<MapScreen>
     if (!mounted) return;
 
     if (success) {
-      ScaffoldMessenger.of(context).showKubusSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
             children: [
@@ -972,7 +1169,7 @@ class _MapScreenState extends State<MapScreen>
       );
       await _loadArtMarkers(forceRefresh: true);
     } else {
-      ScaffoldMessenger.of(context).showKubusSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             l10n.mapMarkerCreateFailedToast,
@@ -1087,7 +1284,7 @@ class _MapScreenState extends State<MapScreen>
       return false;
     } on StateError catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showKubusSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
               e.message,
@@ -1598,7 +1795,10 @@ class _MapScreenState extends State<MapScreen>
       body: AnimatedGradientBackground(
         child: Stack(
           children: [
-            _buildMap(themeProvider), // This will likely be refactored into _buildMapLayer()
+            KeyedSubtree(
+              key: _tutorialMapKey,
+              child: _buildMap(themeProvider),
+            ),
             _buildTopOverlays(theme, taskProvider), // This will likely be refactored into _buildSearchAndFilters()
             _buildPrimaryControls(theme), // This will likely be refactored into _buildSearchAndFilters()
             _buildBottomSheet( // This will likely be refactored into _buildDraggablePanel()
@@ -1610,6 +1810,25 @@ class _MapScreenState extends State<MapScreen>
             if (_activeMarker != null)
               _buildCenteredMarkerOverlay(themeProvider),
             if (_isSearching) _buildSuggestionSheet(theme), // This will likely be refactored into _buildSearchAndFilters()
+            if (_showMapTutorial)
+              Builder(
+                builder: (context) {
+                  final l10n = AppLocalizations.of(context)!;
+                  final steps = _buildMapTutorialSteps(l10n);
+                  final idx = _mapTutorialIndex.clamp(0, steps.length - 1);
+                  return InteractiveTutorialOverlay(
+                    steps: steps,
+                    currentIndex: idx,
+                    onNext: _tutorialNext,
+                    onBack: _tutorialBack,
+                    onSkip: _dismissMapTutorial,
+                    skipLabel: l10n.commonSkip,
+                    backLabel: l10n.commonBack,
+                    nextLabel: l10n.commonNext,
+                    doneLabel: l10n.commonDone,
+                  );
+                },
+              ),
           ],
         ),
       ),
@@ -2468,7 +2687,7 @@ class _MapScreenState extends State<MapScreen>
     if (!AppConfig.isFeatureEnabled('exhibitions') ||
         BackendApiService().exhibitionsApiAvailable == false) {
       if (isExhibitionMarker) {
-        messenger.showKubusSnackBar(
+        messenger.showSnackBar(
           const SnackBar(content: Text('Razstave trenutno niso na voljo.')),
         );
         setState(() {});
@@ -2490,7 +2709,7 @@ class _MapScreenState extends State<MapScreen>
     if (!mounted) return;
 
     if (fetched == null) {
-      messenger.showKubusSnackBar(
+      messenger.showSnackBar(
         const SnackBar(content: Text('Razstave trenutno niso na voljo.')),
       );
       // Force rebuild so we can hide exhibition UI if the API just got marked unavailable.
@@ -2762,19 +2981,25 @@ class _MapScreenState extends State<MapScreen>
                         });
                       },
                     )
-                  : IconButton(
-                      icon: Icon(
-                        _filtersExpanded ? Icons.filter_alt_off : Icons.filter_alt,
-                        color: hintColor,
-                      ),
-                      tooltip: _filtersExpanded
+                  : Tooltip(
+                      message: _filtersExpanded
                           ? l10n.mapHideFiltersTooltip
                           : l10n.mapShowFiltersTooltip,
-                      onPressed: () {
-                        setState(() {
-                          _filtersExpanded = !_filtersExpanded;
-                        });
-                      },
+                      preferBelow: false,
+                      verticalOffset: 18,
+                      margin: const EdgeInsets.symmetric(horizontal: 24),
+                      child: IconButton(
+                        key: _tutorialFilterButtonKey,
+                        icon: Icon(
+                          _filtersExpanded ? Icons.filter_alt_off : Icons.filter_alt,
+                          color: hintColor,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _filtersExpanded = !_filtersExpanded;
+                          });
+                        },
+                      ),
                     ),
               suffixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 44),
               border: InputBorder.none,
@@ -3240,7 +3465,20 @@ class _MapScreenState extends State<MapScreen>
       bottom: bottomOffset,
       child: Column(
         children: [
+          if (AppConfig.isFeatureEnabled('mapTravelMode')) ...[
+            _MapIconButton(
+              key: _tutorialTravelButtonKey,
+              icon: Icons.travel_explore,
+              tooltip: _travelModeEnabled
+                  ? l10n.mapTravelModeDisableTooltip
+                  : l10n.mapTravelModeEnableTooltip,
+              active: _travelModeEnabled,
+              onTap: () => unawaited(_setTravelModeEnabled(!_travelModeEnabled)),
+            ),
+            const SizedBox(height: 12),
+          ],
           _MapIconButton(
+            key: _tutorialCenterButtonKey,
             icon: Icons.my_location,
             tooltip: l10n.mapCenterOnMeTooltip,
             active: _autoFollow,
@@ -3256,6 +3494,7 @@ class _MapScreenState extends State<MapScreen>
           ),
           const SizedBox(height: 12),
           _MapIconButton(
+            key: _tutorialAddMarkerButtonKey,
             icon: Icons.add_location_alt,
             tooltip: l10n.mapAddMapMarkerTooltip,
             onTap: () => unawaited(_startMarkerCreationFlow()),
@@ -3340,6 +3579,7 @@ class _MapScreenState extends State<MapScreen>
                                     children: [
                                       Text(
                                         l10n.mapNearbyArtTitle,
+                                        key: _tutorialNearbyTitleKey,
                                         style: KubusTypography.textTheme.titleMedium
                                             ?.copyWith(
                                           fontWeight: FontWeight.w700,
@@ -3361,7 +3601,7 @@ class _MapScreenState extends State<MapScreen>
                                 _glassIconButton(
                                   icon: Icons.radar,
                                   tooltip: l10n.mapNearbyRadiusTooltip(
-                                      _markerRadiusKm.toInt()),
+                                      _effectiveMarkerRadiusKm.toInt()),
                                   onTap: _openMarkerRadiusDialog,
                                 ),
                                 const SizedBox(width: 8),
@@ -3675,6 +3915,7 @@ class _MapIconButton extends StatelessWidget {
   final bool active;
 
   const _MapIconButton({
+    super.key,
     required this.icon,
     required this.tooltip,
     this.onTap,

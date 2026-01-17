@@ -1,15 +1,16 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/collab_member.dart';
 import '../providers/collab_provider.dart';
 import '../services/backend_api_service.dart';
+import '../utils/design_tokens.dart';
 import '../utils/user_profile_navigation.dart';
 import '../widgets/avatar_widget.dart';
+import 'glass_components.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class CollaborationPanel extends StatefulWidget {
@@ -264,11 +265,11 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
     final messenger = ScaffoldMessenger.of(context);
     final collab = context.read<CollabProvider>();
 
-    final ok = await showDialog<bool>(
+    final ok = await showKubusDialog<bool>(
       context: context,
       builder: (ctx) {
         final l10n = AppLocalizations.of(ctx)!;
-        return AlertDialog(
+        return KubusAlertDialog(
           title: const Text('Remove collaborator?'),
           content: Text('This will revoke access for ${member.user?.displayName ?? member.user?.username ?? 'this person'}.'),
           actions: [
@@ -299,76 +300,73 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
     final collab = context.watch<CollabProvider>();
     final members = collab.collaboratorsFor(widget.entityType, widget.entityId);
 
-    return Card(
-      elevation: 0,
-      color: scheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.7)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Collaboration',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: scheme.onSurface,
-                    ),
+    return LiquidGlassCard(
+      padding: const EdgeInsets.all(KubusSpacing.md),
+      margin: EdgeInsets.zero,
+      borderRadius: BorderRadius.circular(KubusRadius.lg),
+      showBorder: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Collaboration',
+                  style: KubusTextStyles.detailSectionTitle.copyWith(
+                    color: scheme.onSurface,
                   ),
                 ),
-                if (collab.isLoading)
-                  SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: scheme.primary,
-                    ),
-                  )
-                else
-                  IconButton(
-                    tooltip: AppLocalizations.of(context)!.commonRefresh,
-                    onPressed: _loadMembers,
-                    icon: Icon(Icons.refresh, color: scheme.onSurface.withValues(alpha: 0.75)),
+              ),
+              if (collab.isLoading)
+                SizedBox(
+                  width: KubusSizes.trailingChevron + KubusSpacing.xxs,
+                  height: KubusSizes.trailingChevron + KubusSpacing.xxs,
+                  child: CircularProgressIndicator(
+                    strokeWidth: KubusSizes.hairline + KubusSpacing.xxs,
+                    color: scheme.primary,
                   ),
-              ],
+                )
+              else
+                IconButton(
+                  tooltip: AppLocalizations.of(context)!.commonRefresh,
+                  onPressed: _loadMembers,
+                  icon: Icon(
+                    Icons.refresh,
+                    color: scheme.onSurface.withValues(alpha: 0.75),
+                  ),
+                ),
+            ],
+          ),
+          if ((collab.error ?? '').isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
+              child: Text(
+                'Could not load collaborators.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: scheme.error,
+                    ),
+              ),
             ),
-            if ((collab.error ?? '').isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text(
-                  'Could not load collaborators.',
-                  style: GoogleFonts.inter(color: scheme.error, fontSize: 12),
-                ),
+          _buildInviteSection(scheme),
+          const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
+          if (members.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: KubusSpacing.sm),
+              child: Text(
+                'No collaborators yet.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.65),
+                    ),
               ),
-
-            _buildInviteSection(scheme),
-            const SizedBox(height: 12),
-
-            if (members.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Text(
-                  'No collaborators yet.',
-                  style: GoogleFonts.inter(
-                    color: scheme.onSurface.withValues(alpha: 0.65),
-                    fontSize: 13,
-                  ),
-                ),
-              )
-            else
-              Column(
-                children: members.map((m) => _buildMemberRow(m, scheme)).toList(growable: false),
-              ),
-          ],
-        ),
+            )
+          else
+            Column(
+              children: members
+                  .map((m) => _buildMemberRow(m, scheme))
+                  .toList(growable: false),
+            ),
+        ],
       ),
     );
   }
@@ -381,13 +379,11 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
       children: [
         Text(
           'Invite someone',
-          style: GoogleFonts.inter(
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-            color: scheme.onSurface,
-          ),
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: scheme.onSurface,
+              ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: KubusSpacing.sm),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -401,12 +397,14 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
                       prefixIcon: const Icon(Icons.person_add_alt_1),
                       suffixIcon: _loadingSuggestions
                           ? Padding(
-                              padding: const EdgeInsets.all(12),
+                              padding: const EdgeInsets.all(
+                                KubusSpacing.sm + KubusSpacing.xs,
+                              ),
                               child: SizedBox(
-                                width: 14,
-                                height: 14,
+                                width: KubusSizes.trailingChevron - KubusSpacing.xxs,
+                                height: KubusSizes.trailingChevron - KubusSpacing.xxs,
                                 child: CircularProgressIndicator(
-                                  strokeWidth: 2,
+                                  strokeWidth: KubusSizes.hairline + KubusSizes.hairline,
                                   color: scheme.primary,
                                 ),
                               ),
@@ -426,7 +424,9 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
                       filled: true,
                       fillColor: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(
+                          KubusRadius.md + KubusSpacing.xxs,
+                        ),
                         borderSide: BorderSide.none,
                       ),
                     ),
@@ -437,7 +437,7 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
                   ),
                   if (_suggestions.isNotEmpty)
                     Container(
-                      margin: const EdgeInsets.only(top: 8),
+                      margin: const EdgeInsets.only(top: KubusSpacing.sm),
                       decoration: BoxDecoration(
                         color: scheme.surfaceContainerHighest.withValues(alpha: 0.25),
                         borderRadius: BorderRadius.circular(14),
@@ -462,11 +462,15 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
                             ),
                             title: Text(
                               s.displayName ?? '@${s.username}',
-                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600),
+                              style: Theme.of(ctx).textTheme.labelLarge?.copyWith(
+                                    color: scheme.onSurface,
+                                  ),
                             ),
                             subtitle: Text(
                               '@${s.username}',
-                              style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.65)),
+                              style: Theme.of(ctx).textTheme.labelMedium?.copyWith(
+                                    color: scheme.onSurface.withValues(alpha: 0.65),
+                                  ),
                             ),
                             onTap: () {
                               setState(() {
@@ -528,7 +532,9 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
         const SizedBox(height: 6),
         Text(
           'Invite collaborators by username or email.',
-          style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.6)),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.6),
+              ),
         ),
       ],
     );
@@ -552,21 +558,20 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
     final navUserId = walletAddress.isNotEmpty ? walletAddress : member.userId;
     final navUsername = username.isNotEmpty ? username : null;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest.withValues(alpha: 0.20),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.5)),
-      ),
+    return LiquidGlassPanel(
+      margin: const EdgeInsets.only(bottom: KubusSpacing.sm),
+      padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
+      borderRadius: BorderRadius.circular(KubusRadius.lg),
+      blurSigma: KubusGlassEffects.blurSigmaLight,
+      showBorder: true,
+      backgroundColor: scheme.surfaceContainerHighest.withValues(alpha: 0.16),
       child: Row(
         children: [
           Expanded(
             child: Material(
               color: Colors.transparent,
               child: InkWell(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
                 onTap: canOpenProfile
                     ? () => unawaited(
                           UserProfileNavigation.open(
@@ -581,31 +586,28 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
                     AvatarWidget(
                       avatarUrl: user?.avatarUrl,
                       wallet: seed,
-                      radius: 18,
+                      radius: KubusSizes.sidebarActionIcon - KubusSpacing.xxs,
                       allowFabricatedFallback: true,
                       enableProfileNavigation: false,
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             title,
-                            style: GoogleFonts.inter(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                              color: scheme.onSurface,
-                            ),
+                            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                  color: scheme.onSurface,
+                                ),
                             overflow: TextOverflow.ellipsis,
                           ),
                           if (subtitle != null)
                             Text(
                               subtitle,
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                color: scheme.onSurface.withValues(alpha: 0.65),
-                              ),
+                              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                    color: scheme.onSurface.withValues(alpha: 0.65),
+                                  ),
                               overflow: TextOverflow.ellipsis,
                             ),
                         ],
@@ -616,7 +618,7 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
           if (_canManageMembers)
             SizedBox(
               width: 150,
@@ -639,7 +641,7 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
                   filled: true,
                   fillColor: scheme.surface.withValues(alpha: 0.2),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(KubusRadius.md),
                     borderSide: BorderSide.none,
                   ),
                 ),
@@ -648,10 +650,9 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
           else
             Text(
               _roleLabel(member.role),
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                color: scheme.onSurface.withValues(alpha: 0.75),
-              ),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.75),
+                  ),
             ),
           if (_canManageMembers)
             IconButton(

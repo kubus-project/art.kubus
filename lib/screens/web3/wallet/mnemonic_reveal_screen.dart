@@ -1,11 +1,12 @@
+import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../widgets/app_loading.dart';
 import '../../../utils/app_color_utils.dart';
+import '../../../widgets/glass_components.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class MnemonicRevealScreen extends StatefulWidget {
@@ -127,8 +128,7 @@ class _MnemonicRevealScreenState extends State<MnemonicRevealScreen> {
                             size: 20, color: AppColorUtils.indigoAccent),
                         const SizedBox(width: 8),
                         Text(l10n.mnemonicRevealPrivacyWarning,
-                            style: GoogleFonts.inter(
-                                fontSize: 16, fontWeight: FontWeight.w600)),
+                            style: KubusTypography.textTheme.bodyMedium),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -156,12 +156,12 @@ class _MnemonicRevealScreenState extends State<MnemonicRevealScreen> {
                             child: Row(
                               children: [
                                 Text('${index + 1}. ',
-                                    style: GoogleFonts.inter(
-                                        fontWeight: FontWeight.w600)),
+                                    style: KubusTypography.textTheme.bodyMedium),
                                 Expanded(
                                     child: Text(display,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: GoogleFonts.inter())),
+                                        overflow: TextOverflow.ellipsis,  
+                                        style: KubusTypography.textTheme.bodyMedium),
+                                ),
                               ],
                             ),
                           );
@@ -192,9 +192,9 @@ class _MnemonicRevealScreenState extends State<MnemonicRevealScreen> {
                               return;
                             }
                             // fallback to PIN entry dialog
-                            final entered = await showDialog<String?>(
+                            final entered = await showKubusDialog<String?>(
                               context: this.context,
-                              builder: (ctx) => AlertDialog(
+                              builder: (ctx) => KubusAlertDialog(
                                 title: Text(
                                     l10n.mnemonicRevealEnterPinDialogTitle),
                                 content: TextField(
@@ -265,7 +265,7 @@ class _MnemonicRevealScreenState extends State<MnemonicRevealScreen> {
                         const SizedBox(width: 8),
                         Expanded(
                             child: Text(l10n.mnemonicRevealBiometricUnavailable,
-                                style: GoogleFonts.inter())),
+                                style: KubusTypography.textTheme.bodyMedium)),
                       ],
                     ),
                     const SizedBox(height: 12),

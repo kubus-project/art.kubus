@@ -6,9 +6,9 @@ import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../services/ar_service.dart';
 import '../providers/themeprovider.dart';
-import '../utils/app_color_utils.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../widgets/app_loading.dart';
+import '../utils/design_tokens.dart';
+import 'glass_components.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 /// Professional QR/Marker Scanner for AR Artwork Discovery
@@ -133,16 +133,16 @@ class _ARMarkerScannerState extends State<ARMarkerScanner>
 
       // Show confirmation and launch AR
       if (!mounted) return;
-      final shouldLaunch = await showDialog<bool>(
+      final shouldLaunch = await showKubusDialog<bool>(
         context: context,
         builder: (dialogContext) {
           final dialogL10n = AppLocalizations.of(dialogContext)!;
-          return AlertDialog(
+          return KubusAlertDialog(
             title: Text(
               (artworkData['title']?.toString().trim().isNotEmpty ?? false)
                   ? artworkData['title'].toString()
                   : dialogL10n.arMarkerScannerDefaultArtworkTitle,
-              style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+              style: Theme.of(dialogContext).textTheme.titleLarge,
             ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
@@ -153,10 +153,10 @@ class _ARMarkerScannerState extends State<ARMarkerScanner>
                       artworkData['artist'].toString())),
                 if (artworkData['description'] != null)
                   Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
+                    padding: const EdgeInsets.only(top: KubusSpacing.sm),
                     child: Text(artworkData['description'].toString()),
                   ),
-                const SizedBox(height: 16),
+                const SizedBox(height: KubusSpacing.md),
                 Text(dialogL10n.arMarkerScannerLaunchViewerPrompt),
               ],
             ),
@@ -247,13 +247,20 @@ class _ARMarkerScannerState extends State<ARMarkerScanner>
             child: Center(
               child: Container(
                 margin: const EdgeInsets.only(
-                    bottom: 150), // Move up away from app bar
+                  bottom: KubusLayout.mainBottomNavBarHeight +
+                      KubusSpacing.xl +
+                      KubusSpacing.lg +
+                      KubusSpacing.sm +
+                      KubusSpacing.sm +
+                      KubusSpacing.xs +
+                      KubusSpacing.xxs,
+                ),
                 child: SizedBox(
-                  width: 280,
-                  height: 280,
+                  width: KubusSizes.sidebarActionIconBox * 7,
+                  height: KubusSizes.sidebarActionIconBox * 7,
                   child: CustomPaint(
                     painter: ScannerOverlayPainter(
-                      accentColor: AppColorUtils.cyanAccent,
+                      accentColor: colors.primary,
                     ),
                   ),
                 ),
@@ -264,42 +271,40 @@ class _ARMarkerScannerState extends State<ARMarkerScanner>
         // Instructions with fade out
         if (_showOverlay)
           Positioned(
-            bottom: 140, // Moved up from 80 to avoid mode selector
-            left: 20,
-            right: 20,
+            bottom: KubusLayout.mainBottomNavBarHeight + KubusSpacing.xl,
+            left: KubusSpacing.md + KubusSpacing.xs,
+            right: KubusSpacing.md + KubusSpacing.xs,
             child: FadeTransition(
               opacity: _fadeAnimation,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                decoration: BoxDecoration(
-                  color: colors.surface.withValues(alpha: isDark ? 0.85 : 0.92),
-                  borderRadius: BorderRadius.circular(25),
-                  border: Border.all(
-                    color: AppColorUtils.cyanAccent.withValues(alpha: 0.3),
-                    width: 1,
-                  ),
+              child: LiquidGlassPanel(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: KubusSpacing.md + KubusSpacing.xs,
+                  vertical: KubusSpacing.md,
                 ),
+                margin: EdgeInsets.zero,
+                borderRadius: BorderRadius.circular(KubusRadius.xl),
+                blurSigma: KubusGlassEffects.blurSigmaHeavy,
+                showBorder: true,
+                backgroundColor:
+                    colors.surface.withValues(alpha: isDark ? 0.22 : 0.16),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
                       Icons.qr_code_scanner,
-                      color: AppColorUtils.cyanAccent,
-                      size: 24,
+                      color: colors.primary,
+                      size: KubusSpacing.lg,
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
                     Expanded(
                       child: Text(
                         _isProcessing
                             ? l10n.arMarkerScannerProcessingQrLabel
                             : l10n.arMarkerScannerPointCameraLabel,
-                        style: GoogleFonts.inter(
-                          color: colors.onSurface,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                        ),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: colors.onSurface,
+                            ),
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -318,14 +323,12 @@ class _ARMarkerScannerState extends State<ARMarkerScanner>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   AppLoading(),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: KubusSpacing.md + KubusSpacing.xs),
                   Text(
                     l10n.arMarkerScannerLaunchingViewerLabel,
-                    style: GoogleFonts.inter(
-                      color: colors.onSurface,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: colors.onSurface,
+                        ),
                   ),
                 ],
               ),

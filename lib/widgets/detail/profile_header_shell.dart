@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../utils/design_tokens.dart';
 import 'detail_shell_components.dart';
 
 /// A shared profile header component for profile screens (own + other users)
@@ -131,7 +131,7 @@ class ProfileHeaderShell extends StatelessWidget {
                                   end: Alignment.bottomCenter,
                                   colors: [
                                     Colors.transparent,
-                                    Colors.black.withValues(alpha: 0.4),
+                                    scheme.scrim.withValues(alpha: 0.4),
                                   ],
                                 ),
                               ),
@@ -178,13 +178,13 @@ class ProfileHeaderShell extends StatelessWidget {
         shape: BoxShape.circle,
         border: Border.all(
           color: scheme.surface,
-          width: 4,
+          width: DetailSpacing.xs,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: scheme.shadow.withValues(alpha: 0.15),
+            blurRadius: DetailSpacing.md,
+            offset: Offset(0, DetailSpacing.xs),
           ),
         ],
       ),
@@ -210,12 +210,13 @@ class ProfileHeaderShell extends StatelessWidget {
     return Container(
       color: accentColor.withValues(alpha: 0.2),
       alignment: Alignment.center,
-      child: Text(
-        initials,
-        style: GoogleFonts.inter(
-          fontSize: avatarSize * 0.35,
-          fontWeight: FontWeight.w700,
-          color: accentColor,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          initials,
+          style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                color: accentColor,
+              ),
         ),
       ),
     );
@@ -243,25 +244,25 @@ class ProfileHeaderShell extends StatelessWidget {
                 displayName,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.inter(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                  color: scheme.onSurface,
-                ),
+                style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                      color: scheme.onSurface,
+                    ),
               ),
             ),
             if (isVerified) ...[
-              const SizedBox(width: 8),
+              const SizedBox(width: DetailSpacing.sm),
               Icon(
                 Icons.verified,
-                size: 22,
+                size: KubusSizes.sidebarActionIcon + KubusSpacing.xxs,
                 color: scheme.primary,
               ),
             ],
             if (badges.isNotEmpty) ...[
-              const SizedBox(width: 8),
+              const SizedBox(width: DetailSpacing.sm),
               ...badges.map((badge) => Padding(
-                    padding: const EdgeInsets.only(right: 6),
+                    padding: const EdgeInsets.only(
+                      right: KubusSpacing.xs + KubusSpacing.xxs,
+                    ),
                     child: badge,
                   )),
             ],
@@ -269,13 +270,12 @@ class ProfileHeaderShell extends StatelessWidget {
         ),
         // Username
         if (username != null && username!.isNotEmpty) ...[
-          const SizedBox(height: 4),
+          const SizedBox(height: DetailSpacing.xs),
           Text(
             username!.startsWith('@') ? username! : '@$username',
-            style: GoogleFonts.inter(
-              fontSize: 15,
-              color: scheme.onSurface.withValues(alpha: 0.6),
-            ),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.6),
+                ),
           ),
         ],
         // Activity status
@@ -321,31 +321,34 @@ class ProfileHeaderShell extends StatelessWidget {
                           displayName,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.inter(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: scheme.onSurface,
-                          ),
+                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                color: scheme.onSurface,
+                              ),
                         ),
                       ),
                       if (isVerified) ...[
-                        const SizedBox(width: 6),
-                        Icon(Icons.verified, size: 18, color: scheme.primary),
+                        const SizedBox(width: KubusSpacing.xs + KubusSpacing.xxs),
+                        Icon(
+                          Icons.verified,
+                          size: KubusSizes.trailingChevron + KubusSpacing.xxs,
+                          color: scheme.primary,
+                        ),
                       ],
                       ...badges.map((badge) => Padding(
-                            padding: const EdgeInsets.only(left: 6),
+                            padding: const EdgeInsets.only(
+                              left: KubusSpacing.xs + KubusSpacing.xxs,
+                            ),
                             child: badge,
                           )),
                     ],
                   ),
                   if (username != null && username!.isNotEmpty) ...[
-                    const SizedBox(height: 2),
+                    const SizedBox(height: KubusSpacing.xxs),
                     Text(
                       username!.startsWith('@') ? username! : '@$username',
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        color: scheme.onSurface.withValues(alpha: 0.6),
-                      ),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: scheme.onSurface.withValues(alpha: 0.6),
+                          ),
                     ),
                   ],
                 ],
@@ -357,7 +360,7 @@ class ProfileHeaderShell extends StatelessWidget {
           ],
         ),
         if (activityStatus != null) ...[
-          const SizedBox(height: 6),
+          const SizedBox(height: KubusSpacing.xs + KubusSpacing.xxs),
           activityStatus!,
         ],
         if (stats != null) ...[
@@ -410,18 +413,15 @@ class ProfileHeaderShell extends StatelessWidget {
       children: [
         Text(
           value,
-          style: GoogleFonts.inter(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: scheme.onSurface,
-          ),
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: scheme.onSurface,
+              ),
         ),
         Text(
           label,
-          style: GoogleFonts.inter(
-            fontSize: 13,
-            color: scheme.onSurface.withValues(alpha: 0.6),
-          ),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.6),
+              ),
         ),
       ],
     );

@@ -15,6 +15,7 @@ import '../providers/web3provider.dart';
 import '../providers/cache_provider.dart';
 import '../providers/locale_provider.dart';
 import '../providers/deep_link_provider.dart';
+import '../providers/deferred_onboarding_provider.dart';
 import '../services/backend_api_service.dart';
 import '../services/app_bootstrap_service.dart';
 import '../services/onboarding_state_service.dart';
@@ -240,6 +241,16 @@ class _AppInitializerState extends State<AppInitializer> {
       }
     })();
     if (pendingDeepLink != null) {
+      // If a signed-out user opens the app via a deep link on first launch,
+      // let them see the deep-linked content first and defer onboarding until
+      // they navigate elsewhere.
+      try {
+        if (!hasCompletedOnboarding && !profileProvider.isSignedIn) {
+          Provider.of<DeferredOnboardingProvider>(context, listen: false)
+              .enableForDeepLinkColdStart();
+        }
+      } catch (_) {}
+
       try {
         await warmupFuture.timeout(const Duration(seconds: 15));
       } catch (_) {}
@@ -249,7 +260,17 @@ class _AppInitializerState extends State<AppInitializer> {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         final linkContext = appNavigatorKey.currentContext;
         if (linkContext == null) return;
+        DeferredOnboardingProvider? deferredOnboarding;
+        try {
+          deferredOnboarding = Provider.of<DeferredOnboardingProvider>(
+            linkContext,
+            listen: false,
+          );
+        } catch (_) {
+          deferredOnboarding = null;
+        }
         await ShareDeepLinkNavigation.open(linkContext, pendingDeepLink);
+        deferredOnboarding?.markInitialDeepLinkHandled();
       });
       return;
     }

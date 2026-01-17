@@ -2527,6 +2527,90 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapAddMapMarkerTooltip => 'Add map marker';
 
   @override
+  String get mapTravelModeTooltip => 'Travel mode';
+
+  @override
+  String get mapTravelModeEnableTooltip => 'Enable travel mode';
+
+  @override
+  String get mapTravelModeDisableTooltip => 'Disable travel mode';
+
+  @override
+  String get mapTutorialStepMapTitle => 'Your map';
+
+  @override
+  String get mapTutorialStepMapBody => 'Pan and zoom to explore. Tap a marker to see details and actions.';
+
+  @override
+  String get mapTutorialStepMarkersTitle => 'Markers & types';
+
+  @override
+  String get mapTutorialStepMarkersBody => 'Markers can represent artworks, exhibitions, events, institutions, and more. Colors/icons help you spot what’s what.';
+
+  @override
+  String get mapTutorialStepCreateMarkerTitle => 'Create a marker';
+
+  @override
+  String get mapTutorialStepCreateMarkerBody => 'Tap this to add a marker at the current location (or the last long-press point).';
+
+  @override
+  String get mapTutorialStepNearbyTitle => 'Nearby art';
+
+  @override
+  String get mapTutorialStepNearbyBody => 'Browse artworks near you. The list updates as you move and as filters change.';
+
+  @override
+  String get mapTutorialStepNearbyDesktopBody => 'Open the Nearby panel to browse results near your current area and see details faster.';
+
+  @override
+  String get mapTutorialStepTypesTitle => 'Marker types';
+
+  @override
+  String get mapTutorialStepTypesDesktopBody => 'Use these chips to quickly focus on a category (artworks, events, institutions…).';
+
+  @override
+  String get mapTutorialStepFiltersTitle => 'Filters';
+
+  @override
+  String get mapTutorialStepFiltersBody => 'Use filters to narrow down what you see on the map and in the list.';
+
+  @override
+  String get mapTutorialStepFiltersDesktopBody => 'Open the Filters panel to refine results (type, distance, discovery status, and more).';
+
+  @override
+  String get mapTutorialStepTravelTitle => 'Travel mode';
+
+  @override
+  String get mapTutorialStepTravelBody => 'Travel mode expands the loading radius so you can browse markers far beyond nearby.';
+
+  @override
+  String get mapTutorialStepRecenterTitle => 'Recenter';
+
+  @override
+  String get mapTutorialStepRecenterBody => 'Tap to jump back to your location and keep following you.';
+
+  @override
+  String get mapTutorialStepSearchTitle => 'Search';
+
+  @override
+  String get mapTutorialStepSearchBody => 'Search for artworks, artists, institutions, or places to jump to them quickly.';
+
+  @override
+  String get mapTravelModeTutorialTitle => 'Explore beyond nearby';
+
+  @override
+  String get mapTravelModeTutorialBody => 'Travel mode lets you view markers beyond your nearby radius. Tap the Travel button on the map to toggle it anytime.';
+
+  @override
+  String get mapTravelModeTutorialHint => 'Tip: When Travel mode is on, the map loads markers from a much larger area.';
+
+  @override
+  String get mapTravelModeTutorialGotIt => 'Got it';
+
+  @override
+  String get mapTravelModeTutorialEnable => 'Enable travel mode';
+
+  @override
   String get mapNearbyArtTitle => 'Nearby art';
 
   @override

@@ -30,7 +30,7 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
   /// Like/favorite action color - RED across all screens
   final Color likeAction;
 
-  /// Tag/chip background color - PURPLE across all screens
+  /// Tag/chip background color used across the app.
   final Color tagChipBackground;
 
   /// Tag/chip foreground/text color
@@ -67,7 +67,7 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
   // Requested mapping (matches Web3 hub navigation intent):
   // - Artist Studio: red accents
   // - DAO: green accents
-  // - Institutions: deep purple accents
+  // - Institutions: deep accent (no purple)
   // - Marketplace: orange accents
   //
   // These are computed from existing role colors so they automatically adapt
@@ -80,7 +80,7 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
   /// DAO accent (green)
   Color get web3DaoAccent => positiveAction;
 
-  /// Institution accent (deep purple)
+  /// Institution accent (deep accent; kept non-purple)
   Color get web3InstitutionAccent => tagChipBackground;
 
   /// Marketplace accent (orange)
@@ -126,7 +126,7 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
   /// Default dark theme roles
   static const dark = KubusColorRoles(
     likeAction: KubusColors.errorDark, // Coral red - consistent across app
-    tagChipBackground: KubusColors.accentPurpleDark,
+    tagChipBackground: KubusColors.primaryVariantDark,
     tagChipForeground: KubusColors.textPrimaryDark,
     positiveAction: KubusColors.successDark,
     negativeAction: KubusColors.errorDark,
@@ -136,7 +136,7 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
     statCoral: KubusColors.errorDark,
     statGreen: KubusColors.successDark,
     statAmber: KubusColors.warningDark,
-    statPurple: KubusColors.accentPurpleDark,
+    statPurple: KubusColors.primaryVariantDark,
     achievementGold: KubusColors.achievementGoldDark,
     artistStudioRed: KubusColors.errorDark,
   );
@@ -144,7 +144,7 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
   /// Default light theme roles
   static const light = KubusColorRoles(
     likeAction: KubusColors.error, // Material red 600
-    tagChipBackground: KubusColors.accentPurpleLight,
+    tagChipBackground: KubusColors.primaryVariantLight,
     tagChipForeground: KubusColors.textPrimaryLight,
     positiveAction: KubusColors.success, // Green 600
     negativeAction: KubusColors.error, // Red 600
@@ -154,7 +154,7 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
     statCoral: KubusColors.error, // Red 600
     statGreen: KubusColors.success, // Green 600
     statAmber: KubusColors.warning, // Amber 700
-    statPurple: KubusColors.accentPurpleLight,
+    statPurple: KubusColors.primaryVariantLight,
     achievementGold: KubusColors.achievementGoldLight,
     artistStudioRed: KubusColors.error,
   );

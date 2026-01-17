@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../services/backend_api_service.dart';
+import '../glass_components.dart';
+import '../../utils/design_tokens.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class SupportTicketDialog extends StatefulWidget {
@@ -79,19 +80,12 @@ class _SupportTicketDialogState extends State<SupportTicketDialog> {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
 
-    return AlertDialog(
-      backgroundColor: scheme.surface,
-      title: Text(
-        l10n.settingsAboutSupportTileTitle,
-        style: GoogleFonts.inter(
-          color: scheme.onSurface,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
+    return KubusAlertDialog(
+      title: Text(l10n.settingsAboutSupportTileTitle),
       content: Form(
         key: _formKey,
         child: SizedBox(
-          width: 520,
+          width: KubusSizes.dialogWidthLg,
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -103,7 +97,7 @@ class _SupportTicketDialogState extends State<SupportTicketDialog> {
                     labelText: l10n.commonEmail,
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
                 TextFormField(
                   controller: _subjectController,
                   decoration: InputDecoration(
@@ -115,7 +109,7 @@ class _SupportTicketDialogState extends State<SupportTicketDialog> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
                 TextFormField(
                   controller: _messageController,
                   decoration: InputDecoration(
@@ -138,7 +132,10 @@ class _SupportTicketDialogState extends State<SupportTicketDialog> {
           onPressed: _submitting ? null : () => Navigator.of(context).pop(false),
           child: Text(
             l10n.commonCancel,
-            style: GoogleFonts.inter(color: scheme.outline),
+            style: Theme.of(context)
+                .textTheme
+                .labelLarge
+                ?.copyWith(color: scheme.outline),
           ),
         ),
         FilledButton(

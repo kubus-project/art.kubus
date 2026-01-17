@@ -7,6 +7,7 @@ import '../core/app_navigator.dart';
 import '../l10n/app_localizations.dart';
 import '../screens/auth/sign_in_screen.dart';
 import '../services/auth_session_coordinator.dart';
+import '../widgets/glass_components.dart';
 
 class AuthSessionProvider extends ChangeNotifier implements AuthSessionCoordinator {
   AuthSessionProvider({Duration? promptCooldown})
@@ -71,10 +72,10 @@ class AuthSessionProvider extends ChangeNotifier implements AuthSessionCoordinat
       final navContext = navigator.context;
       final l10n = AppLocalizations.of(navContext);
       if (l10n != null && navigator.mounted) {
-        final confirmed = await showDialog<bool>(
+        final confirmed = await showKubusDialog<bool>(
           context: navContext,
           builder: (dialogContext) {
-            return AlertDialog(
+            return KubusAlertDialog(
               title: Text(l10n.authReauthDialogTitle),
               content: Text(l10n.authReauthDialogMessage),
               actions: [
