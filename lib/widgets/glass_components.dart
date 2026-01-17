@@ -389,7 +389,7 @@ class LiquidGlassPanel extends StatelessWidget {
               border: showBorder
                   ? Border.all(
                       color: borderColor,
-                      width: 1.0,
+                      width: KubusSizes.hairline,
                     )
                   : null,
             ),
@@ -589,10 +589,11 @@ class FrostedModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: barrierDismissible ? (onBarrierTap ?? () => Navigator.of(context).pop()) : null,
       child: Container(
-        color: Colors.black.withValues(alpha: KubusGlassEffects.backdropDimming),
+        color: scheme.scrim.withValues(alpha: KubusGlassEffects.backdropDimming),
         child: BackdropFilter(
           filter: ImageFilter.blur(
             sigmaX: KubusGlassEffects.blurSigmaLight,
@@ -680,13 +681,10 @@ class _GlassShimmerState extends State<GlassShimmer>
       builder: (context, child) {
         return ShaderMask(
           shaderCallback: (bounds) {
+            final base = KubusGradients.glassShimmer;
             return LinearGradient(
-              colors: const [
-                Color(0x00FFFFFF),
-                Color(0x20FFFFFF),
-                Color(0x00FFFFFF),
-              ],
-              stops: const [0.0, 0.5, 1.0],
+              colors: base.colors,
+              stops: base.stops,
               begin: Alignment(-2.0 + (_controller.value * 4), -1.0),
               end: Alignment(-1.0 + (_controller.value * 4), 1.0),
             ).createShader(bounds);

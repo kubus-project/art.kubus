@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/notification_provider.dart';
@@ -110,8 +109,7 @@ class DesktopBreakpoints {
       MediaQuery.of(context).size.width >= medium;
 }
 
-/// Main desktop shell that provides the sleek sidebar navigation
-/// inspired by Twitter/X, Google Maps, and Instagram
+/// Main desktop shell that provides the sidebar navigation
 class DesktopShell extends StatefulWidget {
   final int initialIndex;
 
@@ -868,80 +866,78 @@ class _NotificationsPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
     final hasUnread =
         context.select<RecentActivityProvider, bool>((p) => p.hasUnread);
 
     return Column(
       children: [
         // Header
-        Container(
-          padding: const EdgeInsets.all(24),
+        DecoratedBox(
           decoration: BoxDecoration(
             border: Border(
               bottom: BorderSide(
-                color: Theme.of(context)
-                    .colorScheme
-                    .outline
-                    .withValues(alpha: 0.2),
+                color: scheme.outline.withValues(alpha: 0.2),
               ),
             ),
           ),
-          child: Row(
-            children: [
-              Text(
-                l10n.commonNotifications,
-                style: GoogleFonts.inter(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-              const Spacer(),
-              IconButton(
-                tooltip: l10n.commonRefresh,
-                onPressed: () => unawaited(context
-                    .read<RecentActivityProvider>()
-                    .refresh(force: true)),
-                icon: Icon(
-                  Icons.refresh,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.8),
-                ),
-              ),
-              TextButton(
-                onPressed: !hasUnread
-                    ? null
-                    : () async {
-                        final activityProvider =
-                            context.read<RecentActivityProvider>();
-                        await context
-                            .read<NotificationProvider>()
-                            .markViewed(syncServer: true);
-                        activityProvider.markAllReadLocally();
-                      },
-                child: Text(
-                  l10n.homeMarkAllReadButton,
-                  style: GoogleFonts.inter(
-                    color: hasUnread
-                        ? themeProvider.accentColor
-                        : Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.4),
-                    fontWeight: FontWeight.w600,
+          child: LiquidGlassPanel(
+            padding: const EdgeInsets.all(KubusSpacing.lg),
+            margin: EdgeInsets.zero,
+            borderRadius: BorderRadius.zero,
+            blurSigma: KubusGlassEffects.blurSigmaLight,
+            showBorder: false,
+            backgroundColor: scheme.surface.withValues(alpha: isDark ? 0.18 : 0.12),
+            child: Row(
+              children: [
+                Text(
+                  l10n.commonNotifications,
+                  style: KubusTextStyles.screenTitle.copyWith(
+                    color: scheme.onSurface,
                   ),
                 ),
-              ),
-              IconButton(
-                onPressed: onClose,
-                icon: Icon(
-                  Icons.close,
-                  color: Theme.of(context).colorScheme.onSurface,
+                const Spacer(),
+                IconButton(
+                  tooltip: l10n.commonRefresh,
+                  onPressed: () => unawaited(context
+                      .read<RecentActivityProvider>()
+                      .refresh(force: true)),
+                  icon: Icon(
+                    Icons.refresh,
+                    color: scheme.onSurface.withValues(alpha: 0.8),
+                  ),
                 ),
-              ),
-            ],
+                TextButton(
+                  onPressed: !hasUnread
+                      ? null
+                      : () async {
+                          final activityProvider =
+                              context.read<RecentActivityProvider>();
+                          await context
+                              .read<NotificationProvider>()
+                              .markViewed(syncServer: true);
+                          activityProvider.markAllReadLocally();
+                        },
+                  child: Text(
+                    l10n.homeMarkAllReadButton,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                          color: hasUnread
+                              ? themeProvider.accentColor
+                              : scheme.onSurface.withValues(alpha: 0.4),
+                        ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: onClose,
+                  icon: Icon(
+                    Icons.close,
+                    color: scheme.onSurface,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
 
@@ -964,31 +960,29 @@ class _NotificationsPanel extends StatelessWidget {
               if (activityProvider.error != null && activities.isEmpty) {
                 return Center(
                   child: Padding(
-                    padding: const EdgeInsets.all(24),
+                    padding: const EdgeInsets.all(KubusSpacing.lg),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.error_outline,
-                            size: 48, color: scheme.error),
-                        const SizedBox(height: 12),
+                            size: KubusSpacing.xxl, color: scheme.error),
+                        const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
                         Text(
                           activityProvider.error!,
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            color: scheme.onSurface.withValues(alpha: 0.8),
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: scheme.onSurface.withValues(alpha: 0.8),
+                              ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
                         TextButton(
                           onPressed: () =>
                               unawaited(activityProvider.refresh(force: true)),
                           child: Text(
                             l10n.commonRetry,
-                            style: GoogleFonts.inter(
-                              fontWeight: FontWeight.w600,
-                              color: themeProvider.accentColor,
-                            ),
+                            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                  color: themeProvider.accentColor,
+                                ),
                           ),
                         ),
                       ],
@@ -1004,15 +998,15 @@ class _NotificationsPanel extends StatelessWidget {
                     children: [
                       Icon(
                         Icons.notifications_none,
-                        size: 64,
+                        size: KubusSpacing.xxl + KubusSpacing.xl,
                         color: scheme.onSurface.withValues(alpha: 0.3),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: KubusSpacing.md),
                       Text(
                         l10n.homeNoNotificationsTitle,
-                        style: GoogleFonts.inter(
-                          color: scheme.onSurface.withValues(alpha: 0.6),
-                        ),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: scheme.onSurface.withValues(alpha: 0.6),
+                            ),
                       ),
                     ],
                   ),
@@ -1020,7 +1014,7 @@ class _NotificationsPanel extends StatelessWidget {
               }
 
               return ListView.builder(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(KubusSpacing.md),
                 itemCount: activities.length,
                 itemBuilder: (context, index) {
                   final activity = activities[index];
@@ -1070,41 +1064,49 @@ class DesktopSubScreen extends StatelessWidget {
     return Column(
       children: [
         // Header with back button
-        Container(
-          height: 56,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+        DecoratedBox(
           decoration: BoxDecoration(
-            color: scheme.surface,
             border: Border(
               bottom: BorderSide(
                 color: scheme.outline.withValues(alpha: 0.2),
               ),
             ),
           ),
-          child: Row(
-            children: [
-              if (shellScope?.canPop ?? false) ...[
-                IconButton(
-                  onPressed: () => shellScope?.popScreen(),
-                  icon: Icon(
-                    Icons.arrow_back,
-                    color: scheme.onSurface,
-                  ),
-                  tooltip: 'Back',
-                ),
-                const SizedBox(width: 8),
-              ],
-              Text(
-                title,
-                style: GoogleFonts.inter(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: scheme.onSurface,
-                ),
+          child: SizedBox(
+            height: KubusSpacing.xl + KubusSpacing.lg,
+            child: LiquidGlassPanel(
+              padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
+              margin: EdgeInsets.zero,
+              borderRadius: BorderRadius.zero,
+              blurSigma: KubusGlassEffects.blurSigmaLight,
+              showBorder: false,
+              backgroundColor: scheme.surface.withValues(
+                alpha: Theme.of(context).brightness == Brightness.dark ? 0.18 : 0.12,
               ),
-              const Spacer(),
-              if (actions != null) ...actions!,
-            ],
+              child: Row(
+                children: [
+                  if (shellScope?.canPop ?? false) ...[
+                    IconButton(
+                      onPressed: () => shellScope?.popScreen(),
+                      icon: Icon(
+                        Icons.arrow_back,
+                        color: scheme.onSurface,
+                      ),
+                      tooltip: 'Back',
+                    ),
+                    const SizedBox(width: KubusSpacing.sm),
+                  ],
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: scheme.onSurface,
+                        ),
+                  ),
+                  const Spacer(),
+                  if (actions != null) ...actions!,
+                ],
+              ),
+            ),
           ),
         ),
         // Content

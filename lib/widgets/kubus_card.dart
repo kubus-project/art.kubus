@@ -79,15 +79,18 @@ class KubusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final fallbackText = textColor ?? scheme.onPrimary;
+    final bg = backgroundColor ?? scheme.primary;
     return Chip(
       label: Text(
         label,
         style: KubusTypography.textTheme.labelMedium?.copyWith(
-          color: textColor ?? Colors.white,
+          color: fallbackText,
         ),
       ),
-      backgroundColor: backgroundColor ?? KubusColors.primary,
-      deleteIconColor: textColor ?? Colors.white,
+      backgroundColor: bg,
+      deleteIconColor: fallbackText,
       onDeleted: onDeleted,
       padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.xs, vertical: 0),
       visualDensity: VisualDensity.compact,
