@@ -321,6 +321,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         icon: Icons.tune,
         title: l10n.mapTutorialStepFiltersTitle,
         body: l10n.mapTutorialStepFiltersDesktopBody,
+        tooltipAlignToTargetRightEdge: true,
         onTargetTap: () {
           if (!mounted) return;
           setState(() => _showFiltersPanel = true);
@@ -972,7 +973,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     themeProvider: themeProvider,
                     isActive: _showFiltersPanel,
                     tooltip: _showFiltersPanel ? l10n.commonClose : l10n.mapFiltersTitle,
-                    tooltipPreferBelow: false,
+                    // Filters sits on the top-right edge; prefer below so the
+                    // tooltip never renders off-screen above the window.
+                    tooltipPreferBelow: true,
                     tooltipVerticalOffset: 18,
                     // Anchor tooltip to the icon's right edge so the card expands
                     // leftwards (avoids the Nearby sidebar, and aligns the right edge
@@ -4435,6 +4438,10 @@ class _RightEdgeAlignedTooltipState extends State<_RightEdgeAlignedTooltip> {
     final safe = widget.safePadding ?? const EdgeInsets.symmetric(horizontal: 24);
     final screenWidth = MediaQuery.of(context).size.width;
     final maxWidth = math.max(0.0, screenWidth - safe.left - safe.right);
+    // Keep desktop hover-tooltips compact so they don't feel like giant banners,
+    // especially for top-right controls.
+    const double tooltipWidthCap = 240;
+    final cappedMaxWidth = math.min(maxWidth, tooltipWidthCap);
 
     final textStyle = tooltipTheme.textStyle ??
         theme.textTheme.bodySmall?.copyWith(
@@ -4465,17 +4472,23 @@ class _RightEdgeAlignedTooltipState extends State<_RightEdgeAlignedTooltip> {
                 0,
                 preferBelow ? verticalOffset : -verticalOffset,
               ),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  // Tooltip expands to the LEFT from the target's right edge.
-                  maxWidth: maxWidth,
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: Container(
-                    padding: padding,
-                    decoration: decoration,
-                    child: Text(widget.message, style: textStyle),
+              // NOTE: Positioned.fill gives tight constraints. Without
+              // UnconstrainedBox, the tooltip would expand to full-screen.
+              child: UnconstrainedBox(
+                alignment: preferBelow ? Alignment.topRight : Alignment.bottomRight,
+                constrainedAxis: Axis.horizontal,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    // Tooltip expands to the LEFT from the target's right edge.
+                    maxWidth: cappedMaxWidth,
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: Container(
+                      padding: padding,
+                      decoration: decoration,
+                      child: Text(widget.message, style: textStyle),
+                    ),
                   ),
                 ),
               ),

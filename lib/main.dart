@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:art_kubus/screens/events/event_detail_screen.dart';
 import 'package:art_kubus/screens/events/exhibition_detail_screen.dart';
-import 'package:art_kubus/screens/map_screen.dart';
 import 'package:art_kubus/widgets/app_loading.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -51,6 +50,7 @@ import 'providers/map_deep_link_provider.dart';
 import 'providers/deferred_onboarding_provider.dart';
 import 'core/app_initializer.dart';
 import 'core/app_navigator.dart';
+import 'core/shell_entry_screen.dart';
 import 'core/url_strategy.dart';
 import 'core/deep_link_bootstrap_screen.dart';
 import 'main_app.dart';
@@ -548,7 +548,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
             // Alias for telemetry/URL semantics: marker deep links land here so
             // the browser URL becomes /map (not /main), while still rendering
             // the full shell.
-            '/map': (context) => const MapScreen(),
+            '/map': (context) => const ShellEntryScreen.map(),
             '/ar': (context) => const ARScreen(),
             '/artwork': (context) {
               final args = ModalRoute.of(context)?.settings.arguments;

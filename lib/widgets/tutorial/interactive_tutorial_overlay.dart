@@ -17,6 +17,10 @@ class TutorialStepDefinition {
   /// If true, tapping the highlighted region also advances to next step.
   final bool advanceOnTargetTap;
 
+  /// If true, the tooltip card aligns its RIGHT edge to the target's right edge
+  /// (useful for UI controls anchored near the window's right edge).
+  final bool tooltipAlignToTargetRightEdge;
+
   const TutorialStepDefinition({
     required this.title,
     required this.body,
@@ -24,6 +28,7 @@ class TutorialStepDefinition {
     this.icon,
     this.onTargetTap,
     this.advanceOnTargetTap = true,
+    this.tooltipAlignToTargetRightEdge = false,
   });
 }
 
@@ -91,16 +96,33 @@ class InteractiveTutorialOverlay extends StatelessWidget {
     final highlightRect = rect?.inflate(10);
 
     // Tooltip sizing/position.
-    const double tooltipMaxWidth = 360;
+    // Keep this reasonably narrow so it doesn't feel like a full-width banner,
+    // and so it can be positioned safely near right-edge targets.
+    const double tooltipMaxWidth = 340;
     final double tooltipWidth = math.min(tooltipMaxWidth, size.width - 24);
 
     final EdgeInsets safe = media.padding;
 
-    final double preferredX = (highlightRect != null)
-        ? (highlightRect.center.dx - (tooltipWidth / 2))
-        : ((size.width - tooltipWidth) / 2);
+    const double horizontalSafeMargin = 12;
 
-    final double tooltipX = preferredX.clamp(12, size.width - tooltipWidth - 12);
+    final double preferredCenteredX = (highlightRect != null)
+      ? (highlightRect.center.dx - (tooltipWidth / 2))
+      : ((size.width - tooltipWidth) / 2);
+
+    final bool alignRightEdge = _step.tooltipAlignToTargetRightEdge;
+
+    // If requested, align tooltip's RIGHT edge to the target's right edge.
+    // Otherwise, center it; if centering would clamp on the right edge, fall
+    // back to right-edge alignment to keep the association with the target.
+    final bool wouldClampRight = highlightRect != null &&
+      preferredCenteredX > (size.width - tooltipWidth - horizontalSafeMargin);
+
+    final double preferredX = (highlightRect != null && (alignRightEdge || wouldClampRight))
+      ? (highlightRect.right - tooltipWidth)
+      : preferredCenteredX;
+
+    final double tooltipX =
+      preferredX.clamp(horizontalSafeMargin, size.width - tooltipWidth - horizontalSafeMargin);
 
     // Decide whether to place tooltip above or below highlight.
     final double spaceAbove = (highlightRect?.top ?? (size.height / 2)) - safe.top;
@@ -127,6 +149,7 @@ class InteractiveTutorialOverlay extends StatelessWidget {
     final stepLabel = '${currentIndex + 1}/${steps.length}';
 
     return Stack(
+      clipBehavior: Clip.none,
       children: [
         Positioned.fill(
           child: GestureDetector(

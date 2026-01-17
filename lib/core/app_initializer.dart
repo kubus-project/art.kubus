@@ -1,7 +1,6 @@
 // NOTE: use_build_context_synchronously lint handled per-instance; avoid file-level ignore
 import 'dart:async';
 
-import 'package:art_kubus/services/share/share_types.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -25,6 +24,7 @@ import '../screens/desktop/onboarding/desktop_onboarding_screen.dart';
 import '../screens/desktop/desktop_shell.dart';
 import '../widgets/app_loading.dart';
 import 'app_navigator.dart';
+import 'deep_link_startup_routing.dart';
 
 class AppInitializer extends StatefulWidget {
   const AppInitializer({super.key});
@@ -259,10 +259,12 @@ class _AppInitializerState extends State<AppInitializer> {
       } catch (_) {}
       if (!mounted) return;
       _didNavigate = true;
-      // Preserve a semantically useful URL on web (e.g. /map for marker deep links)
-      // while still landing inside the shell.
-      final destination = pendingDeepLink.type == ShareEntityType.marker ? '/map' : '/main';
-      navigator.pushReplacementNamed(destination);
+      final decision = const DeepLinkStartupRouting().decide(
+        pending: pendingDeepLink,
+        shouldShowSignIn: shouldShowSignIn,
+      );
+      if (decision == null) return;
+      navigator.pushReplacementNamed(decision.route, arguments: decision.arguments);
       return;
     }
     

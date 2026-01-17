@@ -4,8 +4,10 @@ import 'package:app_links/app_links.dart';
 import 'package:flutter/foundation.dart';
 
 import '../core/app_navigator.dart';
+import '../core/mobile_shell_registry.dart';
 import '../services/share/share_deep_link_parser.dart';
 import '../utils/share_deep_link_navigation.dart';
+import '../screens/desktop/desktop_shell_registry.dart';
 import 'deep_link_provider.dart';
 
 /// Listens for incoming platform deep links (Android App Links / custom schemes)
@@ -19,7 +21,8 @@ class PlatformDeepLinkListenerProvider extends ChangeNotifier {
   DeepLinkProvider? _deepLinkProvider;
   StreamSubscription<Uri>? _sub;
   bool _initialized = false;
-  String? _lastHandled;
+  String? _lastHandledSignature;
+  DateTime? _lastHandledAt;
 
   void bindDeepLinkProvider(DeepLinkProvider provider) {
     _deepLinkProvider = provider;
@@ -65,10 +68,6 @@ class PlatformDeepLinkListenerProvider extends ChangeNotifier {
     final raw = uri.toString().trim();
     if (raw.isEmpty) return;
 
-    // De-dupe repeats (Android may dispatch the same URI more than once).
-    if (_lastHandled == raw) return;
-    _lastHandled = raw;
-
     ShareDeepLinkTarget? target;
     try {
       target = const ShareDeepLinkParser().parse(uri);
@@ -78,14 +77,34 @@ class PlatformDeepLinkListenerProvider extends ChangeNotifier {
 
     if (target == null) return;
 
+    // De-dupe repeats (Android may dispatch the same URI more than once; and
+    // some link sources trigger both initial+stream events).
+    final signature = '${target.type.name}:${target.id}';
+    final now = DateTime.now();
+    final lastAt = _lastHandledAt;
+    if (_lastHandledSignature == signature &&
+        lastAt != null &&
+        now.difference(lastAt) < const Duration(seconds: 2)) {
+      return;
+    }
+    _lastHandledSignature = signature;
+    _lastHandledAt = now;
+
     final deepLinkProvider = _deepLinkProvider;
 
     final navigator = appNavigatorKey.currentState;
-    final canNavigateNow = allowImmediateNavigation && navigator != null && navigator.mounted;
+    final desktopShellContext = DesktopShellRegistry.instance.context;
+    final mobileShellContext = MobileShellRegistry.instance.context;
+    final canNavigateNow =
+        allowImmediateNavigation &&
+        (desktopShellContext != null ||
+            mobileShellContext != null ||
+            (navigator != null && navigator.mounted));
 
     if (canNavigateNow) {
       // Navigate immediately if the app is already running.
-      unawaited(ShareDeepLinkNavigation.open(navigator.context, target));
+      final ctx = desktopShellContext ?? mobileShellContext ?? navigator!.context;
+      unawaited(ShareDeepLinkNavigation.open(ctx, target));
       return;
     }
 

@@ -13,7 +13,6 @@ import '../screens/art/collection_detail_screen.dart';
 import '../screens/community/post_detail_screen.dart';
 import '../screens/events/event_detail_screen.dart';
 import '../screens/events/exhibition_detail_screen.dart';
-import '../services/backend_api_service.dart';
 import '../services/share/share_types.dart';
 import 'artwork_navigation.dart';
 import 'user_profile_navigation.dart';
@@ -106,28 +105,21 @@ class ShareDeepLinkNavigation {
         return;
       case ShareEntityType.marker:
         tabs?.setIndex(0);
-        final marker = await BackendApiService().getArtMarker(target.id);
-        if (!context.mounted) return;
-        if (marker == null || !marker.hasValidPosition) return;
 
-        // Open the marker inside the existing MapScreen within the MainApp shell.
+        // Prefer opening markers inside the already-mounted MapScreen so the shell
+        // (tabs) remains visible.
         if (mapIntents != null) {
-          mapIntents.openMarker(
-            markerId: marker.id,
-            center: marker.position,
-            zoom: 16.0,
-          );
+          mapIntents.openMarker(markerId: target.id);
           return;
         }
 
-        // Fallback: if we can't access the map intent provider, open a standalone map.
+        // Fallback: if we can't access the map intent provider (early startup or
+        // isolated contexts), open a standalone MapScreen.
         await Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => MapScreen(
-              initialCenter: marker.position,
-              initialZoom: 16.0,
               autoFollow: false,
-              initialMarkerId: marker.id,
+              initialMarkerId: target.id,
             ),
           ),
         );
@@ -189,18 +181,12 @@ class ShareDeepLinkNavigation {
         return;
       case ShareEntityType.marker:
         scope.navigateToRoute('/explore');
-        final marker = await BackendApiService().getArtMarker(target.id);
-        if (!context.mounted) return;
-        if (marker == null || !marker.hasValidPosition) return;
-
         scope.pushScreen(
           DesktopSubScreen(
             title: 'Explore',
             child: DesktopMapScreen(
-              initialCenter: marker.position,
-              initialZoom: 16.0,
               autoFollow: false,
-              initialMarkerId: marker.id,
+              initialMarkerId: target.id,
             ),
           ),
         );
