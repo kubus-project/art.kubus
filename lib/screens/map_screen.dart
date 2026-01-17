@@ -208,7 +208,7 @@ class _MapScreenState extends State<MapScreen>
       DraggableScrollableController();
   double _markerRadiusKm = 5.0;
 
-  static const double _travelModeRadiusKm = 50.0;
+  static const double _travelModeRadiusKm = 20000.0;
   bool _travelModeEnabled = false;
 
   double get _effectiveMarkerRadiusKm =>
