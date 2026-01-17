@@ -9,6 +9,8 @@ import 'providers/deep_link_provider.dart';
 import 'providers/deferred_onboarding_provider.dart';
 import 'providers/main_tab_provider.dart';
 import 'core/mobile_shell_registry.dart';
+import 'services/pin_hashing.dart';
+import 'services/settings_service.dart';
 import 'services/telemetry/telemetry_service.dart';
 import 'utils/share_deep_link_navigation.dart';
 import 'screens/home_screen.dart';
@@ -300,10 +302,50 @@ class _MainAppState extends State<MainApp> {
     final l10n = AppLocalizations.of(context)!;
     final localWallet = Provider.of<WalletProvider>(context, listen: false);
 
-    final ok = await localWallet.authenticateForAppUnlock();
-    if (ok) {
+    var biometricEnabled = false;
+    try {
+      final settings = await SettingsService.loadSettings();
+      biometricEnabled = settings.biometricAuth;
+    } catch (_) {
+      biometricEnabled = false;
+    }
+
+    if (biometricEnabled) {
+      final outcome = await localWallet.unlockWithBiometrics(
+        localizedReason: l10n.lockAppLockedDescription,
+      );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.lockAppUnlockedToast)));
+      if (outcome == BiometricAuthOutcome.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.lockAppUnlockedToast)),
+        );
+        return;
+      }
+      if (outcome == BiometricAuthOutcome.cancelled) {
+        return;
+      }
+      if (outcome == BiometricAuthOutcome.notAvailable) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.settingsBiometricUnavailableToast)),
+        );
+      }
+    }
+
+    final hasPin = await localWallet.hasPin();
+    if (!mounted) return;
+    if (!hasPin) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.lockAuthenticationFailedToast)),
+      );
+      return;
+    }
+
+    final remaining = await localWallet.getPinLockoutRemainingSeconds();
+    if (!mounted) return;
+    if (remaining > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.mnemonicRevealPinLockedError(remaining))),
+      );
       return;
     }
 
@@ -330,13 +372,26 @@ class _MainAppState extends State<MainApp> {
     );
 
     if (entered == null || entered.isEmpty) return;
-    final ok2 = await localWallet.authenticateForAppUnlock(pin: entered);
+    final result = await localWallet.unlockWithPin(entered);
     if (!mounted) return;
-    if (ok2) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.lockAppUnlockedToast)));
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.lockAuthenticationFailedToast)));
+    if (result.isSuccess) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.lockAppUnlockedToast)),
+      );
+      return;
     }
+
+    if (result.outcome == PinVerifyOutcome.lockedOut) {
+      final seconds = result.remainingLockoutSeconds;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.mnemonicRevealPinLockedError(seconds))),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.mnemonicRevealIncorrectPinError)),
+    );
   }
 
   void _syncTelemetryForIndex(int index) {
