@@ -285,27 +285,117 @@ jobs:
           local-dir: build/web/
           server-dir: ${{ vars.WEB_SERVER_DIR || '/app.kubus.site/' }}
 
-      - name: SFTP Deploy (Flutter Web)
+      - name: Prepare SFTP auth (Flutter Web)
         # Fallback for hosts that block FTP/FTPS (21/990) but allow SFTP (22).
         if: ${{ steps.ftp.outputs.ok == 'true' && steps.ftp_target.outputs.ok == 'true' && steps.net.outputs.ftp_ok != 'true' && steps.net.outputs.sftp_ok == 'true' }}
-        id: sftp
+        id: sftp_prep
+        continue-on-error: true
+        shell: bash
+        env:
+          SFTP_HOST: ${{ secrets.SFTP_SERVER || steps.ftp_target.outputs.host }}
+          SFTP_USERNAME: ${{ secrets.SFTP_USERNAME || secrets.FTP_USERNAME }}
+          SFTP_PORT: ${{ vars.SFTP_PORT || 22 }}
+          SFTP_PRIVATE_KEY: ${{ secrets.SFTP_PRIVATE_KEY }}
+          SFTP_PRIVATE_KEY_PASSPHRASE: ${{ secrets.SFTP_PRIVATE_KEY_PASSPHRASE }}
+          SFTP_PASSWORD: ${{ secrets.SFTP_PASSWORD || secrets.FTP_PASSWORD }}
+          SFTP_HOST_FINGERPRINT: ${{ secrets.SFTP_HOST_FINGERPRINT }}
+          SFTP_DEBUG: ${{ vars.SFTP_DEBUG || 'false' }}
+          WEB_SERVER_DIR: ${{ vars.WEB_SERVER_DIR || '/app.kubus.site/' }}
+        run: |
+          set -euo pipefail
+
+          # Most cPanel SSH/SFTP servers have PasswordAuthentication disabled.
+          # If you hit "attempted methods [none publickey]", it means you MUST use an SSH private key.
+          if [ -z "${SFTP_PRIVATE_KEY:-}" ]; then
+            echo "SFTP_PRIVATE_KEY secret is missing/empty. This host likely requires SSH key auth; SFTP deploy will be skipped." >&2
+            exit 0
+          fi
+
+          # Quick sanity checks to catch common misconfiguration: users accidentally paste the PUBLIC key.
+          FIRST_LINE="$(printf '%s' "$SFTP_PRIVATE_KEY" | head -n 1 | tr -d '\r')"
+          if [[ "$FIRST_LINE" == ssh-* ]]; then
+            echo "SFTP_PRIVATE_KEY looks like a PUBLIC key (starts with 'ssh-')." >&2
+            echo "Paste the *private* key (e.g. '-----BEGIN OPENSSH PRIVATE KEY-----') into the GitHub secret SFTP_PRIVATE_KEY." >&2
+            exit 1
+          fi
+          if ! printf '%s' "$SFTP_PRIVATE_KEY" | grep -q "PRIVATE KEY"; then
+            echo "SFTP_PRIVATE_KEY does not appear to be a private key (no 'PRIVATE KEY' marker found)." >&2
+            echo "Make sure you pasted the full private key block into the GitHub secret." >&2
+            exit 1
+          fi
+
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          KEY_PATH=~/.ssh/deploy_key
+
+          # Support both formats:
+          # - Multi-line key pasted as-is into GitHub secrets (preferred)
+          # - Single-line with literal \n sequences (common mistake when copying through JSON/UI)
+          if printf '%s' "$SFTP_PRIVATE_KEY" | grep -q "\\n"; then
+            printf '%b' "${SFTP_PRIVATE_KEY//\\n/\n}" > "$KEY_PATH"
+          else
+            printf '%s' "$SFTP_PRIVATE_KEY" > "$KEY_PATH"
+          fi
+          chmod 600 "$KEY_PATH"
+
+          # Create known_hosts and (optionally) verify the pinned fingerprint matches what the runner sees.
+          KNOWN_HOSTS=~/.ssh/known_hosts
+          : > "$KNOWN_HOSTS"
+          chmod 600 "$KNOWN_HOSTS"
+
+          if command -v ssh-keyscan >/dev/null 2>&1; then
+            ssh-keyscan -p "$SFTP_PORT" -t ed25519,ecdsa,rsa "$SFTP_HOST" 2>/dev/null >> "$KNOWN_HOSTS" || true
+          fi
+
+          if [ -n "${SFTP_HOST_FINGERPRINT:-}" ] && command -v ssh-keygen >/dev/null 2>&1; then
+            # Compare any scanned host key fingerprint with the pinned value; accept match on any algorithm.
+            if ! ssh-keygen -lf "$KNOWN_HOSTS" 2>/dev/null | awk '{print $2}' | grep -Fxq "$SFTP_HOST_FINGERPRINT"; then
+              echo "Pinned SFTP_HOST_FINGERPRINT did not match scanned host keys (or scan unavailable)." >&2
+              echo "Re-check which host key algorithm your server presents (ECDSA/RSA/ED25519)." >&2
+              exit 1
+            fi
+          fi
+
+          # Lightweight auth check (does not fail the job thanks to continue-on-error).
+          # This helps produce clearer errors than drone-scp when auth is wrong.
+          if command -v ssh >/dev/null 2>&1; then
+            ssh -o BatchMode=yes \
+              -o StrictHostKeyChecking=yes \
+              -o UserKnownHostsFile="$KNOWN_HOSTS" \
+              -i "$KEY_PATH" \
+              -p "$SFTP_PORT" \
+              "$SFTP_USERNAME@$SFTP_HOST" \
+              'echo "SSH auth OK"' || true
+          fi
+
+          # Run the actual upload using appleboy/scp-action (via a local key file for reliability).
+          # We invoke the action via `uses` in the next step, passing KEY_PATH through outputs.
+          echo "key_path=$KEY_PATH" >> "$GITHUB_OUTPUT"
+          echo "known_hosts=$KNOWN_HOSTS" >> "$GITHUB_OUTPUT"
+          echo "host=$SFTP_HOST" >> "$GITHUB_OUTPUT"
+          echo "username=$SFTP_USERNAME" >> "$GITHUB_OUTPUT"
+          echo "port=$SFTP_PORT" >> "$GITHUB_OUTPUT"
+          echo "web_server_dir=$WEB_SERVER_DIR" >> "$GITHUB_OUTPUT"
+
+      - name: SFTP Upload (Flutter Web)
+        if: ${{ steps.ftp.outputs.ok == 'true' && steps.ftp_target.outputs.ok == 'true' && steps.net.outputs.ftp_ok != 'true' && steps.net.outputs.sftp_ok == 'true' && steps.sftp_prep.outputs.key_path != '' }}
+        id: sftp_upload
         continue-on-error: true
         uses: appleboy/scp-action@v1
         with:
-          host: ${{ secrets.SFTP_SERVER || steps.ftp_target.outputs.host }}
-          username: ${{ secrets.SFTP_USERNAME || secrets.FTP_USERNAME }}
-          port: ${{ vars.SFTP_PORT || 22 }}
+          host: ${{ steps.sftp_prep.outputs.host }}
+          username: ${{ steps.sftp_prep.outputs.username }}
+          port: ${{ steps.sftp_prep.outputs.port }}
           timeout: ${{ vars.SFTP_TIMEOUT || '120s' }}
           command_timeout: ${{ vars.SFTP_COMMAND_TIMEOUT || '120s' }}
-          # Prefer SSH key auth (recommended for GitHub Actions). If SFTP_PRIVATE_KEY
-          # is not set, the action will fall back to password auth below.
-          key: ${{ secrets.SFTP_PRIVATE_KEY }}
+          key_path: ${{ steps.sftp_prep.outputs.key_path }}
           passphrase: ${{ secrets.SFTP_PRIVATE_KEY_PASSPHRASE }}
           password: ${{ secrets.SFTP_PASSWORD || secrets.FTP_PASSWORD }}
           fingerprint: ${{ secrets.SFTP_HOST_FINGERPRINT }}
           debug: ${{ vars.SFTP_DEBUG || 'false' }}
           source: "build/web/*"
-          target: ${{ vars.WEB_SERVER_DIR || '/app.kubus.site/' }}
+          target: ${{ steps.sftp_prep.outputs.web_server_dir }}
 
       - name: Show SSH host fingerprints (for pinning)
         if: ${{ steps.ftp.outputs.ok == 'true' && steps.ftp_target.outputs.ok == 'true' && steps.net.outputs.ftp_ok != 'true' && steps.net.outputs.sftp_ok == 'true' }}
@@ -330,7 +420,7 @@ jobs:
           ssh-keyscan -p "$SFTP_PORT" -t ed25519,ecdsa,rsa "$SFTP_HOST" 2>/dev/null | ssh-keygen -lf - || true
 
       - name: SFTP deploy note
-        if: ${{ steps.ftp.outputs.ok == 'true' && steps.ftp_target.outputs.ok == 'true' && steps.net.outputs.ftp_ok != 'true' && steps.net.outputs.sftp_ok == 'true' && steps.sftp.outcome != 'success' }}
+        if: ${{ steps.ftp.outputs.ok == 'true' && steps.ftp_target.outputs.ok == 'true' && steps.net.outputs.ftp_ok != 'true' && steps.net.outputs.sftp_ok == 'true' && steps.sftp_upload.outcome != 'success' }}
         run: |
           echo "SFTP port 22 is reachable, but SFTP upload failed (kept non-fatal to avoid a red deploy)."
           echo "Common causes:"
