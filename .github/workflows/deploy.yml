@@ -52,8 +52,45 @@ jobs:
         with:
           submodules: false
 
+      - name: Detect Flutter changes (skip web deploy when unchanged)
+        id: changes
+        if: ${{ github.event_name == 'push' }}
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            flutter:
+              - 'lib/**'
+              - 'test/**'
+              - 'assets/**'
+              - 'pubspec.yaml'
+              - 'pubspec.lock'
+              - 'analysis_options.yaml'
+              - 'android/**'
+              - 'ios/**'
+              - 'macos/**'
+              - 'linux/**'
+              - 'windows/**'
+              - 'web/**'
+
+      - name: Decide whether to deploy web
+        id: web_gate
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "${{ steps.changes.outputs.flutter || 'false' }}" = "true" ]; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+            echo "No Flutter changes detected on this push; skipping web build/deploy to save runner minutes." 
+          fi
+
       - name: Check SFTP secrets
         id: sftp
+        if: ${{ steps.web_gate.outputs.deploy == 'true' }}
         shell: bash
         env:
           SFTP_SERVER: ${{ secrets.SFTP_SERVER }}
@@ -147,6 +184,17 @@ jobs:
             echo "sftp_ok=false" >> "$GITHUB_OUTPUT"
             echo "SSH port is not reachable from this GitHub runner; skipping deploy." >&2
           fi
+
+      - name: Cache Dart/Flutter packages
+        if: ${{ steps.sftp.outputs.ok == 'true' && steps.deploy_target.outputs.ok == 'true' && steps.net.outputs.sftp_ok == 'true' }}
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            .dart_tool
+          key: ${{ runner.os }}-pub-${{ hashFiles('pubspec.lock', 'pubspec.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
 
       - name: Set up Flutter
         if: ${{ steps.sftp.outputs.ok == 'true' && steps.deploy_target.outputs.ok == 'true' && steps.net.outputs.sftp_ok == 'true' }}
@@ -386,6 +434,11 @@ jobs:
         if: ${{ steps.sftp.outputs.ok != 'true' }}
         run: |
           echo "SFTP secrets not configured (need host + username + private key); skipping web deploy."
+
+      - name: Skip deploy (no Flutter changes)
+        if: ${{ steps.web_gate.outputs.deploy != 'true' }}
+        run: |
+          echo "No Flutter changes detected; web deploy skipped."
 
       - name: Skip deploy (SSH not reachable)
         if: ${{ steps.sftp.outputs.ok == 'true' && steps.deploy_target.outputs.ok == 'true' && steps.net.outputs.sftp_ok != 'true' }}
