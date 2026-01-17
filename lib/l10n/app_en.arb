@@ -913,6 +913,14 @@
       "radiusKm": {}
     }
   },
+  "mapNearbyRadiusTooltipWorld": "Nearby radius (World)",
+  "@mapNearbyRadiusTooltipWorld": {
+    "description": "Tooltip for nearby radius when travel mode is enabled (worldwide)."
+  },
+  "mapNearbyRadiusWorldShort": "Radius: World",
+  "@mapNearbyRadiusWorldShort": {
+    "description": "Short label shown in Nearby Art when travel mode is enabled."
+  },
   "mapArArtworkNearbyTitle": "AR artwork nearby!",
   "mapArArtworkNearbySubtitle": "{name} · {distanceMeters}m away",
   "@mapArArtworkNearbySubtitle": {

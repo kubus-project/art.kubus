@@ -102,7 +102,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   String _selectedFilter = 'nearby';
   double _searchRadius = 5.0; // km
 
-  static const double _travelModeRadiusKm = 50.0;
+  // Approx. half Earth's circumference (max great-circle distance).
+  // Using a small buffer so antipodal points are included.
+  static const double _travelModeRadiusKm = 20050.0;
   bool _travelModeEnabled = false;
 
   double get _effectiveSearchRadiusKm =>
@@ -3066,6 +3068,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         mapMarkerService: _mapMarkerService,
         center: center,
         radiusKm: _effectiveSearchRadiusKm,
+        limit: _travelModeEnabled ? 5000 : null,
         forceRefresh: force,
       );
       if (!mounted) return;

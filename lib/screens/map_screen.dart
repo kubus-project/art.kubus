@@ -207,12 +207,10 @@ class _MapScreenState extends State<MapScreen>
   final DraggableScrollableController _sheetController =
       DraggableScrollableController();
   double _markerRadiusKm = 5.0;
-
-  static const double _travelModeRadiusKm = 20000.0;
   bool _travelModeEnabled = false;
 
-  double get _effectiveMarkerRadiusKm =>
-      _travelModeEnabled ? _travelModeRadiusKm : _markerRadiusKm;
+  // Travel mode is viewport-based (bounds query), not huge-radius.
+  double get _effectiveMarkerRadiusKm => _markerRadiusKm;
 
   // Interactive onboarding tutorial (coach marks)
   final GlobalKey _tutorialMapKey = GlobalKey();
@@ -236,11 +234,18 @@ class _MapScreenState extends State<MapScreen>
   final Distance _distanceCalculator = const Distance();
   LatLng? _lastMarkerFetchCenter;
   DateTime? _lastMarkerFetchTime;
+  String? _lastMarkerFetchViewportSignature;
   static const double _markerRefreshDistanceMeters =
       1200; // Increased to reduce API calls
   static const Duration _markerRefreshInterval =
       Duration(minutes: 5); // Increased from 150s to 5 min
   bool _isLoadingMarkers = false; // Prevent concurrent fetches
+
+  String _viewportSignature(LatLngBounds bounds, double zoom) {
+    // Keep it coarse to avoid refetching on tiny pans.
+    double r(double v) => double.parse(v.toStringAsFixed(2));
+    return '${r(bounds.south)}:${r(bounds.west)}:${r(bounds.north)}:${r(bounds.east)}:${zoom.toStringAsFixed(1)}';
+  }
 
   /// NOTE: Do not cache a BuildContext-backed loader as a field/getter.
   /// Timer/async callbacks can outlive this State, and reading providers via a
@@ -342,6 +347,9 @@ class _MapScreenState extends State<MapScreen>
     setState(() {
       _travelModeEnabled = enabled;
     });
+
+    // Switching query strategy (radius vs bounds) should invalidate caches.
+    _mapMarkerService.clearCache();
 
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -727,7 +735,7 @@ class _MapScreenState extends State<MapScreen>
   }
 
   Future<void> _loadArtMarkers(
-      {LatLng? center, bool forceRefresh = false}) async {
+      {LatLng? center, LatLngBounds? bounds, bool forceRefresh = false}) async {
     // Prevent concurrent fetches
     if (_isLoadingMarkers) {
       debugPrint('MapScreen: Skipping marker fetch - already loading');
@@ -735,16 +743,35 @@ class _MapScreenState extends State<MapScreen>
     }
 
     final queryCenter = center ?? _currentPosition ?? _cameraCenter;
+    LatLngBounds? queryBounds = bounds;
+    if (_travelModeEnabled && queryBounds == null) {
+      try {
+        queryBounds = _mapController.camera.visibleBounds;
+      } catch (_) {
+        // Map not ready yet.
+      }
+    }
 
     try {
       _isLoadingMarkers = true;
-      final result = await MapMarkerHelper.loadAndHydrateMarkers(
-        context: context,
-        mapMarkerService: _mapMarkerService,
-        center: queryCenter,
-        radiusKm: _effectiveMarkerRadiusKm,
-        forceRefresh: forceRefresh,
-      );
+
+      final result = (_travelModeEnabled && queryBounds != null)
+          ? await MapMarkerHelper.loadAndHydrateMarkersInBounds(
+              context: context,
+              mapMarkerService: _mapMarkerService,
+              center: queryCenter,
+              bounds: queryBounds,
+              limit: 5000,
+              forceRefresh: forceRefresh,
+            )
+          : await MapMarkerHelper.loadAndHydrateMarkers(
+              context: context,
+              mapMarkerService: _mapMarkerService,
+              center: queryCenter,
+              radiusKm: _effectiveMarkerRadiusKm,
+              limit: _travelModeEnabled ? 5000 : null,
+              forceRefresh: forceRefresh,
+            );
 
       if (mounted) {
         setState(() {
@@ -753,6 +780,10 @@ class _MapScreenState extends State<MapScreen>
       }
       _lastMarkerFetchCenter = result.center;
       _lastMarkerFetchTime = result.fetchedAt;
+      if (_travelModeEnabled && (result.bounds ?? queryBounds) != null) {
+        final b = result.bounds ?? queryBounds!;
+        _lastMarkerFetchViewportSignature = _viewportSignature(b, _lastZoom);
+      }
 
       debugPrint('Loaded ${result.markers.length} art markers from backend');
     } catch (e) {
@@ -765,7 +796,17 @@ class _MapScreenState extends State<MapScreen>
   void _handleMarkerCreated(ArtMarker marker) {
     try {
       if (!marker.hasValidPosition) return;
-      if (_currentPosition != null) {
+      if (_travelModeEnabled) {
+        try {
+          final bounds = _mapController.camera.visibleBounds;
+          if (!bounds.contains(marker.position)) {
+            return;
+          }
+        } catch (_) {
+          // If bounds aren't available yet, ignore socket events until map initializes.
+          return;
+        }
+      } else if (_currentPosition != null) {
         final distanceKm = _distanceCalculator.as(
           LengthUnit.Kilometer,
           _currentPosition!,
@@ -875,7 +916,27 @@ class _MapScreenState extends State<MapScreen>
     });
   }
 
-  void _queueMarkerRefresh(LatLng center, {required bool fromGesture}) {
+  void _queueMarkerRefresh(MapCamera camera, {required bool fromGesture}) {
+    if (_travelModeEnabled) {
+      final bounds = camera.visibleBounds;
+      final signature = _viewportSignature(bounds, camera.zoom);
+      if (_lastMarkerFetchViewportSignature == signature && _artMarkers.isNotEmpty) {
+        return;
+      }
+
+      _markerRefreshDebounce?.cancel();
+      final debounceTime = fromGesture
+          ? const Duration(seconds: 2)
+          : const Duration(milliseconds: 900);
+
+      _markerRefreshDebounce = Timer(debounceTime, () {
+        _markerRefreshDebounce = null;
+        unawaited(_loadArtMarkers(center: camera.center, bounds: bounds, forceRefresh: false));
+      });
+      return;
+    }
+
+    final center = camera.center;
     final shouldRefresh = MapMarkerHelper.shouldRefreshMarkers(
       newCenter: center,
       lastCenter: _lastMarkerFetchCenter,
@@ -889,7 +950,6 @@ class _MapScreenState extends State<MapScreen>
     if (!shouldRefresh) return;
 
     _markerRefreshDebounce?.cancel();
-    // Use longer debounce for gestures to avoid spam during panning
     final debounceTime = fromGesture
         ? const Duration(seconds: 2)
         : const Duration(milliseconds: 800);
@@ -916,8 +976,8 @@ class _MapScreenState extends State<MapScreen>
                   Text(l10n.commonDistanceKm(tempRadius.toStringAsFixed(1))),
                   Slider(
                     min: 1,
-                    max: 50,
-                    divisions: 49,
+                    max: 200,
+                    divisions: 199,
                     value: tempRadius,
                     onChanged: (v) => setStateDialog(() => tempRadius = v),
                   ),
@@ -1963,7 +2023,7 @@ class _MapScreenState extends State<MapScreen>
             _activeMarkerViewportSignature = null;
           });
         }
-        _queueMarkerRefresh(camera.center, fromGesture: hasGesture);
+        _queueMarkerRefresh(camera, fromGesture: hasGesture);
       },
       interactionOptions: const InteractionOptions(
         flags: InteractiveFlag.pinchZoom |
@@ -3680,10 +3740,15 @@ class _MapScreenState extends State<MapScreen>
                                         ),
                                       ),
                                       Text(
-                                        l10n.mapResultsDiscoveredLabel(
-                                          artworks.length,
-                                          (discoveryProgress * 100).round(),
-                                        ),
+                                            _travelModeEnabled
+                                                ? '${l10n.mapResultsDiscoveredLabel(
+                                                    artworks.length,
+                                                    (discoveryProgress * 100).round(),
+                                                  )} • ${l10n.mapNearbyRadiusWorldShort}'
+                                                : l10n.mapResultsDiscoveredLabel(
+                                                    artworks.length,
+                                                    (discoveryProgress * 100).round(),
+                                                  ),
                                         style: KubusTypography.textTheme.bodySmall
                                             ?.copyWith(
                                           color: scheme.onSurfaceVariant,
@@ -3694,9 +3759,13 @@ class _MapScreenState extends State<MapScreen>
                                 ),
                                 _glassIconButton(
                                   icon: Icons.radar,
-                                  tooltip: l10n.mapNearbyRadiusTooltip(
-                                      _effectiveMarkerRadiusKm.toInt()),
-                                  onTap: _openMarkerRadiusDialog,
+                                      tooltip: _travelModeEnabled
+                                          ? l10n.mapNearbyRadiusTooltipWorld
+                                          : l10n.mapNearbyRadiusTooltip(
+                                              _effectiveMarkerRadiusKm.toInt(),
+                                            ),
+                                      onTap:
+                                          _travelModeEnabled ? null : _openMarkerRadiusDialog,
                                 ),
                                 const SizedBox(width: 8),
                                 _glassIconButton(

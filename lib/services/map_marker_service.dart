@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../models/art_marker.dart';
@@ -25,6 +26,9 @@ class MapMarkerService {
   bool _socketRegistered = false;
   LatLng? _lastQueryCenter;
   double _lastQueryRadiusKm = 5.0;
+  int _lastQueryLimit = 100;
+  LatLngBounds? _lastQueryBounds;
+  bool _lastQueryWasBounds = false;
   DateTime? _lastFetchTime;
   static const Duration _cacheTtl = Duration(minutes: 15); // Increased from 10 to 15 minutes
   static const Duration _rateLimitBackoff = Duration(minutes: 30); // Increased from 15 to 30 minutes
@@ -37,10 +41,16 @@ class MapMarkerService {
     debugPrint(message);
   }
 
-  bool _canReuseCache(LatLng center, double radiusKm) {
+  bool _canReuseCache(LatLng center, double radiusKm, int limit) {
+    if (_lastQueryWasBounds) return false;
     if (_cachedMarkers.isEmpty ||
         _lastFetchTime == null ||
         _lastQueryCenter == null) {
+      return false;
+    }
+
+    // If caller requests more than we previously fetched, don't reuse.
+    if (_lastQueryLimit < limit) {
       return false;
     }
 
@@ -59,12 +69,53 @@ class MapMarkerService {
     return centerDelta <= radiusKm * 0.35 && radiusDelta <= 2.0;
   }
 
+  bool _boundsContains(LatLngBounds bounds, LatLng point) {
+    final south = bounds.south;
+    final north = bounds.north;
+    final west = bounds.west;
+    final east = bounds.east;
+
+    if (point.latitude < south || point.latitude > north) return false;
+
+    // Dateline-crossing support: when west > east, the bounds wrap around.
+    if (west <= east) {
+      return point.longitude >= west && point.longitude <= east;
+    }
+    return point.longitude >= west || point.longitude <= east;
+  }
+
+  bool _canReuseBoundsCache(LatLngBounds bounds, int limit) {
+    if (!_lastQueryWasBounds) return false;
+    if (_cachedMarkers.isEmpty || _lastFetchTime == null || _lastQueryBounds == null) {
+      return false;
+    }
+    if (_lastQueryLimit < limit) return false;
+    if (DateTime.now().difference(_lastFetchTime!) > _cacheTtl) return false;
+
+    // If the new bounds are fully contained within the previous bounds,
+    // we can safely reuse cached markers.
+    final b = _lastQueryBounds!;
+    final withinLat = bounds.south >= b.south && bounds.north <= b.north;
+
+    // Longitude containment with wrap-around is tricky; keep it conservative.
+    // If either bounds crosses the dateline, don't reuse.
+    final crossesNew = bounds.west > bounds.east;
+    final crossesOld = b.west > b.east;
+    if (crossesNew || crossesOld) return false;
+
+    final withinLng = bounds.west >= b.west && bounds.east <= b.east;
+    return withinLat && withinLng;
+  }
+
   Future<List<ArtMarker>> loadMarkers({
     required LatLng center,
     double radiusKm = 5.0,
+    int? limit,
     bool forceRefresh = false,
   }) async {
     _ensureSocketBridge();
+
+    final requestedLimit = limit ?? 100;
 
     // Prevent concurrent fetches
     if (_isFetching) {
@@ -77,7 +128,7 @@ class MapMarkerService {
       return _filterValidMarkers(_cachedMarkers);
     }
 
-    if (!forceRefresh && _canReuseCache(center, radiusKm)) {
+    if (!forceRefresh && _canReuseCache(center, radiusKm, requestedLimit)) {
       _log('MapMarkerService: using cached markers (${_cachedMarkers.length} items)');
       return _filterValidMarkers(_cachedMarkers);
     }
@@ -90,6 +141,7 @@ class MapMarkerService {
         latitude: center.latitude,
         longitude: center.longitude,
         radiusKm: radiusKm,
+        limit: requestedLimit,
       );
 
       _rateLimitUntil = null; // successful fetch resets any prior backoff
@@ -98,6 +150,9 @@ class MapMarkerService {
         ..addAll(_filterValidMarkers(markers));
       _lastQueryCenter = center;
       _lastQueryRadiusKm = radiusKm;
+      _lastQueryLimit = requestedLimit;
+      _lastQueryBounds = null;
+      _lastQueryWasBounds = false;
       _lastFetchTime = DateTime.now();
       
       _log('MapMarkerService: Successfully fetched ${markers.length} markers');
@@ -115,12 +170,78 @@ class MapMarkerService {
     return _filterValidMarkers(_cachedMarkers);
   }
 
+  Future<List<ArtMarker>> loadMarkersInBounds({
+    required LatLng center,
+    required LatLngBounds bounds,
+    int? limit,
+    bool forceRefresh = false,
+  }) async {
+    _ensureSocketBridge();
+
+    final requestedLimit = limit ?? 100;
+
+    if (_isFetching) {
+      _log('MapMarkerService: Already fetching (bounds), returning cached markers');
+      return _filterValidMarkers(_cachedMarkers);
+    }
+
+    if (_rateLimitUntil != null && DateTime.now().isBefore(_rateLimitUntil!)) {
+      _log('MapMarkerService: using cache during rate-limit cooldown (bounds) (until $_rateLimitUntil)');
+      return _filterValidMarkers(_cachedMarkers);
+    }
+
+    if (!forceRefresh && _canReuseBoundsCache(bounds, requestedLimit)) {
+      _log('MapMarkerService: using cached markers (bounds) (${_cachedMarkers.length} items)');
+      return _filterValidMarkers(_cachedMarkers);
+    }
+
+    try {
+      _isFetching = true;
+      _log('MapMarkerService: Fetching markers from backend (bounds)...');
+
+      final markers = await _backendApi.getArtMarkersInBounds(
+        latitude: center.latitude,
+        longitude: center.longitude,
+        minLat: bounds.south,
+        maxLat: bounds.north,
+        minLng: bounds.west,
+        maxLng: bounds.east,
+        limit: requestedLimit,
+      );
+
+      _rateLimitUntil = null;
+      _cachedMarkers
+        ..clear()
+        ..addAll(_filterValidMarkers(markers));
+      _lastQueryCenter = center;
+      _lastQueryBounds = bounds;
+      _lastQueryWasBounds = true;
+      _lastQueryLimit = requestedLimit;
+      _lastFetchTime = DateTime.now();
+
+      _log('MapMarkerService: Successfully fetched ${markers.length} markers (bounds)');
+    } catch (e) {
+      final message = e.toString().toLowerCase();
+      if (message.contains('rate limit') || message.contains('429') || message.contains('too many')) {
+        _rateLimitUntil = DateTime.now().add(_rateLimitBackoff);
+        _log('MapMarkerService: rate-limited (bounds), backing off until $_rateLimitUntil');
+      }
+      _log('MapMarkerService: falling back to cached markers (bounds) after error: $e');
+    } finally {
+      _isFetching = false;
+    }
+
+    return _filterValidMarkers(_cachedMarkers);
+  }
+
   double get lastQueryRadiusKm => _lastQueryRadiusKm;
 
   void clearCache() {
     _cachedMarkers.clear();
     _lastQueryCenter = null;
     _lastFetchTime = null;
+    _lastQueryBounds = null;
+    _lastQueryWasBounds = false;
   }
 
   void notifyMarkerDeleted(String markerId) {
@@ -133,9 +254,13 @@ class MapMarkerService {
   void notifyMarkerUpserted(ArtMarker marker) {
     if (!_isValidPosition(marker.position)) return;
 
-    if (_lastQueryCenter != null &&
-        _distance.as(LengthUnit.Kilometer, _lastQueryCenter!, marker.position) <=
-            _lastQueryRadiusKm + 0.5) {
+    final shouldKeep = _lastQueryWasBounds
+        ? (_lastQueryBounds != null && _boundsContains(_lastQueryBounds!, marker.position))
+        : (_lastQueryCenter != null &&
+            _distance.as(LengthUnit.Kilometer, _lastQueryCenter!, marker.position) <=
+                _lastQueryRadiusKm + 0.5);
+
+    if (shouldKeep) {
       final existingIndex = _cachedMarkers.indexWhere((m) => m.id == marker.id);
       if (existingIndex >= 0) {
         _cachedMarkers[existingIndex] = marker;

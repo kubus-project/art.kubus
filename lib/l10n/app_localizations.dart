@@ -4553,6 +4553,18 @@ abstract class AppLocalizations {
   /// **'Nearby radius ({radiusKm} km)'**
   String mapNearbyRadiusTooltip(Object radiusKm);
 
+  /// No description provided for @mapNearbyRadiusTooltipWorld.
+  ///
+  /// In en, this message translates to:
+  /// **'Nearby radius (World)'**
+  String get mapNearbyRadiusTooltipWorld;
+
+  /// No description provided for @mapNearbyRadiusWorldShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Radius: World'**
+  String get mapNearbyRadiusWorldShort;
+
   /// No description provided for @mapArArtworkNearbyTitle.
   ///
   /// In en, this message translates to:

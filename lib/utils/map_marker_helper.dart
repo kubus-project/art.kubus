@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
@@ -11,11 +12,13 @@ class MapMarkerLoadResult {
     required this.markers,
     required this.center,
     required this.fetchedAt,
+    this.bounds,
   });
 
   final List<ArtMarker> markers;
   final LatLng center;
   final DateTime fetchedAt;
+  final LatLngBounds? bounds;
 }
 
 class MapMarkerHelper {
@@ -30,12 +33,14 @@ class MapMarkerHelper {
     required MapMarkerService mapMarkerService,
     required LatLng center,
     required double radiusKm,
+    int? limit,
     bool forceRefresh = false,
   }) async {
     final artworkProvider = context.read<ArtworkProvider>();
     final markers = await mapMarkerService.loadMarkers(
       center: center,
       radiusKm: radiusKm,
+      limit: limit,
       forceRefresh: forceRefresh,
     );
 
@@ -46,6 +51,36 @@ class MapMarkerHelper {
       markers: filteredMarkers,
       center: center,
       fetchedAt: DateTime.now(),
+      bounds: null,
+    );
+  }
+
+  /// Loads markers inside the given [bounds], filters invalid ones, and hydrates
+  /// linked artworks.
+  static Future<MapMarkerLoadResult> loadAndHydrateMarkersInBounds({
+    required BuildContext context,
+    required MapMarkerService mapMarkerService,
+    required LatLng center,
+    required LatLngBounds bounds,
+    int? limit,
+    bool forceRefresh = false,
+  }) async {
+    final artworkProvider = context.read<ArtworkProvider>();
+    final markers = await mapMarkerService.loadMarkersInBounds(
+      center: center,
+      bounds: bounds,
+      limit: limit,
+      forceRefresh: forceRefresh,
+    );
+
+    final filteredMarkers = markers.where((marker) => marker.hasValidPosition).toList();
+    await hydrateMarkersWithArtworks(artworkProvider, filteredMarkers);
+
+    return MapMarkerLoadResult(
+      markers: filteredMarkers,
+      center: center,
+      fetchedAt: DateTime.now(),
+      bounds: bounds,
     );
   }
 
