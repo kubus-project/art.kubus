@@ -2296,6 +2296,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get mapNearbyRadiusTooltipWorld => 'Nearby radius (World)';
+
+  @override
+  String get mapNearbyRadiusWorldShort => 'Radius: World';
+
+  @override
   String get mapArArtworkNearbyTitle => 'AR artwork nearby!';
 
   @override

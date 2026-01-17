@@ -2101,14 +2101,17 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     required double latitude,
     required double longitude,
     double radiusKm = 5.0,
+    int? limit,
   }) async {
     try {
       await _ensureAuthBeforeRequest();
-      final uri = Uri.parse('$baseUrl/api/art-markers').replace(queryParameters: {
+      final qp = <String, String>{
         'lat': latitude.toString(),
         'lng': longitude.toString(),
         'radius': radiusKm.toString(),
-      });
+        if (limit != null) 'limit': limit.toString(),
+      };
+      final uri = Uri.parse('$baseUrl/api/art-markers').replace(queryParameters: qp);
 
       final dynamic data = await _fetchJson(uri, includeAuth: true, allowOrbitFallback: true);
       final List<dynamic> markerList;
@@ -2125,6 +2128,52 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
           .toList();
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getNearbyArtMarkers failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Get art markers that are inside a viewport/bounds.
+  ///
+  /// Used by map travel mode so we fetch what's visible (instead of a massive radius).
+  /// GET /api/art-markers?lat=&lng=&minLat=&maxLat=&minLng=&maxLng=&limit=
+  Future<List<ArtMarker>> getArtMarkersInBounds({
+    required double latitude,
+    required double longitude,
+    required double minLat,
+    required double maxLat,
+    required double minLng,
+    required double maxLng,
+    int? limit,
+  }) async {
+    try {
+      await _ensureAuthBeforeRequest();
+      final qp = <String, String>{
+        'lat': latitude.toString(),
+        'lng': longitude.toString(),
+        'minLat': minLat.toString(),
+        'maxLat': maxLat.toString(),
+        'minLng': minLng.toString(),
+        'maxLng': maxLng.toString(),
+        if (limit != null) 'limit': limit.toString(),
+      };
+      final uri = Uri.parse('$baseUrl/api/art-markers').replace(queryParameters: qp);
+
+      final dynamic data = await _fetchJson(uri, includeAuth: true, allowOrbitFallback: true);
+      final List<dynamic> markerList;
+      if (data is List) {
+        markerList = data;
+      } else if (data is Map<String, dynamic>) {
+        final dynamic maybeList = data['data'] ?? data['markers'] ?? data['artMarkers'];
+        markerList = maybeList is List ? maybeList : const [];
+      } else {
+        markerList = const [];
+      }
+
+      return markerList
+          .map((json) => _artMarkerFromBackendJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.getArtMarkersInBounds failed: $e');
       rethrow;
     }
   }

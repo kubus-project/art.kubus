@@ -2296,6 +2296,12 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
+  String get mapNearbyRadiusTooltipWorld => 'Radij bližine (Svet)';
+
+  @override
+  String get mapNearbyRadiusWorldShort => 'Radij: Svet';
+
+  @override
   String get mapArArtworkNearbyTitle => 'AR umetnina v bližini!';
 
   @override
