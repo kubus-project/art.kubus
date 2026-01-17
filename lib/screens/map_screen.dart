@@ -17,6 +17,7 @@ import '../providers/artwork_provider.dart';
 import '../providers/task_provider.dart';
 import '../providers/wallet_provider.dart';
 import '../providers/themeprovider.dart';
+import '../providers/map_deep_link_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/exhibitions_provider.dart';
 import '../providers/marker_management_provider.dart';
@@ -170,6 +171,10 @@ class _MapScreenState extends State<MapScreen>
   String? _activeMarkerViewportSignature;
   bool _markerOverlayExpanded = false;
   bool _didOpenInitialMarker = false;
+  MapDeepLinkProvider? _mapDeepLinkProvider;
+  bool _handlingDeepLinkIntent = false;
+  String? _lastDeepLinkMarkerId;
+  DateTime? _lastDeepLinkHandledAt;
   Timer? _proximityCheckTimer;
   StreamSubscription<ArtMarker>? _markerSocketSubscription;
   StreamSubscription<String>? _markerDeletedSubscription;
@@ -295,6 +300,24 @@ class _MapScreenState extends State<MapScreen>
       _calculateProgress(); // Calculate progress after providers are ready
 
       unawaited(_maybeShowInteractiveMapTutorial());
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    final provider = Provider.of<MapDeepLinkProvider>(context);
+    if (_mapDeepLinkProvider == provider) return;
+
+    _mapDeepLinkProvider?.removeListener(_handleMapDeepLinkProviderChanged);
+    _mapDeepLinkProvider = provider;
+    _mapDeepLinkProvider?.addListener(_handleMapDeepLinkProviderChanged);
+
+    // If an intent was queued before the map mounted, handle it now.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _handleMapDeepLinkProviderChanged();
     });
   }
 
@@ -476,6 +499,8 @@ class _MapScreenState extends State<MapScreen>
 
   @override
   void dispose() {
+    _mapDeepLinkProvider?.removeListener(_handleMapDeepLinkProviderChanged);
+    _mapDeepLinkProvider = null;
     _timer?.cancel();
     _searchDebounce?.cancel();
     _searchController.dispose();
@@ -629,6 +654,75 @@ class _MapScreenState extends State<MapScreen>
       _showArtMarkerDialog(marker);
     } catch (_) {
       // Best-effort: if marker fetch fails, keep user on the map screen.
+    }
+  }
+
+  void _handleMapDeepLinkProviderChanged() {
+    final provider = _mapDeepLinkProvider;
+    if (provider == null) return;
+
+    final intent = provider.consumePending();
+    if (intent == null) return;
+
+    unawaited(_handleMapDeepLinkIntent(intent));
+  }
+
+  Future<void> _handleMapDeepLinkIntent(MapDeepLinkIntent intent) async {
+    final markerId = intent.markerId.trim();
+    if (markerId.isEmpty) return;
+
+    final now = DateTime.now();
+    final lastAt = _lastDeepLinkHandledAt;
+    if (_lastDeepLinkMarkerId == markerId &&
+        lastAt != null &&
+        now.difference(lastAt) < const Duration(seconds: 2)) {
+      return;
+    }
+
+    if (_handlingDeepLinkIntent) return;
+    _handlingDeepLinkIntent = true;
+    _lastDeepLinkMarkerId = markerId;
+    _lastDeepLinkHandledAt = now;
+
+    try {
+      if (intent.center != null) {
+        final zoom = intent.zoom ?? _mapController.camera.zoom;
+        _mapController.move(intent.center!, zoom);
+      }
+
+      await _openMarkerById(markerId);
+    } finally {
+      _handlingDeepLinkIntent = false;
+    }
+  }
+
+  Future<void> _openMarkerById(String markerId) async {
+    final id = markerId.trim();
+    if (id.isEmpty) return;
+
+    if (_activeMarker?.id == id) {
+      final marker = _activeMarker;
+      if (marker != null) _showArtMarkerDialog(marker);
+      return;
+    }
+
+    final existing = _artMarkers.where((m) => m.id == id).toList(growable: false);
+    if (existing.isNotEmpty) {
+      _showArtMarkerDialog(existing.first);
+      return;
+    }
+
+    try {
+      final marker = await BackendApiService().getArtMarker(id);
+      if (!mounted) return;
+      if (marker == null || !marker.hasValidPosition) return;
+      setState(() {
+        _artMarkers.removeWhere((m) => m.id == marker.id);
+        _artMarkers.add(marker);
+      });
+      _showArtMarkerDialog(marker);
+    } catch (_) {
+      // Best-effort: keep user on the map screen if marker fetch fails.
     }
   }
 

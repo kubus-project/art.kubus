@@ -20,6 +20,8 @@ class MapDeepLinkIntent {
 class MapDeepLinkProvider extends ChangeNotifier {
   MapDeepLinkIntent? _pending;
 
+  MapDeepLinkIntent? get pending => _pending;
+
   /// Schedules a marker to be opened by the MapScreen.
   void openMarker({
     required String markerId,

@@ -25,6 +25,7 @@ import 'web3/desktop_institution_hub_screen.dart';
 import 'web3/desktop_governance_hub_screen.dart';
 import 'desktop_settings_screen.dart';
 import 'components/desktop_navigation.dart';
+import 'desktop_shell_registry.dart';
 import 'community/desktop_profile_screen.dart';
 import '../auth/sign_in_screen.dart';
 import '../onboarding/web3/web3_onboarding.dart' as web3;
@@ -136,7 +137,8 @@ class _DesktopShellState extends State<DesktopShell>
   final List<Widget> _screenStack = [];
 
   BuildContext? _shellScopeContext;
-  bool _didConsumeInitialDeepLink = false;
+  String? _lastDeepLinkSignature;
+  DateTime? _lastDeepLinkHandledAt;
 
   static const List<DesktopNavItem> _signedInNavItems = [
     DesktopNavItem(
@@ -236,6 +238,11 @@ class _DesktopShellState extends State<DesktopShell>
 
   @override
   void dispose() {
+    final ctx = _shellScopeContext;
+    if (ctx != null) {
+      DesktopShellRegistry.instance.unregister(ctx);
+    }
+    _shellScopeContext = null;
     _navExpandController.dispose();
     super.dispose();
   }
@@ -572,7 +579,8 @@ class _DesktopShellState extends State<DesktopShell>
         canPop: _screenStack.isNotEmpty,
         child: Builder(
           builder: (shellContext) {
-            _shellScopeContext ??= shellContext;
+            _shellScopeContext = shellContext;
+            DesktopShellRegistry.instance.register(shellContext);
             _maybeConsumePendingDeepLink(shellContext);
 
             return Stack(
@@ -589,65 +597,6 @@ class _DesktopShellState extends State<DesktopShell>
                   backgroundColor: Colors.transparent,
                   body: Row(
                     children: [
-                      AnimatedBuilder(
-                        animation: _navExpandAnimation,
-                        builder: (context, child) {
-                          final expandedWidth = isLarge
-                              ? DesktopNavigation.expandedWidthLarge
-                              : DesktopNavigation.expandedWidthMedium;
-                          final collapsedWidth = DesktopNavigation.collapsedWidth;
-                          final currentWidth = collapsedWidth +
-                              (expandedWidth - collapsedWidth) * _navExpandAnimation.value;
-
-                          final scheme = theme.colorScheme;
-                          final glassTint = theme.brightness == Brightness.dark
-                              ? Colors.black.withValues(alpha: 0.22)
-                              : Colors.white.withValues(alpha: 0.26);
-
-                          return ClipRRect(
-                            child: Container(
-                              width: currentWidth,
-                              decoration: BoxDecoration(
-                                border: Border(
-                                  right: BorderSide(
-                                    color: theme.brightness == Brightness.dark
-                                        ? Colors.white.withValues(alpha: 0.06)
-                                        : scheme.outline.withValues(alpha: 0.15),
-                                    width: 1,
-                                  ),
-                                ),
-                              ),
-                              child: LiquidGlassPanel(
-                                padding: EdgeInsets.zero,
-                                margin: EdgeInsets.zero,
-                                borderRadius: BorderRadius.zero,
-                                blurSigma: KubusGlassEffects.blurSigmaLight,
-                                showBorder: false,
-                                backgroundColor: glassTint,
-                                child: DesktopNavigation(
-                                  items: navItems,
-                                  selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
-                                  onItemSelected: (index) =>
-                                      _onNavItemSelected(index, navItems, isSignedIn),
-                                  isExpanded: _isNavigationExpanded,
-                                  expandAnimation: _navExpandAnimation,
-                                  onToggleExpand: _toggleNavigation,
-                                  onProfileTap: () => _showProfileMenu(context),
-                                  onSettingsTap: () => _showSettingsScreen(context),
-                                  onNotificationsTap: () =>
-                                      unawaited(_toggleNotificationsPanel()),
-                                  onWalletTap: () => _handleWalletTap(isSignedIn),
-                                  onCollabInvitesTap: isSignedIn &&
-                                          AppConfig.isFeatureEnabled('collabInvites')
-                                      ? () => _showCollabInvites()
-                                      : null,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-
                       // Main content area (takes most space)
                       Expanded(
                         child: _screenStack.isNotEmpty
@@ -718,6 +667,66 @@ class _DesktopShellState extends State<DesktopShell>
                             ),
                           ),
                         ),
+
+                      // Primary navigation (must stay on the RIGHT).
+                      AnimatedBuilder(
+                        animation: _navExpandAnimation,
+                        builder: (context, child) {
+                          final expandedWidth = isLarge
+                              ? DesktopNavigation.expandedWidthLarge
+                              : DesktopNavigation.expandedWidthMedium;
+                          final collapsedWidth = DesktopNavigation.collapsedWidth;
+                          final currentWidth = collapsedWidth +
+                              (expandedWidth - collapsedWidth) * _navExpandAnimation.value;
+
+                          final scheme = theme.colorScheme;
+                          final glassTint = theme.brightness == Brightness.dark
+                              ? Colors.black.withValues(alpha: 0.22)
+                              : Colors.white.withValues(alpha: 0.26);
+
+                          return ClipRRect(
+                            child: Container(
+                              width: currentWidth,
+                              decoration: BoxDecoration(
+                                border: Border(
+                                  left: BorderSide(
+                                    color: theme.brightness == Brightness.dark
+                                        ? Colors.white.withValues(alpha: 0.06)
+                                        : scheme.outline.withValues(alpha: 0.15),
+                                    width: 1,
+                                  ),
+                                ),
+                              ),
+                              child: LiquidGlassPanel(
+                                padding: EdgeInsets.zero,
+                                margin: EdgeInsets.zero,
+                                borderRadius: BorderRadius.zero,
+                                blurSigma: KubusGlassEffects.blurSigmaLight,
+                                showBorder: false,
+                                backgroundColor: glassTint,
+                                child: DesktopNavigation(
+                                  items: navItems,
+                                  selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
+                                  onItemSelected: (index) =>
+                                      _onNavItemSelected(index, navItems, isSignedIn),
+                                  isExpanded: _isNavigationExpanded,
+                                  expandAnimation: _navExpandAnimation,
+                                  onToggleExpand: _toggleNavigation,
+                                  onProfileTap: () => _showProfileMenu(context),
+                                  onSettingsTap: () => _showSettingsScreen(context),
+                                  onNotificationsTap: () =>
+                                      unawaited(_toggleNotificationsPanel()),
+                                  onWalletTap: () => _handleWalletTap(isSignedIn),
+                                  onCollabInvitesTap: isSignedIn &&
+                                          AppConfig.isFeatureEnabled('collabInvites')
+                                      ? () => _showCollabInvites()
+                                      : null,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
                     ],
                   ),
                 ),
@@ -730,19 +739,26 @@ class _DesktopShellState extends State<DesktopShell>
   }
 
   void _maybeConsumePendingDeepLink(BuildContext shellContext) {
-    if (_didConsumeInitialDeepLink) return;
-
-    final ShareDeepLinkTarget? pending;
-    try {
-      pending = shellContext.read<DeepLinkProvider>().consumePending();
-    } catch (_) {
-      return;
-    }
+    final ShareDeepLinkTarget? pending = (() {
+      try {
+        return shellContext.read<DeepLinkProvider>().pending;
+      } catch (_) {
+        return null;
+      }
+    })();
     if (pending == null) return;
 
-    final ShareDeepLinkTarget target = pending;
+    final signature = '${pending.type.name}:${pending.id}';
+    final now = DateTime.now();
+    final lastAt = _lastDeepLinkHandledAt;
+    if (_lastDeepLinkSignature == signature &&
+        lastAt != null &&
+        now.difference(lastAt) < const Duration(seconds: 2)) {
+      return;
+    }
+    _lastDeepLinkSignature = signature;
+    _lastDeepLinkHandledAt = now;
 
-    _didConsumeInitialDeepLink = true;
     final DeferredOnboardingProvider? deferredOnboardingProvider = (() {
       try {
         return shellContext.read<DeferredOnboardingProvider>();
@@ -752,6 +768,16 @@ class _DesktopShellState extends State<DesktopShell>
     })();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
+      if (!shellContext.mounted) return;
+
+      ShareDeepLinkTarget? target;
+      try {
+        target = shellContext.read<DeepLinkProvider>().consumePending();
+      } catch (_) {
+        target = null;
+      }
+      if (target == null) return;
+
       await ShareDeepLinkNavigation.open(shellContext, target);
       if (!mounted) return;
       try {

@@ -37,4 +37,3 @@ class _DeepLinkBootstrapScreenState extends State<DeepLinkBootstrapScreen> {
     return const AppInitializer();
   }
 }
-

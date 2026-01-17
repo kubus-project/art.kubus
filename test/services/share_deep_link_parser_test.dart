@@ -17,9 +17,9 @@ void main() {
     expect(parser.parse(Uri.parse('/exhibition/x1'))?.type, ShareEntityType.exhibition);
     expect(parser.parse(Uri.parse('/collection/c1'))?.type, ShareEntityType.collection);
 
-      // Full canonical URLs should parse the same way as relative paths.
-      expect(parser.parse(Uri.parse('https://app.kubus.site/marker/m_full'))?.type, ShareEntityType.marker);
-      expect(parser.parse(Uri.parse('https://app.kubus.site/marker/m_full'))?.id, 'm_full');
+    // Full canonical URLs should parse the same way as relative paths.
+    expect(parser.parse(Uri.parse('https://app.kubus.site/marker/m_full'))?.type, ShareEntityType.marker);
+    expect(parser.parse(Uri.parse('https://app.kubus.site/marker/m_full'))?.id, 'm_full');
   });
 
   test('ShareDeepLinkParser accepts legacy aliases', () {
@@ -29,7 +29,18 @@ void main() {
     expect(parser.parse(Uri.parse('/u/wallet_3'))?.type, ShareEntityType.profile);
     expect(parser.parse(Uri.parse('/art-markers/m2'))?.type, ShareEntityType.marker);
     expect(parser.parse(Uri.parse('/markers/m3'))?.type, ShareEntityType.marker);
+    expect(parser.parse(Uri.parse('/m/m4'))?.type, ShareEntityType.marker);
+    expect(parser.parse(Uri.parse('/artworks/a1'))?.type, ShareEntityType.artwork);
+    expect(parser.parse(Uri.parse('/a/a2'))?.type, ShareEntityType.artwork);
+    expect(parser.parse(Uri.parse('/posts/p1'))?.type, ShareEntityType.post);
+    expect(parser.parse(Uri.parse('/p/p2'))?.type, ShareEntityType.post);
     expect(parser.parse(Uri.parse('/nfts/n2'))?.type, ShareEntityType.nft);
+  });
+
+  test('ShareDeepLinkParser tolerates path prefixes', () {
+    expect(parser.parse(Uri.parse('/en/marker/m1'))?.type, ShareEntityType.marker);
+    expect(parser.parse(Uri.parse('/sl/m/m2'))?.id, 'm2');
+    expect(parser.parse(Uri.parse('/share/artworks/a3'))?.type, ShareEntityType.artwork);
   });
 
   test('ShareDeepLinkParser returns null for unsupported paths', () {
@@ -38,4 +49,3 @@ void main() {
     expect(parser.parse(Uri.parse('/post/')), isNull);
   });
 }
-

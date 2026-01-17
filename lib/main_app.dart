@@ -8,6 +8,7 @@ import 'providers/profile_provider.dart';
 import 'providers/deep_link_provider.dart';
 import 'providers/deferred_onboarding_provider.dart';
 import 'providers/main_tab_provider.dart';
+import 'core/mobile_shell_registry.dart';
 import 'services/telemetry/telemetry_service.dart';
 import 'utils/share_deep_link_navigation.dart';
 import 'screens/home_screen.dart';
@@ -92,6 +93,7 @@ class _MainAppState extends State<MainApp> {
 
   @override
   void dispose() {
+    MobileShellRegistry.instance.unregister(context);
     _tabProvider?.removeListener(_handleTabProviderChanged);
     _tabProvider = null;
     super.dispose();
@@ -106,6 +108,8 @@ class _MainAppState extends State<MainApp> {
     if (useDesktopLayout) {
       return const DesktopShell();
     }
+
+    MobileShellRegistry.instance.register(context);
 
     final walletProvider = Provider.of<WalletProvider>(context);
     final animationTheme = context.animationTheme;

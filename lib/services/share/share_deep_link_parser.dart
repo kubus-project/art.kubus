@@ -14,41 +14,69 @@ class ShareDeepLinkParser {
   const ShareDeepLinkParser();
 
   ShareDeepLinkTarget? parse(Uri uri) {
-    final segments = uri.pathSegments.where((s) => s.trim().isNotEmpty).toList(growable: false);
+    final segments = uri.pathSegments
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toList(growable: false);
     if (segments.length < 2) return null;
 
-    final head = segments[0].toLowerCase();
-    final id = segments[1].trim();
-    if (id.isEmpty) return null;
+    // Links may include prefixes (e.g. /en/marker/:id, /share/marker/:id).
+    // Scan for the first recognizable "entity" segment and treat the following
+    // segment as the id.
+    for (var i = 0; i < segments.length - 1; i++) {
+      final head = segments[i].toLowerCase();
+      final type = _typeForHead(head);
+      if (type == null) continue;
 
+      final rawId = segments[i + 1];
+      if (rawId.isEmpty) continue;
+
+      final id = Uri.decodeComponent(rawId).trim();
+      if (id.isEmpty) continue;
+
+      return ShareDeepLinkTarget(type: type, id: id);
+    }
+
+    return null;
+  }
+
+  ShareEntityType? _typeForHead(String head) {
     switch (head) {
       case 'post':
-        return ShareDeepLinkTarget(type: ShareEntityType.post, id: id);
+      case 'posts':
+      case 'p':
+        return ShareEntityType.post;
       case 'artwork':
-        return ShareDeepLinkTarget(type: ShareEntityType.artwork, id: id);
+      case 'artworks':
+      case 'a':
+        return ShareEntityType.artwork;
       case 'marker':
       case 'markers':
+      case 'm':
       case 'art-marker':
       case 'art-markers':
-        return ShareDeepLinkTarget(type: ShareEntityType.marker, id: id);
+        return ShareEntityType.marker;
       case 'collection':
-        return ShareDeepLinkTarget(type: ShareEntityType.collection, id: id);
+      case 'collections':
+      case 'c':
+        return ShareEntityType.collection;
       case 'event':
       case 'events':
-        return ShareDeepLinkTarget(type: ShareEntityType.event, id: id);
+        return ShareEntityType.event;
       case 'exhibition':
       case 'exhibitions':
-        return ShareDeepLinkTarget(type: ShareEntityType.exhibition, id: id);
+        return ShareEntityType.exhibition;
       case 'profile':
+      case 'profiles':
       case 'user':
+      case 'users':
       case 'u':
-        return ShareDeepLinkTarget(type: ShareEntityType.profile, id: id);
+        return ShareEntityType.profile;
       case 'nft':
       case 'nfts':
-        return ShareDeepLinkTarget(type: ShareEntityType.nft, id: id);
+        return ShareEntityType.nft;
       default:
         return null;
     }
   }
 }
-
