@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       deploy_web:
-        description: 'Deploy Flutter web build to app server via FTP'
+        description: 'Deploy Flutter web build to app server via SFTP/SSH'
         required: false
         default: true
         type: boolean
@@ -42,7 +42,7 @@ concurrency:
 
 jobs:
   deploy_web:
-    name: FTP deploy (Flutter web)
+    name: SFTP deploy (Flutter web)
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy_web) }}
 
@@ -52,35 +52,42 @@ jobs:
         with:
           submodules: false
 
-      - name: Check FTP secrets
-        id: ftp
+      - name: Check SFTP secrets
+        id: sftp
         shell: bash
         env:
-          FTP_SERVER: ${{ secrets.FTP_SERVER }}
-          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
-          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          SFTP_SERVER: ${{ secrets.SFTP_SERVER }}
+          SFTP_USERNAME: ${{ secrets.SFTP_USERNAME }}
+          SFTP_PRIVATE_KEY: ${{ secrets.SFTP_PRIVATE_KEY }}
+          # Backward-compatible fallbacks (host/user only) so existing repos don't need a rename.
+          FTP_SERVER_FALLBACK: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME_FALLBACK: ${{ secrets.FTP_USERNAME }}
         run: |
-          if [ -n "$FTP_SERVER" ] && [ -n "$FTP_USERNAME" ] && [ -n "$FTP_PASSWORD" ]; then
+          HOST="${SFTP_SERVER:-${FTP_SERVER_FALLBACK:-}}"
+          USER="${SFTP_USERNAME:-${FTP_USERNAME_FALLBACK:-}}"
+
+          if [ -n "$HOST" ] && [ -n "$USER" ] && [ -n "$SFTP_PRIVATE_KEY" ]; then
             echo "ok=true" >> "$GITHUB_OUTPUT"
+            echo "host_raw=$HOST" >> "$GITHUB_OUTPUT"
+            echo "username=$USER" >> "$GITHUB_OUTPUT"
           else
             echo "ok=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Normalize FTP server host/port
-        if: ${{ steps.ftp.outputs.ok == 'true' }}
-        id: ftp_target
+      - name: Normalize SFTP server host
+        if: ${{ steps.sftp.outputs.ok == 'true' }}
+        id: deploy_target
         shell: bash
         env:
-          FTP_SERVER_RAW: ${{ secrets.FTP_SERVER }}
-          FTP_PORT_RAW: ${{ vars.FTP_PORT }}
+          DEPLOY_SERVER_RAW: ${{ steps.sftp.outputs.host_raw }}
         run: |
           # Users sometimes put values like:
-          #   ftps://ftp.example.com
+          #   sftp://example.com
           #   ftp.example.com/
-          #   ftp.example.com:21
-          # This step normalizes to HOST + PORT without printing the secret value.
+          #   example.com:22
+          # This step normalizes to HOST without printing the secret value.
 
-          RAW="${FTP_SERVER_RAW}"
+          RAW="${DEPLOY_SERVER_RAW}"
           RAW="$(printf '%s' "$RAW" | tr -d '\r\n')"
           RAW="$(printf '%s' "$RAW" | xargs)"
 
@@ -93,37 +100,56 @@ jobs:
           HOSTPORT="$(printf '%s' "$HOSTPORT" | xargs)"
 
           HOST="$HOSTPORT"
-          PORT="${FTP_PORT_RAW:-21}"
 
-          # If host looks like host:port (not IPv6), split it.
+          # If host looks like host:port (not IPv6), split it and keep only host.
           if [[ "$HOSTPORT" == *:* && "$HOSTPORT" != \[*\] ]]; then
             CAND_PORT="${HOSTPORT##*:}"
             CAND_HOST="${HOSTPORT%%:*}"
             if [[ "$CAND_PORT" =~ ^[0-9]+$ ]]; then
               HOST="$CAND_HOST"
-              # Only take port from FTP_SERVER when FTP_PORT wasn't provided.
-              if [ -z "${FTP_PORT_RAW:-}" ]; then
-                PORT="$CAND_PORT"
-              fi
             fi
           fi
 
           if [ -z "$HOST" ]; then
             echo "ok=false" >> "$GITHUB_OUTPUT"
-            echo "Unable to parse FTP host from FTP_SERVER secret." >&2
+            echo "Unable to parse SFTP host from configured secret." >&2
             exit 0
           fi
 
           echo "ok=true" >> "$GITHUB_OUTPUT"
           echo "host=$HOST" >> "$GITHUB_OUTPUT"
-          echo "port=$PORT" >> "$GITHUB_OUTPUT"
 
           if [ "$HAS_PROTO" = true ]; then
-            echo "Note: FTP_SERVER appears to include a protocol (e.g., ftps://). Use hostname only (e.g., ftp.kubus.site)."
+            echo "Note: Server secret appears to include a protocol. Prefer hostname only (e.g., ssh.kubus.site)."
+          fi
+
+      - name: Preflight SSH connectivity
+        if: ${{ steps.sftp.outputs.ok == 'true' && steps.deploy_target.outputs.ok == 'true' }}
+        id: net
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ steps.deploy_target.outputs.host }}
+          SFTP_PORT: ${{ vars.SFTP_PORT || 22 }}
+        run: |
+          PORT="${SFTP_PORT:-22}"
+          echo "Checking connectivity to ${DEPLOY_HOST}:${PORT} (SFTP/SSH)..."
+
+          if ! getent hosts "$DEPLOY_HOST" >/dev/null 2>&1; then
+            echo "DNS lookup failed for the configured SFTP host." >&2
+            echo "Check your Actions secret SFTP_SERVER (or FTP_SERVER fallback). It must be a resolvable hostname." >&2
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if nc -vz -w 10 "$DEPLOY_HOST" "$PORT"; then
+            echo "sftp_ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "sftp_ok=false" >> "$GITHUB_OUTPUT"
+            echo "SSH port is not reachable from this GitHub runner; skipping deploy." >&2
           fi
 
       - name: Set up Flutter
-        if: ${{ steps.ftp.outputs.ok == 'true' }}
+        if: ${{ steps.sftp.outputs.ok == 'true' && steps.deploy_target.outputs.ok == 'true' && steps.net.outputs.sftp_ok == 'true' }}
         uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -131,7 +157,7 @@ jobs:
 
       - name: Prepare Dart defines (optional)
         id: defines
-        if: ${{ steps.ftp.outputs.ok == 'true' }}
+        if: ${{ steps.sftp.outputs.ok == 'true' && steps.deploy_target.outputs.ok == 'true' && steps.net.outputs.sftp_ok == 'true' }}
         shell: bash
         env:
           KUBUS_BACKEND_URL: ${{ secrets.KUBUS_BACKEND_URL }}
@@ -154,13 +180,13 @@ jobs:
           echo "args=$ARGS" >> "$GITHUB_OUTPUT"
 
       - name: Build Flutter web
-        if: ${{ steps.ftp.outputs.ok == 'true' }}
+        if: ${{ steps.sftp.outputs.ok == 'true' && steps.deploy_target.outputs.ok == 'true' && steps.net.outputs.sftp_ok == 'true' }}
         run: |
           flutter pub get
           flutter build web --release ${{ steps.defines.outputs.args }}
 
       - name: Show runner public IP (for cPanel allowlist)
-        if: ${{ steps.ftp.outputs.ok == 'true' }}
+        if: ${{ steps.sftp.outputs.ok == 'true' && steps.deploy_target.outputs.ok == 'true' && steps.net.outputs.sftp_ok == 'true' && vars.SFTP_DEBUG == 'true' }}
         shell: bash
         run: |
           echo "Runner public egress IP (best-effort):"
@@ -181,123 +207,18 @@ jobs:
             echo "dig not available on runner"
           fi
 
-      - name: Preflight FTP connectivity
-        if: ${{ steps.ftp.outputs.ok == 'true' && steps.ftp_target.outputs.ok == 'true' }}
-        id: net
-        shell: bash
-        env:
-          FTP_HOST: ${{ steps.ftp_target.outputs.host }}
-          FTP_PORT: ${{ steps.ftp_target.outputs.port }}
-          FTP_PROTOCOL: ${{ vars.FTP_PROTOCOL }}
-        run: |
-          PORT="${FTP_PORT:-21}"
-          PROTOCOL="${FTP_PROTOCOL:-ftps}"
-          echo "Checking connectivity to ${FTP_HOST} (configured protocol=${PROTOCOL}, port=${PORT})..."
-
-          if ! getent hosts "$FTP_HOST" >/dev/null 2>&1; then
-            echo "DNS lookup failed for the configured FTP host." >&2
-            echo "Check your Actions secret FTP_SERVER. It must be a resolvable hostname like: ftp.kubus.site" >&2
-            echo "Do NOT include protocol (ftp://, ftps://), paths (/...), or surrounding spaces." >&2
-            echo "ok=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          # Extra diagnostics (non-fatal): also check common alternatives so logs
-          # hint whether you actually need SFTP (22) or implicit FTPS (990).
-          echo "Probing ${FTP_HOST}:21 (FTP/explicit FTPS control)..."
-          if nc -vz -w 10 "$FTP_HOST" 21; then
-            echo "  reachable"
-            echo "reach_21=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "  not reachable"
-            echo "reach_21=false" >> "$GITHUB_OUTPUT"
-          fi
-
-          echo "Probing ${FTP_HOST}:22 (SFTP/SSH)..."
-          if nc -vz -w 10 "$FTP_HOST" 22; then
-            echo "  reachable"
-            REACH22=true
-            echo "reach_22=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "  not reachable"
-            REACH22=false
-            echo "reach_22=false" >> "$GITHUB_OUTPUT"
-          fi
-
-          echo "Probing ${FTP_HOST}:990 (implicit FTPS)..."
-          if nc -vz -w 10 "$FTP_HOST" 990; then
-            echo "  reachable"
-            echo "reach_990=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "  not reachable"
-            echo "reach_990=false" >> "$GITHUB_OUTPUT"
-          fi
-
-          # Probe the configured port explicitly (it might be something custom).
-          echo "Probing ${FTP_HOST}:${PORT} (configured)..."
-          if nc -vz -w 10 "$FTP_HOST" "$PORT"; then
-            echo "  reachable"
-            REACH_CFG=true
-          else
-            echo "  not reachable"
-            REACH_CFG=false
-          fi
-          echo "reach_configured=${REACH_CFG}" >> "$GITHUB_OUTPUT"
-
-          # Decide which deploy methods are feasible.
-          # IMPORTANT: Port 22 is SFTP/SSH, not FTP/FTPS. If someone sets FTP_PORT=22,
-          # we must NOT run the FTP deploy action, or it will hang/time out.
-          FTP_OK=false
-          if [ "$PORT" = "22" ]; then
-            echo "Configured FTP_PORT is 22 (SSH). Skipping FTP/FTPS deploy. Use SFTP instead." >&2
-          else
-            if [ "$REACH_CFG" = "true" ]; then
-              FTP_OK=true
-            fi
-          fi
-
-          SFTP_OK=false
-          if [ "${REACH22:-false}" = "true" ]; then
-            SFTP_OK=true
-          fi
-
-          echo "ftp_ok=${FTP_OK}" >> "$GITHUB_OUTPUT"
-          echo "sftp_ok=${SFTP_OK}" >> "$GITHUB_OUTPUT"
-
-          if [ "$FTP_OK" != "true" ]; then
-            echo "FTP/FTPS not reachable on configured port (${PORT})." >&2
-            echo "- If your host requires allowlisting GitHub Actions IPs, allowlist the runner egress IP." >&2
-            echo "- If port 21 is blocked but 990 is open, you may need implicit FTPS (set FTP_PORT=990)." >&2
-            echo "- If port 22 is open, prefer SFTP." >&2
-          fi
-
-      - name: FTP Deploy (Flutter Web)
-        if: ${{ steps.ftp.outputs.ok == 'true' && steps.ftp_target.outputs.ok == 'true' && steps.net.outputs.ftp_ok == 'true' }}
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.6
-        with:
-          server: ${{ steps.ftp_target.outputs.host }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ${{ vars.FTP_PROTOCOL || 'ftps' }}
-          port: ${{ steps.ftp_target.outputs.port }}
-          security: ${{ vars.FTP_SECURITY || 'loose' }}
-          timeout: ${{ vars.FTP_TIMEOUT_MS || 120000 }}
-          local-dir: build/web/
-          server-dir: ${{ vars.WEB_SERVER_DIR || '/app.kubus.site/' }}
-
       - name: Prepare SFTP auth (Flutter Web)
-        # Fallback for hosts that block FTP/FTPS (21/990) but allow SFTP (22).
-        if: ${{ steps.ftp.outputs.ok == 'true' && steps.ftp_target.outputs.ok == 'true' && steps.net.outputs.ftp_ok != 'true' && steps.net.outputs.sftp_ok == 'true' }}
+        if: ${{ steps.sftp.outputs.ok == 'true' && steps.deploy_target.outputs.ok == 'true' && steps.net.outputs.sftp_ok == 'true' }}
         id: sftp_prep
         continue-on-error: true
         shell: bash
         env:
-          SFTP_HOST: ${{ secrets.SFTP_SERVER || steps.ftp_target.outputs.host }}
-          SFTP_USERNAME: ${{ secrets.SFTP_USERNAME || secrets.FTP_USERNAME }}
+          SFTP_HOST: ${{ steps.deploy_target.outputs.host }}
+          SFTP_USERNAME: ${{ steps.sftp.outputs.username }}
           SFTP_PORT: ${{ vars.SFTP_PORT || 22 }}
           SFTP_PRIVATE_KEY: ${{ secrets.SFTP_PRIVATE_KEY }}
           SFTP_PRIVATE_KEY_PASSPHRASE: ${{ secrets.SFTP_PRIVATE_KEY_PASSPHRASE }}
-          SFTP_PASSWORD: ${{ secrets.SFTP_PASSWORD || secrets.FTP_PASSWORD }}
+          SFTP_PASSWORD: ${{ secrets.SFTP_PASSWORD }}
           SFTP_HOST_FINGERPRINT: ${{ secrets.SFTP_HOST_FINGERPRINT }}
           SFTP_DEBUG: ${{ vars.SFTP_DEBUG || 'false' }}
           WEB_SERVER_DIR: ${{ vars.WEB_SERVER_DIR || '/app.kubus.site/' }}
@@ -305,13 +226,15 @@ jobs:
           set -euo pipefail
 
           echo "Preparing SFTP auth for ${SFTP_USERNAME}@${SFTP_HOST}:${SFTP_PORT}"
-          echo "Secrets present (values masked):"
-          echo "- SFTP_SERVER set: $([[ -n \"${SFTP_HOST:-}\" ]] && echo yes || echo no)"
-          echo "- SFTP_USERNAME set: $([[ -n \"${SFTP_USERNAME:-}\" ]] && echo yes || echo no)"
-          echo "- SFTP_PRIVATE_KEY set: $([[ -n \"${SFTP_PRIVATE_KEY:-}\" ]] && echo yes || echo no)"
-          echo "- SFTP_PRIVATE_KEY_PASSPHRASE set: $([[ -n \"${SFTP_PRIVATE_KEY_PASSPHRASE:-}\" ]] && echo yes || echo no)"
-          echo "- SFTP_HOST_FINGERPRINT set: $([[ -n \"${SFTP_HOST_FINGERPRINT:-}\" ]] && echo yes || echo no)"
-          echo "- WEB_SERVER_DIR: ${WEB_SERVER_DIR}"
+          if [ "${SFTP_DEBUG:-false}" = "true" ]; then
+            echo "Secrets present (values masked):"
+            echo "- SFTP_SERVER set: $([[ -n \"${SFTP_HOST:-}\" ]] && echo yes || echo no)"
+            echo "- SFTP_USERNAME set: $([[ -n \"${SFTP_USERNAME:-}\" ]] && echo yes || echo no)"
+            echo "- SFTP_PRIVATE_KEY set: $([[ -n \"${SFTP_PRIVATE_KEY:-}\" ]] && echo yes || echo no)"
+            echo "- SFTP_PRIVATE_KEY_PASSPHRASE set: $([[ -n \"${SFTP_PRIVATE_KEY_PASSPHRASE:-}\" ]] && echo yes || echo no)"
+            echo "- SFTP_HOST_FINGERPRINT set: $([[ -n \"${SFTP_HOST_FINGERPRINT:-}\" ]] && echo yes || echo no)"
+            echo "- WEB_SERVER_DIR: ${WEB_SERVER_DIR}"
+          fi
 
           # Most cPanel SSH/SFTP servers have PasswordAuthentication disabled.
           # If you hit "attempted methods [none publickey]", it means you MUST use an SSH private key.
@@ -408,7 +331,7 @@ jobs:
           echo "web_server_dir=$WEB_SERVER_DIR" >> "$GITHUB_OUTPUT"
 
       - name: SFTP Upload (Flutter Web)
-        if: ${{ steps.ftp.outputs.ok == 'true' && steps.ftp_target.outputs.ok == 'true' && steps.net.outputs.ftp_ok != 'true' && steps.net.outputs.sftp_ok == 'true' && steps.sftp_prep.outputs.key_path != '' }}
+        if: ${{ steps.sftp.outputs.ok == 'true' && steps.deploy_target.outputs.ok == 'true' && steps.net.outputs.sftp_ok == 'true' && steps.sftp_prep.outputs.key_path != '' }}
         id: sftp_upload
         continue-on-error: true
         uses: appleboy/scp-action@v1
@@ -422,17 +345,16 @@ jobs:
           passphrase: ${{ secrets.SFTP_PRIVATE_KEY_PASSPHRASE }}
           password: ${{ secrets.SFTP_PASSWORD || secrets.FTP_PASSWORD }}
           fingerprint: ${{ secrets.SFTP_HOST_FINGERPRINT }}
-          debug: ${{ vars.SFTP_DEBUG || 'true' }}
-          capture_stdout: true
+          debug: ${{ vars.SFTP_DEBUG || 'false' }}
           source: "build/web/*"
           strip_components: 2
           target: ${{ steps.sftp_prep.outputs.web_server_dir }}
 
       - name: Show SSH host fingerprints (for pinning)
-        if: ${{ steps.ftp.outputs.ok == 'true' && steps.ftp_target.outputs.ok == 'true' && steps.net.outputs.ftp_ok != 'true' && steps.net.outputs.sftp_ok == 'true' }}
+        if: ${{ steps.sftp.outputs.ok == 'true' && steps.deploy_target.outputs.ok == 'true' && steps.net.outputs.sftp_ok == 'true' && vars.SFTP_DEBUG == 'true' }}
         shell: bash
         env:
-          SFTP_HOST: ${{ secrets.SFTP_SERVER || steps.ftp_target.outputs.host }}
+          SFTP_HOST: ${{ steps.deploy_target.outputs.host }}
           SFTP_PORT: ${{ vars.SFTP_PORT || 22 }}
         run: |
           echo "Fetching SSH host keys for ${SFTP_HOST}:${SFTP_PORT} (best-effort)..."
@@ -451,7 +373,7 @@ jobs:
           ssh-keyscan -p "$SFTP_PORT" -t ed25519,ecdsa,rsa "$SFTP_HOST" 2>/dev/null | ssh-keygen -lf - || true
 
       - name: SFTP deploy note
-        if: ${{ steps.ftp.outputs.ok == 'true' && steps.ftp_target.outputs.ok == 'true' && steps.net.outputs.ftp_ok != 'true' && steps.net.outputs.sftp_ok == 'true' && steps.sftp_upload.outcome != 'success' }}
+        if: ${{ steps.sftp.outputs.ok == 'true' && steps.deploy_target.outputs.ok == 'true' && steps.net.outputs.sftp_ok == 'true' && steps.sftp_upload.outcome != 'success' }}
         run: |
           echo "SFTP port 22 is reachable, but SFTP upload failed (kept non-fatal to avoid a red deploy)."
           echo "Common causes:"
@@ -460,21 +382,15 @@ jobs:
           echo "- Password SFTP disabled; you may need SSH key auth"
           echo "- SSH key is passphrase-protected; set secret SFTP_PRIVATE_KEY_PASSPHRASE"
 
-      - name: Skip deploy (invalid FTP_SERVER)
-        if: ${{ steps.ftp.outputs.ok == 'true' && steps.ftp_target.outputs.ok != 'true' }}
+      - name: Skip deploy (missing SFTP secrets)
+        if: ${{ steps.sftp.outputs.ok != 'true' }}
         run: |
-          echo "FTP secrets are present, but FTP_SERVER could not be parsed into a hostname."
-          echo "Set FTP_SERVER to something like: ftp.kubus.site (no ftps://, no path, no spaces)."
+          echo "SFTP secrets not configured (need host + username + private key); skipping web deploy."
 
-      - name: Skip deploy (no reachable deploy method)
-        if: ${{ steps.ftp.outputs.ok == 'true' && steps.ftp_target.outputs.ok == 'true' && steps.net.outputs.ftp_ok != 'true' && steps.net.outputs.sftp_ok != 'true' }}
+      - name: Skip deploy (SSH not reachable)
+        if: ${{ steps.sftp.outputs.ok == 'true' && steps.deploy_target.outputs.ok == 'true' && steps.net.outputs.sftp_ok != 'true' }}
         run: |
-          echo "Neither FTP/FTPS nor SFTP appears reachable from this GitHub runner; skipping web deploy to avoid a failed workflow."
-
-      - name: Skip deploy (missing FTP secrets)
-        if: ${{ steps.ftp.outputs.ok != 'true' }}
-        run: |
-          echo "FTP secrets not configured; skipping web deploy."
+          echo "SFTP/SSH port is not reachable from this runner; skipping web deploy."
 
   apk:
     name: Build APK + upload to GitHub Release
