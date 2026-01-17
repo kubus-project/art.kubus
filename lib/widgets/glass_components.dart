@@ -2,6 +2,61 @@ import 'package:flutter/material.dart';
 import 'dart:ui';
 import '../utils/design_tokens.dart';
 
+Future<T?> showKubusDialog<T>({
+  required BuildContext context,
+  required WidgetBuilder builder,
+  bool barrierDismissible = true,
+  Color? barrierColor,
+  String? barrierLabel,
+  bool useRootNavigator = true,
+  RouteSettings? routeSettings,
+  Duration transitionDuration = const Duration(milliseconds: 220),
+}) {
+  final scheme = Theme.of(context).colorScheme;
+  final resolvedBarrierColor = barrierColor ??
+      scheme.scrim.withValues(alpha: KubusGlassEffects.backdropDimming);
+
+  return showGeneralDialog<T>(
+    context: context,
+    barrierDismissible: barrierDismissible,
+    barrierLabel: barrierLabel,
+    barrierColor: resolvedBarrierColor,
+    useRootNavigator: useRootNavigator,
+    routeSettings: routeSettings,
+    transitionDuration: transitionDuration,
+    pageBuilder: (dialogContext, __, ___) {
+      return BackdropFilter(
+        filter: ImageFilter.blur(
+          sigmaX: KubusGlassEffects.blurSigmaLight,
+          sigmaY: KubusGlassEffects.blurSigmaLight,
+        ),
+        child: ColoredBox(
+          color: Colors.transparent,
+          child: SafeArea(
+            child: Center(
+              child: Builder(builder: (ctx) => builder(ctx)),
+            ),
+          ),
+        ),
+      );
+    },
+    transitionBuilder: (context, animation, secondaryAnimation, child) {
+      final curved = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+        reverseCurve: Curves.easeInCubic,
+      );
+      return FadeTransition(
+        opacity: curved,
+        child: ScaleTransition(
+          scale: Tween<double>(begin: 0.98, end: 1.0).animate(curved),
+          child: child,
+        ),
+      );
+    },
+  );
+}
+
 /// A reusable animated gradient background that provides subtle
 /// movement and life to screens. Supports both dark and light modes.
 class AnimatedGradientBackground extends StatefulWidget {
@@ -641,6 +696,150 @@ class _GlassShimmerState extends State<GlassShimmer>
         );
       },
       child: widget.child,
+    );
+  }
+}
+
+/// A glass-first dialog surface matching Kubus liquid glass rules.
+///
+/// Prefer using this with [showKubusDialog] so dialogs also blur the background.
+class KubusAlertDialog extends StatelessWidget {
+  final Widget? title;
+  final Widget? content;
+  final List<Widget>? actions;
+  final Color? backgroundColor;
+  final ShapeBorder? shape;
+  final EdgeInsets? insetPadding;
+  final EdgeInsetsGeometry? titlePadding;
+  final EdgeInsetsGeometry? contentPadding;
+  final EdgeInsetsGeometry? actionsPadding;
+  final MainAxisAlignment actionsAlignment;
+  final bool scrollable;
+  final double blurSigma;
+  final bool showBorder;
+
+  const KubusAlertDialog({
+    super.key,
+    this.title,
+    this.content,
+    this.actions,
+    this.backgroundColor,
+    this.shape,
+    this.insetPadding,
+    this.titlePadding,
+    this.contentPadding,
+    this.actionsPadding,
+    this.actionsAlignment = MainAxisAlignment.end,
+    this.scrollable = false,
+    this.blurSigma = KubusGlassEffects.blurSigmaHeavy,
+    this.showBorder = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final surface = backgroundColor ?? scheme.surface;
+    final tint = (Color.lerp(surface, scheme.primary, 0.06) ?? surface)
+        .withValues(alpha: isDark ? 0.22 : 0.14);
+
+    final resolvedShape = shape ??
+        RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(KubusRadius.xl),
+        );
+
+    BorderRadius resolvedRadius = BorderRadius.circular(KubusRadius.xl);
+    if (resolvedShape is RoundedRectangleBorder) {
+      final borderRadius = resolvedShape.borderRadius;
+      if (borderRadius is BorderRadius) {
+        resolvedRadius = borderRadius;
+      } else {
+        resolvedRadius = BorderRadius.circular(KubusRadius.xl);
+      }
+    }
+
+    final effectiveTitlePadding = titlePadding ??
+        const EdgeInsets.fromLTRB(
+          KubusSpacing.lg,
+          KubusSpacing.lg,
+          KubusSpacing.lg,
+          KubusSpacing.sm,
+        );
+
+    final effectiveContentPadding = contentPadding ??
+        const EdgeInsets.fromLTRB(
+          KubusSpacing.lg,
+          KubusSpacing.none,
+          KubusSpacing.lg,
+          KubusSpacing.lg,
+        );
+
+    final effectiveActionsPadding = actionsPadding ??
+        const EdgeInsets.fromLTRB(
+          KubusSpacing.lg,
+          KubusSpacing.none,
+          KubusSpacing.lg,
+          KubusSpacing.lg,
+        );
+
+    Widget body = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (title != null)
+          Padding(
+            padding: effectiveTitlePadding,
+            child: DefaultTextStyle.merge(
+              style: KubusTextStyles.screenTitle.copyWith(
+                color: scheme.onSurface,
+              ),
+              child: title!,
+            ),
+          ),
+        if (content != null)
+          Padding(
+            padding: effectiveContentPadding,
+            child: DefaultTextStyle.merge(
+              style: (KubusTypography.textTheme.bodyMedium ??
+                      const TextStyle())
+                  .copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.9),
+              ),
+              child: content!,
+            ),
+          ),
+        if (actions != null && actions!.isNotEmpty)
+          Padding(
+            padding: effectiveActionsPadding,
+            child: Row(
+              mainAxisAlignment: actionsAlignment,
+              children: actions!,
+            ),
+          ),
+      ],
+    );
+
+    if (scrollable) {
+      body = SingleChildScrollView(child: body);
+    }
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      insetPadding: insetPadding ?? const EdgeInsets.all(KubusSpacing.lg),
+      clipBehavior: Clip.hardEdge,
+      shape: resolvedShape,
+      child: LiquidGlassPanel(
+        padding: EdgeInsets.zero,
+        margin: EdgeInsets.zero,
+        borderRadius: resolvedRadius,
+        blurSigma: blurSigma,
+        showBorder: showBorder,
+        backgroundColor: tint,
+        child: body,
+      ),
     );
   }
 }

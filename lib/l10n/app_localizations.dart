@@ -4991,6 +4991,174 @@ abstract class AppLocalizations {
   /// **'Add map marker'**
   String get mapAddMapMarkerTooltip;
 
+  /// No description provided for @mapTravelModeTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Travel mode'**
+  String get mapTravelModeTooltip;
+
+  /// Tooltip for the Travel Mode toggle when it is currently OFF (enables travel mode).
+  ///
+  /// In en, this message translates to:
+  /// **'Enable travel mode'**
+  String get mapTravelModeEnableTooltip;
+
+  /// Tooltip for the Travel Mode toggle when it is currently ON (disables travel mode).
+  ///
+  /// In en, this message translates to:
+  /// **'Disable travel mode'**
+  String get mapTravelModeDisableTooltip;
+
+  /// Title for the first step of the interactive map tutorial (coach marks).
+  ///
+  /// In en, this message translates to:
+  /// **'Your map'**
+  String get mapTutorialStepMapTitle;
+
+  /// Body text for the first step of the interactive map tutorial (coach marks).
+  ///
+  /// In en, this message translates to:
+  /// **'Pan and zoom to explore. Tap a marker to see details and actions.'**
+  String get mapTutorialStepMapBody;
+
+  /// Title for the markers/types step of the interactive map tutorial.
+  ///
+  /// In en, this message translates to:
+  /// **'Markers & types'**
+  String get mapTutorialStepMarkersTitle;
+
+  /// Body text for the markers/types step of the interactive map tutorial.
+  ///
+  /// In en, this message translates to:
+  /// **'Markers can represent artworks, exhibitions, events, institutions, and more. Colors/icons help you spot what’s what.'**
+  String get mapTutorialStepMarkersBody;
+
+  /// Title for the create-marker step of the interactive map tutorial.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a marker'**
+  String get mapTutorialStepCreateMarkerTitle;
+
+  /// Body text for the create-marker step of the interactive map tutorial.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap this to add a marker at the current location (or the last long-press point).'**
+  String get mapTutorialStepCreateMarkerBody;
+
+  /// Title for the nearby-art step of the interactive map tutorial.
+  ///
+  /// In en, this message translates to:
+  /// **'Nearby art'**
+  String get mapTutorialStepNearbyTitle;
+
+  /// Body text for the nearby-art step of the interactive map tutorial (mobile).
+  ///
+  /// In en, this message translates to:
+  /// **'Browse artworks near you. The list updates as you move and as filters change.'**
+  String get mapTutorialStepNearbyBody;
+
+  /// Body text for the nearby-art step of the interactive map tutorial (desktop).
+  ///
+  /// In en, this message translates to:
+  /// **'Open the Nearby panel to browse results near your current area and see details faster.'**
+  String get mapTutorialStepNearbyDesktopBody;
+
+  /// Title for the marker types step of the interactive map tutorial (desktop).
+  ///
+  /// In en, this message translates to:
+  /// **'Marker types'**
+  String get mapTutorialStepTypesTitle;
+
+  /// Body text for the marker types step of the interactive map tutorial (desktop).
+  ///
+  /// In en, this message translates to:
+  /// **'Use these chips to quickly focus on a category (artworks, events, institutions…).'**
+  String get mapTutorialStepTypesDesktopBody;
+
+  /// Title for the filters step of the interactive map tutorial.
+  ///
+  /// In en, this message translates to:
+  /// **'Filters'**
+  String get mapTutorialStepFiltersTitle;
+
+  /// Body text for the filters step of the interactive map tutorial (mobile).
+  ///
+  /// In en, this message translates to:
+  /// **'Use filters to narrow down what you see on the map and in the list.'**
+  String get mapTutorialStepFiltersBody;
+
+  /// Body text for the filters step of the interactive map tutorial (desktop).
+  ///
+  /// In en, this message translates to:
+  /// **'Open the Filters panel to refine results (type, distance, discovery status, and more).'**
+  String get mapTutorialStepFiltersDesktopBody;
+
+  /// Title for the travel mode step of the interactive map tutorial.
+  ///
+  /// In en, this message translates to:
+  /// **'Travel mode'**
+  String get mapTutorialStepTravelTitle;
+
+  /// Body text for the travel mode step of the interactive map tutorial.
+  ///
+  /// In en, this message translates to:
+  /// **'Travel mode expands the loading radius so you can browse markers far beyond nearby.'**
+  String get mapTutorialStepTravelBody;
+
+  /// Title for the recenter step of the interactive map tutorial (mobile).
+  ///
+  /// In en, this message translates to:
+  /// **'Recenter'**
+  String get mapTutorialStepRecenterTitle;
+
+  /// Body text for the recenter step of the interactive map tutorial (mobile).
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to jump back to your location and keep following you.'**
+  String get mapTutorialStepRecenterBody;
+
+  /// Title for the search step of the interactive map tutorial (desktop).
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get mapTutorialStepSearchTitle;
+
+  /// Body text for the search step of the interactive map tutorial (desktop).
+  ///
+  /// In en, this message translates to:
+  /// **'Search for artworks, artists, institutions, or places to jump to them quickly.'**
+  String get mapTutorialStepSearchBody;
+
+  /// No description provided for @mapTravelModeTutorialTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore beyond nearby'**
+  String get mapTravelModeTutorialTitle;
+
+  /// No description provided for @mapTravelModeTutorialBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Travel mode lets you view markers beyond your nearby radius. Tap the Travel button on the map to toggle it anytime.'**
+  String get mapTravelModeTutorialBody;
+
+  /// No description provided for @mapTravelModeTutorialHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tip: When Travel mode is on, the map loads markers from a much larger area.'**
+  String get mapTravelModeTutorialHint;
+
+  /// No description provided for @mapTravelModeTutorialGotIt.
+  ///
+  /// In en, this message translates to:
+  /// **'Got it'**
+  String get mapTravelModeTutorialGotIt;
+
+  /// No description provided for @mapTravelModeTutorialEnable.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable travel mode'**
+  String get mapTravelModeTutorialEnable;
+
   /// No description provided for @mapNearbyArtTitle.
   ///
   /// In en, this message translates to:

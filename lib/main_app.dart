@@ -4,6 +4,8 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'providers/themeprovider.dart';
 import 'providers/wallet_provider.dart';
 import 'providers/profile_provider.dart';
+import 'providers/deferred_onboarding_provider.dart';
+import 'providers/main_tab_provider.dart';
 import 'services/telemetry/telemetry_service.dart';
 import 'screens/home_screen.dart';
 import 'screens/map_screen.dart';
@@ -16,7 +18,6 @@ import 'utils/app_animations.dart';
 import 'utils/design_tokens.dart';
 import 'widgets/glass_components.dart';
 import 'widgets/user_persona_onboarding_gate.dart';
-import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class MainApp extends StatefulWidget {
   const MainApp({super.key});
@@ -26,22 +27,50 @@ class MainApp extends StatefulWidget {
 }
 
 class _MainAppState extends State<MainApp> {
-  int _currentIndex = 0; // Start with map (index 0)
+  MainTabProvider? _tabProvider;
+  int _lastTelemetryIndex = -1;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _syncTelemetryForIndex(_currentIndex);
+      final index = context.read<MainTabProvider>().currentIndex;
+      _syncTelemetryForIndex(index);
+      _lastTelemetryIndex = index;
     });
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final provider = Provider.of<MainTabProvider>(context);
+    if (_tabProvider == provider) return;
+    _tabProvider?.removeListener(_handleTabProviderChanged);
+    _tabProvider = provider;
+    _tabProvider?.addListener(_handleTabProviderChanged);
+  }
+
+  void _handleTabProviderChanged() {
+    if (!mounted) return;
+    final index = _tabProvider?.currentIndex ?? 0;
+    if (index == _lastTelemetryIndex) return;
+    _lastTelemetryIndex = index;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _syncTelemetryForIndex(index);
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabProvider?.removeListener(_handleTabProviderChanged);
+    _tabProvider = null;
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final walletProvider = Provider.of<WalletProvider>(context);
-    final animationTheme = context.animationTheme;
-    
     // Use screen-based breakpoints (not platform) so large tablets get desktop
     // UI and mobile browsers on web stay on the phone layout.
     final useDesktopLayout = DesktopBreakpoints.isDesktop(context);
@@ -49,6 +78,10 @@ class _MainAppState extends State<MainApp> {
     if (useDesktopLayout) {
       return const DesktopShell();
     }
+
+    final walletProvider = Provider.of<WalletProvider>(context);
+    final animationTheme = context.animationTheme;
+    final currentIndex = context.watch<MainTabProvider>().currentIndex;
 
     return UserPersonaOnboardingGate(
       child: AnimatedGradientBackground(
@@ -63,9 +96,9 @@ class _MainAppState extends State<MainApp> {
               backgroundColor: Colors.transparent,
               extendBody: true,
               body: IndexedStack(
-                index: _currentIndex,
+                index: currentIndex,
                 // Keep heavy AR resources out of the tree unless the AR tab is active.
-                children: _buildScreens(),
+                children: _buildScreens(currentIndex),
               ),
               bottomNavigationBar: _buildBottomNavigationBar(),
             ),
@@ -97,7 +130,7 @@ class _MainAppState extends State<MainApp> {
     );
   }
 
-  List<Widget> _buildScreens() {
+  List<Widget> _buildScreens(int currentIndex) {
     return const [
       MapScreen(),
       // Only build AR when selected so the camera is released when not in use.
@@ -106,7 +139,7 @@ class _MainAppState extends State<MainApp> {
       HomeScreen(),
       ProfileScreenWrapper(),
     ].asMap().entries.map((entry) {
-      if (entry.key == 1 && _currentIndex != 1) {
+      if (entry.key == 1 && currentIndex != 1) {
         return const SizedBox
             .shrink(key: ValueKey('ar-placeholder')); // frees camera resources
       }
@@ -149,11 +182,11 @@ class _MainAppState extends State<MainApp> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _buildNavItem(0, Icons.explore, isSmallScreen),
-                    _buildNavItem(1, Icons.view_in_ar, isSmallScreen),
-                    _buildNavItem(2, Icons.people, isSmallScreen),
-                    _buildNavItem(3, Icons.home, isSmallScreen),
-                    _buildNavItem(4, Icons.person, isSmallScreen),
+                    _buildNavItem(context, 0, Icons.explore, isSmallScreen),
+                    _buildNavItem(context, 1, Icons.view_in_ar, isSmallScreen),
+                    _buildNavItem(context, 2, Icons.people, isSmallScreen),
+                    _buildNavItem(context, 3, Icons.home, isSmallScreen),
+                    _buildNavItem(context, 4, Icons.person, isSmallScreen),
                   ],
                 ),
               ),
@@ -164,54 +197,66 @@ class _MainAppState extends State<MainApp> {
     );
   }
 
-  Widget _buildNavItem(int index, IconData icon, bool isSmallScreen) {
-    final isSelected = _currentIndex == index;
+  Widget _buildNavItem(
+    BuildContext context,
+    int index,
+    IconData icon,
+    bool isSmallScreen,
+  ) {
+    final isSelected = context.select<MainTabProvider, bool>((p) => p.currentIndex == index);
     final themeProvider = Provider.of<ThemeProvider>(context);
     final animationTheme = context.animationTheme;
-    
+    final scheme = Theme.of(context).colorScheme;
+
     return Expanded(
       child: GestureDetector(
         onTap: () {
-          if (_currentIndex == index) return;
-          setState(() {
-            _currentIndex = index;
-          });
-          _syncTelemetryForIndex(index);
+          final tabs = context.read<MainTabProvider>();
+          if (tabs.currentIndex == index) return;
+
+          // If onboarding is deferred due to a cold-start deep link, show it
+          // once the user tries to navigate away from the deep-linked surface.
+          final deferredOnboarding = context.read<DeferredOnboardingProvider>();
+          if (deferredOnboarding.maybeShowOnboarding(context)) return;
+
+          tabs.setIndex(index);
         },
         child: AnimatedContainer(
           duration: animationTheme.short,
           curve: animationTheme.defaultCurve,
           padding: EdgeInsets.symmetric(
-            horizontal: isSmallScreen ? KubusSpacing.xs : KubusSpacing.sm, 
+            horizontal: isSmallScreen ? KubusSpacing.xs : KubusSpacing.sm,
             vertical: isSmallScreen ? KubusSpacing.sm : KubusSpacing.md,
           ),
           decoration: BoxDecoration(
-            color: isSelected 
+            color: isSelected
                 ? themeProvider.accentColor.withValues(alpha: 0.12)
                 : Colors.transparent,
             borderRadius: KubusRadius.circular(KubusRadius.md),
+            border: Border.all(
+              color: isSelected
+                  ? themeProvider.accentColor.withValues(alpha: 0.28)
+                  : scheme.outlineVariant.withValues(alpha: 0.18),
+            ),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AnimatedScale(
-                scale: isSelected ? 1.0 : 0.92,
+          child: Center(
+            child: AnimatedScale(
+              scale: isSelected ? 1.0 : 0.92,
+              duration: animationTheme.short,
+              curve: animationTheme.emphasisCurve,
+              child: AnimatedOpacity(
                 duration: animationTheme.short,
-                curve: animationTheme.emphasisCurve,
-                child: AnimatedOpacity(
-                  duration: animationTheme.short,
-                  opacity: isSelected ? 1.0 : 0.65,
-                  curve: animationTheme.fadeCurve,
-                  child: Icon(
-                    icon,
-                    color: isSelected 
-                        ? themeProvider.accentColor
-                        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
-                    size: isSmallScreen ? 24 : 28,
-                  ),
+                opacity: isSelected ? 1.0 : 0.65,
+                curve: animationTheme.fadeCurve,
+                child: Icon(
+                  icon,
+                  color: isSelected
+                      ? themeProvider.accentColor
+                      : scheme.onSurface.withValues(alpha: 0.82),
+                  size: isSmallScreen ? 24 : 28,
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -226,7 +271,7 @@ class _MainAppState extends State<MainApp> {
     final ok = await localWallet.authenticateForAppUnlock();
     if (ok) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showKubusSnackBar(SnackBar(content: Text(l10n.lockAppUnlockedToast)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.lockAppUnlockedToast)));
       return;
     }
 
@@ -256,9 +301,9 @@ class _MainAppState extends State<MainApp> {
     final ok2 = await localWallet.authenticateForAppUnlock(pin: entered);
     if (!mounted) return;
     if (ok2) {
-      ScaffoldMessenger.of(context).showKubusSnackBar(SnackBar(content: Text(l10n.lockAppUnlockedToast)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.lockAppUnlockedToast)));
     } else {
-      ScaffoldMessenger.of(context).showKubusSnackBar(SnackBar(content: Text(l10n.lockAuthenticationFailedToast)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.lockAuthenticationFailedToast)));
     }
   }
 

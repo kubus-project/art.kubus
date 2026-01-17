@@ -10,6 +10,7 @@ import '../models/artwork.dart';
 import '../models/map_marker_subject.dart';
 import '../utils/marker_subject_utils.dart';
 import '../utils/map_marker_subject_loader.dart';
+import 'glass_components.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class MapMarkerFormResult {
@@ -86,9 +87,9 @@ class MapMarkerDialog extends StatefulWidget {
           ),
           child: Align(
             alignment: Alignment.centerLeft,
-            child: ConstrainedBox(
+              child: ConstrainedBox(
               constraints: BoxConstraints(
-                maxWidth: 460,
+                maxWidth: KubusSizes.dialogWidthMd + KubusSizes.sidebarActionIconBox,
                 maxHeight: MediaQuery.of(context).size.height * 0.9,
               ),
               child: Material(
@@ -112,7 +113,7 @@ class MapMarkerDialog extends StatefulWidget {
       );
     }
 
-    return showDialog<MapMarkerFormResult>(
+    return showKubusDialog<MapMarkerFormResult>(
       context: context,
       barrierDismissible: false,
       builder: (_) => MapMarkerDialog(
@@ -356,17 +357,21 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
       );
     }
 
-    return AlertDialog(
+    return KubusAlertDialog(
       backgroundColor: scheme.surface,
-      contentPadding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+      contentPadding: const EdgeInsets.fromLTRB(
+        KubusSpacing.md + KubusSpacing.xs,
+        KubusSpacing.md + KubusSpacing.xs,
+        KubusSpacing.md + KubusSpacing.xs,
+        KubusSpacing.sm + KubusSpacing.xs,
+      ),
       title: Row(
         children: [
           Icon(Icons.add_location_alt, color: scheme.primary),
-          const SizedBox(width: 10),
+          const SizedBox(width: KubusSpacing.sm + KubusSpacing.xxs),
           Text(
             l10n.mapMarkerDialogTitle,
-            style: KubusTypography.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
+            style: KubusTextStyles.detailSectionTitle.copyWith(
               color: scheme.onSurface,
             ),
           ),

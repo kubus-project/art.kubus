@@ -1017,6 +1017,100 @@
   "mapSortResultsTooltip": "Sort results",
   "mapCenterOnMeTooltip": "Center on me",
   "mapAddMapMarkerTooltip": "Add map marker",
+  "mapTravelModeTooltip": "Travel mode",
+  "mapTravelModeEnableTooltip": "Enable travel mode",
+  "@mapTravelModeEnableTooltip": {
+    "description": "Tooltip for the Travel Mode toggle when it is currently OFF (enables travel mode)."
+  },
+  "mapTravelModeDisableTooltip": "Disable travel mode",
+  "@mapTravelModeDisableTooltip": {
+    "description": "Tooltip for the Travel Mode toggle when it is currently ON (disables travel mode)."
+  },
+  "mapTutorialStepMapTitle": "Your map",
+  "@mapTutorialStepMapTitle": {
+    "description": "Title for the first step of the interactive map tutorial (coach marks)."
+  },
+  "mapTutorialStepMapBody": "Pan and zoom to explore. Tap a marker to see details and actions.",
+  "@mapTutorialStepMapBody": {
+    "description": "Body text for the first step of the interactive map tutorial (coach marks)."
+  },
+  "mapTutorialStepMarkersTitle": "Markers & types",
+  "@mapTutorialStepMarkersTitle": {
+    "description": "Title for the markers/types step of the interactive map tutorial."
+  },
+  "mapTutorialStepMarkersBody": "Markers can represent artworks, exhibitions, events, institutions, and more. Colors/icons help you spot what’s what.",
+  "@mapTutorialStepMarkersBody": {
+    "description": "Body text for the markers/types step of the interactive map tutorial."
+  },
+  "mapTutorialStepCreateMarkerTitle": "Create a marker",
+  "@mapTutorialStepCreateMarkerTitle": {
+    "description": "Title for the create-marker step of the interactive map tutorial."
+  },
+  "mapTutorialStepCreateMarkerBody": "Tap this to add a marker at the current location (or the last long-press point).",
+  "@mapTutorialStepCreateMarkerBody": {
+    "description": "Body text for the create-marker step of the interactive map tutorial."
+  },
+  "mapTutorialStepNearbyTitle": "Nearby art",
+  "@mapTutorialStepNearbyTitle": {
+    "description": "Title for the nearby-art step of the interactive map tutorial."
+  },
+  "mapTutorialStepNearbyBody": "Browse artworks near you. The list updates as you move and as filters change.",
+  "@mapTutorialStepNearbyBody": {
+    "description": "Body text for the nearby-art step of the interactive map tutorial (mobile)."
+  },
+  "mapTutorialStepNearbyDesktopBody": "Open the Nearby panel to browse results near your current area and see details faster.",
+  "@mapTutorialStepNearbyDesktopBody": {
+    "description": "Body text for the nearby-art step of the interactive map tutorial (desktop)."
+  },
+  "mapTutorialStepTypesTitle": "Marker types",
+  "@mapTutorialStepTypesTitle": {
+    "description": "Title for the marker types step of the interactive map tutorial (desktop)."
+  },
+  "mapTutorialStepTypesDesktopBody": "Use these chips to quickly focus on a category (artworks, events, institutions…).",
+  "@mapTutorialStepTypesDesktopBody": {
+    "description": "Body text for the marker types step of the interactive map tutorial (desktop)."
+  },
+  "mapTutorialStepFiltersTitle": "Filters",
+  "@mapTutorialStepFiltersTitle": {
+    "description": "Title for the filters step of the interactive map tutorial."
+  },
+  "mapTutorialStepFiltersBody": "Use filters to narrow down what you see on the map and in the list.",
+  "@mapTutorialStepFiltersBody": {
+    "description": "Body text for the filters step of the interactive map tutorial (mobile)."
+  },
+  "mapTutorialStepFiltersDesktopBody": "Open the Filters panel to refine results (type, distance, discovery status, and more).",
+  "@mapTutorialStepFiltersDesktopBody": {
+    "description": "Body text for the filters step of the interactive map tutorial (desktop)."
+  },
+  "mapTutorialStepTravelTitle": "Travel mode",
+  "@mapTutorialStepTravelTitle": {
+    "description": "Title for the travel mode step of the interactive map tutorial."
+  },
+  "mapTutorialStepTravelBody": "Travel mode expands the loading radius so you can browse markers far beyond nearby.",
+  "@mapTutorialStepTravelBody": {
+    "description": "Body text for the travel mode step of the interactive map tutorial."
+  },
+  "mapTutorialStepRecenterTitle": "Recenter",
+  "@mapTutorialStepRecenterTitle": {
+    "description": "Title for the recenter step of the interactive map tutorial (mobile)."
+  },
+  "mapTutorialStepRecenterBody": "Tap to jump back to your location and keep following you.",
+  "@mapTutorialStepRecenterBody": {
+    "description": "Body text for the recenter step of the interactive map tutorial (mobile)."
+  },
+  "mapTutorialStepSearchTitle": "Search",
+  "@mapTutorialStepSearchTitle": {
+    "description": "Title for the search step of the interactive map tutorial (desktop)."
+  },
+  "mapTutorialStepSearchBody": "Search for artworks, artists, institutions, or places to jump to them quickly.",
+  "@mapTutorialStepSearchBody": {
+    "description": "Body text for the search step of the interactive map tutorial (desktop)."
+  },
+  "mapTravelModeTutorialTitle": "Explore beyond nearby",
+  "mapTravelModeTutorialBody": "Travel mode lets you view markers beyond your nearby radius. Tap the Travel button on the map to toggle it anytime.",
+  "mapTravelModeTutorialHint": "Tip: When Travel mode is on, the map loads markers from a much larger area.",
+  "mapTravelModeTutorialGotIt": "Got it",
+  "mapTravelModeTutorialEnable": "Enable travel mode",
   "mapNearbyArtTitle": "Nearby art",
   "mapResultsDiscoveredLabel": "{count} results · {percent}% discovered",
   "@mapResultsDiscoveredLabel": {

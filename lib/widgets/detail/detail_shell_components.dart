@@ -2,18 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../utils/design_tokens.dart';
 import '../glass_components.dart';
 
 /// Design system spacing constants for detail screens
 class DetailSpacing {
   const DetailSpacing._();
 
-  static const double xs = 4;
-  static const double sm = 8;
-  static const double md = 12;
-  static const double lg = 16;
-  static const double xl = 24;
-  static const double xxl = 32;
+  static const double xs = KubusSpacing.xs;
+  static const double sm = KubusSpacing.sm;
+  static const double md = KubusSpacing.sm + KubusSpacing.xs;
+  static const double lg = KubusSpacing.md;
+  static const double xl = KubusSpacing.lg;
+  static const double xxl = KubusSpacing.xl;
 
   /// Content padding for mobile screens
   static const EdgeInsets contentPaddingMobile = EdgeInsets.symmetric(
@@ -36,62 +37,55 @@ class DetailTypography {
   const DetailTypography._();
 
   /// Screen title (AppBar)
-  static TextStyle screenTitle(BuildContext context) => GoogleFonts.inter(
-        fontSize: 18,
-        fontWeight: FontWeight.w600,
+  static TextStyle screenTitle(BuildContext context) =>
+      KubusTextStyles.detailScreenTitle.copyWith(
         color: Theme.of(context).colorScheme.onSurface,
       );
 
   /// Section header (16px, bold)
-  static TextStyle sectionTitle(BuildContext context) => GoogleFonts.inter(
-        fontSize: 16,
-        fontWeight: FontWeight.w700,
+  static TextStyle sectionTitle(BuildContext context) =>
+      KubusTextStyles.detailSectionTitle.copyWith(
         color: Theme.of(context).colorScheme.onSurface,
       );
 
   /// Card title (15px, semibold)
-  static TextStyle cardTitle(BuildContext context) => GoogleFonts.inter(
-        fontSize: 15,
-        fontWeight: FontWeight.w600,
+  static TextStyle cardTitle(BuildContext context) =>
+      KubusTextStyles.detailCardTitle.copyWith(
         color: Theme.of(context).colorScheme.onSurface,
       );
 
   /// Body text (14px)
-  static TextStyle body(BuildContext context) => GoogleFonts.inter(
-        fontSize: 14,
-        height: 1.5,
+  static TextStyle body(BuildContext context) => KubusTextStyles.detailBody
+      .copyWith(
         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85),
       );
 
   /// Secondary/caption text (13px)
-  static TextStyle caption(BuildContext context) => GoogleFonts.inter(
-        fontSize: 13,
+  static TextStyle caption(BuildContext context) =>
+      KubusTextStyles.detailCaption.copyWith(
         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
       );
 
   /// Small label text (12px)
-  static TextStyle label(BuildContext context) => GoogleFonts.inter(
-        fontSize: 12,
-        fontWeight: FontWeight.w500,
+  static TextStyle label(BuildContext context) =>
+      KubusTextStyles.detailLabel.copyWith(
         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
       );
 
   /// Button text
-  static TextStyle button(BuildContext context) => GoogleFonts.inter(
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-      );
+  static TextStyle button(BuildContext context) =>
+      KubusTextStyles.detailButton;
 }
 
 /// Standard border radius values
 class DetailRadius {
   const DetailRadius._();
 
-  static const double xs = 6;
-  static const double sm = 8;
-  static const double md = 12;
-  static const double lg = 16;
-  static const double xl = 20;
+  static const double xs = KubusRadius.xs + KubusSpacing.xxs;
+  static const double sm = KubusRadius.sm;
+  static const double md = KubusRadius.md;
+  static const double lg = KubusRadius.lg;
+  static const double xl = KubusRadius.lg + KubusSpacing.xs;
 }
 
 /// A unified card component for detail screens with consistent styling

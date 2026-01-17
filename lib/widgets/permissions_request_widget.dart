@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'inline_loading.dart';
 import 'glass_components.dart';
 import '../services/push_notification_service.dart';
 import '../services/notification_helper.dart';
+import '../utils/design_tokens.dart';
 import '../utils/kubus_color_roles.dart';
 
 class PermissionsRequestWidget extends StatefulWidget {
@@ -153,33 +153,30 @@ class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
   }
 
   void _showPermissionDeniedDialog() {
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Permissions Required',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
-        ),
+      builder: (dialogContext) => KubusAlertDialog(
+        title: const Text('Permissions Required'),
         content: Text(
           kIsWeb
               ? 'Location permission is essential for map discovery and nearby artwork features. You can continue without it, but some features will be limited.\n\nYou can enable permissions later in your browser settings.'
               : 'Camera and Location permissions are essential for AR experiences. You can continue without them, but some features will be limited.\n\nYou can enable permissions later in Settings.',
-          style: GoogleFonts.outfit(),
+          style: Theme.of(context).textTheme.bodyMedium,
         ),
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.of(context).pop();
+              Navigator.of(dialogContext).pop();
               widget.onSkip?.call();
             },
-            child: Text('Continue Anyway', style: GoogleFonts.outfit()),
+            child: const Text('Continue Anyway'),
           ),
           ElevatedButton(
             onPressed: () {
-              Navigator.of(context).pop();
+              Navigator.of(dialogContext).pop();
               openAppSettings();
             },
-            child: Text('Open Settings', style: GoogleFonts.outfit()),
+            child: const Text('Open Settings'),
           ),
         ],
       ),
@@ -193,10 +190,10 @@ class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
-    final buttonRadius = BorderRadius.circular(16);
+    final buttonRadius = BorderRadius.circular(KubusRadius.lg);
     final buttonTint = scheme.primary.withValues(alpha: isDark ? 0.82 : 0.88);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.lg),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -246,10 +243,11 @@ class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
                   onPressed: _isRequesting ? null : _requestAllPermissions,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.transparent,
-                    foregroundColor: Colors.white,
+                    foregroundColor: scheme.onPrimary,
                     shadowColor: Colors.transparent,
                     disabledBackgroundColor: Colors.transparent,
-                    disabledForegroundColor: Colors.white.withValues(alpha: 0.55),
+                    disabledForegroundColor:
+                        scheme.onPrimary.withValues(alpha: 0.55),
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: buttonRadius,
@@ -257,35 +255,31 @@ class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
                   ),
                   child: _isRequesting
                       ? SizedBox(
-                          width: 24,
-                          height: 24,
+                          width: KubusSpacing.lg,
+                          height: KubusSpacing.lg,
                           child: InlineLoading(
                             expand: true,
                             shape: BoxShape.circle,
                             tileSize: 3.5,
-                            color: Colors.white,
+                            color: scheme.onPrimary,
                           ),
                         )
                       : Text(
                           'Grant Permissions',
-                          style: GoogleFonts.inter(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: Theme.of(context).textTheme.titleLarge,
                         ),
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
           TextButton(
             onPressed: widget.onSkip,
             child: Text(
               'Skip for Now',
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                color: scheme.onSurface.withValues(alpha: 0.7),
-              ),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.7),
+                  ),
             ),
           ),
         ],
@@ -304,7 +298,7 @@ class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
-    final radius = BorderRadius.circular(12);
+    final radius = BorderRadius.circular(KubusRadius.md);
     final glassTint = isGranted
         ? color.withValues(alpha: isDark ? 0.18 : 0.14)
         : scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
@@ -316,11 +310,11 @@ class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
           color: isGranted
               ? color.withValues(alpha: 0.55)
               : scheme.outline.withValues(alpha: 0.22),
-          width: 1.5,
+          width: KubusSizes.hairline,
         ),
       ),
       child: LiquidGlassPanel(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         margin: EdgeInsets.zero,
         borderRadius: radius,
         showBorder: false,
@@ -328,19 +322,21 @@ class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
         child: Row(
           children: [
             Container(
-              width: 48,
-              height: 48,
+              width: KubusSpacing.xxl,
+              height: KubusSpacing.xxl,
               decoration: BoxDecoration(
-                color: isGranted ? color : Colors.grey,
-                borderRadius: BorderRadius.circular(12),
+                color: isGranted
+                    ? color
+                    : scheme.outlineVariant.withValues(alpha: 0.8),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
               ),
               child: Icon(
                 icon,
-                color: Colors.white,
-                size: 24,
+                color: scheme.onPrimary,
+                size: KubusSpacing.lg,
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: KubusSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -350,28 +346,25 @@ class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
                       Expanded(
                         child: Text(
                           title,
-                          style: GoogleFonts.outfit(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: scheme.onSurface,
-                          ),
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                color: scheme.onSurface,
+                              ),
                         ),
                       ),
                       if (isGranted)
                         Icon(
                           Icons.check_circle,
                           color: color,
-                          size: 20,
+                          size: KubusSizes.sidebarActionIcon,
                         ),
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: KubusSpacing.xs),
                   Text(
                     description,
-                    style: GoogleFonts.outfit(
-                      fontSize: 12,
-                      color: scheme.onSurface.withValues(alpha: 0.7),
-                    ),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurface.withValues(alpha: 0.7),
+                        ),
                   ),
                 ],
               ),

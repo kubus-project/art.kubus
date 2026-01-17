@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/foundation.dart';
 
 import '../providers/deep_link_provider.dart';
 import '../services/share/share_deep_link_parser.dart';
@@ -25,6 +26,9 @@ class _DeepLinkBootstrapScreenState extends State<DeepLinkBootstrapScreen> {
     super.didChangeDependencies();
     if (_seeded) return;
     _seeded = true;
+    if (kDebugMode) {
+      debugPrint('DeepLinkBootstrapScreen: seeding pending target: ${widget.target.type} id=${widget.target.id}');
+    }
     context.read<DeepLinkProvider>().setPending(widget.target);
   }
 

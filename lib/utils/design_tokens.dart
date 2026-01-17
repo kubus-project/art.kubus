@@ -23,8 +23,6 @@ class KubusColors {
   static const Color secondary = Color(0xCC00838F); // 80% opacity primary
 
   // --- Extended Accents (Centralized; avoid per-widget Color literals) ---
-  static const Color accentPurpleDark = Color(0xFF9575CD);
-  static const Color accentPurpleLight = Color(0xFF7E57C2);
   static const Color accentOrangeDark = Color(0xFFFF9800);
   static const Color accentOrangeLight = Color(0xFFFB8C00);
   static const Color accentTealDark = Color(0xFF4ECDC4);
@@ -145,10 +143,34 @@ class KubusSizes {
 
   /// Hairline borders used on glass surfaces.
   static const double hairline = 1.0;
+
+  /// Common max widths for modal/dialog content.
+  static const double dialogWidthMd = 420.0;
+  static const double dialogWidthLg = 520.0;
 }
 
 class KubusTypography {
   KubusTypography._();
+
+  /// Backward-compatible shortcut for creating an Inter [TextStyle].
+  ///
+  /// Prefer [KubusTypography.textTheme] (and [KubusTextStyles]) for most UI,
+  /// but keep this helper to avoid breaking older screens.
+  static TextStyle inter({
+    double? fontSize,
+    FontWeight? fontWeight,
+    Color? color,
+    double? height,
+    double? letterSpacing,
+  }) {
+    return GoogleFonts.inter(
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color,
+      height: height,
+      letterSpacing: letterSpacing,
+    );
+  }
 
   static TextTheme get textTheme {
     return GoogleFonts.interTextTheme().copyWith(
@@ -196,6 +218,40 @@ class KubusTextStyles {
         fontSize: KubusSizes.badgeCountFontSize,
         fontWeight: FontWeight.w700,
       );
+
+  static TextStyle get detailScreenTitle =>
+      KubusTypography.textTheme.titleLarge!;
+
+  static TextStyle get detailSectionTitle => GoogleFonts.inter(
+        fontSize: 16,
+        fontWeight: FontWeight.w700,
+      );
+
+  static TextStyle get detailCardTitle => GoogleFonts.inter(
+        fontSize: 15,
+        fontWeight: FontWeight.w600,
+      );
+
+  static TextStyle get detailBody => GoogleFonts.inter(
+        fontSize: 14,
+        height: 1.5,
+        fontWeight: FontWeight.w400,
+      );
+
+  static TextStyle get detailCaption => GoogleFonts.inter(
+        fontSize: 13,
+        fontWeight: FontWeight.w400,
+      );
+
+  static TextStyle get detailLabel => GoogleFonts.inter(
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+      );
+
+  static TextStyle get detailButton => GoogleFonts.inter(
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+      );
 }
 
 class KubusGradients {
@@ -241,8 +297,8 @@ class KubusGradients {
     } else {
       return LinearGradient(
         colors: [
-          Colors.white.withValues(alpha: 0.8),
-          Colors.white.withValues(alpha: 0.4),
+          KubusColors.surfaceLight.withValues(alpha: 0.8),
+          KubusColors.surfaceLight.withValues(alpha: 0.4),
         ],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
@@ -306,9 +362,9 @@ class KubusGradients {
   /// Hero/accent gradient for feature highlights
   static const LinearGradient heroGradient = LinearGradient(
     colors: [
-      Color(0xFF0EA5E9), // Bright cyan
-      Color(0xFF8B5CF6), // Vibrant purple
-      Color(0xFFEC4899), // Pink accent
+      KubusColors.primaryVariantDark,
+      KubusColors.accentTealDark,
+      KubusColors.accentOrangeLight,
     ],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,

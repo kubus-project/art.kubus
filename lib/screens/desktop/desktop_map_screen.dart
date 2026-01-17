@@ -8,6 +8,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../providers/themeprovider.dart';
@@ -53,10 +54,10 @@ import '../../utils/design_tokens.dart';
 import '../../utils/category_accent_color.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../widgets/glass_components.dart';
+import '../../widgets/tutorial/interactive_tutorial_overlay.dart';
 import '../../widgets/inline_progress.dart';
 import '../../providers/task_provider.dart';
 import '../../models/task.dart';
-import 'package:art_kubus/widgets/kubus_snackbar.dart';
  
 
 /// Desktop map screen with Google Maps-style presentation
@@ -95,6 +96,23 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   bool _isDiscoveryExpanded = false;
   String _selectedFilter = 'nearby';
   double _searchRadius = 5.0; // km
+
+  static const double _travelModeRadiusKm = 50.0;
+  bool _travelModeEnabled = false;
+
+  double get _effectiveSearchRadiusKm =>
+      _travelModeEnabled ? _travelModeRadiusKm : _searchRadius;
+
+  // Interactive onboarding tutorial (coach marks)
+  final GlobalKey _tutorialMapKey = GlobalKey();
+  final GlobalKey _tutorialSearchKey = GlobalKey();
+  final GlobalKey _tutorialFilterChipsKey = GlobalKey();
+  final GlobalKey _tutorialFiltersButtonKey = GlobalKey();
+  final GlobalKey _tutorialNearbyButtonKey = GlobalKey();
+  final GlobalKey _tutorialTravelButtonKey = GlobalKey();
+
+  bool _showMapTutorial = false;
+  int _mapTutorialIndex = 0;
   LatLng? _pendingMarkerLocation;
   bool _mapReady = false;
   double _cameraZoom = 13.0;
@@ -159,6 +177,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _cameraCenter = widget.initialCenter ?? const LatLng(46.0569, 14.5058);
     _cameraZoom = widget.initialZoom ?? _cameraZoom;
 
+    unawaited(_loadMapTravelPrefs());
+
     if (widget.initialCenter != null) {
       _moveCamera(_cameraCenter, _cameraZoom);
     }
@@ -176,7 +196,155 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       // Desktop UX: show the nearby list in the functions sidebar (right panel)
       // instead of rendering a "nearby" card overlay on the map.
       _openNearbyArtPanel();
+
+      unawaited(_maybeShowInteractiveMapTutorial());
     });
+  }
+
+  Future<void> _loadMapTravelPrefs() async {
+    if (!AppConfig.isFeatureEnabled('mapTravelMode')) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final enabled =
+          prefs.getBool(PreferenceKeys.mapTravelModeEnabledV1) ?? false;
+      if (!mounted) return;
+      setState(() {
+        _travelModeEnabled = enabled;
+      });
+    } catch (_) {
+      // Best-effort.
+    }
+  }
+
+  Future<void> _setTravelModeEnabled(bool enabled) async {
+    if (!AppConfig.isFeatureEnabled('mapTravelMode')) return;
+    if (!mounted) return;
+
+    setState(() {
+      _travelModeEnabled = enabled;
+    });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(PreferenceKeys.mapTravelModeEnabledV1, enabled);
+    } catch (_) {
+      // Best-effort.
+    }
+
+    unawaited(_loadMarkers(force: true));
+  }
+
+  Future<void> _maybeShowInteractiveMapTutorial() async {
+    if (!mounted) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final seen = prefs.getBool(PreferenceKeys.mapOnboardingDesktopSeenV2) ?? false;
+      if (seen) return;
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        setState(() {
+          _showMapTutorial = true;
+          _mapTutorialIndex = 0;
+        });
+      });
+    } catch (_) {
+      // Best-effort.
+    }
+  }
+
+  Future<void> _setMapTutorialSeen() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(PreferenceKeys.mapOnboardingDesktopSeenV2, true);
+    } catch (_) {
+      // Best-effort.
+    }
+  }
+
+  void _dismissMapTutorial() {
+    if (!mounted) return;
+    setState(() => _showMapTutorial = false);
+    unawaited(_setMapTutorialSeen());
+  }
+
+  void _tutorialNext() {
+    if (!mounted) return;
+    final steps = _buildMapTutorialSteps(AppLocalizations.of(context)!);
+    if (_mapTutorialIndex >= steps.length - 1) {
+      _dismissMapTutorial();
+      return;
+    }
+    setState(() => _mapTutorialIndex += 1);
+  }
+
+  void _tutorialBack() {
+    if (!mounted) return;
+    if (_mapTutorialIndex <= 0) return;
+    setState(() => _mapTutorialIndex -= 1);
+  }
+
+  List<TutorialStepDefinition> _buildMapTutorialSteps(AppLocalizations l10n) {
+    final steps = <TutorialStepDefinition>[
+      TutorialStepDefinition(
+        targetKey: _tutorialMapKey,
+        icon: Icons.map_outlined,
+        title: l10n.mapTutorialStepMapTitle,
+        body: l10n.mapTutorialStepMapBody,
+      ),
+      TutorialStepDefinition(
+        targetKey: _tutorialMapKey,
+        icon: Icons.place_outlined,
+        title: l10n.mapTutorialStepMarkersTitle,
+        body: l10n.mapTutorialStepMarkersBody,
+      ),
+      TutorialStepDefinition(
+        targetKey: _tutorialNearbyButtonKey,
+        icon: Icons.view_list,
+        title: l10n.mapTutorialStepNearbyTitle,
+        body: l10n.mapTutorialStepNearbyDesktopBody,
+        onTargetTap: _openNearbyArtPanel,
+      ),
+      TutorialStepDefinition(
+        targetKey: _tutorialFilterChipsKey,
+        icon: Icons.auto_awesome,
+        title: l10n.mapTutorialStepTypesTitle,
+        body: l10n.mapTutorialStepTypesDesktopBody,
+      ),
+      TutorialStepDefinition(
+        targetKey: _tutorialFiltersButtonKey,
+        icon: Icons.tune,
+        title: l10n.mapTutorialStepFiltersTitle,
+        body: l10n.mapTutorialStepFiltersDesktopBody,
+        onTargetTap: () {
+          if (!mounted) return;
+          setState(() => _showFiltersPanel = true);
+        },
+      ),
+    ];
+
+    if (AppConfig.isFeatureEnabled('mapTravelMode')) {
+      steps.add(
+        TutorialStepDefinition(
+          targetKey: _tutorialTravelButtonKey,
+          icon: Icons.travel_explore,
+          title: l10n.mapTutorialStepTravelTitle,
+          body: l10n.mapTutorialStepTravelBody,
+          onTargetTap: () => unawaited(_setTravelModeEnabled(true)),
+        ),
+      );
+    }
+
+    steps.add(
+      TutorialStepDefinition(
+        targetKey: _tutorialSearchKey,
+        icon: Icons.search,
+        title: l10n.mapTutorialStepSearchTitle,
+        body: l10n.mapTutorialStepSearchBody,
+      ),
+    );
+
+    return steps;
   }
 
   void _openNearbyArtPanel() {
@@ -215,7 +383,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         .take(30)
         .map((a) => a.id)
         .join(',');
-    final sig = '${_searchRadius.toStringAsFixed(1)}|'
+    final sig = '${_effectiveSearchRadiusKm.toStringAsFixed(1)}|'
         '${base.latitude.toStringAsFixed(4)},${base.longitude.toStringAsFixed(4)}|'
         '${filteredArtworks.length}|$ids';
     if (_nearbySidebarSignature == sig) return;
@@ -238,6 +406,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     final existing = _artMarkers.where((m) => m.id == markerId).toList(growable: false);
     if (existing.isNotEmpty) {
+      _moveCamera(existing.first.position, math.max(_effectiveZoom, 15));
       _handleMarkerTap(existing.first);
       return;
     }
@@ -251,6 +420,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         _artMarkers.removeWhere((m) => m.id == marker.id);
         _artMarkers.add(marker);
       });
+      _moveCamera(marker.position, math.max(_effectiveZoom, 15));
       _handleMarkerTap(marker);
     } catch (_) {
       // Best-effort: keep user on map if marker fetch fails.
@@ -313,7 +483,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       body: Stack(
         children: [
           // Map layer
-          _buildMapLayer(themeProvider),
+          KeyedSubtree(
+            key: _tutorialMapKey,
+            child: _buildMapLayer(themeProvider),
+          ),
 
           // Top bar
           _buildTopBar(themeProvider, animationTheme),
@@ -340,7 +513,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     : _buildFiltersPanel(themeProvider),
           ),
 
-          // Bottom stack: map controls ABOVE the nearby art card
+          // Map controls (bottom-right)
           Positioned(
             left: _selectedArtwork != null || _selectedExhibition != null
                 ? 400
@@ -369,6 +542,26 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               );
             },
           ),
+
+          if (_showMapTutorial)
+            Builder(
+              builder: (context) {
+                final l10n = AppLocalizations.of(context)!;
+                final steps = _buildMapTutorialSteps(l10n);
+                final idx = _mapTutorialIndex.clamp(0, steps.length - 1);
+                return InteractiveTutorialOverlay(
+                  steps: steps,
+                  currentIndex: idx,
+                  onNext: _tutorialNext,
+                  onBack: _tutorialBack,
+                  onSkip: _dismissMapTutorial,
+                  skipLabel: l10n.commonSkip,
+                  backLabel: l10n.commonBack,
+                  nextLabel: l10n.commonNext,
+                  doneLabel: l10n.commonDone,
+                );
+              },
+            ),
         ],
       ),
     );
@@ -549,6 +742,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     required ThemeProvider themeProvider,
     bool isActive = false,
     String? tooltip,
+    EdgeInsets? tooltipMargin,
+    bool? tooltipPreferBelow,
+    double? tooltipVerticalOffset,
+    bool tooltipAlignRightEdge = false,
     double size = 42,
     BorderRadius? borderRadius,
     Color? activeTint,
@@ -610,11 +807,26 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         showBorder: false,
         backgroundColor: isActive ? selectedTint : idleTint,
         onTap: onTap,
-        child: tooltip == null ? child : Tooltip(message: tooltip, child: child),
+        child: tooltip == null
+            ? child
+            : (tooltipAlignRightEdge
+                ? _RightEdgeAlignedTooltip(
+                    message: tooltip,
+                    preferBelow: tooltipPreferBelow,
+                    verticalOffset: tooltipVerticalOffset,
+                    safePadding: tooltipMargin,
+                    child: child,
+                  )
+                : Tooltip(
+                    message: tooltip,
+                    margin: tooltipMargin,
+                    preferBelow: tooltipPreferBelow,
+                    verticalOffset: tooltipVerticalOffset ?? 0,
+                    child: child,
+                  )),
       ),
     );
   }
-
   Marker _buildUserLocationMarker(ThemeProvider themeProvider) {
     final accent = themeProvider.accentColor;
     final position = _userLocation ?? _cameraCenter;
@@ -689,11 +901,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     constraints: const BoxConstraints(maxWidth: 480),
                     child: CompositedTransformTarget(
                       link: _searchFieldLink,
-                      child: DesktopSearchBar(
-                        controller: _searchController,
-                        hintText: l10n.mapSearchHint,
-                        onChanged: _handleSearchChange,
-                        onSubmitted: _handleSearchSubmit,
+                      child: KeyedSubtree(
+                        key: _tutorialSearchKey,
+                        child: DesktopSearchBar(
+                          controller: _searchController,
+                          hintText: l10n.mapSearchHint,
+                          onChanged: _handleSearchChange,
+                          onSubmitted: _handleSearchSubmit,
+                        ),
                       ),
                     ),
                   ),
@@ -702,38 +917,51 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 const SizedBox(width: 20),
 
                 // Filter chips
-                Row(
-                  children: _filterOptions.map((filter) {
-                    final isActive = _selectedFilter == filter;
-                    return Padding(
-                      padding: const EdgeInsets.only(left: 8),
-                      child: _buildGlassChip(
-                        label: _getFilterLabel(filter),
-                        isSelected: isActive,
-                        themeProvider: themeProvider,
-                        onTap: () {
-                          setState(() => _selectedFilter = filter);
-                        },
-                      ),
-                    );
-                  }).toList(),
+                KeyedSubtree(
+                  key: _tutorialFilterChipsKey,
+                  child: Row(
+                    children: _filterOptions.map((filter) {
+                      final isActive = _selectedFilter == filter;
+                      return Padding(
+                        padding: const EdgeInsets.only(left: 8),
+                        child: _buildGlassChip(
+                          label: _getFilterLabel(filter),
+                          isSelected: isActive,
+                          themeProvider: themeProvider,
+                          onTap: () {
+                            setState(() => _selectedFilter = filter);
+                          },
+                        ),
+                      );
+                    }).toList(),
+                  ),
                 ),
 
                 const SizedBox(width: 12),
 
                 // Filters button
-                _buildGlassIconButton(
-                  icon: _showFiltersPanel ? Icons.close : Icons.tune,
-                  themeProvider: themeProvider,
-                  isActive: _showFiltersPanel,
-                  tooltip: _showFiltersPanel ? l10n.commonClose : l10n.mapFiltersTitle,
-                  onTap: () {
-                    setState(() {
-                      _showFiltersPanel = !_showFiltersPanel;
-                      _selectedArtwork = null;
-                      _selectedExhibition = null;
-                    });
-                  },
+                KeyedSubtree(
+                  key: _tutorialFiltersButtonKey,
+                  child: _buildGlassIconButton(
+                    icon: _showFiltersPanel ? Icons.close : Icons.tune,
+                    themeProvider: themeProvider,
+                    isActive: _showFiltersPanel,
+                    tooltip: _showFiltersPanel ? l10n.commonClose : l10n.mapFiltersTitle,
+                    tooltipPreferBelow: false,
+                    tooltipVerticalOffset: 18,
+                    // Anchor tooltip to the icon's right edge so the card expands
+                    // leftwards (avoids the Nearby sidebar, and aligns the right edge
+                    // of the tooltip with the icon).
+                    tooltipAlignRightEdge: true,
+                    tooltipMargin: const EdgeInsets.symmetric(horizontal: 24),
+                    onTap: () {
+                      setState(() {
+                        _showFiltersPanel = !_showFiltersPanel;
+                        _selectedArtwork = null;
+                        _selectedExhibition = null;
+                      });
+                    },
+                  ),
                 ),
               ],
             ),
@@ -1067,7 +1295,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                                       : null);
                               if (modelUrl == null) {
                                 final l10n = AppLocalizations.of(context)!;
-                                messenger.showKubusSnackBar(
+                                messenger.showSnackBar(
                                   SnackBar(
                                     content:
                                         Text(l10n.desktopMapNoArAssetToast),
@@ -1908,16 +2136,39 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (AppConfig.isFeatureEnabled('mapTravelMode')) ...[
+            KeyedSubtree(
+              key: _tutorialTravelButtonKey,
+              child: _buildGlassIconButton(
+                icon: Icons.travel_explore,
+                themeProvider: themeProvider,
+                tooltip: l10n.mapTravelModeTooltip,
+                isActive: _travelModeEnabled,
+                onTap: () =>
+                    unawaited(_setTravelModeEnabled(!_travelModeEnabled)),
+              ),
+            ),
+            Container(
+              width: 1,
+              height: 26,
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              color: scheme.outline.withValues(alpha: 0.22),
+            ),
+          ],
           // Nearby list (functions sidebar)
-          IconButton(
-            onPressed:
-                _isNearbyPanelOpen ? _closeNearbyArtPanel : _openNearbyArtPanel,
-            tooltip: _isNearbyPanelOpen
-                ? l10n.commonClose
-                : l10n.arNearbyArtworksTitle,
-            icon: Icon(
-              Icons.view_list,
-              color: _isNearbyPanelOpen ? accent : scheme.onSurface,
+          KeyedSubtree(
+            key: _tutorialNearbyButtonKey,
+            child: IconButton(
+              onPressed: _isNearbyPanelOpen
+                  ? _closeNearbyArtPanel
+                  : _openNearbyArtPanel,
+              tooltip: _isNearbyPanelOpen
+                  ? l10n.commonClose
+                  : l10n.arNearbyArtworksTitle,
+              icon: Icon(
+                Icons.view_list,
+                color: _isNearbyPanelOpen ? accent : scheme.onSurface,
+              ),
             ),
           ),
           Container(
@@ -2212,7 +2463,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
             child: Text(
-              '${l10n.mapNearbyRadiusTitle}: ${_searchRadius.toStringAsFixed(1)} km',
+              '${l10n.mapNearbyRadiusTitle}: ${_effectiveSearchRadiusKm.toStringAsFixed(1)} km'
+              '${_travelModeEnabled ? ' • ${l10n.mapTravelModeTooltip}' : ''}',
               style: GoogleFonts.inter(
                 fontSize: 12,
                 color: scheme.onSurfaceVariant,
@@ -2654,8 +2906,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final basePosition = _userLocation ?? _effectiveCenter;
     switch (_selectedFilter) {
       case 'nearby':
+        final radiusMeters = (_effectiveSearchRadiusKm * 1000).clamp(0, 500000);
         filtered = filtered
-            .where((artwork) => artwork.getDistanceFrom(basePosition) <= 1000)
+            .where(
+              (artwork) => artwork.getDistanceFrom(basePosition) <= radiusMeters,
+            )
             .toList();
         break;
       case 'discovered':
@@ -2782,7 +3037,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         context: context,
         mapMarkerService: _mapMarkerService,
         center: center,
-        radiusKm: _searchRadius,
+        radiusKm: _effectiveSearchRadiusKm,
         forceRefresh: force,
       );
       if (!mounted) return;
@@ -2903,7 +3158,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   void _handleMarkerTap(ArtMarker marker) {
-    _moveCamera(marker.position, math.max(_effectiveZoom, 15));
+    // Desktop UX: do not re-center the map when a marker is clicked.
     setState(() {
       _activeMarker = marker;
       _markerOverlayExpanded = false; // Reset expand state for new marker
@@ -2997,7 +3252,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (!marker.hasValidPosition) return;
     final withinRadius =
         _distance.as(LengthUnit.Kilometer, _cameraCenter, marker.position) <=
-            (_searchRadius + 0.5);
+        (_effectiveSearchRadiusKm + 0.5);
     if (withinRadius) {
       setState(() {
         final existingIndex = _artMarkers.indexWhere((m) => m.id == marker.id);
@@ -3685,7 +3940,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (!AppConfig.isFeatureEnabled('exhibitions') ||
         BackendApiService().exhibitionsApiAvailable == false) {
       if (isExhibitionMarker) {
-        messenger.showKubusSnackBar(
+        messenger.showSnackBar(
           SnackBar(
             content: Text(
               'Exhibition not available at the moment.',
@@ -3713,7 +3968,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (!mounted) return;
 
     if (fetched == null) {
-      messenger.showKubusSnackBar(
+      messenger.showSnackBar(
         SnackBar(
           content: Text(
             'Exhibition not available at the moment.',
@@ -3859,7 +4114,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final l10n = AppLocalizations.of(context)!;
     final wallet = context.read<WalletProvider>().currentWalletAddress;
     if (wallet == null || wallet.isEmpty) {
-      ScaffoldMessenger.of(context).showKubusSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             l10n.mapMarkerCreateWalletRequired,
@@ -3923,7 +4178,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (!mounted) return;
 
     if (success) {
-      ScaffoldMessenger.of(context).showKubusSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
             children: [
@@ -3943,7 +4198,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       );
       await _loadMarkers(force: true);
     } else {
-      ScaffoldMessenger.of(context).showKubusSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             'Failed to create marker. Please try again.',
@@ -4044,7 +4299,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       return false;
     } on StateError catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showKubusSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
               AppLocalizations.of(context)!.mapMarkerDuplicateToast,
@@ -4081,6 +4336,137 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       default:
         return filter;
     }
+  }
+}
+
+/// Desktop-only tooltip that anchors the tooltip card's RIGHT edge to the
+/// target widget's right edge.
+///
+/// This prevents tooltips for right-edge controls (like Filters) from rendering
+/// under the Nearby functions sidebar, because the bubble expands leftwards.
+class _RightEdgeAlignedTooltip extends StatefulWidget {
+  const _RightEdgeAlignedTooltip({
+    required this.message,
+    required this.child,
+    this.preferBelow,
+    this.verticalOffset,
+    this.safePadding,
+  });
+
+  final String message;
+  final Widget child;
+  final bool? preferBelow;
+  final double? verticalOffset;
+  final EdgeInsets? safePadding;
+
+  @override
+  State<_RightEdgeAlignedTooltip> createState() => _RightEdgeAlignedTooltipState();
+}
+
+class _RightEdgeAlignedTooltipState extends State<_RightEdgeAlignedTooltip> {
+  final LayerLink _link = LayerLink();
+  OverlayEntry? _entry;
+  Timer? _hideTimer;
+
+  @override
+  void dispose() {
+    _hideTimer?.cancel();
+    _remove();
+    super.dispose();
+  }
+
+  void _remove() {
+    _entry?.remove();
+    _entry = null;
+  }
+
+  void _show() {
+    if (_entry != null) return;
+
+    final overlay = Overlay.of(context, rootOverlay: true);
+
+    final theme = Theme.of(context);
+    final tooltipTheme = TooltipTheme.of(context);
+    final preferBelow = widget.preferBelow ?? tooltipTheme.preferBelow ?? true;
+    final verticalOffset =
+        widget.verticalOffset ?? tooltipTheme.verticalOffset ?? 24.0;
+
+    // Safe padding constrains tooltip width so it stays inside the visible
+    // Explore surface. (Unlike Tooltip, we also anchor to the right edge.)
+    final safe = widget.safePadding ?? const EdgeInsets.symmetric(horizontal: 24);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final maxWidth = math.max(0.0, screenWidth - safe.left - safe.right);
+
+    final textStyle = tooltipTheme.textStyle ??
+        theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onInverseSurface,
+        );
+
+    final decoration = tooltipTheme.decoration ??
+        BoxDecoration(
+          color: theme.colorScheme.inverseSurface,
+          borderRadius: BorderRadius.circular(8),
+        );
+
+    final padding = tooltipTheme.padding ??
+        const EdgeInsets.symmetric(horizontal: 12, vertical: 8);
+
+    _entry = OverlayEntry(
+      builder: (context) {
+        return Positioned.fill(
+          child: IgnorePointer(
+            child: CompositedTransformFollower(
+              link: _link,
+              showWhenUnlinked: false,
+              targetAnchor:
+                  preferBelow ? Alignment.bottomRight : Alignment.topRight,
+              followerAnchor:
+                  preferBelow ? Alignment.topRight : Alignment.bottomRight,
+              offset: Offset(
+                0,
+                preferBelow ? verticalOffset : -verticalOffset,
+              ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  // Tooltip expands to the LEFT from the target's right edge.
+                  maxWidth: maxWidth,
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: Container(
+                    padding: padding,
+                    decoration: decoration,
+                    child: Text(widget.message, style: textStyle),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    overlay.insert(_entry!);
+
+    // Auto-hide to match native tooltip behavior.
+    _hideTimer?.cancel();
+    _hideTimer = Timer(const Duration(seconds: 3), _remove);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CompositedTransformTarget(
+      link: _link,
+      child: MouseRegion(
+        onEnter: (_) => _show(),
+        onExit: (_) => _remove(),
+        child: GestureDetector(
+          behavior: HitTestBehavior.deferToChild,
+          onLongPress: _show,
+          child: widget.child,
+        ),
+      ),
+    );
   }
 }
 
