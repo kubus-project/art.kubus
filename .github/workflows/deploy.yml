@@ -335,19 +335,34 @@ jobs:
           # - Multi-line key pasted as-is into GitHub secrets (preferred)
           # - Single-line with literal \n sequences (common mistake when copying through JSON/UI)
           if printf '%s' "$SFTP_PRIVATE_KEY" | grep -q "\\n"; then
-            printf '%b' "${SFTP_PRIVATE_KEY//\\n/\n}" > "$KEY_PATH"
+            # Convert literal \n sequences to real newlines, and strip CRs.
+            printf '%b' "${SFTP_PRIVATE_KEY//\\n/\n}" | tr -d '\r' > "$KEY_PATH"
           else
-            printf '%s' "$SFTP_PRIVATE_KEY" > "$KEY_PATH"
+            # Preserve multiline secret as-is, but strip CRs (Windows line endings break OpenSSH on Linux).
+            printf '%s' "$SFTP_PRIVATE_KEY" | tr -d '\r' > "$KEY_PATH"
           fi
           chmod 600 "$KEY_PATH"
 
-          # If the key is passphrase-protected but no passphrase is configured, fail early with a clear message.
-          # We only test this when no passphrase was provided, because ssh-keygen would otherwise prompt.
-          if [ -z "${SFTP_PRIVATE_KEY_PASSPHRASE:-}" ] && command -v ssh-keygen >/dev/null 2>&1 && command -v timeout >/dev/null 2>&1; then
-            if ! timeout 3 ssh-keygen -y -f "$KEY_PATH" >/dev/null 2>&1; then
-              echo "The SSH private key appears to be passphrase-protected (or unreadable) and SFTP_PRIVATE_KEY_PASSPHRASE is not set." >&2
-              echo "Either provide secret SFTP_PRIVATE_KEY_PASSPHRASE, or use a dedicated deploy key without a passphrase." >&2
-              exit 1
+          # Validate that OpenSSH can parse the key file (prevents 'error in libcrypto').
+          if command -v ssh-keygen >/dev/null 2>&1 && command -v timeout >/dev/null 2>&1; then
+            if [ -z "${SFTP_PRIVATE_KEY_PASSPHRASE:-}" ]; then
+              # No passphrase provided: validate non-interactively.
+              if ! timeout 3 ssh-keygen -y -f "$KEY_PATH" >/dev/null 2>&1; then
+                echo "OpenSSH could not parse the private key file (this often shows up as: 'error in libcrypto')." >&2
+                echo "Fixes:" >&2
+                echo "- Ensure SFTP_PRIVATE_KEY is an OpenSSH private key (NOT a PuTTY .ppk, NOT a public key)." >&2
+                echo "- Re-paste the key with proper newlines (multi-line secret)." >&2
+                echo "- If the key is encrypted, set SFTP_PRIVATE_KEY_PASSPHRASE." >&2
+                exit 1
+              fi
+            else
+              # Passphrase exists; we cannot validate without prompting, but at least fail if the file is totally broken.
+              # Try a quick fingerprint read (may still fail if format is invalid).
+              if ! timeout 3 ssh-keygen -lf "$KEY_PATH" >/dev/null 2>&1; then
+                echo "OpenSSH could not parse the private key file (even before passphrase entry)." >&2
+                echo "This likely means the key format is unsupported/corrupted (e.g., PuTTY .ppk or broken line endings)." >&2
+                exit 1
+              fi
             fi
           fi
 
