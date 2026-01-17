@@ -544,6 +544,10 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
           home: const AppInitializer(),
           routes: {
             '/main': (context) => const MainApp(),
+            // Alias for telemetry/URL semantics: marker deep links land here so
+            // the browser URL becomes /map (not /main), while still rendering
+            // the full shell.
+            '/map': (context) => const MainApp(),
             '/ar': (context) => const ARScreen(),
             '/artwork': (context) {
               final args = ModalRoute.of(context)?.settings.arguments;

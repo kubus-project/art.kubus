@@ -62,6 +62,11 @@ import '../../models/task.dart';
 
 /// Desktop map screen with Google Maps-style presentation
 /// Features side panel for artwork details and filters
+enum _MarkerOverlayMode {
+  anchored,
+  centered,
+}
+
 class DesktopMapScreen extends StatefulWidget {
   final LatLng? initialCenter;
   final double? initialZoom;
@@ -91,6 +96,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   Exhibition? _selectedExhibition;
   ArtMarker? _activeMarker;
   bool _markerOverlayExpanded = false;
+  _MarkerOverlayMode _markerOverlayMode = _MarkerOverlayMode.anchored;
   bool _didOpenInitialMarker = false;
   bool _showFiltersPanel = false;
   bool _isDiscoveryExpanded = false;
@@ -407,7 +413,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final existing = _artMarkers.where((m) => m.id == markerId).toList(growable: false);
     if (existing.isNotEmpty) {
       _moveCamera(existing.first.position, math.max(_effectiveZoom, 15));
-      _handleMarkerTap(existing.first);
+      _handleMarkerTap(existing.first, overlayMode: _MarkerOverlayMode.centered);
       return;
     }
 
@@ -421,7 +427,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         _artMarkers.add(marker);
       });
       _moveCamera(marker.position, math.max(_effectiveZoom, 15));
-      _handleMarkerTap(marker);
+      _handleMarkerTap(marker, overlayMode: _MarkerOverlayMode.centered);
     } catch (_) {
       // Best-effort: keep user on map if marker fetch fails.
     }
@@ -578,6 +584,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             Provider.of<TileProviders?>(context, listen: false);
         final devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
         final isRetina = devicePixelRatio >= 2.0;
+        final overlayMode = _markerOverlayMode;
         final markers = <Marker>[
           _buildUserLocationMarker(themeProvider),
           // Removed duplicate artwork circle markers - only show art marker pins
@@ -591,6 +598,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                       .read<ArtworkProvider>()
                       .getArtworkById(_activeMarker!.artworkId ?? ''),
               themeProvider,
+              pointOverride: overlayMode == _MarkerOverlayMode.centered
+                  ? _effectiveCenter
+                  : _activeMarker!.position,
+              alignmentOverride: overlayMode == _MarkerOverlayMode.centered
+                  ? Alignment.center
+                  : Alignment.bottomCenter,
+              gapOverride:
+                  overlayMode == _MarkerOverlayMode.centered ? 0.0 : 10.0,
             ),
           if (_pendingMarkerLocation != null)
             _buildPendingMarker(_pendingMarkerLocation!, themeProvider),
@@ -3157,10 +3172,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     );
   }
 
-  void _handleMarkerTap(ArtMarker marker) {
+  void _handleMarkerTap(
+    ArtMarker marker, {
+    _MarkerOverlayMode overlayMode = _MarkerOverlayMode.anchored,
+  }) {
     // Desktop UX: do not re-center the map when a marker is clicked.
     setState(() {
       _activeMarker = marker;
+      _markerOverlayMode = overlayMode;
       _markerOverlayExpanded = false; // Reset expand state for new marker
     });
     _maybeRecordPresenceVisitForMarker(marker);
@@ -3276,7 +3295,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   Marker _buildMarkerOverlay(
-      ArtMarker marker, Artwork? artwork, ThemeProvider themeProvider) {
+    ArtMarker marker,
+    Artwork? artwork,
+    ThemeProvider themeProvider, {
+    LatLng? pointOverride,
+    Alignment? alignmentOverride,
+    double? gapOverride,
+  }) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final baseColor = _resolveArtMarkerColor(marker, themeProvider);
@@ -3325,47 +3350,52 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     // The actual content will size itself with AnimatedSize
     const double maxOverlayHeight = 600;
 
+    final point = pointOverride ?? marker.position;
+    final alignment = alignmentOverride ?? Alignment.bottomCenter;
+    // Gap between the marker's anchor point (pin) and the overlay card.
+    // Keep this tiny for desktop so the UI feels connected to the marker.
+    final gap = gapOverride ?? 10.0;
+    final translateY = alignment == Alignment.bottomCenter ? -gap : 0.0;
+
     return Marker(
-      point: marker.position,
+      point: point,
       width: 300,
       height: maxOverlayHeight,
-      alignment: Alignment.topCenter,
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 48),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 280),
-            child: AnimatedSize(
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeOutCubic,
-              alignment: Alignment.topCenter,
-              child: Material(
-                color: Colors.transparent,
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: baseColor.withValues(alpha: 0.35),
-                      width: 1.1,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: baseColor.withValues(alpha: 0.22),
-                        blurRadius: 20,
-                        offset: const Offset(0, 12),
-                      ),
-                    ],
+      alignment: alignment,
+      child: Transform.translate(
+        offset: Offset(0, translateY),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 280),
+          child: AnimatedSize(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.topCenter,
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: baseColor.withValues(alpha: 0.35),
+                    width: 1.1,
                   ),
-                  child: LiquidGlassPanel(
-                    padding: const EdgeInsets.all(14),
-                    borderRadius: BorderRadius.circular(18),
-                    showBorder: false,
-                    backgroundColor: scheme.surface.withValues(alpha: 0.45),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+                  boxShadow: [
+                    BoxShadow(
+                      color: baseColor.withValues(alpha: 0.22),
+                      blurRadius: 20,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: LiquidGlassPanel(
+                  padding: const EdgeInsets.all(14),
+                  borderRadius: BorderRadius.circular(18),
+                  showBorder: false,
+                  backgroundColor: scheme.surface.withValues(alpha: 0.45),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                         // Header row: Title + distance + close button
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -3649,8 +3679,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                             ),
                           ),
                         ),
-                      ],
-                    ),
+                    ],
                   ),
                 ),
               ),
