@@ -13,7 +13,7 @@ class SolanaWalletConnectService {
   
   SolanaWalletConnectService._internal();
   
-  late ReownWalletKit _walletKit;
+  ReownWalletKit? _walletKit;
   bool _isInitialized = false;
   
   // Session management
@@ -37,7 +37,7 @@ class SolanaWalletConnectService {
         throw Exception('WalletConnect project ID not configured. Please set WALLETCONNECT_PROJECT_ID environment variable.');
       }
       
-      _walletKit = ReownWalletKit(
+      final walletKit = ReownWalletKit(
         core: ReownCore(
           projectId: projectId,
           logLevel: kDebugMode ? LogLevel.debug : LogLevel.error,
@@ -49,20 +49,21 @@ class SolanaWalletConnectService {
           icons: ['https://art.kubus.com/logo.png'],
         ),
       );
+      _walletKit = walletKit;
       
       // Initialize the wallet kit
-      await _walletKit.init();
+      await walletKit.init();
       
       // Set up event listeners
       _setupEventListeners();
       
       _isInitialized = true;
       if (kDebugMode) {
-        debugPrint('✅ WalletConnect initialized successfully');
+        debugPrint('SolanaWalletConnectService: initialized');
       }
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('❌ WalletConnect initialization failed: $e');
+        debugPrint('SolanaWalletConnectService: initialization failed: $e');
       }
       onError?.call('Failed to initialize WalletConnect: $e');
       rethrow;
@@ -71,10 +72,12 @@ class SolanaWalletConnectService {
   
   /// Set up event listeners for WalletConnect sessions
   void _setupEventListeners() {
+    final walletKit = _walletKit;
+    if (walletKit == null) return;
     // Session proposal event
-    _walletKit.onSessionProposal.subscribe((args) async {
+    walletKit.onSessionProposal.subscribe((args) async {
       if (kDebugMode) {
-        debugPrint('📨 Session proposal received');
+        debugPrint('SolanaWalletConnectService: session proposal received');
       }
       
       // Auto-approve Solana sessions for demo purposes
@@ -91,17 +94,17 @@ class SolanaWalletConnectService {
     });
     
     // Session request event (for signing transactions/messages)
-    _walletKit.onSessionRequest.subscribe((args) async {
+    walletKit.onSessionRequest.subscribe((args) async {
       if (kDebugMode) {
-        debugPrint('📝 Session request received');
+        debugPrint('SolanaWalletConnectService: session request received');
       }
       await _handleSessionRequest(args);
     });
     
     // Session delete event
-    _walletKit.onSessionDelete.subscribe((args) {
+    walletKit.onSessionDelete.subscribe((args) {
       if (kDebugMode) {
-        debugPrint('🗑️ Session deleted');
+        debugPrint('SolanaWalletConnectService: session deleted');
       }
       _currentSession = null;
       _connectedAddress = null;
@@ -109,9 +112,9 @@ class SolanaWalletConnectService {
     });
     
     // Session expire event
-    _walletKit.onSessionExpire.subscribe((args) {
+    walletKit.onSessionExpire.subscribe((args) {
       if (kDebugMode) {
-        debugPrint('⏰ Session expired');
+        debugPrint('SolanaWalletConnectService: session expired');
       }
       _currentSession = null;
       _connectedAddress = null;
@@ -135,8 +138,12 @@ class SolanaWalletConnectService {
       if (solanaAddress == null || solanaAddress.isEmpty) {
         throw Exception('No wallet address configured for WalletConnect session');
       }
+      final walletKit = _walletKit;
+      if (walletKit == null || !_isInitialized) {
+        throw Exception('WalletConnect not initialized');
+      }
       
-      final sessionData = await _walletKit.approveSession(
+      final sessionData = await walletKit.approveSession(
         id: id,
         namespaces: {
           'solana': Namespace(
@@ -155,13 +162,13 @@ class SolanaWalletConnectService {
       _connectedAddress = solanaAddress;
       
       if (kDebugMode) {
-        debugPrint('✅ Session approved successfully');
+        debugPrint('SolanaWalletConnectService: session approved');
       }
       
       onConnected?.call(solanaAddress);
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('❌ Failed to approve session: $e');
+        debugPrint('SolanaWalletConnectService: approve session failed: $e');
       }
       onError?.call('Failed to approve session: $e');
     }
@@ -170,7 +177,9 @@ class SolanaWalletConnectService {
   /// Reject a session proposal
   Future<void> _rejectSession(int id, String reason) async {
     try {
-      await _walletKit.rejectSession(
+      final walletKit = _walletKit;
+      if (walletKit == null || !_isInitialized) return;
+      await walletKit.rejectSession(
         id: id,
         reason: ReownSignError(
           code: 5000,
@@ -179,17 +188,21 @@ class SolanaWalletConnectService {
       );
       
       if (kDebugMode) {
-        debugPrint('❌ Session rejected: $reason');
+        debugPrint('SolanaWalletConnectService: session rejected: $reason');
       }
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('❌ Failed to reject session: $e');
+        debugPrint('SolanaWalletConnectService: reject session failed: $e');
       }
     }
   }
   
   /// Handle session requests (transaction signing, message signing, etc.)
   Future<void> _handleSessionRequest(SessionRequestEvent args) async {
+    final walletKit = _walletKit;
+    if (walletKit == null || !_isInitialized) {
+      throw Exception('WalletConnect not initialized');
+    }
     try {
       final request = args.params;
       final method = request.request.method;
@@ -205,7 +218,7 @@ class SolanaWalletConnectService {
           await _handleSignAndSendTransaction(args);
           break;
         default:
-          await _walletKit.respondSessionRequest(
+          await walletKit.respondSessionRequest(
             topic: request.topic,
             response: JsonRpcResponse(
               id: request.request.id,
@@ -218,10 +231,10 @@ class SolanaWalletConnectService {
       }
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('❌ Failed to handle session request: $e');
+        debugPrint('SolanaWalletConnectService: handle session request failed: $e');
       }
       
-      await _walletKit.respondSessionRequest(
+      await walletKit.respondSessionRequest(
         topic: args.params.topic,
         response: JsonRpcResponse(
           id: args.params.request.id,
@@ -241,14 +254,18 @@ class SolanaWalletConnectService {
       final message = params['message'] as String;
       
       if (kDebugMode) {
-        debugPrint('📝 Signing message: $message');
+        debugPrint('SolanaWalletConnectService: signing message: $message');
       }
       
       // For demo purposes, return a mock signature
       // In production, this should use the actual wallet's private key
       const mockSignature = 'mock_signature_base64_encoded_string';
       
-      await _walletKit.respondSessionRequest(
+      final walletKit = _walletKit;
+      if (walletKit == null || !_isInitialized) {
+        throw Exception('WalletConnect not initialized');
+      }
+      await walletKit.respondSessionRequest(
         topic: args.params.topic,
         response: JsonRpcResponse(
           id: args.params.request.id,
@@ -259,11 +276,11 @@ class SolanaWalletConnectService {
       );
       
       if (kDebugMode) {
-        debugPrint('✅ Message signed successfully');
+        debugPrint('SolanaWalletConnectService: message signed');
       }
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('❌ Failed to sign message: $e');
+        debugPrint('SolanaWalletConnectService: sign message failed: $e');
       }
       rethrow;
     }
@@ -273,14 +290,18 @@ class SolanaWalletConnectService {
   Future<void> _handleSignTransaction(SessionRequestEvent args) async {
     try {
       if (kDebugMode) {
-        debugPrint('📝 Signing transaction');
+        debugPrint('SolanaWalletConnectService: signing transaction');
       }
       
       // For demo purposes, return a mock signed transaction
       // In production, this should use the actual wallet's private key
       const mockSignedTransaction = 'mock_signed_transaction_base64';
       
-      await _walletKit.respondSessionRequest(
+      final walletKit = _walletKit;
+      if (walletKit == null || !_isInitialized) {
+        throw Exception('WalletConnect not initialized');
+      }
+      await walletKit.respondSessionRequest(
         topic: args.params.topic,
         response: JsonRpcResponse(
           id: args.params.request.id,
@@ -291,11 +312,11 @@ class SolanaWalletConnectService {
       );
       
       if (kDebugMode) {
-        debugPrint('✅ Transaction signed successfully');
+        debugPrint('SolanaWalletConnectService: transaction signed');
       }
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('❌ Failed to sign transaction: $e');
+        debugPrint('SolanaWalletConnectService: sign transaction failed: $e');
       }
       rethrow;
     }
@@ -305,14 +326,18 @@ class SolanaWalletConnectService {
   Future<void> _handleSignAndSendTransaction(SessionRequestEvent args) async {
     try {
       if (kDebugMode) {
-        debugPrint('📝 Signing and sending transaction');
+        debugPrint('SolanaWalletConnectService: signing and sending transaction');
       }
       
       // For demo purposes, return a mock transaction hash
       // In production, this should sign and broadcast the transaction
       const mockTxHash = 'mock_transaction_hash_12345';
       
-      await _walletKit.respondSessionRequest(
+      final walletKit = _walletKit;
+      if (walletKit == null || !_isInitialized) {
+        throw Exception('WalletConnect not initialized');
+      }
+      await walletKit.respondSessionRequest(
         topic: args.params.topic,
         response: JsonRpcResponse(
           id: args.params.request.id,
@@ -323,11 +348,11 @@ class SolanaWalletConnectService {
       );
       
       if (kDebugMode) {
-        debugPrint('✅ Transaction signed and sent successfully');
+        debugPrint('SolanaWalletConnectService: transaction signed and sent');
       }
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('❌ Failed to sign and send transaction: $e');
+        debugPrint('SolanaWalletConnectService: sign and send transaction failed: $e');
       }
       rethrow;
     }
@@ -340,14 +365,18 @@ class SolanaWalletConnectService {
     }
     
     try {
-      await _walletKit.pair(uri: Uri.parse(uri));
+      final walletKit = _walletKit;
+      if (walletKit == null) {
+        throw Exception('WalletConnect not initialized');
+      }
+      await walletKit.pair(uri: Uri.parse(uri));
       
       if (kDebugMode) {
-        debugPrint('🔗 Pairing initiated with URI');
+        debugPrint('SolanaWalletConnectService: pairing initiated');
       }
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('❌ Failed to pair: $e');
+        debugPrint('SolanaWalletConnectService: pair failed: $e');
       }
       onError?.call('Failed to pair: $e');
       rethrow;
@@ -361,7 +390,14 @@ class SolanaWalletConnectService {
     }
     
     try {
-      await _walletKit.disconnectSession(
+      final walletKit = _walletKit;
+      if (walletKit == null || !_isInitialized) {
+        _currentSession = null;
+        _connectedAddress = null;
+        onDisconnected?.call('WalletConnect not initialized');
+        return;
+      }
+      await walletKit.disconnectSession(
         topic: _currentSession!.topic,
         reason: const ReownSignError(
           code: 6000,
@@ -373,13 +409,13 @@ class SolanaWalletConnectService {
       _connectedAddress = null;
       
       if (kDebugMode) {
-        debugPrint('✅ Disconnected successfully');
+        debugPrint('SolanaWalletConnectService: disconnected');
       }
       
       onDisconnected?.call('User disconnected');
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('❌ Failed to disconnect: $e');
+        debugPrint('SolanaWalletConnectService: disconnect failed: $e');
       }
       onError?.call('Failed to disconnect: $e');
     }
@@ -395,10 +431,15 @@ class SolanaWalletConnectService {
   bool get isConnected => _currentSession != null && _connectedAddress != null;
   
   /// Get all active sessions
-  List<SessionData> get activeSessions => _walletKit.sessions.getAll();
+  List<SessionData> get activeSessions {
+    final walletKit = _walletKit;
+    if (walletKit == null || !_isInitialized) return const <SessionData>[];
+    return walletKit.sessions.getAll();
+  }
   
   /// Dispose of the service
   void dispose() {
+    _walletKit = null;
     _instance = null;
   }
 }

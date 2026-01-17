@@ -12,6 +12,7 @@ import '../../../config/api_keys.dart';
 import '../../../models/qr_scan_result.dart';
 import '../../../models/wallet.dart';
 import 'qr_scanner_screen.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class SendTokenScreen extends StatefulWidget {
   const SendTokenScreen({super.key});
@@ -659,7 +660,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
     final token = walletProvider.getTokenBySymbol(_selectedToken);
     final balance = token?.balance ?? double.tryParse(_getTokenBalance(_selectedToken)) ?? 0.0;
     if (balance <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text(l10n.sendTokenNoBalanceToast),
           backgroundColor: Theme.of(context).colorScheme.error,
@@ -671,7 +672,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
     final feeMultiplier = 1 + (ApiKeys.kubusTeamFeePct + ApiKeys.kubusTreasuryFeePct);
     final maxSendable = balance / feeMultiplier;
     if (maxSendable <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text(l10n.sendTokenMaxAmountComputeFailedToast),
           backgroundColor: Theme.of(context).colorScheme.error,
@@ -768,7 +769,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
 
   void _showUnsupportedFeature(BuildContext context, PlatformProvider platformProvider) {
     final l10n = AppLocalizations.of(context)!;
-    ScaffoldMessenger.of(context).showSnackBar(
+    ScaffoldMessenger.of(context).showKubusSnackBar(
       SnackBar(
         content: Text(_qrScannerUnsupportedMessage(l10n, platformProvider)),
         behavior: SnackBarBehavior.floating,
@@ -822,7 +823,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
         fallbackAddress = result.trim();
         structured = QRScanResult.tryParse(fallbackAddress);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
             content: Text(l10n.sendTokenQrUnreadableToast),
             behavior: SnackBarBehavior.floating,
@@ -834,7 +835,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
 
       final address = structured?.address ?? fallbackAddress;
       if (address == null || address.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
             content: Text(l10n.sendTokenQrInvalidAddressToast),
             behavior: SnackBarBehavior.floating,
@@ -874,7 +875,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
         snackSegments.add(l10n.sendTokenQrScannedAmountLabel(amountText));
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text(snackSegments.join(' • ')),
           behavior: SnackBarBehavior.floating,
@@ -886,7 +887,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
         debugPrint('SendTokenScreen: QR scan error: $e');
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text(l10n.sendTokenQrScanErrorToast),
           behavior: SnackBarBehavior.floating,
@@ -922,7 +923,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
       await walletProvider.refreshData();
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text(l10n.sendTokenSendSuccessToast(amount.toStringAsFixed(4), _selectedToken)),
           backgroundColor: Theme.of(context).colorScheme.tertiary,
@@ -933,7 +934,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
       Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text(_mapSendError(l10n, e)),
           backgroundColor: Theme.of(context).colorScheme.error,

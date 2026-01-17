@@ -27,6 +27,7 @@ import '../../../widgets/glass_components.dart';
 import '../../../utils/design_tokens.dart';
 import '../../auth/sign_in_screen.dart';
 import '../../auth/register_screen.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class ConnectWallet extends StatefulWidget {
   final int initialStep;
@@ -622,7 +623,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     final mnemonic = _mnemonicController.text.trim();
     
     if (mnemonic.isEmpty) {
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(l10n.connectWalletImportEmptyMnemonicError),
           backgroundColor: Colors.red,
@@ -635,7 +636,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     // Validate mnemonic format (12 words)
     final words = mnemonic.split(' ').where((w) => w.isNotEmpty).toList();
     if (words.length != 12) {
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(l10n.connectWalletImportInvalidMnemonicWordCountError(words.length)),
           backgroundColor: Colors.red,
@@ -737,7 +738,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
         }
       
       if (mounted) {
-        messenger.showSnackBar(
+        messenger.showKubusSnackBar(
           SnackBar(
             content: Text(l10n.connectWalletImportSuccessToast(address.substring(0, 8))),
             backgroundColor: Colors.green,
@@ -754,7 +755,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
         setState(() {
           _isLoading = false;
         });
-        messenger.showSnackBar(
+        messenger.showKubusSnackBar(
           SnackBar(
             content: Text(l10n.connectWalletImportFailedToast),
             backgroundColor: Colors.red,
@@ -1289,7 +1290,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     final uri = _wcUriController.text.trim();
     
     if (uri.isEmpty) {
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(l10n.connectWalletWalletConnectUriRequiredToast),
           backgroundColor: Colors.red,
@@ -1300,7 +1301,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     }
     
     if (!uri.startsWith('wc:')) {
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(l10n.connectWalletWalletConnectInvalidUriToast),
           backgroundColor: Colors.red,
@@ -1321,7 +1322,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
         setState(() {
           _isLoading = false;
         });
-        messenger.showSnackBar(
+        messenger.showKubusSnackBar(
           SnackBar(
             content: Text(l10n.connectWalletWalletConnectNeedsLocalWalletToast),
             backgroundColor: Colors.red,
@@ -1349,7 +1350,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
           final navigator = Navigator.of(context);
           final chatProvider = Provider.of<ChatProvider>(context, listen: false);
           final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
-          messenger.showSnackBar(
+          messenger.showKubusSnackBar(
             SnackBar(
               content: Text(l10n.connectWalletWalletConnectConnectedToast(address)),
               backgroundColor: Colors.green,
@@ -1443,7 +1444,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
             _isLoading = false;
           });
           final l10n = AppLocalizations.of(context)!;
-          messenger.showSnackBar(
+          messenger.showKubusSnackBar(
             SnackBar(
               content: Text(l10n.connectWalletWalletConnectConnectionErrorToast),
               backgroundColor: Colors.red,
@@ -1457,7 +1458,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
       await wcService.pair(uri);
       
       if (mounted) {
-        messenger.showSnackBar(
+        messenger.showKubusSnackBar(
           SnackBar(
             content: Text(l10n.connectWalletWalletConnectWaitingApprovalToast),
             backgroundColor: Colors.blue,
@@ -1473,7 +1474,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
         setState(() {
           _isLoading = false;
         });
-        messenger.showSnackBar(
+        messenger.showKubusSnackBar(
           SnackBar(
             content: Text(l10n.connectWalletWalletConnectFailedToast),
             backgroundColor: Colors.red,
@@ -1562,7 +1563,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
           try {
             await _runPostWalletConnectRefresh(result['address']!);
           } catch (_) {}
-          messenger.showSnackBar(
+          messenger.showKubusSnackBar(
             SnackBar(
               content: Text(l10n.connectWalletCreateSuccessToast),
               backgroundColor: Colors.green,
@@ -1580,7 +1581,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
         setState(() {
           _isLoading = false;
         });
-        messenger.showSnackBar(
+        messenger.showKubusSnackBar(
           SnackBar(
             content: Text(l10n.connectWalletCreateFailedToast),
             backgroundColor: Colors.red,

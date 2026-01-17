@@ -18,6 +18,7 @@ import '../../../widgets/empty_state_card.dart';
 import '../../web3/wallet/token_swap.dart';
 import '../../web3/wallet/connectwallet_screen.dart';
 import '../../../widgets/glass_components.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
  
 
 /// Desktop wallet screen with professional dashboard layout
@@ -259,7 +260,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
               onPressed: () {
                 final l10n = AppLocalizations.of(context)!;
                 if (!AppConfig.enableWalletConnect || !AppConfig.enableWeb3) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ScaffoldMessenger.of(context).showKubusSnackBar(
                     SnackBar(content: Text(l10n.authWalletConnectionDisabled)),
                   );
                   return;
@@ -403,7 +404,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                         onTap: () {
                           final l10n = AppLocalizations.of(context)!;
                           Clipboard.setData(ClipboardData(text: web3Provider.walletAddress));
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          ScaffoldMessenger.of(context).showKubusSnackBar(
                             SnackBar(content: Text(l10n.walletHomeAddressCopiedToast)),
                           );
                         },
@@ -1327,7 +1328,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                   onPressed: () {
                     final l10n = AppLocalizations.of(context)!;
                     Clipboard.setData(ClipboardData(text: web3Provider.walletAddress));
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    ScaffoldMessenger.of(context).showKubusSnackBar(
                       SnackBar(content: Text(l10n.walletHomeAddressCopiedToast)),
                     );
                   },

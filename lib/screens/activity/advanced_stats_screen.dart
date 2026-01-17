@@ -18,6 +18,7 @@ import '../../providers/web3provider.dart';
 import '../../services/stats_api_service.dart';
 import '../../widgets/charts/stats_interactive_line_chart.dart';
 import '../../widgets/glass_components.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
  
 
 class AdvancedStatsScreen extends StatefulWidget {
@@ -715,7 +716,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
       final points = (series?.series ?? const <StatsSeriesPoint>[]).toList()
         ..sort((a, b) => a.t.compareTo(b.t));
       if (points.isEmpty) {
-        messenger.showSnackBar(
+        messenger.showKubusSnackBar(
           SnackBar(
             content: const Text('No analytics data available to export.'),
             backgroundColor: scheme.error,
@@ -746,7 +747,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
       );
     } catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: const Text('Unable to export analytics.'),
           backgroundColor: scheme.error,
@@ -776,7 +777,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
       );
     } catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: const Text('Unable to share analytics on this device.'),
           backgroundColor: scheme.error,

@@ -20,6 +20,7 @@ import '../../../widgets/artwork_creator_byline.dart';
 import '../../../widgets/avatar_widget.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../../widgets/detail/detail_shell_components.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class DesktopArtworkDetailScreen extends StatefulWidget {
   final String artworkId;
@@ -333,7 +334,7 @@ class _DesktopArtworkDetailScreenState
     final canInteract = isSignedIn;
 
     Future<void> requireSignInToast() async {
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(l10n.communityCommentAuthRequiredToast,
               style: GoogleFonts.inter()),
@@ -690,10 +691,10 @@ class _DesktopArtworkDetailScreenState
                               if (!mounted) return;
                               if (!dialogContext.mounted) return;
                               Navigator.of(dialogContext).pop();
-                              messenger.showSnackBar(SnackBar(content: Text(l10n.commentUpdatedToast)));
+                              messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commentUpdatedToast)));
                             } catch (_) {
                               if (!mounted) return;
-                              messenger.showSnackBar(
+                              messenger.showKubusSnackBar(
                                 SnackBar(
                                   content: Text(l10n.commentEditFailedToast),
                                   backgroundColor: scheme.errorContainer,
@@ -745,10 +746,10 @@ class _DesktopArtworkDetailScreenState
       try {
         await provider.deleteArtworkComment(artworkId: artwork.id, commentId: comment.id);
         if (!mounted) return;
-        messenger.showSnackBar(SnackBar(content: Text(l10n.commentDeletedToast)));
+        messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commentDeletedToast)));
       } catch (_) {
         if (!mounted) return;
-        messenger.showSnackBar(
+        messenger.showKubusSnackBar(
           SnackBar(
             content: Text(l10n.commentDeleteFailedToast),
             backgroundColor: scheme.errorContainer,
@@ -969,7 +970,7 @@ class _DesktopArtworkDetailScreenState
     final l10n = AppLocalizations.of(context)!;
 
     if (!isSignedIn) {
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(l10n.communityCommentAuthRequiredToast,
               style: GoogleFonts.inter()),
@@ -1015,7 +1016,7 @@ class _DesktopArtworkDetailScreenState
           );
         }
       });
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content:
               Text(l10n.artworkCommentAddedToast, style: GoogleFonts.inter()),
@@ -1044,7 +1045,7 @@ class _DesktopArtworkDetailScreenState
           }
         }
         backendMessage = backendMessage?.replaceAll('â€¦', '…');
-        messenger.showSnackBar(
+        messenger.showKubusSnackBar(
           SnackBar(
             content: Text(
               authRequired
@@ -1070,7 +1071,7 @@ class _DesktopArtworkDetailScreenState
       );
     } catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
             content: Text(l10n.commonSomethingWentWrong,
                 style: GoogleFonts.inter())),

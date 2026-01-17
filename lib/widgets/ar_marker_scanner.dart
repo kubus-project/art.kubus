@@ -9,6 +9,7 @@ import '../providers/themeprovider.dart';
 import '../utils/app_color_utils.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../widgets/app_loading.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 /// Professional QR/Marker Scanner for AR Artwork Discovery
 class ARMarkerScanner extends StatefulWidget {
@@ -112,7 +113,7 @@ class _ARMarkerScannerState extends State<ARMarkerScanner>
       } else {
         // Unknown format
         if (mounted) {
-          messenger.showSnackBar(SnackBar(
+          messenger.showKubusSnackBar(SnackBar(
               content: Text(l10n.arMarkerScannerInvalidQrFormatToast)));
         }
         return;
@@ -121,7 +122,7 @@ class _ARMarkerScannerState extends State<ARMarkerScanner>
       // Validate required fields
       if (!artworkData.containsKey('modelUrl')) {
         if (mounted) {
-          messenger.showSnackBar(SnackBar(
+          messenger.showKubusSnackBar(SnackBar(
               content: Text(l10n.arMarkerScannerMissingModelUrlToast)));
         }
         return;
@@ -184,7 +185,7 @@ class _ARMarkerScannerState extends State<ARMarkerScanner>
         );
 
         if (!success && mounted) {
-          messenger.showSnackBar(
+          messenger.showKubusSnackBar(
             SnackBar(
               content: Text(l10n.arMarkerScannerLaunchFailedInstallPrompt),
               action: SnackBarAction(
@@ -200,7 +201,7 @@ class _ARMarkerScannerState extends State<ARMarkerScanner>
         debugPrint('ARMarkerScanner: Error processing QR code: $e');
       }
       if (mounted) {
-        messenger.showSnackBar(
+        messenger.showKubusSnackBar(
             SnackBar(content: Text(l10n.arMarkerScannerProcessingFailedToast)));
       }
     } finally {

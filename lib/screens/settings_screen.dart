@@ -31,6 +31,7 @@ import 'web3/wallet/mnemonic_reveal_screen.dart';
 import '../utils/app_animations.dart';
 import '../../config/config.dart';
 import '../providers/locale_provider.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -839,7 +840,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       final navigationProvider = Provider.of<NavigationProvider>(context, listen: false);
                       await navigationProvider.clearVisitData();
                       if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      ScaffoldMessenger.of(context).showKubusSnackBar(
                         SnackBar(content: Text(l10n.settingsDeveloperQuickActionsClearedToast)),
                       );
                     },
@@ -1440,7 +1441,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 });
                 await _saveAllSettings();
                 if (!mounted) return;
-                messenger.showSnackBar(
+                messenger.showKubusSnackBar(
                   SnackBar(content: Text(l10n.settingsSwitchedToNetworkToast('Mainnet'))),
                 );
               },
@@ -1461,7 +1462,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 });
                 await _saveAllSettings();
                 if (!mounted) return;
-                messenger.showSnackBar(
+                messenger.showKubusSnackBar(
                   SnackBar(content: Text(l10n.settingsSwitchedToNetworkToast('Devnet'))),
                 );
               },
@@ -1482,7 +1483,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 });
                 await _saveAllSettings();
                 if (!mounted) return;
-                messenger.showSnackBar(
+                messenger.showKubusSnackBar(
                   SnackBar(content: Text(l10n.settingsSwitchedToNetworkToast('Testnet'))),
                 );
               },
@@ -1565,7 +1566,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
 
     if (!web3Provider.isConnected) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(content: Text(l10n.settingsConnectWalletFirstToast)),
       );
       return;
@@ -1681,7 +1682,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     final l10n = AppLocalizations.of(context)!;
     final hasWallet = walletProvider.wallet != null || (walletProvider.currentWalletAddress ?? '').isNotEmpty;
     if (!hasWallet) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.settingsConnectOrCreateWalletFirstToast)));
+      ScaffoldMessenger.of(context).showKubusSnackBar(SnackBar(content: Text(l10n.settingsConnectOrCreateWalletFirstToast)));
       return;
     }
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MnemonicRevealScreen()));
@@ -1747,7 +1748,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 await _saveAllSettings();
                 if (!mounted) return;
                 navigator.pop();
-                messenger.showSnackBar(
+                messenger.showKubusSnackBar(
                   SnackBar(content: Text(l10n.settingsAutoLockSetToToast(displayLabel))),
                 );
               },
@@ -1765,7 +1766,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       final canUse = await walletProvider.canUseBiometrics();
       if (!canUse) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(content: Text(l10n.settingsBiometricUnavailableToast)),
           );
         }
@@ -1777,7 +1778,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       final ok = await walletProvider.authenticateWithBiometrics();
       if (!ok) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(content: Text(l10n.settingsBiometricFailedToast)),
           );
         }
@@ -1942,7 +1943,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               await walletProvider.clearPin();
               if (!mounted) return;
               navigator.pop();
-              messenger.showSnackBar(SnackBar(content: Text(l10n.settingsPinClearedToast)));
+              messenger.showKubusSnackBar(SnackBar(content: Text(l10n.settingsPinClearedToast)));
             },
             child: Text(l10n.settingsClearPinButton, style: GoogleFonts.inter(color: Theme.of(context).colorScheme.error)),
           ),
@@ -1954,21 +1955,21 @@ class _SettingsScreenState extends State<SettingsScreen>
               final pin = pinController.text.trim();
               final confirm = confirmController.text.trim();
               if (pin.length < 4 || confirm.length < 4) {
-                messenger.showSnackBar(SnackBar(content: Text(l10n.settingsPinMinLengthError)));
+                messenger.showKubusSnackBar(SnackBar(content: Text(l10n.settingsPinMinLengthError)));
                 return;
               }
               if (pin != confirm) {
-                messenger.showSnackBar(SnackBar(content: Text(l10n.settingsPinMismatchError)));
+                messenger.showKubusSnackBar(SnackBar(content: Text(l10n.settingsPinMismatchError)));
                 return;
               }
               try {
                 await walletProvider.setPin(pin);
                 if (!mounted) return;
                 navigator.pop();
-                messenger.showSnackBar(SnackBar(content: Text(l10n.settingsPinSetSuccessToast)));
+                messenger.showKubusSnackBar(SnackBar(content: Text(l10n.settingsPinSetSuccessToast)));
               } catch (e) {
                 if (!mounted) return;
-                messenger.showSnackBar(SnackBar(content: Text(l10n.settingsPinSetFailedToast)));
+                messenger.showKubusSnackBar(SnackBar(content: Text(l10n.settingsPinSetFailedToast)));
               }
             },
             child: Text(l10n.commonSave, style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onPrimary)),
@@ -2020,7 +2021,7 @@ class _SettingsScreenState extends State<SettingsScreen>
 
               if (!mounted) return;
               navigator.pop();
-              messenger.showSnackBar(
+              messenger.showKubusSnackBar(
                 SnackBar(content: Text(l10n.settingsCacheClearedToast)),
               );
             },
@@ -2063,7 +2064,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               Navigator.of(dialogContext).pop();
               await _resetPermissionFlags();
               if (!mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
+              ScaffoldMessenger.of(context).showKubusSnackBar(
                 SnackBar(content: Text(l10n.settingsPermissionFlagsResetToast)),
               );
             },
@@ -2138,7 +2139,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               
               if (!mounted) return;
               navigator.pop();
-              messenger.showSnackBar(
+              messenger.showKubusSnackBar(
                 SnackBar(content: Text(l10n.settingsDataExportedToast(exportData.length))),
               );
             },
@@ -2199,7 +2200,7 @@ class _SettingsScreenState extends State<SettingsScreen>
 
               if (!mounted) return;
               navigator.pop();
-              messenger.showSnackBar(
+              messenger.showKubusSnackBar(
                 SnackBar(
                   content: Text(l10n.settingsAppResetSuccessToast),
                   duration: const Duration(seconds: 3),
@@ -2300,7 +2301,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   await BackendApiService().deleteMyAccountData(walletAddress: wallet);
                 } catch (e) {
                   debugPrint('SettingsScreen: backend deletion failed: $e');
-                  messenger.showSnackBar(
+                  messenger.showKubusSnackBar(
                     SnackBar(content: Text(l10n.settingsDeleteAccountBackendFailedToast)),
                   );
                 }
@@ -2314,7 +2315,7 @@ class _SettingsScreenState extends State<SettingsScreen>
 
                 if (!mounted) return;
                 dialogNavigator.pop();
-                messenger.showSnackBar(
+                messenger.showKubusSnackBar(
                   SnackBar(
                     content: Text(l10n.settingsAccountDeletedToast),
                     duration: const Duration(seconds: 3),
@@ -2407,7 +2408,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       if (!granted) {
         if (mounted) {
           setState(() => _pushNotifications = false);
-          ScaffoldMessenger.of(context).showSnackBar(
+          ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(content: Text(l10n.settingsEnableNotificationsInSystemToast)),
           );
         }
@@ -2855,7 +2856,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
               onPressed: () {
                 Navigator.pop(dialogContext);
-                ScaffoldMessenger.of(rootContext).showSnackBar(
+                ScaffoldMessenger.of(rootContext).showKubusSnackBar(
                   SnackBar(content: Text(l10n.settingsOpeningFaqToast)),
                 );
               },
@@ -2873,7 +2874,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 Navigator.pop(dialogContext);
 
                 if (!AppConfig.isFeatureEnabled('supportTickets')) {
-                  messenger.showSnackBar(
+                  messenger.showKubusSnackBar(
                     SnackBar(content: Text(l10n.settingsOpeningEmailClientToast)),
                   );
                   return;
@@ -3000,7 +3001,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
             onPressed: () {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
+              ScaffoldMessenger.of(context).showKubusSnackBar(
                 SnackBar(content: Text(l10n.settingsOpeningAppStoreToast)),
               );
             },
@@ -3282,7 +3283,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 await _saveProfileVisibility(selectedVisibility);
                 if (!mounted) return;
                 navigator.pop();
-                ScaffoldMessenger.of(context).showSnackBar(
+                ScaffoldMessenger.of(context).showKubusSnackBar(
                   SnackBar(content: Text(l10n.settingsProfileVisibilitySetToast(displayVisibility))),
                 );
               },
@@ -3451,7 +3452,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 await _saveAllSettings();
                 if (!mounted) return;
                 navigator.pop();
-                ScaffoldMessenger.of(context).showSnackBar(
+                ScaffoldMessenger.of(context).showKubusSnackBar(
                   SnackBar(content: Text(l10n.settingsPrivacySettingsUpdatedToast)),
                 );
               },
@@ -3558,7 +3559,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 await _saveAllSettings();
                 if (!mounted) return;
                 navigator.pop();
-                ScaffoldMessenger.of(context).showSnackBar(
+                ScaffoldMessenger.of(context).showKubusSnackBar(
                   SnackBar(content: Text(l10n.settingsSecuritySettingsUpdatedToast)),
                 );
               },
@@ -3676,7 +3677,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 await _saveAllSettings();
                 if (!mounted) return;
                 navigator.pop();
-                messenger.showSnackBar(
+                messenger.showKubusSnackBar(
                   SnackBar(content: Text(l10n.settingsAccountSettingsUpdatedToast)),
                 );
               },
@@ -3747,7 +3748,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
             onPressed: () {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
+              ScaffoldMessenger.of(context).showKubusSnackBar(
                 SnackBar(content: Text(l10n.settingsPasswordUpdatedToast)),
               );
             },
@@ -3812,7 +3813,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
             onPressed: () {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
+              ScaffoldMessenger.of(context).showKubusSnackBar(
                 SnackBar(content: Text(l10n.settingsAccountDeactivatedToast)),
               );
             },

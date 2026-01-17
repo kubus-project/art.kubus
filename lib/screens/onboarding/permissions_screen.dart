@@ -9,16 +9,19 @@ import '../../widgets/inline_loading.dart';
 import '../../services/push_notification_service.dart';
 import '../../services/notification_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
 import '../../services/onboarding_state_service.dart';
 import '../../services/telemetry/telemetry_service.dart';
 import '../../widgets/app_logo.dart';
 import '../../widgets/gradient_icon_card.dart';
 import '../../screens/desktop/desktop_shell.dart';
+import '../../providers/profile_provider.dart';
 import '../desktop/onboarding/desktop_permissions_screen.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/design_tokens.dart';
 import '../../widgets/kubus_button.dart';
 import '../../widgets/glass_components.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class PermissionsScreen extends StatefulWidget {
   const PermissionsScreen({super.key});
@@ -722,7 +725,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
 
     if (nowGranted) {
       // Show success feedback
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(
             l10n.permissionsPermissionGrantedToast(_getPermissionName(l10n, type)),
@@ -827,7 +830,8 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
     unawaited(TelemetryService().trackOnboardingComplete(reason: 'permissions_complete'));
     
     if (mounted) {
-      Navigator.of(context).pushReplacementNamed('/main');
+      final isSignedIn = Provider.of<ProfileProvider>(context, listen: false).isSignedIn;
+      Navigator.of(context).pushReplacementNamed(isSignedIn ? '/main' : '/sign-in');
     }
   }
 }

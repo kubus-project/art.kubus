@@ -13,6 +13,7 @@ import '../../widgets/collaboration_panel.dart';
 import '../../widgets/detail/detail_shell_components.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/glass_components.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
  
 
 class ArtworkEditScreen extends StatefulWidget {
@@ -148,7 +149,7 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
       });
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(content: Text(l10n.commonActionFailedToast)),
       );
     }
@@ -171,7 +172,7 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
       });
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(content: Text(l10n.commonActionFailedToast)),
       );
     }
@@ -185,14 +186,14 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
     final provider = context.read<ArtworkProvider>();
     final artwork = provider.getArtworkById(widget.artworkId);
     if (artwork == null) {
-      messenger.showSnackBar(SnackBar(content: Text(l10n.commonSomethingWentWrong)));
+      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commonSomethingWentWrong)));
       return;
     }
 
     final title = _titleController.text.trim();
     final description = _descriptionController.text.trim();
     if (title.isEmpty || description.isEmpty) {
-      messenger.showSnackBar(SnackBar(content: Text(l10n.commonActionFailedToast)));
+      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commonActionFailedToast)));
       return;
     }
 
@@ -236,7 +237,7 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
     final nextPriceRaw = _priceController.text.trim();
     final nextPrice = nextPriceRaw.isEmpty ? null : double.tryParse(nextPriceRaw);
     if (nextPriceRaw.isNotEmpty && nextPrice == null) {
-      messenger.showSnackBar(SnackBar(content: Text(l10n.commonActionFailedToast)));
+      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commonActionFailedToast)));
       setState(() => _isSaving = false);
       return;
     }
@@ -247,7 +248,7 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
     final nextArScaleRaw = _arScaleController.text.trim();
     final nextArScale = nextArScaleRaw.isEmpty ? null : double.tryParse(nextArScaleRaw);
     if (nextArScaleRaw.isNotEmpty && nextArScale == null) {
-      messenger.showSnackBar(SnackBar(content: Text(l10n.commonActionFailedToast)));
+      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commonActionFailedToast)));
       setState(() => _isSaving = false);
       return;
     }
@@ -298,16 +299,16 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
       if (!mounted) return;
 
       if (updated == null) {
-        messenger.showSnackBar(SnackBar(content: Text(l10n.commonActionFailedToast)));
+        messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commonActionFailedToast)));
         setState(() => _isSaving = false);
         return;
       }
 
-      messenger.showSnackBar(SnackBar(content: Text(l10n.commonSavedToast)));
+      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commonSavedToast)));
       Navigator.of(context).pop();
     } catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(l10n.commonActionFailedToast)));
+      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commonActionFailedToast)));
       setState(() => _isSaving = false);
     }
   }

@@ -56,6 +56,7 @@ import '../../widgets/glass_components.dart';
 import '../../widgets/inline_progress.dart';
 import '../../providers/task_provider.dart';
 import '../../models/task.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
  
 
 /// Desktop map screen with Google Maps-style presentation
@@ -1066,7 +1067,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                                       : null);
                               if (modelUrl == null) {
                                 final l10n = AppLocalizations.of(context)!;
-                                messenger.showSnackBar(
+                                messenger.showKubusSnackBar(
                                   SnackBar(
                                     content:
                                         Text(l10n.desktopMapNoArAssetToast),
@@ -3684,7 +3685,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (!AppConfig.isFeatureEnabled('exhibitions') ||
         BackendApiService().exhibitionsApiAvailable == false) {
       if (isExhibitionMarker) {
-        messenger.showSnackBar(
+        messenger.showKubusSnackBar(
           SnackBar(
             content: Text(
               'Exhibition not available at the moment.',
@@ -3712,7 +3713,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (!mounted) return;
 
     if (fetched == null) {
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(
             'Exhibition not available at the moment.',
@@ -3858,7 +3859,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final l10n = AppLocalizations.of(context)!;
     final wallet = context.read<WalletProvider>().currentWalletAddress;
     if (wallet == null || wallet.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text(
             l10n.mapMarkerCreateWalletRequired,
@@ -3922,7 +3923,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (!mounted) return;
 
     if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Row(
             children: [
@@ -3942,7 +3943,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       );
       await _loadMarkers(force: true);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text(
             'Failed to create marker. Please try again.',
@@ -4043,7 +4044,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       return false;
     } on StateError catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
             content: Text(
               AppLocalizations.of(context)!.mapMarkerDuplicateToast,

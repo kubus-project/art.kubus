@@ -15,6 +15,7 @@ import '../../../utils/wallet_utils.dart';
 import '../../../config/config.dart';
 import '../../../utils/app_color_utils.dart';
 import '../../../utils/kubus_color_roles.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class GovernanceHub extends StatefulWidget {
   const GovernanceHub({super.key});
@@ -728,7 +729,7 @@ class _GovernanceHubState extends State<GovernanceHub>
     );
 
     if (!AppConfig.isFeatureEnabled('daoReviewDecisions')) {
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
             content:
                 Text(AppLocalizations.of(context)!.daoModerationDisabledToast)),
@@ -737,7 +738,7 @@ class _GovernanceHubState extends State<GovernanceHub>
     }
 
     if (reviewerWallet.isEmpty) {
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
             content: Text(AppLocalizations.of(context)!
                 .daoModerationWalletRequiredToast)),
@@ -746,7 +747,7 @@ class _GovernanceHubState extends State<GovernanceHub>
     }
 
     if (WalletUtils.equals(reviewerWallet, review.walletAddress)) {
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
             content: Text(AppLocalizations.of(context)!
                 .daoModerationSelfNotAllowedToast)),
@@ -767,7 +768,7 @@ class _GovernanceHubState extends State<GovernanceHub>
           );
       if (!mounted) return;
       final l10n = AppLocalizations.of(context)!;
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(
             updated != null
@@ -783,7 +784,7 @@ class _GovernanceHubState extends State<GovernanceHub>
         debugPrint('GovernanceHub: unable to update review: $e');
       }
       if (!mounted) return;
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(
               AppLocalizations.of(context)!.daoModerationUpdateFailedToast),
@@ -1501,7 +1502,7 @@ class _GovernanceHubState extends State<GovernanceHub>
     final l10n = AppLocalizations.of(context)!;
 
     if (_titleController.text.isEmpty || _descriptionController.text.isEmpty) {
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(l10n.daoProposalFillRequiredFieldsToast),
           backgroundColor: scheme.error,
@@ -1515,7 +1516,7 @@ class _GovernanceHubState extends State<GovernanceHub>
     final wallet = web3Provider.walletAddress;
 
     if (wallet.isEmpty) {
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.daoProposalWalletRequiredToast)),
       );
       return;
@@ -1555,7 +1556,7 @@ class _GovernanceHubState extends State<GovernanceHub>
 
       _clearForm();
       setState(() => _selectedIndex = 0);
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(l10n.daoProposalSubmittedToast),
           backgroundColor: scheme.surfaceContainerHighest,
@@ -1566,7 +1567,7 @@ class _GovernanceHubState extends State<GovernanceHub>
         debugPrint('GovernanceHub: unable to submit proposal: $e');
       }
       if (!mounted) return;
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(l10n.daoProposalSubmitFailedToast),
           backgroundColor: scheme.error,
@@ -2522,7 +2523,7 @@ class _GovernanceHubState extends State<GovernanceHub>
     // Here you would typically call a smart contract or API
     // For now, we'll simulate the delegation
 
-    ScaffoldMessenger.of(context).showSnackBar(
+    ScaffoldMessenger.of(context).showKubusSnackBar(
       SnackBar(
         content: Text(l10n.daoDelegationSuccessToast(delegateName)),
         backgroundColor: scheme.primary,
@@ -2636,7 +2637,7 @@ class _GovernanceHubState extends State<GovernanceHub>
 
   void _revokeDelegation() {
     final scheme = Theme.of(context).colorScheme;
-    ScaffoldMessenger.of(context).showSnackBar(
+    ScaffoldMessenger.of(context).showKubusSnackBar(
       SnackBar(
         content: Text(AppLocalizations.of(context)!.daoDelegationRevokedToast),
         backgroundColor: scheme.tertiary,
@@ -2646,7 +2647,7 @@ class _GovernanceHubState extends State<GovernanceHub>
 
   void _selfDelegate() {
     final scheme = Theme.of(context).colorScheme;
-    ScaffoldMessenger.of(context).showSnackBar(
+    ScaffoldMessenger.of(context).showKubusSnackBar(
       SnackBar(
         content:
             Text(AppLocalizations.of(context)!.daoSelfDelegationEnabledToast),
@@ -2663,7 +2664,7 @@ class _GovernanceHubState extends State<GovernanceHub>
     final scheme = Theme.of(context).colorScheme;
 
     if (wallet.isEmpty) {
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
             content:
                 Text(AppLocalizations.of(context)!.daoVoteWalletRequiredToast)),
@@ -2680,7 +2681,7 @@ class _GovernanceHubState extends State<GovernanceHub>
         walletAddress: wallet,
       );
       if (!mounted) return;
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(
             isYes
@@ -2695,7 +2696,7 @@ class _GovernanceHubState extends State<GovernanceHub>
         debugPrint('GovernanceHub: unable to submit vote: $e');
       }
       if (!mounted) return;
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(AppLocalizations.of(context)!.daoVoteSubmitFailedToast),
           backgroundColor: scheme.error,

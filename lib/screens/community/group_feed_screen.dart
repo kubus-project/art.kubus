@@ -31,6 +31,7 @@ import '../../widgets/empty_state_card.dart';
 import '../../widgets/inline_loading.dart';
 import 'post_detail_screen.dart';
 import 'user_profile_screen.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class GroupFeedScreen extends StatefulWidget {
   const GroupFeedScreen({super.key, required this.group});
@@ -365,7 +366,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final content = _composerController.text.trim();
     if (content.isEmpty) {
-      messenger.showSnackBar(SnackBar(content: Text(l10n.communityComposerAddContentToast)));
+      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.communityComposerAddContentToast)));
       return;
     }
 
@@ -402,7 +403,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
       });
       hub.setDraftSubject();
       hub.setDraftArtwork(null);
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(l10n.communityComposerPostCreatedToast),
           duration: const Duration(seconds: 2),
@@ -411,7 +412,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _posting = false);
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(l10n.communityComposerCreatePostFailedToast),
           duration: const Duration(seconds: 3),
@@ -439,7 +440,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
       }
       if (!mounted) return;
       final l10n = AppLocalizations.of(context)!;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(content: Text(l10n.communityGroupMembershipUpdateFailedToast)),
       );
     } finally {
@@ -767,7 +768,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
       if (!mounted) return;
       setState(() {});
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text(
             !wasLiked ? l10n.postDetailPostLikedToast : l10n.postDetailLikeRemovedToast,
@@ -781,7 +782,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
       }
       if (!mounted) return;
       setState(() {});
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text(l10n.communityToggleLikeFailedToast),
           duration: const Duration(seconds: 2),
@@ -799,7 +800,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
       await savedItemsProvider.setPostSaved(post.id, post.isBookmarked);
       if (!mounted) return;
       setState(() {});
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text(
             post.isBookmarked
@@ -814,7 +815,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
         debugPrint('GroupFeedScreen: bookmark toggle failed: $e');
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text(l10n.communityBookmarkUpdateFailedToast),
           duration: const Duration(seconds: 2),
@@ -1201,7 +1202,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                                 post.shareCount =
                                     (post.shareCount + 1).clamp(0, 1 << 30);
                               });
-                              messenger.showSnackBar(
+                              messenger.showKubusSnackBar(
                                 SnackBar(
                                   content: Text(
                                     content.isEmpty
@@ -1215,7 +1216,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                                 debugPrint('GroupFeedScreen: repost failed: $e');
                               }
                               if (!mounted) return;
-                              messenger.showSnackBar(
+                              messenger.showKubusSnackBar(
                                 SnackBar(
                                   content:
                                       Text(l10n.postDetailRepostFailedToast),
@@ -1353,7 +1354,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
       final hub = Provider.of<CommunityHubProvider>(context, listen: false);
       final groupId = post.groupId ?? _group.id;
       hub.removeGroupPost(groupId, post.id);
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.communityRepostRemovedToast)),
       );
     } catch (e) {
@@ -1361,7 +1362,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
         debugPrint('GroupFeedScreen: unrepost failed: $e');
       }
       if (!mounted) return;
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.communityUnrepostFailedToast)),
       );
     }

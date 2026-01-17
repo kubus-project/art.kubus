@@ -29,6 +29,7 @@ import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../widgets/glass_components.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
  
 
 class ArtDetailScreen extends StatefulWidget {
@@ -668,7 +669,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                               ? await provider.unpublishArtwork(artwork.id)
                               : await provider.publishArtwork(artwork.id);
                           if (!mounted) return;
-                          messenger.showSnackBar(
+                          messenger.showKubusSnackBar(
                             SnackBar(
                               content: Text(
                                 updated != null ? l10n.commonSavedToast : l10n.commonActionFailedToast,
@@ -677,7 +678,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                           );
                         } catch (_) {
                           if (!mounted) return;
-                          messenger.showSnackBar(
+                          messenger.showKubusSnackBar(
                             SnackBar(content: Text(l10n.commonActionFailedToast)),
                           );
                         }
@@ -968,14 +969,14 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                                                 }
                                                 Navigator.of(dialogContext)
                                                     .pop();
-                                                messenger.showSnackBar(
+                                                messenger.showKubusSnackBar(
                                                   SnackBar(
                                                       content: Text(l10n
                                                           .commentUpdatedToast)),
                                                 );
                                               } catch (_) {
                                                 if (!mounted) return;
-                                                messenger.showSnackBar(
+                                                messenger.showKubusSnackBar(
                                                   SnackBar(
                                                     content: Text(l10n
                                                         .commentEditFailedToast),
@@ -1037,12 +1038,12 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                             commentId: comment.id,
                           );
                           if (!mounted) return;
-                          messenger.showSnackBar(
+                          messenger.showKubusSnackBar(
                             SnackBar(content: Text(l10n.commentDeletedToast)),
                           );
                         } catch (_) {
                           if (!mounted) return;
-                          messenger.showSnackBar(
+                          messenger.showKubusSnackBar(
                             SnackBar(
                               content: Text(l10n.commentDeleteFailedToast),
                               backgroundColor: scheme.errorContainer,
@@ -1325,7 +1326,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
     if (!profileProvider.isSignedIn) {
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(l10n.communityCommentAuthRequiredToast,
               style: GoogleFonts.outfit()),
@@ -1364,7 +1365,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
       _commentController.clear();
       navigator.pop();
 
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content:
               Text(l10n.artworkCommentAddedToast, style: GoogleFonts.outfit()),
@@ -1402,7 +1403,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
           ? l10n.communityCommentAuthRequiredToast
           : (backendMessage ??
               '${l10n.commonSomethingWentWrong} (${e.statusCode})');
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(
             fallbackMessage,
@@ -1436,7 +1437,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
           raw.contains('Connection refused') ||
           raw.contains('NetworkError') ||
           raw.contains('CORS');
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(
             looksLikeNetwork
@@ -1671,7 +1672,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     await Clipboard.setData(ClipboardData(text: coordinates));
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text(
             'Coordinates copied to clipboard: $coordinates',
@@ -1725,7 +1726,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
 
     if (userId == null || walletAddress == null) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
             content: Text('Please connect your wallet first',
                 style: GoogleFonts.outfit()),
@@ -1970,7 +1971,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         Navigator.pop(context); // Close progress dialog
 
         if (result.success) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(
               content: Row(
                 children: [
@@ -1989,7 +1990,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
             ),
           );
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
+          ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(
               content: Text(
                 'Failed to mint NFT: ${result.error}',
@@ -2004,7 +2005,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     } catch (e) {
       if (mounted) {
         Navigator.pop(context); // Close progress dialog
-        ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
             content: Text(
               'Error minting NFT: $e',

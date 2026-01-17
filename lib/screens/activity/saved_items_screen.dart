@@ -9,6 +9,7 @@ import '../../community/community_interactions.dart';
 import '../../services/backend_api_service.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/artwork_navigation.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 enum SavedItemsCategory { artworks, posts, all }
 
@@ -949,7 +950,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
               }
               Navigator.pop(context);
               
-              ScaffoldMessenger.of(context).showSnackBar(
+              ScaffoldMessenger.of(context).showKubusSnackBar(
                 SnackBar(
                   content: Text('Removed from saved items'),
                   duration: const Duration(seconds: 2),
@@ -995,7 +996,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
               savedProvider.clearAll();
               Navigator.pop(context);
               
-              ScaffoldMessenger.of(context).showSnackBar(
+              ScaffoldMessenger.of(context).showKubusSnackBar(
                 const SnackBar(
                   content: Text('All saved items cleared'),
                   duration: Duration(seconds: 2),

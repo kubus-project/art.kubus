@@ -10,6 +10,7 @@ import '../screens/web3/wallet/wallet_home.dart';
 import '../screens/web3/achievements/achievements_page.dart';
 import '../screens/web3/marketplace/marketplace.dart';
 import 'artwork_navigation.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class ActivityNavigation {
   ActivityNavigation._();
@@ -81,7 +82,7 @@ class ActivityNavigation {
       }
     }
 
-    messenger.showSnackBar(
+    messenger.showKubusSnackBar(
       SnackBar(content: Text(l10n.activityNavigationUnableToOpenToast)),
     );
     return false;

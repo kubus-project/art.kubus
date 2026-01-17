@@ -600,8 +600,17 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     required bool includeAuth,
   }) {
     if (!includeAuth) return headers;
-    if ((_authToken ?? '').isEmpty) return headers;
-    headers.putIfAbsent('Authorization', () => 'Bearer $_authToken');
+    final token = (_authToken ?? '').trim();
+    if (token.isEmpty) {
+      headers.remove('Authorization');
+      return headers;
+    }
+
+    // Always refresh the Authorization header from the current in-memory token.
+    // This matters for re-auth retries: callers often pass a precomputed headers
+    // map (containing an expired token). If we keep it, retries will keep
+    // sending the stale token even after a successful re-auth.
+    headers['Authorization'] = 'Bearer $token';
     return headers;
   }
 

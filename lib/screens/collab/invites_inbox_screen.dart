@@ -9,6 +9,7 @@ import '../art/collection_detail_screen.dart';
 import '../events/event_detail_screen.dart';
 import '../events/exhibition_detail_screen.dart';
 import '../../widgets/avatar_widget.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class InvitesInboxScreen extends StatefulWidget {
   const InvitesInboxScreen({super.key});
@@ -123,9 +124,9 @@ class _InvitesInboxScreenState extends State<InvitesInboxScreen> {
     try {
       await provider.acceptInvite(invite.id);
       if (!mounted) return;
-      messenger.showSnackBar(const SnackBar(content: Text('Invite accepted.')));
+      messenger.showKubusSnackBar(const SnackBar(content: Text('Invite accepted.')));
     } catch (_) {
-      messenger.showSnackBar(const SnackBar(content: Text('Could not accept invite.')));
+      messenger.showKubusSnackBar(const SnackBar(content: Text('Could not accept invite.')));
     }
   }
 
@@ -136,9 +137,9 @@ class _InvitesInboxScreenState extends State<InvitesInboxScreen> {
     try {
       await provider.declineInvite(invite.id);
       if (!mounted) return;
-      messenger.showSnackBar(const SnackBar(content: Text('Invite declined.')));
+      messenger.showKubusSnackBar(const SnackBar(content: Text('Invite declined.')));
     } catch (_) {
-      messenger.showSnackBar(const SnackBar(content: Text('Could not decline invite.')));
+      messenger.showKubusSnackBar(const SnackBar(content: Text('Could not decline invite.')));
     }
   }
 
@@ -147,7 +148,7 @@ class _InvitesInboxScreenState extends State<InvitesInboxScreen> {
     final id = invite.entityId;
 
     if (id.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         const SnackBar(content: Text('This invite is missing an item id.')),
       );
       return;
@@ -179,7 +180,7 @@ class _InvitesInboxScreenState extends State<InvitesInboxScreen> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
+    ScaffoldMessenger.of(context).showKubusSnackBar(
       SnackBar(content: Text('Don\'t know how to open ${invite.entityType}.')),
     );
   }

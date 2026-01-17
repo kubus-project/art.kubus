@@ -362,6 +362,151 @@ class LiquidGlassPanel extends StatelessWidget {
   }
 }
 
+/// A card-flavored alias of [LiquidGlassPanel] that uses the app's card radius
+/// and a slightly calmer blur by default.
+///
+/// This is intentionally a thin wrapper so the glass logic stays in one place.
+class LiquidGlassCard extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry? padding;
+  final EdgeInsetsGeometry? margin;
+  final BorderRadius? borderRadius;
+  final double blurSigma;
+  final bool showBorder;
+  final Color? backgroundColor;
+  final VoidCallback? onTap;
+
+  const LiquidGlassCard({
+    super.key,
+    required this.child,
+    this.padding,
+    this.margin,
+    this.borderRadius,
+    this.blurSigma = KubusGlassEffects.blurSigmaLight,
+    this.showBorder = true,
+    this.backgroundColor,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LiquidGlassPanel(
+      padding: padding,
+      margin: margin,
+      borderRadius: borderRadius ?? BorderRadius.circular(KubusRadius.md),
+      blurSigma: blurSigma,
+      showBorder: showBorder,
+      backgroundColor: backgroundColor,
+      onTap: onTap,
+      child: child,
+    );
+  }
+}
+
+/// A lightweight frosted container used for small floating UI (badges, chips,
+/// info panels). Defaults are tuned for compact content.
+class FrostedContainer extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry? padding;
+  final EdgeInsetsGeometry? margin;
+  final BorderRadius? borderRadius;
+  final double blurSigma;
+  final bool showBorder;
+  final Color? backgroundColor;
+  final VoidCallback? onTap;
+
+  const FrostedContainer({
+    super.key,
+    required this.child,
+    this.padding,
+    this.margin,
+    this.borderRadius,
+    this.blurSigma = KubusGlassEffects.blurSigmaLight,
+    this.showBorder = true,
+    this.backgroundColor,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LiquidGlassPanel(
+      padding: padding ?? const EdgeInsets.all(KubusSpacing.sm),
+      margin: margin,
+      borderRadius: borderRadius ?? BorderRadius.circular(KubusRadius.sm),
+      blurSigma: blurSigma,
+      showBorder: showBorder,
+      backgroundColor: backgroundColor,
+      onTap: onTap,
+      child: child,
+    );
+  }
+}
+
+/// A glass wrapper suitable for bottom sheets and floating "sheet" surfaces.
+///
+/// Use inside `showModalBottomSheet` builders so the sheet inherits the app's
+/// glass rules (blur, border, opacity) without re-implementing them.
+class BackdropGlassSheet extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry? padding;
+  final BorderRadius? borderRadius;
+  final double blurSigma;
+  final Color? backgroundColor;
+  final bool showBorder;
+  final bool showHandle;
+
+  const BackdropGlassSheet({
+    super.key,
+    required this.child,
+    this.padding,
+    this.borderRadius,
+    this.blurSigma = KubusGlassEffects.blurSigmaHeavy,
+    this.backgroundColor,
+    this.showBorder = true,
+    this.showHandle = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final effectiveRadius = borderRadius ??
+        const BorderRadius.vertical(
+          top: Radius.circular(KubusRadius.xl),
+        );
+
+    return SafeArea(
+      top: false,
+      child: LiquidGlassPanel(
+        padding: padding ?? const EdgeInsets.all(KubusSpacing.lg),
+        margin: EdgeInsets.zero,
+        borderRadius: effectiveRadius,
+        blurSigma: blurSigma,
+        showBorder: showBorder,
+        backgroundColor: backgroundColor,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (showHandle) ...[
+              Container(
+                height: KubusSpacing.xs,
+                width: KubusSpacing.xl,
+                decoration: BoxDecoration(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(KubusRadius.xl),
+                ),
+              ),
+              const SizedBox(height: KubusSpacing.md),
+            ],
+            child,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// A frosted glass modal wrapper for dialogs and overlays
 class FrostedModal extends StatelessWidget {
   final Widget child;

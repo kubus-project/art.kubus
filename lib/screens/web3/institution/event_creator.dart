@@ -9,6 +9,7 @@ import '../../../providers/profile_provider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/wallet_utils.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class EventCreator extends StatefulWidget {
   final Event? initialEvent;
@@ -1020,7 +1021,7 @@ class _EventCreatorState extends State<EventCreator>
         return _formKey.currentState?.validate() ?? false;
       case 1:
         if (_startDate == null || _endDate == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(content: Text(l10n.eventCreatorSelectStartEndDatesToast)),
           );
           return false;
@@ -1028,7 +1029,7 @@ class _EventCreatorState extends State<EventCreator>
         return true;
       case 2:
         if (_capacityController.text.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(content: Text(l10n.eventCreatorEnterCapacityToast)),
           );
           return false;
@@ -1052,7 +1053,7 @@ class _EventCreatorState extends State<EventCreator>
             (institutions.isNotEmpty ? institutions.first.id : null);
 
     if (institutionId == null || institutionId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(content: Text(l10n.eventCreatorNoInstitutionAvailableToast)),
       );
       return;
@@ -1060,7 +1061,7 @@ class _EventCreatorState extends State<EventCreator>
 
     final institution = provider.getInstitutionById(institutionId);
     if (institution == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
             content: Text(l10n.eventCreatorSelectedInstitutionNotFoundToast)),
       );
@@ -1070,7 +1071,7 @@ class _EventCreatorState extends State<EventCreator>
     final startDate = _startDate;
     final endDate = _endDate;
     if (startDate == null || endDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(content: Text(l10n.eventCreatorSelectStartEndDatesToast)),
       );
       return;
@@ -1084,7 +1085,7 @@ class _EventCreatorState extends State<EventCreator>
     final endAt = DateTime(
         endDate.year, endDate.month, endDate.day, endTime.hour, endTime.minute);
     if (!endAt.isAfter(startAt)) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(content: Text(l10n.eventCreatorEndTimeAfterStartToast)),
       );
       return;
@@ -1182,7 +1183,7 @@ class _EventCreatorState extends State<EventCreator>
         debugPrint('EventCreator: Failed to save event: $e');
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
             content: Text(
                 AppLocalizations.of(context)!.eventCreatorSaveFailedToast)),

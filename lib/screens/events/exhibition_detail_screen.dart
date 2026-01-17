@@ -18,6 +18,7 @@ import '../../utils/media_url_resolver.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../widgets/detail/detail_shell_components.dart';
 import '../../utils/artwork_navigation.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class ExhibitionDetailScreen extends StatefulWidget {
   final String exhibitionId;
@@ -88,7 +89,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       await provider.updateExhibition(
           exhibition.id, <String, dynamic>{'status': nextStatus});
       if (!mounted) return;
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(l10n.commonSavedToast, style: GoogleFonts.inter()),
           behavior: SnackBarBehavior.floating,
@@ -96,7 +97,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       );
     } catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content:
               Text(l10n.commonActionFailedToast, style: GoogleFonts.inter()),
@@ -125,7 +126,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       if (!mounted) return;
 
       if (bytes == null || bytes.isEmpty) {
-        messenger.showSnackBar(
+        messenger.showKubusSnackBar(
           SnackBar(
             content:
                 Text(l10n.commonActionFailedToast, style: GoogleFonts.inter()),
@@ -143,7 +144,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       if (!mounted) return;
 
       if (url == null || url.isEmpty) {
-        messenger.showSnackBar(
+        messenger.showKubusSnackBar(
           SnackBar(
             content:
                 Text(l10n.commonActionFailedToast, style: GoogleFonts.inter()),
@@ -158,7 +159,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
           .updateExhibition(exhibition.id, <String, dynamic>{'coverUrl': url});
 
       if (!mounted) return;
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(l10n.commonSavedToast, style: GoogleFonts.inter()),
           behavior: SnackBarBehavior.floating,
@@ -166,7 +167,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       );
     } catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content:
               Text(l10n.commonActionFailedToast, style: GoogleFonts.inter()),
@@ -240,7 +241,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
         List<Artwork>.from(artworkProvider.artworks.where(isMemberOwned));
     if (artworks.isEmpty) {
       if (mounted) {
-        messenger.showSnackBar(
+        messenger.showKubusSnackBar(
           SnackBar(
             content: Text(l10n.exhibitionDetailNoArtworksAvailableToLinkToast,
                 style: GoogleFonts.inter()),
@@ -320,7 +321,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
     try {
       await exhibitionsProvider.linkExhibitionArtworks(
           exhibition.id, selectedIds.toList());
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(l10n.exhibitionDetailArtworksLinkedToast,
               style: GoogleFonts.inter()),
@@ -328,7 +329,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
         ),
       );
     } catch (_) {
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(l10n.exhibitionDetailLinkArtworksFailedToast,
               style: GoogleFonts.inter()),

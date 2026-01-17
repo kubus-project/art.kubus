@@ -10,6 +10,7 @@ import '../../../utils/kubus_color_roles.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../../widgets/empty_state_card.dart';
 import 'event_creator.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class EventManager extends StatefulWidget {
   const EventManager({super.key});
@@ -714,7 +715,7 @@ class _EventManagerState extends State<EventManager>
             onPressed: () {
               context.read<InstitutionProvider>().deleteEvent(event.id);
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
+              ScaffoldMessenger.of(context).showKubusSnackBar(
                 SnackBar(content: Text('${event.title} deleted')),
               );
             },

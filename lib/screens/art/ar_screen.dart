@@ -31,6 +31,7 @@ import '../../community/community_interactions.dart';
 import '../../utils/marker_subject_utils.dart';
 import '../download_app_screen.dart';
 import '../community/profile_screen_methods.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 /// AR Screen with seamless Android and iOS support
 /// On web, redirects to download app screen
@@ -226,7 +227,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       _arIntegrationService.onMarkerActivated = (marker) {
         if (!mounted) return;
         final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
             content: Text(l10n.arMarkerNearbyToast(marker.name)),
             action: SnackBarAction(
@@ -591,7 +592,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                           );
 
                           if (!mounted) return;
-                          messenger.showSnackBar(
+                          messenger.showKubusSnackBar(
                             SnackBar(
                               content: Text(l10n.arModelLoadedToast),
                               backgroundColor: scheme.primary,
@@ -602,7 +603,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                             debugPrint('ARScreen: Failed to load AR model: $e');
                           }
                           if (!mounted) return;
-                          messenger.showSnackBar(
+                          messenger.showKubusSnackBar(
                             SnackBar(
                               content: Text(l10n.arModelLoadFailedToast),
                               backgroundColor: scheme.error,
@@ -751,7 +752,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         if (kDebugMode) {
           debugPrint('ARScreen: Error placing artwork: $e');
         }
-        messenger.showSnackBar(
+        messenger.showKubusSnackBar(
           SnackBar(
             content: Text(l10n.arPlaceArtworkFailedToast),
             backgroundColor: scheme.error,
@@ -963,7 +964,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       debugPrint('ARScreen: Object placed: $objectId');
     }
     final l10n = AppLocalizations.of(context)!;
-    ScaffoldMessenger.of(context).showSnackBar(
+    ScaffoldMessenger.of(context).showKubusSnackBar(
       SnackBar(
         content: Text(l10n.arArtworkPlacedToast),
         backgroundColor: Theme.of(context).colorScheme.primary,
@@ -1080,7 +1081,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                           // Show snackbar after navigation completes and context is still mounted
                           WidgetsBinding.instance.addPostFrameCallback((_) {
                             if (mounted && context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              ScaffoldMessenger.of(context).showKubusSnackBar(
                                 SnackBar(
                                   content: Text(
                                     l10n.arSelectedArtworkToast(
@@ -1110,7 +1111,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     if (_selectedArtwork == null) {
       if (_mockArtworks.isEmpty) {
         final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
             content: Text(l10n.arSelectArtworkBeforePlacingToast),
             backgroundColor: Theme.of(context).colorScheme.error,
@@ -1145,7 +1146,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   void _viewArtworkDetails() {
     if (_placedObjects.isEmpty) {
       final l10n = AppLocalizations.of(context)!;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(content: Text(l10n.arNoPlacedArtworksToast)),
       );
       return;
@@ -1200,7 +1201,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                               _placedObjects.removeAt(index);
                             });
                             Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(
+                            ScaffoldMessenger.of(context).showKubusSnackBar(
                               SnackBar(
                                   content: Text(l10n.arArtworkRemovedToast)),
                             );
@@ -1228,7 +1229,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     final colorScheme = Theme.of(context).colorScheme;
     final location = _currentLocation;
     if (location == null) {
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(l10n.arLocationUnavailableToast),
           backgroundColor: colorScheme.error,
@@ -1344,7 +1345,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       }
       if (subjectSelectionRequired(selectedSubjectType) &&
           selectedSubject == null) {
-        messenger.showSnackBar(
+        messenger.showKubusSnackBar(
           SnackBar(
             content: Text(l10n.arSelectSubjectBeforeMarkerToast),
             backgroundColor: colorScheme.error,
@@ -1384,7 +1385,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
 
         if (selectedArtwork == null) {
           refresh(() => isSubmitting = false);
-          messenger.showSnackBar(
+          messenger.showKubusSnackBar(
             SnackBar(
               content: Text(l10n.arSelectedArtworkUnavailableToast),
               backgroundColor: colorScheme.error,
@@ -1411,7 +1412,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
 
         if (marker == null) {
           refresh(() => isSubmitting = false);
-          messenger.showSnackBar(
+          messenger.showKubusSnackBar(
             SnackBar(
               content: Text(l10n.arUploadFailedToast),
               backgroundColor: colorScheme.error,
@@ -1447,7 +1448,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
           _currentMode = 'place';
         });
 
-        messenger.showSnackBar(
+        messenger.showKubusSnackBar(
           SnackBar(
             content: Text(l10n.arMarkerCreatedSwitchToPlaceToast),
             backgroundColor: colorScheme.primary,
@@ -1458,7 +1459,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
           debugPrint('ARScreen: Failed to create AR marker: $e');
         }
         refresh(() => isSubmitting = false);
-        messenger.showSnackBar(
+        messenger.showKubusSnackBar(
           SnackBar(
             content: Text(l10n.arCreateMarkerFailedToast),
             backgroundColor: colorScheme.error,
@@ -2183,7 +2184,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
 
     if (!mounted) return;
     final isLiked = _likedArtworks.contains(artwork['id']);
-    messenger.showSnackBar(
+    messenger.showKubusSnackBar(
       SnackBar(
         content: Row(
           children: [
@@ -2242,7 +2243,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
 
     if (!mounted) return;
     final isSaved = _savedArtworks.contains(artwork['id']);
-    messenger.showSnackBar(
+    messenger.showKubusSnackBar(
       SnackBar(
         content: Row(
           children: [
@@ -2359,7 +2360,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                 debugPrint('ARScreen: Flash toggle failed: $e');
                               }
                               if (!context.mounted) return;
-                              messenger.showSnackBar(
+                              messenger.showKubusSnackBar(
                                 SnackBar(
                                   content: Text(l10n.arFlashNotAvailableToast),
                                 ),
@@ -2378,7 +2379,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                           style: GoogleFonts.inter(fontSize: 12)),
                       onTap: () {
                         Navigator.pop(context);
-                        messenger.showSnackBar(
+                        messenger.showKubusSnackBar(
                           SnackBar(
                             content: Text(l10n.arScannerOverlayResetToast),
                           ),
@@ -2485,7 +2486,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                     onTap: () {
                       setState(() => _placedObjects.clear());
                       Navigator.pop(context);
-                      messenger.showSnackBar(
+                      messenger.showKubusSnackBar(
                         SnackBar(content: Text(l10n.arAllArtworksClearedToast)),
                       );
                     },
@@ -2499,7 +2500,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                     onTap: () {
                       Navigator.pop(context);
                       _initializeAR();
-                      messenger.showSnackBar(
+                      messenger.showKubusSnackBar(
                         SnackBar(content: Text(l10n.arSessionResetToast)),
                       );
                     },

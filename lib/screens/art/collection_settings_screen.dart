@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/app_color_utils.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class CollectionSettingsScreen extends StatefulWidget {
   final int collectionIndex;
@@ -488,7 +489,7 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
 
   void _saveSettings() {
     final l10n = AppLocalizations.of(context)!;
-    ScaffoldMessenger.of(context).showSnackBar(
+    ScaffoldMessenger.of(context).showKubusSnackBar(
       SnackBar(
         content: Text(l10n.collectionSettingsSavedToast(_nameController.text)),
         backgroundColor: Colors.green,
@@ -518,7 +519,7 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
                 Navigator.pop(dialogContext); // Close dialog
                 Navigator.pop(context); // Close settings
                 Navigator.pop(context); // Close collection detail
-                ScaffoldMessenger.of(context).showSnackBar(
+                ScaffoldMessenger.of(context).showKubusSnackBar(
                   SnackBar(
                     content: Text(l10n.collectionSettingsDeletedToast),
                     backgroundColor: Colors.red,

@@ -10,6 +10,7 @@ import '../providers/collab_provider.dart';
 import '../services/backend_api_service.dart';
 import '../utils/user_profile_navigation.dart';
 import '../widgets/avatar_widget.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class CollaborationPanel extends StatefulWidget {
   final String entityType;
@@ -185,7 +186,7 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
     final identifier = raw.replaceFirst(RegExp(r'^@+'), '').trim();
 
     if (identifier.isEmpty) {
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: const Text('Enter a username or email.'),
           backgroundColor: scheme.surface,
@@ -198,7 +199,7 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
     // If it looks like a wallet address, nudge the user to use a username/email.
     final looksLikeWallet = identifier.length >= 32 && !identifier.contains('@');
     if (looksLikeWallet) {
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: const Text('Use a username or email to invite someone.'),
           backgroundColor: scheme.surface,
@@ -220,14 +221,14 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
         _suggestions = <_ProfileSuggestion>[];
         _inviteRole = 'viewer';
       });
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: const Text('Invite sent.'),
           backgroundColor: scheme.surface,
         ),
       );
     } catch (_) {
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: const Text('Could not send invite. Try again.'),
           backgroundColor: scheme.surface,
@@ -251,9 +252,9 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
         role: newRole,
       );
       if (!mounted) return;
-      messenger.showSnackBar(const SnackBar(content: Text('Role updated.')));
+      messenger.showKubusSnackBar(const SnackBar(content: Text('Role updated.')));
     } catch (_) {
-      messenger.showSnackBar(const SnackBar(content: Text('Could not update role.')));
+      messenger.showKubusSnackBar(const SnackBar(content: Text('Could not update role.')));
     }
   }
 
@@ -286,9 +287,9 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
         entityId: widget.entityId,
         memberUserId: member.userId,
       );
-      messenger.showSnackBar(const SnackBar(content: Text('Removed.')));
+      messenger.showKubusSnackBar(const SnackBar(content: Text('Removed.')));
     } catch (_) {
-      messenger.showSnackBar(const SnackBar(content: Text('Could not remove collaborator.')));
+      messenger.showKubusSnackBar(const SnackBar(content: Text('Could not remove collaborator.')));
     }
   }
 

@@ -11,6 +11,7 @@ import '../../config/config.dart';
 import '../../providers/exhibitions_provider.dart';
 import 'exhibition_detail_screen.dart';
 import '../../widgets/glass_components.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
  
 
 class ExhibitionCreatorScreen extends StatefulWidget {
@@ -59,7 +60,7 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
       if (!mounted) return;
 
       if (bytes == null || bytes.isEmpty) {
-        messenger.showSnackBar(
+        messenger.showKubusSnackBar(
           SnackBar(content: Text(l10n.commonActionFailedToast)),
         );
         return;
@@ -71,7 +72,7 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
       });
     } catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.commonActionFailedToast)),
       );
     }
@@ -318,7 +319,7 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
     final locationName = _locationController.text.trim();
 
     if (_endsAt != null && _startsAt != null && _endsAt!.isBefore(_startsAt!)) {
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.exhibitionCreatorEndDateAfterStartError)),
       );
       return;
@@ -335,7 +336,7 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
         );
         if (!mounted) return;
         if (coverUrl == null || coverUrl.isEmpty) {
-          messenger.showSnackBar(
+          messenger.showKubusSnackBar(
             SnackBar(content: Text(l10n.commonActionFailedToast)),
           );
           return;
@@ -356,7 +357,7 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
       if (!mounted) return;
 
       if (created == null) {
-        messenger.showSnackBar(SnackBar(content: Text(l10n.exhibitionCreatorCreateFailed)));
+        messenger.showKubusSnackBar(SnackBar(content: Text(l10n.exhibitionCreatorCreateFailed)));
         return;
       }
 
@@ -370,7 +371,7 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.exhibitionCreatorCreateFailedWithError(e))),
       );
     } finally {

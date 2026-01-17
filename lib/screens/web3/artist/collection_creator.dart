@@ -9,6 +9,7 @@ import 'dart:typed_data';
 import '../../../services/backend_api_service.dart';
 import '../../../providers/collections_provider.dart';
 import '../../../utils/kubus_color_roles.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class CollectionCreator extends StatefulWidget {
   final void Function(String collectionId)? onCreated;
@@ -61,7 +62,7 @@ class _CollectionCreatorState extends State<CollectionCreator> {
         );
         if (!mounted) return;
         if (thumbnailUrl == null || thumbnailUrl.isEmpty) {
-          messenger.showSnackBar(
+          messenger.showKubusSnackBar(
             SnackBar(content: Text(l10n.commonActionFailedToast)),
           );
           return;
@@ -82,7 +83,7 @@ class _CollectionCreatorState extends State<CollectionCreator> {
       if (!mounted) return;
 
       if (id == null || id.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(content: Text(l10n.collectionCreatorCreateFailed)),
         );
         return;
@@ -95,7 +96,7 @@ class _CollectionCreatorState extends State<CollectionCreator> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(content: Text(l10n.collectionCreatorCreateFailedWithError(e))),
       );
     } finally {
@@ -182,7 +183,7 @@ class _CollectionCreatorState extends State<CollectionCreator> {
                             final bytes = file?.bytes;
                             if (!mounted) return;
                             if (bytes == null || bytes.isEmpty) {
-                              messenger.showSnackBar(
+                              messenger.showKubusSnackBar(
                                 SnackBar(content: Text(failedToast)),
                               );
                               return;

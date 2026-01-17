@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../services/backend_api_service.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class SupportTicketDialog extends StatefulWidget {
   final String? initialEmail;
@@ -62,10 +63,10 @@ class _SupportTicketDialogState extends State<SupportTicketDialog> {
 
       if (!mounted) return;
       navigator.pop(true);
-      messenger.showSnackBar(SnackBar(content: Text(l10n.commonSavedToast)));
+      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commonSavedToast)));
     } catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(l10n.commonActionFailedToast)));
+      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commonActionFailedToast)));
     } finally {
       if (mounted) {
         setState(() => _submitting = false);

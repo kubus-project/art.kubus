@@ -18,6 +18,7 @@ import '../../providers/tile_providers.dart';
 import '../../utils/map_marker_subject_loader.dart';
 import '../../utils/marker_subject_utils.dart';
 import '../../widgets/art_map_view.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class MarkerEditorView extends StatefulWidget {
   const MarkerEditorView({
@@ -435,12 +436,12 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
     final lat = double.tryParse(_latController.text.trim());
     final lng = double.tryParse(_lngController.text.trim());
     if (lat == null || lng == null || !_validateLatLng(lat, lng)) {
-      messenger.showSnackBar(SnackBar(content: Text(l10n.mapMarkerDialogValidLatitudeError)));
+      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.mapMarkerDialogValidLatitudeError)));
       return;
     }
 
     if (_subjectSelectionRequired(_subjectType) && _subject == null) {
-      messenger.showSnackBar(SnackBar(content: Text(l10n.mapMarkerDialogSelectSubjectToast)));
+      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.mapMarkerDialogSelectSubjectToast)));
       return;
     }
 
@@ -516,7 +517,7 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
 
       if (!mounted) return;
       if (saved == null) {
-        messenger.showSnackBar(SnackBar(content: Text(l10n.manageMarkersSaveFailed)));
+        messenger.showKubusSnackBar(SnackBar(content: Text(l10n.manageMarkersSaveFailed)));
         return;
       }
 
@@ -553,13 +554,13 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
         }
       }
 
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(content: Text(widget.isNew ? l10n.manageMarkersCreatedToast : l10n.manageMarkersUpdatedToast)),
       );
       widget.onSaved?.call(saved);
     } catch (e) {
       if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(l10n.manageMarkersSaveFailed)));
+      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.manageMarkersSaveFailed)));
       if (kDebugMode) {
         debugPrint('MarkerEditorView: save failed: $e');
       }
@@ -603,10 +604,10 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
       final ok = await markerProvider.deleteMarker(marker.id);
       if (!mounted) return;
       if (!ok) {
-        messenger.showSnackBar(SnackBar(content: Text(l10n.manageMarkersDeleteFailed)));
+        messenger.showKubusSnackBar(SnackBar(content: Text(l10n.manageMarkersDeleteFailed)));
         return;
       }
-      messenger.showSnackBar(SnackBar(content: Text(l10n.manageMarkersDeletedToast)));
+      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.manageMarkersDeletedToast)));
       widget.onDeleted?.call();
       widget.onClose?.call();
       if (!widget.showHeader) {

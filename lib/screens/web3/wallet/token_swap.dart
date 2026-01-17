@@ -9,6 +9,7 @@ import '../../../models/swap_quote.dart';
 import '../../../models/wallet.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../utils/app_color_utils.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class TokenSwap extends StatefulWidget {
   const TokenSwap({super.key});
@@ -728,7 +729,7 @@ class _TokenSwapState extends State<TokenSwap> {
       );
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text('Swap submitted: ${_fromTokenSymbol!} → ${_toTokenSymbol!}'),
           backgroundColor: Theme.of(context).colorScheme.tertiary,
@@ -737,7 +738,7 @@ class _TokenSwapState extends State<TokenSwap> {
       Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text(e.toString().replaceFirst('Exception: ', 'Swap failed: ')),
           backgroundColor: Theme.of(context).colorScheme.error,

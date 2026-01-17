@@ -16,6 +16,7 @@ import 'receive_token_screen.dart';
 import '../../settings_screen.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../utils/app_color_utils.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class WalletHome extends StatefulWidget {
   const WalletHome({super.key});
@@ -119,7 +120,7 @@ class _WalletHomeState extends State<WalletHome> {
                     if (!web3Provider.isConnected) {
                       Navigator.pushReplacementNamed(context, '/connect_wallet');
                     } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      ScaffoldMessenger.of(context).showKubusSnackBar(
                         SnackBar(content: Text(l10n.walletHomeAlreadyConnectedToast)),
                       );
                     }
@@ -209,7 +210,7 @@ class _WalletHomeState extends State<WalletHome> {
                                 onTap: () {
                                   // Show full address and copy to clipboard
                                   final address = wallet?.address ?? walletAddress ?? '';
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  ScaffoldMessenger.of(context).showKubusSnackBar(
                                     SnackBar(
                                       content: Text(l10n.walletHomeAddressLabel(address)),
                                       action: SnackBarAction(
@@ -217,7 +218,7 @@ class _WalletHomeState extends State<WalletHome> {
                                         onPressed: () async {
                                           await Clipboard.setData(ClipboardData(text: address));
                                           if (context.mounted) {
-                                            ScaffoldMessenger.of(context).showSnackBar(
+                                            ScaffoldMessenger.of(context).showKubusSnackBar(
                                               SnackBar(
                                                 content: Text(l10n.walletHomeAddressCopiedToast),
                                                 duration: const Duration(seconds: 2),

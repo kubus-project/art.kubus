@@ -55,6 +55,7 @@ import '../services/backend_api_service.dart';
 import '../config/config.dart';
 import 'events/exhibition_detail_screen.dart';
 import '../widgets/glass_components.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 /// Custom painter for the direction cone indicator
 class DirectionConePainter extends CustomPainter {
@@ -680,7 +681,7 @@ class _MapScreenState extends State<MapScreen>
     }
 
     // Also show in-app SnackBar
-    ScaffoldMessenger.of(context).showSnackBar(
+    ScaffoldMessenger.of(context).showKubusSnackBar(
       SnackBar(
         content: Row(
           children: [
@@ -810,7 +811,7 @@ class _MapScreenState extends State<MapScreen>
       debugPrint('Error launching AR experience: $e');
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
             content: Text(l10n.mapFailedToLaunchAr),
             backgroundColor: Colors.red,
@@ -897,7 +898,7 @@ class _MapScreenState extends State<MapScreen>
     final l10n = AppLocalizations.of(context)!;
     final wallet = context.read<WalletProvider>().currentWalletAddress;
     if (wallet == null || wallet.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text(
             l10n.mapMarkerCreateWalletRequired,
@@ -951,7 +952,7 @@ class _MapScreenState extends State<MapScreen>
     if (!mounted) return;
 
     if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Row(
             children: [
@@ -971,7 +972,7 @@ class _MapScreenState extends State<MapScreen>
       );
       await _loadArtMarkers(forceRefresh: true);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text(
             l10n.mapMarkerCreateFailedToast,
@@ -1086,7 +1087,7 @@ class _MapScreenState extends State<MapScreen>
       return false;
     } on StateError catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
             content: Text(
               e.message,
@@ -2467,7 +2468,7 @@ class _MapScreenState extends State<MapScreen>
     if (!AppConfig.isFeatureEnabled('exhibitions') ||
         BackendApiService().exhibitionsApiAvailable == false) {
       if (isExhibitionMarker) {
-        messenger.showSnackBar(
+        messenger.showKubusSnackBar(
           const SnackBar(content: Text('Razstave trenutno niso na voljo.')),
         );
         setState(() {});
@@ -2489,7 +2490,7 @@ class _MapScreenState extends State<MapScreen>
     if (!mounted) return;
 
     if (fetched == null) {
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         const SnackBar(content: Text('Razstave trenutno niso na voljo.')),
       );
       // Force rebuild so we can hide exhibition UI if the API just got marked unavailable.

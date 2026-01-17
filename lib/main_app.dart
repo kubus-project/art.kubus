@@ -16,6 +16,7 @@ import 'utils/app_animations.dart';
 import 'utils/design_tokens.dart';
 import 'widgets/glass_components.dart';
 import 'widgets/user_persona_onboarding_gate.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class MainApp extends StatefulWidget {
   const MainApp({super.key});
@@ -225,7 +226,7 @@ class _MainAppState extends State<MainApp> {
     final ok = await localWallet.authenticateForAppUnlock();
     if (ok) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.lockAppUnlockedToast)));
+      ScaffoldMessenger.of(context).showKubusSnackBar(SnackBar(content: Text(l10n.lockAppUnlockedToast)));
       return;
     }
 
@@ -255,9 +256,9 @@ class _MainAppState extends State<MainApp> {
     final ok2 = await localWallet.authenticateForAppUnlock(pin: entered);
     if (!mounted) return;
     if (ok2) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.lockAppUnlockedToast)));
+      ScaffoldMessenger.of(context).showKubusSnackBar(SnackBar(content: Text(l10n.lockAppUnlockedToast)));
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.lockAuthenticationFailedToast)));
+      ScaffoldMessenger.of(context).showKubusSnackBar(SnackBar(content: Text(l10n.lockAuthenticationFailedToast)));
     }
   }
 

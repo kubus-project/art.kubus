@@ -22,6 +22,16 @@ class KubusColors {
   // --- Secondary / Accents ---
   static const Color secondary = Color(0xCC00838F); // 80% opacity primary
 
+  // --- Extended Accents (Centralized; avoid per-widget Color literals) ---
+  static const Color accentPurpleDark = Color(0xFF9575CD);
+  static const Color accentPurpleLight = Color(0xFF7E57C2);
+  static const Color accentOrangeDark = Color(0xFFFF9800);
+  static const Color accentOrangeLight = Color(0xFFFB8C00);
+  static const Color accentTealDark = Color(0xFF4ECDC4);
+  static const Color accentTealLight = Color(0xFF00897B);
+  static const Color achievementGoldDark = Color(0xFFFFD700);
+  static const Color achievementGoldLight = Color(0xFFFFC107);
+
   // --- Semantic Colors ---
   static const Color error = Color(0xFFE53935); // Red 600
   static const Color errorDark = Color(0xFFFF6B6B); // Coral Red
@@ -112,6 +122,31 @@ class KubusLayout {
   static const double mainBottomNavBarHeight = 72.0;
 }
 
+/// Shared component sizing tokens.
+///
+/// Use these instead of hardcoding magic numbers in widgets.
+class KubusSizes {
+  KubusSizes._();
+
+  /// Compact icon container used in action sidebars.
+  static const double sidebarActionIconBox = 40.0;
+
+  /// Icon size inside [sidebarActionIconBox].
+  static const double sidebarActionIcon = 20.0;
+
+  /// Trailing chevron icon size used in list tiles.
+  static const double trailingChevron = 16.0;
+
+  /// Small badge label size without changing typography tokens.
+  ///
+  /// Prefer [KubusTypography.textTheme.labelSmall] where possible; this exists
+  /// for compact count badges that must stay readable.
+  static const double badgeCountFontSize = 11.0;
+
+  /// Hairline borders used on glass surfaces.
+  static const double hairline = 1.0;
+}
+
 class KubusTypography {
   KubusTypography._();
 
@@ -136,6 +171,31 @@ class KubusTypography {
       labelSmall: GoogleFonts.inter(fontWeight: FontWeight.w500, fontSize: 10),
     );
   }
+}
+
+/// App-specific semantic text styles built on top of [KubusTypography].
+///
+/// Prefer these for UI elements that need consistent weights/sizing without
+/// sprinkling `copyWith(fontWeight: ...)` across the codebase.
+class KubusTextStyles {
+  KubusTextStyles._();
+
+  static TextStyle get screenTitle =>
+      KubusTypography.textTheme.headlineMedium!;
+
+  static TextStyle get sectionTitle =>
+      KubusTypography.textTheme.titleMedium!;
+
+  static TextStyle get actionTileTitle =>
+      KubusTypography.textTheme.labelLarge!;
+
+  static TextStyle get actionTileSubtitle =>
+      KubusTypography.textTheme.labelMedium!;
+
+  static TextStyle get badgeCount => GoogleFonts.inter(
+        fontSize: KubusSizes.badgeCountFontSize,
+        fontWeight: FontWeight.w700,
+      );
 }
 
 class KubusGradients {

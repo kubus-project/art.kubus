@@ -12,11 +12,13 @@ import '../../../services/telemetry/telemetry_service.dart';
 import '../../../widgets/app_logo.dart';
 import '../../../widgets/gradient_icon_card.dart';
 import '../../../providers/themeprovider.dart';
+import '../../../providers/profile_provider.dart';
 import '../../../services/push_notification_service.dart';
 import '../../../services/notification_helper.dart';
 import '../../../utils/app_animations.dart';
 import '../desktop_shell.dart';
 import '../../../widgets/glass_components.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 /// Desktop-optimized permissions screen with side-by-side layout
 class DesktopPermissionsScreen extends StatefulWidget {
@@ -277,7 +279,7 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
     });
 
     if (nowGranted) {
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(
             l10n.permissionsPermissionGrantedToast(_getPermissionName(l10n, type)),
@@ -363,7 +365,8 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
     unawaited(TelemetryService().trackOnboardingComplete(reason: 'permissions_complete'));
 
     if (mounted) {
-      Navigator.of(context).pushReplacementNamed('/main');
+      final isSignedIn = Provider.of<ProfileProvider>(context, listen: false).isSignedIn;
+      Navigator.of(context).pushReplacementNamed(isSignedIn ? '/main' : '/sign-in');
     }
   }
 

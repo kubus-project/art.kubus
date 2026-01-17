@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../models/wallet.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class ReceiveTokenScreen extends StatefulWidget {
   const ReceiveTokenScreen({super.key});
@@ -533,7 +534,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
   void _copyAddress(String? walletAddress) {
     final l10n = AppLocalizations.of(context)!;
     if (walletAddress == null || walletAddress.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text(l10n.receiveTokenNoWalletAddressToast),
           backgroundColor: Theme.of(context).colorScheme.error,
@@ -544,7 +545,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
       return;
     }
     Clipboard.setData(ClipboardData(text: walletAddress));
-    ScaffoldMessenger.of(context).showSnackBar(
+    ScaffoldMessenger.of(context).showKubusSnackBar(
       SnackBar(
         content: Text(l10n.walletHomeAddressCopiedToast),
         backgroundColor: Provider.of<ThemeProvider>(context).accentColor,

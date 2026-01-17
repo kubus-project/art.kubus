@@ -10,6 +10,7 @@ import '../models/artwork.dart';
 import '../models/map_marker_subject.dart';
 import '../utils/marker_subject_utils.dart';
 import '../utils/map_marker_subject_loader.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class MapMarkerFormResult {
   final String title;
@@ -746,7 +747,7 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
     final l10n = AppLocalizations.of(context)!;
     if (!_formKey.currentState!.validate()) return;
     if (_subjectSelectionRequired(_selectedSubjectType) && _selectedSubject == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(content: Text(l10n.mapMarkerDialogSelectSubjectToast)),
       );
       return;

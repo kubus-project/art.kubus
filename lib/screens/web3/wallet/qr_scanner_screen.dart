@@ -9,6 +9,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class QRScannerScreen extends StatefulWidget {
   const QRScannerScreen({super.key});
@@ -517,7 +518,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
       });
     } catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(l10n.qrScannerTorchNotSupportedToast),
           backgroundColor: scheme.error,
@@ -540,7 +541,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
       });
     } catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(l10n.qrScannerSwitchCameraFailedToast),
           backgroundColor: scheme.error,

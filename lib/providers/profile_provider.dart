@@ -27,13 +27,21 @@ class ProfileProvider extends foundation.ChangeNotifier {
   int _realFollowersCount = 0;
   int _realFollowingCount = 0;
   int _realPostsCount = 0;
-  late SharedPreferences _prefs;
+  SharedPreferences? _prefs;
   final ProfileBackendApi _apiService;
   Map<String, dynamic>? _lastUploadDebug;
   ProfilePreferences? _cachedPreferences;
 
   ProfileProvider({ProfileBackendApi? apiService})
       : _apiService = apiService ?? BackendApiService();
+
+  Future<SharedPreferences> _ensurePrefs() async {
+    final existing = _prefs;
+    if (existing != null) return existing;
+    final prefs = await SharedPreferences.getInstance();
+    _prefs = prefs;
+    return prefs;
+  }
 
   /// Debug info for last upload attempt (raw server response + extraction + verification)
   Map<String, dynamic>? get lastUploadDebug => _lastUploadDebug;
@@ -213,7 +221,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
   String? get _currentWalletAddress {
     final wallet = _currentUser?.walletAddress;
     if (wallet != null && wallet.isNotEmpty) return wallet;
-    final stored = _prefs.getString(PreferenceKeys.walletAddress) ?? _prefs.getString('wallet_address');
+    final prefs = _prefs;
+    if (prefs == null) return null;
+    final stored = prefs.getString(PreferenceKeys.walletAddress) ?? prefs.getString('wallet_address');
     if (stored != null && stored.isNotEmpty) return stored;
     return null;
   }
@@ -228,14 +238,18 @@ class ProfileProvider extends foundation.ChangeNotifier {
 
     final wallet = _currentWalletAddress;
     if (wallet == null) return null;
-    final persisted = _prefs.getString(_personaKeyForWallet(wallet));
+    final prefs = _prefs;
+    if (prefs == null) return null;
+    final persisted = prefs.getString(_personaKeyForWallet(wallet));
     return UserPersonaX.tryParse(persisted);
   }
 
   bool get hasCompletedPersonaOnboarding {
     final wallet = _currentWalletAddress;
     if (wallet == null) return false;
-    return _prefs.getBool(_personaOnboardedKeyForWallet(wallet)) ?? false;
+    final prefs = _prefs;
+    if (prefs == null) return false;
+    return prefs.getBool(_personaOnboardedKeyForWallet(wallet)) ?? false;
   }
 
   /// Whether we should prompt the user to choose a UX persona.
@@ -254,7 +268,8 @@ class ProfileProvider extends foundation.ChangeNotifier {
     final resolved = (walletAddress ?? _currentWalletAddress ?? '').trim();
     if (resolved.isEmpty) return;
     try {
-      await _prefs.setBool(_personaOnboardedKeyForWallet(resolved), true);
+      final prefs = await _ensurePrefs();
+      await prefs.setBool(_personaOnboardedKeyForWallet(resolved), true);
     } catch (_) {}
   }
   
@@ -288,8 +303,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
 
     final nextValue = persona.storageValue;
     try {
-      await _prefs.setString(_personaKeyForWallet(wallet), nextValue);
-      await _prefs.setBool(_personaOnboardedKeyForWallet(wallet), true);
+      final prefs = await _ensurePrefs();
+      await prefs.setString(_personaKeyForWallet(wallet), nextValue);
+      await prefs.setBool(_personaOnboardedKeyForWallet(wallet), true);
     } catch (_) {}
 
     final existing = _currentUser?.preferences ?? _cachedPreferencesFromPrefs();
@@ -331,10 +347,10 @@ class ProfileProvider extends foundation.ChangeNotifier {
   
   // Initialize SharedPreferences and settings
   Future<void> initialize() async {
-    _prefs = await SharedPreferences.getInstance();
+    final prefs = await _ensurePrefs();
     
     // Try to load existing profile
-    final walletAddress = _prefs.getString('wallet_address');
+    final walletAddress = prefs.getString('wallet_address');
     // Initialize persisted user cache for returning users only
     if (walletAddress != null && walletAddress.isNotEmpty) {
       try { await UserService.initialize(); } catch (_) {}
@@ -561,7 +577,8 @@ class ProfileProvider extends foundation.ChangeNotifier {
       }
       
       // Save wallet address
-      await _prefs.setString('wallet_address', walletAddress);
+      final prefs = await _ensurePrefs();
+      await prefs.setString('wallet_address', walletAddress);
       debugPrint('ProfileProvider: Wallet address saved and profile loaded');
 
       _isLoading = false;
@@ -686,8 +703,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
       } catch (_) {}
 
       // Save to SharedPreferences
-      await _prefs.setString('wallet_address', walletAddress);
-      await _prefs.setString('username', _currentUser!.username);
+      final prefs = await _ensurePrefs();
+      await prefs.setString('wallet_address', walletAddress);
+      await prefs.setString('username', _currentUser!.username);
       debugPrint('ProfileProvider: Profile saved successfully for wallet: $walletAddress');
       
       // Persist to UserService cache (and let ChatProvider be updated via EventBus)
@@ -947,13 +965,17 @@ class ProfileProvider extends foundation.ChangeNotifier {
 
   ProfilePreferences _cachedPreferencesFromPrefs() {
     try {
-      final wallet = _prefs.getString(PreferenceKeys.walletAddress) ?? _prefs.getString('wallet_address') ?? '';
-      final bool isPrivate = _prefs.getBool('private_profile') ?? false;
-      final bool showActivityStatus = _prefs.getBool('show_activity_status') ?? true;
-      final bool shareLastVisitedLocation = _prefs.getBool('share_last_visited_location') ?? false;
-      final bool showCollection = _prefs.getBool('show_collection') ?? true;
-      final bool allowMessages = _prefs.getBool('allow_messages') ?? true;
-      final String? persona = wallet.isNotEmpty ? _prefs.getString(_personaKeyForWallet(wallet)) : null;
+      final prefs = _prefs;
+      if (prefs == null) {
+        return _currentUser?.preferences ?? _cachedPreferences ?? ProfilePreferences();
+      }
+      final wallet = prefs.getString(PreferenceKeys.walletAddress) ?? prefs.getString('wallet_address') ?? '';
+      final bool isPrivate = prefs.getBool('private_profile') ?? false;
+      final bool showActivityStatus = prefs.getBool('show_activity_status') ?? true;
+      final bool shareLastVisitedLocation = prefs.getBool('share_last_visited_location') ?? false;
+      final bool showCollection = prefs.getBool('show_collection') ?? true;
+      final bool allowMessages = prefs.getBool('allow_messages') ?? true;
+      final String? persona = wallet.isNotEmpty ? prefs.getString(_personaKeyForWallet(wallet)) : null;
       return ProfilePreferences(
         privacy: isPrivate ? 'private' : 'public',
         notifications: true,
@@ -975,18 +997,23 @@ class ProfileProvider extends foundation.ChangeNotifier {
     if (currentPersona.isNotEmpty) {
       // Ensure local keys are kept in sync so onboarding doesn't reappear.
       try {
-        _prefs.setString(_personaKeyForWallet(walletAddress), currentPersona);
-        _prefs.setBool(_personaOnboardedKeyForWallet(walletAddress), true);
+        final prefs = _prefs;
+        if (prefs != null) {
+          prefs.setString(_personaKeyForWallet(walletAddress), currentPersona);
+          prefs.setBool(_personaOnboardedKeyForWallet(walletAddress), true);
+        }
       } catch (_) {}
       return existing;
     }
 
-    final persisted = (_prefs.getString(_personaKeyForWallet(walletAddress)) ?? '').trim();
+    final prefs = _prefs;
+    if (prefs == null) return existing;
+    final persisted = (prefs.getString(_personaKeyForWallet(walletAddress)) ?? '').trim();
     if (persisted.isEmpty) return existing;
 
     // Mark onboarding complete when we have a persisted persona.
     try {
-      _prefs.setBool(_personaOnboardedKeyForWallet(walletAddress), true);
+      prefs.setBool(_personaOnboardedKeyForWallet(walletAddress), true);
     } catch (_) {}
     return existing.copyWith(persona: persisted);
   }
@@ -1022,16 +1049,17 @@ class ProfileProvider extends foundation.ChangeNotifier {
 
   Future<void> _persistPreferences(ProfilePreferences preferences) async {
     try {
-      await _prefs.setBool('private_profile', preferences.privacy.toLowerCase() == 'private');
-      await _prefs.setBool('show_activity_status', preferences.showActivityStatus);
-      await _prefs.setBool('share_last_visited_location', preferences.shareLastVisitedLocation);
-      await _prefs.setBool('show_collection', preferences.showCollection);
-      await _prefs.setBool('allow_messages', preferences.allowMessages);
+      final prefs = await _ensurePrefs();
+      await prefs.setBool('private_profile', preferences.privacy.toLowerCase() == 'private');
+      await prefs.setBool('show_activity_status', preferences.showActivityStatus);
+      await prefs.setBool('share_last_visited_location', preferences.shareLastVisitedLocation);
+      await prefs.setBool('show_collection', preferences.showCollection);
+      await prefs.setBool('allow_messages', preferences.allowMessages);
       final wallet = _currentWalletAddress;
       final persona = (preferences.persona ?? '').trim();
       if (wallet != null && wallet.isNotEmpty && persona.isNotEmpty) {
-        await _prefs.setString(_personaKeyForWallet(wallet), persona);
-        await _prefs.setBool(_personaOnboardedKeyForWallet(wallet), true);
+        await prefs.setString(_personaKeyForWallet(wallet), persona);
+        await prefs.setBool(_personaOnboardedKeyForWallet(wallet), true);
       }
       _cachedPreferences = preferences;
     } catch (_) {}

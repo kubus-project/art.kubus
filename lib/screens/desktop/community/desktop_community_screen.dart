@@ -50,6 +50,7 @@ import '../../community/post_detail_screen.dart';
 import '../../download_app_screen.dart';
 import '../../map_screen.dart';
 import '../../season0/season0_screen.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class _ComposerImagePayload {
   final Uint8List bytes;
@@ -238,7 +239,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     final l10n = AppLocalizations.of(context)!;
     final profileProvider = context.read<ProfileProvider>();
     if (!profileProvider.isSignedIn) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text(l10n.userProfileSignInToFollowToast),
           action: SnackBarAction(
@@ -289,7 +290,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       _appRefreshProvider?.triggerCommunity();
       _appRefreshProvider?.triggerProfile();
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text(
             shouldFollow
@@ -319,7 +320,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         }
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text(l10n.userProfileFollowUpdateFailedToast),
           duration: const Duration(seconds: 3),
@@ -3287,7 +3288,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       );
       if (!mounted) return;
       setState(() {});
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(wasLiked ? 'Post unliked' : 'Post liked'),
           duration: const Duration(milliseconds: 1300),
@@ -3296,7 +3297,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     } catch (e) {
       if (!mounted) return;
       setState(() {});
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text('Failed to ${wasLiked ? 'unlike' : 'like'} post: $e'),
         ),
@@ -3310,7 +3311,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       await CommunityService.toggleBookmark(post);
       if (!mounted) return;
       setState(() {});
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(post.isBookmarked
               ? 'Saved to bookmarks'
@@ -3320,7 +3321,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       );
     } catch (e) {
       if (!mounted) return;
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(content: Text('Failed to update bookmark: $e')),
       );
     }
@@ -3479,7 +3480,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         _discoverPosts = _prependUniquePost(_discoverPosts, createdRepost);
         _followingPosts = _prependUniquePost(_followingPosts, createdRepost);
       });
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(
           content: Text(comment != null && comment.trim().isNotEmpty
               ? 'Reposted with comment'
@@ -3489,7 +3490,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       return true;
     } catch (e) {
       if (!mounted) return false;
-      messenger.showSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(content: Text('Failed to repost: $e')),
       );
       return false;
@@ -3682,10 +3683,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
       await Future.wait([_loadDiscoverFeed(), _loadFollowingFeed()]);
       if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(l10n.communityRepostRemovedToast)));
+      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.communityRepostRemovedToast)));
     } catch (e) {
       if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(l10n.communityUnrepostFailedToast)));
+      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.communityUnrepostFailedToast)));
     }
   }
 
@@ -4807,12 +4808,12 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               _openConversation(conv);
               return;
             }
-            messenger.showSnackBar(
+            messenger.showKubusSnackBar(
               const SnackBar(content: Text('Unable to start conversation')),
             );
           } catch (e) {
             if (!mounted) return;
-            messenger.showSnackBar(
+            messenger.showKubusSnackBar(
               SnackBar(content: Text('Unable to start conversation: $e')),
             );
           }
@@ -5773,7 +5774,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         // Refresh feed
         _loadDiscoverFeed();
 
-        ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
             content: const Text('Post published!'),
             behavior: SnackBarBehavior.floating,
@@ -5785,7 +5786,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     } catch (e) {
       if (mounted) {
         setState(() => _isPosting = false);
-        ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
             content: Text('Failed to post: ${e.toString()}'),
             behavior: SnackBarBehavior.floating,
@@ -7475,7 +7476,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     final groups = hub.groups.where((g) => g.isMember || g.isOwner).toList();
     if (groups.isEmpty) {
       if (!mounted) return null;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showKubusSnackBar(
         const SnackBar(
             content: Text('Join a community group to target your post.')),
       );
@@ -7749,7 +7750,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         });
         hub.resetDraft();
 
-        ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
             content: const Text('Post created successfully!'),
             backgroundColor:
@@ -7764,7 +7765,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     } catch (e) {
       if (mounted) {
         setState(() => _isPosting = false);
-        ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
             content: Text('Failed to create post: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
