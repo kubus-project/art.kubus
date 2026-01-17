@@ -343,10 +343,11 @@ jobs:
           fi
           chmod 600 "$KEY_PATH"
 
-          # Validate that OpenSSH can parse the key file (prevents 'error in libcrypto').
+          # Validate that OpenSSH can parse the key file.
+          # IMPORTANT: if the key is passphrase-protected, ssh-keygen will prompt and a timeout will look like a parse failure.
+          # So we only perform non-interactive validation when NO passphrase is configured.
           if command -v ssh-keygen >/dev/null 2>&1 && command -v timeout >/dev/null 2>&1; then
             if [ -z "${SFTP_PRIVATE_KEY_PASSPHRASE:-}" ]; then
-              # No passphrase provided: validate non-interactively.
               if ! timeout 3 ssh-keygen -y -f "$KEY_PATH" >/dev/null 2>&1; then
                 echo "OpenSSH could not parse the private key file (this often shows up as: 'error in libcrypto')." >&2
                 echo "Fixes:" >&2
@@ -356,13 +357,7 @@ jobs:
                 exit 1
               fi
             else
-              # Passphrase exists; we cannot validate without prompting, but at least fail if the file is totally broken.
-              # Try a quick fingerprint read (may still fail if format is invalid).
-              if ! timeout 3 ssh-keygen -lf "$KEY_PATH" >/dev/null 2>&1; then
-                echo "OpenSSH could not parse the private key file (even before passphrase entry)." >&2
-                echo "This likely means the key format is unsupported/corrupted (e.g., PuTTY .ppk or broken line endings)." >&2
-                exit 1
-              fi
+              echo "Note: private key is passphrase-protected; skipping non-interactive parse validation." 
             fi
           fi
 
@@ -385,8 +380,8 @@ jobs:
           fi
 
           # Lightweight auth check (does not fail the job thanks to continue-on-error).
-          # This helps produce clearer errors than drone-scp when auth is wrong.
-          if command -v ssh >/dev/null 2>&1; then
+          # Skip when a passphrase is required, because we can't supply it to the system ssh client here.
+          if [ -z "${SFTP_PRIVATE_KEY_PASSPHRASE:-}" ] && command -v ssh >/dev/null 2>&1; then
             ssh -o BatchMode=yes \
               -o StrictHostKeyChecking=yes \
               -o UserKnownHostsFile="$KNOWN_HOSTS" \
