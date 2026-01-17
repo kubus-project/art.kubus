@@ -377,6 +377,10 @@ class _AppLauncherState extends State<AppLauncher> {
                 create: (context) => AuthSessionProvider(),
                 update: (context, profileProvider, walletProvider, authSessionProvider) {
                   final provider = authSessionProvider ?? AuthSessionProvider();
+                  provider.bindDependencies(
+                    profileProvider: profileProvider,
+                    walletProvider: walletProvider,
+                  );
                   provider.bindOnSessionRestored(() async {
                     final walletAddress = profileProvider.currentUser?.walletAddress ?? walletProvider.currentWalletAddress;
                     if (walletAddress == null || walletAddress.isEmpty) return;

@@ -631,20 +631,25 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     if (statusCode != 403) return false;
 
     final body = (responseBody ?? '').trim();
-    if (body.isEmpty) return false;
+    // Some deployments return a bare 403 with an empty body for invalid/expired
+    // tokens. Treat this as an auth failure so the session re-auth flow can
+    // repair the token.
+    if (body.isEmpty) return true;
 
     try {
       final decoded = jsonDecode(body);
       if (decoded is Map<String, dynamic>) {
         final msg = (decoded['error'] ?? decoded['message'] ?? decoded['detail'] ?? '').toString();
         if (msg.trim().isEmpty) return false;
-        return _looksLikeTokenErrorMessage(msg);
+        return _looksLikeTokenErrorMessage(msg) || msg.toLowerCase().trim() == 'forbidden';
       }
       if (decoded is String) {
-        return _looksLikeTokenErrorMessage(decoded);
+        final normalized = decoded.toLowerCase().trim();
+        return _looksLikeTokenErrorMessage(decoded) || normalized == 'forbidden';
       }
     } catch (_) {
-      return _looksLikeTokenErrorMessage(body);
+      final normalized = body.toLowerCase().trim();
+      return _looksLikeTokenErrorMessage(body) || normalized == 'forbidden';
     }
 
     return false;

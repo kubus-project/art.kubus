@@ -1,12 +1,10 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
-import 'package:crypto/crypto.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:solana/solana.dart' show Ed25519HDKeyPair;
 import '../models/wallet.dart';
@@ -14,10 +12,21 @@ import '../models/swap_quote.dart';
 import '../services/solana_wallet_service.dart';
 import '../services/backend_api_service.dart';
 import '../services/stats_api_service.dart';
+import '../services/pin_hashing.dart';
 import '../services/user_service.dart';
 import '../config/config.dart';
 import '../config/api_keys.dart';
 import '../utils/wallet_utils.dart';
+
+enum BiometricAuthOutcome {
+  success,
+  failed,
+  cancelled,
+  notAvailable,
+  lockedOut,
+  permanentlyLockedOut,
+  error,
+}
 
 class WalletProvider extends ChangeNotifier {
   final SolanaWalletService _solanaWalletService;
@@ -29,6 +38,7 @@ class WalletProvider extends ChangeNotifier {
   static const String _pinLockoutTsKey = 'wallet_pin_lockout_ts';
   static const int _maxPinAttempts = 5;
   static const Duration _pinLockoutDuration = Duration(minutes: 5);
+  static const int _pinPbkdf2Iterations = 120000;
   // Cached mnemonic import retry
   Timer? _importRetryTimer;
   int _importRetryAttempts = 0;
@@ -140,35 +150,98 @@ class WalletProvider extends ChangeNotifier {
 
   Future<bool> canUseBiometrics() async {
     try {
-      final canCheck = await _localAuth.canCheckBiometrics;
       final isSupported = await _localAuth.isDeviceSupported();
-      return canCheck || isSupported;
+      if (!isSupported) return false;
+      final canCheck = await _localAuth.canCheckBiometrics;
+      final available = await _localAuth.getAvailableBiometrics();
+      return canCheck || available.isNotEmpty;
     } catch (e) {
       debugPrint('Biometrics check failed: $e');
       return false;
     }
   }
 
-  Future<bool> authenticateWithBiometrics() async {
+  Future<BiometricAuthOutcome> authenticateWithBiometricsDetailed({
+    String? localizedReason,
+  }) async {
     try {
+      final canUse = await canUseBiometrics();
+      if (!canUse) return BiometricAuthOutcome.notAvailable;
+
       final didAuthenticate = await _localAuth.authenticate(
-        localizedReason: 'Authenticate to unlock the app',
+        localizedReason: localizedReason ?? 'Authenticate to continue',
+        options: const AuthenticationOptions(
+          biometricOnly: true,
+          stickyAuth: true,
+          useErrorDialogs: false,
+        ),
       );
-      return didAuthenticate;
+      return didAuthenticate ? BiometricAuthOutcome.success : BiometricAuthOutcome.failed;
     } on PlatformException catch (e) {
-      debugPrint('Biometric auth failed: ${e.message}');
-      return false;
+      final code = e.code.toLowerCase();
+      if (code.contains('notavailable') || code.contains('not_available')) {
+        return BiometricAuthOutcome.notAvailable;
+      }
+      if (code.contains('notenrolled') || code.contains('not_enrolled')) {
+        return BiometricAuthOutcome.notAvailable;
+      }
+      if (code.contains('lockedout') || code.contains('locked_out')) {
+        return BiometricAuthOutcome.lockedOut;
+      }
+      if (code.contains('permanentlylockedout') || code.contains('permanently_locked_out')) {
+        return BiometricAuthOutcome.permanentlyLockedOut;
+      }
+      if (code.contains('usercanceled') ||
+          code.contains('user_canceled') ||
+          code.contains('usercancel') ||
+          code.contains('user_cancel') ||
+          code.contains('canceled') ||
+          code.contains('cancelled')) {
+        return BiometricAuthOutcome.cancelled;
+      }
+      return BiometricAuthOutcome.error;
     } catch (e) {
       debugPrint('Biometric auth error: $e');
-      return false;
+      return BiometricAuthOutcome.error;
     }
+  }
+
+  Future<bool> authenticateWithBiometrics({String? localizedReason}) async {
+    final outcome = await authenticateWithBiometricsDetailed(localizedReason: localizedReason);
+    return outcome == BiometricAuthOutcome.success;
+  }
+
+  void _unlockAppState() {
+    _isLocked = false;
+    _pendingShowMnemonic = false;
+    notifyListeners();
+  }
+
+  Future<BiometricAuthOutcome> unlockWithBiometrics({String? localizedReason}) async {
+    final outcome = await authenticateWithBiometricsDetailed(localizedReason: localizedReason);
+    if (outcome == BiometricAuthOutcome.success) {
+      _unlockAppState();
+    }
+    return outcome;
+  }
+
+  Future<PinVerifyResult> unlockWithPin(String pin) async {
+    final result = await verifyPinDetailed(pin);
+    if (result.isSuccess) {
+      _unlockAppState();
+    }
+    return result;
   }
 
   Future<void> setPin(String pin) async {
     try {
-      final digest = sha256.convert(utf8.encode(pin)).toString();
-      await _secureStorage.write(key: _pinHashKey, value: digest);
-      debugPrint('App PIN set');
+      final hash = derivePinHashV1(
+        pin,
+        iterations: _pinPbkdf2Iterations,
+      );
+      await _secureStorage.write(key: _pinHashKey, value: hash.encode());
+      await _secureStorage.delete(key: _pinFailedKey);
+      await _secureStorage.delete(key: _pinLockoutTsKey);
     } catch (e) {
       debugPrint('Failed to set PIN: $e');
       rethrow;
@@ -178,40 +251,43 @@ class WalletProvider extends ChangeNotifier {
   Future<void> clearPin() async {
     try {
       await _secureStorage.delete(key: _pinHashKey);
-      debugPrint('App PIN cleared');
+      await _secureStorage.delete(key: _pinFailedKey);
+      await _secureStorage.delete(key: _pinLockoutTsKey);
     } catch (e) {
       debugPrint('Failed to clear PIN: $e');
     }
   }
 
-  Future<bool> verifyPin(String pin) async {
+  Future<bool> hasPin() async {
     try {
-      // Check lockout
-      final lockoutStr = await _secureStorage.read(key: _pinLockoutTsKey);
-      if (lockoutStr != null) {
-        final lockoutTs = int.tryParse(lockoutStr);
-        if (lockoutTs != null) {
-          final now = DateTime.now().millisecondsSinceEpoch;
-          if (now < lockoutTs) {
-            // Still in lockout
-            debugPrint('PIN locked until $lockoutTs');
-            return false;
-          } else {
-            // Lockout expired, clear
-            await _secureStorage.delete(key: _pinLockoutTsKey);
-            await _secureStorage.delete(key: _pinFailedKey);
-          }
+      final stored = await _secureStorage.read(key: _pinHashKey);
+      return stored != null && stored.trim().isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<PinVerifyResult> verifyPinDetailed(String pin) async {
+    try {
+      final remainingLockoutSeconds = await getPinLockoutRemainingSeconds();
+      final stored = await _secureStorage.read(key: _pinHashKey);
+      final result = verifyPinAgainstStoredHash(
+        pin,
+        stored,
+        remainingLockoutSeconds: remainingLockoutSeconds,
+      );
+
+      if (result.isSuccess) {
+        await _secureStorage.delete(key: _pinFailedKey);
+        await _secureStorage.delete(key: _pinLockoutTsKey);
+        if (result.needsMigration) {
+          await setPin(pin);
         }
+        return const PinVerifyResult(PinVerifyOutcome.success);
       }
 
-      final stored = await _secureStorage.read(key: _pinHashKey);
-      if (stored == null) return false;
-      final digest = sha256.convert(utf8.encode(pin)).toString();
-      final matched = digest == stored;
-      if (matched) {
-        // Reset failed attempts
-        await _secureStorage.delete(key: _pinFailedKey);
-        return true;
+      if (result.outcome != PinVerifyOutcome.incorrect) {
+        return result;
       }
 
       // Not matched: increment failed count
@@ -223,35 +299,37 @@ class WalletProvider extends ChangeNotifier {
         final lockoutUntil = DateTime.now().add(_pinLockoutDuration).millisecondsSinceEpoch;
         await _secureStorage.write(key: _pinLockoutTsKey, value: lockoutUntil.toString());
         await _secureStorage.delete(key: _pinFailedKey);
-        debugPrint('PIN locked until $lockoutUntil due to too many attempts');
+        final remaining = await getPinLockoutRemainingSeconds();
+        return PinVerifyResult(
+          PinVerifyOutcome.lockedOut,
+          remainingLockoutSeconds: remaining,
+        );
       }
 
-      return false;
+      return const PinVerifyResult(PinVerifyOutcome.incorrect);
     } catch (e) {
       debugPrint('PIN verification failed: $e');
-      return false;
+      return const PinVerifyResult(PinVerifyOutcome.error);
     }
+  }
+
+  Future<bool> verifyPin(String pin) async {
+    final result = await verifyPinDetailed(pin);
+    return result.isSuccess;
   }
 
   /// Authenticate to unlock the app (does not reveal mnemonic).
   /// Tries biometric first, then PIN if provided. Returns true when unlocked.
   Future<bool> authenticateForAppUnlock({String? pin}) async {
     try {
-      bool ok = false;
-      try {
-        ok = await authenticateWithBiometrics();
-      } catch (_) {
-        ok = false;
-      }
+      final biometric = await unlockWithBiometrics();
+      var ok = biometric == BiometricAuthOutcome.success;
 
       if (!ok && pin != null && pin.isNotEmpty) {
-        ok = await verifyPin(pin);
+        ok = (await unlockWithPin(pin)).isSuccess;
       }
 
       if (ok) {
-        _isLocked = false;
-        _pendingShowMnemonic = false;
-        notifyListeners();
         return true;
       }
       return false;
@@ -270,7 +348,12 @@ class WalletProvider extends ChangeNotifier {
       if (ts == null) return 0;
       final now = DateTime.now().millisecondsSinceEpoch;
       final remaining = ts - now;
-      return remaining > 0 ? (remaining / 1000).ceil() : 0;
+      if (remaining <= 0) {
+        await _secureStorage.delete(key: _pinLockoutTsKey);
+        await _secureStorage.delete(key: _pinFailedKey);
+        return 0;
+      }
+      return (remaining / 1000).ceil();
     } catch (e) {
       return 0;
     }

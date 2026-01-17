@@ -77,6 +77,27 @@ void main() {
     expect(coordinator.promptCalls, 1);
   });
 
+  test('empty 403 triggers auth coordinator once', () async {
+    final api = BackendApiService();
+    api.setAuthTokenForTesting('expired-or-wrong-token');
+
+    final coordinator = _TestAuthCoordinator(
+      onPrompt: (_) async => const AuthReauthResult(AuthReauthOutcome.cancelled),
+    );
+    api.bindAuthCoordinator(coordinator);
+
+    api.setHttpClient(
+      MockClient((request) async {
+        return http.Response('', 403);
+      }),
+    );
+
+    final result = await api.getMyProfile();
+    expect(result['success'], isFalse);
+    expect(result['status'], 403);
+    expect(coordinator.promptCalls, 1);
+  });
+
   test('concurrent 401s only prompt once', () async {
     final api = BackendApiService();
     api.setAuthTokenForTesting(null);
