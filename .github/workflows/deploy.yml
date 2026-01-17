@@ -305,6 +305,13 @@ jobs:
           set -euo pipefail
 
           echo "Preparing SFTP auth for ${SFTP_USERNAME}@${SFTP_HOST}:${SFTP_PORT}"
+          echo "Secrets present (values masked):"
+          echo "- SFTP_SERVER set: $([[ -n \"${{ secrets.SFTP_SERVER }}\" ]] && echo yes || echo no)"
+          echo "- SFTP_USERNAME set: $([[ -n \"${{ secrets.SFTP_USERNAME }}\" ]] && echo yes || echo no)"
+          echo "- SFTP_PRIVATE_KEY set: $([[ -n \"${{ secrets.SFTP_PRIVATE_KEY }}\" ]] && echo yes || echo no)"
+          echo "- SFTP_PRIVATE_KEY_PASSPHRASE set: $([[ -n \"${{ secrets.SFTP_PRIVATE_KEY_PASSPHRASE }}\" ]] && echo yes || echo no)"
+          echo "- SFTP_HOST_FINGERPRINT set: $([[ -n \"${{ secrets.SFTP_HOST_FINGERPRINT }}\" ]] && echo yes || echo no)"
+          echo "- WEB_SERVER_DIR: ${WEB_SERVER_DIR}"
 
           # Most cPanel SSH/SFTP servers have PasswordAuthentication disabled.
           # If you hit "attempted methods [none publickey]", it means you MUST use an SSH private key.
@@ -415,7 +422,8 @@ jobs:
           passphrase: ${{ secrets.SFTP_PRIVATE_KEY_PASSPHRASE }}
           password: ${{ secrets.SFTP_PASSWORD || secrets.FTP_PASSWORD }}
           fingerprint: ${{ secrets.SFTP_HOST_FINGERPRINT }}
-          debug: ${{ vars.SFTP_DEBUG || 'false' }}
+          debug: ${{ vars.SFTP_DEBUG || 'true' }}
+          capture_stdout: true
           source: "build/web/*"
           target: ${{ steps.sftp_prep.outputs.web_server_dir }}
 
