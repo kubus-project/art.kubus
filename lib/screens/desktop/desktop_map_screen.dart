@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -732,7 +731,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             : null,
       ),
       child: LiquidGlassPanel(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        padding: const EdgeInsets.symmetric(
+          horizontal: KubusSpacing.sm + KubusSpacing.xs,
+          vertical: KubusSpacing.sm + KubusSpacing.xxs,
+        ),
         margin: EdgeInsets.zero,
         borderRadius: radius,
         blurSigma: KubusGlassEffects.blurSigmaLight,
@@ -741,11 +743,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         onTap: onTap,
         child: Text(
           label,
-          style: GoogleFonts.inter(
-            fontSize: 13,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-            color: isSelected ? accent : scheme.onSurface,
-          ),
+          style: (isSelected
+                  ? theme.textTheme.labelLarge
+                  : theme.textTheme.labelMedium)
+              ?.copyWith(color: isSelected ? accent : scheme.onSurface),
         ),
       ),
     );
@@ -881,11 +882,19 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
+          padding: const EdgeInsets.fromLTRB(
+            KubusSpacing.lg,
+            KubusSpacing.sm + KubusSpacing.xs,
+            KubusSpacing.lg,
+            KubusSpacing.sm + KubusSpacing.xs,
+          ),
           child: LiquidGlassPanel(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            padding: const EdgeInsets.symmetric(
+              horizontal: KubusSpacing.md + KubusSpacing.xs,
+              vertical: KubusSpacing.md,
+            ),
             margin: EdgeInsets.zero,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(KubusRadius.lg),
             blurSigma: KubusGlassEffects.blurSigmaLight,
             backgroundColor:
                 scheme.surface.withValues(alpha: isDark ? 0.20 : 0.14),
@@ -895,20 +904,21 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 // Logo and title
                 Row(
                   children: [
-                    const AppLogo(width: 36, height: 36),
-                    const SizedBox(width: 12),
+                    const AppLogo(
+                      width: KubusSpacing.xl + KubusSpacing.xs,
+                      height: KubusSpacing.xl + KubusSpacing.xs,
+                    ),
+                    const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
                     Text(
                       l10n.desktopMapTitleDiscover,
-                      style: GoogleFonts.inter(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
+                      style: theme.textTheme.headlineSmall?.copyWith(
                         color: scheme.onSurface,
                       ),
                     ),
                   ],
                 ),
 
-                const SizedBox(width: 40),
+                const SizedBox(width: KubusSpacing.xl + KubusSpacing.sm),
 
                 // Search bar
                 Expanded(
@@ -929,7 +939,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   ),
                 ),
 
-                const SizedBox(width: 20),
+                const SizedBox(width: KubusSpacing.md + KubusSpacing.xs),
 
                 // Filter chips
                 KeyedSubtree(
@@ -938,7 +948,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     children: _filterOptions.map((filter) {
                       final isActive = _selectedFilter == filter;
                       return Padding(
-                        padding: const EdgeInsets.only(left: 8),
+                        padding: const EdgeInsets.only(left: KubusSpacing.sm),
                         child: _buildGlassChip(
                           label: _getFilterLabel(filter),
                           isSelected: isActive,
@@ -952,7 +962,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   ),
                 ),
 
-                const SizedBox(width: 12),
+                const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
 
                 // Filters button
                 KeyedSubtree(
@@ -1021,7 +1031,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     padding: const EdgeInsets.all(16),
                     child: Text(
                       l10n.mapSearchMinCharsHint,
-                      style: GoogleFonts.inter(
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: scheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
@@ -1047,7 +1057,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                         const SizedBox(width: 12),
                         Text(
                           l10n.commonNoResultsFound,
-                          style: GoogleFonts.inter(
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: scheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
@@ -1076,13 +1086,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                       ),
                       title: Text(
                         suggestion.label,
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                       ),
                       subtitle: suggestion.subtitle == null
                           ? null
                           : Text(
                               suggestion.subtitle!,
-                              style: GoogleFonts.inter(
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 color: scheme.onSurface.withValues(alpha: 0.6),
                               ),
                             ),
@@ -1213,7 +1223,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                             const SizedBox(width: 6),
                             Text(
                               AppLocalizations.of(context)!.mapArReadyChipLabel,
-                              style: GoogleFonts.inter(
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
                                 color: accent,
@@ -1237,7 +1247,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 children: [
                   Text(
                     artwork.title,
-                    style: GoogleFonts.inter(
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.onSurface,
@@ -1246,7 +1256,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   const SizedBox(height: 8),
                   ArtworkCreatorByline(
                     artwork: artwork,
-                    style: GoogleFonts.inter(
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontSize: 14,
                       color: scheme.tertiary,
                       fontWeight: FontWeight.w500,
@@ -1257,7 +1267,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   if (artwork.description.isNotEmpty) ...[
                     Text(
                       artwork.description,
-                      style: GoogleFonts.inter(
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontSize: 14,
                         height: 1.6,
                         color: Theme.of(context)
@@ -1480,7 +1490,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         const SizedBox(width: 6),
         Text(
           value,
-          style: GoogleFonts.inter(
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             fontSize: 14,
             fontWeight: FontWeight.w500,
             color: Theme.of(context).colorScheme.onSurface,
@@ -1617,7 +1627,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                           const SizedBox(width: 6),
                           Text(
                             'Exhibition',
-                            style: GoogleFonts.inter(
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: exhibitionAccent,
@@ -1641,7 +1651,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 children: [
                   Text(
                     exhibition.title,
-                    style: GoogleFonts.inter(
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
                       color: scheme.onSurface,
@@ -1651,7 +1661,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     const SizedBox(height: 8),
                     Text(
                       'Hosted by ${exhibition.host!.displayName ?? exhibition.host!.username ?? 'Unknown'}',
-                      style: GoogleFonts.inter(
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontSize: 14,
                         color: exhibitionAccent,
                         fontWeight: FontWeight.w500,
@@ -1676,7 +1686,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     const SizedBox(height: 16),
                     Text(
                       exhibition.description!,
-                      style: GoogleFonts.inter(
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontSize: 14,
                         height: 1.6,
                         color: scheme.onSurface.withValues(alpha: 0.7),
@@ -1768,7 +1778,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           Expanded(
             child: Text(
               label,
-              style: GoogleFonts.inter(fontSize: 13, color: scheme.onSurface),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 13, color: scheme.onSurface),
             ),
           ),
         ],
@@ -1815,7 +1825,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 Expanded(
                   child: Text(
                     l10n.mapFiltersTitle,
-                    style: GoogleFonts.inter(
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: scheme.onSurface,
@@ -1849,7 +1859,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   // Search radius
                   Text(
                     l10n.mapNearbyRadiusTitle,
-                    style: GoogleFonts.inter(
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: Theme.of(context).colorScheme.onSurface,
@@ -1882,7 +1892,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                         child: Text(
                           l10n.commonDistanceKm(
                               _searchRadius.toInt().toString()),
-                          style: GoogleFonts.inter(
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                             color: scheme.onSurface,
@@ -1896,7 +1906,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   // Artwork types
                   Text(
                     l10n.desktopMapArtworkTypeTitle,
-                    style: GoogleFonts.inter(
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: Theme.of(context).colorScheme.onSurface,
@@ -1939,7 +1949,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   // Sort by
                   Text(
                     l10n.desktopMapSortByTitle,
-                    style: GoogleFonts.inter(
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: Theme.of(context).colorScheme.onSurface,
@@ -2112,7 +2122,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 const SizedBox(width: 12),
                 Text(
                   label,
-                  style: GoogleFonts.inter(
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontSize: 14,
                     fontWeight:
                         isSelected ? FontWeight.w600 : FontWeight.normal,
@@ -2323,7 +2333,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     children: [
                       Text(
                         l10n.mapDiscoveryPathTitle,
-                        style: GoogleFonts.outfit(
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                           color: scheme.onSurface,
                         ),
@@ -2458,7 +2468,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 Expanded(
                   child: Text(
                     l10n.arNearbyArtworksTitle,
-                    style: GoogleFonts.inter(
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: scheme.onSurface,
@@ -2480,7 +2490,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             child: Text(
               '${l10n.mapNearbyRadiusTitle}: ${_effectiveSearchRadiusKm.toStringAsFixed(1)} km'
               '${_travelModeEnabled ? ' • ${l10n.mapTravelModeTooltip}' : ''}',
-              style: GoogleFonts.inter(
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 fontSize: 12,
                 color: scheme.onSurfaceVariant,
               ),
@@ -2491,7 +2501,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 ? Center(
                     child: Text(
                       l10n.mapEmptyNoArtworksTitle,
-                      style: GoogleFonts.inter(
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontSize: 13,
                         color: scheme.onSurface.withValues(alpha: 0.65),
                       ),
@@ -2582,7 +2592,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                                       artwork.title,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: GoogleFonts.inter(
+                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w700,
                                         color: scheme.onSurface,
@@ -2595,7 +2605,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                                           : l10n.commonUnknown,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: GoogleFonts.inter(
+                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                         fontSize: 12,
                                         color: scheme.onSurfaceVariant,
                                       ),
@@ -2614,7 +2624,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                                           ),
                                           child: Text(
                                             distanceText,
-                                            style: GoogleFonts.inter(
+                                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                               fontSize: 11,
                                               fontWeight: FontWeight.w600,
                                               color: accent,
@@ -2624,7 +2634,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                                         const Spacer(),
                                         Text(
                                           '${artwork.rewards} KUB8',
-                                          style: GoogleFonts.inter(
+                                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                             fontSize: 11,
                                             fontWeight: FontWeight.w600,
                                             color: scheme.onSurfaceVariant,
@@ -3255,7 +3265,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           child: Center(
             child: Text(
               '$count',
-              style: GoogleFonts.inter(
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 fontSize: count > 9 ? 16 : 15,
                 fontWeight: FontWeight.w700,
                 color: Theme.of(context).colorScheme.onPrimary,
@@ -3407,7 +3417,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                                   if (canPresentExhibition) ...[
                                     Text(
                                       'Exhibition',
-                                      style: GoogleFonts.inter(
+                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                         fontSize: 10,
                                         fontWeight: FontWeight.w700,
                                         color: baseColor,
@@ -3420,7 +3430,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                                     displayTitle,
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.inter(
+                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                       fontWeight: FontWeight.w700,
                                       fontSize: 14,
                                       height: 1.2,
@@ -3447,7 +3457,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                                     const SizedBox(width: 4),
                                     Text(
                                       distanceText,
-                                      style: GoogleFonts.inter(
+                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                         fontSize: 10,
                                         fontWeight: FontWeight.w700,
                                         color: baseColor,
@@ -3504,7 +3514,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                           const SizedBox(height: 10),
                           Text(
                             visibleDescription,
-                            style: GoogleFonts.inter(
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontSize: 12,
                               color: scheme.onSurfaceVariant,
                               height: 1.4,
@@ -3530,7 +3540,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                                 _markerOverlayExpanded
                                     ? l10n.commonCollapse
                                     : l10n.commonExpand,
-                                style: GoogleFonts.inter(
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                   color: baseColor,
@@ -3672,7 +3682,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                               canPresentExhibition
                                   ? 'Open Exhibition'
                                   : l10n.commonViewDetails,
-                              style: GoogleFonts.inter(
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 13,
                               ),
@@ -3775,7 +3785,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   Flexible(
                     child: Text(
                       label,
-                      style: GoogleFonts.inter(
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: fg,
@@ -3807,7 +3817,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           const SizedBox(width: 4),
           Text(
             'POAP',
-            style: GoogleFonts.inter(
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               fontSize: 10,
               fontWeight: FontWeight.w600,
               color: baseColor,
@@ -3855,7 +3865,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           SizedBox(width: isLarge ? 6 : 4),
           Text(
             label,
-            style: GoogleFonts.inter(
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               fontSize: isLarge ? 11 : 10,
               fontWeight: FontWeight.w500,
               color: scheme.onSurface,
@@ -3973,7 +3983,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           SnackBar(
             content: Text(
               'Exhibition not available at the moment.',
-              style: GoogleFonts.inter(),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(),
             ),
             behavior: SnackBarBehavior.floating,
           ),
@@ -4001,7 +4011,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         SnackBar(
           content: Text(
             'Exhibition not available at the moment.',
-            style: GoogleFonts.inter(),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(),
           ),
           behavior: SnackBarBehavior.floating,
         ),
@@ -4076,7 +4086,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         backgroundColor: scheme.surface,
         title: Text(
           marker.name,
-          style: GoogleFonts.inter(
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             fontWeight: FontWeight.w700,
             color: scheme.onSurface,
           ),
@@ -4105,7 +4115,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               marker.description.isNotEmpty
                   ? marker.description
                   : AppLocalizations.of(context)!.mapNoLinkedArtworkForMarker,
-              style: GoogleFonts.inter(color: scheme.onSurfaceVariant),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
             ),
           ],
         ),
@@ -4147,7 +4157,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         SnackBar(
           content: Text(
             l10n.mapMarkerCreateWalletRequired,
-            style: GoogleFonts.inter(),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(),
           ),
           behavior: SnackBarBehavior.floating,
         ),
@@ -4216,7 +4226,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               Expanded(
                 child: Text(
                   'Marker created successfully!',
-                  style: GoogleFonts.inter(color: Colors.white),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white),
                 ),
               ),
             ],
@@ -4231,7 +4241,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         SnackBar(
           content: Text(
             'Failed to create marker. Please try again.',
-            style: GoogleFonts.inter(color: Colors.white),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white),
           ),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
@@ -4332,7 +4342,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           SnackBar(
             content: Text(
               AppLocalizations.of(context)!.mapMarkerDuplicateToast,
-              style: GoogleFonts.inter(color: Colors.white),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white),
             ),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,

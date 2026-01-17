@@ -187,6 +187,22 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
         side: const BorderSide(color: KubusColors.outlineDark),
       ),
     ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: KubusColors.surfaceDark.withValues(alpha: 0.22),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: KubusRadius.circular(KubusRadius.xl),
+        side: const BorderSide(color: KubusColors.glassBorderDark),
+      ),
+    ),
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      showDragHandle: false,
+      shape: RoundedRectangleBorder(
+        borderRadius: KubusRadius.circular(KubusRadius.xl),
+      ),
+    ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: _accentColor,
@@ -264,6 +280,22 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
       shape: RoundedRectangleBorder(
         borderRadius: KubusRadius.circular(KubusRadius.md),
         side: const BorderSide(color: KubusColors.outlineLight),
+      ),
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: KubusColors.surfaceLight.withValues(alpha: 0.16),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: KubusRadius.circular(KubusRadius.xl),
+        side: const BorderSide(color: KubusColors.glassBorderLight),
+      ),
+    ),
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      showDragHandle: false,
+      shape: RoundedRectangleBorder(
+        borderRadius: KubusRadius.circular(KubusRadius.xl),
       ),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(

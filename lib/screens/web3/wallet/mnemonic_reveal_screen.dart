@@ -5,8 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../widgets/app_loading.dart';
-import '../../../utils/app_color_utils.dart';
 import '../../../widgets/glass_components.dart';
+import '../../../widgets/kubus_button.dart';
+import '../../../utils/kubus_color_roles.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class MnemonicRevealScreen extends StatefulWidget {
@@ -109,13 +110,14 @@ class _MnemonicRevealScreenState extends State<MnemonicRevealScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
     final words = _mnemonic?.split(RegExp(r"\s+")) ?? [];
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.mnemonicRevealTitle),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         child: _isLoading
             ? const AppLoading()
             : Column(
@@ -124,14 +126,19 @@ class _MnemonicRevealScreenState extends State<MnemonicRevealScreen> {
                   if (_mnemonic != null) ...[
                     Row(
                       children: [
-                        Icon(Icons.shield_outlined,
-                            size: 20, color: AppColorUtils.indigoAccent),
-                        const SizedBox(width: 8),
-                        Text(l10n.mnemonicRevealPrivacyWarning,
-                            style: KubusTypography.textTheme.bodyMedium),
+                        Icon(
+                          Icons.shield_outlined,
+                          size: KubusSizes.sidebarActionIcon,
+                          color: scheme.primary,
+                        ),
+                        const SizedBox(width: KubusSpacing.sm),
+                        Text(
+                          l10n.mnemonicRevealPrivacyWarning,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
                     Expanded(
                       child: GridView.builder(
                         gridDelegate:
@@ -142,16 +149,21 @@ class _MnemonicRevealScreenState extends State<MnemonicRevealScreen> {
                           final w = words[index];
                           final display = _masked ? '•••••' : w;
                           return Container(
-                            margin: const EdgeInsets.all(6),
+                            margin: const EdgeInsets.all(
+                              KubusSpacing.xs + KubusSpacing.xxs,
+                            ),
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 8),
+                              horizontal: KubusSpacing.sm + KubusSpacing.xs,
+                              vertical: KubusSpacing.sm,
+                            ),
                             decoration: BoxDecoration(
-                              color: AppColorUtils.indigoAccent
-                                  .withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
+                              color: scheme.primary.withValues(alpha: 0.10),
+                              borderRadius:
+                                  BorderRadius.circular(KubusRadius.sm),
                               border: Border.all(
-                                  color: AppColorUtils.indigoAccent
-                                      .withValues(alpha: 0.3)),
+                                color: scheme.primary.withValues(alpha: 0.25),
+                                width: KubusSizes.hairline,
+                              ),
                             ),
                             child: Row(
                               children: [
@@ -168,17 +180,10 @@ class _MnemonicRevealScreenState extends State<MnemonicRevealScreen> {
                         },
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
                     Row(
                       children: [
-                        ElevatedButton.icon(
-                          icon: Icon(Icons.visibility,
-                              size: 18, color: scheme.onPrimary),
-                          label: Text(l10n.mnemonicRevealShowButton),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColorUtils.indigoAccent,
-                            foregroundColor: Colors.white,
-                          ),
+                        KubusButton(
                           onPressed: () async {
                             // Biometric re-check before showing
                             final wallet = Provider.of<WalletProvider>(context,
@@ -239,60 +244,71 @@ class _MnemonicRevealScreenState extends State<MnemonicRevealScreen> {
                               );
                             }
                           },
+                          label: l10n.mnemonicRevealShowButton,
+                          icon: Icons.visibility,
+                          backgroundColor: scheme.primary,
+                          foregroundColor: scheme.onPrimary,
                         ),
-                        const SizedBox(width: 12),
-                        ElevatedButton.icon(
-                          icon: const Icon(Icons.copy, size: 18),
-                          label: Text(l10n.commonCopy),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: scheme.surface,
-                            foregroundColor: scheme.onSurface,
-                          ),
+                        const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
+                        KubusOutlineButton(
                           onPressed: _copyToClipboard,
+                          label: l10n.commonCopy,
+                          icon: Icons.copy,
                         ),
-                        const SizedBox(width: 12),
-                        OutlinedButton(
+                        const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
+                        KubusOutlineButton(
                           onPressed: () => Navigator.of(context).pop(),
-                          child: Text(l10n.commonClose),
+                          label: l10n.commonClose,
                         ),
                       ],
                     ),
                   ] else ...[
                     Row(
                       children: [
-                        Icon(Icons.info_outline,
-                            size: 20, color: AppColorUtils.amberAccent),
-                        const SizedBox(width: 8),
+                        Icon(
+                          Icons.info_outline,
+                          size: KubusSizes.sidebarActionIcon,
+                          color: roles.warningAction,
+                        ),
+                        const SizedBox(width: KubusSpacing.sm),
                         Expanded(
                             child: Text(l10n.mnemonicRevealBiometricUnavailable,
                                 style: KubusTypography.textTheme.bodyMedium)),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
                     if (_error != null)
                       Padding(
-                          padding: const EdgeInsets.only(bottom: 8.0),
-                          child: Text(_error!,
-                              style: TextStyle(color: scheme.error))),
+                        padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
+                        child: Text(
+                          _error!,
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(color: scheme.error),
+                        ),
+                      ),
                     TextField(
                         controller: _pinController,
                         obscureText: true,
                         keyboardType: TextInputType.number,
                         decoration:
                             InputDecoration(labelText: l10n.commonPinLabel)),
-                    const SizedBox(height: 12),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColorUtils.indigoAccent,
-                        foregroundColor: Colors.white,
-                      ),
+                    const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
+                    KubusButton(
                       onPressed: _attemptPinReveal,
-                      child: Text(l10n.commonUnlock),
+                      label: l10n.commonUnlock,
+                      icon: Icons.lock_open,
+                      backgroundColor: scheme.primary,
+                      foregroundColor: scheme.onPrimary,
+                      isFullWidth: true,
                     ),
-                    const SizedBox(height: 8),
-                    OutlinedButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: Text(l10n.commonCancel)),
+                    const SizedBox(height: KubusSpacing.sm),
+                    KubusOutlineButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      label: l10n.commonCancel,
+                      isFullWidth: true,
+                    ),
                   ]
                 ],
               ),
