@@ -350,6 +350,7 @@ class _MapScreenState extends State<MapScreen>
 
     // Switching query strategy (radius vs bounds) should invalidate caches.
     _mapMarkerService.clearCache();
+    _lastMarkerFetchViewportSignature = null;
 
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -358,7 +359,8 @@ class _MapScreenState extends State<MapScreen>
       // Best-effort.
     }
 
-    unawaited(_loadArtMarkers(forceRefresh: true));
+    // In travel mode we want an immediate viewport refresh (bounds-based).
+    unawaited(_loadMarkersForCurrentView(forceRefresh: true));
   }
 
   Future<void> _maybeShowInteractiveMapTutorial() async {
@@ -620,9 +622,9 @@ class _MapScreenState extends State<MapScreen>
       // Set up notification tap handler
       _pushNotificationService.onNotificationTap = _handleNotificationTap;
 
-      // Load art markers from backend
-        await _loadArtMarkers(center: widget.initialCenter);
-        await _maybeOpenInitialMarker();
+      // Marker loading is triggered after the map reports ready (and/or when
+      // we get the initial location). This avoids travel-mode starting with a
+      // tiny radius query before the viewport bounds are available.
       _markerSocketSubscription =
           _mapMarkerService.onMarkerCreated.listen(_handleMarkerCreated);
       _markerDeletedSubscription =
@@ -636,6 +638,23 @@ class _MapScreenState extends State<MapScreen>
     } catch (e) {
       debugPrint('Error initializing AR integration: $e');
     }
+  }
+
+  Future<void> _loadMarkersForCurrentView({bool forceRefresh = false}) async {
+    LatLng? center;
+    LatLngBounds? bounds;
+
+    try {
+      final cam = _mapController.camera;
+      center = cam.center;
+      if (_travelModeEnabled) {
+        bounds = cam.visibleBounds;
+      }
+    } catch (_) {
+      // Map may not be ready yet.
+    }
+
+    await _loadArtMarkers(center: center, bounds: bounds, forceRefresh: forceRefresh);
   }
 
   Future<void> _maybeOpenInitialMarker() async {
@@ -755,9 +774,12 @@ class _MapScreenState extends State<MapScreen>
     try {
       _isLoadingMarkers = true;
 
+      // Capture providers before awaiting to avoid BuildContext across async gaps.
+      final artworkProvider = context.read<ArtworkProvider>();
+
       final result = (_travelModeEnabled && queryBounds != null)
           ? await MapMarkerHelper.loadAndHydrateMarkersInBounds(
-              context: context,
+              artworkProvider: artworkProvider,
               mapMarkerService: _mapMarkerService,
               center: queryCenter,
               bounds: queryBounds,
@@ -765,7 +787,7 @@ class _MapScreenState extends State<MapScreen>
               forceRefresh: forceRefresh,
             )
           : await MapMarkerHelper.loadAndHydrateMarkers(
-              context: context,
+              artworkProvider: artworkProvider,
               mapMarkerService: _mapMarkerService,
               center: queryCenter,
               radiusKm: _effectiveMarkerRadiusKm,
@@ -2009,6 +2031,16 @@ class _MapScreenState extends State<MapScreen>
       onMapReady: () {
         if (_currentPosition != null) {
           _mapController.move(_currentPosition!, _lastZoom);
+        }
+
+        // Travel mode must start with a bounds query once the map is ready,
+        // otherwise the first load may be anchored to the default center.
+        if (_travelModeEnabled) {
+          unawaited(_loadMarkersForCurrentView(forceRefresh: true).then((_) => _maybeOpenInitialMarker()));
+        } else if (_artMarkers.isEmpty && !_isLoadingMarkers) {
+          unawaited(_loadMarkersForCurrentView(forceRefresh: true).then((_) => _maybeOpenInitialMarker()));
+        } else {
+          unawaited(_maybeOpenInitialMarker());
         }
       },
       onPositionChanged: (camera, hasGesture) {
@@ -3744,7 +3776,7 @@ class _MapScreenState extends State<MapScreen>
                                                 ? '${l10n.mapResultsDiscoveredLabel(
                                                     artworks.length,
                                                     (discoveryProgress * 100).round(),
-                                                  )} • ${l10n.mapNearbyRadiusWorldShort}'
+                                                  )} • ${l10n.mapTravelModeStatusTravelling}'
                                                 : l10n.mapResultsDiscoveredLabel(
                                                     artworks.length,
                                                     (discoveryProgress * 100).round(),
@@ -3760,7 +3792,7 @@ class _MapScreenState extends State<MapScreen>
                                 _glassIconButton(
                                   icon: Icons.radar,
                                       tooltip: _travelModeEnabled
-                                          ? l10n.mapNearbyRadiusTooltipWorld
+                                          ? l10n.mapTravelModeStatusTravellingTooltip
                                           : l10n.mapNearbyRadiusTooltip(
                                               _effectiveMarkerRadiusKm.toInt(),
                                             ),

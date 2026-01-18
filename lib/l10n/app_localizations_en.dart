@@ -2302,6 +2302,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapNearbyRadiusWorldShort => 'Radius: World';
 
   @override
+  String get mapTravelModeStatusTravelling => 'You are travelling';
+
+  @override
+  String get mapTravelModeStatusTravellingTooltip =>
+      'Travel mode is on — showing markers in view';
+
+  @override
   String get mapArArtworkNearbyTitle => 'AR artwork nearby!';
 
   @override
@@ -2587,7 +2594,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapTutorialStepTravelTitle => 'Travel mode';
 
   @override
-  String get mapTutorialStepTravelBody => 'Travel mode expands the loading radius so you can browse markers far beyond nearby.';
+  String get mapTutorialStepTravelBody => 'Travel mode loads markers for the visible map area so you can explore anywhere.';
 
   @override
   String get mapTutorialStepRecenterTitle => 'Recenter';
@@ -2605,10 +2612,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapTravelModeTutorialTitle => 'Explore beyond nearby';
 
   @override
-  String get mapTravelModeTutorialBody => 'Travel mode lets you view markers beyond your nearby radius. Tap the Travel button on the map to toggle it anytime.';
+  String get mapTravelModeTutorialBody => "Travel mode lets you browse markers anywhere. The map loads what's currently in view.";
 
   @override
-  String get mapTravelModeTutorialHint => 'Tip: When Travel mode is on, the map loads markers from a much larger area.';
+  String get mapTravelModeTutorialHint => 'Tip: Pan and zoom — markers refresh to match the viewport.';
 
   @override
   String get mapTravelModeTutorialGotIt => 'Got it';

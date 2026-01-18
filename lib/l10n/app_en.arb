@@ -921,6 +921,14 @@
   "@mapNearbyRadiusWorldShort": {
     "description": "Short label shown in Nearby Art when travel mode is enabled."
   },
+  "mapTravelModeStatusTravelling": "You are travelling",
+  "@mapTravelModeStatusTravelling": {
+    "description": "Short status label shown when Travel mode is enabled (instead of a numeric radius)."
+  },
+  "mapTravelModeStatusTravellingTooltip": "Travel mode is on — showing markers in view",
+  "@mapTravelModeStatusTravellingTooltip": {
+    "description": "Tooltip shown near the Nearby Art radius control when Travel mode is enabled."
+  },
   "mapArArtworkNearbyTitle": "AR artwork nearby!",
   "mapArArtworkNearbySubtitle": "{name} · {distanceMeters}m away",
   "@mapArArtworkNearbySubtitle": {
@@ -1094,7 +1102,7 @@
   "@mapTutorialStepTravelTitle": {
     "description": "Title for the travel mode step of the interactive map tutorial."
   },
-  "mapTutorialStepTravelBody": "Travel mode expands the loading radius so you can browse markers far beyond nearby.",
+  "mapTutorialStepTravelBody": "Travel mode loads markers for the visible map area so you can explore anywhere.",
   "@mapTutorialStepTravelBody": {
     "description": "Body text for the travel mode step of the interactive map tutorial."
   },
@@ -1115,8 +1123,8 @@
     "description": "Body text for the search step of the interactive map tutorial (desktop)."
   },
   "mapTravelModeTutorialTitle": "Explore beyond nearby",
-  "mapTravelModeTutorialBody": "Travel mode lets you view markers beyond your nearby radius. Tap the Travel button on the map to toggle it anytime.",
-  "mapTravelModeTutorialHint": "Tip: When Travel mode is on, the map loads markers from a much larger area.",
+  "mapTravelModeTutorialBody": "Travel mode lets you browse markers anywhere. The map loads what’s currently in view.",
+  "mapTravelModeTutorialHint": "Tip: Pan and zoom — markers refresh to match the viewport.",
   "mapTravelModeTutorialGotIt": "Got it",
   "mapTravelModeTutorialEnable": "Enable travel mode",
   "mapNearbyArtTitle": "Nearby art",
@@ -1525,6 +1533,11 @@
   "collectionCreatorNameRequiredError": "Collection name is required",
   "collectionCreatorCreateFailed": "Failed to create collection.",
   "collectionCreatorCreateFailedWithError": "Failed to create collection: {error}",
+  "@collectionCreatorCreateFailedWithError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
   "collectionDetailLoadFailedMessage": "Failed to load collection details. Please try again.",
   "collectionDetailNoArtworksYet": "No artworks yet.",
   "collectionDetailAddArtwork": "Add Artwork",

@@ -4565,6 +4565,18 @@ abstract class AppLocalizations {
   /// **'Radius: World'**
   String get mapNearbyRadiusWorldShort;
 
+  /// No description provided for @mapTravelModeStatusTravelling.
+  ///
+  /// In en, this message translates to:
+  /// **'You are travelling'**
+  String get mapTravelModeStatusTravelling;
+
+  /// No description provided for @mapTravelModeStatusTravellingTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Travel mode is on — showing markers in view'**
+  String get mapTravelModeStatusTravellingTooltip;
+
   /// No description provided for @mapArArtworkNearbyTitle.
   ///
   /// In en, this message translates to:
