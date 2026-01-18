@@ -2302,6 +2302,13 @@ class AppLocalizationsSl extends AppLocalizations {
   String get mapNearbyRadiusWorldShort => 'Radij: Svet';
 
   @override
+  String get mapTravelModeStatusTravelling => 'Potuješ';
+
+  @override
+  String get mapTravelModeStatusTravellingTooltip =>
+      'Način potovanja je vklopljen — prikazujem označevalce v pogledu';
+
+  @override
   String get mapArArtworkNearbyTitle => 'AR umetnina v bližini!';
 
   @override
@@ -2587,7 +2594,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get mapTutorialStepTravelTitle => 'Način potovanja';
 
   @override
-  String get mapTutorialStepTravelBody => 'Način potovanja razširi radij nalaganja, da lahko brskaš tudi daleč stran.';
+  String get mapTutorialStepTravelBody => 'Način potovanja naloži označevalce za trenutno viden del zemljevida, da lahko raziskuješ kjerkoli.';
 
   @override
   String get mapTutorialStepRecenterTitle => 'Nazaj na mojo lokacijo';
@@ -2605,10 +2612,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get mapTravelModeTutorialTitle => 'Razišči širše območje';
 
   @override
-  String get mapTravelModeTutorialBody => 'Način potovanja ti omogoča ogled označevalcev tudi izven običajnega radija v bližini. Dotakni se gumba Način potovanja na zemljevidu za vklop/izklop.';
+  String get mapTravelModeTutorialBody => 'Način potovanja ti omogoča brskanje kjerkoli. Zemljevid naloži tisto, kar je trenutno v pogledu.';
 
   @override
-  String get mapTravelModeTutorialHint => 'Namig: Ko je način potovanja vklopljen, se naložijo označevalci z veliko širšega območja.';
+  String get mapTravelModeTutorialHint => 'Namig: Premakni in približaj/oddalji — označevalci se osvežijo glede na pogled.';
 
   @override
   String get mapTravelModeTutorialGotIt => 'Razumem';

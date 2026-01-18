@@ -101,14 +101,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   bool _isDiscoveryExpanded = false;
   String _selectedFilter = 'nearby';
   double _searchRadius = 5.0; // km
-
-  // Approx. half Earth's circumference (max great-circle distance).
-  // Using a small buffer so antipodal points are included.
-  static const double _travelModeRadiusKm = 20050.0;
   bool _travelModeEnabled = false;
 
-  double get _effectiveSearchRadiusKm =>
-      _travelModeEnabled ? _travelModeRadiusKm : _searchRadius;
+  // Travel mode is viewport-based (bounds query), not huge-radius.
+  double get _effectiveSearchRadiusKm => _searchRadius;
 
   // Interactive onboarding tutorial (coach marks)
   final GlobalKey _tutorialMapKey = GlobalKey();
@@ -140,8 +136,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   double? _queuedCameraZoom;
   LatLng? _lastMarkerFetchCenter;
   DateTime? _lastMarkerFetchTime;
+  String? _lastMarkerFetchViewportSignature;
   static const double _markerRefreshDistanceMeters = 1200;
   static const Duration _markerRefreshInterval = Duration(minutes: 5);
+
+  String _viewportSignature(LatLngBounds bounds, double zoom) {
+    double r(double v) => double.parse(v.toStringAsFixed(2));
+    return '${r(bounds.south)}:${r(bounds.west)}:${r(bounds.north)}:${r(bounds.east)}:${zoom.toStringAsFixed(1)}';
+  }
 
   final TextEditingController _searchController = TextEditingController();
   final LayerLink _searchFieldLink = LayerLink();
@@ -191,7 +193,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      unawaited(_loadMarkers(force: true).then((_) => _maybeOpenInitialMarker()));
+      // Load markers after the first layout. If travel mode is enabled we will
+      // force a bounds refresh once the map reports ready.
+      unawaited(_loadMarkersForCurrentView(force: true).then((_) => _maybeOpenInitialMarker()));
 
       // Only animate camera to user location when we're not deep-linking to a target.
       // When initialCenter is provided (e.g. "Open on Map"), keep the camera focused on that target.
@@ -231,6 +235,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _travelModeEnabled = enabled;
     });
 
+    // Switching query strategy (radius vs bounds) should invalidate caches.
+    _mapMarkerService.clearCache();
+    _lastMarkerFetchViewportSignature = null;
+
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(PreferenceKeys.mapTravelModeEnabledV1, enabled);
@@ -238,7 +246,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       // Best-effort.
     }
 
-    unawaited(_loadMarkers(force: true));
+    unawaited(_loadMarkersForCurrentView(force: true));
   }
 
   Future<void> _maybeShowInteractiveMapTutorial() async {
@@ -391,7 +399,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         .take(30)
         .map((a) => a.id)
         .join(',');
-    final sig = '${_effectiveSearchRadiusKm.toStringAsFixed(1)}|'
+    final modeSig = _travelModeEnabled ? 'travel' : _effectiveSearchRadiusKm.toStringAsFixed(1);
+    final sig = '$modeSig|'
         '${base.latitude.toStringAsFixed(4)},${base.longitude.toStringAsFixed(4)}|'
         '${filteredArtworks.length}|$ids';
     if (_nearbySidebarSignature == sig) return;
@@ -450,6 +459,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _mapController.move(_queuedCameraTarget!, _queuedCameraZoom!);
       _queuedCameraTarget = null;
       _queuedCameraZoom = null;
+    }
+
+    // Travel mode needs a bounds-based fetch once the viewport exists.
+    if (_travelModeEnabled) {
+      unawaited(_loadMarkersForCurrentView(force: true));
+    } else if (_artMarkers.isEmpty && !_isLoadingMarkers) {
+      unawaited(_loadMarkersForCurrentView(force: true));
     }
   }
 
@@ -652,7 +668,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 _markerOverlayExpanded = false;
               });
             }
-            _queueMarkerRefresh(center, fromGesture: hasGesture);
+            _queueMarkerRefresh(position, fromGesture: hasGesture);
           },
         );
       },
@@ -1877,11 +1893,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                         child: Slider(
                           value: _searchRadius,
                           min: 1,
-                          max: 50,
-                          divisions: 49,
-                          onChanged: (value) {
-                            setState(() => _searchRadius = value);
-                          },
+                          max: 200,
+                          divisions: 199,
+                          onChanged: _travelModeEnabled
+                              ? null
+                              : (value) {
+                                  setState(() => _searchRadius = value);
+                                },
                           activeColor: themeProvider.accentColor,
                         ),
                       ),
@@ -2007,7 +2025,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                         _selectedFilter = 'nearby';
                         _selectedSort = 'distance';
                       });
-                      _loadMarkers(force: true);
+                      _loadMarkersForCurrentView(force: true);
                     },
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
@@ -2023,7 +2041,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   child: ElevatedButton(
                     onPressed: () {
                       setState(() => _showFiltersPanel = false);
-                      _loadMarkers(force: true);
+                      _loadMarkersForCurrentView(force: true);
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: themeProvider.accentColor,
@@ -2493,8 +2511,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
             child: Text(
-              '${l10n.mapNearbyRadiusTitle}: ${_effectiveSearchRadiusKm.toStringAsFixed(1)} km'
-              '${_travelModeEnabled ? ' • ${l10n.mapTravelModeTooltip}' : ''}',
+              _travelModeEnabled
+                  ? l10n.mapTravelModeStatusTravelling
+                  : '${l10n.mapNearbyRadiusTitle}: ${_effectiveSearchRadiusKm.toStringAsFixed(1)} km',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 fontSize: 12,
                 color: scheme.onSurfaceVariant,
@@ -3058,31 +3077,93 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
   }
 
-  Future<void> _loadMarkers({bool force = false}) async {
+  Future<void> _loadMarkersForCurrentView({bool force = false}) async {
+    LatLng? center;
+    LatLngBounds? bounds;
+
+    try {
+      final cam = _mapController.camera;
+      center = cam.center;
+      if (_travelModeEnabled) {
+        bounds = cam.visibleBounds;
+      }
+    } catch (_) {
+      // Map not ready yet.
+    }
+
+    await _loadMarkers(center: center, bounds: bounds, force: force);
+  }
+
+  Future<void> _loadMarkers({LatLng? center, LatLngBounds? bounds, bool force = false}) async {
     if (_isLoadingMarkers) return;
     _isLoadingMarkers = true;
     try {
-      final center = _userLocation ?? _effectiveCenter;
-      final result = await MapMarkerHelper.loadAndHydrateMarkers(
-        context: context,
-        mapMarkerService: _mapMarkerService,
-        center: center,
-        radiusKm: _effectiveSearchRadiusKm,
-        limit: _travelModeEnabled ? 5000 : null,
-        forceRefresh: force,
-      );
+      // Capture providers before awaiting to avoid BuildContext across async gaps.
+      final artworkProvider = context.read<ArtworkProvider>();
+
+      final queryCenter = center ?? _userLocation ?? _effectiveCenter;
+      LatLngBounds? queryBounds = bounds;
+      if (_travelModeEnabled && queryBounds == null) {
+        try {
+          queryBounds = _mapController.camera.visibleBounds;
+        } catch (_) {
+          // Map not ready.
+        }
+      }
+
+      final result = (_travelModeEnabled && queryBounds != null)
+          ? await MapMarkerHelper.loadAndHydrateMarkersInBounds(
+              artworkProvider: artworkProvider,
+              mapMarkerService: _mapMarkerService,
+              center: queryCenter,
+              bounds: queryBounds,
+              limit: 5000,
+              forceRefresh: force,
+            )
+          : await MapMarkerHelper.loadAndHydrateMarkers(
+              artworkProvider: artworkProvider,
+              mapMarkerService: _mapMarkerService,
+              center: queryCenter,
+              radiusKm: _effectiveSearchRadiusKm,
+              limit: _travelModeEnabled ? 5000 : null,
+              forceRefresh: force,
+            );
       if (!mounted) return;
       setState(() {
         _artMarkers = result.markers;
       });
       _lastMarkerFetchCenter = result.center;
       _lastMarkerFetchTime = result.fetchedAt;
+      if (_travelModeEnabled && (result.bounds ?? queryBounds) != null) {
+        final b = result.bounds ?? queryBounds!;
+        _lastMarkerFetchViewportSignature = _viewportSignature(b, _cameraZoom);
+      }
     } finally {
       _isLoadingMarkers = false;
     }
   }
 
-  void _queueMarkerRefresh(LatLng center, {required bool fromGesture}) {
+  void _queueMarkerRefresh(MapCamera camera, {required bool fromGesture}) {
+    if (_travelModeEnabled) {
+      final bounds = camera.visibleBounds;
+      final signature = _viewportSignature(bounds, camera.zoom);
+      if (_lastMarkerFetchViewportSignature == signature && _artMarkers.isNotEmpty) {
+        return;
+      }
+
+      _markerRefreshDebounce?.cancel();
+      final debounceTime = fromGesture
+          ? const Duration(milliseconds: 650)
+          : const Duration(milliseconds: 250);
+
+      _markerRefreshDebounce = Timer(debounceTime, () {
+        _markerRefreshDebounce = null;
+        unawaited(_loadMarkers(center: camera.center, bounds: bounds, force: false));
+      });
+      return;
+    }
+
+    final center = camera.center;
     final shouldRefresh = MapMarkerHelper.shouldRefreshMarkers(
       newCenter: center,
       lastCenter: _lastMarkerFetchCenter,
@@ -3096,11 +3177,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (!shouldRefresh) return;
 
     _markerRefreshDebounce?.cancel();
-    final shouldForce = shouldRefresh;
     _markerRefreshDebounce = Timer(
-        fromGesture ? const Duration(milliseconds: 350) : Duration.zero, () {
-      _loadMarkers(force: shouldForce);
-    });
+      fromGesture ? const Duration(milliseconds: 350) : Duration.zero,
+      () {
+        _loadMarkers(center: center, force: true);
+      },
+    );
   }
 
   Marker _buildPendingMarker(LatLng point, ThemeProvider themeProvider) {
@@ -4241,7 +4323,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           behavior: SnackBarBehavior.floating,
         ),
       );
-      await _loadMarkers(force: true);
+      await _loadMarkersForCurrentView(force: true);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

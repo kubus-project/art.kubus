@@ -1,7 +1,6 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:provider/provider.dart';
 
 import '../models/art_marker.dart';
 import '../providers/artwork_provider.dart';
@@ -29,14 +28,13 @@ class MapMarkerHelper {
   /// Loads markers for a given center, filters invalid ones, and hydrates
   /// linked artworks so downstream UI can render metadata without null checks.
   static Future<MapMarkerLoadResult> loadAndHydrateMarkers({
-    required BuildContext context,
+    required ArtworkProvider artworkProvider,
     required MapMarkerService mapMarkerService,
     required LatLng center,
     required double radiusKm,
     int? limit,
     bool forceRefresh = false,
   }) async {
-    final artworkProvider = context.read<ArtworkProvider>();
     final markers = await mapMarkerService.loadMarkers(
       center: center,
       radiusKm: radiusKm,
@@ -58,14 +56,13 @@ class MapMarkerHelper {
   /// Loads markers inside the given [bounds], filters invalid ones, and hydrates
   /// linked artworks.
   static Future<MapMarkerLoadResult> loadAndHydrateMarkersInBounds({
-    required BuildContext context,
+    required ArtworkProvider artworkProvider,
     required MapMarkerService mapMarkerService,
     required LatLng center,
     required LatLngBounds bounds,
     int? limit,
     bool forceRefresh = false,
   }) async {
-    final artworkProvider = context.read<ArtworkProvider>();
     final markers = await mapMarkerService.loadMarkersInBounds(
       center: center,
       bounds: bounds,

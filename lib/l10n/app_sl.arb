@@ -903,6 +903,14 @@
   "@mapNearbyRadiusWorldShort": {
     "description": "Kratek napis v seznamu bližnjih vsebin, ko je vključen potovalni način."
   },
+  "mapTravelModeStatusTravelling": "Potuješ",
+  "@mapTravelModeStatusTravelling": {
+    "description": "Kratek statusni napis, ko je vključen način potovanja (namesto številčnega radija)."
+  },
+  "mapTravelModeStatusTravellingTooltip": "Način potovanja je vklopljen — prikazujem označevalce v pogledu",
+  "@mapTravelModeStatusTravellingTooltip": {
+    "description": "Namig ob kontroli radija bližine, ko je vključen način potovanja."
+  },
   "mapArArtworkNearbyTitle": "AR umetnina v bližini!",
   "mapArArtworkNearbySubtitle": "{name} · {distanceMeters} m stran",
   "@mapArArtworkNearbySubtitle": {
@@ -1076,7 +1084,7 @@
   "@mapTutorialStepTravelTitle": {
     "description": "Naslov koraka o načinu potovanja v interaktivnem vodiču po zemljevidu."
   },
-  "mapTutorialStepTravelBody": "Način potovanja razširi radij nalaganja, da lahko brskaš tudi daleč stran.",
+  "mapTutorialStepTravelBody": "Način potovanja naloži označevalce za trenutno viden del zemljevida, da lahko raziskuješ kjerkoli.",
   "@mapTutorialStepTravelBody": {
     "description": "Opis koraka o načinu potovanja v interaktivnem vodiču po zemljevidu."
   },
@@ -1097,8 +1105,8 @@
     "description": "Opis koraka o iskanju (namizno) v interaktivnem vodiču po zemljevidu."
   },
   "mapTravelModeTutorialTitle": "Razišči širše območje",
-  "mapTravelModeTutorialBody": "Način potovanja ti omogoča ogled označevalcev tudi izven običajnega radija v bližini. Dotakni se gumba Način potovanja na zemljevidu za vklop/izklop.",
-  "mapTravelModeTutorialHint": "Namig: Ko je način potovanja vklopljen, se naložijo označevalci z veliko širšega območja.",
+  "mapTravelModeTutorialBody": "Način potovanja ti omogoča brskanje kjerkoli. Zemljevid naloži tisto, kar je trenutno v pogledu.",
+  "mapTravelModeTutorialHint": "Namig: Premakni in približaj/oddalji — označevalci se osvežijo glede na pogled.",
   "mapTravelModeTutorialGotIt": "Razumem",
   "mapTravelModeTutorialEnable": "Vključi način potovanja",
   "mapNearbyArtTitle": "Umetnost v bližini",
@@ -1474,6 +1482,11 @@
   "collectionCreatorNameRequiredError": "Ime zbirke je obvezno",
   "collectionCreatorCreateFailed": "Ustvarjanje zbirke ni uspelo.",
   "collectionCreatorCreateFailedWithError": "Ustvarjanje zbirke ni uspelo: {error}",
+  "@collectionCreatorCreateFailedWithError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
   "collectionDetailLoadFailedMessage": "Nalaganje podrobnosti zbirke ni uspelo. Poskusi znova.",
   "collectionDetailNoArtworksYet": "Zaenkrat ni umetnin.",
   "collectionDetailAddArtwork": "Dodaj umetnino",
