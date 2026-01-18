@@ -185,43 +185,52 @@ class _MainAppState extends State<MainApp> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isSmallScreen = constraints.maxWidth < 375;
+        final bottomInset = MediaQuery.of(context).padding.bottom;
         final theme = Theme.of(context);
         final scheme = theme.colorScheme;
         final isDark = theme.brightness == Brightness.dark;
         final glassTint = scheme.surface.withValues(alpha: isDark ? 0.18 : 0.12);
         
-        return Container(
-          decoration: BoxDecoration(
-            boxShadow: [
-              BoxShadow(
-                color: theme.shadowColor.withValues(alpha: 0.10),
-                blurRadius: 18,
-                offset: const Offset(0, -6),
-              ),
-            ],
-          ),
-          child: LiquidGlassPanel(
-            margin: EdgeInsets.zero,
-            padding: EdgeInsets.zero,
-            borderRadius: BorderRadius.zero,
-            blurSigma: KubusGlassEffects.blurSigmaLight,
-            backgroundColor: glassTint,
-            child: SafeArea(
-              top: false,
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: isSmallScreen ? KubusSpacing.xs : KubusSpacing.sm,
-                  vertical: isSmallScreen ? 2 : KubusSpacing.xs,
+        // Explicit height prevents the nav bar from accidentally expanding to
+        // fill the entire Scaffold when it receives overly-permissive (or tight)
+        // vertical constraints.
+        return SizedBox(
+          height: KubusLayout.mainBottomNavBarHeight + bottomInset,
+          child: Container(
+            decoration: BoxDecoration(
+              boxShadow: [
+                BoxShadow(
+                  color: theme.shadowColor.withValues(alpha: 0.10),
+                  blurRadius: 18,
+                  offset: const Offset(0, -6),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildNavItem(context, 0, Icons.explore, isSmallScreen),
-                    _buildNavItem(context, 1, Icons.view_in_ar, isSmallScreen),
-                    _buildNavItem(context, 2, Icons.people, isSmallScreen),
-                    _buildNavItem(context, 3, Icons.home, isSmallScreen),
-                    _buildNavItem(context, 4, Icons.person, isSmallScreen),
-                  ],
+              ],
+            ),
+            child: LiquidGlassPanel(
+              margin: EdgeInsets.zero,
+              padding: EdgeInsets.zero,
+              borderRadius: BorderRadius.zero,
+              blurSigma: KubusGlassEffects.blurSigmaLight,
+              backgroundColor: glassTint,
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal:
+                        isSmallScreen ? KubusSpacing.xs : KubusSpacing.sm,
+                    vertical: isSmallScreen ? 2 : KubusSpacing.xs,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildNavItem(context, 0, Icons.explore, isSmallScreen),
+                      _buildNavItem(
+                          context, 1, Icons.view_in_ar, isSmallScreen),
+                      _buildNavItem(context, 2, Icons.people, isSmallScreen),
+                      _buildNavItem(context, 3, Icons.home, isSmallScreen),
+                      _buildNavItem(context, 4, Icons.person, isSmallScreen),
+                    ],
+                  ),
                 ),
               ),
             ),
