@@ -1,3 +1,4 @@
 {
-    "chatgpt.openOnStartup": true
+    "chatgpt.openOnStartup": true,
+    "cmake.sourceDirectory": "G:/WorkingDATA/art.kubus/art.kubus/windows"
 }

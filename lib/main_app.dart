@@ -218,7 +218,7 @@ class _MainAppState extends State<MainApp> {
                   padding: EdgeInsets.symmetric(
                     horizontal:
                         isSmallScreen ? KubusSpacing.xs : KubusSpacing.sm,
-                    vertical: isSmallScreen ? 2 : KubusSpacing.xs,
+                    vertical: isSmallScreen ? 1 : 2,
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,

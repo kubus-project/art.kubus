@@ -47,6 +47,26 @@ class _SignInScreenState extends State<SignInScreen> {
   final _passwordController = TextEditingController();
   bool _isEmailSubmitting = false;
   bool _isGoogleSubmitting = false;
+  int? _googleRateLimitUntilMs;
+
+  @override
+  void initState() {
+    super.initState();
+    // Preload rate-limit cooldown so the Google sign-in click handler can
+    // start the popup flow without awaiting (browser user-activation rules).
+    unawaited(_loadGoogleAuthCooldown());
+  }
+
+  Future<void> _loadGoogleAuthCooldown() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final untilMs = prefs.getInt('rate_limit_auth_google_until');
+      if (!mounted) return;
+      _googleRateLimitUntilMs = untilMs;
+    } catch (_) {
+      // Best-effort only.
+    }
+  }
 
   @override
   void dispose() {
@@ -258,28 +278,24 @@ class _SignInScreenState extends State<SignInScreen> {
     unawaited(TelemetryService().trackSignInAttempt(method: 'google'));
 
     // Honor any server-provided rate-limit cooldown persisted from prior attempts.
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      if (!mounted) return;
-      final untilMs = prefs.getInt('rate_limit_auth_google_until');
-      if (untilMs != null) {
-        final until = DateTime.fromMillisecondsSinceEpoch(untilMs);
-        if (DateTime.now().isBefore(until)) {
-          final remaining = until.difference(DateTime.now());
-          final mins = remaining.inMinutes;
-          final secs = remaining.inSeconds % 60;
-          final friendly = mins > 0 ? '${mins}m ${secs}s' : '${secs}s';
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showKubusSnackBar(
-            SnackBar(
-                content: Text(l10n.authGoogleRateLimitedRetryIn(friendly))),
-          );
-          unawaited(TelemetryService().trackSignInFailure(
-              method: 'google', errorClass: 'rate_limited'));
-          return;
-        }
+    // IMPORTANT: do not await here, otherwise browsers may block the Google popup
+    // due to missing user activation.
+    final untilMs = _googleRateLimitUntilMs;
+    if (untilMs != null) {
+      final until = DateTime.fromMillisecondsSinceEpoch(untilMs);
+      if (DateTime.now().isBefore(until)) {
+        final remaining = until.difference(DateTime.now());
+        final mins = remaining.inMinutes;
+        final secs = remaining.inSeconds % 60;
+        final friendly = mins > 0 ? '${mins}m ${secs}s' : '${secs}s';
+        ScaffoldMessenger.of(context).showKubusSnackBar(
+          SnackBar(content: Text(l10n.authGoogleRateLimitedRetryIn(friendly))),
+        );
+        unawaited(TelemetryService().trackSignInFailure(
+            method: 'google', errorClass: 'rate_limited'));
+        return;
       }
-    } catch (_) {}
+    }
 
     setState(() => _isGoogleSubmitting = true);
     try {
@@ -301,6 +317,7 @@ class _SignInScreenState extends State<SignInScreen> {
       try {
         final prefs = await SharedPreferences.getInstance();
         await prefs.remove('rate_limit_auth_google_until');
+        _googleRateLimitUntilMs = null;
       } catch (_) {}
       await _handleAuthSuccess(result);
       unawaited(TelemetryService().trackSignInSuccess(method: 'google'));
