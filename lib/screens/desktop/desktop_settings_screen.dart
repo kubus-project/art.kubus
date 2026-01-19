@@ -11,6 +11,7 @@ import '../../providers/stats_provider.dart';
 import '../../providers/web3provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../providers/platform_provider.dart';
+import '../../providers/security_gate_provider.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/push_notification_service.dart';
 import '../../services/settings_service.dart';
@@ -62,8 +63,12 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
   bool _sessionTimeout = true;
   String _autoLockTime = '5 minutes';
   bool _loginNotifications = true;
+  bool _requirePin = false;
   bool _biometricAuth = false;
+  bool _useBiometricsOnUnlock = true;
   bool _privacyMode = false;
+  bool _hasPin = false;
+  bool _biometricsSupported = false;
   
   // Account settings state
   bool _emailNotifications = true;
@@ -100,10 +105,13 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
 
   Future<void> _loadSettings() async {
     final web3Provider = Provider.of<Web3Provider>(context, listen: false);
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final settings = await SettingsService.loadSettings(
       fallbackNetwork:
           web3Provider.currentNetwork.isNotEmpty ? web3Provider.currentNetwork : null,
     );
+    final hasPin = await walletProvider.hasPin();
+    final biometricsSupported = await walletProvider.canUseBiometrics();
     if (!mounted) return;
 
     setState(() {
@@ -121,8 +129,12 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       _sessionTimeout = settings.sessionTimeout;
       _autoLockTime = settings.autoLockTime;
       _loginNotifications = settings.loginNotifications;
-      _biometricAuth = settings.biometricAuth;
+      _requirePin = settings.requirePin;
+      _biometricAuth = settings.biometricAuth && hasPin && biometricsSupported;
+      _useBiometricsOnUnlock = settings.useBiometricsOnUnlock;
       _privacyMode = settings.privacyMode;
+      _hasPin = hasPin;
+      _biometricsSupported = biometricsSupported;
 
       _emailNotifications = settings.emailNotifications;
       _pushNotifications = settings.pushNotifications;
@@ -157,7 +169,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       sessionTimeout: _sessionTimeout,
       autoLockTime: _autoLockTime,
       autoLockSeconds: _autoLockSecondsFromLabel(_autoLockTime),
+      requirePin: _requirePin,
       biometricAuth: _biometricAuth,
+      useBiometricsOnUnlock: _useBiometricsOnUnlock,
       privacyMode: _privacyMode,
       analytics: _analytics,
       crashReporting: _crashReporting,
@@ -175,6 +189,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
 
   int _autoLockSecondsFromLabel(String label) {
     switch (label.toLowerCase()) {
+      case 'immediately':
+        return -1;
       case '10 seconds':
         return 10;
       case '30 seconds':
@@ -1608,7 +1624,20 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
   Future<void> _toggleBiometric(bool value) async {
     final l10n = AppLocalizations.of(context)!;
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final gate = Provider.of<SecurityGateProvider>(context, listen: false);
     if (value) {
+      final hasPin = await walletProvider.hasPin();
+      if (!hasPin) {
+        if (mounted) {
+          setState(() => _biometricAuth = false);
+          ScaffoldMessenger.of(context).showKubusSnackBar(
+            SnackBar(content: Text(l10n.settingsPinSetFailedToast)),
+          );
+        }
+        await _saveSettings();
+        await gate.reloadSettings();
+        return;
+      }
       final canUse = await walletProvider.canUseBiometrics();
       if (!canUse) {
         if (mounted) {
@@ -1618,6 +1647,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
           );
         }
         await _saveSettings();
+        await gate.reloadSettings();
         return;
       }
       final ok = await walletProvider.authenticateWithBiometrics();
@@ -1629,12 +1659,177 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
           );
         }
         await _saveSettings();
+        await gate.reloadSettings();
         return;
       }
     }
     if (!mounted) return;
-    setState(() => _biometricAuth = value);
+    setState(() {
+      _biometricAuth = value;
+      if (!value) {
+        _useBiometricsOnUnlock = true;
+      }
+    });
     await _saveSettings();
+    await gate.reloadSettings();
+  }
+
+  Future<void> _toggleRequirePin(bool value) async {
+    final l10n = AppLocalizations.of(context)!;
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final gate = Provider.of<SecurityGateProvider>(context, listen: false);
+
+    if (value) {
+      final hasPin = await walletProvider.hasPin();
+      if (!hasPin) {
+        await _showSetPinDialog();
+      }
+      final nowHasPin = await walletProvider.hasPin();
+      if (!mounted) return;
+      if (!nowHasPin) {
+        ScaffoldMessenger.of(context).showKubusSnackBar(
+          SnackBar(content: Text(l10n.settingsPinSetFailedToast)),
+        );
+        setState(() => _requirePin = false);
+        await _saveSettings();
+        await gate.reloadSettings();
+        return;
+      }
+      setState(() => _requirePin = true);
+      await _saveSettings();
+      await gate.reloadSettings();
+      return;
+    }
+
+    await gate.lock(SecurityLockReason.sensitiveAction);
+    final settled = await gate.waitForResolution();
+    if (settled == null || !settled.isSuccess) {
+      if (mounted) setState(() => _requirePin = true);
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() => _requirePin = false);
+    await _saveSettings();
+    await gate.reloadSettings();
+  }
+
+  Future<void> _showSetPinDialog() async {
+    final l10n = AppLocalizations.of(context)!;
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final gate = Provider.of<SecurityGateProvider>(context, listen: false);
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final pinController = TextEditingController();
+    final confirmController = TextEditingController();
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: Text(
+          l10n.settingsSetPinDialogTitle,
+          style: GoogleFonts.inter(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: pinController,
+              obscureText: true,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: l10n.commonPinLabel,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: confirmController,
+              obscureText: true,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: l10n.settingsConfirmPinLabel,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              l10n.commonCancel,
+              style: GoogleFonts.inter(color: Theme.of(context).colorScheme.outline),
+            ),
+          ),
+          TextButton(
+            onPressed: () async {
+              final navigator = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
+
+              await gate.lock(SecurityLockReason.sensitiveAction);
+              final settled = await gate.waitForResolution();
+              if (settled == null || !settled.isSuccess) {
+                return;
+              }
+
+              await walletProvider.clearPin();
+              if (!mounted) return;
+              setState(() {
+                _requirePin = false;
+                _biometricAuth = false;
+                _useBiometricsOnUnlock = true;
+                _hasPin = false;
+              });
+              await _saveSettings();
+              await gate.reloadSettings();
+              navigator.pop();
+              messenger.showKubusSnackBar(SnackBar(content: Text(l10n.settingsPinClearedToast)));
+            },
+            child: Text(
+              l10n.settingsClearPinButton,
+              style: GoogleFonts.inter(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: themeProvider.accentColor),
+            onPressed: () async {
+              final navigator = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
+              final pin = pinController.text.trim();
+              final confirm = confirmController.text.trim();
+              if (pin.length < 4 || confirm.length < 4) {
+                messenger.showKubusSnackBar(SnackBar(content: Text(l10n.settingsPinMinLengthError)));
+                return;
+              }
+              if (pin != confirm) {
+                messenger.showKubusSnackBar(SnackBar(content: Text(l10n.settingsPinMismatchError)));
+                return;
+              }
+              try {
+                await walletProvider.setPin(pin);
+                if (!mounted) return;
+                final hasPin = await walletProvider.hasPin();
+                final biometricsSupported = await walletProvider.canUseBiometrics();
+                if (!mounted) return;
+                setState(() {
+                  _hasPin = hasPin;
+                  _biometricsSupported = biometricsSupported;
+                });
+                await gate.reloadSettings();
+                navigator.pop();
+                messenger.showKubusSnackBar(SnackBar(content: Text(l10n.settingsPinSetSuccessToast)));
+              } catch (_) {
+                if (!mounted) return;
+                messenger.showKubusSnackBar(SnackBar(content: Text(l10n.settingsPinSetFailedToast)));
+              }
+            },
+            child: Text(l10n.commonSave, style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onPrimary)),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _handleLogout() async {
@@ -2188,6 +2383,24 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   onTap: _showChangePasswordDialog,
                 ),
                 const Divider(height: 32),
+                _buildSettingsRow(
+                  l10n.settingsSetPinTileTitle,
+                  l10n.settingsSetPinTileSubtitle,
+                  Icons.pin,
+                  onTap: _showSetPinDialog,
+                ),
+                const Divider(height: 32),
+                _buildToggleSetting(
+                  l10n.settingsRequirePinTileTitle,
+                  l10n.settingsRequirePinTileSubtitle,
+                  _requirePin,
+                  saveAfterToggle: false,
+                  onChanged: (value) {
+                    setState(() => _requirePin = value);
+                    _toggleRequirePin(value);
+                  },
+                ),
+                const Divider(height: 32),
                 _buildToggleSetting(
                   l10n.settingsTwoFactorTitle,
                   l10n.settingsTwoFactorSubtitle,
@@ -2195,16 +2408,32 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   onChanged: (value) => setState(() => _twoFactorAuth = value),
                 ),
                 const Divider(height: 32),
-                _buildToggleSetting(
-                  l10n.settingsBiometricTileTitle,
-                  l10n.settingsBiometricTileSubtitle,
-                  _biometricAuth,
-                  saveAfterToggle: false,
-                  onChanged: (value) {
-                    setState(() => _biometricAuth = value);
-                    _toggleBiometric(value);
-                  },
-                ),
+                if (_hasPin && _biometricsSupported)
+                  _buildToggleSetting(
+                    l10n.settingsBiometricTileTitle,
+                    l10n.settingsBiometricTileSubtitle,
+                    _biometricAuth,
+                    saveAfterToggle: false,
+                    onChanged: (value) {
+                      setState(() => _biometricAuth = value);
+                      _toggleBiometric(value);
+                    },
+                  )
+                else if (_hasPin && !_biometricsSupported)
+                  _buildSettingsRow(
+                    l10n.settingsBiometricTileTitle,
+                    l10n.settingsBiometricUnavailableToast,
+                    Icons.fingerprint,
+                  ),
+                if (_biometricAuth && _hasPin && _biometricsSupported) ...[
+                  const Divider(height: 32),
+                  _buildToggleSetting(
+                    l10n.settingsUseBiometricsOnUnlockTitle,
+                    l10n.settingsUseBiometricsOnUnlockSubtitle,
+                    _useBiometricsOnUnlock,
+                    onChanged: (value) => setState(() => _useBiometricsOnUnlock = value),
+                  ),
+                ],
                 const Divider(height: 32),
                 _buildToggleSetting(
                   l10n.settingsSessionTimeoutTitle,
@@ -2890,8 +3119,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
 
   Widget _buildAutoLockDropdown() {
     final l10n = AppLocalizations.of(context)!;
-    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final options = <Map<String, dynamic>>[
+      {'storedLabel': 'Immediately', 'displayLabel': l10n.settingsAutoLockImmediately, 'seconds': -1},
       {'storedLabel': '10 seconds', 'displayLabel': l10n.settingsAutoLock10Seconds, 'seconds': 10},
       {'storedLabel': '30 seconds', 'displayLabel': l10n.settingsAutoLock30Seconds, 'seconds': 30},
       {'storedLabel': '1 minute', 'displayLabel': l10n.settingsAutoLock1Minute, 'seconds': 60},
@@ -2949,15 +3178,12 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             .toList(),
         onChanged: (value) async {
           if (value == null) return;
-          final seconds =
-              options.firstWhere((opt) => opt['storedLabel'] == value)['seconds'] as int;
+          final gate = Provider.of<SecurityGateProvider>(context, listen: false);
           setState(() {
             _autoLockTime = value;
           });
-          try {
-            await walletProvider.setLockTimeoutSeconds(seconds);
-          } catch (_) {}
           await _saveSettings();
+          await gate.reloadSettings();
         },
       ),
     );

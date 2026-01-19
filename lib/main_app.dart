@@ -1,16 +1,12 @@
 import 'package:art_kubus/services/share/share_deep_link_parser.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:art_kubus/l10n/app_localizations.dart';
 import 'providers/themeprovider.dart';
-import 'providers/wallet_provider.dart';
 import 'providers/profile_provider.dart';
 import 'providers/deep_link_provider.dart';
 import 'providers/deferred_onboarding_provider.dart';
 import 'providers/main_tab_provider.dart';
 import 'core/mobile_shell_registry.dart';
-import 'services/pin_hashing.dart';
-import 'services/settings_service.dart';
 import 'services/telemetry/telemetry_service.dart';
 import 'utils/share_deep_link_navigation.dart';
 import 'screens/home_screen.dart';
@@ -113,8 +109,6 @@ class _MainAppState extends State<MainApp> {
 
     MobileShellRegistry.instance.register(context);
 
-    final walletProvider = Provider.of<WalletProvider>(context);
-    final animationTheme = context.animationTheme;
     final currentIndex = context.watch<MainTabProvider>().currentIndex;
 
     return UserPersonaOnboardingGate(
@@ -124,41 +118,15 @@ class _MainAppState extends State<MainApp> {
         // scaffolds transparent so this background remains visible.
         animate: true,
         intensity: 0.22,
-        child: Stack(
-          children: [
-            Scaffold(
-              backgroundColor: Colors.transparent,
-              extendBody: true,
-              body: IndexedStack(
-                index: currentIndex,
-                // Keep heavy AR resources out of the tree unless the AR tab is active.
-                children: _buildScreens(currentIndex),
-              ),
-              bottomNavigationBar: _buildBottomNavigationBar(),
-            ),
-
-            // Lock overlay with animated transitions
-            Positioned.fill(
-              child: IgnorePointer(
-                ignoring: !walletProvider.isLocked,
-                child: AnimatedSwitcher(
-                  duration: animationTheme.medium,
-                  switchInCurve: animationTheme.fadeCurve,
-                  switchOutCurve: animationTheme.fadeCurve,
-                  transitionBuilder: (child, animation) => FadeTransition(
-                    opacity: CurvedAnimation(parent: animation, curve: animationTheme.fadeCurve),
-                    child: child,
-                  ),
-                  child: walletProvider.isLocked
-                      ? _LockOverlay(
-                          key: const ValueKey('locked'),
-                          onUnlockRequested: _handleUnlock,
-                        )
-                      : const SizedBox(key: ValueKey('unlocked')),
-                ),
-              ),
-            ),
-          ],
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          extendBody: true,
+          body: IndexedStack(
+            index: currentIndex,
+            // Keep heavy AR resources out of the tree unless the AR tab is active.
+            children: _buildScreens(currentIndex),
+          ),
+          bottomNavigationBar: _buildBottomNavigationBar(),
         ),
       ),
     );
@@ -306,103 +274,6 @@ class _MainAppState extends State<MainApp> {
     );
   }
 
-  Future<void> _handleUnlock() async {
-    if (!mounted) return;
-    final l10n = AppLocalizations.of(context)!;
-    final localWallet = Provider.of<WalletProvider>(context, listen: false);
-
-    var biometricEnabled = false;
-    try {
-      final settings = await SettingsService.loadSettings();
-      biometricEnabled = settings.biometricAuth;
-    } catch (_) {
-      biometricEnabled = false;
-    }
-
-    if (biometricEnabled) {
-      final outcome = await localWallet.unlockWithBiometrics(
-        localizedReason: l10n.lockAppLockedDescription,
-      );
-      if (!mounted) return;
-      if (outcome == BiometricAuthOutcome.success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.lockAppUnlockedToast)),
-        );
-        return;
-      }
-      if (outcome == BiometricAuthOutcome.cancelled) {
-        return;
-      }
-      if (outcome == BiometricAuthOutcome.notAvailable) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.settingsBiometricUnavailableToast)),
-        );
-      }
-    }
-
-    final hasPin = await localWallet.hasPin();
-    if (!mounted) return;
-    if (!hasPin) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.lockAuthenticationFailedToast)),
-      );
-      return;
-    }
-
-    final remaining = await localWallet.getPinLockoutRemainingSeconds();
-    if (!mounted) return;
-    if (remaining > 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.mnemonicRevealPinLockedError(remaining))),
-      );
-      return;
-    }
-
-    final pinController = TextEditingController();
-    if (!mounted) return;
-    final entered = await showDialog<String?>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.lockEnterPinTitle),
-        content: TextField(
-          controller: pinController,
-          keyboardType: TextInputType.number,
-          obscureText: true,
-          decoration: InputDecoration(labelText: l10n.commonPinLabel),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(null), child: Text(l10n.commonCancel)),
-          ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(pinController.text.trim()),
-            child: Text(l10n.commonUnlock),
-          ),
-        ],
-      ),
-    );
-
-    if (entered == null || entered.isEmpty) return;
-    final result = await localWallet.unlockWithPin(entered);
-    if (!mounted) return;
-    if (result.isSuccess) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.lockAppUnlockedToast)),
-      );
-      return;
-    }
-
-    if (result.outcome == PinVerifyOutcome.lockedOut) {
-      final seconds = result.remainingLockoutSeconds;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.mnemonicRevealPinLockedError(seconds))),
-      );
-      return;
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.mnemonicRevealIncorrectPinError)),
-    );
-  }
-
   void _syncTelemetryForIndex(int index) {
     if (DesktopBreakpoints.isDesktop(context)) return;
     final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
@@ -442,45 +313,6 @@ class _MainAppState extends State<MainApp> {
     }
 
     TelemetryService().setActiveScreen(screenName: name, screenRoute: route);
-  }
-}
-
-class _LockOverlay extends StatelessWidget {
-  const _LockOverlay({super.key, required this.onUnlockRequested});
-
-  final Future<void> Function() onUnlockRequested;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return Container(
-      color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.95),
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                l10n.lockAppLockedTitle,
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                l10n.lockAppLockedDescription,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: onUnlockRequested,
-                child: Text(l10n.commonUnlock),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }
 

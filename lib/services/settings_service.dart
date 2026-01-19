@@ -46,7 +46,9 @@ class SettingsService {
     await prefs.setString('autoLockTime', state.autoLockTime);
     await prefs.setInt('autoLockSeconds', state.autoLockSeconds);
     await prefs.setBool('loginNotifications', state.loginNotifications);
+    await prefs.setBool('requirePin', state.requirePin);
     await prefs.setBool('biometricAuth', state.biometricAuth);
+    await prefs.setBool('useBiometricsOnUnlock', state.useBiometricsOnUnlock);
     await prefs.setBool('privacyMode', state.privacyMode);
 
     await prefs.setBool('enableAnalytics', state.analytics);
@@ -175,7 +177,9 @@ class SettingsState {
   final bool sessionTimeout;
   final String autoLockTime;
   final int autoLockSeconds;
+  final bool requirePin;
   final bool biometricAuth;
+  final bool useBiometricsOnUnlock;
   final bool privacyMode;
 
   final bool analytics;
@@ -206,7 +210,9 @@ class SettingsState {
     required this.sessionTimeout,
     required this.autoLockTime,
     required this.autoLockSeconds,
+    required this.requirePin,
     required this.biometricAuth,
+    required this.useBiometricsOnUnlock,
     required this.privacyMode,
     required this.analytics,
     required this.crashReporting,
@@ -235,7 +241,9 @@ class SettingsState {
       sessionTimeout: true,
       autoLockTime: '5 minutes',
       autoLockSeconds: _autoLockSecondsForLabel('5 minutes'),
+      requirePin: false,
       biometricAuth: false,
+      useBiometricsOnUnlock: true,
       privacyMode: false,
       analytics: true,
       crashReporting: true,
@@ -277,7 +285,9 @@ class SettingsState {
       sessionTimeout: prefs.getBool('sessionTimeout') ?? defaults.sessionTimeout,
       autoLockTime: storedAutoLockLabel,
       autoLockSeconds: storedAutoLockSeconds,
+      requirePin: prefs.getBool('requirePin') ?? defaults.requirePin,
       biometricAuth: prefs.getBool('biometricAuth') ?? defaults.biometricAuth,
+      useBiometricsOnUnlock: prefs.getBool('useBiometricsOnUnlock') ?? defaults.useBiometricsOnUnlock,
       privacyMode: prefs.getBool('privacyMode') ?? defaults.privacyMode,
       analytics: prefs.getBool('enableAnalytics') ??
           prefs.getBool('analytics') ??
@@ -314,7 +324,9 @@ class SettingsState {
     bool? sessionTimeout,
     String? autoLockTime,
     int? autoLockSeconds,
+    bool? requirePin,
     bool? biometricAuth,
+    bool? useBiometricsOnUnlock,
     bool? privacyMode,
     bool? analytics,
     bool? crashReporting,
@@ -341,7 +353,9 @@ class SettingsState {
       sessionTimeout: sessionTimeout ?? this.sessionTimeout,
       autoLockTime: autoLockTime ?? this.autoLockTime,
       autoLockSeconds: autoLockSeconds ?? this.autoLockSeconds,
+      requirePin: requirePin ?? this.requirePin,
       biometricAuth: biometricAuth ?? this.biometricAuth,
+      useBiometricsOnUnlock: useBiometricsOnUnlock ?? this.useBiometricsOnUnlock,
       privacyMode: privacyMode ?? this.privacyMode,
       analytics: analytics ?? this.analytics,
       crashReporting: crashReporting ?? this.crashReporting,
@@ -360,6 +374,8 @@ class SettingsState {
 
 int _autoLockSecondsForLabel(String label) {
   switch (label.toLowerCase()) {
+    case 'immediately':
+      return -1;
     case '10 seconds':
       return 10;
     case '30 seconds':

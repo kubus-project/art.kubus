@@ -107,7 +107,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
     // In modal re-auth flows, avoid running protected API calls here because the
     // auth coordinator may be waiting on this route to pop (deadlock risk).
-    // The app refreshes profile/session via AuthSessionProvider.onSessionRestored.
+    // The app refreshes profile/session via SecurityGateProvider after re-auth.
     if (!isModalReauth) {
       try {
         if (walletAddress != null && walletAddress.toString().isNotEmpty) {

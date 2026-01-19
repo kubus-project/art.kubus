@@ -1138,6 +1138,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsBiometricTileSubtitle => 'Use fingerprint or face unlock';
 
   @override
+  String get settingsUseBiometricsOnUnlockTitle => 'Use biometrics on unlock';
+
+  @override
+  String get settingsUseBiometricsOnUnlockSubtitle =>
+      'Prefer biometrics when unlocking the app';
+
+  @override
+  String get settingsRequirePinTileTitle => 'Require PIN';
+
+  @override
+  String get settingsRequirePinTileSubtitle => 'Require PIN to unlock the app';
+
+  @override
   String get settingsSetPinTileTitle => 'Set app PIN';
 
   @override
@@ -1285,6 +1298,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsConnectOrCreateWalletFirstToast => 'Connect or create a wallet first.';
+
+  @override
+  String get settingsAutoLockImmediately => 'Immediately';
 
   @override
   String get settingsAutoLock10Seconds => '10 seconds';
@@ -6373,6 +6389,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String mnemonicRevealPinLockedError(Object seconds) {
     return 'PIN locked for $seconds seconds';
+  }
+
+  @override
+  String securityPinAttemptsRemaining(Object remaining, Object max) {
+    return 'Attempts remaining: $remaining / $max';
   }
 
   @override

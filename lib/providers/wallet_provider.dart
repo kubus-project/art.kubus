@@ -13,6 +13,7 @@ import '../services/solana_wallet_service.dart';
 import '../services/backend_api_service.dart';
 import '../services/stats_api_service.dart';
 import '../services/pin_hashing.dart';
+import '../services/security/pin_auth_service.dart';
 import '../services/user_service.dart';
 import '../config/config.dart';
 import '../config/api_keys.dart';
@@ -28,25 +29,24 @@ enum BiometricAuthOutcome {
   error,
 }
 
+void _walletLog(String message) {
+  if (!kDebugMode) return;
+  debugPrint('WalletProvider: $message');
+}
+
 class WalletProvider extends ChangeNotifier {
   final SolanaWalletService _solanaWalletService;
   final BackendApiService _apiService = BackendApiService();
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   final LocalAuthentication _localAuth = LocalAuthentication();
-  static const String _pinHashKey = 'wallet_pin_hash';
-  static const String _pinFailedKey = 'wallet_pin_failed_count';
-  static const String _pinLockoutTsKey = 'wallet_pin_lockout_ts';
-  static const int _maxPinAttempts = 5;
-  static const Duration _pinLockoutDuration = Duration(minutes: 5);
-  static const int _pinPbkdf2Iterations = 120000;
+  late final PinAuthService _pinAuth = PinAuthService(
+    store: SecureStoragePinStore(_secureStorage),
+  );
   // Cached mnemonic import retry
   Timer? _importRetryTimer;
   int _importRetryAttempts = 0;
   static const int _maxImportRetryAttempts = 3;
   static const Duration _baseImportRetryDelay = Duration(seconds: 5);
-  int _lockTimeoutSeconds = 0; // 0 = disabled
-  bool _isLocked = false;
-  bool _pendingShowMnemonic = false;
 
   Wallet? _wallet;
   List<Token> _tokens = [];
@@ -108,7 +108,6 @@ class WalletProvider extends ChangeNotifier {
 
   Future<void> _init() async {
     await _applySavedNetworkPreference();
-    await _loadLockTimeout();
     await _loadCachedWallet();
     // If a cached wallet was not loaded, proceed to load data normally
     if (_currentWalletAddress == null) {
@@ -131,23 +130,6 @@ class WalletProvider extends ChangeNotifier {
     }
   }
 
-  // Load lock timeout (seconds) from secure storage
-  Future<void> _loadLockTimeout() async {
-    try {
-      final str = await _secureStorage.read(key: 'lock_timeout_seconds');
-      if (str != null) {
-        final v = int.tryParse(str) ?? 0;
-        _lockTimeoutSeconds = v;
-      }
-    } catch (e) {
-      debugPrint('Failed to load lock timeout: $e');
-    }
-  }
-
-  int get lockTimeoutSeconds => _lockTimeoutSeconds;
-  bool get isLocked => _isLocked;
-  bool get pendingShowMnemonic => _pendingShowMnemonic;
-
   Future<bool> canUseBiometrics() async {
     try {
       final isSupported = await _localAuth.isDeviceSupported();
@@ -156,7 +138,7 @@ class WalletProvider extends ChangeNotifier {
       final available = await _localAuth.getAvailableBiometrics();
       return canCheck || available.isNotEmpty;
     } catch (e) {
-      debugPrint('Biometrics check failed: $e');
+      _walletLog('biometrics check failed: $e');
       return false;
     }
   }
@@ -201,7 +183,7 @@ class WalletProvider extends ChangeNotifier {
       }
       return BiometricAuthOutcome.error;
     } catch (e) {
-      debugPrint('Biometric auth error: $e');
+      _walletLog('biometric auth error: $e');
       return BiometricAuthOutcome.error;
     }
   }
@@ -211,57 +193,26 @@ class WalletProvider extends ChangeNotifier {
     return outcome == BiometricAuthOutcome.success;
   }
 
-  void _unlockAppState() {
-    _isLocked = false;
-    _pendingShowMnemonic = false;
-    notifyListeners();
-  }
-
-  Future<BiometricAuthOutcome> unlockWithBiometrics({String? localizedReason}) async {
-    final outcome = await authenticateWithBiometricsDetailed(localizedReason: localizedReason);
-    if (outcome == BiometricAuthOutcome.success) {
-      _unlockAppState();
-    }
-    return outcome;
-  }
-
-  Future<PinVerifyResult> unlockWithPin(String pin) async {
-    final result = await verifyPinDetailed(pin);
-    if (result.isSuccess) {
-      _unlockAppState();
-    }
-    return result;
-  }
-
   Future<void> setPin(String pin) async {
     try {
-      final hash = derivePinHashV1(
-        pin,
-        iterations: _pinPbkdf2Iterations,
-      );
-      await _secureStorage.write(key: _pinHashKey, value: hash.encode());
-      await _secureStorage.delete(key: _pinFailedKey);
-      await _secureStorage.delete(key: _pinLockoutTsKey);
+      await _pinAuth.setPin(pin);
     } catch (e) {
-      debugPrint('Failed to set PIN: $e');
+      _walletLog('failed to set PIN: $e');
       rethrow;
     }
   }
 
   Future<void> clearPin() async {
     try {
-      await _secureStorage.delete(key: _pinHashKey);
-      await _secureStorage.delete(key: _pinFailedKey);
-      await _secureStorage.delete(key: _pinLockoutTsKey);
+      await _pinAuth.clearPin();
     } catch (e) {
-      debugPrint('Failed to clear PIN: $e');
+      _walletLog('failed to clear PIN: $e');
     }
   }
 
   Future<bool> hasPin() async {
     try {
-      final stored = await _secureStorage.read(key: _pinHashKey);
-      return stored != null && stored.trim().isNotEmpty;
+      return await _pinAuth.hasPin();
     } catch (_) {
       return false;
     }
@@ -269,46 +220,9 @@ class WalletProvider extends ChangeNotifier {
 
   Future<PinVerifyResult> verifyPinDetailed(String pin) async {
     try {
-      final remainingLockoutSeconds = await getPinLockoutRemainingSeconds();
-      final stored = await _secureStorage.read(key: _pinHashKey);
-      final result = verifyPinAgainstStoredHash(
-        pin,
-        stored,
-        remainingLockoutSeconds: remainingLockoutSeconds,
-      );
-
-      if (result.isSuccess) {
-        await _secureStorage.delete(key: _pinFailedKey);
-        await _secureStorage.delete(key: _pinLockoutTsKey);
-        if (result.needsMigration) {
-          await setPin(pin);
-        }
-        return const PinVerifyResult(PinVerifyOutcome.success);
-      }
-
-      if (result.outcome != PinVerifyOutcome.incorrect) {
-        return result;
-      }
-
-      // Not matched: increment failed count
-      final failedStr = await _secureStorage.read(key: _pinFailedKey);
-      var failed = int.tryParse(failedStr ?? '0') ?? 0;
-      failed += 1;
-      await _secureStorage.write(key: _pinFailedKey, value: failed.toString());
-      if (failed >= _maxPinAttempts) {
-        final lockoutUntil = DateTime.now().add(_pinLockoutDuration).millisecondsSinceEpoch;
-        await _secureStorage.write(key: _pinLockoutTsKey, value: lockoutUntil.toString());
-        await _secureStorage.delete(key: _pinFailedKey);
-        final remaining = await getPinLockoutRemainingSeconds();
-        return PinVerifyResult(
-          PinVerifyOutcome.lockedOut,
-          remainingLockoutSeconds: remaining,
-        );
-      }
-
-      return const PinVerifyResult(PinVerifyOutcome.incorrect);
+      return await _pinAuth.verifyPin(pin);
     } catch (e) {
-      debugPrint('PIN verification failed: $e');
+      _walletLog('PIN verification failed: $e');
       return const PinVerifyResult(PinVerifyOutcome.error);
     }
   }
@@ -322,11 +236,11 @@ class WalletProvider extends ChangeNotifier {
   /// Tries biometric first, then PIN if provided. Returns true when unlocked.
   Future<bool> authenticateForAppUnlock({String? pin}) async {
     try {
-      final biometric = await unlockWithBiometrics();
+      final biometric = await authenticateWithBiometricsDetailed();
       var ok = biometric == BiometricAuthOutcome.success;
 
       if (!ok && pin != null && pin.isNotEmpty) {
-        ok = (await unlockWithPin(pin)).isSuccess;
+        ok = (await verifyPinDetailed(pin)).isSuccess;
       }
 
       if (ok) {
@@ -334,7 +248,7 @@ class WalletProvider extends ChangeNotifier {
       }
       return false;
     } catch (e) {
-      debugPrint('authenticateForAppUnlock failed: $e');
+      _walletLog('authenticateForAppUnlock failed: $e');
       return false;
     }
   }
@@ -342,166 +256,19 @@ class WalletProvider extends ChangeNotifier {
   /// Returns remaining lockout seconds for PIN entry (0 if none)
   Future<int> getPinLockoutRemainingSeconds() async {
     try {
-      final lockoutStr = await _secureStorage.read(key: _pinLockoutTsKey);
-      if (lockoutStr == null) return 0;
-      final ts = int.tryParse(lockoutStr);
-      if (ts == null) return 0;
-      final now = DateTime.now().millisecondsSinceEpoch;
-      final remaining = ts - now;
-      if (remaining <= 0) {
-        await _secureStorage.delete(key: _pinLockoutTsKey);
-        await _secureStorage.delete(key: _pinFailedKey);
-        return 0;
-      }
-      return (remaining / 1000).ceil();
+      return await _pinAuth.getLockoutRemainingSeconds();
     } catch (e) {
       return 0;
     }
   }
 
-  Future<void> setLockTimeoutSeconds(int seconds) async {
-    _lockTimeoutSeconds = seconds;
+  /// Reads the cached mnemonic without performing any local authentication.
+  /// Callers must enforce their own security gate before calling this.
+  Future<String?> readCachedMnemonic() async {
     try {
-      await _secureStorage.write(key: 'lock_timeout_seconds', value: seconds.toString());
+      return await _secureStorage.read(key: 'cached_mnemonic');
     } catch (e) {
-      debugPrint('Failed to save lock timeout: $e');
-    }
-    notifyListeners();
-  }
-
-  Future<void> _writeLastInactiveTs(String value) async {
-    // FlutterSecureStorage can throw on web (plugin implementation differences).
-    // Use SharedPreferences on web, and as a fallback elsewhere.
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('last_inactive_ts', value);
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('WalletProvider: failed to write last_inactive_ts to SharedPreferences: $e');
-      }
-    }
-
-    if (kIsWeb) return;
-
-    try {
-      await _secureStorage.write(key: 'last_inactive_ts', value: value);
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('WalletProvider: failed to write last_inactive_ts to secure storage: $e');
-      }
-    }
-  }
-
-  Future<String?> _readLastInactiveTs() async {
-    // Prefer secure storage on native; fall back to SharedPreferences.
-    if (!kIsWeb) {
-      try {
-        final fromSecure = await _secureStorage.read(key: 'last_inactive_ts');
-        if (fromSecure != null && fromSecure.trim().isNotEmpty) return fromSecure;
-      } catch (e) {
-        if (kDebugMode) {
-          debugPrint('WalletProvider: failed to read last_inactive_ts from secure storage: $e');
-        }
-      }
-    }
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      return prefs.getString('last_inactive_ts');
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('WalletProvider: failed to read last_inactive_ts from SharedPreferences: $e');
-      }
-      return null;
-    }
-  }
-
-  Future<void> _deleteLastInactiveTs() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('last_inactive_ts');
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('WalletProvider: failed to delete last_inactive_ts from SharedPreferences: $e');
-      }
-    }
-
-    if (kIsWeb) return;
-
-    try {
-      await _secureStorage.delete(key: 'last_inactive_ts');
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('WalletProvider: failed to delete last_inactive_ts from secure storage: $e');
-      }
-    }
-  }
-
-  // Mark app inactive (store timestamp)
-  Future<void> markInactive() async {
-    await _writeLastInactiveTs(DateTime.now().millisecondsSinceEpoch.toString());
-  }
-
-  // Mark app active (check if lock threshold exceeded)
-  Future<void> markActive() async {
-    try {
-      final tsStr = await _readLastInactiveTs();
-      if (tsStr != null && _lockTimeoutSeconds > 0) {
-        final ts = int.tryParse(tsStr);
-        if (ts != null) {
-          final elapsed = DateTime.now().difference(DateTime.fromMillisecondsSinceEpoch(ts));
-          if (elapsed.inSeconds >= _lockTimeoutSeconds) {
-            _isLocked = true;
-            _pendingShowMnemonic = true;
-            notifyListeners();
-            return;
-          }
-        }
-      }
-      // Not locked
-      _isLocked = false;
-      _pendingShowMnemonic = false;
-      // clear stored timestamp
-      await _deleteLastInactiveTs();
-      notifyListeners();
-    } catch (e) {
-      debugPrint('Error during markActive: $e');
-    }
-  }
-
-  /// Reveal the stored mnemonic (only when available). If wallet is locked,
-  /// calling this will clear the locked state and return the mnemonic.
-  Future<String?> revealMnemonic({String? pin}) async {
-    try {
-      // If locked, require authentication first
-      if (_isLocked) {
-        bool ok = false;
-        // Try biometric first
-        try {
-          ok = await authenticateWithBiometrics();
-        } catch (_) {
-          ok = false;
-        }
-
-        // If biometric not available or failed, try PIN if provided
-        if (!ok && pin != null && pin.isNotEmpty) {
-          ok = await verifyPin(pin);
-        }
-
-        if (!ok) {
-          debugPrint('Unlock required but authentication failed');
-          return null;
-        }
-      }
-
-      final m = await _secureStorage.read(key: 'cached_mnemonic');
-      // unlock after revealing
-      _isLocked = false;
-      _pendingShowMnemonic = false;
-      notifyListeners();
-      return m;
-    } catch (e) {
-      debugPrint('Failed to reveal mnemonic: $e');
+      _walletLog('failed to read cached mnemonic: $e');
       return null;
     }
   }
@@ -512,9 +279,8 @@ class WalletProvider extends ChangeNotifier {
       await _secureStorage.write(key: 'cached_mnemonic', value: mnemonic);
       await _secureStorage.write(
           key: 'cached_mnemonic_ts', value: DateTime.now().millisecondsSinceEpoch.toString());
-      debugPrint('Wallet mnemonic cached securely for 7 days');
     } catch (e) {
-      debugPrint('Failed to cache mnemonic securely: $e');
+      _walletLog('failed to cache mnemonic: $e');
     }
   }
 
@@ -522,40 +288,35 @@ class WalletProvider extends ChangeNotifier {
     try {
       await _secureStorage.delete(key: 'cached_mnemonic');
       await _secureStorage.delete(key: 'cached_mnemonic_ts');
-      debugPrint('Cached mnemonic cleared securely');
     } catch (e) {
-      debugPrint('Failed to clear cached mnemonic: $e');
+      _walletLog('failed to clear cached mnemonic: $e');
     }
   }
 
   Future<void> _loadCachedWallet() async {
     try {
-      debugPrint('🔐 WalletProvider._loadCachedWallet: Starting cached wallet check...');
+      _walletLog('_loadCachedWallet: starting cached wallet check');
       final mnemonic = await _secureStorage.read(key: 'cached_mnemonic');
       final tsStr = await _secureStorage.read(key: 'cached_mnemonic_ts');
-      
-      debugPrint('🔐 Cached mnemonic found: ${mnemonic != null}, timestamp: ${tsStr != null}');
-      
+
       if (mnemonic != null) {
         if (tsStr != null) {
           final ts = int.tryParse(tsStr);
           if (ts != null) {
             final age = DateTime.now().difference(DateTime.fromMillisecondsSinceEpoch(ts));
-            debugPrint('🔐 Mnemonic age: ${age.inDays} days');
-            
+
             if (age.inDays < 7) {
-              debugPrint('Found cached mnemonic (age ${age.inDays} days). Validating before import...');
+              _walletLog('cached mnemonic within TTL; validating before import');
               // Validate mnemonic format first. If invalid, clear it immediately.
               try {
                 final isValid = _solanaWalletService.validateMnemonic(mnemonic);
-                debugPrint('🔐 Mnemonic validation result: $isValid');
                 if (!isValid) {
-                  debugPrint('Cached mnemonic is invalid format, clearing cache');
+                  _walletLog('cached mnemonic invalid format; clearing');
                   await clearCachedMnemonic();
                   return;
                 }
               } catch (e) {
-                debugPrint('Error validating cached mnemonic: $e');
+                _walletLog('cached mnemonic validation failed: $e');
                 // don't clear yet — may be transient
               }
 
@@ -564,59 +325,51 @@ class WalletProvider extends ChangeNotifier {
               // user through onboarding when network/import fails temporarily.
               DerivedKeyPairResult? derived;
               try {
-                debugPrint('🔐 Attempting to derive keypair from cached mnemonic...');
                 derived = await _solanaWalletService.derivePreferredKeyPair(
                   mnemonic,
                 );
                 _cachedDerivedCandidate = derived;
                 try {
                   _solanaWalletService.setActiveKeyPair(derived.hdKeyPair);
-                  debugPrint('🔐 Active keypair restored from cached mnemonic');
                 } catch (e) {
-                  debugPrint('⚠️ Failed to set active keypair from cached mnemonic: $e');
+                  _walletLog('failed to set active keypair from cached mnemonic: $e');
                 }
                 _currentWalletAddress = derived.address;
-                debugPrint('🔐 ✅ Keypair derived! Address: $_currentWalletAddress');
-                
+
                 // Save to SharedPreferences for profile provider
                 final prefs = await SharedPreferences.getInstance();
                 await prefs.setString('wallet_address', _currentWalletAddress!);
-                debugPrint('🔐 ✅ Wallet address saved to SharedPreferences');
-                
+
                 notifyListeners();
                 // Attempt to load data in background (don't block startup)
                 _loadData().then((_) {
-                  debugPrint('🔐 Wallet data loaded, notifying listeners');
                   notifyListeners();
                 });
               } catch (e) {
-                debugPrint('❌ Failed to derive keypair from cached mnemonic: $e');
+                _walletLog('failed to derive keypair from cached mnemonic: $e');
               }
 
               // Attempt import of full wallet state; if it fails, schedule retries.
-              debugPrint('🔐 Calling _attemptImportFromCache...');
               final success = await _attemptImportFromCache(mnemonic, derived: derived);
-              debugPrint('🔐 Import result: $success');
               if (success) return;
               _scheduleImportRetry(mnemonic);
             } else {
               // expired
-              debugPrint('🔐 Mnemonic expired (${age.inDays} days), clearing');
               await clearCachedMnemonic();
             }
           }
         } else {
           // No timestamp present but mnemonic exists — try to import and set timestamp on success.
-          debugPrint('Found cached mnemonic with no timestamp. Attempting import and will set timestamp on success.');
+          _walletLog('cached mnemonic present without timestamp; attempting import');
           try {
             final isValid = _solanaWalletService.validateMnemonic(mnemonic);
             if (!isValid) {
-              debugPrint('Cached mnemonic invalid format, clearing');
+              _walletLog('cached mnemonic invalid format; clearing');
               await clearCachedMnemonic();
               return;
             }
           } catch (e) {
-            debugPrint('Error validating cached mnemonic without ts: $e');
+            _walletLog('cached mnemonic validation failed (no timestamp): $e');
           }
 
           DerivedKeyPairResult? derived;
@@ -627,15 +380,14 @@ class WalletProvider extends ChangeNotifier {
             _cachedDerivedCandidate = derived;
             try {
               _solanaWalletService.setActiveKeyPair(derived.hdKeyPair);
-              debugPrint('🔐 Active keypair restored from cached mnemonic (no ts)');
             } catch (e) {
-              debugPrint('⚠️ Failed to set active keypair from cached mnemonic (no ts): $e');
+              _walletLog('failed to set active keypair from cached mnemonic (no timestamp): $e');
             }
             _currentWalletAddress = derived.address;
             notifyListeners();
             _loadData();
           } catch (e) {
-            debugPrint('Failed to derive keypair from cached mnemonic (no ts): $e');
+            _walletLog('failed to derive keypair from cached mnemonic (no timestamp): $e');
           }
 
           final success = await _attemptImportFromCache(mnemonic, derived: derived);
@@ -644,17 +396,17 @@ class WalletProvider extends ChangeNotifier {
             try {
               await _secureStorage.write(key: 'cached_mnemonic_ts', value: DateTime.now().millisecondsSinceEpoch.toString());
             } catch (e) {
-              debugPrint('Failed to write cached_mnemonic_ts after successful import: $e');
+              _walletLog('failed to write cached_mnemonic_ts after import: $e');
             }
             return;
           }
           _scheduleImportRetry(mnemonic);
         }
       } else {
-        debugPrint('🔐 No cached mnemonic found - fresh start');
+        // No cached mnemonic found.
       }
     } catch (e) {
-      debugPrint('❌ Error loading cached wallet: $e');
+      _walletLog('error loading cached wallet: $e');
     }
 
     // Fallback: if no cached mnemonic restored a wallet, try SharedPreferences so web
@@ -668,11 +420,10 @@ class WalletProvider extends ChangeNotifier {
             ?.trim();
         if (storedAddress != null && storedAddress.isNotEmpty) {
           _currentWalletAddress = storedAddress;
-          debugPrint('🔐 Fallback restored wallet from SharedPreferences: $_currentWalletAddress');
           await _loadData();
         }
       } catch (e) {
-        debugPrint('⚠️ WalletProvider fallback restore failed: $e');
+        _walletLog('fallback restore failed: $e');
       }
     }
   }
@@ -680,19 +431,16 @@ class WalletProvider extends ChangeNotifier {
   // Attempt import immediately (returns true on success)
   Future<bool> _attemptImportFromCache(String mnemonic, {DerivedKeyPairResult? derived}) async {
     try {
-      debugPrint('🔐 Attempting to import cached mnemonic (attempt ${_importRetryAttempts + 1})...');
       final candidate = derived ?? _cachedDerivedCandidate;
       await importWalletFromMnemonic(mnemonic, preDerived: candidate);
       _cachedDerivedCandidate = null;
-      debugPrint('🔐 ✅ Imported cached mnemonic successfully');
       // reset retry state
       _importRetryAttempts = 0;
       _importRetryTimer?.cancel();
       _importRetryTimer = null;
       return true;
     } catch (e, stackTrace) {
-      debugPrint('❌ Import attempt failed: $e');
-      debugPrint('Stack trace: $stackTrace');
+      _walletLog('import attempt failed: $e\n$stackTrace');
       _importRetryAttempts += 1;
       return false;
     }
@@ -701,14 +449,14 @@ class WalletProvider extends ChangeNotifier {
   void _scheduleImportRetry(String mnemonic) {
     try {
       if (_importRetryAttempts >= _maxImportRetryAttempts) {
-        debugPrint('Max import retry attempts reached; will not retry further automatically');
+        _walletLog('max import retry attempts reached; giving up');
         return;
       }
 
       _importRetryTimer?.cancel();
       final multiplier = _importRetryAttempts + 1;
       final delay = Duration(seconds: _baseImportRetryDelay.inSeconds * multiplier);
-      debugPrint('Scheduling mnemonic import retry in ${delay.inSeconds}s');
+      _walletLog('scheduling mnemonic import retry in ${delay.inSeconds}s');
       _importRetryTimer = Timer(delay, () async {
         // Only retry if still have cached mnemonic and not imported yet
         final cached = await _secureStorage.read(key: 'cached_mnemonic');
@@ -719,12 +467,12 @@ class WalletProvider extends ChangeNotifier {
           if (_importRetryAttempts < _maxImportRetryAttempts) {
             _scheduleImportRetry(cached);
           } else {
-            debugPrint('Import retries exhausted');
+            _walletLog('import retries exhausted');
           }
         }
       });
     } catch (e) {
-      debugPrint('Failed to schedule import retry: $e');
+      _walletLog('failed to schedule import retry: $e');
     }
   }
 
@@ -744,13 +492,13 @@ class WalletProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    debugPrint('WalletProvider._loadData: Starting');
+    _walletLog('_loadData: starting');
 
     try {
-      debugPrint('WalletProvider._loadData: Loading from blockchain');
+      _walletLog('_loadData: loading from blockchain');
       await _loadFromBlockchain();
     } catch (e) {
-      debugPrint('Error loading wallet data: $e');
+      _walletLog('error loading wallet data: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -760,7 +508,7 @@ class WalletProvider extends ChangeNotifier {
   Future<void> _loadFromBlockchain() async {
     try {
       if (_currentWalletAddress == null) {
-        debugPrint('No wallet address available - clearing wallet data');
+        _walletLog('no wallet address available; clearing wallet data');
         // Clear all data when mock is disabled and no real wallet
         _wallet = null;
         _tokens = [];
@@ -771,7 +519,7 @@ class WalletProvider extends ChangeNotifier {
       // Load Solana wallet data
       await _loadSolanaWallet(_currentWalletAddress!);
     } catch (e) {
-      debugPrint('Error loading blockchain data: $e');
+      _walletLog('error loading blockchain data: $e');
       // Clear data on error when mock data is disabled
       _wallet = null;
       _tokens = [];
@@ -852,7 +600,7 @@ class WalletProvider extends ChangeNotifier {
 
       await _syncBackendData(address);
     } catch (e) {
-      debugPrint('Error loading Solana wallet: $e');
+      _walletLog('error loading Solana wallet: $e');
       rethrow;
     }
   }
@@ -883,7 +631,7 @@ class WalletProvider extends ChangeNotifier {
                   walletAddress: address,
                   username: 'user_${address.substring(0,6)}',
                 );
-                debugPrint('WalletProvider._syncBackendData: registerWallet response: $reg');
+                _walletLog('_syncBackendData: registerWallet response: $reg');
                 try {
                   _backendProfile = await _apiService.getProfileByWallet(address);
                 } catch (_) {
@@ -901,7 +649,7 @@ class WalletProvider extends ChangeNotifier {
                   }
                 }
               } catch (regErr) {
-                debugPrint('WalletProvider._syncBackendData: registerWallet failed: $regErr');
+                _walletLog('_syncBackendData: registerWallet failed: $regErr');
               }
             } else {
               rethrow;
@@ -909,7 +657,7 @@ class WalletProvider extends ChangeNotifier {
           }
         }
       } catch (e) {
-        debugPrint('WalletProvider._syncBackendData: profile lookup failed: $e');
+        _walletLog('_syncBackendData: profile lookup failed: $e');
       }
 
       // Canonical user snapshot (collections + achievement stats)
@@ -924,7 +672,7 @@ class WalletProvider extends ChangeNotifier {
         _achievementsUnlocked = snapshot.counters['achievementsUnlocked'] ?? 0;
         _achievementTokenTotal = (snapshot.counters['achievementTokensTotal'] ?? 0).toDouble();
       } catch (e) {
-        debugPrint('stats snapshot fetch failed: $e');
+        _walletLog('stats snapshot fetch failed: $e');
       }
 
       // Try to issue backend token for this wallet to ensure API auth is ready
@@ -935,16 +683,16 @@ class WalletProvider extends ChangeNotifier {
         _apiService.setPreferredWalletAddress(address);
         if (AppConfig.enableDebugIssueToken) {
           final issued = await _apiService.issueTokenForWallet(address);
-          debugPrint('WalletProvider._syncBackendData: token issued for $address -> $issued');
+          _walletLog('_syncBackendData: token issued');
           if (issued) await _apiService.loadAuthToken();
         }
       } catch (e) {
-        debugPrint('WalletProvider._syncBackendData: token issuance failed: $e');
+        _walletLog('_syncBackendData: token issuance failed: $e');
       }
 
       notifyListeners();
     } catch (e) {
-      debugPrint('backend sync error: $e');
+      _walletLog('backend sync error: $e');
     }
   }
 
@@ -1107,7 +855,7 @@ class WalletProvider extends ChangeNotifier {
       await _loadFromBlockchain();
       notifyListeners();
         } catch (e, st) {
-      debugPrint('sendTransaction failed: $e\n$st');
+      _walletLog('sendTransaction failed: $e\n$st');
       rethrow;
     }
   }
@@ -1189,7 +937,7 @@ class WalletProvider extends ChangeNotifier {
       await _loadFromBlockchain();
       notifyListeners();
         } catch (e, st) {
-      debugPrint('swapTokens failed: $e\n$st');
+      _walletLog('swapTokens failed: $e\n$st');
       rethrow;
     }
   }
@@ -1285,9 +1033,9 @@ class WalletProvider extends ChangeNotifier {
         change: 0,
       );
       _solanaWalletService.setActiveKeyPair(hdKeyPair);
-      debugPrint('🔐 Active keypair set for newly created wallet');
+      _walletLog('active keypair set for newly created wallet');
     } catch (e) {
-      debugPrint('⚠️ Failed to set active keypair for new wallet: $e');
+      _walletLog('failed to set active keypair for new wallet: $e');
     }
     
     _currentWalletAddress = keyPair.publicKey;
@@ -1297,19 +1045,19 @@ class WalletProvider extends ChangeNotifier {
       await prefs.setString('wallet_address', _currentWalletAddress!);
       await prefs.setBool('has_wallet', true);
     } catch (e) {
-      debugPrint('Failed to persist wallet address: $e');
+      _walletLog('failed to persist wallet address: $e');
     }
 
     // Load the newly created wallet from blockchain and sync backend
     try {
       await _loadData();
     } catch (e) {
-      debugPrint('createWallet: loadData failed: $e');
+      _walletLog('createWallet: loadData failed: $e');
     }
     try {
       await _syncBackendData(_currentWalletAddress!);
     } catch (e) {
-      debugPrint('createWallet: sync backend failed: $e');
+      _walletLog('createWallet: sync backend failed: $e');
     }
 
     // Cache mnemonic for reuse
@@ -1326,7 +1074,7 @@ class WalletProvider extends ChangeNotifier {
   }
 
   Future<String> importWalletFromMnemonic(String mnemonic, {DerivedKeyPairResult? preDerived}) async {
-    debugPrint('🔐 importWalletFromMnemonic START');
+    _walletLog('importWalletFromMnemonic start');
     
     if (!_solanaWalletService.validateMnemonic(mnemonic)) {
       throw Exception('Invalid mnemonic phrase');
@@ -1337,21 +1085,21 @@ class WalletProvider extends ChangeNotifier {
     );
     try {
       _solanaWalletService.setActiveKeyPair(derived.hdKeyPair);
-      debugPrint('🔐 Active keypair set for imported wallet');
+      _walletLog('active keypair set for imported wallet');
     } catch (e) {
-      debugPrint('⚠️ Failed to set active keypair for imported wallet: $e');
+      _walletLog('failed to set active keypair for imported wallet: $e');
     }
     _currentWalletAddress = derived.address;
-    debugPrint('🔐 Wallet address set: $_currentWalletAddress');
+    // Wallet address set.
     
     // Save to SharedPreferences for profile provider
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('wallet_address', _currentWalletAddress!);
       await prefs.setBool('has_wallet', true);
-      debugPrint('🔐 ✅ Wallet address saved to SharedPreferences');
+      _walletLog('wallet address saved to SharedPreferences');
     } catch (e) {
-      debugPrint('⚠️ Failed to save wallet address to SharedPreferences: $e');
+      _walletLog('failed to save wallet address to SharedPreferences: $e');
     }
     
     // Notify immediately that we have an address
@@ -1359,33 +1107,33 @@ class WalletProvider extends ChangeNotifier {
     
     // Load the imported wallet from blockchain
     try {
-      debugPrint('🔐 Loading wallet data...');
+      _walletLog('loading wallet data');
       await _loadData();
-      debugPrint('🔐 Wallet data loaded, wallet object: ${_wallet != null}');
+      _walletLog('wallet data loaded');
     } catch (e) {
-      debugPrint('❌ Error loading wallet data: $e');
+      _walletLog('error loading wallet data: $e');
       // Even if loading fails, we have the address
     }
     
     if (_currentWalletAddress != null) {
       try {
         await _syncBackendData(_currentWalletAddress!);
-        debugPrint('🔐 Backend data synced');
+        _walletLog('backend data synced');
       } catch (e) {
-        debugPrint('❌ Error syncing backend data: $e');
+        _walletLog('error syncing backend data: $e');
       }
     }
 
     // Cache mnemonic for reuse
     try {
       await _cacheMnemonic(mnemonic);
-      debugPrint('🔐 Mnemonic cached');
+      // Mnemonic cached.
     } catch (e) {
-      debugPrint('❌ Error caching mnemonic: $e');
+      _walletLog('error caching mnemonic: $e');
     }
     
     // Final notification to update all listeners
-    debugPrint('🔐 Notifying listeners - wallet import complete');
+    _walletLog('wallet import complete');
     notifyListeners();
     
     return _currentWalletAddress!;
@@ -1394,7 +1142,7 @@ class WalletProvider extends ChangeNotifier {
   Future<void> connectWalletWithAddress(String address) async {
     final sanitized = address.trim();
     if (sanitized.isEmpty) {
-      debugPrint('connectWalletWithAddress called with empty address');
+      _walletLog('connectWalletWithAddress called with empty address');
       return;
     }
 
@@ -1407,7 +1155,7 @@ class WalletProvider extends ChangeNotifier {
       await prefs.setString('wallet', sanitized);
       await prefs.setBool('has_wallet', true);
     } catch (e) {
-      debugPrint('connectWalletWithAddress: failed to persist wallet address -> $e');
+      _walletLog('connectWalletWithAddress: failed to persist wallet address: $e');
     }
     
     // Load the connected wallet from blockchain

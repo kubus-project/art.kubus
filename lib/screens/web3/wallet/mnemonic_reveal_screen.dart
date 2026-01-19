@@ -4,8 +4,8 @@ import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../providers/wallet_provider.dart';
+import '../../../providers/security_gate_provider.dart';
 import '../../../widgets/app_loading.dart';
-import '../../../widgets/glass_components.dart';
 import '../../../widgets/kubus_button.dart';
 import '../../../utils/kubus_color_roles.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
@@ -21,22 +21,36 @@ class _MnemonicRevealScreenState extends State<MnemonicRevealScreen> {
   bool _isLoading = true;
   String? _mnemonic;
   bool _masked = true;
-  final _pinController = TextEditingController();
   String? _error;
 
   @override
   void initState() {
     super.initState();
-    _attemptBiometricReveal();
+    _unlockAndLoadMnemonic();
   }
 
-  Future<void> _attemptBiometricReveal() async {
+  Future<void> _unlockAndLoadMnemonic() async {
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _isLoading = true;
       _error = null;
     });
+
+    final gate = Provider.of<SecurityGateProvider>(context, listen: false);
     final wallet = Provider.of<WalletProvider>(context, listen: false);
-    final m = await wallet.revealMnemonic();
+
+    await gate.lock(SecurityLockReason.sensitiveAction);
+    final settled = await gate.waitForResolution();
+    if (!mounted) return;
+    if (settled == null || !settled.isSuccess) {
+      setState(() {
+        _isLoading = false;
+        _error = l10n.lockAuthenticationFailedToast;
+      });
+      return;
+    }
+
+    final m = await wallet.readCachedMnemonic();
     if (!mounted) return;
     if (m != null) {
       setState(() {
@@ -48,51 +62,8 @@ class _MnemonicRevealScreenState extends State<MnemonicRevealScreen> {
     }
     setState(() {
       _isLoading = false;
+      _error = l10n.lockAuthenticationFailedToast;
     });
-  }
-
-  Future<void> _attemptPinReveal() async {
-    final l10n = AppLocalizations.of(context)!;
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-    final wallet = Provider.of<WalletProvider>(context, listen: false);
-    final remaining = await wallet.getPinLockoutRemainingSeconds();
-    if (!mounted) return;
-    if (remaining > 0) {
-      setState(() {
-        _error = l10n.mnemonicRevealPinLockedError(remaining);
-        _isLoading = false;
-      });
-      return;
-    }
-    final pin = _pinController.text.trim();
-    if (pin.length < 4) {
-      setState(() {
-        _error = l10n.mnemonicRevealPinError;
-        _isLoading = false;
-      });
-      return;
-    }
-    final m = await wallet.revealMnemonic(pin: pin);
-    if (!mounted) return;
-    if (m != null) {
-      setState(() {
-        _mnemonic = m;
-        _isLoading = false;
-        _masked = true;
-      });
-    } else {
-      final rem = await wallet.getPinLockoutRemainingSeconds();
-      if (!mounted) return;
-      setState(() {
-        _error = rem > 0
-            ? l10n.mnemonicRevealPinLockedError(rem)
-            : l10n.mnemonicRevealIncorrectPinError;
-        _isLoading = false;
-      });
-    }
   }
 
   void _copyToClipboard() {
@@ -185,64 +156,12 @@ class _MnemonicRevealScreenState extends State<MnemonicRevealScreen> {
                       children: [
                         KubusButton(
                           onPressed: () async {
-                            // Biometric re-check before showing
-                            final wallet = Provider.of<WalletProvider>(context,
-                                listen: false);
-                            final messenger = ScaffoldMessenger.of(context);
-                            final ok =
-                                await wallet.authenticateWithBiometrics();
+                            final gate = Provider.of<SecurityGateProvider>(context, listen: false);
+                            await gate.lock(SecurityLockReason.sensitiveAction);
+                            final settled = await gate.waitForResolution();
                             if (!mounted) return;
-                            if (ok) {
-                              setState(() => _masked = false);
-                              return;
-                            }
-                            // fallback to PIN entry dialog
-                            final entered = await showKubusDialog<String?>(
-                              context: this.context,
-                              builder: (ctx) => KubusAlertDialog(
-                                title: Text(
-                                    l10n.mnemonicRevealEnterPinDialogTitle),
-                                content: TextField(
-                                    controller: _pinController,
-                                    obscureText: true,
-                                    keyboardType: TextInputType.number,
-                                    decoration: InputDecoration(
-                                        labelText: l10n.commonPinLabel)),
-                                actions: [
-                                  TextButton(
-                                      onPressed: () =>
-                                          Navigator.of(ctx).pop(null),
-                                      child: Text(l10n.commonCancel)),
-                                  ElevatedButton(
-                                      onPressed: () => Navigator.of(ctx)
-                                          .pop(_pinController.text.trim()),
-                                      child: Text(l10n.commonUnlock)),
-                                ],
-                              ),
-                            );
-
-                            if (!mounted) return;
-                            if (entered == null || entered.isEmpty) return;
-                            final m2 =
-                                await wallet.revealMnemonic(pin: entered);
-                            if (!mounted) return;
-                            if (m2 != null) {
-                              setState(() {
-                                _mnemonic = m2;
-                                _masked = false;
-                              });
-                            } else {
-                              final rem =
-                                  await wallet.getPinLockoutRemainingSeconds();
-                              if (!mounted) return;
-                              messenger.showKubusSnackBar(
-                                SnackBar(
-                                  content: Text(rem > 0
-                                      ? l10n.mnemonicRevealPinLockedError(rem)
-                                      : l10n.mnemonicRevealIncorrectPinError),
-                                ),
-                              );
-                            }
+                            if (settled == null || !settled.isSuccess) return;
+                            setState(() => _masked = false);
                           },
                           label: l10n.mnemonicRevealShowButton,
                           icon: Icons.visibility,
@@ -288,15 +207,8 @@ class _MnemonicRevealScreenState extends State<MnemonicRevealScreen> {
                               ?.copyWith(color: scheme.error),
                         ),
                       ),
-                    TextField(
-                        controller: _pinController,
-                        obscureText: true,
-                        keyboardType: TextInputType.number,
-                        decoration:
-                            InputDecoration(labelText: l10n.commonPinLabel)),
-                    const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
                     KubusButton(
-                      onPressed: _attemptPinReveal,
+                      onPressed: _unlockAndLoadMnemonic,
                       label: l10n.commonUnlock,
                       icon: Icons.lock_open,
                       backgroundColor: scheme.primary,

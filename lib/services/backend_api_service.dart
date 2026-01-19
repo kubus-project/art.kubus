@@ -751,7 +751,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       ),
     );
 
-    final canRetry = isIdempotent || method.toUpperCase() == 'GET' || method.toUpperCase() == 'HEAD';
+    // Treat 401/403 as safe-to-retry once: servers must not perform side effects
+    // when rejecting a request for auth reasons.
+    final canRetry = true;
     if (result.isSuccess && canRetry) {
       if ((_authToken ?? '').isEmpty) {
         await loadAuthToken();
@@ -873,13 +875,15 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
   }
 
   Future<http.Response> _sendMultipart(
-    http.MultipartRequest request, {
+    http.MultipartRequest Function() requestFactory, {
     bool includeAuth = true,
     Duration timeout = AppConfig.requestTimeout,
+    bool retriedAfterReauth = false,
   }) async {
     if (includeAuth && _authCoordinator != null && _authCoordinator!.isResolving) {
       final settled = await _authCoordinator!.waitForResolution();
       if (settled != null && !settled.isSuccess) {
+        final request = requestFactory();
         throw BackendApiRequestException(
           statusCode: 401,
           path: request.url.path,
@@ -888,6 +892,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       }
     }
 
+    final request = requestFactory();
     final baseHeaders = <String, String>{
       'Accept': 'application/json',
       ...request.headers,
@@ -900,21 +905,34 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     final response = await http.Response.fromStream(streamed);
 
     final coordinator = _authCoordinator;
-    if (includeAuth &&
+    final isAuthFailure = includeAuth &&
         coordinator != null &&
         AppConfig.isFeatureEnabled('rePromptLoginOnExpiry') &&
-        _isAuthFailureStatus(statusCode: response.statusCode, responseBody: response.body)) {
-      await coordinator.handleAuthFailure(
-        AuthFailureContext(
-          statusCode: response.statusCode,
-          method: request.method,
-          path: request.url.path,
-          body: response.body,
-        ),
-      );
+        _isAuthFailureStatus(statusCode: response.statusCode, responseBody: response.body);
+
+    if (!isAuthFailure) return response;
+    if (retriedAfterReauth) return response;
+
+    final result = await coordinator.handleAuthFailure(
+      AuthFailureContext(
+        statusCode: response.statusCode,
+        method: request.method,
+        path: request.url.path,
+        body: response.body,
+      ),
+    );
+
+    if (!result.isSuccess) return response;
+    if ((_authToken ?? '').isEmpty) {
+      await loadAuthToken();
     }
 
-    return response;
+    return _sendMultipart(
+      requestFactory,
+      includeAuth: includeAuth,
+      timeout: timeout,
+      retriedAfterReauth: true,
+    );
   }
 
   Future<void> _persistTokenFromResponse(Map<String, dynamic> body) async {
@@ -1424,13 +1442,24 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
   Future<Map<String, dynamic>> uploadMessageAttachment(String conversationId, List<int> bytes, String filename, String contentType) async {
     try {
       final uri = Uri.parse('$baseUrl/api/messages/$conversationId/messages');
-      final request = http.MultipartRequest('POST', uri);
-      request.headers.addAll({'Accept': 'application/json'});
-      request.files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename, contentType: MediaType.parse(contentType)));
       final placeholder = filename.isNotEmpty ? 'Attachment • $filename' : 'Shared an attachment';
-      request.fields['message'] = placeholder;
-      request.fields['content'] = placeholder;
-      final resp = await _sendMultipart(request, includeAuth: true);
+      http.MultipartRequest buildRequest() {
+        final request = http.MultipartRequest('POST', uri);
+        request.headers.addAll({'Accept': 'application/json'});
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'file',
+            bytes,
+            filename: filename,
+            contentType: MediaType.parse(contentType),
+          ),
+        );
+        request.fields['message'] = placeholder;
+        request.fields['content'] = placeholder;
+        return request;
+      }
+
+      final resp = await _sendMultipart(buildRequest, includeAuth: true);
       if (resp.statusCode == 200 || resp.statusCode == 201) return jsonDecode(resp.body) as Map<String, dynamic>;
       return {'success': false, 'status': resp.statusCode, 'body': resp.body};
     } catch (e) {
@@ -1461,18 +1490,40 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     try {
       // Try conversation-specific avatar endpoint first
       var uri = Uri.parse('$baseUrl/api/conversations/$conversationId/avatar');
-      var request = http.MultipartRequest('POST', uri);
-      request.headers.addAll({'Accept': 'application/json'});
-      request.files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename, contentType: MediaType.parse(contentType)));
-      var resp = await _sendMultipart(request, includeAuth: true);
+      http.MultipartRequest buildPrimary() {
+        final request = http.MultipartRequest('POST', uri);
+        request.headers.addAll({'Accept': 'application/json'});
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'file',
+            bytes,
+            filename: filename,
+            contentType: MediaType.parse(contentType),
+          ),
+        );
+        return request;
+      }
+
+      var resp = await _sendMultipart(buildPrimary, includeAuth: true);
       if (resp.statusCode == 200 || resp.statusCode == 201) return jsonDecode(resp.body) as Map<String, dynamic>;
 
       // Fallback to messages-based endpoint
       uri = Uri.parse('$baseUrl/api/messages/$conversationId/avatar');
-      request = http.MultipartRequest('POST', uri);
-      request.headers.addAll({'Accept': 'application/json'});
-      request.files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename, contentType: MediaType.parse(contentType)));
-      resp = await _sendMultipart(request, includeAuth: true);
+      http.MultipartRequest buildFallback() {
+        final request = http.MultipartRequest('POST', uri);
+        request.headers.addAll({'Accept': 'application/json'});
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'file',
+            bytes,
+            filename: filename,
+            contentType: MediaType.parse(contentType),
+          ),
+        );
+        return request;
+      }
+
+      resp = await _sendMultipart(buildFallback, includeAuth: true);
       if (resp.statusCode == 200 || resp.statusCode == 201) return jsonDecode(resp.body) as Map<String, dynamic>;
 
       return {'success': false, 'status': resp.statusCode, 'body': resp.body};
@@ -5653,31 +5704,34 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     await _ensureAuthBeforeRequest(walletAddress: walletAddress);
     const int maxRetries = 3;
     int attempt = 0;
-    while (true) {
-      attempt++;
-      try {
-        final request = http.MultipartRequest(
-          'POST',
-          Uri.parse('$baseUrl/api/upload'),
-        );
+      while (true) {
+        attempt++;
+        try {
+          http.MultipartRequest buildRequest() {
+            final request = http.MultipartRequest(
+              'POST',
+              Uri.parse('$baseUrl/api/upload'),
+            );
 
-        request.headers.addAll(_getHeaders());
-        request.files.add(
-          http.MultipartFile.fromBytes(
-            'file',
-            fileBytes,
-            filename: fileName,
-          ),
-        );
+            request.headers.addAll(_getHeaders());
+            request.files.add(
+              http.MultipartFile.fromBytes(
+                'file',
+                fileBytes,
+                filename: fileName,
+              ),
+            );
 
-        request.fields['fileType'] = fileType;
-        request.fields['targetStorage'] = 'http'; // Use HTTP storage instead of hybrid/IPFS
-        if (metadata != null) {
-          request.fields['metadata'] = jsonEncode(metadata);
-        }
+            request.fields['fileType'] = fileType;
+            request.fields['targetStorage'] = 'http'; // Use HTTP storage instead of hybrid/IPFS
+            if (metadata != null) {
+              request.fields['metadata'] = jsonEncode(metadata);
+            }
 
-        final streamedResponse = await request.send();
-        final response = await http.Response.fromStream(streamedResponse);
+            return request;
+          }
+
+          final response = await _sendMultipart(buildRequest, includeAuth: true);
 
         if (response.statusCode == 200) {
           final body = jsonDecode(response.body) as Map<String, dynamic>;
@@ -5773,24 +5827,26 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         final uri = Uri.parse('$baseUrl/api/profiles/avatars');
         _debugLogThrottled('uploadAvatarToProfile:url', 'BackendApiService.uploadAvatarToProfile: POST $uri');
         
-        final request = http.MultipartRequest('POST', uri);
+        http.MultipartRequest buildRequest() {
+          final request = http.MultipartRequest('POST', uri);
 
-        // include auth header if set
-        request.headers.addAll(_getHeaders());
-        request.files.add(
-          http.MultipartFile.fromBytes(
-            'file',
-            fileBytes,
-            filename: fileName,
-            contentType: MediaType.parse(fileType),
-          ),
-        );
+          // include auth header if set
+          request.headers.addAll(_getHeaders());
+          request.files.add(
+            http.MultipartFile.fromBytes(
+              'file',
+              fileBytes,
+              filename: fileName,
+              contentType: MediaType.parse(fileType),
+            ),
+          );
 
-        request.fields['fileType'] = fileType;
-        if (metadata != null) request.fields['metadata'] = jsonEncode(metadata);
+          request.fields['fileType'] = fileType;
+          if (metadata != null) request.fields['metadata'] = jsonEncode(metadata);
+          return request;
+        }
 
-        final streamedResponse = await request.send();
-        final response = await http.Response.fromStream(streamedResponse);
+        final response = await _sendMultipart(buildRequest, includeAuth: true);
         _debugLogThrottled(
           'uploadAvatarToProfile:status',
           'BackendApiService.uploadAvatarToProfile: status=${response.statusCode} bodyLen=${response.body.length}',

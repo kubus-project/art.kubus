@@ -42,7 +42,7 @@ import 'providers/stats_provider.dart';
 import 'providers/analytics_filters_provider.dart';
 import 'providers/desktop_dashboard_state_provider.dart';
 import 'providers/marker_management_provider.dart';
-import 'providers/auth_session_provider.dart';
+import 'providers/security_gate_provider.dart';
 import 'providers/deep_link_provider.dart';
 import 'providers/platform_deep_link_listener_provider.dart';
 import 'providers/main_tab_provider.dart';
@@ -71,6 +71,7 @@ import 'services/telemetry/telemetry_route_observer.dart';
 import 'services/telemetry/telemetry_service.dart';
 
 import 'widgets/glass_components.dart';
+import 'widgets/security_gate_overlay.dart';
 
 import 'screens/collab/invites_inbox_screen.dart';
 import 'services/share/share_deep_link_parser.dart';
@@ -373,20 +374,18 @@ class _AppLauncherState extends State<AppLauncher> {
                   solanaWalletService: context.read<SolanaWalletService>(),
                 ),
               ),
-              ChangeNotifierProxyProvider2<ProfileProvider, WalletProvider, AuthSessionProvider>(
-                create: (context) => AuthSessionProvider(),
-                update: (context, profileProvider, walletProvider, authSessionProvider) {
-                  final provider = authSessionProvider ?? AuthSessionProvider();
+              ChangeNotifierProxyProvider3<ProfileProvider, WalletProvider, NotificationProvider, SecurityGateProvider>(
+                lazy: false,
+                create: (context) => SecurityGateProvider(),
+                update: (context, profileProvider, walletProvider, notificationProvider, securityGateProvider) {
+                  final provider = securityGateProvider ?? SecurityGateProvider();
                   provider.bindDependencies(
                     profileProvider: profileProvider,
                     walletProvider: walletProvider,
+                    notificationProvider: notificationProvider,
                   );
-                  provider.bindOnSessionRestored(() async {
-                    final walletAddress = profileProvider.currentUser?.walletAddress ?? walletProvider.currentWalletAddress;
-                    if (walletAddress == null || walletAddress.isEmpty) return;
-                    await profileProvider.loadProfile(walletAddress);
-                  });
                   BackendApiService().bindAuthCoordinator(provider);
+                  unawaited(provider.initialize());
                   return provider;
                 },
               ),
@@ -489,13 +488,13 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     TelemetryService().onAppLifecycleChanged(state);
     final ctx = context;
     if (!mounted) return;
-    final walletProvider = Provider.of<WalletProvider>(ctx, listen: false);
+    final securityGate = Provider.of<SecurityGateProvider>(ctx, listen: false);
     final refreshProvider = Provider.of<AppRefreshProvider>(ctx, listen: false);
     final presenceProvider = Provider.of<PresenceProvider>(ctx, listen: false);
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
-      walletProvider.markInactive();
+      securityGate.onAppLifecycleChanged(state);
     } else if (state == AppLifecycleState.resumed) {
-      walletProvider.markActive();
+      securityGate.onAppLifecycleChanged(state);
       // Refresh core surfaces after returning to foreground (no manual reload needed).
       refreshProvider.triggerAll();
       unawaited(presenceProvider.onAppResumed());
@@ -519,15 +518,15 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
           theme: themeProvider.lightTheme,
           darkTheme: themeProvider.darkTheme,
           themeMode: themeProvider.themeMode,
-          builder: (context, child) {
-            // Global backdrop to prevent 'HTML background bleed-through' on web
-            // when screens use transparent scaffolds for glass/gradient UI.
-            return AnimatedGradientBackground(
-              animate: false,
-              intensity: 0.22,
-              child: child ?? const SizedBox.shrink(),
-            );
-          },
+           builder: (context, child) {
+             // Global backdrop to prevent 'HTML background bleed-through' on web
+             // when screens use transparent scaffolds for glass/gradient UI.
+             return AnimatedGradientBackground(
+               animate: false,
+               intensity: 0.22,
+               child: SecurityGateOverlay(child: child ?? const SizedBox.shrink()),
+             );
+           },
           onGenerateRoute: (settings) {
             final name = (settings.name ?? '').trim();
             if (name.isEmpty) {
