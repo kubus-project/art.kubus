@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -2532,9 +2532,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     final communityProvider =
         Provider.of<CommunityHubProvider>(context, listen: false);
 
-    await showDialog(
+    await showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
@@ -3356,39 +3356,66 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   }
 
   Future<void> _showRepostOptions(CommunityPost post) async {
-    await showDialog(
+    await showKubusDialog(
       context: context,
       builder: (dialogContext) {
-        return SimpleDialog(
+        Widget optionTile({
+          required IconData icon,
+          required String label,
+          Color? iconColor,
+          required Future<void> Function() onTap,
+        }) {
+          final scheme = Theme.of(dialogContext).colorScheme;
+          return LiquidGlassPanel(
+            padding: EdgeInsets.zero,
+            margin: EdgeInsets.zero,
+            showBorder: false,
+            borderRadius: BorderRadius.circular(KubusRadius.md),
+            backgroundColor: scheme.surface.withValues(alpha: 0.06),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(KubusRadius.md),
+                onTap: () async {
+                  Navigator.of(dialogContext).pop();
+                  await onTap();
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: KubusSpacing.lg,
+                    vertical: KubusSpacing.md,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(icon, size: 18, color: iconColor ?? scheme.onSurface),
+                      const SizedBox(width: KubusSpacing.md),
+                      Expanded(child: Text(label)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+
+        return KubusAlertDialog(
           title: const Text('Share post'),
-          children: [
-            SimpleDialogOption(
-              onPressed: () async {
-                Navigator.of(dialogContext).pop();
-                await _createRepost(post);
-              },
-              child: Row(
-                children: const [
-                  Icon(Icons.repeat, size: 18),
-                  SizedBox(width: 10),
-                  Text('Quick repost'),
-                ],
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              optionTile(
+                icon: Icons.repeat,
+                label: 'Quick repost',
+                onTap: () => _createRepost(post),
               ),
-            ),
-            SimpleDialogOption(
-              onPressed: () async {
-                Navigator.of(dialogContext).pop();
-                await _showQuoteRepostDialog(post);
-              },
-              child: Row(
-                children: const [
-                  Icon(Icons.edit_note, size: 18),
-                  SizedBox(width: 10),
-                  Text('Repost with comment'),
-                ],
+              const SizedBox(height: KubusSpacing.md),
+              optionTile(
+                icon: Icons.edit_note,
+                label: 'Repost with comment',
+                onTap: () => _showQuoteRepostDialog(post),
               ),
-            ),
-          ],
+            ],
+          ),
         );
       },
     );
@@ -3398,13 +3425,13 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     final controller = TextEditingController();
     bool isSubmitting = false;
 
-    await showDialog(
+    await showKubusDialog(
       context: context,
       barrierDismissible: !isSubmitting,
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            return AlertDialog(
+            return KubusAlertDialog(
               title: const Text('Repost with comment'),
               content: SizedBox(
                 width: 520,
@@ -3609,39 +3636,79 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
   Future<void> _showUnrepostOptions(CommunityPost post) async {
     final l10n = AppLocalizations.of(context)!;
-    await showDialog(
+    await showKubusDialog(
       context: context,
-      builder: (dialogContext) => SimpleDialog(
-        title: Text(l10n.communityUnrepostTitle),
-        children: [
-          SimpleDialogOption(
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-              unawaited(_unrepostPost(post));
-            },
-            child: Row(
-              children: [
-                Icon(Icons.delete_outline, color: Theme.of(context).colorScheme.error),
-                const SizedBox(width: 10),
-                Text(
-                  l10n.communityUnrepostAction,
-                  style: GoogleFonts.inter(color: Theme.of(context).colorScheme.error),
+      builder: (dialogContext) {
+        Widget optionTile({
+          required IconData icon,
+          required String label,
+          Color? iconColor,
+          TextStyle? textStyle,
+          required VoidCallback onTap,
+        }) {
+          final scheme = Theme.of(dialogContext).colorScheme;
+          return LiquidGlassPanel(
+            padding: EdgeInsets.zero,
+            margin: EdgeInsets.zero,
+            showBorder: false,
+            borderRadius: BorderRadius.circular(KubusRadius.md),
+            backgroundColor: scheme.surface.withValues(alpha: 0.06),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(KubusRadius.md),
+                onTap: () {
+                  Navigator.of(dialogContext).pop();
+                  onTap();
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: KubusSpacing.lg,
+                    vertical: KubusSpacing.md,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(icon, size: 18, color: iconColor ?? scheme.onSurface),
+                      const SizedBox(width: KubusSpacing.md),
+                      Expanded(
+                        child: Text(
+                          label,
+                          style: textStyle,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
+              ),
             ),
+          );
+        }
+
+        final scheme = Theme.of(dialogContext).colorScheme;
+
+        return KubusAlertDialog(
+          title: Text(l10n.communityUnrepostTitle),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              optionTile(
+                icon: Icons.delete_outline,
+                label: l10n.communityUnrepostAction,
+                iconColor: scheme.error,
+                textStyle: GoogleFonts.inter(color: scheme.error),
+                onTap: () => unawaited(_unrepostPost(post)),
+              ),
+              const SizedBox(height: KubusSpacing.md),
+              optionTile(
+                icon: Icons.cancel,
+                label: l10n.commonCancel,
+                iconColor: scheme.onSurface.withValues(alpha: 0.65),
+                onTap: () {},
+              ),
+            ],
           ),
-          SimpleDialogOption(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Row(
-              children: [
-                Icon(Icons.cancel, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.65)),
-                const SizedBox(width: 10),
-                Text(l10n.commonCancel),
-              ],
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -3650,9 +3717,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context)!;
 
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showKubusDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => KubusAlertDialog(
         title: Text(l10n.communityUnrepostTitle, style: GoogleFonts.inter()),
         content: Text(l10n.communityUnrepostConfirmBody, style: GoogleFonts.inter()),
         actions: [
@@ -3823,7 +3890,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                           ),
                           subtitle: subtitleParts.isNotEmpty
                               ? Text(
-                                  subtitleParts.join(' • '),
+                                  subtitleParts.join(' â€¢ '),
                                   style: GoogleFonts.inter(
                                     fontSize: 12,
                                     color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
@@ -4261,8 +4328,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
                   child: Text(
                     filteredConversations.length == 1
-                        ? 'Showing 1 result for “$trimmedQuery”'
-                        : 'Showing ${filteredConversations.length} results for “$trimmedQuery”',
+                        ? 'Showing 1 result for â€œ$trimmedQueryâ€'
+                        : 'Showing ${filteredConversations.length} results for â€œ$trimmedQueryâ€',
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -4544,7 +4611,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Text(
-                'We couldn\'t find any conversations, members, or messages matching “$queryLabel”.',
+                'We couldn\'t find any conversations, members, or messages matching â€œ$queryLabelâ€.',
                 style: GoogleFonts.inter(
                   fontSize: 13,
                   color: scheme.onSurface.withValues(alpha: 0.55),
@@ -4648,7 +4715,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     final title = (conversation.title ?? conversation.rawTitle ?? '').trim();
     final titlePreview = _matchField(title, queryVariants);
     if (titlePreview != null) {
-      register(4.0, 'Title match • $titlePreview');
+      register(4.0, 'Title match â€¢ $titlePreview');
     }
 
     final preloaded =
@@ -4698,7 +4765,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     for (final name in memberNames) {
       final snippet = _matchField(name, queryVariants);
       if (snippet != null) {
-        register(3.2, 'Member • $snippet');
+        register(3.2, 'Member â€¢ $snippet');
         break;
       }
     }
@@ -4714,7 +4781,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     final lastMessageSnippet =
         _matchField(conversation.lastMessage, queryVariants);
     if (lastMessageSnippet != null) {
-      register(2.6, 'Latest message • “$lastMessageSnippet”');
+      register(2.6, 'Latest message â€¢ â€œ$lastMessageSnippetâ€');
     }
 
     final cachedMessages = chatProvider.messages[conversation.id];
@@ -4726,8 +4793,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   message.senderUsername ??
                   message.senderWallet)
               .trim();
-          final prefix = sender.isNotEmpty ? '$sender • ' : '';
-          register(2.4, 'Message • $prefix“$snippet”');
+          final prefix = sender.isNotEmpty ? '$sender â€¢ ' : '';
+          register(2.4, 'Message â€¢ $prefixâ€œ$snippetâ€');
           break;
         }
       }
@@ -4765,7 +4832,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     for (final variant in queryVariants) {
       if (variant.isEmpty) continue;
       if (lower.contains(variant)) {
-        return 'Wallet match • ${_shortenWallet(normalized)}';
+        return 'Wallet match â€¢ ${_shortenWallet(normalized)}';
       }
     }
     return null;
@@ -4775,8 +4842,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     const radius = 18;
     final start = math.max(0, matchStart - radius);
     final end = math.min(value.length, matchStart + matchLength + radius);
-    final prefix = start > 0 ? '…' : '';
-    final suffix = end < value.length ? '…' : '';
+    final prefix = start > 0 ? 'â€¦' : '';
+    final suffix = end < value.length ? 'â€¦' : '';
     final snippet = value.substring(start, end).trim();
     if (snippet.isEmpty) return value;
     return '$prefix$snippet$suffix';
@@ -4784,12 +4851,12 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
   String _shortenWallet(String wallet) {
     if (wallet.length <= 12) return wallet;
-    return '${wallet.substring(0, 4)}…${wallet.substring(wallet.length - 4)}';
+    return '${wallet.substring(0, 4)}â€¦${wallet.substring(wallet.length - 4)}';
   }
 
   void _startNewConversation() {
     // Show dialog to start new conversation
-    showDialog(
+    showKubusDialog(
       context: context,
       builder: (dialogContext) => _NewConversationDialog(
         themeProvider: Provider.of<ThemeProvider>(dialogContext),
@@ -5289,9 +5356,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
   void _showAddTagDialog(CommunityHubProvider hub) {
     final controller = TextEditingController();
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text('Add Tag',
@@ -5496,7 +5563,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     String? errorMessage;
     Timer? debounce;
 
-    final selection = await showDialog<String>(
+    final selection = await showKubusDialog<String>(
       context: context,
       builder: (dialogContext) {
         return StatefulBuilder(
@@ -5536,7 +5603,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               }
             }
 
-            return AlertDialog(
+            return KubusAlertDialog(
               backgroundColor: Theme.of(context).colorScheme.surface,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16)),
@@ -6896,10 +6963,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
   Future<void> _pickLocation() async {
     final controller = TextEditingController(text: _selectedLocation ?? '');
-    final result = await showDialog<String>(
+    final result = await showKubusDialog<String>(
       context: context,
       builder: (context) {
-        return AlertDialog(
+        return KubusAlertDialog(
           backgroundColor: Theme.of(context).colorScheme.surface,
           title: Text(
             'Tag a location',
@@ -6942,7 +7009,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   }
 
   void _showEmojiPicker() {
-    const emojis = ['🎨', '🔥', '✨', '🛰️', '🖼️', '🌐', '💫', '🚀'];
+    const emojis = ['ðŸŽ¨', 'ðŸ”¥', 'âœ¨', 'ðŸ›°ï¸', 'ðŸ–¼ï¸', 'ðŸŒ', 'ðŸ’«', 'ðŸš€'];
     showModalBottomSheet(
       context: context,
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -7483,7 +7550,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       return null;
     }
 
-    return showDialog<CommunityGroupSummary>(
+    return showKubusDialog<CommunityGroupSummary>(
       context: context,
       builder: (dialogContext) {
         return Dialog(
@@ -7619,9 +7686,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   }
 
   void _showARAttachmentInfo() {
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(

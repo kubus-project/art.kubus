@@ -1,4 +1,5 @@
-import 'dart:async';
+﻿import 'dart:async';
+import 'package:art_kubus/widgets/glass_components.dart';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:flutter/foundation.dart';
@@ -307,7 +308,7 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
     final controller = TextEditingController();
     final focusNode = FocusNode();
     try {
-      return await showDialog<MarkerSubjectOption>(
+      return await showKubusDialog<MarkerSubjectOption>(
         context: context,
         builder: (dialogContext) {
           return StatefulBuilder(
@@ -320,7 +321,7 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                           o.title.toLowerCase().contains(query) || o.subtitle.toLowerCase().contains(query))
                       .toList(growable: false);
 
-              return AlertDialog(
+              return KubusAlertDialog(
                 title: Text(title),
                 content: SizedBox(
                   width: 520,
@@ -577,9 +578,9 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
 
     final l10n = AppLocalizations.of(context)!;
     final navigator = Navigator.of(context);
-    final confirm = await showDialog<bool>(
+    final confirm = await showKubusDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (_) => KubusAlertDialog(
         title: Text(l10n.manageMarkersDeleteConfirmTitle),
         content: Text(l10n.manageMarkersDeleteConfirmBody),
         actions: [

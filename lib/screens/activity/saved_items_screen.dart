@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
@@ -10,6 +10,7 @@ import '../../services/backend_api_service.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/artwork_navigation.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import 'package:art_kubus/widgets/glass_components.dart';
 
 enum SavedItemsCategory { artworks, posts, all }
 
@@ -922,9 +923,9 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
   }
 
   void _confirmUnsave(String itemId, String type, SavedItemsProvider savedProvider) {
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         title: Text(
           'Remove from Saved?',
           style: GoogleFonts.inter(fontWeight: FontWeight.bold),
@@ -971,9 +972,9 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
   }
 
   void _showClearDialog() {
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         title: Text(
           'Clear All Saved Items?',
           style: GoogleFonts.inter(fontWeight: FontWeight.bold),

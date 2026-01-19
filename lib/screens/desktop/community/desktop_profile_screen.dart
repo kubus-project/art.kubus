@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../l10n/app_localizations.dart';
@@ -42,6 +42,7 @@ import '../../events/event_detail_screen.dart';
 import '../../../config/config.dart';
 import 'desktop_community_analytics_screen.dart';
 import 'desktop_profile_analytics_screen.dart';
+import 'package:art_kubus/widgets/glass_components.dart';
 
 /// Desktop profile screen with clean card-based layout
 /// Features: Profile header, stats cards, achievements, posts feed
@@ -349,11 +350,11 @@ class _ProfileScreenState extends State<ProfileScreen>
                 onPressed: () {
                   final wallet = context.read<ProfileProvider>().currentUser?.walletAddress ?? '';
                   if (wallet.trim().isEmpty) return;
-                  showDialog<void>(
+                  showKubusDialog<void>(
                     context: context,
                     builder: (dialogContext) {
                       final scheme = Theme.of(dialogContext).colorScheme;
-                      return AlertDialog(
+                      return KubusAlertDialog(
                         backgroundColor: scheme.surface,
                         title: Text('Analytics', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
                         content: Column(

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -26,6 +26,7 @@ import '../../utils/wallet_utils.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/app_color_utils.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import 'package:art_kubus/widgets/glass_components.dart';
 
 // Use AvatarWidget from widgets to render avatars safely
 
@@ -808,7 +809,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                     if (readAtStr != null && readAtStr.isNotEmpty) {
                       try {
                         final dt = DateTime.parse(readAtStr);
-                        suffix = ' • ${_formatTimeAgo(dt)}';
+                        suffix = ' â€¢ ${_formatTimeAgo(dt)}';
                       } catch (_) {}
                     }
                     return Tooltip(
@@ -1122,7 +1123,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
               padding: const EdgeInsets.all(16.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: ['👍', '❤️', '😂', '😮', '😢', '😡'].map((emoji) {
+                children: ['ðŸ‘', 'â¤ï¸', 'ðŸ˜‚', 'ðŸ˜®', 'ðŸ˜¢', 'ðŸ˜¡'].map((emoji) {
                   return GestureDetector(
                     onTap: () {
                       Navigator.pop(context);
@@ -1357,7 +1358,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                   };
                 }).toList();
                 if (!mounted || !dialogContext.mounted) return;
-                final selected = await showDialog<String?>(
+                final selected = await showKubusDialog<String?>(
                   context: dialogContext,
                   builder: (_) => MembersDialog(
                     members: mappedMembers,
@@ -1377,7 +1378,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
               break;
             case 'add_member':
               try {
-                final identifier = await showDialog<String?>(
+                final identifier = await showKubusDialog<String?>(
                   context: context,
                   builder: (ctx) => _AddMemberDialog(),
                 );
@@ -2282,7 +2283,7 @@ class _AddMemberDialogState extends State<_AddMemberDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return AlertDialog(
+    return KubusAlertDialog(
       title: Text(l10n.messagesAddMemberDialogTitle),
       content: Builder(
         builder: (dialogCtx) {
@@ -2442,7 +2443,7 @@ class MembersDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return AlertDialog(
+    return KubusAlertDialog(
       title: Text(l10n.messagesConversationMembersTitle),
       content: SizedBox(
         width: 360,
@@ -2479,9 +2480,9 @@ class MembersDialog extends StatelessWidget {
                     switch (choice) {
                       case 'manage':
                         // Open a small dialog with explicit actions
-                        final action = await showDialog<String?>(
+                        final action = await showKubusDialog<String?>(
                           context: context,
-                          builder: (c) => AlertDialog(
+                          builder: (c) => KubusAlertDialog(
                             title: Text(l10n.messagesMemberOptionsTitle),
                             content: Text(
                                 l10n.messagesMemberOptionsBody(displayName)),
@@ -2511,9 +2512,9 @@ class MembersDialog extends StatelessWidget {
                         }
                         if (action == 'transfer') {
                           // Confirm transfer
-                          final confirmed = await showDialog<bool>(
+                          final confirmed = await showKubusDialog<bool>(
                             context: context,
-                            builder: (c) => AlertDialog(
+                            builder: (c) => KubusAlertDialog(
                               title: Text(l10n.messagesTransferOwnershipTitle),
                               content: Text(l10n.messagesTransferOwnershipBody(
                                   displayName, wallet)),
@@ -2612,7 +2613,7 @@ class _RenameConversationDialogState extends State<_RenameConversationDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return AlertDialog(
+    return KubusAlertDialog(
       title: Text(l10n.messagesRenameConversationTitle),
       content: TextField(
         controller: _controller,

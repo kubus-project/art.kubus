@@ -1,10 +1,11 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/app_loading.dart';
 import '../config/config.dart';
 import '../services/onboarding_state_service.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import 'package:art_kubus/widgets/glass_components.dart';
 
 /// Developer tool to reset app onboarding state
 /// This screen can be accessed from the settings or profile menu during development
@@ -57,9 +58,9 @@ class _OnboardingResetScreenState extends State<OnboardingResetScreen> {
   Future<void> _resetOnboardingState() async {
     final l10n = AppLocalizations.of(context)!;
 
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showKubusDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.onboardingResetDialogTitle,

@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -1538,7 +1538,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       final end = exhibition.endsAt != null
           ? _formatExhibitionDate(exhibition.endsAt!)
           : null;
-      dateRange = [start, end].whereType<String>().join(' – ');
+      dateRange = [start, end].whereType<String>().join(' â€“ ');
       if (dateRange.trim().isEmpty) dateRange = null;
     }
 
@@ -3436,7 +3436,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         ? rawDescription
         : (_markerOverlayExpanded
             ? rawDescription
-            : '${rawDescription.substring(0, maxPreviewChars)}…');
+            : '${rawDescription.substring(0, maxPreviewChars)}â€¦');
 
     final showChips =
         _hasMetadataChips(marker, artwork) || canPresentExhibition;
@@ -4168,9 +4168,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       metadata: marker.metadata,
     );
 
-    await showDialog<void>(
+    await showKubusDialog<void>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => KubusAlertDialog(
         backgroundColor: scheme.surface,
         title: Text(
           marker.name,

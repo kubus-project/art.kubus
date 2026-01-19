@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+﻿import 'package:flutter/foundation.dart';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -887,8 +887,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             final v = (snapshot.counters[key] ?? 0);
             return _formatCompactCount(v);
           }
-          if (isLoading) return '…';
-          if (error != null) return '—';
+          if (isLoading) return 'â€¦';
+          if (error != null) return 'â€”';
           return '0';
         }
         final stats = [
@@ -2060,10 +2060,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final wallet =
         (context.read<ProfileProvider>().currentUser?.walletAddress ?? '')
             .trim();
-    showDialog(
+    showKubusDialog(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) => AlertDialog(
+        builder: (dialogContext, setDialogState) => KubusAlertDialog(
           backgroundColor: Theme.of(dialogContext).colorScheme.surface,
           title: Row(
             children: [

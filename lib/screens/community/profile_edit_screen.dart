@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
@@ -17,6 +17,7 @@ import '../../providers/themeprovider.dart';
 import '../../widgets/inline_loading.dart';
 import '../../utils/media_url_resolver.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import 'package:art_kubus/widgets/glass_components.dart';
 
 class ProfileEditScreen extends StatefulWidget {
   const ProfileEditScreen({super.key});
@@ -269,9 +270,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           final debug = profileProvider.lastUploadDebug;
           if (debug != null) {
             final pretty = const JsonEncoder.withIndent('  ').convert(debug);
-            showDialog<void>(
+            showKubusDialog<void>(
               context: context,
-              builder: (context) => AlertDialog(
+              builder: (context) => KubusAlertDialog(
                 title: const Text('Upload Debug Info'),
                 content: SingleChildScrollView(
                   child: SelectableText(pretty),

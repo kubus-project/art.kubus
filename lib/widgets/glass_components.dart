@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'dart:ui';
 import '../utils/design_tokens.dart';
 
@@ -11,34 +11,40 @@ Future<T?> showKubusDialog<T>({
   bool useRootNavigator = true,
   RouteSettings? routeSettings,
   Duration transitionDuration = const Duration(milliseconds: 220),
+  bool useSafeArea = true,
+  Offset? anchorPoint,
 }) {
   final scheme = Theme.of(context).colorScheme;
   final resolvedBarrierColor = barrierColor ??
       scheme.scrim.withValues(alpha: KubusGlassEffects.backdropDimming);
+  final resolvedBarrierLabel =
+      barrierLabel ?? MaterialLocalizations.of(context).modalBarrierDismissLabel;
 
   return showGeneralDialog<T>(
     context: context,
     barrierDismissible: barrierDismissible,
-    barrierLabel: barrierLabel,
+    barrierLabel: resolvedBarrierLabel,
     barrierColor: resolvedBarrierColor,
     useRootNavigator: useRootNavigator,
     routeSettings: routeSettings,
     transitionDuration: transitionDuration,
+    anchorPoint: anchorPoint,
     pageBuilder: (dialogContext, __, ___) {
-      return BackdropFilter(
+      final content = BackdropFilter(
         filter: ImageFilter.blur(
           sigmaX: KubusGlassEffects.blurSigmaLight,
           sigmaY: KubusGlassEffects.blurSigmaLight,
         ),
         child: ColoredBox(
           color: Colors.transparent,
-          child: SafeArea(
-            child: Center(
-              child: Builder(builder: (ctx) => builder(ctx)),
-            ),
+          child: Center(
+            child: Builder(builder: (ctx) => builder(ctx)),
           ),
         ),
       );
+
+      if (!useSafeArea) return content;
+      return SafeArea(child: content);
     },
     transitionBuilder: (context, animation, secondaryAnimation, child) {
       final curved = CurvedAnimation(
@@ -77,7 +83,7 @@ class AnimatedGradientBackground extends StatefulWidget {
 
   /// Optional hue shift in degrees applied subtly over time.
   ///
-  /// This helps gradients feel more “alive” without requiring hardcoded
+  /// This helps gradients feel more â€œaliveâ€ without requiring hardcoded
   /// multi-palette animations.
   final double hueShiftDegrees;
   
@@ -702,6 +708,8 @@ class _GlassShimmerState extends State<GlassShimmer>
 ///
 /// Prefer using this with [showKubusDialog] so dialogs also blur the background.
 class KubusAlertDialog extends StatelessWidget {
+  final Widget? icon;
+  final EdgeInsetsGeometry? iconPadding;
   final Widget? title;
   final Widget? content;
   final List<Widget>? actions;
@@ -715,9 +723,16 @@ class KubusAlertDialog extends StatelessWidget {
   final bool scrollable;
   final double blurSigma;
   final bool showBorder;
+  final Clip clipBehavior;
+  final String? semanticLabel;
+  final double? elevation;
+  final TextStyle? titleTextStyle;
+  final TextStyle? contentTextStyle;
 
   const KubusAlertDialog({
     super.key,
+    this.icon,
+    this.iconPadding,
     this.title,
     this.content,
     this.actions,
@@ -731,6 +746,11 @@ class KubusAlertDialog extends StatelessWidget {
     this.scrollable = false,
     this.blurSigma = KubusGlassEffects.blurSigmaHeavy,
     this.showBorder = true,
+    this.clipBehavior = Clip.hardEdge,
+    this.semanticLabel,
+    this.elevation,
+    this.titleTextStyle,
+    this.contentTextStyle,
   });
 
   @override
@@ -782,40 +802,67 @@ class KubusAlertDialog extends StatelessWidget {
           KubusSpacing.lg,
         );
 
-    Widget body = Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (title != null)
-          Padding(
+    final iconWidget = icon == null
+        ? null
+        : Padding(
+            padding: iconPadding ??
+                const EdgeInsets.fromLTRB(
+                  KubusSpacing.lg,
+                  KubusSpacing.lg,
+                  KubusSpacing.lg,
+                  KubusSpacing.none,
+                ),
+            child: IconTheme(
+              data: IconThemeData(color: scheme.onSurface),
+              child: icon!,
+            ),
+          );
+
+    final titleWidget = title == null
+        ? null
+        : Padding(
             padding: effectiveTitlePadding,
             child: DefaultTextStyle.merge(
-              style: KubusTextStyles.screenTitle.copyWith(
+              style: (titleTextStyle ?? KubusTextStyles.screenTitle).copyWith(
                 color: scheme.onSurface,
               ),
               child: title!,
             ),
-          ),
-        if (content != null)
-          Padding(
-            padding: effectiveContentPadding,
-            child: DefaultTextStyle.merge(
-              style: (KubusTypography.textTheme.bodyMedium ??
-                      const TextStyle())
-                  .copyWith(
-                color: scheme.onSurface.withValues(alpha: 0.9),
+          );
+
+    final contentWidget = content == null
+        ? null
+        : Flexible(
+            fit: FlexFit.loose,
+            child: SingleChildScrollView(
+              padding: effectiveContentPadding,
+              child: DefaultTextStyle.merge(
+                style: (contentTextStyle ?? (KubusTypography.textTheme.bodyMedium ?? const TextStyle())).copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.9),
+                ),
+                child: content!,
               ),
-              child: content!,
             ),
-          ),
-        if (actions != null && actions!.isNotEmpty)
-          Padding(
+          );
+
+    final actionsWidget = (actions == null || actions!.isEmpty)
+        ? null
+        : Padding(
             padding: effectiveActionsPadding,
             child: Row(
               mainAxisAlignment: actionsAlignment,
               children: actions!,
             ),
-          ),
+          );
+
+    Widget body = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (iconWidget != null) iconWidget,
+        if (titleWidget != null) titleWidget,
+        if (contentWidget != null) contentWidget,
+        if (actionsWidget != null) actionsWidget,
       ],
     );
 
@@ -823,11 +870,11 @@ class KubusAlertDialog extends StatelessWidget {
       body = SingleChildScrollView(child: body);
     }
 
-    return Dialog(
+    Widget dialog = Dialog(
       backgroundColor: Colors.transparent,
-      elevation: 0,
+      elevation: elevation ?? 0,
       insetPadding: insetPadding ?? const EdgeInsets.all(KubusSpacing.lg),
-      clipBehavior: Clip.hardEdge,
+      clipBehavior: clipBehavior,
       shape: resolvedShape,
       child: LiquidGlassPanel(
         padding: EdgeInsets.zero,
@@ -839,5 +886,16 @@ class KubusAlertDialog extends StatelessWidget {
         child: body,
       ),
     );
+
+    if (semanticLabel != null && semanticLabel!.trim().isNotEmpty) {
+      dialog = Semantics(
+        scopesRoute: true,
+        namesRoute: true,
+        label: semanticLabel,
+        child: dialog,
+      );
+    }
+
+    return dialog;
   }
 }

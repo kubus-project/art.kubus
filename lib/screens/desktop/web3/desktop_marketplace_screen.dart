@@ -7,8 +7,10 @@ import '../../../providers/artwork_provider.dart';
 import '../../../models/artwork.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/kubus_color_roles.dart';
+import '../../../utils/design_tokens.dart';
 import '../../../widgets/artwork_creator_byline.dart';
 import '../../../widgets/detail/detail_shell_components.dart';
+import '../../../widgets/glass_components.dart';
 import '../components/desktop_widgets.dart';
 import '../../art/ar_screen.dart';
 import 'desktop_wallet_screen.dart';
@@ -749,236 +751,255 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
   }
 
   void _showNFTDetail(Artwork artwork, ThemeProvider themeProvider) {
-    showDialog(
+    showKubusDialog<void>(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return Dialog(
           backgroundColor: Colors.transparent,
-          child: Container(
-            width: 860,
-            constraints: const BoxConstraints(maxHeight: 640),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(DetailRadius.xl),
-            ),
-            child: Row(
-              children: [
-                // Image side
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          themeProvider.accentColor.withValues(alpha: 0.4),
-                          themeProvider.accentColor.withValues(alpha: 0.1),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.horizontal(
-                          left: Radius.circular(DetailRadius.xl)),
-                    ),
-                    child: Stack(
-                      children: [
-                        const Center(
-                          child: Icon(
-                            Icons.view_in_ar,
-                            size: 110,
-                            color: Colors.white,
-                          ),
-                        ),
-                        if (artwork.arEnabled)
-                          Positioned(
-                            bottom: DetailSpacing.lg + DetailSpacing.xs,
-                            left: DetailSpacing.lg + DetailSpacing.xs,
-                            right: DetailSpacing.lg + DetailSpacing.xs,
-                            child: ElevatedButton.icon(
-                              onPressed: () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (context) => const ARScreen(),
-                                  ),
-                                );
-                              },
-                              icon: const Icon(Icons.view_in_ar),
-                              label: const Text('View in AR'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                foregroundColor: themeProvider.accentColor,
-                                padding:
-                                    EdgeInsets.symmetric(vertical: DetailSpacing.lg),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(DetailRadius.md),
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // Info side
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.all(DetailSpacing.xxl),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                artwork.title,
-                                style: DetailTypography.screenTitle(context),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            IconButton(
-                              onPressed: () => Navigator.of(context).pop(),
-                              icon: const Icon(Icons.close),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: DetailSpacing.sm),
-                        Text(
-                          'by ${artwork.artist}',
-                          style: DetailTypography.body(context).copyWith(
-                            color: themeProvider.accentColor,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        SizedBox(height: DetailSpacing.lg + DetailSpacing.xs),
-                        if (artwork.description.isNotEmpty)
-                          Expanded(
-                            child: SingleChildScrollView(
-                              child: Text(
-                                artwork.description,
-                                style: DetailTypography.body(context).copyWith(
-                                  height: 1.7,
-                                ),
-                              ),
-                            ),
-                          ),
-                        SizedBox(height: DetailSpacing.lg + DetailSpacing.xs),
-
-                        // Price
-                        Container(
-                          padding: EdgeInsets.all(DetailSpacing.lg + DetailSpacing.xs),
-                          decoration: BoxDecoration(
-                            color:
-                                Theme.of(context).colorScheme.primaryContainer,
-                            borderRadius: BorderRadius.circular(DetailRadius.lg),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Current Price',
-                                    style: DetailTypography.caption(context),
-                                  ),
-                                  SizedBox(height: DetailSpacing.xs),
-                                  Text(
-                                    '${(artwork.id.hashCode % 10 + 1) / 2.0} SOL',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 30,
-                                      fontWeight: FontWeight.bold,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Column(
-                                children: [
-                                  Row(
-                                    children: [
-                                      Icon(Icons.favorite,
-                                          size: 16,
-                                          color: Colors.red
-                                              .withValues(alpha: 0.7)),
-                                      SizedBox(width: DetailSpacing.xs),
-                                      Text('${artwork.likesCount}'),
-                                    ],
-                                  ),
-                                  SizedBox(height: DetailSpacing.xs),
-                                  Row(
-                                    children: [
-                                      Icon(Icons.visibility,
-                                          size: 16,
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurface
-                                              .withValues(alpha: 0.5)),
-                                      SizedBox(width: DetailSpacing.xs),
-                                      Text('${artwork.viewsCount}'),
-                                    ],
-                                  ),
-                                ],
-                              ),
+          child: LiquidGlassPanel(
+            padding: EdgeInsets.zero,
+            margin: EdgeInsets.zero,
+            borderRadius: BorderRadius.circular(DetailRadius.xl),
+            blurSigma: KubusGlassEffects.blurSigmaHeavy,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 640),
+              child: SizedBox(
+                width: 860,
+                child: Row(
+                  children: [
+                    // Image side
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              themeProvider.accentColor.withValues(alpha: 0.4),
+                              themeProvider.accentColor.withValues(alpha: 0.1),
                             ],
                           ),
+                          borderRadius: BorderRadius.horizontal(
+                              left: Radius.circular(DetailRadius.xl)),
                         ),
-                        SizedBox(height: DetailSpacing.lg + DetailSpacing.xs),
-
-                        // Actions
-                        Row(
+                        child: Stack(
                           children: [
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          const DesktopWalletScreen(),
-                                    ),
-                                  );
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: themeProvider.accentColor,
-                                  foregroundColor: Colors.white,
-                                  padding:
-                                      EdgeInsets.symmetric(vertical: DetailSpacing.lg),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(DetailRadius.md),
-                                  ),
-                                ),
-                                child: const Text('Buy Now'),
+                            const Center(
+                              child: Icon(
+                                Icons.view_in_ar,
+                                size: 110,
+                                color: Colors.white,
                               ),
                             ),
-                            SizedBox(width: DetailSpacing.md),
-                            OutlinedButton(
-                              onPressed: () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const DesktopWalletScreen(),
+                            if (artwork.arEnabled)
+                              Positioned(
+                                bottom: DetailSpacing.lg + DetailSpacing.xs,
+                                left: DetailSpacing.lg + DetailSpacing.xs,
+                                right: DetailSpacing.lg + DetailSpacing.xs,
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    Navigator.of(dialogContext).push(
+                                      MaterialPageRoute(
+                                        builder: (context) => const ARScreen(),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.view_in_ar),
+                                  label: const Text('View in AR'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: themeProvider.accentColor,
+                                    padding: EdgeInsets.symmetric(
+                                        vertical: DetailSpacing.lg),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(DetailRadius.md),
+                                    ),
                                   ),
-                                );
-                              },
-                              style: OutlinedButton.styleFrom(
-                                padding: EdgeInsets.symmetric(
-                                    vertical: DetailSpacing.lg, horizontal: DetailSpacing.lg + DetailSpacing.xs),
-                                side: BorderSide(
-                                    color: themeProvider.accentColor),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(DetailRadius.md),
                                 ),
                               ),
-                              child: const Text('Make Offer'),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Info side
+                    Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.all(DetailSpacing.xxl),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    artwork.title,
+                                    style: DetailTypography.screenTitle(
+                                        dialogContext),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                IconButton(
+                                  onPressed: () =>
+                                      Navigator.of(dialogContext).pop(),
+                                  icon: const Icon(Icons.close),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: DetailSpacing.sm),
+                            Text(
+                              'by ${artwork.artist}',
+                              style: DetailTypography.body(dialogContext).copyWith(
+                                color: themeProvider.accentColor,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            SizedBox(height: DetailSpacing.lg + DetailSpacing.xs),
+                            if (artwork.description.isNotEmpty)
+                              Expanded(
+                                child: SingleChildScrollView(
+                                  child: Text(
+                                    artwork.description,
+                                    style: DetailTypography.body(dialogContext)
+                                        .copyWith(
+                                      height: 1.7,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            SizedBox(height: DetailSpacing.lg + DetailSpacing.xs),
+
+                            // Price
+                            Container(
+                              padding: EdgeInsets.all(
+                                  DetailSpacing.lg + DetailSpacing.xs),
+                              decoration: BoxDecoration(
+                                color: Theme.of(dialogContext)
+                                    .colorScheme
+                                    .primaryContainer,
+                                borderRadius:
+                                    BorderRadius.circular(DetailRadius.lg),
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Current Price',
+                                        style: DetailTypography.caption(
+                                            dialogContext),
+                                      ),
+                                      SizedBox(height: DetailSpacing.xs),
+                                      Text(
+                                        '${(artwork.id.hashCode % 10 + 1) / 2.0} SOL',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 30,
+                                          fontWeight: FontWeight.bold,
+                                          color: Theme.of(dialogContext)
+                                              .colorScheme
+                                              .onSurface,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Column(
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Icon(Icons.favorite,
+                                              size: 16,
+                                              color: Colors.red.withValues(
+                                                  alpha: 0.7)),
+                                          SizedBox(width: DetailSpacing.xs),
+                                          Text('${artwork.likesCount}'),
+                                        ],
+                                      ),
+                                      SizedBox(height: DetailSpacing.xs),
+                                      Row(
+                                        children: [
+                                          Icon(Icons.visibility,
+                                              size: 16,
+                                              color: Theme.of(dialogContext)
+                                                  .colorScheme
+                                                  .onSurface
+                                                  .withValues(alpha: 0.5)),
+                                          SizedBox(width: DetailSpacing.xs),
+                                          Text('${artwork.viewsCount}'),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            SizedBox(height: DetailSpacing.lg + DetailSpacing.xs),
+
+                            // Actions
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: () {
+                                      Navigator.of(dialogContext).push(
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const DesktopWalletScreen(),
+                                        ),
+                                      );
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor:
+                                          themeProvider.accentColor,
+                                      foregroundColor: Colors.white,
+                                      padding: EdgeInsets.symmetric(
+                                          vertical: DetailSpacing.lg),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(
+                                            DetailRadius.md),
+                                      ),
+                                    ),
+                                    child: const Text('Buy Now'),
+                                  ),
+                                ),
+                                SizedBox(width: DetailSpacing.md),
+                                OutlinedButton(
+                                  onPressed: () {
+                                    Navigator.of(dialogContext).push(
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const DesktopWalletScreen(),
+                                      ),
+                                    );
+                                  },
+                                  style: OutlinedButton.styleFrom(
+                                    padding: EdgeInsets.symmetric(
+                                        vertical: DetailSpacing.lg,
+                                        horizontal: DetailSpacing.lg +
+                                            DetailSpacing.xs),
+                                    side: BorderSide(
+                                        color: themeProvider.accentColor),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(
+                                          DetailRadius.md),
+                                    ),
+                                  ),
+                                  child: const Text('Make Offer'),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         );

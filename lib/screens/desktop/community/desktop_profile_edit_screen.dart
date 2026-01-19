@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
@@ -18,6 +18,7 @@ import '../../../utils/app_animations.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../components/desktop_widgets.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import 'package:art_kubus/widgets/glass_components.dart';
 
 /// Desktop profile edit screen - form layout with card sections
 /// Clean organized layout for editing profile information
@@ -909,9 +910,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
           final debug = profileProvider.lastUploadDebug;
           if (debug != null) {
             final pretty = const JsonEncoder.withIndent('  ').convert(debug);
-            showDialog<void>(
+            showKubusDialog<void>(
               context: context,
-              builder: (context) => AlertDialog(
+              builder: (context) => KubusAlertDialog(
                 title: const Text('Upload Debug Info'),
                 content: SingleChildScrollView(
                   child: SelectableText(pretty),

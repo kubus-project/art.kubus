@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -9,6 +9,7 @@ import '../../../utils/artwork_media_resolver.dart';
 import '../../../utils/artwork_navigation.dart';
 import '../../../utils/artwork_edit_navigation.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import 'package:art_kubus/widgets/glass_components.dart';
 
 class ArtworkGallery extends StatefulWidget {
   final VoidCallback? onCreateRequested;
@@ -597,9 +598,9 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
 
   void _showSortDialog() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         title: Text(l10n.artistGallerySortByTitle,
             style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
@@ -633,9 +634,9 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
 
   void _showSearchDialog() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         title: Text(l10n.artistGallerySearchTitle,
             style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
@@ -668,9 +669,9 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
 
   void _showCreateArtworkDialog() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         title: Text(l10n.artistGalleryCreateNewTitle,
             style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
@@ -753,9 +754,9 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
 
   void _confirmDelete(art_model.Artwork artwork, ArtworkProvider provider) {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         title: Text(l10n.artistGalleryDeleteArtworkTitle,
             style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),

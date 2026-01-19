@@ -1,4 +1,4 @@
-import 'package:file_picker/file_picker.dart';
+﻿import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -32,6 +32,7 @@ import '../../utils/marker_subject_utils.dart';
 import '../download_app_screen.dart';
 import '../community/profile_screen_methods.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import 'package:art_kubus/widgets/glass_components.dart';
 
 /// AR Screen with seamless Android and iOS support
 /// On web, redirects to download app screen
@@ -2515,11 +2516,11 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   }
 
   void _showARNotSupportedDialog() {
-    showDialog(
+    showKubusDialog(
       context: context,
       builder: (context) {
         final l10n = AppLocalizations.of(context)!;
-        return AlertDialog(
+        return KubusAlertDialog(
           backgroundColor: Theme.of(context).colorScheme.surface,
           title: Text(
             l10n.arNotSupportedTitle,
@@ -2553,11 +2554,11 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   }
 
   void _showARInitializationErrorDialog() {
-    showDialog(
+    showKubusDialog(
       context: context,
       builder: (context) {
         final l10n = AppLocalizations.of(context)!;
-        return AlertDialog(
+        return KubusAlertDialog(
           backgroundColor: Theme.of(context).colorScheme.surface,
           title: Text(
             l10n.arInitializationFailedTitle,

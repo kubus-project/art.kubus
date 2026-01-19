@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -20,6 +20,7 @@ import '../services/backend_api_service.dart';
 import '../services/push_notification_service.dart';
 import '../services/settings_service.dart';
 import '../widgets/platform_aware_widgets.dart';
+import '../widgets/glass_components.dart';
 import 'onboarding/onboarding_screen.dart';
 import 'web3/wallet/wallet_home.dart' as web3_wallet;
 import 'web3/wallet/connectwallet_screen.dart';
@@ -1448,9 +1449,9 @@ class _SettingsScreenState extends State<SettingsScreen>
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final currentNetwork = web3Provider.currentNetwork.toLowerCase();
     
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.settingsSelectNetworkDialogTitle,
@@ -1609,9 +1610,9 @@ class _SettingsScreenState extends State<SettingsScreen>
       return;
     }
 
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Row(
           children: [
@@ -1744,9 +1745,9 @@ class _SettingsScreenState extends State<SettingsScreen>
       {'label': 'Never', 'seconds': 0, 'display': l10n.settingsAutoLockNever},
     ];
 
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.settingsAutoLockTimerDialogTitle,
@@ -1888,9 +1889,9 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   void _showRecoveryWarningDialog() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Row(
           children: [
@@ -1938,9 +1939,9 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   void _showImportWarningDialog() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Row(
           children: [
@@ -1993,9 +1994,9 @@ class _SettingsScreenState extends State<SettingsScreen>
     final pinController = TextEditingController();
     final confirmController = TextEditingController();
 
-    await showDialog(
+    await showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.settingsSetPinDialogTitle,
@@ -2100,9 +2101,9 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   void _showClearCacheDialog() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.settingsClearCacheDialogTitle,
@@ -2153,9 +2154,9 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   void _showResetPermissionFlagsDialog() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => KubusAlertDialog(
         backgroundColor: Theme.of(dialogContext).colorScheme.surface,
         title: Text(
           l10n.settingsResetPermissionFlagsDialogTitle,
@@ -2204,9 +2205,9 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   void _showDataExportDialog() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.settingsExportDataDialogTitle,
@@ -2271,9 +2272,9 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   void _showResetDialog() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.settingsResetAppDialogTitle,
@@ -2336,9 +2337,9 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   void _showDeleteAccountDialog() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => KubusAlertDialog(
         backgroundColor: Theme.of(dialogContext).colorScheme.surface,
         title: Text(
           l10n.settingsDeleteAccountDialogTitle,
@@ -2369,13 +2370,13 @@ class _SettingsScreenState extends State<SettingsScreen>
               foregroundColor: Colors.white,
             ),
             onPressed: () async {
-              // Show confirmation dialog — ensure mounted before calling showDialog
+              // Show confirmation dialog â€” ensure mounted before calling showDialog
               if (!mounted) return;
               final dialogNavigator = Navigator.of(dialogContext);
               final messenger = ScaffoldMessenger.of(context);
-              final confirmed = await showDialog<bool>(
+              final confirmed = await showKubusDialog<bool>(
                 context: dialogContext,
-                builder: (confirmContext) => AlertDialog(
+                builder: (confirmContext) => KubusAlertDialog(
                   backgroundColor: Theme.of(confirmContext).colorScheme.surface,
                   title: Text(
                     l10n.settingsFinalConfirmationTitle,
@@ -2550,9 +2551,9 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   Future<void> _handleLogout() async {
     final l10n = AppLocalizations.of(context)!;
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showKubusDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => KubusAlertDialog(
         backgroundColor: Theme.of(dialogContext).colorScheme.surface,
         title: Text(
           l10n.settingsLogoutDialogTitle,
@@ -2670,9 +2671,9 @@ class _SettingsScreenState extends State<SettingsScreen>
     final l10n = AppLocalizations.of(context)!;
     final web3Provider = Provider.of<Web3Provider>(context, listen: false);
     
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.settingsTransactionHistoryDialogTitle,
@@ -2816,9 +2817,9 @@ class _SettingsScreenState extends State<SettingsScreen>
   // About dialog methods
   void _showVersionDialog() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.settingsAppVersionDialogTitle,
@@ -2853,7 +2854,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
             const SizedBox(height: 16),
             Text(
-              '© 2025 kubus',
+              'Â© 2025 kubus',
               style: GoogleFonts.inter(
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
@@ -2883,9 +2884,9 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   void _showTermsDialog() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.settingsTermsDialogTitle,
@@ -2920,9 +2921,9 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   void _showPrivacyPolicyDialog() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.settingsPrivacyPolicyDialogTitle,
@@ -2958,9 +2959,9 @@ class _SettingsScreenState extends State<SettingsScreen>
   void _showSupportDialog() {
     final l10n = AppLocalizations.of(context)!;
     final rootContext = context;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => KubusAlertDialog(
         backgroundColor: Theme.of(dialogContext).colorScheme.surface,
         title: Text(
           l10n.settingsSupportDialogTitle,
@@ -3010,7 +3011,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   return;
                 }
 
-                await showDialog<bool>(
+                await showKubusDialog<bool>(
                   context: rootContext,
                   builder: (_) => const SupportTicketDialog(),
                 );
@@ -3037,9 +3038,9 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   void _showLicensesDialog() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.settingsLicensesDialogTitle,
@@ -3074,9 +3075,9 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   void _showRateAppDialog() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.settingsRateAppDialogTitle,
@@ -3351,10 +3352,10 @@ class _SettingsScreenState extends State<SettingsScreen>
     final accentColor = Provider.of<ThemeProvider>(context, listen: false).accentColor;
     final visibilityOptions = _profileVisibilityOptions(l10n);
 
-    showDialog(
+    showKubusDialog(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (innerContext, setDialogState) => AlertDialog(
+        builder: (innerContext, setDialogState) => KubusAlertDialog(
           backgroundColor: Theme.of(innerContext).colorScheme.surface,
           title: Text(
             l10n.settingsProfileVisibilityDialogTitle,
@@ -3436,10 +3437,10 @@ class _SettingsScreenState extends State<SettingsScreen>
     bool showCollection = initialPrefs.showCollection;
     bool allowMessages = initialPrefs.allowMessages;
 
-    showDialog(
+    showKubusDialog(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (innerContext, setDialogState) => AlertDialog(
+        builder: (innerContext, setDialogState) => KubusAlertDialog(
           backgroundColor: Theme.of(innerContext).colorScheme.surface,
           title: Text(
             l10n.settingsPrivacySettingsDialogTitle,
@@ -3596,10 +3597,10 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   void _showSecuritySettingsDialog() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (innerContext, setDialogState) => AlertDialog(
+        builder: (innerContext, setDialogState) => KubusAlertDialog(
           backgroundColor: Theme.of(innerContext).colorScheme.surface,
           title: Text(
             l10n.settingsSecuritySettingsDialogTitle,
@@ -3703,10 +3704,10 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   void _showAccountManagementDialog() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
+        builder: (context, setDialogState) => KubusAlertDialog(
           backgroundColor: Theme.of(context).colorScheme.surface,
           title: Text(
             l10n.settingsAccountManagementDialogTitle,
@@ -3822,9 +3823,9 @@ class _SettingsScreenState extends State<SettingsScreen>
   // Additional Dialog Methods
   void _showChangePasswordDialog() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.settingsChangePasswordDialogTitle,
@@ -3891,9 +3892,9 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   void _showAccountDeactivationDialog() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.settingsDeactivateAccountDialogTitle,

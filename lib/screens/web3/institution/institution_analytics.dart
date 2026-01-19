@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:io';
+import 'package:art_kubus/widgets/glass_components.dart';
 
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -973,7 +974,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
           avgDurationMinutes = minutes / events.length;
         }
         final avgDurationLabel = avgDurationMinutes == null
-            ? '—'
+            ? 'â€”'
             : avgDurationMinutes >= 60
                 ? '${(avgDurationMinutes / 60).toStringAsFixed(1)} h'
                 : '${avgDurationMinutes.round()} min';
@@ -986,12 +987,12 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
         if (fillValues.isNotEmpty) {
           avgFill = fillValues.fold<double>(0, (sum, v) => sum + v) / fillValues.length;
         }
-        final avgFillLabel = avgFill == null ? '—' : '${(avgFill * 100).toStringAsFixed(0)}%';
+        final avgFillLabel = avgFill == null ? 'â€”' : '${(avgFill * 100).toStringAsFixed(0)}%';
 
         final metrics = [
           {'label': 'Avg. Event Duration', 'value': avgDurationLabel},
           {'label': 'Avg. Event Fill', 'value': avgFillLabel},
-          {'label': 'Return Visitors', 'value': '—'},
+          {'label': 'Return Visitors', 'value': 'â€”'},
         ];
 
         return LayoutBuilder(
@@ -1380,7 +1381,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                   ),
                 ),
                 Text(
-                  '$views • $rating',
+                  '$views â€¢ $rating',
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     color: Theme.of(context)
@@ -1400,9 +1401,9 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
   void _showExportDialog() {
     final messenger = ScaffoldMessenger.of(context);
     final scheme = Theme.of(context).colorScheme;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         title: Text('Export Analytics',
             style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
@@ -1563,9 +1564,9 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
   }
 
   void _showSettingsDialog() {
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         title: Text('Analytics Settings',
             style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),

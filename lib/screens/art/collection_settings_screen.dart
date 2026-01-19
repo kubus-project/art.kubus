@@ -1,9 +1,10 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/app_color_utils.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import 'package:art_kubus/widgets/glass_components.dart';
 
 class CollectionSettingsScreen extends StatefulWidget {
   final int collectionIndex;
@@ -501,10 +502,10 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
 
   void _showDeleteDialog() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
       builder: (BuildContext dialogContext) {
-        return AlertDialog(
+        return KubusAlertDialog(
           title: Text(l10n.collectionSettingsDeleteDialogTitle),
           content: Text(
             l10n.collectionSettingsDeleteDialogContent(widget.collectionName),

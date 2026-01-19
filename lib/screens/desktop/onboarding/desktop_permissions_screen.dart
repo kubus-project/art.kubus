@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -315,9 +315,9 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
 
   void _showSettingsDialog(PermissionType type) {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.permissionsPermissionRequiredTitle,

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../models/art_marker.dart';
@@ -164,7 +164,7 @@ Future<void> showArtMarkerInfoDialog({
                   _chip(
                     scheme,
                     Icons.emoji_events_outlined,
-                    '$poapCount POAP • $badgeCount badges',
+                    '$poapCount POAP â€¢ $badgeCount badges',
                     baseColor,
                   ),
               ],
