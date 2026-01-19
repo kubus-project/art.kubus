@@ -154,6 +154,35 @@ void main() {
     expect(result['success'], isTrue);
   });
 
+  test('POST retries once after successful reauth', () async {
+    final api = BackendApiService();
+    api.setAuthTokenForTesting('expired-token');
+
+    int requestCount = 0;
+    api.setHttpClient(
+      MockClient((request) async {
+        requestCount += 1;
+        if (requestCount == 1) {
+          return http.Response(jsonEncode({'success': false, 'error': 'Token expired'}), 401);
+        }
+        return http.Response(jsonEncode({'data': {'id': 'conversation-1'}}), 200);
+      }),
+    );
+
+    final coordinator = _TestAuthCoordinator(
+      onPrompt: (_) async {
+        api.setAuthTokenForTesting('new-token');
+        return const AuthReauthResult(AuthReauthOutcome.success);
+      },
+    );
+    api.bindAuthCoordinator(coordinator);
+
+    final result = await api.createConversation(title: 'test', isGroup: false, members: const <String>[]);
+    expect(coordinator.promptCalls, 1);
+    expect(requestCount, 2);
+    expect(result['data'], isA<Map<String, dynamic>>());
+  });
+
   test('auth endpoints bypass in-flight reauth gating', () async {
     final api = BackendApiService();
     api.setAuthTokenForTesting('expired-token');

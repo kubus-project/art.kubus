@@ -14,6 +14,7 @@ import '../providers/wallet_provider.dart';
 import '../providers/platform_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/navigation_provider.dart';
+import '../providers/security_gate_provider.dart';
 import '../models/wallet.dart';
 import '../services/backend_api_service.dart';
 import '../services/push_notification_service.dart';
@@ -81,8 +82,12 @@ class _SettingsScreenState extends State<SettingsScreen>
   bool _sessionTimeout = true;
   String _autoLockTime = '5 minutes';
   bool _loginNotifications = true;
+  bool _requirePin = false;
   bool _biometricAuth = false;
+  bool _useBiometricsOnUnlock = true;
   bool _privacyMode = false;
+  bool _hasPin = false;
+  bool _biometricsSupported = false;
   
   // Account settings state
   bool _emailNotifications = true;
@@ -1118,28 +1123,60 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   Widget _buildSecuritySection(AppLocalizations l10n) {
+    final canShowBiometricsToggle = _hasPin && _biometricsSupported;
     return _buildSection(
       l10n.settingsSecurityPrivacySectionTitle,
       Icons.security,
       [
         _buildSettingsTile(
-          l10n.settingsBiometricTileTitle,
-          l10n.settingsBiometricTileSubtitle,
-          Icons.fingerprint,
-          trailing: Switch(
-            value: _biometricAuth,
-            onChanged: (value) {
-              _toggleBiometric(value);
-            },
-            activeThumbColor: AppColorUtils.indigoAccent,
-          ),
-        ),
-        _buildSettingsTile(
           l10n.settingsSetPinTileTitle,
           l10n.settingsSetPinTileSubtitle,
           Icons.pin,
-          onTap: () => _showSetPinDialog(),
+          trailing: Switch(
+            value: _requirePin,
+            onChanged: (value) {
+              unawaited(_toggleRequirePin(value));
+            },
+            activeThumbColor: AppColorUtils.indigoAccent,
+          ),
+          onTap: () {
+            unawaited(_showSetPinDialog());
+          },
         ),
+        if (canShowBiometricsToggle)
+          _buildSettingsTile(
+            l10n.settingsBiometricTileTitle,
+            l10n.settingsBiometricTileSubtitle,
+            Icons.fingerprint,
+            trailing: Switch(
+              value: _biometricAuth,
+              onChanged: (value) {
+                unawaited(_toggleBiometric(value));
+              },
+              activeThumbColor: AppColorUtils.indigoAccent,
+            ),
+          )
+        else if (_hasPin && !_biometricsSupported)
+          _buildSettingsTile(
+            l10n.settingsBiometricTileTitle,
+            l10n.settingsBiometricUnavailableToast,
+            Icons.fingerprint,
+          ),
+        if (_biometricAuth && canShowBiometricsToggle)
+          _buildSettingsTile(
+            l10n.settingsUseBiometricsOnUnlockTitle,
+            l10n.settingsUseBiometricsOnUnlockSubtitle,
+            Icons.lock_outline,
+            trailing: Switch(
+              value: _useBiometricsOnUnlock,
+              onChanged: (value) {
+                final gate = context.read<SecurityGateProvider>();
+                setState(() => _useBiometricsOnUnlock = value);
+                unawaited(_saveAllSettings().then((_) => gate.reloadSettings()));
+              },
+              activeThumbColor: AppColorUtils.indigoAccent,
+            ),
+          ),
         _buildSettingsTile(
           l10n.settingsAutoLockTileTitle,
           l10n.settingsAutoLockTileSubtitle,
@@ -1690,9 +1727,9 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   void _showAutoLockDialog() {
     final l10n = AppLocalizations.of(context)!;
-    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
 
     final options = <Map<String, dynamic>>[
+      {'label': 'Immediately', 'seconds': -1, 'display': l10n.settingsAutoLockImmediately},
       {'label': '10 seconds', 'seconds': 10, 'display': l10n.settingsAutoLock10Seconds},
       {'label': '30 seconds', 'seconds': 30, 'display': l10n.settingsAutoLock30Seconds},
       {'label': '1 minute', 'seconds': 60, 'display': l10n.settingsAutoLock1Minute},
@@ -1722,7 +1759,6 @@ class _SettingsScreenState extends State<SettingsScreen>
           mainAxisSize: MainAxisSize.min,
           children: options.map((opt) {
             final label = opt['label'] as String;
-            final seconds = opt['seconds'] as int;
             final displayLabel = opt['display'] as String;
             final isSelected = _autoLockTime == label;
             return ListTile(
@@ -1736,16 +1772,12 @@ class _SettingsScreenState extends State<SettingsScreen>
               onTap: () async {
                 final navigator = Navigator.of(context);
                 final messenger = ScaffoldMessenger.of(context);
+                final gate = context.read<SecurityGateProvider>();
                 setState(() {
                   _autoLockTime = label;
                 });
-                // Persist selection to provider and secure storage
-                try {
-                  await walletProvider.setLockTimeoutSeconds(seconds);
-                } catch (e) {
-                  debugPrint('Failed to set lock timeout: $e');
-                }
                 await _saveAllSettings();
+                await gate.reloadSettings();
                 if (!mounted) return;
                 navigator.pop();
                 messenger.showKubusSnackBar(
@@ -1762,7 +1794,20 @@ class _SettingsScreenState extends State<SettingsScreen>
   Future<void> _toggleBiometric(bool value) async {
     final l10n = AppLocalizations.of(context)!;
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final gate = context.read<SecurityGateProvider>();
     if (value) {
+      final hasPin = await walletProvider.hasPin();
+      if (!hasPin) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showKubusSnackBar(
+            SnackBar(content: Text(l10n.settingsConnectOrCreateWalletFirstToast)),
+          );
+        }
+        setState(() => _biometricAuth = false);
+        await _saveAllSettings();
+        await gate.reloadSettings();
+        return;
+      }
       final canUse = await walletProvider.canUseBiometrics();
       if (!canUse) {
         if (mounted) {
@@ -1771,7 +1816,8 @@ class _SettingsScreenState extends State<SettingsScreen>
           );
         }
         setState(() => _biometricAuth = false);
-        _saveAllSettings();
+        await _saveAllSettings();
+        await gate.reloadSettings();
         return;
       }
       // Optional: require one successful auth when enabling
@@ -1783,12 +1829,61 @@ class _SettingsScreenState extends State<SettingsScreen>
           );
         }
         setState(() => _biometricAuth = false);
-        _saveAllSettings();
+        await _saveAllSettings();
+        await gate.reloadSettings();
         return;
       }
     }
-    setState(() => _biometricAuth = value);
-    _saveAllSettings();
+    setState(() {
+      _biometricAuth = value;
+      if (!value) {
+        _useBiometricsOnUnlock = true;
+      }
+    });
+    await _saveAllSettings();
+    await gate.reloadSettings();
+  }
+
+  Future<void> _toggleRequirePin(bool value) async {
+    final l10n = AppLocalizations.of(context)!;
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final gate = context.read<SecurityGateProvider>();
+
+    if (value) {
+      final hasPin = await walletProvider.hasPin();
+      if (!hasPin) {
+        await _showSetPinDialog();
+      }
+      final nowHasPin = await walletProvider.hasPin();
+      if (!mounted) return;
+      if (!nowHasPin) {
+        ScaffoldMessenger.of(context).showKubusSnackBar(
+          SnackBar(content: Text(l10n.settingsPinSetFailedToast)),
+        );
+        setState(() => _requirePin = false);
+        await _saveAllSettings();
+        await gate.reloadSettings();
+        return;
+      }
+      setState(() => _requirePin = true);
+      await _saveAllSettings();
+      await gate.reloadSettings();
+      return;
+    }
+
+    // Disabling requires a local verification.
+    await gate.lock(SecurityLockReason.sensitiveAction);
+    final settled = await gate.waitForResolution();
+    if (settled == null || !settled.isSuccess) {
+      if (!mounted) return;
+      setState(() => _requirePin = true);
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() => _requirePin = false);
+    await _saveAllSettings();
+    await gate.reloadSettings();
   }
 
   void _showRecoveryWarningDialog() {
@@ -1891,13 +1986,14 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  void _showSetPinDialog() {
+  Future<void> _showSetPinDialog() async {
     final l10n = AppLocalizations.of(context)!;
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final gate = context.read<SecurityGateProvider>();
     final pinController = TextEditingController();
     final confirmController = TextEditingController();
 
-    showDialog(
+    await showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
@@ -1939,9 +2035,24 @@ class _SettingsScreenState extends State<SettingsScreen>
             onPressed: () async {
               final navigator = Navigator.of(context);
               final messenger = ScaffoldMessenger.of(context);
-              // Clear PIN
+              // Clearing PIN requires verification. If the user forgot it, they
+              // must logout and re-login.
+              await gate.lock(SecurityLockReason.sensitiveAction);
+              final settled = await gate.waitForResolution();
+              if (settled == null || !settled.isSuccess) {
+                return;
+              }
+
               await walletProvider.clearPin();
               if (!mounted) return;
+              setState(() {
+                _requirePin = false;
+                _biometricAuth = false;
+                _useBiometricsOnUnlock = true;
+                _hasPin = false;
+              });
+              await _saveAllSettings();
+              await gate.reloadSettings();
               navigator.pop();
               messenger.showKubusSnackBar(SnackBar(content: Text(l10n.settingsPinClearedToast)));
             },
@@ -1965,6 +2076,14 @@ class _SettingsScreenState extends State<SettingsScreen>
               try {
                 await walletProvider.setPin(pin);
                 if (!mounted) return;
+                final hasPin = await walletProvider.hasPin();
+                final biometricsSupported = await walletProvider.canUseBiometrics();
+                if (!mounted) return;
+                setState(() {
+                  _hasPin = hasPin;
+                  _biometricsSupported = biometricsSupported;
+                });
+                await gate.reloadSettings();
                 navigator.pop();
                 messenger.showKubusSnackBar(SnackBar(content: Text(l10n.settingsPinSetSuccessToast)));
               } catch (e) {
@@ -2353,7 +2472,9 @@ class _SettingsScreenState extends State<SettingsScreen>
       sessionTimeout: _sessionTimeout,
       autoLockTime: _autoLockTime,
       autoLockSeconds: _autoLockSecondsFromLabel(_autoLockTime),
+      requirePin: _requirePin,
       biometricAuth: _biometricAuth,
+      useBiometricsOnUnlock: _useBiometricsOnUnlock,
       privacyMode: _privacyMode,
       analytics: _analytics,
       crashReporting: _crashReporting,
@@ -2371,6 +2492,8 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   int _autoLockSecondsFromLabel(String label) {
     switch (label.toLowerCase()) {
+      case 'immediately':
+        return -1;
       case '10 seconds':
         return 10;
       case '30 seconds':
@@ -2492,10 +2615,13 @@ class _SettingsScreenState extends State<SettingsScreen>
   // Load all settings
   Future<void> _loadAllSettings() async {
     final web3Provider = Provider.of<Web3Provider>(context, listen: false);
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final settings = await SettingsService.loadSettings(
       fallbackNetwork:
           web3Provider.currentNetwork.isNotEmpty ? web3Provider.currentNetwork : null,
     );
+    final hasPin = await walletProvider.hasPin();
+    final biometricsSupported = await walletProvider.canUseBiometrics();
     if (!mounted) return;
 
     setState(() {
@@ -2512,8 +2638,12 @@ class _SettingsScreenState extends State<SettingsScreen>
       _twoFactorAuth = settings.twoFactorAuth;
       _sessionTimeout = settings.sessionTimeout;
       _autoLockTime = settings.autoLockTime;
-      _biometricAuth = settings.biometricAuth;
+      _requirePin = settings.requirePin;
+      _biometricAuth = settings.biometricAuth && hasPin && biometricsSupported;
+      _useBiometricsOnUnlock = settings.useBiometricsOnUnlock;
       _privacyMode = settings.privacyMode;
+      _hasPin = hasPin;
+      _biometricsSupported = biometricsSupported;
 
       _analytics = settings.analytics;
       _crashReporting = settings.crashReporting;

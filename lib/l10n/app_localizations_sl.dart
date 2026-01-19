@@ -1138,6 +1138,19 @@ class AppLocalizationsSl extends AppLocalizations {
   String get settingsBiometricTileSubtitle => 'Uporabi prstni odtis ali prepoznavo obraza';
 
   @override
+  String get settingsUseBiometricsOnUnlockTitle => 'Uporabi biometrijo za odklep';
+
+  @override
+  String get settingsUseBiometricsOnUnlockSubtitle =>
+      'Pri odklepanju aplikacije daj prednost biometriji';
+
+  @override
+  String get settingsRequirePinTileTitle => 'Zahtevaj PIN';
+
+  @override
+  String get settingsRequirePinTileSubtitle => 'Za odklep aplikacije zahtevaj PIN';
+
+  @override
   String get settingsSetPinTileTitle => 'Nastavi PIN aplikacije';
 
   @override
@@ -1285,6 +1298,9 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get settingsConnectOrCreateWalletFirstToast => 'Najprej poveži ali ustvari denarnico.';
+
+  @override
+  String get settingsAutoLockImmediately => 'Takoj';
 
   @override
   String get settingsAutoLock10Seconds => '10 sekund';
@@ -6617,4 +6633,9 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get communitySubjectPickerEmptyInstitution => 'Ni najdenih institucij.';
+
+  @override
+  String securityPinAttemptsRemaining(Object remaining, Object max) {
+    return 'Preostali poskusi: $remaining/$max';
+  }
 }

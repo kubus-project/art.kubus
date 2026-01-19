@@ -460,6 +460,10 @@
   "settingsSecurityPrivacySectionTitle": "Security & privacy",
   "settingsBiometricTileTitle": "Biometric authentication",
   "settingsBiometricTileSubtitle": "Use fingerprint or face unlock",
+  "settingsUseBiometricsOnUnlockTitle": "Use biometrics on unlock",
+  "settingsUseBiometricsOnUnlockSubtitle": "Prefer biometrics when unlocking the app",
+  "settingsRequirePinTileTitle": "Require PIN",
+  "settingsRequirePinTileSubtitle": "Require PIN to unlock the app",
   "settingsSetPinTileTitle": "Set app PIN",
   "settingsSetPinTileSubtitle": "Protect the app with a numeric PIN",
   "settingsAutoLockTileTitle": "Auto-lock",
@@ -514,6 +518,7 @@
   "settingsSecurityWarningTitle": "Security warning",
   "settingsSecurityWarningBullets": "• Make sure you're in a private place\n• Never share your recovery phrase\n• Write it down and store it safely",
   "settingsConnectOrCreateWalletFirstToast": "Connect or create a wallet first.",
+  "settingsAutoLockImmediately": "Immediately",
   "settingsAutoLock10Seconds": "10 seconds",
   "settingsAutoLock30Seconds": "30 seconds",
   "settingsAutoLock1Minute": "1 minute",
@@ -3054,6 +3059,13 @@
   "@mnemonicRevealPinLockedError": {
     "placeholders": {
       "seconds": {}
+    }
+  },
+  "securityPinAttemptsRemaining": "Attempts remaining: {remaining} / {max}",
+  "@securityPinAttemptsRemaining": {
+    "placeholders": {
+      "remaining": {},
+      "max": {}
     }
   },
   "mnemonicRevealIncorrectPinError": "Incorrect PIN",

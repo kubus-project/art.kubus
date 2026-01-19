@@ -2297,6 +2297,30 @@ abstract class AppLocalizations {
   /// **'Use fingerprint or face unlock'**
   String get settingsBiometricTileSubtitle;
 
+  /// No description provided for @settingsUseBiometricsOnUnlockTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Use biometrics on unlock'**
+  String get settingsUseBiometricsOnUnlockTitle;
+
+  /// No description provided for @settingsUseBiometricsOnUnlockSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Prefer biometrics when unlocking the app'**
+  String get settingsUseBiometricsOnUnlockSubtitle;
+
+  /// No description provided for @settingsRequirePinTileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Require PIN'**
+  String get settingsRequirePinTileTitle;
+
+  /// No description provided for @settingsRequirePinTileSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Require PIN to unlock the app'**
+  String get settingsRequirePinTileSubtitle;
+
   /// No description provided for @settingsSetPinTileTitle.
   ///
   /// In en, this message translates to:
@@ -2590,6 +2614,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Connect or create a wallet first.'**
   String get settingsConnectOrCreateWalletFirstToast;
+
+  /// No description provided for @settingsAutoLockImmediately.
+  ///
+  /// In en, this message translates to:
+  /// **'Immediately'**
+  String get settingsAutoLockImmediately;
 
   /// No description provided for @settingsAutoLock10Seconds.
   ///
@@ -12070,6 +12100,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'PIN locked for {seconds} seconds'**
   String mnemonicRevealPinLockedError(Object seconds);
+
+  /// No description provided for @securityPinAttemptsRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Attempts remaining: {remaining} / {max}'**
+  String securityPinAttemptsRemaining(Object remaining, Object max);
 
   /// No description provided for @mnemonicRevealIncorrectPinError.
   ///

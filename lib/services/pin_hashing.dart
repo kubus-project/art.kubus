@@ -17,10 +17,14 @@ class PinVerifyResult {
     this.outcome, {
     this.remainingLockoutSeconds = 0,
     this.needsMigration = false,
+    this.remainingAttempts = 0,
+    this.maxAttempts = 0,
   });
 
   final PinVerifyOutcome outcome;
   final int remainingLockoutSeconds;
+  final int remainingAttempts;
+  final int maxAttempts;
 
   /// True when the stored hash was a legacy unsalted SHA-256 hex digest.
   /// Callers may re-hash with PBKDF2 after a successful verification.
