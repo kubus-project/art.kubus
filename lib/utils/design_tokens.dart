@@ -117,7 +117,7 @@ class KubusLayout {
   ///
   /// Used to keep bottom-anchored UI (FABs, draggable sheets, overlays) above
   /// the navbar when the root Scaffold uses `extendBody: true`.
-  static const double mainBottomNavBarHeight = 72.0;
+  static const double mainBottomNavBarHeight = 64.0;
 }
 
 /// Shared component sizing tokens.
