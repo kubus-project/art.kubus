@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/app_loading.dart';
@@ -46,6 +46,7 @@ import '../../config/config.dart';
 import 'community_analytics_screen.dart';
 import 'profile_analytics_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import 'package:art_kubus/widgets/glass_components.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -2496,9 +2497,9 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   void _navigateToHelpSupport() {
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         title: Text(
           'Help & Support',
           style: GoogleFonts.inter(fontWeight: FontWeight.bold),
@@ -2570,9 +2571,9 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   void _showContactSupportDialog() {
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         title: Text(
           'Contact Support',
           style: GoogleFonts.inter(fontWeight: FontWeight.bold),
@@ -2643,9 +2644,9 @@ class _ProfileScreenState extends State<ProfileScreen>
   void _showReportBugDialog() {
     final bugController = TextEditingController();
 
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         title: Text(
           'Report a Bug',
           style: GoogleFonts.inter(fontWeight: FontWeight.bold),
@@ -2698,9 +2699,9 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   void _showAboutDialog() {
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         title: Text(
           'About art.kubus',
           style: GoogleFonts.inter(fontWeight: FontWeight.bold),
@@ -2757,7 +2758,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
             const SizedBox(height: 16),
             Text(
-              '© 2024 kubus Project',
+              'Â© 2024 kubus Project',
               style: GoogleFonts.inter(
                 fontSize: 12,
                 color: Theme.of(context)

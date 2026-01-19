@@ -1,4 +1,5 @@
-import 'dart:convert';
+﻿import 'dart:convert';
+import 'package:art_kubus/widgets/glass_components.dart';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -622,10 +623,10 @@ class _DesktopArtworkDetailScreenState
 
     Future<void> showHistory() async {
       if (!comment.isEdited || comment.originalContent == null) return;
-      await showDialog<void>(
+      await showKubusDialog<void>(
         context: context,
         builder: (dialogContext) {
-          return AlertDialog(
+          return KubusAlertDialog(
             title: Text(l10n.commentHistoryTitle),
             content: SingleChildScrollView(
               child: Column(
@@ -656,13 +657,13 @@ class _DesktopArtworkDetailScreenState
       final messenger = ScaffoldMessenger.of(context);
       final controller = TextEditingController(text: comment.content);
       bool saving = false;
-      await showDialog<void>(
+      await showKubusDialog<void>(
         context: context,
         barrierDismissible: !saving,
         builder: (dialogContext) {
           return StatefulBuilder(
             builder: (context, setDialogState) {
-              return AlertDialog(
+              return KubusAlertDialog(
                 title: Text(l10n.commentEditTitle),
                 content: TextField(
                   controller: controller,
@@ -719,10 +720,10 @@ class _DesktopArtworkDetailScreenState
 
     Future<void> promptDelete() async {
       final messenger = ScaffoldMessenger.of(context);
-      final confirmed = await showDialog<bool>(
+      final confirmed = await showKubusDialog<bool>(
         context: context,
         builder: (dialogContext) {
-          return AlertDialog(
+          return KubusAlertDialog(
             title: Text(l10n.commentDeleteConfirmTitle),
             content: Text(l10n.commentDeleteConfirmMessage),
             actions: [
@@ -1036,7 +1037,7 @@ class _DesktopArtworkDetailScreenState
               if (decoded is Map<String, dynamic>) {
                 final msg = (decoded['error'] ?? decoded['message'] ?? '').toString().trim();
                 if (msg.isNotEmpty) {
-                  backendMessage = msg.length > 140 ? '${msg.substring(0, 140)}…' : msg;
+                  backendMessage = msg.length > 140 ? '${msg.substring(0, 140)}â€¦' : msg;
                 }
               }
             }
@@ -1044,7 +1045,7 @@ class _DesktopArtworkDetailScreenState
             // Ignore body parse failures and fall back to a generic message.
           }
         }
-        backendMessage = backendMessage?.replaceAll('â€¦', '…');
+        backendMessage = backendMessage?.replaceAll('Ã¢â‚¬Â¦', 'â€¦');
         messenger.showKubusSnackBar(
           SnackBar(
             content: Text(

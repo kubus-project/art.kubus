@@ -1,3 +1,6 @@
+﻿// NOTE: use_build_context_synchronously lint handled per-instance; avoid file-level ignore
+
+import 'package:art_kubus/widgets/glass_components.dart';
 // NOTE: use_build_context_synchronously lint handled per-instance; avoid file-level ignore
 import 'dart:async';
 
@@ -432,7 +435,7 @@ class _CommunityScreenState extends State<CommunityScreen>
             followingOnly: true,
             walletAddress: resolvedWallet,
           );
-          debugPrint('📥 Loaded ${followingPosts?.length ?? 0} following posts');
+          debugPrint('ðŸ“¥ Loaded ${followingPosts?.length ?? 0} following posts');
         } catch (e) {
           debugPrint('Error loading following feed: $e');
         }
@@ -443,7 +446,7 @@ class _CommunityScreenState extends State<CommunityScreen>
             followingOnly: false,
             walletAddress: resolvedWallet,
           );
-          debugPrint('📥 Loaded ${discoverPosts?.length ?? 0} discover posts');
+          debugPrint('ðŸ“¥ Loaded ${discoverPosts?.length ?? 0} discover posts');
         } catch (e) {
           debugPrint('Error loading discover feed: $e');
         }
@@ -546,7 +549,7 @@ class _CommunityScreenState extends State<CommunityScreen>
         followingOnly: targetFollowing,
         walletAddress: walletAddress,
       );
-      debugPrint('📥 Loaded ${posts.length} ${targetFollowing ? 'following' : 'discover'} posts');
+      debugPrint('ðŸ“¥ Loaded ${posts.length} ${targetFollowing ? 'following' : 'discover'} posts');
     } catch (e) {
       debugPrint('Error loading community data: $e');
     }
@@ -910,7 +913,7 @@ class _CommunityScreenState extends State<CommunityScreen>
   }
 
   // Helper to get user avatar from backend
-  // _getUserAvatar removed (unused) — avatars are now resolved via UserService and ChatProvider caching
+  // _getUserAvatar removed (unused) â€” avatars are now resolved via UserService and ChatProvider caching
 
   @override
   void dispose() {
@@ -1837,7 +1840,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    group.latestPost?.content ?? '—',
+                    group.latestPost?.content ?? 'â€”',
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                     style: KubusTypography.textTheme.bodySmall?.copyWith(
@@ -2098,7 +2101,7 @@ class _CommunityScreenState extends State<CommunityScreen>
               style: KubusTypography.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
             ),
             subtitle: Text(
-              '${_getTimeAgo(post.timestamp)} • ${post.category}',
+              '${_getTimeAgo(post.timestamp)} â€¢ ${post.category}',
               style: KubusTypography.textTheme.labelSmall,
             ),
             trailing: IconButton(
@@ -2179,7 +2182,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                             post.distanceKm != null
                                 ? l10n.commonDistanceKmAway(post.distanceKm!.toStringAsFixed(1))
                                 : null,
-                          ].whereType<String>().join(' • '),
+                          ].whereType<String>().join(' â€¢ '),
                           style: KubusTypography.textTheme.labelSmall?.copyWith(
                             color: scheme.onSurface.withValues(alpha: 0.6),
                           ),
@@ -2636,7 +2639,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                       if (post.distanceKm != null) ...[
                                         const SizedBox(width: 8),
                                         Text(
-                                          '• ${post.distanceKm!.toStringAsFixed(1)} km',
+                                          'â€¢ ${post.distanceKm!.toStringAsFixed(1)} km',
                                           style: GoogleFonts.inter(
                                             fontSize: 11,
                                             color: Theme.of(context).colorScheme.onTertiaryContainer.withValues(alpha: 0.7),
@@ -3744,17 +3747,17 @@ class _CommunityScreenState extends State<CommunityScreen>
           await backend.loadAuthToken();
           final token = backend.getAuthToken();
           debugPrint(
-              '🔐 Auth token loaded for notifications: ${token != null ? (token.length > 16 ? '${token.substring(0, 8)}...' : token) : "<none>"}');
+              'ðŸ” Auth token loaded for notifications: ${token != null ? (token.length > 16 ? '${token.substring(0, 8)}...' : token) : "<none>"}');
           // Optionally fetch which wallet this token maps to
           try {
             final me = await backend.getMyProfile();
             debugPrint(
-                '🔍 Token maps to wallet: ${me['wallet'] ?? me['wallet_address']}');
+                'ðŸ” Token maps to wallet: ${me['wallet'] ?? me['wallet_address']}');
           } catch (e) {
-            debugPrint('⚠️ Unable to map token to profile: $e');
+            debugPrint('âš ï¸ Unable to map token to profile: $e');
           }
         } catch (e) {
-          debugPrint('⚠️ No auth token available: $e');
+          debugPrint('âš ï¸ No auth token available: $e');
         }
 
         // Load local in-app notifications
@@ -3762,7 +3765,7 @@ class _CommunityScreenState extends State<CommunityScreen>
         // Load server notifications (if authenticated)
         final remote = await backend.getNotifications(limit: 50);
         debugPrint(
-            '📥 Loaded ${local.length} local + ${remote.length} remote notifications');
+            'ðŸ“¥ Loaded ${local.length} local + ${remote.length} remote notifications');
         // Normalize remote (ensure Map<String,dynamic>)
         final remapped =
             remote.map((e) => Map<String, dynamic>.from(e)).toList();
@@ -5564,7 +5567,7 @@ class _CommunityScreenState extends State<CommunityScreen>
           overflow: TextOverflow.ellipsis,
         ),
         subtitle: Text(
-          [type, address].where((e) => e.toString().trim().isNotEmpty).join(' • '),
+          [type, address].where((e) => e.toString().trim().isNotEmpty).join(' â€¢ '),
           style: GoogleFonts.inter(
             fontSize: 12,
             color: scheme.onSurface.withValues(alpha: 0.6),
@@ -5737,9 +5740,9 @@ class _CommunityScreenState extends State<CommunityScreen>
     final hub = Provider.of<CommunityHubProvider>(context, listen: false);
     final controller = TextEditingController(text: initialLabel ?? '');
     final l10n = AppLocalizations.of(context)!;
-    final result = await showDialog<String>(
+    final result = await showKubusDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => KubusAlertDialog(
         title: Text(l10n.communityNameThisPlaceTitle),
         content: TextField(
           controller: controller,
@@ -5915,8 +5918,8 @@ class _CommunityScreenState extends State<CommunityScreen>
       final mediaUrls = await _uploadComposerMedia();
       if (content.isEmpty) {
         content = _selectedPostVideo != null
-            ? '🎥'
-            : (_selectedPostImage != null ? '📷' : 'Shared via art.kubus');
+            ? 'ðŸŽ¥'
+            : (_selectedPostImage != null ? 'ðŸ“·' : 'Shared via art.kubus');
       }
 
       final groupName = hub.draft.targetGroup?.name;
@@ -6237,7 +6240,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                           ),
                           subtitle: subtitleParts.isNotEmpty
                               ? Text(
-                                  subtitleParts.join(' • '),
+                                  subtitleParts.join(' â€¢ '),
                                   style: GoogleFonts.inter(
                                     fontSize: 12,
                                     color: theme.colorScheme.onSurface
@@ -6431,10 +6434,10 @@ class _CommunityScreenState extends State<CommunityScreen>
 
                     Future<void> showHistory(Comment c) async {
                       if (!c.isEdited || c.originalContent == null) return;
-                      await showDialog<void>(
+                      await showKubusDialog<void>(
                         context: context,
                         builder: (dialogContext) {
-                          return AlertDialog(
+                          return KubusAlertDialog(
                             title: Text(l10n.commentHistoryTitle),
                             content: SingleChildScrollView(
                               child: Column(
@@ -6465,13 +6468,13 @@ class _CommunityScreenState extends State<CommunityScreen>
                       final messenger = ScaffoldMessenger.of(context);
                       final controller = TextEditingController(text: c.content);
                       bool saving = false;
-                      await showDialog<void>(
+                      await showKubusDialog<void>(
                         context: context,
                         barrierDismissible: !saving,
                         builder: (dialogContext) {
                           return StatefulBuilder(
                             builder: (context, setDialogState) {
-                              return AlertDialog(
+                              return KubusAlertDialog(
                                 title: Text(l10n.commentEditTitle),
                                 content: TextField(
                                   controller: controller,
@@ -6528,10 +6531,10 @@ class _CommunityScreenState extends State<CommunityScreen>
 
                     Future<void> promptDelete(Comment c) async {
                       final messenger = ScaffoldMessenger.of(context);
-                      final confirmed = await showDialog<bool>(
+                      final confirmed = await showKubusDialog<bool>(
                         context: context,
                         builder: (dialogContext) {
-                          return AlertDialog(
+                          return KubusAlertDialog(
                             title: Text(l10n.commentDeleteConfirmTitle),
                             content: Text(l10n.commentDeleteConfirmMessage),
                             actions: [
@@ -7486,9 +7489,9 @@ class _CommunityScreenState extends State<CommunityScreen>
     final l10n = AppLocalizations.of(context)!;
 
     // Show confirmation dialog
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showKubusDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => KubusAlertDialog(
         title: Text(l10n.communityUnrepostTitle, style: GoogleFonts.inter()),
         content: Text(l10n.communityUnrepostConfirmBody,
             style: GoogleFonts.inter()),

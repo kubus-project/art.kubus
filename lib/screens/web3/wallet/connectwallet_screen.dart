@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1340,7 +1340,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
         await wcService.initialize();
       }
       
-      // Do not capture BuildContext-dependent objects here — capture inside the callback after verifying mounted
+      // Do not capture BuildContext-dependent objects here â€” capture inside the callback after verifying mounted
 
       // Set up callbacks
       wcService.onConnected = (address) async {
@@ -1598,11 +1598,11 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     bool confirmed = false;
     final shortAddress = '${address.substring(0, 8)}...${address.substring(address.length - 6)}';
     
-    await showDialog(
+    await showKubusDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
+        builder: (context, setDialogState) => KubusAlertDialog(
           title: Text(
             l10n.connectWalletMnemonicDialogTitle,
             style: GoogleFonts.inter(fontWeight: FontWeight.bold),
@@ -1817,9 +1817,9 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
 
   void _showWeb3Guide() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(

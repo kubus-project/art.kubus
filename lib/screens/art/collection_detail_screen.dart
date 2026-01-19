@@ -1,4 +1,5 @@
-import 'dart:async';
+﻿import 'dart:async';
+import 'package:art_kubus/widgets/glass_components.dart';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -551,12 +552,12 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
     }
 
     final selectedIds = <String>{};
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (context, setLocalState) {
-            return AlertDialog(
+            return KubusAlertDialog(
               title: Text(
                 l10n.collectionDetailAddArtwork,
                 style: GoogleFonts.inter(fontWeight: FontWeight.w700),

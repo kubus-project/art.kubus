@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -16,6 +16,7 @@ import '../../../config/config.dart';
 import '../../../utils/app_color_utils.dart';
 import '../../../utils/kubus_color_roles.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import 'package:art_kubus/widgets/glass_components.dart';
 
 class GovernanceHub extends StatefulWidget {
   const GovernanceHub({super.key});
@@ -669,9 +670,9 @@ class _GovernanceHubState extends State<GovernanceHub>
             ? l10n.daoModerationRejectLabel
             : l10n.daoModerationSetPendingLabel;
 
-    final shouldProceed = await showDialog<bool>(
+    final shouldProceed = await showKubusDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => KubusAlertDialog(
         backgroundColor: colorScheme.surfaceContainerHighest,
         title: Text(
           l10n.daoModerationDecisionDialogTitle(decisionLabel),
@@ -824,9 +825,9 @@ class _GovernanceHubState extends State<GovernanceHub>
     final isActionInFlight = _reviewActionId == review.id;
 
     final colorScheme = Theme.of(context).colorScheme;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: colorScheme.surfaceContainerHighest,
         title: Text(
           l10n.daoReviewDetailsDialogTitle,
@@ -989,7 +990,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '$totalVotes votes • ${supportPct.toStringAsFixed(1)}% support',
+                    '$totalVotes votes â€¢ ${supportPct.toStringAsFixed(1)}% support',
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       color: Colors.grey[500],
@@ -2135,7 +2136,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                                   ),
                                 ),
                                 Text(
-                                  '${delegate.delegatorCount} delegators • ${(delegate.participationRate * 100).toStringAsFixed(0)}% participation',
+                                  '${delegate.delegatorCount} delegators â€¢ ${(delegate.participationRate * 100).toStringAsFixed(0)}% participation',
                                   style: GoogleFonts.inter(
                                     fontSize: 12,
                                     color:
@@ -2396,7 +2397,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                                         ),
                                       ),
                                       Text(
-                                        '${delegate.delegatorCount} delegators • ${(delegate.participationRate * 100).toStringAsFixed(0)}% participation',
+                                        '${delegate.delegatorCount} delegators â€¢ ${(delegate.participationRate * 100).toStringAsFixed(0)}% participation',
                                         style: GoogleFonts.inter(
                                           fontSize: 12,
                                           color: Colors.grey[400],
@@ -2440,9 +2441,9 @@ class _GovernanceHubState extends State<GovernanceHub>
     final scheme = Theme.of(context).colorScheme;
     final votingPowerDisplay =
         '${context.read<Web3Provider>().kub8Balance.toStringAsFixed(2)} KUB8';
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         title: Text(
           l10n.daoDelegateVotingPowerDialogTitle,

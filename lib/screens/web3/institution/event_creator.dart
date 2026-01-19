@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+﻿import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -10,6 +10,7 @@ import '../../../providers/web3provider.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/wallet_utils.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import 'package:art_kubus/widgets/glass_components.dart';
 
 class EventCreator extends StatefulWidget {
   final Event? initialEvent;
@@ -1140,9 +1141,9 @@ class _EventCreatorState extends State<EventCreator>
 
       if (!mounted) return;
       final l10n = AppLocalizations.of(context)!;
-      showDialog(
+      showKubusDialog(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (context) => KubusAlertDialog(
           backgroundColor:
               Theme.of(context).colorScheme.surfaceContainerHighest,
           title: Text(
@@ -1327,9 +1328,9 @@ class _EventCreatorState extends State<EventCreator>
   }
 
   void _showHelp() {
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         title: Text('Event Creation Help',
             style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),

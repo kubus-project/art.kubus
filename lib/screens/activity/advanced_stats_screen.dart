@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -644,9 +644,9 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
   }
 
   void _showExportDialog(_StatsContext stats) {
-    showDialog<bool>(
+    showKubusDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         title: const Text('Export Data'),
         content: const Text('Export your stats data as CSV.'),
         actions: [
@@ -668,9 +668,9 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
   }
 
   void _showShareDialog(_StatsContext stats) {
-    showDialog<bool>(
+    showKubusDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         title: const Text('Share Stats'),
         content: const Text('Share a summary of this analytics view.'),
         actions: [

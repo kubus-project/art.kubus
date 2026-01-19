@@ -1,4 +1,4 @@
-import 'package:file_picker/file_picker.dart';
+﻿import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -14,6 +14,7 @@ import '../../../providers/themeprovider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../services/backend_api_service.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import 'package:art_kubus/widgets/glass_components.dart';
 
 class ArtworkCreator extends StatefulWidget {
   final VoidCallback? onCreated;
@@ -1300,9 +1301,9 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
       }
 
       if (!mounted) return;
-      showDialog(
+      showKubusDialog(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (context) => KubusAlertDialog(
           backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
           title: Text(l10n.artistCreatorSuccessTitle, style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
           content: Column(
@@ -1380,9 +1381,9 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
 
   void _showHelp() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         title: Text(l10n.artistCreatorHelpTitle, style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: Text(

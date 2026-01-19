@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -11,6 +11,7 @@ import '../../../widgets/inline_loading.dart';
 import '../../../widgets/empty_state_card.dart';
 import 'event_creator.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import 'package:art_kubus/widgets/glass_components.dart';
 
 class EventManager extends StatefulWidget {
   const EventManager({super.key});
@@ -517,9 +518,9 @@ class _EventManagerState extends State<EventManager>
       }
     }
 
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         title: Text('Notifications',
             style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
@@ -597,9 +598,9 @@ class _EventManagerState extends State<EventManager>
   }
 
   void _showSearchDialog() {
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         title: Text('Search Events',
             style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
@@ -640,11 +641,11 @@ class _EventManagerState extends State<EventManager>
   }
 
   void _viewEvent(Event event) {
-    showDialog(
+    showKubusDialog(
       context: context,
       builder: (context) {
         final scheme = Theme.of(context).colorScheme;
-        return AlertDialog(
+        return KubusAlertDialog(
           backgroundColor: scheme.surfaceContainerHighest,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -690,9 +691,9 @@ class _EventManagerState extends State<EventManager>
   }
 
   void _deleteEvent(Event event) {
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         title: Text('Delete Event',
             style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),

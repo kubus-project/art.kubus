@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+﻿import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -1776,9 +1776,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
 
   void _showBlockConfirmation() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => KubusAlertDialog(
         title: Text(
           l10n.userProfileBlockDialogTitle(user!.name),
           style: GoogleFonts.inter(fontWeight: FontWeight.bold),
@@ -1828,9 +1828,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
 
   void _showReportDialog() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => KubusAlertDialog(
         title: Text(
           l10n.userProfileReportDialogTitle(user!.name),
           style: GoogleFonts.inter(fontWeight: FontWeight.bold),

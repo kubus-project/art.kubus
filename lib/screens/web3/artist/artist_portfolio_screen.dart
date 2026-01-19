@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:art_kubus/widgets/glass_components.dart';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../models/artwork.dart';
@@ -369,7 +370,7 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
                         ),
                         if (entry.subtitle != null && entry.subtitle!.trim().isNotEmpty) ...[
                           Text(
-                            ' • ',
+                            ' â€¢ ',
                             style: GoogleFonts.inter(
                               fontSize: 12,
                               color: scheme.onSurface.withValues(alpha: 0.45),
@@ -470,10 +471,10 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
 
   Future<bool?> _confirmDeleteArtwork(BuildContext context, String title) {
     final l10n = AppLocalizations.of(context)!;
-    return showDialog<bool>(
+    return showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) {
-        return AlertDialog(
+        return KubusAlertDialog(
           title: Text(l10n.artistGalleryDeleteArtworkTitle),
           content: Text(l10n.artistGalleryDeleteConfirmBody(title)),
           actions: [

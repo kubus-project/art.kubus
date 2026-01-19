@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -1203,9 +1203,9 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
 
   void _showARInfo() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(DetailRadius.xl),
@@ -2432,7 +2432,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     await np.markViewed();
     if (!mounted) return;
 
-    await showDialog(
+    await showKubusDialog(
       context: context,
       barrierColor: Colors.black26,
       builder: (dialogContext) => Align(
@@ -2711,7 +2711,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       },
     ];
 
-    await showDialog(
+    await showKubusDialog(
       context: context,
       barrierColor: Colors.black26,
       builder: (dialogContext) => Align(

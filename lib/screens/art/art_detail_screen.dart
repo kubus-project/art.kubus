@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -923,13 +923,13 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                             TextEditingController(text: comment.content);
                         bool saving = false;
 
-                        await showDialog<void>(
+                        await showKubusDialog<void>(
                           context: context,
                           barrierDismissible: !saving,
                           builder: (dialogContext) {
                             return StatefulBuilder(
                               builder: (context, setDialogState) {
-                                return AlertDialog(
+                                return KubusAlertDialog(
                                   title: Text(l10n.commentEditTitle),
                                   content: TextField(
                                     controller: controller,
@@ -1005,10 +1005,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                         navigator; // keep reference (no-op)
                       } else if (value == 'delete') {
                         final messenger = ScaffoldMessenger.of(context);
-                        final confirmed = await showDialog<bool>(
+                        final confirmed = await showKubusDialog<bool>(
                           context: context,
                           builder: (dialogContext) {
-                            return AlertDialog(
+                            return KubusAlertDialog(
                               title: Text(l10n.commentDeleteConfirmTitle),
                               content: Text(l10n.commentDeleteConfirmMessage),
                               actions: [
@@ -1086,10 +1086,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
               behavior: HitTestBehavior.opaque,
               onTap: (comment.isEdited && comment.originalContent != null)
                   ? () {
-                      showDialog<void>(
+                      showKubusDialog<void>(
                         context: context,
                         builder: (dialogContext) {
-                          return AlertDialog(
+                          return KubusAlertDialog(
                             title: Text(l10n.commentHistoryTitle),
                             content: SingleChildScrollView(
                               child: Column(
@@ -1388,7 +1388,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                   .trim();
               if (msg.isNotEmpty) {
                 backendMessage =
-                    msg.length > 140 ? '${msg.substring(0, 140)}…' : msg;
+                    msg.length > 140 ? '${msg.substring(0, 140)}â€¦' : msg;
               }
             }
           }
@@ -1397,7 +1397,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         }
       }
 
-      backendMessage = backendMessage?.replaceAll('â€¦', '…');
+      backendMessage = backendMessage?.replaceAll('Ã¢â‚¬Â¦', 'â€¦');
 
       final fallbackMessage = authRequired
           ? l10n.communityCommentAuthRequiredToast
@@ -1686,9 +1686,9 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   }
 
   void _showErrorDialog(String message) {
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           'Navigation Error',
@@ -1746,10 +1746,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
 
     CollectibleType selectedType = CollectibleType.nft;
 
-    showDialog(
+    showKubusDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
+        builder: (context, setState) => KubusAlertDialog(
           backgroundColor: Theme.of(context).colorScheme.surface,
           title: Text(
             'Mint NFT Series',
@@ -1910,10 +1910,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     final walletAddress = prefs.getString('wallet_address') ?? '';
     if (!mounted) return;
 
-    showDialog(
+    showKubusDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         content: Column(
           mainAxisSize: MainAxisSize.min,

@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -30,8 +30,7 @@ import '../../utils/app_color_utils.dart';
 import '../../widgets/glass_components.dart';
 import '../../utils/design_tokens.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
- 
-
+  
 
 /// Desktop profile and settings screen
 /// Clean dashboard layout with account info and settings
@@ -977,9 +976,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
 
   void _showRecoveryWarning() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
@@ -1036,9 +1035,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
   void _showDisconnectConfirmation() {
     final l10n = AppLocalizations.of(context)!;
     final errorColor = Theme.of(context).colorScheme.error;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(l10n.desktopSettingsDisconnectWalletDialogTitle, style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
@@ -1075,9 +1074,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
   // Dialog Methods from Mobile Settings
   void _showVersionDialog() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(l10n.settingsAppVersionDialogTitle, style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
         content: Column(
@@ -1101,9 +1100,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
 
   void _showTermsDialog() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(l10n.settingsTermsDialogTitle, style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
         content: SingleChildScrollView(
@@ -1121,9 +1120,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
 
   void _showPrivacyPolicyDialog() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(l10n.settingsPrivacyPolicyDialogTitle, style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
         content: SingleChildScrollView(
@@ -1142,9 +1141,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
   void _showSupportDialog() {
     final l10n = AppLocalizations.of(context)!;
     final rootContext = context;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => KubusAlertDialog(
         backgroundColor: Theme.of(dialogContext).colorScheme.surface,
         title: Text(l10n.settingsSupportDialogTitle, style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(dialogContext).colorScheme.onSurface)),
         content: Column(
@@ -1173,7 +1172,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   return;
                 }
 
-                await showDialog<bool>(
+                await showKubusDialog<bool>(
                   context: rootContext,
                   builder: (_) => const SupportTicketDialog(),
                 );
@@ -1192,9 +1191,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
 
   void _showLicensesDialog() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(l10n.settingsLicensesDialogTitle, style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
         content: SingleChildScrollView(
@@ -1212,9 +1211,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
 
   void _showRateAppDialog() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(l10n.settingsRateAppDialogTitle, style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
         content: Column(
@@ -1240,9 +1239,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
 
   void _showChangePasswordDialog() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => KubusAlertDialog(
         backgroundColor: Theme.of(dialogContext).colorScheme.surface,
         title: Text(
           l10n.settingsChangePasswordDialogTitle,
@@ -1309,9 +1308,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
 
   void _showResetDialog() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(l10n.settingsResetAppDialogTitle, style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
         content: Text(l10n.settingsResetAppDialogBody, style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface)),
@@ -1348,9 +1347,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
 
   void _showDeleteAccountDialog() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(l10n.settingsDeleteAccountDialogTitle, style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
         content: Text(
@@ -1401,9 +1400,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
 
   void _showDataExportDialog() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(l10n.settingsExportDataDialogTitle, style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
         content: Text(l10n.settingsExportDataDialogBody, style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface)),
@@ -1424,9 +1423,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
 
   void _showClearCacheDialog() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(l10n.settingsClearCacheDialogTitle, style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
         content: Text(l10n.settingsClearCacheDialogBody, style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface)),
@@ -1452,9 +1451,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
   void _showResetPermissionFlagsDialog() {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => KubusAlertDialog(
         backgroundColor: Theme.of(dialogContext).colorScheme.surface,
         title: Text(
           l10n.settingsResetPermissionFlagsDialogTitle,
@@ -1722,9 +1721,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     final pinController = TextEditingController();
     final confirmController = TextEditingController();
 
-    await showDialog<void>(
+    await showKubusDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.settingsSetPinDialogTitle,
@@ -1834,9 +1833,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
 
   Future<void> _handleLogout() async {
     final l10n = AppLocalizations.of(context)!;
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showKubusDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => KubusAlertDialog(
         backgroundColor: Theme.of(dialogContext).colorScheme.surface,
         title: Text(
           l10n.settingsLogoutDialogTitle,
@@ -2936,7 +2935,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
           // Copyright
           Center(
             child: Text(
-              '© 2025 kubus • ${l10n.settingsAllRightsReserved}',
+              'Â© 2025 kubus â€¢ ${l10n.settingsAllRightsReserved}',
               style: GoogleFonts.inter(
                 fontSize: 12,
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),

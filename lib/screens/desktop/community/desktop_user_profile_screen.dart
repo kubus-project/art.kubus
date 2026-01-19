@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+﻿import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -41,6 +41,7 @@ import '../../../config/config.dart';
 import 'desktop_community_analytics_screen.dart';
 import 'desktop_profile_analytics_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import 'package:art_kubus/widgets/glass_components.dart';
 
 /// Desktop user profile screen - viewing another user's profile
 /// Clean card-based layout with follow/message actions
@@ -424,11 +425,11 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               final wallet = user?.id.toString().trim() ?? '';
               if (wallet.isEmpty) return;
 
-              showDialog<void>(
+              showKubusDialog<void>(
                 context: context,
                 builder: (dialogContext) {
                   final scheme = Theme.of(dialogContext).colorScheme;
-                  return AlertDialog(
+                  return KubusAlertDialog(
                     backgroundColor: scheme.surface,
                     title: Text(
                       'Analytics',
@@ -1759,9 +1760,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       return;
     }
 
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
@@ -1816,9 +1817,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
   void _showReportDialog() {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(

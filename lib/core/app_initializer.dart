@@ -1,3 +1,6 @@
+﻿// NOTE: use_build_context_synchronously lint handled per-instance; avoid file-level ignore
+
+import 'package:art_kubus/widgets/glass_components.dart';
 // NOTE: use_build_context_synchronously lint handled per-instance; avoid file-level ignore
 import 'dart:async';
 
@@ -462,7 +465,7 @@ class ExploreOnlyApp extends StatelessWidget {
         debugPrint('AppInitializer: wallet prompt triggered');
       }
     }
-    showDialog(
+    showKubusDialog(
       context: context,
       builder: (context) => const WalletPromptScreen(),
     );
@@ -475,7 +478,7 @@ class WalletPromptScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
+    return KubusAlertDialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
@@ -525,7 +528,7 @@ class WalletPromptScreen extends StatelessWidget {
                 children: [
                   Icon(Icons.check_circle, color: Colors.green, size: 16),
                   SizedBox(width: 8),
-                  Text('• Buy and sell NFTs'),
+                  Text('â€¢ Buy and sell NFTs'),
                 ],
               ),
               SizedBox(height: 4),
@@ -533,7 +536,7 @@ class WalletPromptScreen extends StatelessWidget {
                 children: [
                   Icon(Icons.check_circle, color: Colors.green, size: 16),
                   SizedBox(width: 8),
-                  Text('• Create your own artworks'),
+                  Text('â€¢ Create your own artworks'),
                 ],
               ),
               SizedBox(height: 4),
@@ -541,7 +544,7 @@ class WalletPromptScreen extends StatelessWidget {
                 children: [
                   Icon(Icons.check_circle, color: Colors.green, size: 16),
                   SizedBox(width: 8),
-                  Text('• Community interactions'),
+                  Text('â€¢ Community interactions'),
                 ],
               ),
             ],

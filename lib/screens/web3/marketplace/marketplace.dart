@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -23,6 +23,7 @@ import '../../../utils/kubus_color_roles.dart';
 import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import 'package:art_kubus/widgets/glass_components.dart';
 
 class Marketplace extends StatefulWidget {
   const Marketplace({super.key});
@@ -143,9 +144,9 @@ class _MarketplaceState extends State<Marketplace>
     final web3Provider = context.read<Web3Provider>();
     final colorScheme = Theme.of(context).colorScheme;
 
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: colorScheme.surfaceContainerHighest,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
@@ -1017,7 +1018,7 @@ class _MarketplaceState extends State<Marketplace>
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Owned NFT ${collectible.isForSale ? '• Listed for Sale' : ''}',
+                    'Owned NFT ${collectible.isForSale ? 'â€¢ Listed for Sale' : ''}',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.inter(
                       fontSize: 14,
@@ -1157,9 +1158,9 @@ class _MarketplaceState extends State<Marketplace>
     final priceController = TextEditingController();
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
 
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
@@ -1283,9 +1284,9 @@ class _MarketplaceState extends State<Marketplace>
   void _removeFromSale(Collectible collectible) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: scheme.surfaceContainerHighest,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
@@ -1715,7 +1716,7 @@ class _MarketplaceState extends State<Marketplace>
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'NFT Collection${series.requiresARInteraction ? ' • AR Enabled' : ''}',
+                    'NFT Collection${series.requiresARInteraction ? ' â€¢ AR Enabled' : ''}',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.inter(
                       fontSize: 14,
@@ -1894,9 +1895,9 @@ class _MarketplaceState extends State<Marketplace>
     final colorScheme = Theme.of(context).colorScheme;
 
     if (!web3Provider.isConnected || web3Provider.walletAddress.isEmpty) {
-      showDialog(
+      showKubusDialog(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (context) => KubusAlertDialog(
           backgroundColor: colorScheme.surfaceContainerHighest,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -1944,9 +1945,9 @@ class _MarketplaceState extends State<Marketplace>
     }
 
     if (series.requiresARInteraction) {
-      showDialog(
+      showKubusDialog(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (context) => KubusAlertDialog(
           backgroundColor: Theme.of(context).colorScheme.primaryContainer,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -2017,9 +2018,9 @@ class _MarketplaceState extends State<Marketplace>
   }
 
   void _showMintDialog(CollectibleSeries series) {
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
@@ -2122,7 +2123,7 @@ class _MarketplaceState extends State<Marketplace>
       }
 
       // Show loading
-      showDialog(
+      showKubusDialog(
         context: context,
         barrierDismissible: false,
         builder: (context) => Center(
@@ -2153,9 +2154,9 @@ class _MarketplaceState extends State<Marketplace>
       // Show success
       if (!mounted) return;
       final l10n = AppLocalizations.of(context)!;
-      showDialog(
+      showKubusDialog(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (context) => KubusAlertDialog(
           backgroundColor:
               Theme.of(context).colorScheme.surfaceContainerHighest,
           shape: RoundedRectangleBorder(
@@ -2222,9 +2223,9 @@ class _MarketplaceState extends State<Marketplace>
 
       if (!mounted) return;
       final l10n = AppLocalizations.of(context)!;
-      showDialog(
+      showKubusDialog(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (context) => KubusAlertDialog(
           backgroundColor:
               Theme.of(context).colorScheme.surfaceContainerHighest,
           shape: RoundedRectangleBorder(

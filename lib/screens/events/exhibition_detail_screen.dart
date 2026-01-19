@@ -1,8 +1,9 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:art_kubus/widgets/glass_components.dart';
 
 import '../../models/exhibition.dart';
 import '../../models/artwork.dart';
@@ -254,12 +255,12 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
 
     final selectedIds = <String>{};
 
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (context, setLocalState) {
-            return AlertDialog(
+            return KubusAlertDialog(
               title: Text(l10n.exhibitionDetailAddArtworksDialogTitle,
                   style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
               content: SizedBox(
@@ -286,7 +287,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                         style: GoogleFonts.inter(fontWeight: FontWeight.w600),
                       ),
                       subtitle: Text(
-                        art.artist.isNotEmpty ? art.artist : '—',
+                        art.artist.isNotEmpty ? art.artist : 'â€”',
                         style: GoogleFonts.inter(
                             fontSize: 12,
                             color: scheme.onSurface.withValues(alpha: 0.75)),
@@ -670,7 +671,7 @@ class _ExhibitionDetailsCard extends StatelessWidget {
           exhibition.startsAt != null ? _fmtDate(exhibition.startsAt!) : null;
       final end =
           exhibition.endsAt != null ? _fmtDate(exhibition.endsAt!) : null;
-      dateRange = [start, end].whereType<String>().join(' → ');
+      dateRange = [start, end].whereType<String>().join(' â†’ ');
       if (dateRange.trim().isEmpty) dateRange = null;
     }
 

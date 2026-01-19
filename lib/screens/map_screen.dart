@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
@@ -79,7 +79,7 @@ class DirectionConePainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
 
     // Draw cone pointing upward (will be rotated by the parent Transform)
-    // Cone dimensions: 60° spread angle
+    // Cone dimensions: 60Â° spread angle
     final coneAngle = math.pi / 3; // 60 degrees in radians
     final coneLength = size.height * 0.8;
 
@@ -985,10 +985,10 @@ class _MapScreenState extends State<MapScreen>
   Future<void> _openMarkerRadiusDialog() async {
     double tempRadius = _markerRadiusKm;
     final l10n = AppLocalizations.of(context)!;
-    final result = await showDialog<double>(
+    final result = await showKubusDialog<double>(
       context: context,
       builder: (context) {
-        return AlertDialog(
+        return KubusAlertDialog(
           title: Text(l10n.mapNearbyRadiusTitle),
           content: StatefulBuilder(
             builder: (context, setStateDialog) {
@@ -1598,7 +1598,7 @@ class _MapScreenState extends State<MapScreen>
               _locationPermissionRequested = false;
             }
           } else {
-            // already requested permission once — don't re-request repeatedly
+            // already requested permission once â€” don't re-request repeatedly
             debugPrint(
                 'MapScreen: Permission denied and previously requested; skipping further requests.');
             resolvedPosition ??= _loadFallbackPosition(prefs);
@@ -1864,9 +1864,9 @@ class _MapScreenState extends State<MapScreen>
 
   void _showDiscoveryRewardForArtwork(Artwork artwork) {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => KubusAlertDialog(
         title: Row(
           children: [
             const Icon(Icons.celebration, color: Colors.amber),
@@ -2262,7 +2262,7 @@ class _MapScreenState extends State<MapScreen>
         ? rawDescription
         : (_markerOverlayExpanded
             ? rawDescription
-            : '${rawDescription.substring(0, maxPreviewChars)}…');
+            : '${rawDescription.substring(0, maxPreviewChars)}â€¦');
 
     final distanceText = () {
       if (_currentPosition == null) return null;
@@ -2947,9 +2947,9 @@ class _MapScreenState extends State<MapScreen>
       metadata: marker.metadata,
     );
 
-    await showDialog<void>(
+    await showKubusDialog<void>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => KubusAlertDialog(
         backgroundColor: scheme.surface,
         title: Text(
           marker.name,
@@ -3776,7 +3776,7 @@ class _MapScreenState extends State<MapScreen>
                                                 ? '${l10n.mapResultsDiscoveredLabel(
                                                     artworks.length,
                                                     (discoveryProgress * 100).round(),
-                                                  )} • ${l10n.mapTravelModeStatusTravelling}'
+                                                  )} â€¢ ${l10n.mapTravelModeStatusTravelling}'
                                                 : l10n.mapResultsDiscoveredLabel(
                                                     artworks.length,
                                                     (discoveryProgress * 100).round(),

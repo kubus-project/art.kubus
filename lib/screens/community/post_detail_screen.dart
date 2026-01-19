@@ -1,4 +1,5 @@
-import 'dart:async';
+﻿import 'dart:async';
+import 'package:art_kubus/widgets/glass_components.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -405,7 +406,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           contentPadding: EdgeInsets.zero,
                           leading: AvatarWidget(wallet: user.walletAddress ?? user.userId, avatarUrl: user.avatarUrl, radius: 20, enableProfileNavigation: true),
                           title: Text(user.displayName.isNotEmpty ? user.displayName : l10n.commonUnnamed, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-                          subtitle: subtitleParts.isNotEmpty ? Text(subtitleParts.join(' • '), style: GoogleFonts.inter(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.6))) : null,
+                          subtitle: subtitleParts.isNotEmpty ? Text(subtitleParts.join(' â€¢ '), style: GoogleFonts.inter(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.6))) : null,
                         );
                       },
                     );
@@ -539,7 +540,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           ),
                           subtitle: subtitleParts.isNotEmpty
                               ? Text(
-                                    subtitleParts.join(' • '),
+                                    subtitleParts.join(' â€¢ '),
                                   style: GoogleFonts.inter(
                                     fontSize: 12,
                                     color: theme.colorScheme.onSurface
@@ -734,9 +735,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     if (!mounted || post == null) return;
     final l10n = AppLocalizations.of(context)!;
 
-    showDialog(
+    showKubusDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => KubusAlertDialog(
         title: Text(
           l10n.postDetailReportPostDialogTitle,
           style: GoogleFonts.inter(fontWeight: FontWeight.bold),
@@ -1158,10 +1159,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
     bool deleting = false;
 
-    await showDialog<void>(
+    await showKubusDialog<void>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
+        builder: (context, setDialogState) => KubusAlertDialog(
           title: Text(
             l10n.postDetailDeletePostTitle,
             style: GoogleFonts.inter(fontWeight: FontWeight.bold),
@@ -1518,10 +1519,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
                           Future<void> showHistory(Comment c) async {
                             if (!c.isEdited || c.originalContent == null) return;
-                            await showDialog<void>(
+                            await showKubusDialog<void>(
                               context: context,
                               builder: (dialogContext) {
-                                return AlertDialog(
+                                return KubusAlertDialog(
                                   title: Text(l10n.commentHistoryTitle),
                                   content: SingleChildScrollView(
                                     child: Column(
@@ -1552,13 +1553,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                             final messenger = ScaffoldMessenger.of(context);
                             final controller = TextEditingController(text: c.content);
                             bool saving = false;
-                            await showDialog<void>(
+                            await showKubusDialog<void>(
                               context: context,
                               barrierDismissible: !saving,
                               builder: (dialogContext) {
                                 return StatefulBuilder(
                                   builder: (context, setDialogState) {
-                                    return AlertDialog(
+                                    return KubusAlertDialog(
                                       title: Text(l10n.commentEditTitle),
                                       content: TextField(
                                         controller: controller,
@@ -1615,10 +1616,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
                           Future<void> promptDelete(Comment c) async {
                             final messenger = ScaffoldMessenger.of(context);
-                            final confirmed = await showDialog<bool>(
+                            final confirmed = await showKubusDialog<bool>(
                               context: context,
                               builder: (dialogContext) {
-                                return AlertDialog(
+                                return KubusAlertDialog(
                                   title: Text(l10n.commentDeleteConfirmTitle),
                                   content: Text(l10n.commentDeleteConfirmMessage),
                                   actions: [

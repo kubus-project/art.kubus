@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:provider/provider.dart';
@@ -416,7 +416,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
           }
           final avatar = matchedUser?.profileImageUrl ?? '';
           final name = matchedUser?.name ?? '';
-          // Only set avatar from a real profileImageUrl. Do not fabricate placeholders here — AvatarWidget will handle safe fallbacks.
+          // Only set avatar from a real profileImageUrl. Do not fabricate placeholders here â€” AvatarWidget will handle safe fallbacks.
           final currentAvatar = _conversationAvatars[c];
           final currentName = _conversationNames[c];
           if ((currentAvatar == null || currentAvatar.isEmpty) &&
@@ -581,7 +581,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                 showAction: true,
                 actionLabel: l10n.messagesEmptyStartChatAction,
                 onAction: () async {
-                  final result = await showDialog<Map<String, dynamic>>(
+                  final result = await showKubusDialog<Map<String, dynamic>>(
                       context: context,
                       builder: (ctx) => _CreateConversationDialog());
                   if (!mounted) return;
@@ -675,7 +675,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                     }
                   }
                 }
-                // Prefer any explicit avatar; do not fabricate a placeholder here — AvatarWidget will render a safe fallback.
+                // Prefer any explicit avatar; do not fabricate a placeholder here â€” AvatarWidget will render a safe fallback.
                 final effectiveFallbackAvatar =
                     _normalizeAvatarUrl(fallbackAvatar);
                 final sanitizedFallback =
@@ -1017,7 +1017,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
           }
         }
       } catch (e) {
-        // best-effort: no synthetic fallback assigned here — leave null so AvatarWidget shows a safe fallback.
+        // best-effort: no synthetic fallback assigned here â€” leave null so AvatarWidget shows a safe fallback.
       }
       if (mounted) setState(() {});
     } catch (e) {
@@ -1098,7 +1098,7 @@ class _CreateConversationDialogState extends State<_CreateConversationDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return AlertDialog(
+    return KubusAlertDialog(
       title: Text(l10n.messagesCreateConversationTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,
