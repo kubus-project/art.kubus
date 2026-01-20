@@ -1,17 +1,20 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/config.dart';
 import '../../providers/profile_provider.dart';
+import '../../providers/security_gate_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../providers/web3provider.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/google_auth_service.dart';
 import '../../services/onboarding_state_service.dart';
+import '../../services/security/post_auth_security_setup_service.dart';
 import '../../services/telemetry/telemetry_service.dart';
 import '../../widgets/app_logo.dart';
 import '../../widgets/gradient_icon_card.dart';
@@ -31,11 +34,13 @@ class SignInScreen extends StatefulWidget {
     super.key,
     this.redirectRoute,
     this.redirectArguments,
+    this.initialEmail,
     this.onAuthSuccess,
   });
 
   final String? redirectRoute;
   final Object? redirectArguments;
+  final String? initialEmail;
   final FutureOr<void> Function(Map<String, dynamic> payload)? onAuthSuccess;
 
   @override
@@ -52,6 +57,10 @@ class _SignInScreenState extends State<SignInScreen> {
   @override
   void initState() {
     super.initState();
+    final seededEmail = (widget.initialEmail ?? '').trim();
+    if (seededEmail.isNotEmpty) {
+      _emailController.text = seededEmail;
+    }
     // Preload rate-limit cooldown so the Google sign-in click handler can
     // start the popup flow without awaiting (browser user-activation rules).
     unawaited(_loadGoogleAuthCooldown());
@@ -79,6 +88,9 @@ class _SignInScreenState extends State<SignInScreen> {
     final l10n = AppLocalizations.of(context)!;
     final redirectRoute = widget.redirectRoute?.trim();
     final isModalReauth = widget.onAuthSuccess != null;
+    final navigator = Navigator.of(context);
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final gate = Provider.of<SecurityGateProvider>(context, listen: false);
     final data = (payload['data'] as Map<String, dynamic>?) ?? payload;
     final user = (data['user'] as Map<String, dynamic>?) ?? data;
     String? walletAddress = user['walletAddress'] ?? user['wallet_address'];
@@ -104,6 +116,16 @@ class _SignInScreenState extends State<SignInScreen> {
       TelemetryService().setActorUserId(userId.toString());
     }
     if (!mounted) return;
+
+    if (!isModalReauth) {
+      final ok = await const PostAuthSecuritySetupService().ensurePostAuthSecuritySetup(
+        navigator: navigator,
+        walletProvider: walletProvider,
+        securityGateProvider: gate,
+      );
+      if (!mounted) return;
+      if (!ok) return;
+    }
 
     // In modal re-auth flows, avoid running protected API calls here because the
     // auth coordinator may be waiting on this route to pop (deadlock risk).
@@ -260,6 +282,23 @@ class _SignInScreenState extends State<SignInScreen> {
       unawaited(TelemetryService().trackSignInFailure(
           method: 'email', errorClass: e.runtimeType.toString()));
       if (!mounted) return;
+      if (e is BackendApiRequestException && e.statusCode == 403) {
+        try {
+          final decoded = jsonDecode((e.body ?? '').toString());
+          if (decoded is Map && decoded['requiresEmailVerification'] == true) {
+            Navigator.of(context).pushReplacementNamed(
+              '/verify-email',
+              arguments: {'email': email},
+            );
+            ScaffoldMessenger.of(context).showKubusSnackBar(
+              SnackBar(content: Text(l10n.authEmailNotVerifiedToast)),
+            );
+            return;
+          }
+        } catch (_) {
+          // Fall through to generic error toast.
+        }
+      }
       ScaffoldMessenger.of(context)
           .showKubusSnackBar(SnackBar(content: Text(l10n.authEmailSignInFailed)));
     } finally {
@@ -685,6 +724,19 @@ class _SignInScreenState extends State<SignInScreen> {
           decoration: InputDecoration(
             labelText: AppLocalizations.of(context)!.commonPassword,
             border: const OutlineInputBorder(),
+          ),
+        ),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: () {
+              final email = _emailController.text.trim();
+              Navigator.of(context).pushNamed(
+                '/forgot-password',
+                arguments: {'email': email},
+              );
+            },
+            child: Text(AppLocalizations.of(context)!.authForgotPasswordLink),
           ),
         ),
         const SizedBox(height: KubusSpacing.md),

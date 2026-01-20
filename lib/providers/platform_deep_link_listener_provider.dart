@@ -2,12 +2,15 @@ import 'dart:async';
 
 import 'package:app_links/app_links.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 
 import '../core/app_navigator.dart';
 import '../core/mobile_shell_registry.dart';
+import '../services/auth/auth_deep_link_parser.dart';
 import '../services/share/share_deep_link_parser.dart';
 import '../utils/share_deep_link_navigation.dart';
 import '../screens/desktop/desktop_shell_registry.dart';
+import 'auth_deep_link_provider.dart';
 import 'deep_link_provider.dart';
 
 /// Listens for incoming platform deep links (Android App Links / custom schemes)
@@ -19,13 +22,18 @@ class PlatformDeepLinkListenerProvider extends ChangeNotifier {
   final AppLinks _appLinks = AppLinks();
 
   DeepLinkProvider? _deepLinkProvider;
+  AuthDeepLinkProvider? _authDeepLinkProvider;
   StreamSubscription<Uri>? _sub;
   bool _initialized = false;
   String? _lastHandledSignature;
   DateTime? _lastHandledAt;
 
-  void bindDeepLinkProvider(DeepLinkProvider provider) {
-    _deepLinkProvider = provider;
+  void bindProviders({
+    required DeepLinkProvider deepLinkProvider,
+    required AuthDeepLinkProvider authDeepLinkProvider,
+  }) {
+    _deepLinkProvider = deepLinkProvider;
+    _authDeepLinkProvider = authDeepLinkProvider;
     _ensureInitialized();
   }
 
@@ -67,6 +75,60 @@ class PlatformDeepLinkListenerProvider extends ChangeNotifier {
   void _handleUri(Uri uri, {bool allowImmediateNavigation = true}) {
     final raw = uri.toString().trim();
     if (raw.isEmpty) return;
+
+    AuthDeepLinkTarget? authTarget;
+    try {
+      authTarget = const AuthDeepLinkParser().parse(uri);
+    } catch (_) {
+      authTarget = null;
+    }
+
+    if (authTarget != null) {
+      final signature = 'auth:${authTarget.signature()}';
+      final now = DateTime.now();
+      final lastAt = _lastHandledAt;
+      if (_lastHandledSignature == signature &&
+          lastAt != null &&
+          now.difference(lastAt) < const Duration(seconds: 2)) {
+        return;
+      }
+      _lastHandledSignature = signature;
+      _lastHandledAt = now;
+
+      final navigator = appNavigatorKey.currentState;
+      final desktopShellContext = DesktopShellRegistry.instance.context;
+      final mobileShellContext = MobileShellRegistry.instance.context;
+      final canNavigateNow =
+          allowImmediateNavigation &&
+          (desktopShellContext != null ||
+              mobileShellContext != null ||
+              (navigator != null && navigator.mounted));
+
+      if (canNavigateNow) {
+        final ctx = desktopShellContext ?? mobileShellContext ?? navigator!.context;
+        switch (authTarget.type) {
+          case AuthDeepLinkType.verifyEmail:
+            Navigator.of(ctx).pushNamed(
+              '/verify-email',
+              arguments: {
+                'token': authTarget.token,
+                if (authTarget.email != null) 'email': authTarget.email,
+              },
+            );
+            break;
+          case AuthDeepLinkType.resetPassword:
+            Navigator.of(ctx).pushNamed(
+              '/reset-password',
+              arguments: {'token': authTarget.token},
+            );
+            break;
+        }
+        return;
+      }
+
+      _authDeepLinkProvider?.setPending(authTarget);
+      return;
+    }
 
     ShareDeepLinkTarget? target;
     try {

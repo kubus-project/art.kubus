@@ -6,10 +6,12 @@ import 'package:flutter/scheduler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/app_navigator.dart';
+import '../services/auth_gating_service.dart';
 import '../services/auth_session_coordinator.dart';
 import '../services/backend_api_service.dart';
 import '../services/pin_hashing.dart';
 import '../services/settings_service.dart';
+import '../services/onboarding_state_service.dart';
 import '../providers/notification_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/wallet_provider.dart';
@@ -46,11 +48,13 @@ class SecurityGateProvider extends ChangeNotifier implements AuthSessionCoordina
   DateTime _lastInteractionAt = DateTime.now();
 
   Completer<void>? _initializeCompleter;
+  bool _hasLocalAccount = false;
 
   bool get isLocked => _locked;
   SecurityLockReason? get lockReason => _lockReason;
   AuthFailureContext? get authFailureContext => _authFailureContext;
   bool get isBusy => _busy;
+  bool get hasLocalAccount => _hasLocalAccount;
 
   SettingsState get settings => _settings ?? SettingsState.defaults();
 
@@ -94,8 +98,18 @@ class SecurityGateProvider extends ChangeNotifier implements AuthSessionCoordina
 
   Future<void> reloadSettings() async {
     _settings = await SettingsService.loadSettings();
+    await refreshLocalAccountState();
     _resetInactivityTimer();
     notifyListeners();
+  }
+
+  Future<void> refreshLocalAccountState({SharedPreferences? prefs}) async {
+    try {
+      final resolved = prefs ?? await SharedPreferences.getInstance();
+      _hasLocalAccount = AuthGatingService.hasLocalAccountSync(prefs: resolved);
+    } catch (_) {
+      _hasLocalAccount = false;
+    }
   }
 
   void onUserInteraction() {
@@ -151,6 +165,7 @@ class SecurityGateProvider extends ChangeNotifier implements AuthSessionCoordina
   }
 
   bool _shouldAutoLock() {
+    if (!_hasLocalAccount) return false;
     if (!requirePin) return false;
     final seconds = autoLockSeconds;
     if (seconds == 0) return false;
@@ -176,6 +191,9 @@ class SecurityGateProvider extends ChangeNotifier implements AuthSessionCoordina
   }
 
   Future<void> lock(SecurityLockReason reason, {AuthFailureContext? context}) async {
+    if ((reason == SecurityLockReason.autoLock || reason == SecurityLockReason.tokenExpired) && !_hasLocalAccount) {
+      return;
+    }
     final wallet = _walletProvider;
     final hasPin = await wallet?.hasPin() ?? false;
     if (reason == SecurityLockReason.autoLock && (!requirePin || !hasPin)) return;
@@ -220,6 +238,7 @@ class SecurityGateProvider extends ChangeNotifier implements AuthSessionCoordina
         debugPrint('SecurityGateProvider.logout failed: $e');
       }
     } finally {
+      _hasLocalAccount = false;
       _completeAndReset(const AuthReauthResult(AuthReauthOutcome.cancelled));
       final navigator = appNavigatorKey.currentState;
       if (navigator != null && navigator.mounted) {
@@ -262,6 +281,31 @@ class SecurityGateProvider extends ChangeNotifier implements AuthSessionCoordina
     final cooldownUntil = _cooldownUntil;
     if (cooldownUntil != null && now.isBefore(cooldownUntil)) {
       return const AuthReauthResult(AuthReauthOutcome.cooldown);
+    }
+
+    SharedPreferences? prefs;
+    try {
+      prefs = await SharedPreferences.getInstance();
+      _hasLocalAccount = AuthGatingService.hasLocalAccountSync(prefs: prefs);
+    } catch (_) {}
+
+    if (!await AuthGatingService.shouldPromptReauth(prefs: prefs)) {
+      // Fresh installs (no stored session) must never show the "sign in again"
+      // lock. In that case, either let onboarding proceed or route to sign-in.
+      final showOnboarding = await AuthGatingService.shouldShowFirstRunOnboarding(
+        prefs: prefs,
+        onboardingState: prefs == null ? null : await OnboardingStateService.load(prefs: prefs),
+      );
+
+      if (!showOnboarding) {
+        _cooldownUntil = DateTime.now().add(_promptCooldown);
+        final navigator = appNavigatorKey.currentState;
+        if (navigator != null && navigator.mounted) {
+          navigator.pushNamedAndRemoveUntil('/sign-in', (_) => false);
+        }
+      }
+
+      return const AuthReauthResult(AuthReauthOutcome.notEnabled);
     }
 
     await lock(SecurityLockReason.tokenExpired, context: context);

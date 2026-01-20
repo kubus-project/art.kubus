@@ -12,6 +12,7 @@ import '../../providers/web3provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../providers/platform_provider.dart';
 import '../../providers/security_gate_provider.dart';
+import '../../providers/email_preferences_provider.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/push_notification_service.dart';
 import '../../services/settings_service.dart';
@@ -20,7 +21,6 @@ import '../../widgets/detail/detail_shell_components.dart';
 import '../../widgets/support/support_ticket_dialog.dart';
 import '../../utils/app_animations.dart';
 import 'components/desktop_widgets.dart';
-import 'community/desktop_profile_edit_screen.dart';
 import '../web3/wallet/wallet_home.dart';
 import '../web3/wallet/mnemonic_reveal_screen.dart';
 import '../onboarding/onboarding_screen.dart';
@@ -64,6 +64,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
   bool _loginNotifications = true;
   bool _requirePin = false;
   bool _biometricAuth = false;
+  bool _biometricsDeclined = false;
   bool _useBiometricsOnUnlock = true;
   bool _privacyMode = false;
   bool _hasPin = false;
@@ -130,6 +131,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       _loginNotifications = settings.loginNotifications;
       _requirePin = settings.requirePin;
       _biometricAuth = settings.biometricAuth && hasPin && biometricsSupported;
+      _biometricsDeclined = settings.biometricsDeclined;
       _useBiometricsOnUnlock = settings.useBiometricsOnUnlock;
       _privacyMode = settings.privacyMode;
       _hasPin = hasPin;
@@ -170,6 +172,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       autoLockSeconds: _autoLockSecondsFromLabel(_autoLockTime),
       requirePin: _requirePin,
       biometricAuth: _biometricAuth,
+      biometricsDeclined: _biometricsDeclined,
       useBiometricsOnUnlock: _useBiometricsOnUnlock,
       privacyMode: _privacyMode,
       analytics: _analytics,
@@ -579,33 +582,6 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                               ],
                             ),
                           ],
-                        ),
-                      ),
-                      ElevatedButton.icon(
-                        onPressed: () async {
-                          final navigator = Navigator.of(context);
-                          final web3Provider = Provider.of<Web3Provider>(context, listen: false);
-                          final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
-                          final result = await navigator.push(
-                            MaterialPageRoute(
-                              builder: (context) => const ProfileEditScreen(),
-                            ),
-                          );
-                          // Reload profile if changes were saved
-                          if (!mounted) return;
-                          if (result == true && web3Provider.isConnected && web3Provider.walletAddress.isNotEmpty) {
-                            await profileProvider.loadProfile(web3Provider.walletAddress);
-                          }
-                        },
-                        icon: const Icon(Icons.edit, size: 18),
-                        label: Text(l10n.settingsEditProfileTileTitle),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: headerColor,
-                          padding: EdgeInsets.symmetric(horizontal: DetailSpacing.lg + DetailSpacing.xs, vertical: DetailSpacing.md),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(DetailRadius.md),
-                          ),
                         ),
                       ),
                     ],
@@ -1668,6 +1644,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       if (!value) {
         _useBiometricsOnUnlock = true;
       }
+      if (value) {
+        _biometricsDeclined = false;
+      }
     });
     await _saveSettings();
     await gate.reloadSettings();
@@ -2183,6 +2162,12 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
 
   Widget _buildNotificationSettings(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
+    final emailPreferencesProvider = context.watch<EmailPreferencesProvider>();
+    if (emailPreferencesProvider.canManage &&
+        !emailPreferencesProvider.initialized &&
+        !emailPreferencesProvider.isLoading) {
+      unawaited(emailPreferencesProvider.initialize());
+    }
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Column(
@@ -2212,18 +2197,155 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   },
                 ),
                 const Divider(height: 32),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    l10n.settingsEmailPreferencesSectionTitle,
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    l10n.settingsEmailPreferencesTransactionalNote,
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                  ),
+                ),
+                if (emailPreferencesProvider.isLoading) ...[
+                  const SizedBox(height: 12),
+                  LinearProgressIndicator(
+                    minHeight: 2,
+                    backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Provider.of<ThemeProvider>(context, listen: false).accentColor,
+                    ),
+                  ),
+                ],
+                const Divider(height: 32),
                 _buildToggleSetting(
-                  l10n.settingsEmailNotificationsTitle,
-                  l10n.settingsEmailNotificationsSubtitle,
-                  _emailNotifications,
-                  onChanged: (value) => setState(() => _emailNotifications = value),
+                  l10n.settingsEmailPreferencesProductUpdatesTitle,
+                  l10n.settingsEmailPreferencesProductUpdatesSubtitle,
+                  emailPreferencesProvider.preferences.productUpdates,
+                  saveAfterToggle: false,
+                  enabled: emailPreferencesProvider.canManage && !emailPreferencesProvider.isUpdating,
+                  onChanged: (value) {
+                    final next = emailPreferencesProvider.preferences.copyWith(productUpdates: value);
+                    final messenger = ScaffoldMessenger.of(context);
+                    unawaited(() async {
+                      final ok = await emailPreferencesProvider.updatePreferences(next);
+                      if (!ok && mounted) {
+                        messenger.showKubusSnackBar(
+                          SnackBar(content: Text(l10n.settingsEmailPreferencesUpdateFailedToast)),
+                        );
+                      }
+                    }());
+                  },
                 ),
                 const Divider(height: 32),
                 _buildToggleSetting(
-                  l10n.settingsMarketingEmailsTitle,
-                  l10n.settingsMarketingEmailsSubtitle,
-                  _marketingEmails,
-                  onChanged: (value) => setState(() => _marketingEmails = value),
+                  l10n.settingsEmailPreferencesNewsletterTitle,
+                  l10n.settingsEmailPreferencesNewsletterSubtitle,
+                  emailPreferencesProvider.preferences.newsletter,
+                  saveAfterToggle: false,
+                  enabled: emailPreferencesProvider.canManage && !emailPreferencesProvider.isUpdating,
+                  onChanged: (value) {
+                    final next = emailPreferencesProvider.preferences.copyWith(newsletter: value);
+                    final messenger = ScaffoldMessenger.of(context);
+                    unawaited(() async {
+                      final ok = await emailPreferencesProvider.updatePreferences(next);
+                      if (!ok && mounted) {
+                        messenger.showKubusSnackBar(
+                          SnackBar(content: Text(l10n.settingsEmailPreferencesUpdateFailedToast)),
+                        );
+                      }
+                    }());
+                  },
+                ),
+                const Divider(height: 32),
+                _buildToggleSetting(
+                  l10n.settingsEmailPreferencesCommunityDigestTitle,
+                  l10n.settingsEmailPreferencesCommunityDigestSubtitle,
+                  emailPreferencesProvider.preferences.communityDigest,
+                  saveAfterToggle: false,
+                  enabled: emailPreferencesProvider.canManage && !emailPreferencesProvider.isUpdating,
+                  onChanged: (value) {
+                    final next = emailPreferencesProvider.preferences.copyWith(communityDigest: value);
+                    final messenger = ScaffoldMessenger.of(context);
+                    unawaited(() async {
+                      final ok = await emailPreferencesProvider.updatePreferences(next);
+                      if (!ok && mounted) {
+                        messenger.showKubusSnackBar(
+                          SnackBar(content: Text(l10n.settingsEmailPreferencesUpdateFailedToast)),
+                        );
+                      }
+                    }());
+                  },
+                ),
+                const Divider(height: 32),
+                _buildToggleSetting(
+                  l10n.settingsEmailPreferencesSecurityAlertsTitle,
+                  l10n.settingsEmailPreferencesSecurityAlertsSubtitle,
+                  emailPreferencesProvider.preferences.securityAlerts,
+                  saveAfterToggle: false,
+                  enabled: emailPreferencesProvider.canManage && !emailPreferencesProvider.isUpdating,
+                  onChanged: (value) {
+                    final next = emailPreferencesProvider.preferences.copyWith(securityAlerts: value);
+                    final messenger = ScaffoldMessenger.of(context);
+                    unawaited(() async {
+                      final ok = await emailPreferencesProvider.updatePreferences(next);
+                      if (!ok && mounted) {
+                        messenger.showKubusSnackBar(
+                          SnackBar(content: Text(l10n.settingsEmailPreferencesUpdateFailedToast)),
+                        );
+                      }
+                    }());
+                  },
+                ),
+                const Divider(height: 32),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.settingsEmailPreferencesTransactionalTitle,
+                            style: GoogleFonts.inter(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                          Text(
+                            l10n.settingsEmailPreferencesTransactionalSubtitle,
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: true,
+                      onChanged: null,
+                      activeTrackColor: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.5),
+                      thumbColor: WidgetStateProperty.resolveWith((states) {
+                        if (states.contains(WidgetState.selected)) {
+                          return Provider.of<ThemeProvider>(context, listen: false).accentColor;
+                        }
+                        return null;
+                      }),
+                    ),
+                  ],
                 ),
                 const Divider(height: 32),
                 _buildToggleSetting(

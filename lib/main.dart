@@ -42,9 +42,11 @@ import 'providers/stats_provider.dart';
 import 'providers/analytics_filters_provider.dart';
 import 'providers/desktop_dashboard_state_provider.dart';
 import 'providers/marker_management_provider.dart';
-import 'providers/security_gate_provider.dart';
-import 'providers/deep_link_provider.dart';
-import 'providers/platform_deep_link_listener_provider.dart';
+  import 'providers/security_gate_provider.dart';
+import 'providers/email_preferences_provider.dart';
+import 'providers/auth_deep_link_provider.dart';
+  import 'providers/deep_link_provider.dart';
+  import 'providers/platform_deep_link_listener_provider.dart';
 import 'providers/main_tab_provider.dart';
 import 'providers/map_deep_link_provider.dart';
 import 'providers/deferred_onboarding_provider.dart';
@@ -54,8 +56,11 @@ import 'core/shell_entry_screen.dart';
 import 'core/url_strategy.dart';
 import 'core/deep_link_bootstrap_screen.dart';
 import 'main_app.dart';
-import 'screens/auth/sign_in_screen.dart';
-import 'screens/auth/register_screen.dart';
+  import 'screens/auth/sign_in_screen.dart';
+  import 'screens/auth/register_screen.dart';
+import 'screens/auth/forgot_password_screen.dart';
+import 'screens/auth/reset_password_screen.dart';
+import 'screens/auth/verify_email_screen.dart';
 import 'screens/art/ar_screen.dart';
 import 'screens/art/art_detail_screen.dart';
 import 'screens/desktop/art/desktop_artwork_detail_screen.dart';
@@ -323,11 +328,15 @@ class _AppLauncherState extends State<AppLauncher> {
               ),
               ChangeNotifierProvider(create: (context) => CommunityCommentsProvider()),
               ChangeNotifierProvider(create: (context) => DeepLinkProvider()),
-              ChangeNotifierProxyProvider<DeepLinkProvider, PlatformDeepLinkListenerProvider>(
+              ChangeNotifierProvider(create: (context) => AuthDeepLinkProvider()),
+              ChangeNotifierProxyProvider2<DeepLinkProvider, AuthDeepLinkProvider, PlatformDeepLinkListenerProvider>(
                 create: (context) => PlatformDeepLinkListenerProvider(),
-                update: (context, deepLinkProvider, listenerProvider) {
+                update: (context, deepLinkProvider, authDeepLinkProvider, listenerProvider) {
                   final provider = listenerProvider ?? PlatformDeepLinkListenerProvider();
-                  provider.bindDeepLinkProvider(deepLinkProvider);
+                  provider.bindProviders(
+                    deepLinkProvider: deepLinkProvider,
+                    authDeepLinkProvider: authDeepLinkProvider,
+                  );
                   return provider;
                 },
               ),
@@ -386,6 +395,15 @@ class _AppLauncherState extends State<AppLauncher> {
                   );
                   BackendApiService().bindAuthCoordinator(provider);
                   unawaited(provider.initialize());
+                  return provider;
+                },
+              ),
+              ChangeNotifierProxyProvider<SecurityGateProvider, EmailPreferencesProvider>(
+                create: (context) => EmailPreferencesProvider(),
+                update: (context, securityGateProvider, emailPreferencesProvider) {
+                  final provider = emailPreferencesProvider ?? EmailPreferencesProvider();
+                  final tokenPresent = (BackendApiService().getAuthToken() ?? '').trim().isNotEmpty;
+                  provider.bindSession(hasSession: tokenPresent || securityGateProvider.hasLocalAccount);
                   return provider;
                 },
               ),
@@ -527,27 +545,61 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
                child: SecurityGateOverlay(child: child ?? const SizedBox.shrink()),
              );
            },
-          onGenerateRoute: (settings) {
-            final name = (settings.name ?? '').trim();
-            if (name.isEmpty) {
-              return MaterialPageRoute(builder: (_) => const AppInitializer(), settings: settings);
-            }
+           onGenerateRoute: (settings) {
+             final name = (settings.name ?? '').trim();
+             if (name.isEmpty) {
+               return MaterialPageRoute(builder: (_) => const AppInitializer(), settings: settings);
+             }
+ 
+             final uri = Uri.tryParse(name) ?? Uri(path: name);
 
-            final uri = Uri.tryParse(name) ?? Uri(path: name);
-            final target = const ShareDeepLinkParser().parse(uri);
-            if (target != null) {
-              return MaterialPageRoute(
-                builder: (_) => DeepLinkBootstrapScreen(target: target),
+             if (uri.path == '/verify-email') {
+               final token = (uri.queryParameters['token'] ?? '').trim();
+               final email = (uri.queryParameters['email'] ?? '').trim();
+               if (token.isNotEmpty) {
+                 return MaterialPageRoute(
+                   builder: (_) => VerifyEmailScreen(
+                     email: email.isEmpty ? null : email,
+                     token: token,
+                   ),
+                   settings: RouteSettings(
+                     name: '/verify-email',
+                     arguments: {
+                       'token': token,
+                       if (email.isNotEmpty) 'email': email,
+                     },
+                   ),
+                 );
+               }
+             }
+
+             if (uri.path == '/reset-password') {
+               final token = (uri.queryParameters['token'] ?? '').trim();
+               if (token.isNotEmpty) {
+                 return MaterialPageRoute(
+                   builder: (_) => ResetPasswordScreen(token: token),
+                   settings: RouteSettings(
+                     name: '/reset-password',
+                     arguments: {'token': token},
+                   ),
+                 );
+               }
+             }
+
+             final target = const ShareDeepLinkParser().parse(uri);
+             if (target != null) {
+               return MaterialPageRoute(
+                 builder: (_) => DeepLinkBootstrapScreen(target: target),
                 settings: settings,
               );
             }
 
-            // Fall back to the main initializer for unknown named routes (e.g. browser refresh on /foo).
-            return MaterialPageRoute(builder: (_) => const AppInitializer(), settings: settings);
-          },
-          home: const AppInitializer(),
-          routes: {
-            '/main': (context) => const MainApp(),
+             // Fall back to the main initializer for unknown named routes (e.g. browser refresh on /foo).
+             return MaterialPageRoute(builder: (_) => const AppInitializer(), settings: settings);
+           },
+           home: const AppInitializer(),
+           routes: {
+             '/main': (context) => const MainApp(),
             // Alias for telemetry/URL semantics: marker deep links land here so
             // the browser URL becomes /map (not /main), while still rendering
             // the full shell.
@@ -581,18 +633,49 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
               if (args is Map) {
                 final redirectRoute = args['redirectRoute']?.toString();
                 final redirectArguments = args['redirectArguments'];
+                final email = args['email']?.toString();
                 return SignInScreen(
                   redirectRoute: redirectRoute,
                   redirectArguments: redirectArguments,
+                  initialEmail: email,
                 );
               }
               return const SignInScreen();
             },
-            '/register': (context) => const RegisterScreen(),
-            '/web3': (context) {
-              final l10n = AppLocalizations.of(context)!;
-              return Scaffold(
-                body: Center(child: Text(l10n.web3DashboardComingSoon)),
+             '/register': (context) => const RegisterScreen(),
+             '/verify-email': (context) {
+               final args = ModalRoute.of(context)?.settings.arguments;
+               String? token;
+               String? email;
+               if (args is Map) {
+                 token = args['token']?.toString();
+                 email = args['email']?.toString();
+               }
+               return VerifyEmailScreen(
+                 email: email?.trim().isNotEmpty == true ? email!.trim() : null,
+                 token: token?.trim().isNotEmpty == true ? token!.trim() : null,
+               );
+             },
+             '/forgot-password': (context) {
+               final args = ModalRoute.of(context)?.settings.arguments;
+               String? email;
+               if (args is Map) {
+                 email = args['email']?.toString();
+               }
+               return ForgotPasswordScreen(initialEmail: email);
+             },
+             '/reset-password': (context) {
+               final args = ModalRoute.of(context)?.settings.arguments;
+               String? token;
+               if (args is Map) {
+                 token = args['token']?.toString();
+               }
+               return ResetPasswordScreen(token: token);
+             },
+             '/web3': (context) {
+               final l10n = AppLocalizations.of(context)!;
+               return Scaffold(
+                 body: Center(child: Text(l10n.web3DashboardComingSoon)),
               );
             },
           },

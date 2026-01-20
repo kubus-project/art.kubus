@@ -48,6 +48,7 @@ class SettingsService {
     await prefs.setBool('loginNotifications', state.loginNotifications);
     await prefs.setBool('requirePin', state.requirePin);
     await prefs.setBool('biometricAuth', state.biometricAuth);
+    await prefs.setBool('biometricsDeclined', state.biometricsDeclined);
     await prefs.setBool('useBiometricsOnUnlock', state.useBiometricsOnUnlock);
     await prefs.setBool('privacyMode', state.privacyMode);
 
@@ -125,10 +126,14 @@ class SettingsService {
     final prefs = await SharedPreferences.getInstance();
     const removeKeys = {
       'jwt_token',
+      'token',
+      'auth_token',
+      'authToken',
       'wallet_address',
       'wallet',
       'walletAddress',
       'has_wallet',
+      'user_id',
       'completed_onboarding',
       'notification_permission_granted',
       'last_inactive_ts',
@@ -179,6 +184,7 @@ class SettingsState {
   final int autoLockSeconds;
   final bool requirePin;
   final bool biometricAuth;
+  final bool biometricsDeclined;
   final bool useBiometricsOnUnlock;
   final bool privacyMode;
 
@@ -212,6 +218,7 @@ class SettingsState {
     required this.autoLockSeconds,
     required this.requirePin,
     required this.biometricAuth,
+    required this.biometricsDeclined,
     required this.useBiometricsOnUnlock,
     required this.privacyMode,
     required this.analytics,
@@ -243,6 +250,7 @@ class SettingsState {
       autoLockSeconds: _autoLockSecondsForLabel('5 minutes'),
       requirePin: false,
       biometricAuth: false,
+      biometricsDeclined: false,
       useBiometricsOnUnlock: true,
       privacyMode: false,
       analytics: true,
@@ -287,6 +295,7 @@ class SettingsState {
       autoLockSeconds: storedAutoLockSeconds,
       requirePin: prefs.getBool('requirePin') ?? defaults.requirePin,
       biometricAuth: prefs.getBool('biometricAuth') ?? defaults.biometricAuth,
+      biometricsDeclined: prefs.getBool('biometricsDeclined') ?? defaults.biometricsDeclined,
       useBiometricsOnUnlock: prefs.getBool('useBiometricsOnUnlock') ?? defaults.useBiometricsOnUnlock,
       privacyMode: prefs.getBool('privacyMode') ?? defaults.privacyMode,
       analytics: prefs.getBool('enableAnalytics') ??
@@ -326,6 +335,7 @@ class SettingsState {
     int? autoLockSeconds,
     bool? requirePin,
     bool? biometricAuth,
+    bool? biometricsDeclined,
     bool? useBiometricsOnUnlock,
     bool? privacyMode,
     bool? analytics,
@@ -355,6 +365,7 @@ class SettingsState {
       autoLockSeconds: autoLockSeconds ?? this.autoLockSeconds,
       requirePin: requirePin ?? this.requirePin,
       biometricAuth: biometricAuth ?? this.biometricAuth,
+      biometricsDeclined: biometricsDeclined ?? this.biometricsDeclined,
       useBiometricsOnUnlock: useBiometricsOnUnlock ?? this.useBiometricsOnUnlock,
       privacyMode: privacyMode ?? this.privacyMode,
       analytics: analytics ?? this.analytics,
