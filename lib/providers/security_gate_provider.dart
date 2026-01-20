@@ -291,7 +291,11 @@ class SecurityGateProvider extends ChangeNotifier implements AuthSessionCoordina
          path.contains('verify') || 
          path.contains('signup') ||
          path.contains('login/email'));
-    if (isAuthEndpoint) {
+    
+    // Also skip re-auth on email verification routes (user waiting for verification)
+    final isEmailVerificationRoute = path.contains('/verify-email');
+    
+    if (isAuthEndpoint || isEmailVerificationRoute) {
       _cooldownUntil = DateTime.now().add(_promptCooldown);
       return const AuthReauthResult(AuthReauthOutcome.notEnabled, message: 'Auth endpoint does not require re-auth');
     }

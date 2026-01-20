@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:web/web.dart' as web;
+
 import '../../utils/kubus_color_roles.dart';
 import '../../widgets/app_logo.dart';
 import '../../widgets/gradient_icon_card.dart';
@@ -26,6 +28,7 @@ class _EmailVerificationSuccessScreenState extends State<EmailVerificationSucces
   String? _error;
   int _countdown = 5;
   Timer? _countdownTimer;
+  bool _tabCloseFailed = false;
 
   @override
   void initState() {
@@ -68,22 +71,52 @@ class _EmailVerificationSuccessScreenState extends State<EmailVerificationSucces
       });
       if (_countdown <= 0) {
         timer.cancel();
-        _closeTab();
+        _handleCountdownComplete();
       }
     });
   }
 
-  void _closeTab() {
-    // Try to close the window/tab
-    if (kIsWeb) {
-      // On web, try to close the window
-      // Note: This only works if the window was opened by script
-      // Otherwise it will just show the message
-      try {
-        // ignore: avoid_web_libraries_in_flutter
-        // We use conditional import in web-specific code
-        // For now, just show a message that they can close the tab
-      } catch (_) {}
+  Future<void> _handleCountdownComplete() async {
+    // Try to close the tab using JavaScript
+    try {
+      if (kDebugMode) {
+        debugPrint('EmailVerificationSuccessScreen: Countdown complete, attempting to close tab');
+      }
+      // Small delay to ensure UI updates complete
+      await Future.delayed(const Duration(milliseconds: 200));
+      _attemptCloseWindow();
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('EmailVerificationSuccessScreen: Error during countdown completion: $e');
+      }
+      if (mounted) {
+        setState(() => _tabCloseFailed = true);
+      }
+    }
+  }
+
+  void _attemptCloseWindow() {
+    try {
+      if (kDebugMode) {
+        debugPrint('EmailVerificationSuccessScreen: Calling window.close()');
+      }
+      // Try to close the window using the web API
+      web.window.close();
+      // If close succeeds, this code won't execute, but if it fails:
+      if (kDebugMode) {
+        debugPrint('EmailVerificationSuccessScreen: window.close() did not close the tab (browser blocked it)');
+      }
+      if (mounted) {
+        setState(() => _tabCloseFailed = true);
+      }
+    } catch (e) {
+      // Browser blocked the close or other error
+      if (kDebugMode) {
+        debugPrint('EmailVerificationSuccessScreen: Exception during window.close(): $e');
+      }
+      if (mounted) {
+        setState(() => _tabCloseFailed = true);
+      }
     }
   }
 
@@ -189,58 +222,93 @@ class _EmailVerificationSuccessScreenState extends State<EmailVerificationSucces
                                 textAlign: TextAlign.center,
                               ),
                               const SizedBox(height: 24),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 12,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: scheme.surfaceContainerHighest,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Column(
-                                  children: [
-                                    Text(
-                                      'This tab will auto-close in',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 14,
-                                        color: scheme.onSurface.withValues(alpha: 0.7),
+                              if (!_tabCloseFailed) ...[
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 12,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: scheme.surfaceContainerHighest,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        'Closing in',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 14,
+                                          color: scheme.onSurface.withValues(alpha: 0.7),
+                                        ),
+                                        textAlign: TextAlign.center,
                                       ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      '$_countdown',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 32,
-                                        fontWeight: FontWeight.w800,
-                                        color: roles.positiveAction,
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        '$_countdown',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 32,
+                                          fontWeight: FontWeight.w800,
+                                          color: roles.positiveAction,
+                                        ),
                                       ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Go back to your app and sign in to continue',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: scheme.onSurface.withValues(alpha: 0.85),
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ] else ...[
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 12,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: scheme.surfaceContainerHighest,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    'You may now close this tab',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: scheme.onSurface,
                                     ),
-                                  ],
+                                    textAlign: TextAlign.center,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'Go back to your session and sign in to continue',
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: scheme.onSurface.withValues(alpha: 0.85),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Go back to your app and sign in to continue',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: scheme.onSurface.withValues(alpha: 0.85),
+                                  ),
+                                  textAlign: TextAlign.center,
                                 ),
-                                textAlign: TextAlign.center,
-                              ),
+                              ],
                             ],
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pushReplacementNamed('/sign-in'),
-                          child: Text(
-                            'Or continue in this tab →',
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              color: scheme.primary,
+                        Padding(
+                          padding: const EdgeInsets.only(top: 16.0),
+                          child: TextButton(
+                            onPressed: () =>
+                                Navigator.of(context).pushReplacementNamed('/sign-in'),
+                            child: Text(
+                              'Or sign in manually →',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                color: scheme.primary,
+                              ),
                             ),
                           ),
                         ),
