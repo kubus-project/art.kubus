@@ -138,6 +138,25 @@ class SecurityGateProvider extends ChangeNotifier implements AuthSessionCoordina
 
   Future<void> _handleResumed() async {
     try {
+      // Check if we're on an auth-related route that shouldn't trigger auto-lock
+      final navigator = appNavigatorKey.currentState;
+      if (navigator != null && navigator.mounted) {
+        final currentRoute = ModalRoute.of(navigator.context);
+        if (currentRoute != null) {
+          final routeName = currentRoute.settings.name ?? '';
+          // Skip auto-lock on auth routes
+          if (routeName.contains('/verify-email') || 
+              routeName.contains('/sign-in') ||
+              routeName.contains('/register') ||
+              routeName.contains('/signup')) {
+            if (kDebugMode) {
+              debugPrint('SecurityGateProvider._handleResumed: Skipping auto-lock on auth route: $routeName');
+            }
+            return;
+          }
+        }
+      }
+
       final prefs = await SharedPreferences.getInstance();
       final lastInactiveMs = prefs.getInt('last_inactive_ts');
       await prefs.remove('last_inactive_ts');
