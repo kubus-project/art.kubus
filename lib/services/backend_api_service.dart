@@ -1185,7 +1185,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       if (response.statusCode == 404) {
         throw Exception('Email registration endpoint not available on the backend (received 404). Ensure the server is updated and ENABLE_EMAIL_AUTH=true.');
       }
-      throw Exception('Email registration failed: ${response.statusCode} ${response.body}');
+      throw BackendApiRequestException(statusCode: response.statusCode, path: uri.path, body: response.body);
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.registerWithEmail failed: $e');
       rethrow;
@@ -1219,9 +1219,128 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         _markRateLimited(key, response, defaultWindowMs: 900000);
         throw Exception(_rateLimitMessage(key));
       }
-      throw Exception('Email login failed: ${response.statusCode} ${response.body}');
+      throw BackendApiRequestException(statusCode: response.statusCode, path: uri.path, body: response.body);
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.loginWithEmail failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Resend email verification link
+  /// POST /api/auth/resend-verification { email }
+  Future<Map<String, dynamic>> resendEmailVerification({required String email}) async {
+    try {
+      final uri = Uri.parse('$baseUrl/api/auth/resend-verification');
+      final key = _rateLimitKey('POST', uri);
+      if (_isRateLimited(key)) {
+        throw Exception(_rateLimitMessage(key));
+      }
+      final response = await _post(
+        uri,
+        includeAuth: false,
+        headers: _getHeaders(includeAuth: false),
+        body: jsonEncode({'email': email}),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+      if (response.statusCode == 429) {
+        _markRateLimited(key, response, defaultWindowMs: 900000);
+        throw Exception(_rateLimitMessage(key));
+      }
+      throw BackendApiRequestException(statusCode: response.statusCode, path: uri.path, body: response.body);
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.resendEmailVerification failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Verify email
+  /// POST /api/auth/verify-email { token }
+  Future<Map<String, dynamic>> verifyEmail({required String token}) async {
+    try {
+      final uri = Uri.parse('$baseUrl/api/auth/verify-email');
+      final key = _rateLimitKey('POST', uri);
+      if (_isRateLimited(key)) {
+        throw Exception(_rateLimitMessage(key));
+      }
+      final response = await _post(
+        uri,
+        includeAuth: false,
+        headers: _getHeaders(includeAuth: false),
+        body: jsonEncode({'token': token}),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+      if (response.statusCode == 429) {
+        _markRateLimited(key, response, defaultWindowMs: 900000);
+        throw Exception(_rateLimitMessage(key));
+      }
+      throw BackendApiRequestException(statusCode: response.statusCode, path: uri.path, body: response.body);
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.verifyEmail failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Request password reset (always returns 200 when enabled)
+  /// POST /api/auth/forgot-password { email }
+  Future<Map<String, dynamic>> forgotPassword({required String email}) async {
+    try {
+      final uri = Uri.parse('$baseUrl/api/auth/forgot-password');
+      final key = _rateLimitKey('POST', uri);
+      if (_isRateLimited(key)) {
+        throw Exception(_rateLimitMessage(key));
+      }
+      final response = await _post(
+        uri,
+        includeAuth: false,
+        headers: _getHeaders(includeAuth: false),
+        body: jsonEncode({'email': email}),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+      if (response.statusCode == 429) {
+        _markRateLimited(key, response, defaultWindowMs: 900000);
+        throw Exception(_rateLimitMessage(key));
+      }
+      throw BackendApiRequestException(statusCode: response.statusCode, path: uri.path, body: response.body);
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.forgotPassword failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Reset password with token (single-use)
+  /// POST /api/auth/reset-password { token, newPassword }
+  Future<Map<String, dynamic>> resetPassword({
+    required String token,
+    required String newPassword,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl/api/auth/reset-password');
+      final key = _rateLimitKey('POST', uri);
+      if (_isRateLimited(key)) {
+        throw Exception(_rateLimitMessage(key));
+      }
+      final response = await _post(
+        uri,
+        includeAuth: false,
+        headers: _getHeaders(includeAuth: false),
+        body: jsonEncode({'token': token, 'newPassword': newPassword}),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+      if (response.statusCode == 429) {
+        _markRateLimited(key, response, defaultWindowMs: 900000);
+        throw Exception(_rateLimitMessage(key));
+      }
+      throw BackendApiRequestException(statusCode: response.statusCode, path: uri.path, body: response.body);
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.resetPassword failed: $e');
       rethrow;
     }
   }
@@ -1295,6 +1414,48 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getUserProfile failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Get authenticated user's email preferences
+  /// GET /api/users/me/preferences
+  Future<Map<String, dynamic>> getMyEmailPreferences() async {
+    try {
+      final uri = Uri.parse('$baseUrl/api/users/me/preferences');
+      final response = await _get(uri, headers: _getHeaders());
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+      if (response.statusCode == 404) {
+        throw Exception('Email preferences endpoint not available on the backend (received 404). Ensure the server is updated.');
+      }
+      throw BackendApiRequestException(statusCode: response.statusCode, path: uri.path, body: response.body);
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.getMyEmailPreferences failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Update authenticated user's email preferences
+  /// PATCH /api/users/me/preferences
+  Future<Map<String, dynamic>> updateMyEmailPreferences(Map<String, dynamic> preferences) async {
+    try {
+      final uri = Uri.parse('$baseUrl/api/users/me/preferences');
+      final response = await _patch(
+        uri,
+        headers: _getHeaders(),
+        body: jsonEncode(preferences),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+      if (response.statusCode == 404) {
+        throw Exception('Email preferences endpoint not available on the backend (received 404). Ensure the server is updated.');
+      }
+      throw BackendApiRequestException(statusCode: response.statusCode, path: uri.path, body: response.body);
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.updateMyEmailPreferences failed: $e');
       rethrow;
     }
   }

@@ -551,6 +551,12 @@ abstract class AppLocalizations {
   /// **'Password'**
   String get commonPassword;
 
+  /// No description provided for @commonConfirmPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm password'**
+  String get commonConfirmPassword;
+
   /// No description provided for @commonUsernameOptional.
   ///
   /// In en, this message translates to:
@@ -965,6 +971,30 @@ abstract class AppLocalizations {
   /// **'Enter a valid email and an 8+ character password.'**
   String get authEnterValidEmailPassword;
 
+  /// No description provided for @authEnterValidEmailInline.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid email address.'**
+  String get authEnterValidEmailInline;
+
+  /// No description provided for @authPasswordPolicyError.
+  ///
+  /// In en, this message translates to:
+  /// **'Password must be 8–128 characters and include a letter and a number.'**
+  String get authPasswordPolicyError;
+
+  /// No description provided for @authPasswordMismatchInline.
+  ///
+  /// In en, this message translates to:
+  /// **'Passwords do not match.'**
+  String get authPasswordMismatchInline;
+
+  /// No description provided for @authAccountAlreadyExistsToast.
+  ///
+  /// In en, this message translates to:
+  /// **'An account with this email already exists. Sign in instead.'**
+  String get authAccountAlreadyExistsToast;
+
   /// No description provided for @authEmailSignInFailed.
   ///
   /// In en, this message translates to:
@@ -976,6 +1006,210 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Registration failed. Please try again.'**
   String get authRegistrationFailed;
+
+  /// No description provided for @authVerifyEmailRegistrationToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Registration successful. Check your email to verify your account.'**
+  String get authVerifyEmailRegistrationToast;
+
+  /// No description provided for @authEmailNotVerifiedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Email not verified. Check your inbox to continue.'**
+  String get authEmailNotVerifiedToast;
+
+  /// No description provided for @authForgotPasswordLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Forgot password?'**
+  String get authForgotPasswordLink;
+
+  /// No description provided for @authVerifyEmailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify your email'**
+  String get authVerifyEmailTitle;
+
+  /// No description provided for @authVerifyEmailSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'We sent a verification link. Tap it to finish setting up your account.'**
+  String get authVerifyEmailSubtitle;
+
+  /// No description provided for @authVerifyEmailHighlightInbox.
+  ///
+  /// In en, this message translates to:
+  /// **'Open your email app and find our message'**
+  String get authVerifyEmailHighlightInbox;
+
+  /// No description provided for @authVerifyEmailHighlightSpam.
+  ///
+  /// In en, this message translates to:
+  /// **'Check spam/junk if you don’t see it'**
+  String get authVerifyEmailHighlightSpam;
+
+  /// No description provided for @authVerifyEmailHighlightSecure.
+  ///
+  /// In en, this message translates to:
+  /// **'Links expire for security'**
+  String get authVerifyEmailHighlightSecure;
+
+  /// No description provided for @authVerifyEmailStatusVerifying.
+  ///
+  /// In en, this message translates to:
+  /// **'Verifying…'**
+  String get authVerifyEmailStatusVerifying;
+
+  /// No description provided for @authVerifyEmailStatusVerified.
+  ///
+  /// In en, this message translates to:
+  /// **'Email verified'**
+  String get authVerifyEmailStatusVerified;
+
+  /// No description provided for @authVerifyEmailStatusPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for verification'**
+  String get authVerifyEmailStatusPending;
+
+  /// No description provided for @authVerifyEmailResendButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend verification email'**
+  String get authVerifyEmailResendButton;
+
+  /// No description provided for @authVerifyEmailEnterEmailInline.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your email to resend verification.'**
+  String get authVerifyEmailEnterEmailInline;
+
+  /// No description provided for @authVerifyEmailResendToast.
+  ///
+  /// In en, this message translates to:
+  /// **'If an account exists for this email, a verification email will be sent shortly.'**
+  String get authVerifyEmailResendToast;
+
+  /// No description provided for @authVerifyEmailResendFailedInline.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not resend verification email. Please try again.'**
+  String get authVerifyEmailResendFailedInline;
+
+  /// No description provided for @authVerifyEmailFailedInline.
+  ///
+  /// In en, this message translates to:
+  /// **'This verification link is invalid or expired.'**
+  String get authVerifyEmailFailedInline;
+
+  /// No description provided for @authVerifyEmailSuccessToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Email verified. You can now sign in.'**
+  String get authVerifyEmailSuccessToast;
+
+  /// No description provided for @authVerifyEmailSignInHint.
+  ///
+  /// In en, this message translates to:
+  /// **'After verifying, return here to sign in.'**
+  String get authVerifyEmailSignInHint;
+
+  /// No description provided for @authForgotPasswordTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset your password'**
+  String get authForgotPasswordTitle;
+
+  /// No description provided for @authForgotPasswordSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your email and we’ll send a reset link.'**
+  String get authForgotPasswordSubtitle;
+
+  /// No description provided for @authForgotPasswordHighlightOne.
+  ///
+  /// In en, this message translates to:
+  /// **'We never reveal whether an email exists'**
+  String get authForgotPasswordHighlightOne;
+
+  /// No description provided for @authForgotPasswordHighlightTwo.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset links expire quickly'**
+  String get authForgotPasswordHighlightTwo;
+
+  /// No description provided for @authForgotPasswordEnterEmailInline.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your email.'**
+  String get authForgotPasswordEnterEmailInline;
+
+  /// No description provided for @authForgotPasswordSendButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Send reset link'**
+  String get authForgotPasswordSendButton;
+
+  /// No description provided for @authForgotPasswordSentToast.
+  ///
+  /// In en, this message translates to:
+  /// **'If an account exists for this email, a reset link will be sent shortly.'**
+  String get authForgotPasswordSentToast;
+
+  /// No description provided for @authForgotPasswordFailedInline.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not request a reset link. Please try again.'**
+  String get authForgotPasswordFailedInline;
+
+  /// No description provided for @authResetPasswordTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a new password'**
+  String get authResetPasswordTitle;
+
+  /// No description provided for @authResetPasswordSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a new password for your account.'**
+  String get authResetPasswordSubtitle;
+
+  /// No description provided for @authResetPasswordHighlightOne.
+  ///
+  /// In en, this message translates to:
+  /// **'Use a strong password'**
+  String get authResetPasswordHighlightOne;
+
+  /// No description provided for @authResetPasswordHighlightTwo.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset links are single-use'**
+  String get authResetPasswordHighlightTwo;
+
+  /// No description provided for @authResetPasswordMissingTokenInline.
+  ///
+  /// In en, this message translates to:
+  /// **'This reset link is missing a token.'**
+  String get authResetPasswordMissingTokenInline;
+
+  /// No description provided for @authResetPasswordSubmitButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset password'**
+  String get authResetPasswordSubmitButton;
+
+  /// No description provided for @authResetPasswordSuccessToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Password updated. You can now sign in.'**
+  String get authResetPasswordSuccessToast;
+
+  /// No description provided for @authResetPasswordFailedInline.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not reset your password. The link may be invalid or expired.'**
+  String get authResetPasswordFailedInline;
 
   /// No description provided for @authGoogleSignInFailed.
   ///
@@ -3442,6 +3676,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Receive promotional content'**
   String get settingsMarketingEmailsSubtitle;
+
+  /// No description provided for @settingsEmailPreferencesSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Email preferences'**
+  String get settingsEmailPreferencesSectionTitle;
+
+  /// No description provided for @settingsEmailPreferencesTransactionalNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Account emails (verification and password reset) are always enabled.'**
+  String get settingsEmailPreferencesTransactionalNote;
+
+  /// No description provided for @settingsEmailPreferencesProductUpdatesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Product updates'**
+  String get settingsEmailPreferencesProductUpdatesTitle;
+
+  /// No description provided for @settingsEmailPreferencesProductUpdatesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Occasional announcements about new features'**
+  String get settingsEmailPreferencesProductUpdatesSubtitle;
+
+  /// No description provided for @settingsEmailPreferencesNewsletterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Newsletter'**
+  String get settingsEmailPreferencesNewsletterTitle;
+
+  /// No description provided for @settingsEmailPreferencesNewsletterSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'News and highlights from art.kubus'**
+  String get settingsEmailPreferencesNewsletterSubtitle;
+
+  /// No description provided for @settingsEmailPreferencesCommunityDigestTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Community digest'**
+  String get settingsEmailPreferencesCommunityDigestTitle;
+
+  /// No description provided for @settingsEmailPreferencesCommunityDigestSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Periodic summary of community activity'**
+  String get settingsEmailPreferencesCommunityDigestSubtitle;
+
+  /// No description provided for @settingsEmailPreferencesSecurityAlertsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Security alerts'**
+  String get settingsEmailPreferencesSecurityAlertsTitle;
+
+  /// No description provided for @settingsEmailPreferencesSecurityAlertsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Important account security notifications'**
+  String get settingsEmailPreferencesSecurityAlertsSubtitle;
+
+  /// No description provided for @settingsEmailPreferencesTransactionalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Account emails'**
+  String get settingsEmailPreferencesTransactionalTitle;
+
+  /// No description provided for @settingsEmailPreferencesTransactionalSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification and password reset emails are always enabled'**
+  String get settingsEmailPreferencesTransactionalSubtitle;
+
+  /// No description provided for @settingsEmailPreferencesUpdateFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not update email preferences. Please try again.'**
+  String get settingsEmailPreferencesUpdateFailedToast;
 
   /// No description provided for @settingsAccountTypeTitle.
   ///

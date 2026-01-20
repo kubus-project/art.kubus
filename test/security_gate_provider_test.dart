@@ -1,8 +1,15 @@
 import 'package:art_kubus/providers/security_gate_provider.dart';
 import 'package:art_kubus/services/auth_session_coordinator.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() {
+    SharedPreferences.setMockInitialValues(<String, Object>{'jwt_token': 'stored-token'});
+  });
+
   test('SecurityGateProvider coalesces concurrent auth failures', () async {
     final gate = SecurityGateProvider(promptCooldown: Duration.zero);
 

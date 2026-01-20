@@ -15,6 +15,7 @@ import '../providers/platform_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/security_gate_provider.dart';
+import '../providers/email_preferences_provider.dart';
 import '../models/wallet.dart';
 import '../services/backend_api_service.dart';
 import '../services/push_notification_service.dart';
@@ -85,6 +86,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   bool _loginNotifications = true;
   bool _requirePin = false;
   bool _biometricAuth = false;
+  bool _biometricsDeclined = false;
   bool _useBiometricsOnUnlock = true;
   bool _privacyMode = false;
   bool _hasPin = false;
@@ -889,12 +891,22 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   Widget _buildProfileSection(AppLocalizations l10n) {
     final profileProvider = Provider.of<ProfileProvider>(context);
+    final emailPreferencesProvider = context.watch<EmailPreferencesProvider>();
+    if (emailPreferencesProvider.canManage &&
+        !emailPreferencesProvider.initialized &&
+        !emailPreferencesProvider.isLoading) {
+      unawaited(emailPreferencesProvider.initialize());
+    }
     final artistRole = profileProvider.currentUser?.isArtist ?? false;
     final institutionRole = profileProvider.currentUser?.isInstitution ?? false;
     final roleSummary = l10n.settingsRoleSummary(
       artistRole ? l10n.commonOn : l10n.commonOff,
       institutionRole ? l10n.commonOn : l10n.commonOff,
     );
+
+    final emailNotificationsState = emailPreferencesProvider.canManage
+        ? (emailPreferencesProvider.preferences.productUpdates ? l10n.commonOn : l10n.commonOff)
+        : (_emailNotifications ? l10n.commonOn : l10n.commonOff);
     return _buildSection(
       l10n.settingsProfileSectionTitle,
       Icons.person_outline,
@@ -955,7 +967,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           l10n.settingsAccountManagementTileTitle,
           l10n.settingsAccountSummary(
             _accountType,
-            _emailNotifications ? l10n.commonOn : l10n.commonOff,
+            emailNotificationsState,
           ),
           Icons.manage_accounts,
           onTap: () {
@@ -1840,6 +1852,9 @@ class _SettingsScreenState extends State<SettingsScreen>
       if (!value) {
         _useBiometricsOnUnlock = true;
       }
+      if (value) {
+        _biometricsDeclined = false;
+      }
     });
     await _saveAllSettings();
     await gate.reloadSettings();
@@ -2475,6 +2490,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       autoLockSeconds: _autoLockSecondsFromLabel(_autoLockTime),
       requirePin: _requirePin,
       biometricAuth: _biometricAuth,
+      biometricsDeclined: _biometricsDeclined,
       useBiometricsOnUnlock: _useBiometricsOnUnlock,
       privacyMode: _privacyMode,
       analytics: _analytics,
@@ -2641,6 +2657,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       _autoLockTime = settings.autoLockTime;
       _requirePin = settings.requirePin;
       _biometricAuth = settings.biometricAuth && hasPin && biometricsSupported;
+      _biometricsDeclined = settings.biometricsDeclined;
       _useBiometricsOnUnlock = settings.useBiometricsOnUnlock;
       _privacyMode = settings.privacyMode;
       _hasPin = hasPin;
@@ -3704,117 +3721,231 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   void _showAccountManagementDialog() {
     final l10n = AppLocalizations.of(context)!;
+    final emailPreferencesProvider = context.read<EmailPreferencesProvider>();
+    if (emailPreferencesProvider.canManage &&
+        !emailPreferencesProvider.initialized &&
+        !emailPreferencesProvider.isLoading) {
+      unawaited(emailPreferencesProvider.initialize());
+    }
     showKubusDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => KubusAlertDialog(
-          backgroundColor: Theme.of(context).colorScheme.surface,
-          title: Text(
-            l10n.settingsAccountManagementDialogTitle,
-            style: GoogleFonts.inter(
-              color: Theme.of(context).colorScheme.onSurface,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildSwitchTile(
-                    l10n.settingsEmailNotificationsTitle,
-                    l10n.settingsEmailNotificationsSubtitle,
-                    _emailNotifications,
-                    (value) => setDialogState(() => _emailNotifications = value),
-                  ),
-                  _buildSwitchTile(
-                    l10n.settingsPushNotificationsTitle,
-                    l10n.settingsPushNotificationsSubtitle,
-                    _pushNotifications,
-                    (value) async {
-                      setDialogState(() => _pushNotifications = value);
-                      await _togglePushNotifications(value);
-                    },
-                  ),
-                  _buildSwitchTile(
-                    l10n.settingsMarketingEmailsTitle,
-                    l10n.settingsMarketingEmailsSubtitle,
-                    _marketingEmails,
-                    (value) => setDialogState(() => _marketingEmails = value),
-                  ),
-                  _buildDropdownTile(
-                    l10n.settingsAccountTypeTitle,
-                    l10n.settingsAccountTypeSubtitle,
-                    _accountType,
-                    ['Standard', 'Premium', 'Enterprise'],
-                    (value) => setDialogState(() => _accountType = value!),
-                    optionLabelBuilder: (option) {
-                      switch (option) {
-                        case 'Standard':
-                          return l10n.settingsAccountTypeStandard;
-                        case 'Premium':
-                          return l10n.settingsAccountTypePremium;
-                        case 'Enterprise':
-                          return l10n.settingsAccountTypeEnterprise;
-                        default:
-                          return option;
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  _buildActionTile(
-                    l10n.settingsDeactivateAccountTileTitle,
-                    l10n.settingsDeactivateAccountTileSubtitle,
-                    Icons.pause_circle_outline,
-                    () {
-                      Navigator.pop(context);
-                      _showAccountDeactivationDialog();
-                    },
-                  ),
-                  _buildActionTile(
-                    l10n.settingsDeleteAccountTileTitle,
-                    l10n.settingsDeleteAccountTileSubtitle,
-                    Icons.delete_forever,
-                    () {
-                      Navigator.pop(context);
-                      _showDeleteAccountDialog();
-                    },
-                  ),
-                ],
+        builder: (context, setDialogState) => Consumer<EmailPreferencesProvider>(
+          builder: (context, emailPreferences, _) => KubusAlertDialog(
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            title: Text(
+              l10n.settingsAccountManagementDialogTitle,
+              style: GoogleFonts.inter(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontWeight: FontWeight.bold,
               ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(
-                l10n.commonCancel,
-                style: GoogleFonts.inter(
-                  color: Theme.of(context).colorScheme.outline,
+            content: SizedBox(
+              width: double.maxFinite,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.settingsEmailPreferencesSectionTitle,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      l10n.settingsEmailPreferencesTransactionalNote,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                      ),
+                    ),
+                    if (emailPreferences.isLoading) ...[
+                      const SizedBox(height: 12),
+                      LinearProgressIndicator(
+                        minHeight: 2,
+                        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Provider.of<ThemeProvider>(context, listen: false).accentColor,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    _buildSwitchTile(
+                      l10n.settingsEmailPreferencesProductUpdatesTitle,
+                      l10n.settingsEmailPreferencesProductUpdatesSubtitle,
+                      emailPreferences.preferences.productUpdates,
+                      (value) {
+                        final next = emailPreferences.preferences.copyWith(productUpdates: value);
+                        final messenger = ScaffoldMessenger.of(this.context);
+                        unawaited(() async {
+                          final ok = await emailPreferences.updatePreferences(next);
+                          if (!ok && mounted) {
+                            messenger.showKubusSnackBar(
+                              SnackBar(content: Text(l10n.settingsEmailPreferencesUpdateFailedToast)),
+                            );
+                          }
+                        }());
+                      },
+                      enabled: emailPreferences.canManage && !emailPreferences.isUpdating,
+                    ),
+                    _buildSwitchTile(
+                      l10n.settingsEmailPreferencesNewsletterTitle,
+                      l10n.settingsEmailPreferencesNewsletterSubtitle,
+                      emailPreferences.preferences.newsletter,
+                      (value) {
+                        final next = emailPreferences.preferences.copyWith(newsletter: value);
+                        final messenger = ScaffoldMessenger.of(this.context);
+                        unawaited(() async {
+                          final ok = await emailPreferences.updatePreferences(next);
+                          if (!ok && mounted) {
+                            messenger.showKubusSnackBar(
+                              SnackBar(content: Text(l10n.settingsEmailPreferencesUpdateFailedToast)),
+                            );
+                          }
+                        }());
+                      },
+                      enabled: emailPreferences.canManage && !emailPreferences.isUpdating,
+                    ),
+                    _buildSwitchTile(
+                      l10n.settingsEmailPreferencesCommunityDigestTitle,
+                      l10n.settingsEmailPreferencesCommunityDigestSubtitle,
+                      emailPreferences.preferences.communityDigest,
+                      (value) {
+                        final next = emailPreferences.preferences.copyWith(communityDigest: value);
+                        final messenger = ScaffoldMessenger.of(this.context);
+                        unawaited(() async {
+                          final ok = await emailPreferences.updatePreferences(next);
+                          if (!ok && mounted) {
+                            messenger.showKubusSnackBar(
+                              SnackBar(content: Text(l10n.settingsEmailPreferencesUpdateFailedToast)),
+                            );
+                          }
+                        }());
+                      },
+                      enabled: emailPreferences.canManage && !emailPreferences.isUpdating,
+                    ),
+                    _buildSwitchTile(
+                      l10n.settingsEmailPreferencesSecurityAlertsTitle,
+                      l10n.settingsEmailPreferencesSecurityAlertsSubtitle,
+                      emailPreferences.preferences.securityAlerts,
+                      (value) {
+                        final next = emailPreferences.preferences.copyWith(securityAlerts: value);
+                        final messenger = ScaffoldMessenger.of(this.context);
+                        unawaited(() async {
+                          final ok = await emailPreferences.updatePreferences(next);
+                          if (!ok && mounted) {
+                            messenger.showKubusSnackBar(
+                              SnackBar(content: Text(l10n.settingsEmailPreferencesUpdateFailedToast)),
+                            );
+                          }
+                        }());
+                      },
+                      enabled: emailPreferences.canManage && !emailPreferences.isUpdating,
+                    ),
+                    _buildSwitchTile(
+                      l10n.settingsEmailPreferencesTransactionalTitle,
+                      l10n.settingsEmailPreferencesTransactionalSubtitle,
+                      true,
+                      (_) {},
+                      enabled: false,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      l10n.permissionsNotificationsTitle,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildSwitchTile(
+                      l10n.settingsPushNotificationsTitle,
+                      l10n.settingsPushNotificationsSubtitle,
+                      _pushNotifications,
+                      (value) async {
+                        setDialogState(() => _pushNotifications = value);
+                        await _togglePushNotifications(value);
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    _buildDropdownTile(
+                      l10n.settingsAccountTypeTitle,
+                      l10n.settingsAccountTypeSubtitle,
+                      _accountType,
+                      ['Standard', 'Premium', 'Enterprise'],
+                      (value) => setDialogState(() => _accountType = value!),
+                      optionLabelBuilder: (option) {
+                        switch (option) {
+                          case 'Standard':
+                            return l10n.settingsAccountTypeStandard;
+                          case 'Premium':
+                            return l10n.settingsAccountTypePremium;
+                          case 'Enterprise':
+                            return l10n.settingsAccountTypeEnterprise;
+                          default:
+                            return option;
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    _buildActionTile(
+                      l10n.settingsDeactivateAccountTileTitle,
+                      l10n.settingsDeactivateAccountTileSubtitle,
+                      Icons.pause_circle_outline,
+                      () {
+                        Navigator.pop(context);
+                        _showAccountDeactivationDialog();
+                      },
+                    ),
+                    _buildActionTile(
+                      l10n.settingsDeleteAccountTileTitle,
+                      l10n.settingsDeleteAccountTileSubtitle,
+                      Icons.delete_forever,
+                      () {
+                        Navigator.pop(context);
+                        _showDeleteAccountDialog();
+                      },
+                    ),
+                  ],
                 ),
               ),
             ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
-                foregroundColor: Colors.white,
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  l10n.commonCancel,
+                  style: GoogleFonts.inter(
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
+                ),
               ),
-              onPressed: () async {
-                final dialogContext = context;
-                final navigator = Navigator.of(dialogContext);
-                final messenger = ScaffoldMessenger.of(dialogContext);
-                setState(() {}); // Update main state
-                await _saveAllSettings();
-                if (!mounted) return;
-                navigator.pop();
-                messenger.showKubusSnackBar(
-                  SnackBar(content: Text(l10n.settingsAccountSettingsUpdatedToast)),
-                );
-              },
-              child: Text(l10n.commonSave),
-            ),
-          ],
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () async {
+                  final dialogContext = context;
+                  final navigator = Navigator.of(dialogContext);
+                  final messenger = ScaffoldMessenger.of(dialogContext);
+                  setState(() {}); // Update main state
+                  await _saveAllSettings();
+                  if (!mounted) return;
+                  navigator.pop();
+                  messenger.showKubusSnackBar(
+                    SnackBar(content: Text(l10n.settingsAccountSettingsUpdatedToast)),
+                  );
+                },
+                child: Text(l10n.commonSave),
+              ),
+            ],
+          ),
         ),
       ),
     );

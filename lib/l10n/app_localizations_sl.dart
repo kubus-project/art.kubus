@@ -239,6 +239,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get commonPassword => 'Geslo';
 
   @override
+  String get commonConfirmPassword => 'Potrdite geslo';
+
+  @override
   String get commonUsernameOptional => 'Uporabniško ime (neobvezno)';
 
   @override
@@ -450,10 +453,124 @@ class AppLocalizationsSl extends AppLocalizations {
   String get authEnterValidEmailPassword => 'Vnesi veljavno e-pošto in geslo (vsaj 8 znakov).';
 
   @override
+  String get authEnterValidEmailInline => 'Vnesi veljaven e-poštni naslov.';
+
+  @override
+  String get authPasswordPolicyError => 'Geslo mora biti dolgo 8–128 znakov in vsebuje črko ter številko.';
+
+  @override
+  String get authPasswordMismatchInline => 'Gesli se ne ujemata.';
+
+  @override
+  String get authAccountAlreadyExistsToast => 'Račun s tem e-poštnim naslovom že obstaja. Prijavi se.';
+
+  @override
   String get authEmailSignInFailed => 'Prijava z e-pošto ni uspela. Poskusi znova.';
 
   @override
   String get authRegistrationFailed => 'Registracija ni uspela. Poskusi znova.';
+
+  @override
+  String get authVerifyEmailRegistrationToast => 'Registracija uspešna. Preveri e-pošto za potrditev računa.';
+
+  @override
+  String get authEmailNotVerifiedToast => 'E-pošta ni potrjena. Preveri prejeto pošto.';
+
+  @override
+  String get authForgotPasswordLink => 'Ste pozabili geslo?';
+
+  @override
+  String get authVerifyEmailTitle => 'Potrdi e-pošto';
+
+  @override
+  String get authVerifyEmailSubtitle => 'Poslali smo povezavo za potrditev. Odpri jo, da dokončaš nastavitev računa.';
+
+  @override
+  String get authVerifyEmailHighlightInbox => 'Odpri e-poštno aplikacijo in poišči naše sporočilo';
+
+  @override
+  String get authVerifyEmailHighlightSpam => 'Če ga ne vidiš, preveri vsiljeno/spam pošto';
+
+  @override
+  String get authVerifyEmailHighlightSecure => 'Povezave iz varnostnih razlogov potečejo';
+
+  @override
+  String get authVerifyEmailStatusVerifying => 'Potrjevanje…';
+
+  @override
+  String get authVerifyEmailStatusVerified => 'E-pošta potrjena';
+
+  @override
+  String get authVerifyEmailStatusPending => 'Čakanje na potrditev';
+
+  @override
+  String get authVerifyEmailResendButton => 'Ponovno pošlji potrditveno e-pošto';
+
+  @override
+  String get authVerifyEmailEnterEmailInline => 'Vnesi e-pošto za ponovno pošiljanje potrditve.';
+
+  @override
+  String get authVerifyEmailResendToast => 'Če račun za ta e-poštni naslov obstaja, bomo kmalu poslali potrditveno e-pošto.';
+
+  @override
+  String get authVerifyEmailResendFailedInline => 'Ponovno pošiljanje ni uspelo. Poskusi znova.';
+
+  @override
+  String get authVerifyEmailFailedInline => 'Povezava je neveljavna ali je potekla.';
+
+  @override
+  String get authVerifyEmailSuccessToast => 'E-pošta potrjena. Zdaj se lahko prijaviš.';
+
+  @override
+  String get authVerifyEmailSignInHint => 'Po potrditvi se vrni in se prijavi.';
+
+  @override
+  String get authForgotPasswordTitle => 'Ponastavi geslo';
+
+  @override
+  String get authForgotPasswordSubtitle => 'Vnesi e-pošto in poslali bomo povezavo za ponastavitev.';
+
+  @override
+  String get authForgotPasswordHighlightOne => 'Nikoli ne razkrijemo, ali račun obstaja';
+
+  @override
+  String get authForgotPasswordHighlightTwo => 'Povezave hitro potečejo';
+
+  @override
+  String get authForgotPasswordEnterEmailInline => 'Vnesi e-pošto.';
+
+  @override
+  String get authForgotPasswordSendButton => 'Pošlji povezavo';
+
+  @override
+  String get authForgotPasswordSentToast => 'Če račun za ta e-poštni naslov obstaja, bomo kmalu poslali povezavo za ponastavitev.';
+
+  @override
+  String get authForgotPasswordFailedInline => 'Zahteva ni uspela. Poskusi znova.';
+
+  @override
+  String get authResetPasswordTitle => 'Izberi novo geslo';
+
+  @override
+  String get authResetPasswordSubtitle => 'Ustvari novo geslo za svoj račun.';
+
+  @override
+  String get authResetPasswordHighlightOne => 'Uporabi močno geslo';
+
+  @override
+  String get authResetPasswordHighlightTwo => 'Povezava je enkratna';
+
+  @override
+  String get authResetPasswordMissingTokenInline => 'Povezavi za ponastavitev manjka žeton.';
+
+  @override
+  String get authResetPasswordSubmitButton => 'Ponastavi geslo';
+
+  @override
+  String get authResetPasswordSuccessToast => 'Geslo posodobljeno. Zdaj se lahko prijaviš.';
+
+  @override
+  String get authResetPasswordFailedInline => 'Ponastavitev ni uspela. Povezava je morda neveljavna ali potekla.';
 
   @override
   String get authGoogleSignInFailed => 'Prijava z Googlom ni uspela. Poskusi znova.';
@@ -1726,6 +1843,45 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get settingsMarketingEmailsSubtitle => 'Prejemaj promocijsko vsebino';
+
+  @override
+  String get settingsEmailPreferencesSectionTitle => 'Nastavitve e‑pošte';
+
+  @override
+  String get settingsEmailPreferencesTransactionalNote => 'E‑pošta za račun (potrditev in ponastavitev gesla) je vedno omogočena.';
+
+  @override
+  String get settingsEmailPreferencesProductUpdatesTitle => 'Posodobitve izdelka';
+
+  @override
+  String get settingsEmailPreferencesProductUpdatesSubtitle => 'Občasna obvestila o novih funkcijah';
+
+  @override
+  String get settingsEmailPreferencesNewsletterTitle => 'Novice';
+
+  @override
+  String get settingsEmailPreferencesNewsletterSubtitle => 'Novice in poudarki iz art.kubus';
+
+  @override
+  String get settingsEmailPreferencesCommunityDigestTitle => 'Povzetek skupnosti';
+
+  @override
+  String get settingsEmailPreferencesCommunityDigestSubtitle => 'Periodični povzetek aktivnosti skupnosti';
+
+  @override
+  String get settingsEmailPreferencesSecurityAlertsTitle => 'Varnostna opozorila';
+
+  @override
+  String get settingsEmailPreferencesSecurityAlertsSubtitle => 'Pomembna obvestila o varnosti računa';
+
+  @override
+  String get settingsEmailPreferencesTransactionalTitle => 'E‑pošta za račun';
+
+  @override
+  String get settingsEmailPreferencesTransactionalSubtitle => 'E‑pošta za potrditev in ponastavitev gesla je vedno omogočena';
+
+  @override
+  String get settingsEmailPreferencesUpdateFailedToast => 'Nastavitev e‑pošte ni bilo mogoče posodobiti. Poskusi znova.';
 
   @override
   String get settingsAccountTypeTitle => 'Vrsta računa';

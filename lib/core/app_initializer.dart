@@ -18,10 +18,13 @@ import '../providers/web3provider.dart';
 import '../providers/cache_provider.dart';
 import '../providers/locale_provider.dart';
 import '../providers/deep_link_provider.dart';
+import '../providers/auth_deep_link_provider.dart';
 import '../providers/deferred_onboarding_provider.dart';
 import '../services/backend_api_service.dart';
 import '../services/app_bootstrap_service.dart';
 import '../services/onboarding_state_service.dart';
+import '../services/auth_gating_service.dart';
+import '../services/auth/auth_deep_link_parser.dart';
 import '../screens/onboarding/onboarding_screen.dart';
 import '../screens/desktop/onboarding/desktop_onboarding_screen.dart';
 import '../screens/desktop/desktop_shell.dart';
@@ -193,6 +196,11 @@ class _AppInitializerState extends State<AppInitializer> {
     final hasWallet = prefs.getBool('has_wallet') ?? false;
     final hasCompletedOnboarding = onboardingState.hasCompletedOnboarding;
     final hasAuthToken = (BackendApiService().getAuthToken() ?? '').isNotEmpty;
+    final hasLocalAccount = AuthGatingService.hasLocalAccountSync(prefs: prefs);
+    final shouldShowFirstRunOnboarding = await AuthGatingService.shouldShowFirstRunOnboarding(
+      prefs: prefs,
+      onboardingState: onboardingState,
+    );
     final shouldShowSignIn = !hasWallet &&
       !hasAuthToken &&
       AppConfig.enableMultiAuthEntry &&
@@ -205,6 +213,8 @@ class _AppInitializerState extends State<AppInitializer> {
       debugPrint('  userSkipOnboarding: $userSkipOnboarding');
       debugPrint('  hasWallet: $hasWallet');
       debugPrint('  hasCompletedOnboarding: $hasCompletedOnboarding');
+      debugPrint('  hasLocalAccount: $hasLocalAccount');
+      debugPrint('  shouldShowFirstRunOnboarding: $shouldShowFirstRunOnboarding');
       debugPrint('  showWelcomeScreen: ${AppConfig.showWelcomeScreen}');
       debugPrint('  enforceWalletOnboarding: ${AppConfig.enforceWalletOnboarding}');
     }
@@ -232,6 +242,37 @@ class _AppInitializerState extends State<AppInitializer> {
       context: context,
       walletAddress: walletAddress,
     );
+
+    final pendingAuthLink = (() {
+      try {
+        return Provider.of<AuthDeepLinkProvider>(context, listen: false).consumePending();
+      } catch (_) {
+        return null;
+      }
+    })();
+    if (pendingAuthLink != null) {
+      unawaited(warmupFuture);
+      if (!mounted) return;
+      _didNavigate = true;
+      switch (pendingAuthLink.type) {
+        case AuthDeepLinkType.verifyEmail:
+          navigator.pushReplacementNamed(
+            '/verify-email',
+            arguments: {
+              'token': pendingAuthLink.token,
+              if (pendingAuthLink.email != null) 'email': pendingAuthLink.email,
+            },
+          );
+          break;
+        case AuthDeepLinkType.resetPassword:
+          navigator.pushReplacementNamed(
+            '/reset-password',
+            arguments: {'token': pendingAuthLink.token},
+          );
+          break;
+      }
+      return;
+    }
 
     // If a share/deep link landed the user on this initializer, route into the
     // shell first. The shell (MainApp/DesktopShell) will consume & open the
@@ -288,7 +329,7 @@ class _AppInitializerState extends State<AppInitializer> {
         _didNavigate = true;
         navigator.pushReplacementNamed('/main');
       }
-    } else if (!hasCompletedOnboarding) {
+    } else if (shouldShowFirstRunOnboarding) {
       // First-time user - show onboarding (no wallet required)
       // Use desktop onboarding for desktop layouts
       if (isDesktop) {

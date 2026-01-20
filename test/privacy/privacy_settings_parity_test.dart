@@ -1,4 +1,5 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/providers/email_preferences_provider.dart';
 import 'package:art_kubus/providers/locale_provider.dart';
 import 'package:art_kubus/providers/navigation_provider.dart';
 import 'package:art_kubus/providers/notification_provider.dart';
@@ -12,6 +13,7 @@ import 'package:art_kubus/screens/community/profile_edit_screen.dart' as mobile_
 import 'package:art_kubus/screens/desktop/community/desktop_profile_edit_screen.dart' as desktop_profile_edit;
 import 'package:art_kubus/screens/desktop/desktop_settings_screen.dart';
 import 'package:art_kubus/screens/settings_screen.dart';
+import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/solana_wallet_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -41,6 +43,7 @@ Widget _wrapWithApp({
       ChangeNotifierProvider.value(value: navigationProvider),
       ChangeNotifierProvider.value(value: localeProvider),
       ChangeNotifierProvider.value(value: statsProvider),
+      ChangeNotifierProvider(create: (_) => EmailPreferencesProvider(backendApi: BackendApiService())),
     ],
     child: MaterialApp(
       locale: const Locale('en'),
@@ -56,6 +59,7 @@ void main() {
 
   testWidgets('Mobile privacy toggles persist via ProfileProvider and reflect in Edit Profile', (tester) async {
     SharedPreferences.setMockInitialValues({});
+    BackendApiService().setAuthTokenForTesting(null);
     tester.view.devicePixelRatio = 1.0;
     await tester.binding.setSurfaceSize(const Size(1200, 900));
     addTearDown(() async => tester.binding.setSurfaceSize(null));
@@ -142,6 +146,7 @@ void main() {
 
   testWidgets('Desktop privacy toggles persist via ProfileProvider and reflect in Desktop Edit Profile', (tester) async {
     SharedPreferences.setMockInitialValues({});
+    BackendApiService().setAuthTokenForTesting(null);
     tester.view.devicePixelRatio = 1.0;
     await tester.binding.setSurfaceSize(const Size(1600, 1200));
     addTearDown(() async => tester.binding.setSurfaceSize(null));

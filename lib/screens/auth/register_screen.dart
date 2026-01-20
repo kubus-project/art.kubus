@@ -8,16 +8,19 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../config/config.dart';
 import '../../providers/profile_provider.dart';
+import '../../providers/security_gate_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../providers/web3provider.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/google_auth_service.dart';
 import '../../services/onboarding_state_service.dart';
+import '../../services/security/post_auth_security_setup_service.dart';
 import '../../services/telemetry/telemetry_service.dart';
 import '../../widgets/app_logo.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/gradient_icon_card.dart';
 import '../../widgets/google_sign_in_button.dart';
+import '../../utils/auth_password_policy.dart';
 import '../web3/wallet/connectwallet_screen.dart';
 import '../desktop/auth/desktop_auth_shell.dart';
 import '../desktop/desktop_shell.dart';
@@ -34,20 +37,28 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   final _usernameController = TextEditingController();
   bool _isSubmitting = false;
   bool _isGoogleSubmitting = false;
+  String? _emailError;
+  String? _passwordError;
+  String? _confirmPasswordError;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     _usernameController.dispose();
     super.dispose();
   }
 
   Future<void> _handleAuthSuccess(Map<String, dynamic> payload) async {
     final l10n = AppLocalizations.of(context)!;
+    final navigator = Navigator.of(context);
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final gate = Provider.of<SecurityGateProvider>(context, listen: false);
     final data = (payload['data'] as Map<String, dynamic>?) ?? payload;
     final user = (data['user'] as Map<String, dynamic>?) ?? data;
     String? walletAddress = user['walletAddress'] ?? user['wallet_address'];
@@ -73,6 +84,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
       TelemetryService().setActorUserId(userId.toString());
     }
     if (!mounted) return;
+
+    final ok = await const PostAuthSecuritySetupService().ensurePostAuthSecuritySetup(
+      navigator: navigator,
+      walletProvider: walletProvider,
+      securityGateProvider: gate,
+    );
+    if (!mounted) return;
+    if (!ok) return;
+
     try {
       if (walletAddress != null && walletAddress.toString().isNotEmpty) {
         await Provider.of<ProfileProvider>(context, listen: false)
@@ -100,29 +120,55 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
     final email = _emailController.text.trim();
     final password = _passwordController.text;
+    final confirm = _confirmPasswordController.text;
     final username = _usernameController.text.trim();
-    if (email.isEmpty || password.length < 8) {
-      ScaffoldMessenger.of(context).showKubusSnackBar(
-          SnackBar(content: Text(l10n.authEnterValidEmailPassword)));
-      return;
-    }
+    final emailLooksValid = email.contains('@') && email.contains('.');
+    final passwordOk = AuthPasswordPolicy.isValid(password);
+    final confirmOk = password == confirm;
+
+    setState(() {
+      _emailError = emailLooksValid ? null : l10n.authEnterValidEmailInline;
+      _passwordError = passwordOk ? null : l10n.authPasswordPolicyError;
+      _confirmPasswordError = confirmOk ? null : l10n.authPasswordMismatchInline;
+    });
+    if (!emailLooksValid || !passwordOk || !confirmOk) return;
+
     unawaited(TelemetryService().trackSignUpAttempt(method: 'email'));
     setState(() => _isSubmitting = true);
     try {
       final api = BackendApiService();
-      final result = await api.registerWithEmail(
+      await api.registerWithEmail(
         email: email,
         password: password,
         username: username.isNotEmpty ? username : null,
       );
-      await _handleAuthSuccess(result);
+      if (!mounted) return;
+      Navigator.of(context).pushReplacementNamed(
+        '/verify-email',
+        arguments: {'email': email},
+      );
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(content: Text(l10n.authVerifyEmailRegistrationToast)),
+      );
       unawaited(TelemetryService().trackSignUpSuccess(method: 'email'));
+      // Note: email registration no longer creates a session until verification.
+      // Avoid writing local account/session state here.
     } catch (e) {
       unawaited(TelemetryService().trackSignUpFailure(
           method: 'email', errorClass: e.runtimeType.toString()));
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showKubusSnackBar(SnackBar(content: Text(l10n.authRegistrationFailed)));
+      if (e is BackendApiRequestException && e.statusCode == 409) {
+        Navigator.of(context).pushReplacementNamed(
+          '/sign-in',
+          arguments: {'email': email},
+        );
+        ScaffoldMessenger.of(context).showKubusSnackBar(
+          SnackBar(content: Text(l10n.authAccountAlreadyExistsToast)),
+        );
+      } else {
+        ScaffoldMessenger.of(context)
+            .showKubusSnackBar(SnackBar(content: Text(l10n.authRegistrationFailed)));
+      }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -586,7 +632,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
           keyboardType: TextInputType.emailAddress,
           decoration: InputDecoration(
             labelText: AppLocalizations.of(context)!.commonEmail,
-            border: OutlineInputBorder(),
+            border: const OutlineInputBorder(),
+            errorText: _emailError,
           ),
         ),
         const SizedBox(height: 10),
@@ -595,7 +642,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
           obscureText: true,
           decoration: InputDecoration(
             labelText: AppLocalizations.of(context)!.commonPassword,
-            border: OutlineInputBorder(),
+            border: const OutlineInputBorder(),
+            errorText: _passwordError,
+          ),
+        ),
+        const SizedBox(height: 10),
+        TextField(
+          controller: _confirmPasswordController,
+          obscureText: true,
+          decoration: InputDecoration(
+            labelText: AppLocalizations.of(context)!.commonConfirmPassword,
+            border: const OutlineInputBorder(),
+            errorText: _confirmPasswordError,
           ),
         ),
         const SizedBox(height: 10),
@@ -603,7 +661,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           controller: _usernameController,
           decoration: InputDecoration(
             labelText: AppLocalizations.of(context)!.commonUsernameOptional,
-            border: OutlineInputBorder(),
+            border: const OutlineInputBorder(),
           ),
         ),
         const SizedBox(height: 10),

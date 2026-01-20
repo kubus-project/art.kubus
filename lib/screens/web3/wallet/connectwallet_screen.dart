@@ -15,9 +15,11 @@ import '../../../providers/profile_provider.dart';
 import '../../../providers/app_refresh_provider.dart';
 import '../../../providers/notification_provider.dart';
 import '../../../providers/recent_activity_provider.dart';
+import '../../../providers/security_gate_provider.dart';
 import '../../../services/solana_walletconnect_service.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../services/app_bootstrap_service.dart';
+import '../../../services/security/post_auth_security_setup_service.dart';
 import '../../../services/user_service.dart';
 import '../../../services/telemetry/telemetry_service.dart';
 import '../../../models/user.dart';
@@ -652,6 +654,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     
     try {
       final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+      final gate = Provider.of<SecurityGateProvider>(context, listen: false);
       final navigator = Navigator.of(context);
       final chatProvider = Provider.of<ChatProvider>(context, listen: false);
       final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
@@ -738,6 +741,16 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
         }
       
       if (mounted) {
+        final hasAuth = (BackendApiService().getAuthToken() ?? '').trim().isNotEmpty;
+        if (hasAuth) {
+          final ok = await const PostAuthSecuritySetupService().ensurePostAuthSecuritySetup(
+            navigator: navigator,
+            walletProvider: walletProvider,
+            securityGateProvider: gate,
+          );
+          if (!mounted) return;
+          if (!ok) return;
+        }
         messenger.showKubusSnackBar(
           SnackBar(
             content: Text(l10n.connectWalletImportSuccessToast(address.substring(0, 8))),
@@ -1348,6 +1361,8 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
           final l10n = AppLocalizations.of(context)!;
           final messenger = ScaffoldMessenger.of(context);
           final navigator = Navigator.of(context);
+          final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+          final gate = Provider.of<SecurityGateProvider>(context, listen: false);
           final chatProvider = Provider.of<ChatProvider>(context, listen: false);
           final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
           messenger.showKubusSnackBar(
@@ -1431,6 +1446,16 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
           try {
             await _runPostWalletConnectRefresh(address);
           } catch (_) {}
+          final hasAuth = (BackendApiService().getAuthToken() ?? '').trim().isNotEmpty;
+          if (hasAuth) {
+            final ok = await const PostAuthSecuritySetupService().ensurePostAuthSecuritySetup(
+              navigator: navigator,
+              walletProvider: walletProvider,
+              securityGateProvider: gate,
+            );
+            if (!mounted) return;
+            if (!ok) return;
+          }
           _trackWalletAuthSuccess();
           navigator.pop();
         }

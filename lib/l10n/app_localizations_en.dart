@@ -239,6 +239,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonPassword => 'Password';
 
   @override
+  String get commonConfirmPassword => 'Confirm password';
+
+  @override
   String get commonUsernameOptional => 'Username (optional)';
 
   @override
@@ -450,10 +453,124 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authEnterValidEmailPassword => 'Enter a valid email and an 8+ character password.';
 
   @override
+  String get authEnterValidEmailInline => 'Enter a valid email address.';
+
+  @override
+  String get authPasswordPolicyError => 'Password must be 8–128 characters and include a letter and a number.';
+
+  @override
+  String get authPasswordMismatchInline => 'Passwords do not match.';
+
+  @override
+  String get authAccountAlreadyExistsToast => 'An account with this email already exists. Sign in instead.';
+
+  @override
   String get authEmailSignInFailed => 'Email sign-in failed. Please try again.';
 
   @override
   String get authRegistrationFailed => 'Registration failed. Please try again.';
+
+  @override
+  String get authVerifyEmailRegistrationToast => 'Registration successful. Check your email to verify your account.';
+
+  @override
+  String get authEmailNotVerifiedToast => 'Email not verified. Check your inbox to continue.';
+
+  @override
+  String get authForgotPasswordLink => 'Forgot password?';
+
+  @override
+  String get authVerifyEmailTitle => 'Verify your email';
+
+  @override
+  String get authVerifyEmailSubtitle => 'We sent a verification link. Tap it to finish setting up your account.';
+
+  @override
+  String get authVerifyEmailHighlightInbox => 'Open your email app and find our message';
+
+  @override
+  String get authVerifyEmailHighlightSpam => 'Check spam/junk if you don’t see it';
+
+  @override
+  String get authVerifyEmailHighlightSecure => 'Links expire for security';
+
+  @override
+  String get authVerifyEmailStatusVerifying => 'Verifying…';
+
+  @override
+  String get authVerifyEmailStatusVerified => 'Email verified';
+
+  @override
+  String get authVerifyEmailStatusPending => 'Waiting for verification';
+
+  @override
+  String get authVerifyEmailResendButton => 'Resend verification email';
+
+  @override
+  String get authVerifyEmailEnterEmailInline => 'Enter your email to resend verification.';
+
+  @override
+  String get authVerifyEmailResendToast => 'If an account exists for this email, a verification email will be sent shortly.';
+
+  @override
+  String get authVerifyEmailResendFailedInline => 'Could not resend verification email. Please try again.';
+
+  @override
+  String get authVerifyEmailFailedInline => 'This verification link is invalid or expired.';
+
+  @override
+  String get authVerifyEmailSuccessToast => 'Email verified. You can now sign in.';
+
+  @override
+  String get authVerifyEmailSignInHint => 'After verifying, return here to sign in.';
+
+  @override
+  String get authForgotPasswordTitle => 'Reset your password';
+
+  @override
+  String get authForgotPasswordSubtitle => 'Enter your email and we’ll send a reset link.';
+
+  @override
+  String get authForgotPasswordHighlightOne => 'We never reveal whether an email exists';
+
+  @override
+  String get authForgotPasswordHighlightTwo => 'Reset links expire quickly';
+
+  @override
+  String get authForgotPasswordEnterEmailInline => 'Enter your email.';
+
+  @override
+  String get authForgotPasswordSendButton => 'Send reset link';
+
+  @override
+  String get authForgotPasswordSentToast => 'If an account exists for this email, a reset link will be sent shortly.';
+
+  @override
+  String get authForgotPasswordFailedInline => 'Could not request a reset link. Please try again.';
+
+  @override
+  String get authResetPasswordTitle => 'Choose a new password';
+
+  @override
+  String get authResetPasswordSubtitle => 'Create a new password for your account.';
+
+  @override
+  String get authResetPasswordHighlightOne => 'Use a strong password';
+
+  @override
+  String get authResetPasswordHighlightTwo => 'Reset links are single-use';
+
+  @override
+  String get authResetPasswordMissingTokenInline => 'This reset link is missing a token.';
+
+  @override
+  String get authResetPasswordSubmitButton => 'Reset password';
+
+  @override
+  String get authResetPasswordSuccessToast => 'Password updated. You can now sign in.';
+
+  @override
+  String get authResetPasswordFailedInline => 'Could not reset your password. The link may be invalid or expired.';
 
   @override
   String get authGoogleSignInFailed => 'Google sign-in failed. Please try again.';
@@ -1726,6 +1843,45 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsMarketingEmailsSubtitle => 'Receive promotional content';
+
+  @override
+  String get settingsEmailPreferencesSectionTitle => 'Email preferences';
+
+  @override
+  String get settingsEmailPreferencesTransactionalNote => 'Account emails (verification and password reset) are always enabled.';
+
+  @override
+  String get settingsEmailPreferencesProductUpdatesTitle => 'Product updates';
+
+  @override
+  String get settingsEmailPreferencesProductUpdatesSubtitle => 'Occasional announcements about new features';
+
+  @override
+  String get settingsEmailPreferencesNewsletterTitle => 'Newsletter';
+
+  @override
+  String get settingsEmailPreferencesNewsletterSubtitle => 'News and highlights from art.kubus';
+
+  @override
+  String get settingsEmailPreferencesCommunityDigestTitle => 'Community digest';
+
+  @override
+  String get settingsEmailPreferencesCommunityDigestSubtitle => 'Periodic summary of community activity';
+
+  @override
+  String get settingsEmailPreferencesSecurityAlertsTitle => 'Security alerts';
+
+  @override
+  String get settingsEmailPreferencesSecurityAlertsSubtitle => 'Important account security notifications';
+
+  @override
+  String get settingsEmailPreferencesTransactionalTitle => 'Account emails';
+
+  @override
+  String get settingsEmailPreferencesTransactionalSubtitle => 'Verification and password reset emails are always enabled';
+
+  @override
+  String get settingsEmailPreferencesUpdateFailedToast => 'Could not update email preferences. Please try again.';
 
   @override
   String get settingsAccountTypeTitle => 'Account type';
