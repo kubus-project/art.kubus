@@ -77,47 +77,41 @@ class _EmailVerificationSuccessScreenState extends State<EmailVerificationSucces
   }
 
   Future<void> _handleCountdownComplete() async {
-    // Try to close the tab using JavaScript
-    try {
-      if (kDebugMode) {
-        debugPrint('EmailVerificationSuccessScreen: Countdown complete, attempting to close tab');
-      }
-      // Small delay to ensure UI updates complete
-      await Future.delayed(const Duration(milliseconds: 200));
-      _attemptCloseWindow();
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('EmailVerificationSuccessScreen: Error during countdown completion: $e');
-      }
-      if (mounted) {
-        setState(() => _tabCloseFailed = true);
-      }
+    if (kDebugMode) {
+      debugPrint('EmailVerificationSuccessScreen: Countdown complete, attempting to close tab');
     }
+    
+    // Small delay to ensure UI updates complete
+    await Future.delayed(const Duration(milliseconds: 200));
+    
+    // Attempt to close the window
+    _attemptCloseWindow();
   }
 
   void _attemptCloseWindow() {
+    if (kDebugMode) {
+      debugPrint('EmailVerificationSuccessScreen: Calling window.close()');
+    }
+    
     try {
-      if (kDebugMode) {
-        debugPrint('EmailVerificationSuccessScreen: Calling window.close()');
-      }
       // Try to close the window using the web API
       web.window.close();
-      // If close succeeds, this code won't execute, but if it fails:
-      if (kDebugMode) {
-        debugPrint('EmailVerificationSuccessScreen: window.close() did not close the tab (browser blocked it)');
-      }
-      if (mounted) {
-        setState(() => _tabCloseFailed = true);
-      }
     } catch (e) {
-      // Browser blocked the close or other error
       if (kDebugMode) {
-        debugPrint('EmailVerificationSuccessScreen: Exception during window.close(): $e');
-      }
-      if (mounted) {
-        setState(() => _tabCloseFailed = true);
+        debugPrint('EmailVerificationSuccessScreen: window.close() threw exception: $e');
       }
     }
+    
+    // After a short delay, check if window is still open
+    // If we're still here, the close was blocked
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        if (kDebugMode) {
+          debugPrint('EmailVerificationSuccessScreen: Tab still open after close attempt - browser blocked it');
+        }
+        setState(() => _tabCloseFailed = true);
+      }
+    });
   }
 
   @override
