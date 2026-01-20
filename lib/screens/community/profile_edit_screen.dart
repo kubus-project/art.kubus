@@ -20,7 +20,9 @@ import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 
 class ProfileEditScreen extends StatefulWidget {
-  const ProfileEditScreen({super.key});
+  const ProfileEditScreen({super.key, this.isOnboarding = false});
+
+  final bool isOnboarding;
 
   @override
   State<ProfileEditScreen> createState() => _ProfileEditScreenState();
@@ -486,7 +488,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             try { EventBus().emitProfileUpdated(updatedUser); } catch (_) {}
           }
         } catch (_) {}
-        Navigator.pop(context, true);
+        
+        // If this is onboarding, redirect to main screen after saving
+        if (widget.isOnboarding) {
+          Navigator.of(context).pushReplacementNamed('/main');
+        } else {
+          Navigator.pop(context, true);
+        }
       } else {
         throw Exception(profileProvider.error ?? 'Failed to save profile');
       }

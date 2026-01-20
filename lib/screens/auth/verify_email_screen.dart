@@ -63,8 +63,9 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       await BackendApiService().verifyEmail(token: token);
       if (!mounted) return;
       setState(() => _verified = true);
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showKubusSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.authVerifyEmailSuccessToast)),
+        SnackBar(content: Text(l10n.authVerifyEmailSuccessToast)),
       );
     } catch (_) {
       if (!mounted) return;
@@ -159,7 +160,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
         ),
         const SizedBox(height: 12),
         KubusButton(
-          onPressed: _verified ? _goToSignIn : _goToSignIn,
+          onPressed: _goToSignIn,
           icon: Icons.login_rounded,
           label: l10n.commonSignIn,
           isFullWidth: true,

@@ -27,6 +27,7 @@ import '../../utils/kubus_color_roles.dart';
 import '../web3/wallet/connectwallet_screen.dart';
 import '../desktop/auth/desktop_auth_shell.dart';
 import '../desktop/desktop_shell.dart';
+import '../community/profile_edit_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class SignInScreen extends StatefulWidget {
@@ -163,6 +164,22 @@ class _SignInScreenState extends State<SignInScreen> {
       Navigator.of(context).pushReplacementNamed(
         redirectRoute,
         arguments: widget.redirectArguments,
+      );
+      return;
+    }
+
+    // Check if user needs profile onboarding (new users from email registration)
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profile = profileProvider.currentUser;
+    final needsProfileSetup = profile != null && 
+        (profile.displayName.isEmpty || profile.displayName == profile.username) &&
+        (profile.bio).isEmpty;
+    
+    if (needsProfileSetup) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => const ProfileEditScreen(isOnboarding: true),
+        ),
       );
       return;
     }
