@@ -61,6 +61,7 @@ import 'main_app.dart';
 import 'screens/auth/forgot_password_screen.dart';
 import 'screens/auth/reset_password_screen.dart';
 import 'screens/auth/verify_email_screen.dart';
+import 'screens/auth/email_verification_success_screen.dart';
 import 'screens/art/ar_screen.dart';
 import 'screens/art/art_detail_screen.dart';
 import 'screens/desktop/art/desktop_artwork_detail_screen.dart';
@@ -558,10 +559,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
                final email = (uri.queryParameters['email'] ?? '').trim();
                if (token.isNotEmpty) {
                  return MaterialPageRoute(
-                   builder: (_) => VerifyEmailScreen(
-                     email: email.isEmpty ? null : email,
-                     token: token,
-                   ),
+                   builder: (_) => EmailVerificationSuccessScreen(token: token),
                    settings: RouteSettings(
                      name: '/verify-email',
                      arguments: {

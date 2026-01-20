@@ -283,29 +283,52 @@ class SecurityGateProvider extends ChangeNotifier implements AuthSessionCoordina
       return const AuthReauthResult(AuthReauthOutcome.cooldown);
     }
 
+    // Don't prompt for re-auth on auth endpoints (signup, email verification, etc).
+    // These are endpoints that don't require an existing session.
+    final path = (context.path).toLowerCase();
+    final isAuthEndpoint = path.contains('/auth/') && 
+        (path.contains('register') || 
+         path.contains('verify') || 
+         path.contains('signup') ||
+         path.contains('login/email'));
+    if (isAuthEndpoint) {
+      _cooldownUntil = DateTime.now().add(_promptCooldown);
+      return const AuthReauthResult(AuthReauthOutcome.notEnabled, message: 'Auth endpoint does not require re-auth');
+    }
+
     SharedPreferences? prefs;
     try {
       prefs = await SharedPreferences.getInstance();
       _hasLocalAccount = AuthGatingService.hasLocalAccountSync(prefs: prefs);
     } catch (_) {}
 
-    if (!await AuthGatingService.shouldPromptReauth(prefs: prefs)) {
-      // Fresh installs (no stored session) must never show the "sign in again"
-      // lock. In that case, either let onboarding proceed or route to sign-in.
-      final showOnboarding = await AuthGatingService.shouldShowFirstRunOnboarding(
-        prefs: prefs,
-        onboardingState: prefs == null ? null : await OnboardingStateService.load(prefs: prefs),
-      );
+    // Only prompt for re-auth if:
+    // 1. Feature is enabled AND
+    // 2. User has a local account (token + wallet) AND
+    // 3. User has app lock enabled (PIN or auto-lock is set)
+    final shouldPrompt = await AuthGatingService.shouldPromptReauth(prefs: prefs);
+    final hasAppLock = requirePin || (autoLockSeconds != 0 && autoLockSeconds > 0);
+    
+    if (!shouldPrompt || !hasAppLock) {
+      // Fresh installs (no stored session) or users without app lock enabled
+      // must never show the "sign in again" lock. In that case, either let 
+      // onboarding proceed or route to sign-in.
+      if (!shouldPrompt) {
+        final showOnboarding = await AuthGatingService.shouldShowFirstRunOnboarding(
+          prefs: prefs,
+          onboardingState: prefs == null ? null : await OnboardingStateService.load(prefs: prefs),
+        );
 
-      if (!showOnboarding) {
-        _cooldownUntil = DateTime.now().add(_promptCooldown);
-        final navigator = appNavigatorKey.currentState;
-        if (navigator != null && navigator.mounted) {
-          navigator.pushNamedAndRemoveUntil('/sign-in', (_) => false);
+        if (!showOnboarding) {
+          _cooldownUntil = DateTime.now().add(_promptCooldown);
+          final navigator = appNavigatorKey.currentState;
+          if (navigator != null && navigator.mounted) {
+            navigator.pushNamedAndRemoveUntil('/sign-in', (_) => false);
+          }
         }
       }
-
-      return const AuthReauthResult(AuthReauthOutcome.notEnabled);
+      _cooldownUntil = DateTime.now().add(_promptCooldown);
+      return const AuthReauthResult(AuthReauthOutcome.notEnabled, message: 'Re-auth not enabled or app lock not configured');
     }
 
     await lock(SecurityLockReason.tokenExpired, context: context);
