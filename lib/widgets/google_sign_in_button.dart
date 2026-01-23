@@ -21,7 +21,8 @@ class GoogleSignInButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final radius = BorderRadius.circular(14);
+    // Match KubusButton geometry (more square than the previous pill-ish look).
+    final radius = BorderRadius.circular(8);
 
     // Brand-ish tones (not exact logo assets; avoids bundling trademarked art).
     const googleBlue = Color(0xFF4285F4);
@@ -48,9 +49,6 @@ class GoogleSignInButton extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: radius,
-        border: Border.all(
-          color: brandBackground.withValues(alpha: 0.35),
-        ),
       ),
       child: LiquidGlassPanel(
         padding: EdgeInsets.zero,
@@ -59,7 +57,7 @@ class GoogleSignInButton extends StatelessWidget {
         showBorder: false,
         backgroundColor: glassTint,
         child: SizedBox(
-          height: 50,
+          height: 56,
           width: double.infinity,
           child: ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
@@ -67,6 +65,10 @@ class GoogleSignInButton extends StatelessWidget {
               foregroundColor: brandForeground,
               shadowColor: Colors.transparent,
               disabledBackgroundColor: Colors.transparent,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 16,
+              ),
               shape: RoundedRectangleBorder(borderRadius: radius),
               elevation: 0,
             ),
@@ -103,7 +105,6 @@ class _GoogleBadgeG extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         shape: BoxShape.circle,
-        border: Border.all(color: borderColor),
       ),
       alignment: Alignment.center,
       child: Text(

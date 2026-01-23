@@ -639,10 +639,10 @@ class _SignInScreenState extends State<SignInScreen> {
           ),
           SafeArea(
             top: false,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               child: Padding(
-                padding: const EdgeInsets.only(top: kToolbarHeight + 12),
+                padding: const EdgeInsets.only(top: kToolbarHeight + 8),
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 520),
