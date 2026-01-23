@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/config.dart';
@@ -56,6 +57,7 @@ class _SignInScreenState extends State<SignInScreen> {
   bool _isEmailSubmitting = false;
   bool _isGoogleSubmitting = false;
   int? _googleRateLimitUntilMs;
+  bool _didAttemptGoogleAutoSignIn = false;
 
   @override
   void initState() {
@@ -67,6 +69,37 @@ class _SignInScreenState extends State<SignInScreen> {
     // Preload rate-limit cooldown so the Google sign-in click handler can
     // start the popup flow without awaiting (browser user-activation rules).
     unawaited(_loadGoogleAuthCooldown());
+
+    // Best-effort "automatic" sign-in on mobile (silent re-auth for returning users).
+    // Note: One Tap is web-only (GIS iframe) and cannot be replicated on native.
+    if (!kIsWeb && AppConfig.enableGoogleAuth) {
+      unawaited(_attemptGoogleAutoSignIn());
+    }
+  }
+
+  Future<void> _attemptGoogleAutoSignIn() async {
+    if (_didAttemptGoogleAutoSignIn) return;
+    _didAttemptGoogleAutoSignIn = true;
+    if (_isGoogleSubmitting) return;
+
+    try {
+      await GoogleAuthService().ensureInitialized();
+      final account = await GoogleSignIn.instance.attemptLightweightAuthentication();
+      if (!mounted) return;
+      if (account == null) return;
+
+      if (mounted) {
+        setState(() => _isGoogleSubmitting = true);
+      }
+      final result = GoogleAuthService().resultFromAccount(account);
+      await _completeGoogleSignIn(result);
+    } catch (_) {
+      // Best-effort only.
+    } finally {
+      if (mounted) {
+        setState(() => _isGoogleSubmitting = false);
+      }
+    }
   }
 
   Future<void> _loadGoogleAuthCooldown() async {

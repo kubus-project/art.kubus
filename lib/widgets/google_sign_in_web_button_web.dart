@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:google_sign_in_platform_interface/google_sign_in_platform_interface.dart';
 import 'package:google_sign_in_web/google_sign_in_web.dart' as gweb;
@@ -15,14 +14,12 @@ class GoogleSignInWebButton extends StatefulWidget {
     this.onAuthError,
     required this.isLoading,
     required this.colorScheme,
-    this.scale = 1.15,
   });
 
   final Future<void> Function(GoogleAuthResult result) onAuthResult;
   final void Function(Object error)? onAuthError;
   final bool isLoading;
   final ColorScheme colorScheme;
-  final double scale;
 
   @override
   State<GoogleSignInWebButton> createState() => _GoogleSignInWebButtonState();
@@ -68,6 +65,33 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
         widget.onAuthError?.call(error);
       },
     );
+
+    // Bring back "automatic" / low-friction sign-in on web:
+    // - attemptLightweightAuthentication() enables silent re-auth when possible
+    //   (returning users, existing session, etc.).
+    // - best-effort One Tap prompt when supported by the underlying web plugin.
+    try {
+      final account = await GoogleSignIn.instance.attemptLightweightAuthentication();
+      if (!mounted) return;
+      if (account != null && !widget.isLoading) {
+        final result = GoogleAuthService().resultFromAccount(account);
+        await widget.onAuthResult(result);
+      }
+    } catch (_) {
+      // Best-effort only; One Tap / silent auth may be blocked by browser policies.
+    }
+
+    // Best-effort One Tap prompt (GIS) when available.
+    // The plugin API surface can vary by version; we avoid hard dependency.
+    try {
+      final platform = GoogleSignInPlatform.instance;
+      if (platform is gweb.GoogleSignInPlugin) {
+        // ignore: avoid_dynamic_calls
+        await (platform as dynamic).prompt();
+      }
+    } catch (_) {
+      // Best-effort only.
+    }
   }
 
   @override
@@ -81,66 +105,64 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    // Defensive: avoid weird layout/math if someone passes 0 or negative.
-    final scale = widget.scale <= 0 ? 1.0 : widget.scale;
-
     final Widget child;
     if (!_ready) {
-      child = _buildFallbackLoading();
+      child = const SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      );
     } else {
       final platform = GoogleSignInPlatform.instance;
       if (platform is gweb.GoogleSignInPlugin) {
         child = LayoutBuilder(
           builder: (BuildContext context, BoxConstraints constraints) {
-            final double maxWidth = constraints.maxWidth.isFinite
-                ? constraints.maxWidth
-                : 400;
-            // We scale the rendered button up for better tap targets/visual weight.
-            // Because Transform.scale doesn't affect layout, we compensate by
-            // shrinking the minimumWidth so the post-scale visual width matches
-            // the available space.
-            final double desiredVisualWidth = maxWidth.clamp(200, 420);
-            final double minWidthBeforeScale = (desiredVisualWidth / scale)
-                .clamp(160, desiredVisualWidth);
+            final double maxWidth =
+                constraints.maxWidth.isFinite ? constraints.maxWidth : 400;
+            // Match the surrounding auth buttons: take the full available width.
+            // Keep GIS unscaled so logo/text match Google's sizing.
+            final double buttonWidth = maxWidth;
 
-            return Center(
-              child: Transform.scale(
-                scale: scale,
-                alignment: Alignment.center,
-                child: platform.renderButton(
-                  configuration: gweb.GSIButtonConfiguration(
-                    type: gweb.GSIButtonType.standard,
-                    theme: isDark
-                        ? gweb.GSIButtonTheme.filledBlack
-                        : gweb.GSIButtonTheme.outline,
-                    size: gweb.GSIButtonSize.large,
-                    text: gweb.GSIButtonText.continueWith,
-                    shape: gweb.GSIButtonShape.pill,
-                    logoAlignment: gweb.GSIButtonLogoAlignment.left,
-                    minimumWidth: minWidthBeforeScale,
-                  ),
+            // Use only the GIS button (no custom visible wrappers).
+            // Keep the GIS button unscaled so its typography matches Google specs.
+            // We still match the surrounding layout by centering it inside the
+            // 56px auth row height.
+            return SizedBox(
+              width: buttonWidth,
+              child: platform.renderButton(
+                configuration: gweb.GSIButtonConfiguration(
+                  type: gweb.GSIButtonType.standard,
+                  theme: isDark
+                      ? gweb.GSIButtonTheme.filledBlack
+                      : gweb.GSIButtonTheme.outline,
+                  size: gweb.GSIButtonSize.large,
+                  text: gweb.GSIButtonText.continueWith,
+                  shape: gweb.GSIButtonShape.rectangular,
+                  logoAlignment: gweb.GSIButtonLogoAlignment.left,
+                  minimumWidth: buttonWidth,
                 ),
               ),
             );
           },
         );
       } else {
-        child = _buildFallbackUnsupported();
+        child = const SizedBox.shrink();
       }
     }
 
-    // No wrapper/background: show the original GIS button as-is.
-    // We only reserve enough height so the scaled button doesn't get clipped.
-    final double reservedHeight = 56 * scale;
+    // Same size as other auth buttons.
+    const double reservedHeight = 56;
     return SizedBox(
       height: reservedHeight,
       width: double.infinity,
       child: Stack(
         alignment: Alignment.center,
         children: <Widget>[
-          AbsorbPointer(
-            absorbing: widget.isLoading,
-            child: Center(child: child),
+          Positioned.fill(
+            child: AbsorbPointer(
+              absorbing: widget.isLoading,
+              child: child,
+            ),
           ),
           if (widget.isLoading)
             Positioned.fill(
@@ -161,37 +183,6 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
               ),
             ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildFallbackLoading() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: <Widget>[
-        const SizedBox(
-          width: 18,
-          height: 18,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        ),
-        const SizedBox(width: 10),
-        Text(
-          'Preparing Google sign-in…',
-          style: GoogleFonts.inter(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFallbackUnsupported() {
-    return Text(
-      'Google sign-in is unavailable',
-      style: GoogleFonts.inter(
-        fontSize: 14,
-        fontWeight: FontWeight.w700,
       ),
     );
   }
