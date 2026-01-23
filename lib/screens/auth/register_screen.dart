@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -20,6 +21,7 @@ import '../../widgets/app_logo.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/gradient_icon_card.dart';
 import '../../widgets/google_sign_in_button.dart';
+import '../../widgets/google_sign_in_web_button.dart';
 import '../../utils/auth_password_policy.dart';
 import '../web3/wallet/connectwallet_screen.dart';
 import '../desktop/auth/desktop_auth_shell.dart';
@@ -266,6 +268,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
           .showKubusSnackBar(SnackBar(content: Text(l10n.authGoogleSignInDisabled)));
       return;
     }
+
+    // Web uses a GIS-rendered button which triggers auth events instead of an
+    // imperative signIn call.
+    if (kIsWeb) {
+      return;
+    }
     unawaited(TelemetryService().trackSignUpAttempt(method: 'google'));
     setState(() => _isGoogleSubmitting = true);
     try {
@@ -277,10 +285,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
         return;
       }
       final api = BackendApiService();
+      // For account merge: only pass email, let backend decide on username/profile preservation
       final result = await api.loginWithGoogle(
         idToken: googleResult.idToken,
+        code: googleResult.serverAuthCode,
         email: googleResult.email,
-        username: googleResult.displayName,
+        // Don't pass username to let backend preserve existing account data if email matches
+        username: null,
       );
       await _handleAuthSuccess(result);
       unawaited(TelemetryService().trackSignUpSuccess(method: 'google'));
@@ -610,11 +621,53 @@ class _RegisterScreenState extends State<RegisterScreen> {
               if (enableEmail) _buildEmailForm(colorScheme),
               if (enableGoogle) ...[
                 const SizedBox(height: 12),
-                GoogleSignInButton(
-                  onPressed: _registerWithGoogle,
-                  isLoading: _isGoogleSubmitting,
-                  colorScheme: colorScheme,
-                ),
+                if (kIsWeb)
+                  GoogleSignInWebButton(
+                    colorScheme: colorScheme,
+                    isLoading: _isGoogleSubmitting,
+                    onAuthResult: (GoogleAuthResult googleResult) async {
+                      unawaited(
+                        TelemetryService().trackSignUpAttempt(method: 'google'),
+                      );
+                      if (!_isGoogleSubmitting && mounted) {
+                        setState(() => _isGoogleSubmitting = true);
+                      }
+                      try {
+                        final api = BackendApiService();
+                        final result = await api.loginWithGoogle(
+                          idToken: googleResult.idToken,
+                          code: googleResult.serverAuthCode,
+                          email: googleResult.email,
+                          username: null,
+                        );
+                        if (!mounted) return;
+                        await _handleAuthSuccess(result);
+                        unawaited(
+                          TelemetryService().trackSignUpSuccess(method: 'google'),
+                        );
+                      } finally {
+                        if (mounted) setState(() => _isGoogleSubmitting = false);
+                      }
+                    },
+                    onAuthError: (Object error) {
+                      unawaited(
+                        TelemetryService().trackSignUpFailure(
+                          method: 'google',
+                          errorClass: error.runtimeType.toString(),
+                        ),
+                      );
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showKubusSnackBar(
+                        SnackBar(content: Text(l10n.authGoogleSignInFailed)),
+                      );
+                    },
+                  )
+                else
+                  GoogleSignInButton(
+                    onPressed: _registerWithGoogle,
+                    isLoading: _isGoogleSubmitting,
+                    colorScheme: colorScheme,
+                  ),
               ],
             ],
           ),
