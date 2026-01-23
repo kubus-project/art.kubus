@@ -79,7 +79,8 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final radius = BorderRadius.circular(14);
+    // Match KubusButton geometry.
+    final radius = BorderRadius.circular(8);
 
     // Brand-ish tones (we still render the required GIS button for web).
     const googleBlue = Color(0xFF4285F4);
@@ -125,9 +126,6 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
     return Container(
       decoration: BoxDecoration(
         borderRadius: radius,
-        border: Border.all(
-          color: brandBackground.withValues(alpha: 0.35),
-        ),
       ),
       child: LiquidGlassPanel(
         padding: EdgeInsets.zero,
@@ -136,7 +134,7 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
         showBorder: false,
         backgroundColor: glassTint,
         child: SizedBox(
-          height: 54,
+          height: 56,
           width: double.infinity,
           child: Stack(
             alignment: Alignment.center,
