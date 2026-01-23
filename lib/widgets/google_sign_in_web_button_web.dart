@@ -81,8 +81,12 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
     final isDark = theme.brightness == Brightness.dark;
     final radius = BorderRadius.circular(14);
 
-    final glassTint =
-        widget.colorScheme.secondary.withValues(alpha: isDark ? 0.82 : 0.88);
+    // Brand-ish tones (we still render the required GIS button for web).
+    const googleBlue = Color(0xFF4285F4);
+    const googleAmber = Color(0xFFFBBC05);
+
+    final brandBackground = isDark ? googleBlue : googleAmber;
+    final glassTint = brandBackground.withValues(alpha: isDark ? 0.78 : 0.86);
 
     final Widget child;
     if (!_ready) {
@@ -100,7 +104,10 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
             return platform.renderButton(
               configuration: gweb.GSIButtonConfiguration(
                 type: gweb.GSIButtonType.standard,
-                theme: gweb.GSIButtonTheme.outline,
+                // Keep Google's button readable against our brand-tinted glass.
+                theme: isDark
+                    ? gweb.GSIButtonTheme.filledBlack
+                    : gweb.GSIButtonTheme.outline,
                 size: gweb.GSIButtonSize.large,
                 text: gweb.GSIButtonText.continueWith,
                 shape: gweb.GSIButtonShape.pill,
@@ -119,7 +126,7 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
       decoration: BoxDecoration(
         borderRadius: radius,
         border: Border.all(
-          color: widget.colorScheme.secondary.withValues(alpha: 0.30),
+          color: brandBackground.withValues(alpha: 0.35),
         ),
       ),
       child: LiquidGlassPanel(
