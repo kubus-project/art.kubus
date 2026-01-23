@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -19,6 +20,7 @@ import '../../services/telemetry/telemetry_service.dart';
 import '../../widgets/app_logo.dart';
 import '../../widgets/gradient_icon_card.dart';
 import '../../widgets/google_sign_in_button.dart';
+import '../../widgets/google_sign_in_web_button.dart';
 import '../../widgets/kubus_button.dart';
 import '../../widgets/kubus_card.dart';
 import '../../widgets/glass_components.dart';
@@ -331,11 +333,15 @@ class _SignInScreenState extends State<SignInScreen> {
       return;
     }
 
+    // Web uses a GIS-rendered button which triggers auth events instead of an
+    // imperative signIn call.
+    if (kIsWeb) {
+      return;
+    }
+
     unawaited(TelemetryService().trackSignInAttempt(method: 'google'));
 
     // Honor any server-provided rate-limit cooldown persisted from prior attempts.
-    // IMPORTANT: do not await here, otherwise browsers may block the Google popup
-    // due to missing user activation.
     final untilMs = _googleRateLimitUntilMs;
     if (untilMs != null) {
       final until = DateTime.fromMillisecondsSinceEpoch(untilMs);
@@ -363,20 +369,7 @@ class _SignInScreenState extends State<SignInScreen> {
         setState(() => _isGoogleSubmitting = false);
         return;
       }
-      final api = BackendApiService();
-      final result = await api.loginWithGoogle(
-        idToken: googleResult.idToken,
-        code: googleResult.serverAuthCode,
-        email: googleResult.email,
-        username: googleResult.displayName,
-      );
-      // Clear any stored cooldown on success.
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.remove('rate_limit_auth_google_until');
-        _googleRateLimitUntilMs = null;
-      } catch (_) {}
-      await _handleAuthSuccess(result);
+      await _completeGoogleSignIn(googleResult);
       unawaited(TelemetryService().trackSignInSuccess(method: 'google'));
     } catch (e) {
       unawaited(TelemetryService().trackSignInFailure(
@@ -387,6 +380,53 @@ class _SignInScreenState extends State<SignInScreen> {
     } finally {
       if (mounted) setState(() => _isGoogleSubmitting = false);
     }
+  }
+
+  Future<void> _completeGoogleSignIn(GoogleAuthResult googleResult) async {
+    final l10n = AppLocalizations.of(context)!;
+
+    // Honor any server-provided rate-limit cooldown persisted from prior attempts.
+    final untilMs = _googleRateLimitUntilMs;
+    if (untilMs != null) {
+      final until = DateTime.fromMillisecondsSinceEpoch(untilMs);
+      if (DateTime.now().isBefore(until)) {
+        final remaining = until.difference(DateTime.now());
+        final mins = remaining.inMinutes;
+        final secs = remaining.inSeconds % 60;
+        final friendly = mins > 0 ? '${mins}m ${secs}s' : '${secs}s';
+        ScaffoldMessenger.of(context).showKubusSnackBar(
+          SnackBar(content: Text(l10n.authGoogleRateLimitedRetryIn(friendly))),
+        );
+        unawaited(TelemetryService().trackSignInFailure(
+            method: 'google', errorClass: 'rate_limited'));
+        return;
+      }
+    }
+
+    if (!_isGoogleSubmitting && mounted) {
+      setState(() => _isGoogleSubmitting = true);
+    }
+
+    final api = BackendApiService();
+
+    // For email account merge: pass email but NOT username to avoid overwriting
+    // existing account data. Backend preserves existing username/avatar/name.
+    final result = await api.loginWithGoogle(
+      idToken: googleResult.idToken,
+      code: googleResult.serverAuthCode,
+      email: googleResult.email,
+      username: null,
+    );
+
+    // Clear any stored cooldown on success.
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('rate_limit_auth_google_until');
+      _googleRateLimitUntilMs = null;
+    } catch (_) {}
+
+    if (!mounted) return;
+    await _handleAuthSuccess(result);
   }
 
   void _showConnectWalletModal() {
@@ -699,11 +739,38 @@ class _SignInScreenState extends State<SignInScreen> {
               if (enableEmail) _buildEmailForm(colorScheme),
               if (enableGoogle) ...[
                 const SizedBox(height: KubusSpacing.md),
-                GoogleSignInButton(
-                  onPressed: _signInWithGoogle,
-                  isLoading: _isGoogleSubmitting,
-                  colorScheme: colorScheme,
-                ),
+                if (kIsWeb)
+                  GoogleSignInWebButton(
+                    colorScheme: colorScheme,
+                    isLoading: _isGoogleSubmitting,
+                    onAuthResult: (GoogleAuthResult googleResult) async {
+                      unawaited(
+                        TelemetryService().trackSignInAttempt(method: 'google'),
+                      );
+                      await _completeGoogleSignIn(googleResult);
+                      unawaited(
+                        TelemetryService().trackSignInSuccess(method: 'google'),
+                      );
+                    },
+                    onAuthError: (Object error) {
+                      unawaited(
+                        TelemetryService().trackSignInFailure(
+                          method: 'google',
+                          errorClass: error.runtimeType.toString(),
+                        ),
+                      );
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showKubusSnackBar(
+                        SnackBar(content: Text(l10n.authGoogleSignInFailed)),
+                      );
+                    },
+                  )
+                else
+                  GoogleSignInButton(
+                    onPressed: _signInWithGoogle,
+                    isLoading: _isGoogleSubmitting,
+                    colorScheme: colorScheme,
+                  ),
               ],
               const SizedBox(height: KubusSpacing.md),
               TextButton(

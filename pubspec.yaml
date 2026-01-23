@@ -2,7 +2,7 @@ name: art_kubus
 description: "art.kubus"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+publish_to: "none" # Remove this line if you wish to publish to pub.dev
 
 # The following defines the version and build number for your application.
 # A version number is three numbers separated by dots, like 1.2.43
@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 0.2.6
 
 environment:
-  sdk: '>=3.3.4 <4.0.0'
+  sdk: ">=3.3.4 <4.0.0"
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -40,13 +40,13 @@ dependencies:
   cupertino_icons: ^1.0.6
   path_provider: ^2.1.5
   # Permissions
-  permission_handler: ^11.4.0  # Restored to latest version
+  permission_handler: ^11.4.0 # Restored to latest version
   flutter_native_splash: ^2.4.6
   url_launcher: ^6.3.1
   image_picker: ^1.1.1
   provider: ^6.1.5
   location: ^8.0.1
-  flutter_map: ^7.0.2  # Keeping compatible with flutter_map_geojson
+  flutter_map: ^7.0.2 # Keeping compatible with flutter_map_geojson
   latlong2: ^0.9.1
   flutter_map_cancellable_tile_provider: ^3.0.2
   flutter_map_geojson: ^1.0.8
@@ -55,70 +55,70 @@ dependencies:
   local_auth: ^2.1.5
   geolocator: ^10.1.0
   proj4dart: any
-  
+
   # UI and Theming
   google_fonts: ^6.2.1
   animations: ^2.0.11
-  
+
   # Identity
   google_sign_in: ^7.2.0
-  
+
   # Charts and Graphs
   fl_chart: ^1.0.0
-  
+
   # Web3 and Blockchain (Solana-focused)
   http: ^1.4.0
   http_parser: ^4.0.2
-  pointycastle: ^3.9.1  # Compatible with reown_walletkit
-  solana: ^0.31.2+1  # Updated Solana SDK for Dart
-  bip39: ^1.0.6    # BIP39 mnemonic generation
-  
+  pointycastle: ^3.9.1 # Compatible with reown_walletkit
+  solana: ^0.31.2+1 # Updated Solana SDK for Dart
+  bip39: ^1.0.6 # BIP39 mnemonic generation
+
   # Notifications
   flutter_local_notifications: ^17.0.0
 
   # Web interop (replaces dart:html on web)
   web: ^1.1.1
-  
+
   # WalletConnect for real wallet connections (using new package)
-  reown_walletkit: ^1.1.0  # Using a more stable version
+  reown_walletkit: ^1.1.0 # Using a more stable version
 
   # QR Code functionality
-  qr_flutter: ^4.1.0  # QR code generation
-  mobile_scanner: ^5.0.2  # QR code scanning (modern replacement for qr_code_scanner)
-  
+  qr_flutter: ^4.1.0 # QR code generation
+  mobile_scanner: ^5.0.2 # QR code scanning (modern replacement for qr_code_scanner)
+
   # Camera and AR
   camera: ^0.11.1
   flutter_compass: ^0.8.1
   # Platform-specific AR plugins for best reliability and maintenance:
   # arkit_plugin: ^1.2.0  # iOS ARKit - DISABLED due to vector_math 2.1.4 incompatibility
   arcore_flutter_plugin:
-    path: third_party/arcore_flutter_plugin  # Local override with updated Android config
+    path: third_party/arcore_flutter_plugin # Local override with updated Android config
   # Note: ARManager provides unified API for both platforms
   # Features: Plane detection, object placement, hit testing, GLTF/GLB models
   # See AR_IMPLEMENTATION.md for setup instructions
   # iOS AR support temporarily disabled until arkit_plugin is updated
-  
+
   # Crypto and Security
   crypto: ^3.0.3
-  
+
   # Logging
   logger: ^2.5.0
-  
+
   # Utilities
   vector_math: ^2.1.4
-  file_picker: ^8.1.2  # Updated to avoid conflicts
+  file_picker: ^8.1.2 # Updated to avoid conflicts
   path: ^1.9.0
   filesystem_picker: ^4.1.0
   intl: ^0.20.2
-  share_plus: ^11.0.0  # Updated to latest version
+  share_plus: ^11.0.0 # Updated to latest version
   socket_io_client: ^2.0.0
   dio: ^5.9.0
   equatable: ^2.0.5
 
   # Deep links / App Links (Android), Universal Links (iOS)
   app_links: ^7.0.0
-
-
+  google_sign_in_web: ^1.1.0
+  google_sign_in_platform_interface: ^3.1.0
 
 # Dependency overrides to fix arkit_plugin compatibility with vector_math 2.1.4
 # The scaleByVector3 method was removed in vector_math 2.1.4
@@ -126,7 +126,7 @@ dependencies:
 dependency_overrides:
   # Override vector_math for all packages
   vector_math: ^2.1.4
-  
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -152,9 +152,8 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
-     - assets/images/logo.png
-     - assets/images/logo_black.png
-
+    - assets/images/logo.png
+    - assets/images/logo_black.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

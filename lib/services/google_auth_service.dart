@@ -29,82 +29,142 @@ class GoogleAuthService {
 
   bool _initialized = false;
 
-  Future<void> _ensureInitialized() async {
+  Future<void> ensureInitialized() async {
     if (_initialized) return;
     final webId = ApiKeys.googleWebClientId.trim();
     final androidId = ApiKeys.googleClientId.trim();
-    final selectedClientId = kIsWeb && webId.isNotEmpty ? webId : androidId;
-    
-    // For Authorization Code Flow, we MUST pass the Web Client ID as serverClientId.
-    final serverId = webId.isNotEmpty ? webId : (kIsWeb ? null : androidId);
+    final String? selectedClientId =
+        kIsWeb
+            ? (webId.isNotEmpty ? webId : null)
+            : (androidId.isNotEmpty ? androidId : null);
 
-    // GoogleSignIn 7.x: Scopes are not passed in initialize.
-    await GoogleSignIn.instance.initialize(
-      clientId: selectedClientId.isNotEmpty ? selectedClientId : null,
-      serverClientId: serverId,
-    );
+    // Web does not support serverClientId in google_sign_in_web.
+    // On mobile, if server auth code is ever required, serverClientId should
+    // be the Web OAuth client id.
+    final String? serverClientId = (!kIsWeb && webId.isNotEmpty) ? webId : null;
+
+    // GoogleSignIn 7.x: Initialize with clientId and serverClientId
+    // Note: GoogleSignIn.instance is a singleton, configure before use
+    try {
+      await GoogleSignIn.instance.initialize(
+        clientId: selectedClientId,
+        serverClientId: serverClientId,
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('GoogleAuthService: Failed to initialize: $e');
+      }
+    }
     _initialized = true;
   }
 
+  GoogleAuthResult resultFromAccount(GoogleSignInAccount account) {
+    final auth = account.authentication;
+    final idToken = auth.idToken;
+
+    if (idToken == null || idToken.isEmpty) {
+      throw Exception('Google sign-in failed: No ID token returned.');
+    }
+
+    return GoogleAuthResult(
+      idToken: idToken,
+      // google_sign_in 7.x no longer provides serverAuthCode via the auth
+      // object. This remains for backward compatibility with backend calls.
+      serverAuthCode: null,
+      email: account.email,
+      displayName: account.displayName,
+    );
+  }
+
+  /// Sign in with Google. Supports both mobile and web.
+  /// - Mobile (iOS/Android): Uses authenticate() / attemptLightweightAuthentication().
+  /// - Web: Interactive authentication is not supported via this API.
+  ///   On web, use a GIS-rendered button and listen to
+  ///   [GoogleSignIn.instance.authenticationEvents].
   Future<GoogleAuthResult?> signIn() async {
     if (!AppConfig.enableGoogleAuth) {
       throw Exception('Google sign-in is disabled by feature flag.');
     }
 
-    await _ensureInitialized();
+    await ensureInitialized();
+
+    if (kIsWeb) {
+      throw UnsupportedError(
+        'GoogleAuthService.signIn is not supported on the web. '
+        'Use the google_sign_in_web renderButton UI and listen to '
+        'GoogleSignIn.instance.authenticationEvents instead.',
+      );
+    }
+
     try {
       GoogleSignInAccount? account;
 
-      // 1. Try silent/lightweight auth
+      // Mobile flow: Try lightweight auth first (may return null or throw).
       try {
-        account = await GoogleSignIn.instance.attemptLightweightAuthentication();
+        final Future<GoogleSignInAccount?>? attempt =
+            GoogleSignIn.instance.attemptLightweightAuthentication();
+        if (attempt != null) {
+          account = await attempt;
+        }
       } catch (e) {
-         debugPrint('GoogleAuthService: attemptLightweightAuthentication failed: $e');
+        if (kDebugMode) {
+          debugPrint(
+            'GoogleAuthService: attemptLightweightAuthentication failed: $e',
+          );
+        }
       }
 
-      // 2. If no user, trigger interactive flow
+      // If no user, trigger interactive authentication.
       if (account == null) {
-          try {
-             account = await GoogleSignIn.instance.authenticate();
-          } catch (e) {
-             debugPrint('GoogleAuthService: authenticate failed: $e');
-             return null;
+        try {
+          account = await GoogleSignIn.instance.authenticate();
+        } catch (e) {
+          if (kDebugMode) {
+            debugPrint('GoogleAuthService: authenticate failed: $e');
           }
+          return null;
+        }
       }
 
-      // 7.x: Access authentication synchronously
-      final auth = account.authentication;
-      final idToken = auth.idToken;
-      
-      // In 7.x, try to get serverAuthCode from authentication object or cast dynamically if needed
-      String? serverAuthCode;
-      try {
-         // Try to read it from auth if it exists there (dynamic dispatch for safety during upgrade)
-         serverAuthCode = (auth as dynamic).serverAuthCode as String?;
-      } catch (_) {}
-
-      // Fallback: If no serverAuthCode found on auth object, check the account object 
-      // just in case (though error logs said it was missing).
-      if (serverAuthCode == null || serverAuthCode.isEmpty) {
-         try {
-           serverAuthCode = (account as dynamic).serverAuthCode as String?;
-         } catch (_) {}
-      }
-
-      if ((idToken == null || idToken.isEmpty) && (serverAuthCode == null || serverAuthCode.isEmpty)) {
-         throw Exception('Google sign-in failed: No ID token or Server Auth Code returned.');
-      }
-
-      return GoogleAuthResult(
-        idToken: idToken ?? '',
-        serverAuthCode: serverAuthCode,
-        email: account.email,
-        displayName: account.displayName,
-      );
+      return resultFromAccount(account);
     } on Exception {
       rethrow;
     } catch (e) {
       throw Exception('Google sign-in failed: $e');
+    }
+  }
+
+  /// Sign out the current user.
+  /// - Mobile: Removes account from the device
+  /// - Web: Clears the session (user can still be signed in to Google account in browser)
+  Future<void> signOut() async {
+    if (!_initialized) {
+      return;
+    }
+    
+    try {
+      await GoogleSignIn.instance.signOut();
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('GoogleAuthService.signOut: $e');
+      }
+    }
+  }
+
+  /// Disconnect the app's access to the user's Google account.
+  /// - Mobile: Removes account and disconnects app
+  /// - Web: Disconnects app access (user remains signed in to Google)
+  Future<void> disconnect() async {
+    if (!_initialized) {
+      return;
+    }
+    
+    try {
+      await GoogleSignIn.instance.disconnect();
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('GoogleAuthService.disconnect: $e');
+      }
     }
   }
 }
