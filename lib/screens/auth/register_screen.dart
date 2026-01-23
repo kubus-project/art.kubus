@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../utils/kubus_color_roles.dart';
@@ -43,9 +44,54 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _usernameController = TextEditingController();
   bool _isSubmitting = false;
   bool _isGoogleSubmitting = false;
+  bool _didAttemptGoogleAutoSignIn = false;
   String? _emailError;
   String? _passwordError;
   String? _confirmPasswordError;
+
+  @override
+  void initState() {
+    super.initState();
+    // Best-effort "automatic" sign-in on mobile (silent re-auth for returning users).
+    // Note: One Tap is web-only (GIS iframe) and cannot be replicated on native.
+    if (!kIsWeb && AppConfig.enableGoogleAuth) {
+      unawaited(_attemptGoogleAutoSignIn());
+    }
+  }
+
+  Future<void> _attemptGoogleAutoSignIn() async {
+    if (_didAttemptGoogleAutoSignIn) return;
+    _didAttemptGoogleAutoSignIn = true;
+    if (_isGoogleSubmitting) return;
+
+    try {
+      await GoogleAuthService().ensureInitialized();
+      final account = await GoogleSignIn.instance.attemptLightweightAuthentication();
+      if (!mounted) return;
+      if (account == null) return;
+
+      if (mounted) {
+        setState(() => _isGoogleSubmitting = true);
+      }
+
+      final googleResult = GoogleAuthService().resultFromAccount(account);
+      final api = BackendApiService();
+      final result = await api.loginWithGoogle(
+        idToken: googleResult.idToken,
+        code: googleResult.serverAuthCode,
+        email: googleResult.email,
+        username: null,
+      );
+      if (!mounted) return;
+      await _handleAuthSuccess(result);
+    } catch (_) {
+      // Best-effort only.
+    } finally {
+      if (mounted) {
+        setState(() => _isGoogleSubmitting = false);
+      }
+    }
+  }
 
   @override
   void dispose() {
