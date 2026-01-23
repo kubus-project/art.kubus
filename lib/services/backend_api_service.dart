@@ -1348,23 +1348,34 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
   /// Login with Google idToken (verified server-side)
   /// POST /api/auth/login/google
   Future<Map<String, dynamic>> loginWithGoogle({
-    required String idToken,
+    String? idToken,
+    String? code,
     String? email,
     String? username,
     String? walletAddress,
   }) async {
     try {
-      final uri = Uri.parse('$baseUrl/api/auth/login/google');
+      if ((code == null || code.isEmpty) && (idToken == null || idToken.isEmpty)) {
+        throw Exception('Either auth code or idToken is required for Google login');
+      }
+
+      final isCodeFlow = code != null && code.isNotEmpty;
+      final endpoint = isCodeFlow ? '/api/auth/login/google/code' : '/api/auth/login/google';
+      final uri = Uri.parse('$baseUrl$endpoint');
       final key = _rateLimitKey('POST', uri);
+      
       if (_isRateLimited(key)) {
         throw Exception(_rateLimitMessage(key));
       }
+
       final body = {
-        'idToken': idToken,
+        if (isCodeFlow) 'code': code,
+        if (!isCodeFlow && idToken != null) 'idToken': idToken,
         if (email != null && email.isNotEmpty) 'email': email,
         if (username != null && username.isNotEmpty) 'username': username,
         if (walletAddress != null && walletAddress.isNotEmpty) 'walletAddress': walletAddress,
       };
+
       final response = await _post(
         uri,
         includeAuth: false,

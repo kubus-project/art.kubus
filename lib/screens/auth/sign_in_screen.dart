@@ -366,6 +366,7 @@ class _SignInScreenState extends State<SignInScreen> {
       final api = BackendApiService();
       final result = await api.loginWithGoogle(
         idToken: googleResult.idToken,
+        code: googleResult.serverAuthCode,
         email: googleResult.email,
         username: googleResult.displayName,
       );
