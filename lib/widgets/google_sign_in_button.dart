@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'glass_components.dart';
-
 /// Google Sign-In button that works across platforms.
 /// The handler should trigger the platform-appropriate GIS/SDK flow.
 class GoogleSignInButton extends StatelessWidget {
@@ -24,11 +22,11 @@ class GoogleSignInButton extends StatelessWidget {
     // Match KubusButton geometry (more square than the previous pill-ish look).
     final radius = BorderRadius.circular(8);
 
-    // Google-like neutral button styling: black on dark, white on light.
-    final baseBackground = isDark ? Colors.black : Colors.white;
+    // Transparent background (requested) with neutral black/white content.
     final baseForeground = isDark ? Colors.white : const Color(0xFF1F1F1F);
-    final borderColor = isDark ? Colors.transparent : const Color(0x1F000000);
-    final glassTint = baseBackground.withValues(alpha: isDark ? 0.88 : 0.94);
+    final borderColor = isDark
+        ? Colors.white.withValues(alpha: 0.22)
+        : Colors.black.withValues(alpha: 0.12);
 
     final Widget leading = isLoading
         ? SizedBox(
@@ -43,46 +41,32 @@ class GoogleSignInButton extends StatelessWidget {
             color: baseForeground,
           );
 
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: radius,
-        border: Border.all(
-          color: borderColor,
-          width: 1,
+    return SizedBox(
+      height: 56,
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        style: OutlinedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          foregroundColor: baseForeground,
+          shadowColor: Colors.transparent,
+          disabledForegroundColor: baseForeground.withValues(alpha: 0.55),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 16,
+          ),
+          side: BorderSide(
+            color: borderColor,
+            width: 1,
+          ),
+          shape: RoundedRectangleBorder(borderRadius: radius),
         ),
-      ),
-      child: LiquidGlassPanel(
-        padding: EdgeInsets.zero,
-        margin: EdgeInsets.zero,
-        borderRadius: radius,
-        showBorder: false,
-        backgroundColor: glassTint,
-        child: SizedBox(
-          height: 56,
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.transparent,
-              foregroundColor: baseForeground,
-              shadowColor: Colors.transparent,
-              disabledBackgroundColor: Colors.transparent,
-              disabledForegroundColor: baseForeground.withValues(alpha: 0.55),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 24,
-                vertical: 16,
-              ),
-              shape: RoundedRectangleBorder(borderRadius: radius),
-              elevation: 0,
-            ),
-            onPressed: isLoading ? null : onPressed,
-            icon: leading,
-            label: Text(
-              isLoading ? 'Connecting...' : 'Continue with Google',
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+        onPressed: isLoading ? null : () async => onPressed(),
+        icon: leading,
+        label: Text(
+          isLoading ? 'Connecting...' : 'Continue with Google',
+          style: GoogleFonts.inter(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ),

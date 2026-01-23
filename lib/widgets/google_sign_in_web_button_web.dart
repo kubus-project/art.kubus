@@ -7,7 +7,6 @@ import 'package:google_sign_in_platform_interface/google_sign_in_platform_interf
 import 'package:google_sign_in_web/google_sign_in_web.dart' as gweb;
 
 import '../services/google_auth_service.dart';
-import 'glass_components.dart';
 
 class GoogleSignInWebButton extends StatefulWidget {
   const GoogleSignInWebButton({
@@ -16,12 +15,14 @@ class GoogleSignInWebButton extends StatefulWidget {
     this.onAuthError,
     required this.isLoading,
     required this.colorScheme,
+    this.scale = 1.15,
   });
 
   final Future<void> Function(GoogleAuthResult result) onAuthResult;
   final void Function(Object error)? onAuthError;
   final bool isLoading;
   final ColorScheme colorScheme;
+  final double scale;
 
   @override
   State<GoogleSignInWebButton> createState() => _GoogleSignInWebButtonState();
@@ -79,13 +80,9 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    // Match KubusButton geometry.
-    final radius = BorderRadius.circular(8);
 
-    // Neutral wrapper so it doesn't fight the GIS-rendered Google button.
-    final baseBackground = isDark ? Colors.black : Colors.white;
-    final borderColor = isDark ? Colors.transparent : const Color(0x1F000000);
-    final glassTint = baseBackground.withValues(alpha: isDark ? 0.88 : 0.94);
+    // Defensive: avoid weird layout/math if someone passes 0 or negative.
+    final scale = widget.scale <= 0 ? 1.0 : widget.scale;
 
     final Widget child;
     if (!_ready) {
@@ -98,19 +95,31 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
             final double maxWidth = constraints.maxWidth.isFinite
                 ? constraints.maxWidth
                 : 400;
-            final double buttonWidth = maxWidth.clamp(180, 400);
+            // We scale the rendered button up for better tap targets/visual weight.
+            // Because Transform.scale doesn't affect layout, we compensate by
+            // shrinking the minimumWidth so the post-scale visual width matches
+            // the available space.
+            final double desiredVisualWidth = maxWidth.clamp(200, 420);
+            final double minWidthBeforeScale = (desiredVisualWidth / scale)
+                .clamp(160, desiredVisualWidth);
 
-            return platform.renderButton(
-              configuration: gweb.GSIButtonConfiguration(
-                type: gweb.GSIButtonType.standard,
-                theme: isDark
-                    ? gweb.GSIButtonTheme.filledBlack
-                    : gweb.GSIButtonTheme.outline,
-                size: gweb.GSIButtonSize.large,
-                text: gweb.GSIButtonText.continueWith,
-                shape: gweb.GSIButtonShape.pill,
-                logoAlignment: gweb.GSIButtonLogoAlignment.left,
-                minimumWidth: buttonWidth,
+            return Center(
+              child: Transform.scale(
+                scale: scale,
+                alignment: Alignment.center,
+                child: platform.renderButton(
+                  configuration: gweb.GSIButtonConfiguration(
+                    type: gweb.GSIButtonType.standard,
+                    theme: isDark
+                        ? gweb.GSIButtonTheme.filledBlack
+                        : gweb.GSIButtonTheme.outline,
+                    size: gweb.GSIButtonSize.large,
+                    text: gweb.GSIButtonText.continueWith,
+                    shape: gweb.GSIButtonShape.pill,
+                    logoAlignment: gweb.GSIButtonLogoAlignment.left,
+                    minimumWidth: minWidthBeforeScale,
+                  ),
+                ),
               ),
             );
           },
@@ -120,51 +129,38 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
       }
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: radius,
-        border: Border.all(
-          color: borderColor,
-          width: 1,
-        ),
-      ),
-      child: LiquidGlassPanel(
-        padding: EdgeInsets.zero,
-        margin: EdgeInsets.zero,
-        borderRadius: radius,
-        showBorder: false,
-        backgroundColor: glassTint,
-        child: SizedBox(
-          height: 56,
-          width: double.infinity,
-          child: Stack(
-            alignment: Alignment.center,
-            children: <Widget>[
-              AbsorbPointer(
-                absorbing: widget.isLoading,
-                child: Center(child: child),
-              ),
-              if (widget.isLoading)
-                Positioned.fill(
-                  child: ColoredBox(
-                    color: Colors.transparent,
-                    child: Center(
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            widget.colorScheme.onSurface,
-                          ),
-                        ),
+    // No wrapper/background: show the original GIS button as-is.
+    // We only reserve enough height so the scaled button doesn't get clipped.
+    final double reservedHeight = 56 * scale;
+    return SizedBox(
+      height: reservedHeight,
+      width: double.infinity,
+      child: Stack(
+        alignment: Alignment.center,
+        children: <Widget>[
+          AbsorbPointer(
+            absorbing: widget.isLoading,
+            child: Center(child: child),
+          ),
+          if (widget.isLoading)
+            Positioned.fill(
+              child: ColoredBox(
+                color: Colors.transparent,
+                child: Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        widget.colorScheme.onSurface,
                       ),
                     ),
                   ),
                 ),
-            ],
-          ),
-        ),
+              ),
+            ),
+        ],
       ),
     );
   }
