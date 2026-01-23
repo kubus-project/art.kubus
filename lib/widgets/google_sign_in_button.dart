@@ -24,13 +24,11 @@ class GoogleSignInButton extends StatelessWidget {
     // Match KubusButton geometry (more square than the previous pill-ish look).
     final radius = BorderRadius.circular(8);
 
-    // Brand-ish tones (not exact logo assets; avoids bundling trademarked art).
-    const googleBlue = Color(0xFF4285F4);
-    const googleAmber = Color(0xFFFBBC05);
-
-    final brandBackground = isDark ? googleBlue : googleAmber;
-    final brandForeground = isDark ? Colors.white : const Color(0xFF1F1F1F);
-    final glassTint = brandBackground.withValues(alpha: isDark ? 0.78 : 0.86);
+    // Google-like neutral button styling: black on dark, white on light.
+    final baseBackground = isDark ? Colors.black : Colors.white;
+    final baseForeground = isDark ? Colors.white : const Color(0xFF1F1F1F);
+    final borderColor = isDark ? Colors.transparent : const Color(0x1F000000);
+    final glassTint = baseBackground.withValues(alpha: isDark ? 0.88 : 0.94);
 
     final Widget leading = isLoading
         ? SizedBox(
@@ -38,17 +36,20 @@ class GoogleSignInButton extends StatelessWidget {
             height: 20,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(brandForeground),
+              valueColor: AlwaysStoppedAnimation<Color>(baseForeground),
             ),
           )
-        : _GoogleBadgeG(
-            foreground: googleBlue,
-            borderColor: colorScheme.onSurface.withValues(alpha: 0.10),
+        : _GoogleGlyph(
+            color: baseForeground,
           );
 
     return Container(
       decoration: BoxDecoration(
         borderRadius: radius,
+        border: Border.all(
+          color: borderColor,
+          width: 1,
+        ),
       ),
       child: LiquidGlassPanel(
         padding: EdgeInsets.zero,
@@ -62,9 +63,10 @@ class GoogleSignInButton extends StatelessWidget {
           child: ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.transparent,
-              foregroundColor: brandForeground,
+              foregroundColor: baseForeground,
               shadowColor: Colors.transparent,
               disabledBackgroundColor: Colors.transparent,
+              disabledForegroundColor: baseForeground.withValues(alpha: 0.55),
               padding: const EdgeInsets.symmetric(
                 horizontal: 24,
                 vertical: 16,
@@ -88,32 +90,25 @@ class GoogleSignInButton extends StatelessWidget {
   }
 }
 
-class _GoogleBadgeG extends StatelessWidget {
-  const _GoogleBadgeG({
-    required this.foreground,
-    required this.borderColor,
-  });
+class _GoogleGlyph extends StatelessWidget {
+  const _GoogleGlyph({required this.color});
 
-  final Color foreground;
-  final Color borderColor;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       width: 22,
       height: 22,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        'G',
-        style: GoogleFonts.inter(
-          fontSize: 14,
-          fontWeight: FontWeight.w800,
-          color: foreground,
-          height: 1,
+      child: Center(
+        child: Text(
+          'G',
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+            color: color,
+            height: 1,
+          ),
         ),
       ),
     );
