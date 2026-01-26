@@ -1030,11 +1030,15 @@ class _MapScreenState extends State<MapScreen>
   Future<GeoBounds?> _getVisibleGeoBounds() async {
     final controller = _mapController;
     if (controller == null) return null;
-    final bounds = await controller.getVisibleRegion();
-    return GeoBounds.fromCorners(
-      LatLng(bounds.southwest.latitude, bounds.southwest.longitude),
-      LatLng(bounds.northeast.latitude, bounds.northeast.longitude),
-    );
+    try {
+      final bounds = await controller.getVisibleRegion();
+      return GeoBounds.fromCorners(
+        LatLng(bounds.southwest.latitude, bounds.southwest.longitude),
+        LatLng(bounds.northeast.latitude, bounds.northeast.longitude),
+      );
+    } catch (_) {
+      return null;
+    }
   }
 
   void _queueMarkerRefresh({required bool fromGesture}) {
