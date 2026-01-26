@@ -57,42 +57,46 @@ class ArtMapView extends StatelessWidget {
     // renderer/state bugs on web and ensures dark/light swaps are reliable.
     final mapKey = ValueKey<String>('maplibre-${isDarkMode ? 'dark' : 'light'}-$styleAsset');
 
-    return ml.MapLibreMap(
-      key: mapKey,
-      styleString: styleAsset,
-      initialCameraPosition: ml.CameraPosition(
-        target: ml.LatLng(initialCenter.latitude, initialCenter.longitude),
-        zoom: initialZoom,
+    // MapLibre is a platform view; in a loose Stack it can end up with a 0-size
+    // layout. SizedBox.expand guarantees fullscreen rendering for our map screens.
+    return SizedBox.expand(
+      child: ml.MapLibreMap(
+        key: mapKey,
+        styleString: styleAsset,
+        initialCameraPosition: ml.CameraPosition(
+          target: ml.LatLng(initialCenter.latitude, initialCenter.longitude),
+          zoom: initialZoom,
+        ),
+        minMaxZoomPreference: ml.MinMaxZoomPreference(minZoom, maxZoom),
+        rotateGesturesEnabled: rotateGesturesEnabled,
+        scrollGesturesEnabled: scrollGesturesEnabled,
+        zoomGesturesEnabled: zoomGesturesEnabled,
+        tiltGesturesEnabled: tiltGesturesEnabled,
+        compassEnabled: compassEnabled,
+        myLocationEnabled: false,
+        myLocationTrackingMode: ml.MyLocationTrackingMode.none,
+        onMapCreated: onMapCreated,
+        onStyleLoadedCallback: onStyleLoaded,
+        onCameraMove: onCameraMove,
+        onCameraIdle: onCameraIdle,
+        onMapClick: onMapClick == null
+            ? null
+            : (math.Point<double> point, ml.LatLng latLng) {
+                onMapClick!(
+                  point,
+                  ll.LatLng(latLng.latitude, latLng.longitude),
+                );
+              },
+        onMapLongClick: onMapLongClick == null
+            ? null
+            : (math.Point<double> point, ml.LatLng latLng) {
+                onMapLongClick!(
+                  point,
+                  ll.LatLng(latLng.latitude, latLng.longitude),
+                );
+              },
+        trackCameraPosition: true,
       ),
-      minMaxZoomPreference: ml.MinMaxZoomPreference(minZoom, maxZoom),
-      rotateGesturesEnabled: rotateGesturesEnabled,
-      scrollGesturesEnabled: scrollGesturesEnabled,
-      zoomGesturesEnabled: zoomGesturesEnabled,
-      tiltGesturesEnabled: tiltGesturesEnabled,
-      compassEnabled: compassEnabled,
-      myLocationEnabled: false,
-      myLocationTrackingMode: ml.MyLocationTrackingMode.none,
-      onMapCreated: onMapCreated,
-      onStyleLoadedCallback: onStyleLoaded,
-      onCameraMove: onCameraMove,
-      onCameraIdle: onCameraIdle,
-      onMapClick: onMapClick == null
-          ? null
-          : (math.Point<double> point, ml.LatLng latLng) {
-              onMapClick!(
-                point,
-                ll.LatLng(latLng.latitude, latLng.longitude),
-              );
-            },
-      onMapLongClick: onMapLongClick == null
-          ? null
-          : (math.Point<double> point, ml.LatLng latLng) {
-              onMapLongClick!(
-                point,
-                ll.LatLng(latLng.latitude, latLng.longitude),
-              );
-            },
-      trackCameraPosition: true,
     );
   }
 }
