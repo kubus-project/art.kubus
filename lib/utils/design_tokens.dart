@@ -173,13 +173,16 @@ class KubusTypography {
   }
 
   static TextTheme get textTheme {
-    return GoogleFonts.interTextTheme().copyWith(
+    // Important: build a color-agnostic text theme so it can inherit the active
+    // ThemeData text colors (fixes dark-mode regressions where GoogleFonts
+    // defaults to light theme colors).
+    return GoogleFonts.interTextTheme(const TextTheme()).copyWith(
       displayLarge:
           GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 32),
       displayMedium:
-          GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 28),
+        GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 28),
       displaySmall:
-          GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 24),
+        GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 24),
       headlineMedium:
           GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 20),
       headlineSmall:

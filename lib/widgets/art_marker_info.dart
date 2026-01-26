@@ -6,6 +6,7 @@ import '../models/artwork.dart';
 import '../utils/app_color_utils.dart';
 import '../utils/artwork_media_resolver.dart';
 import '../utils/design_tokens.dart';
+import '../utils/kubus_color_roles.dart';
 import 'glass_components.dart';
 
 Future<void> showArtMarkerInfoDialog({
@@ -15,10 +16,12 @@ Future<void> showArtMarkerInfoDialog({
   LatLng? userPosition,
 }) {
   final scheme = Theme.of(context).colorScheme;
+  final roles = KubusColorRoles.of(context);
   final baseColor = AppColorUtils.markerSubjectColor(
     markerType: marker.type.name,
     metadata: marker.metadata,
     scheme: scheme,
+    roles: roles,
   );
   final hasExhibitions = marker.isExhibitionMarker || marker.exhibitionSummaries.isNotEmpty;
   final primaryExhibition = marker.resolvedExhibitionSummary;

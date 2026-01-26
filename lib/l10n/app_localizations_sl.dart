@@ -2721,6 +2721,15 @@ class AppLocalizationsSl extends AppLocalizations {
   String get mapTravelModeDisableTooltip => 'Izklopi način potovanja';
 
   @override
+  String get mapIsometricViewEnableTooltip => 'Vklopi izometrični pogled';
+
+  @override
+  String get mapIsometricViewDisableTooltip => 'Izklopi izometrični pogled';
+
+  @override
+  String get mapExhibitionsUnavailableToast => 'Razstave trenutno niso na voljo.';
+
+  @override
   String get mapTutorialStepMapTitle => 'Zemljevid';
 
   @override

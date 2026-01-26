@@ -1099,6 +1099,18 @@
   "@mapTravelModeDisableTooltip": {
     "description": "Tooltip for the Travel Mode toggle when it is currently ON (disables travel mode)."
   },
+  "mapIsometricViewEnableTooltip": "Enable isometric view",
+  "@mapIsometricViewEnableTooltip": {
+    "description": "Tooltip for the Isometric View toggle when it is currently OFF (enables isometric view)."
+  },
+  "mapIsometricViewDisableTooltip": "Disable isometric view",
+  "@mapIsometricViewDisableTooltip": {
+    "description": "Tooltip for the Isometric View toggle when it is currently ON (disables isometric view)."
+  },
+  "mapExhibitionsUnavailableToast": "Exhibitions are currently unavailable.",
+  "@mapExhibitionsUnavailableToast": {
+    "description": "Toast/SnackBar shown when exhibitions can't be opened from the map (feature disabled or API unavailable)."
+  },
   "mapTutorialStepMapTitle": "Your map",
   "@mapTutorialStepMapTitle": {
     "description": "Title for the first step of the interactive map tutorial (coach marks)."

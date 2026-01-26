@@ -5375,6 +5375,24 @@ abstract class AppLocalizations {
   /// **'Disable travel mode'**
   String get mapTravelModeDisableTooltip;
 
+  /// Tooltip for the Isometric View toggle when it is currently OFF (enables isometric view).
+  ///
+  /// In en, this message translates to:
+  /// **'Enable isometric view'**
+  String get mapIsometricViewEnableTooltip;
+
+  /// Tooltip for the Isometric View toggle when it is currently ON (disables isometric view).
+  ///
+  /// In en, this message translates to:
+  /// **'Disable isometric view'**
+  String get mapIsometricViewDisableTooltip;
+
+  /// Toast/SnackBar shown when exhibitions can't be opened from the map (feature disabled or API unavailable).
+  ///
+  /// In en, this message translates to:
+  /// **'Exhibitions are currently unavailable.'**
+  String get mapExhibitionsUnavailableToast;
+
   /// Title for the first step of the interactive map tutorial (coach marks).
   ///
   /// In en, this message translates to:

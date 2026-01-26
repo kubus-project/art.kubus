@@ -2721,6 +2721,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapTravelModeDisableTooltip => 'Disable travel mode';
 
   @override
+  String get mapIsometricViewEnableTooltip => 'Enable isometric view';
+
+  @override
+  String get mapIsometricViewDisableTooltip => 'Disable isometric view';
+
+  @override
+  String get mapExhibitionsUnavailableToast => 'Exhibitions are currently unavailable.';
+
+  @override
   String get mapTutorialStepMapTitle => 'Your map';
 
   @override

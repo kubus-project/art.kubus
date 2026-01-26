@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -9,64 +10,181 @@ import 'art_marker_service.dart';
 import 'backend_api_service.dart';
 import 'socket_service.dart';
 
+@immutable
+class _MarkerCacheEntry {
+  const _MarkerCacheEntry({
+    required this.markers,
+    required this.fetchedAt,
+  });
+
+  final List<ArtMarker> markers;
+  final DateTime fetchedAt;
+}
+
 /// Service responsible for fetching and managing map-visible art markers.
 class MapMarkerService {
-  MapMarkerService._internal();
+  MapMarkerService._internal({
+    BackendApiService? backendApiService,
+    ArtMarkerService? artMarkerService,
+    SocketService? socketService,
+    bool enableSocketBridge = true,
+  })  : _backendApi = backendApiService ?? BackendApiService(),
+        _artMarkerService = artMarkerService ?? ArtMarkerService(),
+        _socket = socketService ?? SocketService(),
+        _enableSocketBridge = enableSocketBridge;
+
   static final MapMarkerService _instance = MapMarkerService._internal();
   factory MapMarkerService() => _instance;
 
-  final BackendApiService _backendApi = BackendApiService();
-  final ArtMarkerService _artMarkerService = ArtMarkerService();
+  @visibleForTesting
+  static MapMarkerService createForTest({
+    BackendApiService? backendApiService,
+    ArtMarkerService? artMarkerService,
+  }) {
+    return MapMarkerService._internal(
+      backendApiService: backendApiService,
+      artMarkerService: artMarkerService,
+      enableSocketBridge: false,
+    );
+  }
+
+  final BackendApiService _backendApi;
+  final ArtMarkerService _artMarkerService;
   final List<ArtMarker> _cachedMarkers = [];
   final StreamController<ArtMarker> _markerStreamController =
       StreamController<ArtMarker>.broadcast();
   final StreamController<String> _markerDeletedController =
       StreamController<String>.broadcast();
-  final SocketService _socket = SocketService();
+  final SocketService _socket;
+  final bool _enableSocketBridge;
   bool _socketRegistered = false;
   LatLng? _lastQueryCenter;
   double _lastQueryRadiusKm = 5.0;
-  int _lastQueryLimit = 100;
   LatLngBounds? _lastQueryBounds;
   bool _lastQueryWasBounds = false;
-  DateTime? _lastFetchTime;
-  static const Duration _cacheTtl = Duration(minutes: 15); // Increased from 10 to 15 minutes
+
+  // Query cache (LRU) to keep Travel Mode panning smooth.
+  // - Bounds queries: short TTL to avoid staleness while moving quickly.
+  // - Radius queries: longer TTL since they are used when exploring a fixed area.
+  static const Duration _boundsCacheTtl = Duration(seconds: 90);
+  static const Duration _radiusCacheTtl = Duration(minutes: 10);
+  static const int _maxQueryCacheEntries = 24;
+  final LinkedHashMap<String, _MarkerCacheEntry> _queryCache =
+      LinkedHashMap<String, _MarkerCacheEntry>();
+  final Map<String, Future<List<ArtMarker>>> _inFlightByKey =
+      <String, Future<List<ArtMarker>>>{};
+
   static const Duration _rateLimitBackoff = Duration(minutes: 30); // Increased from 15 to 30 minutes
   DateTime? _rateLimitUntil;
   final Distance _distance = const Distance();
-  bool _isFetching = false; // Prevent concurrent fetches
 
   void _log(String message) {
     if (!kDebugMode) return;
     debugPrint(message);
   }
 
-  bool _canReuseCache(LatLng center, double radiusKm, int limit) {
-    if (_lastQueryWasBounds) return false;
-    if (_cachedMarkers.isEmpty ||
-        _lastFetchTime == null ||
-        _lastQueryCenter == null) {
-      return false;
-    }
+  static int _decimalsForZoomBucket(int? zoomBucket) {
+    final bucket = zoomBucket ?? 13;
+    if (bucket <= 9) return 1; // ~11km
+    if (bucket <= 11) return 2; // ~1.1km
+    return 3; // ~110m
+  }
 
-    // If caller requests more than we previously fetched, don't reuse.
-    if (_lastQueryLimit < limit) {
-      return false;
-    }
+  static String _q(double value, int decimals) =>
+      value.toStringAsFixed(decimals);
 
-    if (DateTime.now().difference(_lastFetchTime!) > _cacheTtl) {
-      return false;
-    }
+  static String _filtersKeyOrEmpty(String? filtersKey) {
+    final key = (filtersKey ?? '').trim();
+    return key.isEmpty ? '-' : key;
+  }
 
-    final centerDelta = _distance.as(
-      LengthUnit.Kilometer,
-      _lastQueryCenter!,
-      center,
+  @visibleForTesting
+  static String buildRadiusQueryKey({
+    required LatLng center,
+    required double radiusKm,
+    required int limit,
+    int? zoomBucket,
+    String? filtersKey,
+  }) {
+    final decimals = _decimalsForZoomBucket(zoomBucket);
+    final fKey = _filtersKeyOrEmpty(filtersKey);
+    final radiusKey = radiusKm.toStringAsFixed(2);
+    return [
+      'r',
+      'zb=${zoomBucket ?? '-'}',
+      'lim=$limit',
+      'f=$fKey',
+      'lat=${_q(center.latitude, decimals)}',
+      'lng=${_q(center.longitude, decimals)}',
+      'rad=$radiusKey',
+    ].join('|');
+  }
+
+  @visibleForTesting
+  static String buildBoundsQueryKey({
+    required LatLngBounds bounds,
+    required int limit,
+    int? zoomBucket,
+    String? filtersKey,
+  }) {
+    final decimals = _decimalsForZoomBucket(zoomBucket);
+    final fKey = _filtersKeyOrEmpty(filtersKey);
+    final crossesDateline = bounds.west > bounds.east;
+    return [
+      'b',
+      'zb=${zoomBucket ?? '-'}',
+      'lim=$limit',
+      'f=$fKey',
+      'xdl=${crossesDateline ? '1' : '0'}',
+      's=${_q(bounds.south, decimals)}',
+      'n=${_q(bounds.north, decimals)}',
+      'w=${_q(bounds.west, decimals)}',
+      'e=${_q(bounds.east, decimals)}',
+    ].join('|');
+  }
+
+  _MarkerCacheEntry? _touchCacheEntry(String key) {
+    final entry = _queryCache.remove(key);
+    if (entry == null) return null;
+    _queryCache[key] = entry;
+    return entry;
+  }
+
+  List<ArtMarker>? _getFreshCachedMarkers(String key, Duration ttl) {
+    final entry = _touchCacheEntry(key);
+    if (entry == null) return null;
+    if (DateTime.now().difference(entry.fetchedAt) > ttl) {
+      _queryCache.remove(key);
+      return null;
+    }
+    return entry.markers;
+  }
+
+  List<ArtMarker>? _peekCachedMarkers(String key) => _queryCache[key]?.markers;
+
+  void _putCacheEntry(String key, List<ArtMarker> markers) {
+    _queryCache.remove(key);
+    _queryCache[key] = _MarkerCacheEntry(
+      markers: List<ArtMarker>.unmodifiable(markers),
+      fetchedAt: DateTime.now(),
     );
+    while (_queryCache.length > _maxQueryCacheEntries) {
+      _queryCache.remove(_queryCache.keys.first);
+    }
+  }
 
-    // More lenient cache reuse - 35% of radius instead of 25%
-    final radiusDelta = (_lastQueryRadiusKm - radiusKm).abs();
-    return centerDelta <= radiusKm * 0.35 && radiusDelta <= 2.0;
+  Future<List<ArtMarker>> _dedupeInFlight(
+    String key,
+    Future<List<ArtMarker>> Function() task,
+  ) {
+    final existing = _inFlightByKey[key];
+    if (existing != null) return existing;
+
+    final future = task().whenComplete(() {
+      _inFlightByKey.remove(key);
+    });
+    _inFlightByKey[key] = future;
+    return future;
   }
 
   bool _boundsContains(LatLngBounds bounds, LatLng point) {
@@ -84,90 +202,75 @@ class MapMarkerService {
     return point.longitude >= west || point.longitude <= east;
   }
 
-  bool _canReuseBoundsCache(LatLngBounds bounds, int limit) {
-    if (!_lastQueryWasBounds) return false;
-    if (_cachedMarkers.isEmpty || _lastFetchTime == null || _lastQueryBounds == null) {
-      return false;
-    }
-    if (_lastQueryLimit < limit) return false;
-    if (DateTime.now().difference(_lastFetchTime!) > _cacheTtl) return false;
-
-    // If the new bounds are fully contained within the previous bounds,
-    // we can safely reuse cached markers.
-    final b = _lastQueryBounds!;
-    final withinLat = bounds.south >= b.south && bounds.north <= b.north;
-
-    // Longitude containment with wrap-around is tricky; keep it conservative.
-    // If either bounds crosses the dateline, don't reuse.
-    final crossesNew = bounds.west > bounds.east;
-    final crossesOld = b.west > b.east;
-    if (crossesNew || crossesOld) return false;
-
-    final withinLng = bounds.west >= b.west && bounds.east <= b.east;
-    return withinLat && withinLng;
-  }
-
   Future<List<ArtMarker>> loadMarkers({
     required LatLng center,
     double radiusKm = 5.0,
     int? limit,
     bool forceRefresh = false,
+    int? zoomBucket,
+    String? filtersKey,
   }) async {
     _ensureSocketBridge();
 
     final requestedLimit = limit ?? 100;
-
-    // Prevent concurrent fetches
-    if (_isFetching) {
-      _log('MapMarkerService: Already fetching, returning cached markers');
-      return _filterValidMarkers(_cachedMarkers);
-    }
+    final key = buildRadiusQueryKey(
+      center: center,
+      radiusKm: radiusKm,
+      limit: requestedLimit,
+      zoomBucket: zoomBucket,
+      filtersKey: filtersKey,
+    );
 
     if (_rateLimitUntil != null && DateTime.now().isBefore(_rateLimitUntil!)) {
-      _log('MapMarkerService: using cache during rate-limit cooldown (until $_rateLimitUntil)');
-      return _filterValidMarkers(_cachedMarkers);
+      final cached = _peekCachedMarkers(key) ?? _cachedMarkers;
+      return _filterValidMarkers(cached);
     }
 
-    if (!forceRefresh && _canReuseCache(center, radiusKm, requestedLimit)) {
-      _log('MapMarkerService: using cached markers (${_cachedMarkers.length} items)');
-      return _filterValidMarkers(_cachedMarkers);
-    }
-
-    try {
-      _isFetching = true;
-      _log('MapMarkerService: Fetching markers from backend...');
-      
-      final markers = await _backendApi.getNearbyArtMarkers(
-        latitude: center.latitude,
-        longitude: center.longitude,
-        radiusKm: radiusKm,
-        limit: requestedLimit,
-      );
-
-      _rateLimitUntil = null; // successful fetch resets any prior backoff
-      _cachedMarkers
-        ..clear()
-        ..addAll(_filterValidMarkers(markers));
-      _lastQueryCenter = center;
-      _lastQueryRadiusKm = radiusKm;
-      _lastQueryLimit = requestedLimit;
-      _lastQueryBounds = null;
-      _lastQueryWasBounds = false;
-      _lastFetchTime = DateTime.now();
-      
-      _log('MapMarkerService: Successfully fetched ${markers.length} markers');
-    } catch (e) {
-      final message = e.toString().toLowerCase();
-      if (message.contains('rate limit') || message.contains('429') || message.contains('too many')) {
-        _rateLimitUntil = DateTime.now().add(_rateLimitBackoff);
-        _log('MapMarkerService: rate-limited, backing off until $_rateLimitUntil');
+    if (!forceRefresh) {
+      final cached = _getFreshCachedMarkers(key, _radiusCacheTtl);
+      if (cached != null) {
+        _cachedMarkers
+          ..clear()
+          ..addAll(cached);
+        _lastQueryCenter = center;
+        _lastQueryRadiusKm = radiusKm;
+        _lastQueryBounds = null;
+        _lastQueryWasBounds = false;
+        return _filterValidMarkers(cached);
       }
-      _log('MapMarkerService: falling back to cached markers after error: $e');
-    } finally {
-      _isFetching = false;
     }
 
-    return _filterValidMarkers(_cachedMarkers);
+    return _dedupeInFlight(key, () async {
+      try {
+        final markers = await _backendApi.getNearbyArtMarkers(
+          latitude: center.latitude,
+          longitude: center.longitude,
+          radiusKm: radiusKm,
+          limit: requestedLimit,
+        );
+
+        _rateLimitUntil = null;
+        final filtered = _filterValidMarkers(markers);
+        _putCacheEntry(key, filtered);
+        _cachedMarkers
+          ..clear()
+          ..addAll(filtered);
+        _lastQueryCenter = center;
+        _lastQueryRadiusKm = radiusKm;
+        _lastQueryBounds = null;
+        _lastQueryWasBounds = false;
+        return filtered;
+      } catch (e) {
+        final message = e.toString().toLowerCase();
+        if (message.contains('rate limit') ||
+            message.contains('429') ||
+            message.contains('too many')) {
+          _rateLimitUntil = DateTime.now().add(_rateLimitBackoff);
+        }
+        final cached = _peekCachedMarkers(key) ?? _cachedMarkers;
+        return _filterValidMarkers(cached);
+      }
+    });
   }
 
   Future<List<ArtMarker>> loadMarkersInBounds({
@@ -175,71 +278,79 @@ class MapMarkerService {
     required LatLngBounds bounds,
     int? limit,
     bool forceRefresh = false,
+    int? zoomBucket,
+    String? filtersKey,
   }) async {
     _ensureSocketBridge();
 
     final requestedLimit = limit ?? 100;
-
-    if (_isFetching) {
-      _log('MapMarkerService: Already fetching (bounds), returning cached markers');
-      return _filterValidMarkers(_cachedMarkers);
-    }
+    final key = buildBoundsQueryKey(
+      bounds: bounds,
+      limit: requestedLimit,
+      zoomBucket: zoomBucket,
+      filtersKey: filtersKey,
+    );
 
     if (_rateLimitUntil != null && DateTime.now().isBefore(_rateLimitUntil!)) {
-      _log('MapMarkerService: using cache during rate-limit cooldown (bounds) (until $_rateLimitUntil)');
-      return _filterValidMarkers(_cachedMarkers);
+      final cached = _peekCachedMarkers(key) ?? _cachedMarkers;
+      return _filterValidMarkers(cached);
     }
 
-    if (!forceRefresh && _canReuseBoundsCache(bounds, requestedLimit)) {
-      _log('MapMarkerService: using cached markers (bounds) (${_cachedMarkers.length} items)');
-      return _filterValidMarkers(_cachedMarkers);
-    }
-
-    try {
-      _isFetching = true;
-      _log('MapMarkerService: Fetching markers from backend (bounds)...');
-
-      final markers = await _backendApi.getArtMarkersInBounds(
-        latitude: center.latitude,
-        longitude: center.longitude,
-        minLat: bounds.south,
-        maxLat: bounds.north,
-        minLng: bounds.west,
-        maxLng: bounds.east,
-        limit: requestedLimit,
-      );
-
-      _rateLimitUntil = null;
-      _cachedMarkers
-        ..clear()
-        ..addAll(_filterValidMarkers(markers));
-      _lastQueryCenter = center;
-      _lastQueryBounds = bounds;
-      _lastQueryWasBounds = true;
-      _lastQueryLimit = requestedLimit;
-      _lastFetchTime = DateTime.now();
-
-      _log('MapMarkerService: Successfully fetched ${markers.length} markers (bounds)');
-    } catch (e) {
-      final message = e.toString().toLowerCase();
-      if (message.contains('rate limit') || message.contains('429') || message.contains('too many')) {
-        _rateLimitUntil = DateTime.now().add(_rateLimitBackoff);
-        _log('MapMarkerService: rate-limited (bounds), backing off until $_rateLimitUntil');
+    if (!forceRefresh) {
+      final cached = _getFreshCachedMarkers(key, _boundsCacheTtl);
+      if (cached != null) {
+        _cachedMarkers
+          ..clear()
+          ..addAll(cached);
+        _lastQueryCenter = center;
+        _lastQueryBounds = bounds;
+        _lastQueryWasBounds = true;
+        return _filterValidMarkers(cached);
       }
-      _log('MapMarkerService: falling back to cached markers (bounds) after error: $e');
-    } finally {
-      _isFetching = false;
     }
 
-    return _filterValidMarkers(_cachedMarkers);
+    return _dedupeInFlight(key, () async {
+      try {
+        final markers = await _backendApi.getArtMarkersInBounds(
+          latitude: center.latitude,
+          longitude: center.longitude,
+          minLat: bounds.south,
+          maxLat: bounds.north,
+          minLng: bounds.west,
+          maxLng: bounds.east,
+          limit: requestedLimit,
+        );
+
+        _rateLimitUntil = null;
+        final filtered = _filterValidMarkers(markers);
+        _putCacheEntry(key, filtered);
+        _cachedMarkers
+          ..clear()
+          ..addAll(filtered);
+        _lastQueryCenter = center;
+        _lastQueryBounds = bounds;
+        _lastQueryWasBounds = true;
+        return filtered;
+      } catch (e) {
+        final message = e.toString().toLowerCase();
+        if (message.contains('rate limit') ||
+            message.contains('429') ||
+            message.contains('too many')) {
+          _rateLimitUntil = DateTime.now().add(_rateLimitBackoff);
+        }
+        final cached = _peekCachedMarkers(key) ?? _cachedMarkers;
+        return _filterValidMarkers(cached);
+      }
+    });
   }
 
   double get lastQueryRadiusKm => _lastQueryRadiusKm;
 
   void clearCache() {
     _cachedMarkers.clear();
+    _queryCache.clear();
+    _inFlightByKey.clear();
     _lastQueryCenter = null;
-    _lastFetchTime = null;
     _lastQueryBounds = null;
     _lastQueryWasBounds = false;
   }
@@ -248,6 +359,16 @@ class MapMarkerService {
     final id = markerId.trim();
     if (id.isEmpty) return;
     _cachedMarkers.removeWhere((m) => m.id == id);
+    for (final key in _queryCache.keys.toList(growable: false)) {
+      final entry = _queryCache[key];
+      if (entry == null) continue;
+      final nextMarkers = entry.markers.where((m) => m.id != id).toList();
+      if (nextMarkers.length == entry.markers.length) continue;
+      _queryCache[key] = _MarkerCacheEntry(
+        markers: List<ArtMarker>.unmodifiable(nextMarkers),
+        fetchedAt: entry.fetchedAt,
+      );
+    }
     _markerDeletedController.add(id);
   }
 
@@ -267,8 +388,6 @@ class MapMarkerService {
       } else {
         _cachedMarkers.add(marker);
       }
-    } else {
-      clearCache();
     }
 
     _markerStreamController.add(marker);
@@ -366,6 +485,7 @@ class MapMarkerService {
 
   void _ensureSocketBridge() {
     if (_socketRegistered) return;
+    if (!_enableSocketBridge) return;
     _socketRegistered = true;
     // Connect is idempotent; if chat/notifications already connected this will be a no-op.
     unawaited(_socket.connect());
@@ -379,17 +499,25 @@ class MapMarkerService {
       if (deleted) {
         final id = (payload['id'] ?? payload['_id'] ?? '').toString();
         if (id.isEmpty) return;
-        _cachedMarkers.removeWhere((m) => m.id == id);
-        _markerDeletedController.add(id);
+        notifyMarkerDeleted(id);
         return;
       }
 
       final marker = _markerFromSocketPayload(payload);
       if (marker == null || !_isValidPosition(marker.position)) return;
+      final shouldKeep = _lastQueryWasBounds
+          ? (_lastQueryBounds != null &&
+              _boundsContains(_lastQueryBounds!, marker.position))
+          : (_lastQueryCenter != null &&
+              _distance.as(
+                    LengthUnit.Kilometer,
+                    _lastQueryCenter!,
+                    marker.position,
+                  ) <=
+                  _lastQueryRadiusKm + 0.5);
+
       // If we have an active cache window and the marker is nearby, merge it in-place.
-      if (_lastQueryCenter != null &&
-          _distance.as(LengthUnit.Kilometer, _lastQueryCenter!, marker.position) <=
-              _lastQueryRadiusKm + 0.5) {
+      if (shouldKeep) {
         final existingIndex =
             _cachedMarkers.indexWhere((m) => m.id == marker.id);
         if (existingIndex >= 0) {
@@ -397,9 +525,6 @@ class MapMarkerService {
         } else {
           _cachedMarkers.add(marker);
         }
-      } else {
-        // New marker outside cache window; clear so next fetch pulls fresh data.
-        clearCache();
       }
       _markerStreamController.add(marker);
     } catch (e) {
