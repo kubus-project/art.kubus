@@ -10,7 +10,10 @@ _flutter.loader.load({
     serviceWorkerVersion: {{flutter_service_worker_version}},
   },
   config: {
-    renderer: "canvaskit",
-    canvasKitBaseUrl: "/canvaskit/",
+    // MapLibre GL on web uses WebGL; running Flutter itself on CanvasKit (also WebGL)
+    // can starve/kill the map's context on some GPUs/browsers, resulting in an
+    // invisible map. HTML renderer keeps Flutter off WebGL and allows MapLibre
+    // to own the WebGL context reliably.
+    renderer: "html",
   },
 });

@@ -4,7 +4,7 @@ import 'package:latlong2/latlong.dart';
 
 import 'geo_bounds.dart';
 
-/// Utilities for viewport-based marker loading on FlutterMap.
+/// Utilities for viewport-based marker loading on MapLibre.
 ///
 /// Travel Mode fetches markers using a bounds query. To keep panning smooth,
 /// we expand the visible bounds by a padding factor and only refetch when the
