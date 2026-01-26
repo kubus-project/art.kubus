@@ -12850,6 +12850,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No institutions found.'**
   String get communitySubjectPickerEmptyInstitution;
+
+  /// No description provided for @supportSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Support'**
+  String get supportSectionTitle;
+
+  /// No description provided for @supportSectionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Help us keep building art.kubus — every donation helps.'**
+  String get supportSectionSubtitle;
+
+  /// No description provided for @supportSectionMoreInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'More info'**
+  String get supportSectionMoreInfo;
+
+  /// No description provided for @supportMethodKofi.
+  ///
+  /// In en, this message translates to:
+  /// **'Ko-fi'**
+  String get supportMethodKofi;
+
+  /// No description provided for @supportMethodKofiHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Coffee-sized support'**
+  String get supportMethodKofiHint;
+
+  /// No description provided for @supportMethodPaypal.
+  ///
+  /// In en, this message translates to:
+  /// **'PayPal'**
+  String get supportMethodPaypal;
+
+  /// No description provided for @supportMethodPaypalHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Donate via PayPal'**
+  String get supportMethodPaypalHint;
+
+  /// No description provided for @supportMethodGithubSponsors.
+  ///
+  /// In en, this message translates to:
+  /// **'GitHub Sponsors'**
+  String get supportMethodGithubSponsors;
+
+  /// No description provided for @supportMethodGithubSponsorsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Support via GitHub'**
+  String get supportMethodGithubSponsorsHint;
+
+  /// No description provided for @supportDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What your support enables'**
+  String get supportDialogTitle;
+
+  /// No description provided for @supportDialogSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Three tiers — all meaningful. Thank you for helping us keep building.'**
+  String get supportDialogSubtitle;
+
+  /// No description provided for @supportTier5Amount.
+  ///
+  /// In en, this message translates to:
+  /// **'€5'**
+  String get supportTier5Amount;
+
+  /// No description provided for @supportTier5Body.
+  ///
+  /// In en, this message translates to:
+  /// **'Helps cover monthly infrastructure costs.'**
+  String get supportTier5Body;
+
+  /// No description provided for @supportTier15Amount.
+  ///
+  /// In en, this message translates to:
+  /// **'€15'**
+  String get supportTier15Amount;
+
+  /// No description provided for @supportTier15Body.
+  ///
+  /// In en, this message translates to:
+  /// **'Supports steady weekly improvements.'**
+  String get supportTier15Body;
+
+  /// No description provided for @supportTier50Amount.
+  ///
+  /// In en, this message translates to:
+  /// **'€50'**
+  String get supportTier50Amount;
+
+  /// No description provided for @supportTier50Body.
+  ///
+  /// In en, this message translates to:
+  /// **'Funds one focused development session (new feature / fixes / content updates).'**
+  String get supportTier50Body;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

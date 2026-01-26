@@ -3222,5 +3222,23 @@
   "communitySubjectPickerEmptyArtwork": "No artworks found.",
   "communitySubjectPickerEmptyExhibition": "No exhibitions found.",
   "communitySubjectPickerEmptyCollection": "No collections found.",
-  "communitySubjectPickerEmptyInstitution": "No institutions found."
+  "communitySubjectPickerEmptyInstitution": "No institutions found.",
+
+  "supportSectionTitle": "Support",
+  "supportSectionSubtitle": "Help us keep building art.kubus — every donation helps.",
+  "supportSectionMoreInfo": "More info",
+  "supportMethodKofi": "Ko-fi",
+  "supportMethodKofiHint": "Coffee-sized support",
+  "supportMethodPaypal": "PayPal",
+  "supportMethodPaypalHint": "Donate via PayPal",
+  "supportMethodGithubSponsors": "GitHub Sponsors",
+  "supportMethodGithubSponsorsHint": "Support via GitHub",
+  "supportDialogTitle": "What your support enables",
+  "supportDialogSubtitle": "Three tiers — all meaningful. Thank you for helping us keep building.",
+  "supportTier5Amount": "€5",
+  "supportTier5Body": "Helps cover monthly infrastructure costs.",
+  "supportTier15Amount": "€15",
+  "supportTier15Body": "Supports steady weekly improvements.",
+  "supportTier50Amount": "€50",
+  "supportTier50Body": "Funds one focused development session (new feature / fixes / content updates)."
 }

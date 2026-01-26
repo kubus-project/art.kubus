@@ -48,6 +48,7 @@ import '../utils/design_tokens.dart';
 import '../widgets/staggered_fade_slide.dart';
 import '../utils/artwork_navigation.dart';
 import '../widgets/glass_components.dart';
+import '../widgets/support/support_section.dart';
  
 
 class HomeScreen extends StatefulWidget {
@@ -161,6 +162,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     sections.add(animated(_buildRecentActivity()));
     sections.add(SizedBox(height: spacing));
     sections.add(animated(_buildFeaturedArtworks()));
+    sections.add(SizedBox(height: spacing));
+    sections.add(animated(const SupportSectionCard()));
 
     return sections;
   }

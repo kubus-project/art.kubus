@@ -6800,6 +6800,57 @@ class AppLocalizationsSl extends AppLocalizations {
   String get communitySubjectPickerEmptyInstitution => 'Ni najdenih institucij.';
 
   @override
+  String get supportSectionTitle => 'Podpri';
+
+  @override
+  String get supportSectionSubtitle => 'Pomagaj nam graditi art.kubus — vsaka donacija šteje.';
+
+  @override
+  String get supportSectionMoreInfo => 'Več informacij';
+
+  @override
+  String get supportMethodKofi => 'Ko-fi';
+
+  @override
+  String get supportMethodKofiHint => 'Podpora v velikosti kave';
+
+  @override
+  String get supportMethodPaypal => 'PayPal';
+
+  @override
+  String get supportMethodPaypalHint => 'Doniraj prek PayPala';
+
+  @override
+  String get supportMethodGithubSponsors => 'GitHub Sponsors';
+
+  @override
+  String get supportMethodGithubSponsorsHint => 'Podpri prek GitHuba';
+
+  @override
+  String get supportDialogTitle => 'Kaj omogoča tvoja podpora';
+
+  @override
+  String get supportDialogSubtitle => 'Tri ravni — vsaka je pomembna. Hvala, ker nam pomagaš graditi naprej.';
+
+  @override
+  String get supportTier5Amount => '5 €';
+
+  @override
+  String get supportTier5Body => 'Pomaga pokriti mesečne stroške infrastrukture.';
+
+  @override
+  String get supportTier15Amount => '15 €';
+
+  @override
+  String get supportTier15Body => 'Podpira stalne tedenske izboljšave.';
+
+  @override
+  String get supportTier50Amount => '50 €';
+
+  @override
+  String get supportTier50Body => 'Financira eno osredotočeno razvojno sejo (nova funkcija / popravki / posodobitve vsebin).';
+
+  @override
   String securityPinAttemptsRemaining(Object remaining, Object max) {
     return 'Preostali poskusi: $remaining/$max';
   }

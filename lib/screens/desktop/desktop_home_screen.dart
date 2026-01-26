@@ -52,6 +52,7 @@ import '../../services/search_service.dart';
 import '../home_screen.dart' show ActivityScreen;
 import '../../services/backend_api_service.dart';
 import '../../utils/app_color_utils.dart';
+import '../../widgets/support/support_section.dart';
 
 /// Desktop home screen with spacious layout and proper grid systems
 /// Inspired by Twitter/X feed presentation and Google Maps panels
@@ -422,6 +423,14 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(DetailSpacing.xxl, 0, DetailSpacing.xxl, 56),
                     child: _buildFeaturedArtworks(),
+                  ),
+                ),
+
+                // Support / Donate
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(DetailSpacing.xxl, 0, DetailSpacing.xxl, DetailSpacing.xxl),
+                    child: const SupportSectionCard(),
                   ),
                 ),
               ],

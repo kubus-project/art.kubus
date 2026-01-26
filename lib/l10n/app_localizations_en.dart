@@ -6779,4 +6779,55 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get communitySubjectPickerEmptyInstitution => 'No institutions found.';
+
+  @override
+  String get supportSectionTitle => 'Support';
+
+  @override
+  String get supportSectionSubtitle => 'Help us keep building art.kubus — every donation helps.';
+
+  @override
+  String get supportSectionMoreInfo => 'More info';
+
+  @override
+  String get supportMethodKofi => 'Ko-fi';
+
+  @override
+  String get supportMethodKofiHint => 'Coffee-sized support';
+
+  @override
+  String get supportMethodPaypal => 'PayPal';
+
+  @override
+  String get supportMethodPaypalHint => 'Donate via PayPal';
+
+  @override
+  String get supportMethodGithubSponsors => 'GitHub Sponsors';
+
+  @override
+  String get supportMethodGithubSponsorsHint => 'Support via GitHub';
+
+  @override
+  String get supportDialogTitle => 'What your support enables';
+
+  @override
+  String get supportDialogSubtitle => 'Three tiers — all meaningful. Thank you for helping us keep building.';
+
+  @override
+  String get supportTier5Amount => '€5';
+
+  @override
+  String get supportTier5Body => 'Helps cover monthly infrastructure costs.';
+
+  @override
+  String get supportTier15Amount => '€15';
+
+  @override
+  String get supportTier15Body => 'Supports steady weekly improvements.';
+
+  @override
+  String get supportTier50Amount => '€50';
+
+  @override
+  String get supportTier50Body => 'Funds one focused development session (new feature / fixes / content updates).';
 }
