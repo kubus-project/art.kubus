@@ -2227,47 +2227,50 @@ class _MapScreenState extends State<MapScreen>
     final discoveryProgress = taskProvider.getOverallProgress();
     final isLoadingArtworks = artworkProvider.isLoading('load_artworks');
 
+    final stack = Stack(
+      children: [
+        KeyedSubtree(
+          key: _tutorialMapKey,
+          child: _buildMap(themeProvider),
+        ),
+        _buildTopOverlays(theme, taskProvider), // This will likely be refactored into _buildSearchAndFilters()
+        _buildPrimaryControls(theme), // This will likely be refactored into _buildSearchAndFilters()
+        _buildBottomSheet( // This will likely be refactored into _buildDraggablePanel()
+          theme,
+          filteredArtworks,
+          discoveryProgress,
+          isLoadingArtworks,
+        ),
+        _buildMarkerOverlay(themeProvider),
+        if (_isSearching) _buildSuggestionSheet(theme), // This will likely be refactored into _buildSearchAndFilters()
+        if (_showMapTutorial)
+          Builder(
+            builder: (context) {
+              final l10n = AppLocalizations.of(context)!;
+              final steps = _buildMapTutorialSteps(l10n);
+              final idx = _mapTutorialIndex.clamp(0, steps.length - 1);
+              return InteractiveTutorialOverlay(
+                steps: steps,
+                currentIndex: idx,
+                onNext: _tutorialNext,
+                onBack: _tutorialBack,
+                onSkip: _dismissMapTutorial,
+                skipLabel: l10n.commonSkip,
+                backLabel: l10n.commonBack,
+                nextLabel: l10n.commonNext,
+                doneLabel: l10n.commonDone,
+              );
+            },
+          ),
+      ],
+    );
+
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: AnimatedGradientBackground(
-        child: Stack(
-          children: [
-            KeyedSubtree(
-              key: _tutorialMapKey,
-              child: _buildMap(themeProvider),
-            ),
-            _buildTopOverlays(theme, taskProvider), // This will likely be refactored into _buildSearchAndFilters()
-            _buildPrimaryControls(theme), // This will likely be refactored into _buildSearchAndFilters()
-            _buildBottomSheet( // This will likely be refactored into _buildDraggablePanel()
-              theme,
-              filteredArtworks,
-              discoveryProgress,
-              isLoadingArtworks,
-            ),
-            _buildMarkerOverlay(themeProvider),
-            if (_isSearching) _buildSuggestionSheet(theme), // This will likely be refactored into _buildSearchAndFilters()
-            if (_showMapTutorial)
-              Builder(
-                builder: (context) {
-                  final l10n = AppLocalizations.of(context)!;
-                  final steps = _buildMapTutorialSteps(l10n);
-                  final idx = _mapTutorialIndex.clamp(0, steps.length - 1);
-                  return InteractiveTutorialOverlay(
-                    steps: steps,
-                    currentIndex: idx,
-                    onNext: _tutorialNext,
-                    onBack: _tutorialBack,
-                    onSkip: _dismissMapTutorial,
-                    skipLabel: l10n.commonSkip,
-                    backLabel: l10n.commonBack,
-                    nextLabel: l10n.commonNext,
-                    doneLabel: l10n.commonDone,
-                  );
-                },
-              ),
-          ],
-        ),
-      ),
+      // On web the map is implemented via MapLibre GL JS (a platform view).
+      // Avoid painting a full-screen opaque background behind it so it remains
+      // visible regardless of composition order.
+      body: kIsWeb ? stack : AnimatedGradientBackground(child: stack),
     );
   }
 
