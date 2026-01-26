@@ -1,4 +1,6 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
@@ -33,6 +35,18 @@ class CubeMarkerStyle {
   }) {
     final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    return CubeMarkerStyle.fromScheme(
+      scheme: scheme,
+      isDark: isDark,
+      baseColor: baseColor,
+    );
+  }
+
+  factory CubeMarkerStyle.fromScheme({
+    required ColorScheme scheme,
+    required bool isDark,
+    required Color baseColor,
+  }) {
     final shadow = scheme.shadow;
 
     return CubeMarkerStyle(
@@ -923,4 +937,296 @@ Color _normalizeBase(Color color) {
       .withLightness(lightness.toDouble())
       .withSaturation(saturation.toDouble())
       .toColor();
+}
+
+/// Renders the cube marker visuals into PNG bytes for MapLibre symbol icons.
+///
+/// This keeps marker rendering native (no Flutter widget markers on top of the
+/// map) while preserving the exact Kubus cube styling.
+class ArtMarkerCubeIconRenderer {
+  static const double markerCubeSizeAtZoom15 = 46;
+  static const double markerWidthAtZoom15 = 56;
+  static const double markerHeightAtZoom15 = 72;
+
+  static Future<Uint8List> renderMarkerPng({
+    required Color baseColor,
+    required IconData icon,
+    required ArtMarkerSignal tier,
+    required ColorScheme scheme,
+    required KubusColorRoles roles,
+    required bool isDark,
+    bool forceGlow = false,
+    double pixelRatio = 2.0,
+  }) async {
+    final style = CubeMarkerStyle.fromScheme(
+      scheme: scheme,
+      isDark: isDark,
+      baseColor: baseColor,
+    );
+
+    final showGlow = forceGlow ||
+        tier == ArtMarkerSignal.featured ||
+        tier == ArtMarkerSignal.legendary;
+
+    return _renderPng(
+      width: markerWidthAtZoom15,
+      height: markerHeightAtZoom15,
+      pixelRatio: pixelRatio,
+      paint: (canvas, size) {
+        final cubeSize = markerCubeSizeAtZoom15;
+        final cubeW = cubeSize;
+        final cubeH = cubeSize * 1.15;
+        final offset = Offset(
+          (size.width - cubeW) / 2,
+          (size.height - cubeH) / 2,
+        );
+        _paintCubeMarker(
+          canvas,
+          offset: offset,
+          cubeSize: cubeSize,
+          palette: _CubePalette.fromBase(baseColor, edgeColor: style.edgeColor),
+          style: style,
+          roles: roles,
+          icon: icon,
+          label: null,
+          labelStyle: null,
+          showGlow: showGlow,
+          tier: tier,
+          baseColor: baseColor,
+          isSelected: forceGlow,
+        );
+      },
+    );
+  }
+
+  static Future<Uint8List> renderClusterPng({
+    required int count,
+    required Color baseColor,
+    required ColorScheme scheme,
+    required bool isDark,
+    double cubeSize = 54,
+    double pixelRatio = 2.0,
+  }) async {
+    final style = CubeMarkerStyle.fromScheme(
+      scheme: scheme,
+      isDark: isDark,
+      baseColor: baseColor,
+    );
+    final showGlow = count >= 10;
+    final label = count > 99 ? '99+' : '$count';
+    final palette = _CubePalette.fromBase(baseColor, edgeColor: style.edgeColor);
+    final labelStyle = KubusTextStyles.badgeCount.copyWith(
+      color: palette.topAccent,
+    );
+
+    final w = cubeSize;
+    final h = cubeSize * 1.15;
+    return _renderPng(
+      width: w,
+      height: h,
+      pixelRatio: pixelRatio,
+      paint: (canvas, _) {
+        _paintCubeMarker(
+          canvas,
+          offset: Offset.zero,
+          cubeSize: cubeSize,
+          palette: palette,
+          style: style,
+          roles: null,
+          icon: null,
+          label: label,
+          labelStyle: labelStyle,
+          showGlow: showGlow,
+          tier: ArtMarkerSignal.subtle,
+          baseColor: baseColor,
+          isSelected: false,
+        );
+      },
+    );
+  }
+
+  static Future<Uint8List> _renderPng({
+    required double width,
+    required double height,
+    required double pixelRatio,
+    required void Function(Canvas canvas, Size logicalSize) paint,
+  }) async {
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    final logicalSize = Size(width, height);
+
+    final pr = pixelRatio.isFinite ? pixelRatio.clamp(1.0, 4.0).toDouble() : 2.0;
+    canvas.scale(pr, pr);
+    paint(canvas, logicalSize);
+
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(
+      (width * pr).round(),
+      (height * pr).round(),
+    );
+    final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+    return bytes!.buffer.asUint8List();
+  }
+
+  static void _paintCubeMarker(
+    Canvas canvas, {
+    required Offset offset,
+    required double cubeSize,
+    required _CubePalette palette,
+    required CubeMarkerStyle style,
+    required Color baseColor,
+    required bool showGlow,
+    required ArtMarkerSignal tier,
+    required bool isSelected,
+    required KubusColorRoles? roles,
+    required IconData? icon,
+    required String? label,
+    required TextStyle? labelStyle,
+  }) {
+    final width = cubeSize;
+    final height = cubeSize * 1.15;
+
+    canvas.save();
+    canvas.translate(offset.dx, offset.dy);
+
+    final shadowCenter = Offset(width / 2, height);
+    _paintRadialEllipse(
+      canvas,
+      center: shadowCenter,
+      size: cubeSize * 0.72,
+      color: style.shadowColor,
+      alphaA: showGlow ? 0.32 : 0.20,
+      alphaB: 0.08,
+    );
+
+    if (showGlow) {
+      _paintRadialEllipse(
+        canvas,
+        center: Offset(width / 2, height - cubeSize * 0.02),
+        size: cubeSize * 0.9,
+        color: baseColor,
+        alphaA: isSelected ? 0.48 : 0.40,
+        alphaB: isSelected ? 0.18 : 0.14,
+      );
+    }
+
+    final cubeBodyHeight = cubeSize * 0.85;
+    final cubeW = cubeSize * 0.88;
+    final cubeOffset = Offset((width - cubeW) / 2, height - cubeSize * 0.12 - cubeBodyHeight);
+
+    canvas.save();
+    canvas.translate(cubeOffset.dx, cubeOffset.dy);
+    _IsometricCubePainter(
+      palette: palette,
+      style: style,
+      icon: icon,
+      label: label,
+      labelStyle: labelStyle,
+    ).paint(canvas, Size(cubeW, cubeBodyHeight));
+    canvas.restore();
+
+    if (tier != ArtMarkerSignal.subtle && roles != null) {
+      final ringSize = cubeSize * 0.68;
+      final ringCenter = Offset(width / 2, height - cubeSize * 0.04);
+      _paintSignalRing(
+        canvas,
+        center: ringCenter,
+        size: ringSize,
+        tier: tier,
+        baseColor: baseColor,
+        roles: roles,
+      );
+    }
+
+    canvas.restore();
+  }
+
+  static void _paintRadialEllipse(
+    Canvas canvas, {
+    required Offset center,
+    required double size,
+    required Color color,
+    required double alphaA,
+    required double alphaB,
+  }) {
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.scale(1.0, 0.35);
+    canvas.translate(-center.dx, -center.dy);
+
+    final rect = Rect.fromCenter(center: center, width: size, height: size);
+    final shader = ui.Gradient.radial(
+      center,
+      size / 2,
+      [
+        color.withValues(alpha: alphaA),
+        color.withValues(alpha: alphaB),
+        Colors.transparent,
+      ],
+      const [0.0, 0.55, 1.0],
+    );
+    canvas.drawOval(rect, Paint()..shader = shader);
+    canvas.restore();
+  }
+
+  static void _paintSignalRing(
+    Canvas canvas, {
+    required Offset center,
+    required double size,
+    required ArtMarkerSignal tier,
+    required Color baseColor,
+    required KubusColorRoles roles,
+  }) {
+    Color glowColor;
+    double opacity;
+    double strokeWidth;
+    double blur;
+
+    switch (tier) {
+      case ArtMarkerSignal.legendary:
+        glowColor = roles.achievementGold;
+        opacity = 0.7;
+        strokeWidth = 2.5;
+        blur = 8;
+        break;
+      case ArtMarkerSignal.featured:
+        glowColor = baseColor;
+        opacity = 0.55;
+        strokeWidth = 1.5;
+        blur = 4;
+        break;
+      case ArtMarkerSignal.active:
+        glowColor = baseColor;
+        opacity = 0.35;
+        strokeWidth = 1.5;
+        blur = 4;
+        break;
+      case ArtMarkerSignal.subtle:
+        return;
+    }
+
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.scale(1.0, 0.35);
+    canvas.translate(-center.dx, -center.dy);
+
+    final rect = Rect.fromCenter(center: center, width: size, height: size);
+    canvas.drawOval(
+      rect,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth
+        ..color = glowColor.withValues(alpha: opacity),
+    );
+    canvas.drawOval(
+      rect,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth
+        ..color = glowColor.withValues(alpha: opacity * 0.6)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, blur),
+    );
+
+    canvas.restore();
+  }
 }

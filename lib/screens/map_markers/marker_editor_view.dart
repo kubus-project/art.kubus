@@ -1,12 +1,14 @@
-﻿import 'dart:async';
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:art_kubus/widgets/glass_components.dart';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:maplibre_gl/maplibre_gl.dart' as ml;
 import 'package:provider/provider.dart';
 
 import '../../config/config.dart';
@@ -45,9 +47,12 @@ class MarkerEditorView extends StatefulWidget {
 
 class _MarkerEditorViewState extends State<MarkerEditorView> {
   static const LatLng _defaultCenter = LatLng(46.056946, 14.505751);
+  static const String _editorSourceId = 'kubus_marker_editor_position';
+  static const String _editorLayerId = 'kubus_marker_editor_position_layer';
 
   final _formKey = GlobalKey<FormState>();
-  final MapController _mapController = MapController();
+  ml.MapLibreMapController? _mapController;
+  bool _styleReady = false;
   late LatLng _position;
 
   late final TextEditingController _nameController;
@@ -121,6 +126,93 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
     if (lat == null || lng == null) return;
     if (!_validateLatLng(lat, lng)) return;
     setState(() => _position = LatLng(lat, lng));
+    unawaited(_syncEditorPositionOnMap());
+    unawaited(_moveCameraTo(_position));
+  }
+
+  String _rgba(Color color, {double? alphaOverride}) {
+    int clamp255(double value) => value.round().clamp(0, 255);
+    final r = clamp255(color.r * 255.0);
+    final g = clamp255(color.g * 255.0);
+    final b = clamp255(color.b * 255.0);
+    final a = alphaOverride ?? color.a;
+    return 'rgba($r,$g,$b,${a.toStringAsFixed(3)})';
+  }
+
+  Future<void> _handleMapStyleLoaded({
+    required ColorScheme scheme,
+  }) async {
+    final controller = _mapController;
+    if (controller == null) return;
+
+    _styleReady = true;
+
+    try {
+      await controller.removeLayer(_editorLayerId);
+    } catch (_) {}
+    try {
+      await controller.removeSource(_editorSourceId);
+    } catch (_) {}
+
+    await controller.addGeoJsonSource(
+      _editorSourceId,
+      _editorPositionCollection(_position),
+      promoteId: 'id',
+    );
+
+    await controller.addCircleLayer(
+      _editorSourceId,
+      _editorLayerId,
+      ml.CircleLayerProperties(
+        circleRadius: 7,
+        circleColor: _rgba(scheme.primary),
+        circleOpacity: 1.0,
+        circleStrokeWidth: 2,
+        circleStrokeColor: _rgba(scheme.surface),
+      ),
+    );
+  }
+
+  Map<String, dynamic> _editorPositionCollection(LatLng position) {
+    return <String, dynamic>{
+      'type': 'FeatureCollection',
+      'features': <dynamic>[
+        <String, dynamic>{
+          'type': 'Feature',
+          'id': 'editor',
+          'properties': const <String, dynamic>{'id': 'editor'},
+          'geometry': <String, dynamic>{
+            'type': 'Point',
+            'coordinates': <double>[position.longitude, position.latitude],
+          },
+        },
+      ],
+    };
+  }
+
+  Future<void> _syncEditorPositionOnMap() async {
+    final controller = _mapController;
+    if (controller == null || !_styleReady) return;
+
+    await controller.editGeoJsonSource(
+      _editorSourceId,
+      jsonEncode(_editorPositionCollection(_position)),
+    );
+  }
+
+  Future<void> _moveCameraTo(LatLng target) async {
+    final controller = _mapController;
+    if (controller == null || !_styleReady) return;
+
+    await controller.animateCamera(
+      ml.CameraUpdate.newCameraPosition(
+        ml.CameraPosition(
+          target: ml.LatLng(target.latitude, target.longitude),
+          zoom: 15,
+        ),
+      ),
+      duration: const Duration(milliseconds: 240),
+    );
   }
 
   MarkerSubjectType _parseSubjectType(String? raw) {
@@ -626,7 +718,6 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final tileProviders = context.read<TileProviders>();
-    final isRetina = MediaQuery.of(context).devicePixelRatio > 1.4;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     final lat = double.tryParse(_latController.text.trim());
@@ -671,32 +762,32 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
                 child: ArtMapView(
-                  mapController: _mapController,
                   initialCenter: markerPosition,
                   initialZoom: 15,
                   minZoom: 3,
                   maxZoom: 24,
                   isDarkMode: isDarkMode,
-                  isRetina: isRetina,
-                  tileProviders: tileProviders,
-                  markers: [
-                    Marker(
-                      point: markerPosition,
-                      width: 42,
-                      height: 42,
-                      child: Icon(Icons.place, color: scheme.primary, size: 36),
-                    ),
-                  ],
-                  onTap: (_, point) {
+                  styleAsset: tileProviders.mapStyleAsset(isDarkMode: isDarkMode),
+                  onMapCreated: (controller) {
+                    _mapController = controller;
+                  },
+                  onStyleLoaded: () {
+                    unawaited(
+                      _handleMapStyleLoaded(
+                        scheme: scheme,
+                      ).then((_) => _syncEditorPositionOnMap()),
+                    );
+                  },
+                  onMapClick: (_, point) {
                     setState(() {
                       _position = point;
                       _latController.text = point.latitude.toStringAsFixed(6);
                       _lngController.text = point.longitude.toStringAsFixed(6);
                     });
+                    unawaited(_syncEditorPositionOnMap());
                   },
-                  interactionOptions: const InteractionOptions(
-                    flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
-                  ),
+                  rotateGesturesEnabled: false,
+                  compassEnabled: false,
                 ),
               ),
             ),

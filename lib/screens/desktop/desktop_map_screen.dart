@@ -1,8 +1,9 @@
 ﻿import 'dart:async';
+import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
+import 'package:maplibre_gl/maplibre_gl.dart' as ml;
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
@@ -33,10 +34,10 @@ import '../../utils/debouncer.dart';
 import '../../utils/map_search_suggestion.dart';
 import '../../utils/presence_marker_visit.dart';
 import '../../utils/map_viewport_utils.dart';
+import '../../utils/geo_bounds.dart';
 import '../../widgets/art_marker_cube.dart';
 import '../../widgets/artwork_creator_byline.dart';
 import '../../widgets/art_map_view.dart';
-import '../../widgets/map_isometric_transform.dart';
 import '../../widgets/map_marker_dialog.dart';
 import '../../utils/grid_utils.dart';
 import '../../widgets/app_logo.dart';
@@ -89,7 +90,7 @@ class DesktopMapScreen extends StatefulWidget {
 
 class _DesktopMapScreenState extends State<DesktopMapScreen>
     with TickerProviderStateMixin {
-  late MapController _mapController;
+  ml.MapLibreMapController? _mapController;
   late AnimationController _animationController;
   late AnimationController _panelController;
   final MapMarkerService _mapMarkerService = MapMarkerService();
@@ -97,7 +98,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   Artwork? _selectedArtwork;
   Exhibition? _selectedExhibition;
   ArtMarker? _activeMarker;
-  String? _hoveredMarkerId;
   bool _markerOverlayExpanded = false;
   _MarkerOverlayMode _markerOverlayMode = _MarkerOverlayMode.anchored;
   bool _didOpenInitialMarker = false;
@@ -143,8 +143,21 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   double? _queuedCameraZoom;
   LatLng? _lastMarkerFetchCenter;
   DateTime? _lastMarkerFetchTime;
-  LatLngBounds? _loadedTravelBounds;
+  GeoBounds? _loadedTravelBounds;
   int? _loadedTravelZoomBucket;
+  bool _programmaticCameraMove = false;
+  double _lastBearing = 0.0;
+  bool _mapStyleReady = false;
+  final Set<String> _registeredMapImages = <String>{};
+  final LayerLink _markerOverlayLink = LayerLink();
+  final Debouncer _overlayAnchorDebouncer = Debouncer();
+  Offset? _activeMarkerAnchor;
+  static const String _markerSourceId = 'kubus_markers';
+  static const String _markerLayerId = 'kubus_marker_layer';
+  static const String _locationSourceId = 'kubus_user_location';
+  static const String _locationLayerId = 'kubus_user_location_layer';
+  static const String _pendingSourceId = 'kubus_pending_marker';
+  static const String _pendingLayerId = 'kubus_pending_marker_layer';
   static const double _markerRefreshDistanceMeters = 1200;
   static const Duration _markerRefreshInterval = Duration(minutes: 5);
 
@@ -170,7 +183,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   @override
   void initState() {
     super.initState();
-    _mapController = MapController();
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 600),
       vsync: this,
@@ -191,10 +203,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     unawaited(_loadMapTravelPrefs());
     unawaited(_loadMapIsometricPrefs());
-
-    if (widget.initialCenter != null) {
-      _moveCamera(_cameraCenter, _cameraZoom);
-    }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Load markers after the first layout. If travel mode is enabled we will
@@ -284,18 +292,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       // Best-effort.
     }
 
-    try {
-      if (enabled) {
-        final rotation = _mapController.camera.rotation;
-        if (rotation.abs() < 1.0) {
-          _mapController.rotate(18);
-        }
-      } else {
-        _mapController.rotate(0);
-      }
-    } catch (_) {
-      // Map may not be ready yet.
-    }
+    unawaited(_applyIsometricCamera(enabled: enabled, adjustZoomForScale: true));
   }
 
   Future<void> _maybeShowInteractiveMapTutorial() async {
@@ -493,19 +490,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
   }
 
-  LatLng get _effectiveCenter =>
-      _mapReady ? _mapController.camera.center : _cameraCenter;
-  double get _effectiveZoom =>
-      _mapReady ? _mapController.camera.zoom : _cameraZoom;
+  LatLng get _effectiveCenter => _cameraCenter;
+  double get _effectiveZoom => _cameraZoom;
 
   void _handleMapReady() {
-    setState(() {
-      _mapReady = true;
-      _cameraCenter = _mapController.camera.center;
-      _cameraZoom = _mapController.camera.zoom;
-    });
+    setState(() => _mapReady = true);
     if (_queuedCameraTarget != null && _queuedCameraZoom != null) {
-      _mapController.move(_queuedCameraTarget!, _queuedCameraZoom!);
+      unawaited(_moveCamera(_queuedCameraTarget!, _queuedCameraZoom!));
       _queuedCameraTarget = null;
       _queuedCameraZoom = null;
     }
@@ -518,15 +509,557 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
   }
 
-  void _moveCamera(LatLng target, double zoom) {
+  void _handleMapCreated(ml.MapLibreMapController controller) {
+    _mapController = controller;
+    _mapStyleReady = false;
+    _registeredMapImages.clear();
+  }
+
+  String _rgba(Color color, {double? alphaOverride}) {
+    int clamp255(double value) => value.round().clamp(0, 255);
+    final r = clamp255(color.r * 255.0);
+    final g = clamp255(color.g * 255.0);
+    final b = clamp255(color.b * 255.0);
+    final a = alphaOverride ?? color.a;
+    return 'rgba($r,$g,$b,${a.toStringAsFixed(3)})';
+  }
+
+  Future<void> _handleMapStyleLoaded(ThemeProvider themeProvider) async {
+    final controller = _mapController;
+    if (controller == null) return;
+
+    final scheme = Theme.of(context).colorScheme;
+    _mapStyleReady = true;
+    _registeredMapImages.clear();
+
+    // Clear any previous layer/source ids (e.g. style swap).
+    for (final id in <String>[_markerLayerId, _locationLayerId, _pendingLayerId]) {
+      try {
+        await controller.removeLayer(id);
+      } catch (_) {}
+    }
+    for (final id in <String>[_markerSourceId, _locationSourceId, _pendingSourceId]) {
+      try {
+        await controller.removeSource(id);
+      } catch (_) {}
+    }
+
+    await controller.addGeoJsonSource(
+      _markerSourceId,
+      const <String, dynamic>{'type': 'FeatureCollection', 'features': <dynamic>[]},
+      promoteId: 'id',
+    );
+    await controller.addSymbolLayer(
+      _markerSourceId,
+      _markerLayerId,
+      ml.SymbolLayerProperties(
+        iconImage: <dynamic>['get', 'icon'],
+        iconSize: <dynamic>[
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          3,
+          0.5,
+          15,
+          1.0,
+          24,
+          1.5,
+        ],
+        iconAllowOverlap: true,
+        iconIgnorePlacement: true,
+        iconAnchor: 'center',
+        iconPitchAlignment: 'map',
+        iconRotationAlignment: 'map',
+      ),
+    );
+
+    await controller.addGeoJsonSource(
+      _locationSourceId,
+      const <String, dynamic>{'type': 'FeatureCollection', 'features': <dynamic>[]},
+      promoteId: 'id',
+    );
+    await controller.addCircleLayer(
+      _locationSourceId,
+      _locationLayerId,
+      ml.CircleLayerProperties(
+        circleRadius: 6,
+        circleColor: _rgba(scheme.secondary),
+        circleOpacity: 1.0,
+        circleStrokeWidth: 2,
+        circleStrokeColor: _rgba(scheme.surface),
+      ),
+    );
+
+    await controller.addGeoJsonSource(
+      _pendingSourceId,
+      const <String, dynamic>{'type': 'FeatureCollection', 'features': <dynamic>[]},
+      promoteId: 'id',
+    );
+    await controller.addCircleLayer(
+      _pendingSourceId,
+      _pendingLayerId,
+      ml.CircleLayerProperties(
+        circleRadius: 7,
+        circleColor: _rgba(scheme.primary, alphaOverride: 0.92),
+        circleOpacity: 0.92,
+        circleStrokeWidth: 2,
+        circleStrokeColor: _rgba(scheme.surface),
+      ),
+    );
+
+    await _applyIsometricCamera(enabled: _isometricViewEnabled);
+    await _syncUserLocation(themeProvider: themeProvider);
+    await _syncPendingMarker(themeProvider: themeProvider);
+    await _syncMapMarkers(themeProvider: themeProvider);
+    _queueOverlayAnchorRefresh();
+  }
+
+  void _queueOverlayAnchorRefresh() {
+    if (_markerOverlayMode != _MarkerOverlayMode.anchored) return;
+    if (_activeMarker == null) return;
+    if (!_mapStyleReady) return;
+    _overlayAnchorDebouncer(const Duration(milliseconds: 16), () {
+      unawaited(_refreshActiveMarkerAnchor());
+    });
+  }
+
+  Future<void> _refreshActiveMarkerAnchor() async {
+    final controller = _mapController;
+    final marker = _activeMarker;
+    if (controller == null || marker == null) return;
+    if (!_mapStyleReady) return;
+    if (_markerOverlayMode != _MarkerOverlayMode.anchored) return;
+
+    try {
+      final screen = await controller.toScreenLocation(
+        ml.LatLng(marker.position.latitude, marker.position.longitude),
+      );
+      if (!mounted) return;
+      setState(() {
+        _activeMarkerAnchor = Offset(screen.x.toDouble(), screen.y.toDouble());
+      });
+    } catch (_) {
+      // Ignore anchor updates during style transitions.
+    }
+  }
+
+  Future<void> _handleMapTap(
+    math.Point<double> point, {
+    required ThemeProvider themeProvider,
+  }) async {
+    final controller = _mapController;
+    if (controller == null) return;
+    if (!_mapStyleReady) return;
+
+    try {
+      final features = await controller.queryRenderedFeatures(
+        point,
+        <String>[_markerLayerId],
+        null,
+      );
+
+      if (features.isEmpty) {
+        setState(() {
+          _selectedArtwork = null;
+          _selectedExhibition = null;
+          _showFiltersPanel = false;
+          _showSearchOverlay = false;
+          _pendingMarkerLocation = null;
+          _activeMarker = null;
+          _markerOverlayExpanded = false;
+          _activeMarkerAnchor = null;
+        });
+        unawaited(_syncMapMarkers(themeProvider: themeProvider));
+        unawaited(_syncPendingMarker(themeProvider: themeProvider));
+        return;
+      }
+
+      final dynamic first = features.first;
+      final props = (first is Map ? first['properties'] : null) as Map?;
+      final kind = props?['kind']?.toString();
+      if (kind == 'cluster') {
+        final lng = (props?['lng'] as num?)?.toDouble();
+        final lat = (props?['lat'] as num?)?.toDouble();
+        if (lat == null || lng == null) return;
+        final nextZoom = math.min(_cameraZoom + 2.0, 18.0);
+        await _moveCamera(LatLng(lat, lng), nextZoom);
+        return;
+      }
+
+      final markerId = (props?['markerId'] ?? props?['id'])?.toString() ?? '';
+      if (markerId.isEmpty) return;
+      final marker = _artMarkers.where((m) => m.id == markerId).toList(growable: false);
+      if (marker.isEmpty) return;
+      _handleMarkerTap(marker.first);
+      unawaited(_syncMapMarkers(themeProvider: themeProvider));
+      _queueOverlayAnchorRefresh();
+    } catch (_) {
+      // Ignore taps during style transitions / rapid camera moves.
+    }
+  }
+
+  Future<void> _syncUserLocation({required ThemeProvider themeProvider}) async {
+    final controller = _mapController;
+    if (controller == null) return;
+    if (!_mapStyleReady) return;
+
+    final pos = _userLocation;
+    final data = (pos == null)
+        ? const <String, dynamic>{'type': 'FeatureCollection', 'features': <dynamic>[]}
+        : <String, dynamic>{
+            'type': 'FeatureCollection',
+            'features': <dynamic>[
+              <String, dynamic>{
+                'type': 'Feature',
+                'id': 'me',
+                'properties': const <String, dynamic>{'id': 'me'},
+                'geometry': <String, dynamic>{
+                  'type': 'Point',
+                  'coordinates': <double>[pos.longitude, pos.latitude],
+                },
+              },
+            ],
+          };
+
+    await controller.editGeoJsonSource(_locationSourceId, jsonEncode(data));
+  }
+
+  Future<void> _syncPendingMarker({required ThemeProvider themeProvider}) async {
+    final controller = _mapController;
+    if (controller == null) return;
+    if (!_mapStyleReady) return;
+
+    final pos = _pendingMarkerLocation;
+    final data = (pos == null)
+        ? const <String, dynamic>{'type': 'FeatureCollection', 'features': <dynamic>[]}
+        : <String, dynamic>{
+            'type': 'FeatureCollection',
+            'features': <dynamic>[
+              <String, dynamic>{
+                'type': 'Feature',
+                'id': 'pending',
+                'properties': const <String, dynamic>{'id': 'pending'},
+                'geometry': <String, dynamic>{
+                  'type': 'Point',
+                  'coordinates': <double>[pos.longitude, pos.latitude],
+                },
+              },
+            ],
+          };
+
+    await controller.editGeoJsonSource(_pendingSourceId, jsonEncode(data));
+  }
+
+  List<_ClusterBucket> _clusterMarkers(List<ArtMarker> markers, double zoom) {
+    if (markers.isEmpty) return const <_ClusterBucket>[];
+
+    final level = (GridUtils.resolvePrimaryGridLevel(zoom) - 2).clamp(3, 14);
+    final Map<String, _ClusterBucket> buckets = {};
+
+    for (final marker in markers) {
+      final cell = GridUtils.gridCellForLevel(marker.position, level);
+      buckets.putIfAbsent(cell.anchorKey, () => _ClusterBucket(cell, <ArtMarker>[]));
+      buckets[cell.anchorKey]!.markers.add(marker);
+    }
+
+    return buckets.values.toList(growable: false);
+  }
+
+  Future<void> _syncMapMarkers({required ThemeProvider themeProvider}) async {
+    final controller = _mapController;
+    if (controller == null) return;
+    if (!_mapStyleReady) return;
+
+    final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
+    final isDark = themeProvider.isDarkMode;
+
+    final zoom = _cameraZoom;
+    final visibleMarkers = _artMarkers.where((m) => m.hasValidPosition).toList(growable: false);
+    final useClustering = zoom < 12;
+
+    final features = <dynamic>[];
+
+    if (useClustering) {
+      final clusters = _clusterMarkers(visibleMarkers, zoom);
+      for (final cluster in clusters) {
+        if (cluster.markers.length == 1) {
+          final marker = cluster.markers.first;
+          features.add(
+            await _markerFeatureFor(
+              marker: marker,
+              themeProvider: themeProvider,
+              scheme: scheme,
+              roles: roles,
+              isDark: isDark,
+            ),
+          );
+        } else {
+          features.add(
+            await _clusterFeatureFor(
+              cluster: cluster,
+              scheme: scheme,
+              roles: roles,
+              isDark: isDark,
+            ),
+          );
+        }
+      }
+    } else {
+      for (final marker in visibleMarkers) {
+        features.add(
+          await _markerFeatureFor(
+            marker: marker,
+            themeProvider: themeProvider,
+            scheme: scheme,
+            roles: roles,
+            isDark: isDark,
+          ),
+        );
+      }
+    }
+
+    final collection = <String, dynamic>{
+      'type': 'FeatureCollection',
+      'features': features,
+    };
+    await controller.editGeoJsonSource(_markerSourceId, jsonEncode(collection));
+  }
+
+  Future<Map<String, dynamic>> _markerFeatureFor({
+    required ArtMarker marker,
+    required ThemeProvider themeProvider,
+    required ColorScheme scheme,
+    required KubusColorRoles roles,
+    required bool isDark,
+  }) async {
+    final controller = _mapController;
+    if (controller == null) return const <String, dynamic>{};
+
+    final selected = _activeMarker?.id == marker.id;
+    final typeName = marker.type.name;
+    final tier = marker.signalTier;
+    final iconId = 'mk_${typeName}_${tier.name}${selected ? '_sel' : ''}_${isDark ? 'd' : 'l'}';
+
+    if (!_registeredMapImages.contains(iconId)) {
+      final baseColor = _resolveArtMarkerColor(marker, themeProvider);
+      final bytes = await ArtMarkerCubeIconRenderer.renderMarkerPng(
+        baseColor: baseColor,
+        icon: _resolveArtMarkerIcon(marker.type),
+        tier: tier,
+        scheme: scheme,
+        roles: roles,
+        isDark: isDark,
+        forceGlow: selected,
+      );
+      await controller.addImage(iconId, bytes);
+      _registeredMapImages.add(iconId);
+    }
+
+    return <String, dynamic>{
+      'type': 'Feature',
+      'id': marker.id,
+      'properties': <String, dynamic>{
+        'id': marker.id,
+        'markerId': marker.id,
+        'kind': 'marker',
+        'icon': iconId,
+        'markerType': typeName,
+      },
+      'geometry': <String, dynamic>{
+        'type': 'Point',
+        'coordinates': <double>[marker.position.longitude, marker.position.latitude],
+      },
+    };
+  }
+
+  Future<Map<String, dynamic>> _clusterFeatureFor({
+    required _ClusterBucket cluster,
+    required ColorScheme scheme,
+    required KubusColorRoles roles,
+    required bool isDark,
+  }) async {
+    final controller = _mapController;
+    if (controller == null) return const <String, dynamic>{};
+
+    final first = cluster.markers.first;
+    final typeName = first.type.name;
+    final label = cluster.markers.length > 99 ? '99+' : '${cluster.markers.length}';
+    final iconId = 'cl_${typeName}_${label}_${isDark ? 'd' : 'l'}';
+
+    if (!_registeredMapImages.contains(iconId)) {
+      final baseColor = AppColorUtils.markerSubjectColor(
+        markerType: typeName,
+        metadata: first.metadata,
+        scheme: scheme,
+        roles: roles,
+      );
+      final bytes = await ArtMarkerCubeIconRenderer.renderClusterPng(
+        count: cluster.markers.length,
+        baseColor: baseColor,
+        scheme: scheme,
+        isDark: isDark,
+      );
+      await controller.addImage(iconId, bytes);
+      _registeredMapImages.add(iconId);
+    }
+
+    final center = cluster.cell.center;
+    final id = 'cluster:${cluster.cell.anchorKey}';
+    return <String, dynamic>{
+      'type': 'Feature',
+      'id': id,
+      'properties': <String, dynamic>{
+        'id': id,
+        'kind': 'cluster',
+        'icon': iconId,
+        'lat': center.latitude,
+        'lng': center.longitude,
+      },
+      'geometry': <String, dynamic>{
+        'type': 'Point',
+        'coordinates': <double>[center.longitude, center.latitude],
+      },
+    };
+  }
+
+  Future<GeoBounds?> _getVisibleGeoBounds() async {
+    final controller = _mapController;
+    if (controller == null) return null;
+    try {
+      final bounds = await controller.getVisibleRegion();
+      return GeoBounds.fromCorners(
+        LatLng(bounds.southwest.latitude, bounds.southwest.longitude),
+        LatLng(bounds.northeast.latitude, bounds.northeast.longitude),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _queueMarkerRefresh({required bool fromGesture}) {
+    if (_mapController == null) return;
+
+    final center = _cameraCenter;
+    final zoom = _cameraZoom;
+
+    if (_travelModeEnabled) {
+      final bucket = MapViewportUtils.zoomBucket(zoom);
+      final debounceTime = fromGesture
+          ? const Duration(milliseconds: 450)
+          : const Duration(milliseconds: 350);
+
+      _markerRefreshDebouncer(debounceTime, () {
+        unawaited(() async {
+          final visibleBounds = await _getVisibleGeoBounds();
+          if (visibleBounds == null) return;
+
+          final shouldRefetch = MapViewportUtils.shouldRefetchTravelMode(
+            visibleBounds: visibleBounds,
+            loadedBounds: _loadedTravelBounds,
+            zoomBucket: bucket,
+            loadedZoomBucket: _loadedTravelZoomBucket,
+            hasMarkers: _artMarkers.isNotEmpty,
+          );
+          if (!shouldRefetch) return;
+
+          final queryBounds = MapViewportUtils.expandBounds(
+            visibleBounds,
+            MapViewportUtils.paddingFractionForZoomBucket(bucket),
+          );
+
+          await _loadMarkers(
+            center: center,
+            bounds: queryBounds,
+            force: false,
+            zoomBucket: bucket,
+          );
+        }());
+      });
+      return;
+    }
+
+    final shouldRefresh = MapMarkerHelper.shouldRefreshMarkers(
+      newCenter: center,
+      lastCenter: _lastMarkerFetchCenter,
+      lastFetchTime: _lastMarkerFetchTime,
+      distance: _distance,
+      refreshInterval: _markerRefreshInterval,
+      refreshDistanceMeters: _markerRefreshDistanceMeters,
+      hasMarkers: _artMarkers.isNotEmpty,
+    );
+
+    if (!shouldRefresh) return;
+
+    final debounceTime = fromGesture
+        ? const Duration(seconds: 2)
+        : const Duration(milliseconds: 800);
+
+    _markerRefreshDebouncer(debounceTime, () {
+      unawaited(_loadMarkers(center: center, force: false));
+    });
+  }
+
+  Future<void> _applyIsometricCamera({required bool enabled, bool adjustZoomForScale = false}) async {
+    final controller = _mapController;
+    if (controller == null) return;
+
+    final shouldEnable = enabled && AppConfig.isFeatureEnabled('mapIsometricView');
+    final targetPitch = shouldEnable ? 54.736 : 0.0;
+    final targetBearing = shouldEnable
+        ? (_lastBearing.abs() < 1.0 ? 18.0 : _lastBearing)
+        : 0.0;
+
+    double targetZoom = _cameraZoom;
+    if (adjustZoomForScale) {
+      const scale = 1.2;
+      final delta = math.log(scale) / math.ln2;
+      targetZoom = shouldEnable
+          ? (_cameraZoom + delta)
+          : (_cameraZoom - delta);
+      targetZoom = targetZoom.clamp(3.0, 24.0).toDouble();
+      _cameraZoom = targetZoom;
+    }
+
+    _programmaticCameraMove = true;
+    await controller.animateCamera(
+      ml.CameraUpdate.newCameraPosition(
+        ml.CameraPosition(
+          target: ml.LatLng(_cameraCenter.latitude, _cameraCenter.longitude),
+          zoom: targetZoom,
+          bearing: targetBearing,
+          tilt: targetPitch,
+        ),
+      ),
+      duration: const Duration(milliseconds: 320),
+    );
+  }
+
+  Future<void> _moveCamera(LatLng target, double zoom) async {
     _cameraCenter = target;
     _cameraZoom = zoom;
-    if (_mapReady) {
-      _mapController.move(target, zoom);
-    } else {
+    final controller = _mapController;
+    if (!_mapReady || controller == null) {
       _queuedCameraTarget = target;
       _queuedCameraZoom = zoom;
+      return;
     }
+
+    _programmaticCameraMove = true;
+    await controller.animateCamera(
+      ml.CameraUpdate.newCameraPosition(
+        ml.CameraPosition(
+          target: ml.LatLng(target.latitude, target.longitude),
+          zoom: zoom,
+          bearing: _lastBearing,
+          tilt:
+              _isometricViewEnabled && AppConfig.isFeatureEnabled('mapIsometricView')
+                  ? 54.736
+                  : 0.0,
+        ),
+      ),
+      duration: const Duration(milliseconds: 320),
+    );
   }
 
   @override
@@ -540,6 +1073,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _panelController.dispose();
     _searchDebounce?.cancel();
     _markerRefreshDebouncer.dispose();
+    _overlayAnchorDebouncer.dispose();
     _markerStreamSub?.cancel();
     _markerDeletedSub?.cancel();
     _searchController.dispose();
@@ -646,72 +1180,33 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         final filteredArtworks = _getFilteredArtworks(artworkProvider.artworks);
 
         _syncNearbySidebarIfNeeded(themeProvider, filteredArtworks);
-        // TileProviders centralizes tile logic (tiles + optional grid overlay) just like mobile MapScreen
-        final tileProviders =
-            Provider.of<TileProviders?>(context, listen: false);
-        final devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
-        final isRetina = devicePixelRatio >= 2.0;
-        final overlayMode = _markerOverlayMode;
-        final markers = <Marker>[
-          _buildUserLocationMarker(themeProvider),
-          // Removed duplicate artwork circle markers - only show art marker pins
-          ..._buildArtMarkerPins(themeProvider),
-          if (_activeMarker != null)
-            _buildMarkerOverlay(
-              _activeMarker!,
-              _activeMarker!.isExhibitionMarker
-                  ? null
-                  : context
-                      .read<ArtworkProvider>()
-                      .getArtworkById(_activeMarker!.artworkId ?? ''),
-              themeProvider,
-              pointOverride: overlayMode == _MarkerOverlayMode.centered
-                  ? _effectiveCenter
-                  : _activeMarker!.position,
-              alignmentOverride: overlayMode == _MarkerOverlayMode.centered
-                  ? Alignment.center
-                  : Alignment.bottomCenter,
-              gapOverride:
-                  overlayMode == _MarkerOverlayMode.centered ? 0.0 : 10.0,
-            ),
-          if (_pendingMarkerLocation != null)
-            _buildPendingMarker(_pendingMarkerLocation!, themeProvider),
-        ];
+        final isDark = themeProvider.isDarkMode;
+        final tileProviders = Provider.of<TileProviders?>(context, listen: false);
+        final styleAsset = tileProviders?.mapStyleAsset(isDarkMode: isDark) ??
+            (isDark ? AppConfig.mapStyleDarkAsset : AppConfig.mapStyleLightAsset);
 
         final map = ArtMapView(
-          mapController: _mapController,
           initialCenter: _effectiveCenter,
           initialZoom: _cameraZoom,
           minZoom: 3.0,
           maxZoom: 24.0,
-          isDarkMode: themeProvider.isDarkMode,
-          isRetina: isRetina,
-          tileProviders: tileProviders,
-          markers: markers,
-          onMapReady: _handleMapReady,
-          onTap: (_, __) {
-            setState(() {
-              _selectedArtwork = null;
-              _selectedExhibition = null;
-              _showFiltersPanel = false;
-              _showSearchOverlay = false;
-              _pendingMarkerLocation = null;
-              _activeMarker = null;
-              _markerOverlayExpanded = false;
-            });
+          isDarkMode: isDark,
+          styleAsset: styleAsset,
+          onMapCreated: _handleMapCreated,
+          onStyleLoaded: () {
+            unawaited(_handleMapStyleLoaded(themeProvider).then((_) => _handleMapReady()));
           },
-          onLongPress: (_, point) {
-            setState(() => _pendingMarkerLocation = point);
-            _startMarkerCreationFlow(position: point);
-          },
-          onPositionChanged: (position, hasGesture) {
-            final center = position.center;
-            _cameraCenter = center;
+          onCameraMove: (position) {
+            _cameraCenter = LatLng(position.target.latitude, position.target.longitude);
             _cameraZoom = position.zoom;
+            _lastBearing = position.bearing;
+
             final bucket = MapViewportUtils.zoomBucket(position.zoom);
             if (bucket != _renderZoomBucket) {
               setState(() => _renderZoomBucket = bucket);
             }
+
+            final hasGesture = !_programmaticCameraMove;
             if (hasGesture && _autoFollow) {
               setState(() => _autoFollow = false);
             }
@@ -720,15 +1215,45 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 _activeMarker = null;
                 _markerOverlayExpanded = false;
               });
+              unawaited(_syncMapMarkers(themeProvider: themeProvider));
             }
-            _queueMarkerRefresh(position, fromGesture: hasGesture);
+
+            _queueMarkerRefresh(fromGesture: hasGesture);
+            _queueOverlayAnchorRefresh();
+          },
+          onCameraIdle: () {
+            _programmaticCameraMove = false;
+            _queueMarkerRefresh(fromGesture: false);
+            _queueOverlayAnchorRefresh();
+          },
+          onMapClick: (point, _) {
+            unawaited(_handleMapTap(point, themeProvider: themeProvider));
+          },
+          onMapLongClick: (_, point) {
+            setState(() => _pendingMarkerLocation = point);
+            unawaited(_syncPendingMarker(themeProvider: themeProvider));
+            _startMarkerCreationFlow(position: point);
           },
         );
 
-        return MapIsometricTransform(
-          enabled: _isometricViewEnabled &&
-              AppConfig.isFeatureEnabled('mapIsometricView'),
-          child: map,
+        return Stack(
+          children: [
+            Positioned.fill(child: map),
+            if (_markerOverlayMode == _MarkerOverlayMode.anchored &&
+                _activeMarkerAnchor != null)
+              Positioned(
+                left: _activeMarkerAnchor!.dx,
+                top: _activeMarkerAnchor!.dy,
+                child: CompositedTransformTarget(
+                  link: _markerOverlayLink,
+                  child: const SizedBox(width: 1, height: 1),
+                ),
+              ),
+            _buildMarkerOverlayLayer(
+              themeProvider: themeProvider,
+              artworkProvider: artworkProvider,
+            ),
+          ],
         );
       },
     );
@@ -736,6 +1261,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   Future<void> _refreshUserLocation({bool animate = false}) async {
     if (_isLocating) return;
+    final themeProvider = context.read<ThemeProvider>();
     setState(() => _isLocating = true);
     try {
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -759,6 +1285,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           _cameraCenter = current;
         }
       });
+      unawaited(_syncUserLocation(themeProvider: themeProvider));
       if (animate || _autoFollow) {
         _moveCamera(current, math.max(_effectiveZoom, 15));
       }
@@ -919,36 +1446,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       ),
     );
   }
-  Marker _buildUserLocationMarker(ThemeProvider themeProvider) {
-    final accent = themeProvider.accentColor;
-    final scheme = Theme.of(context).colorScheme;
-    final position = _userLocation ?? _cameraCenter;
-    return Marker(
-      point: position,
-      width: 20,
-      height: 20,
-      child: Container(
-        width: 20,
-        height: 20,
-        decoration: BoxDecoration(
-          color: accent,
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: scheme.onPrimary.withValues(alpha: 0.9),
-            width: 3,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: accent.withValues(alpha: 0.3),
-              blurRadius: 10,
-              spreadRadius: 3,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildTopBar(
       ThemeProvider themeProvider, AppAnimationTheme animationTheme) {
     final l10n = AppLocalizations.of(context)!;
@@ -3149,13 +3646,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     return filtered;
   }
 
-  double _scaleForZoom(double zoom) {
-    const double minZoom = 3.0;
-    const double maxZoom = 18.0;
-    final double t = ((zoom - minZoom) / (maxZoom - minZoom)).clamp(0.0, 1.0);
-    return 0.38 + t * (1.25 - 0.38);
-  }
-
   Color _resolveArtMarkerColor(ArtMarker marker, ThemeProvider themeProvider) {
     final scheme = Theme.of(context).colorScheme;
     final roles = KubusColorRoles.of(context);
@@ -3188,23 +3678,19 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   Future<void> _loadMarkersForCurrentView({bool force = false}) async {
-    LatLng? center;
-    LatLngBounds? bounds;
+    if (_travelModeEnabled && !_mapStyleReady) return;
+    final center = _cameraCenter;
+    GeoBounds? bounds;
     int? zoomBucket;
 
-    try {
-      final cam = _mapController.camera;
-      center = cam.center;
-      if (_travelModeEnabled) {
-        final visibleBounds = cam.visibleBounds;
-        zoomBucket = MapViewportUtils.zoomBucket(cam.zoom);
-        bounds = MapViewportUtils.expandBounds(
-          visibleBounds,
-          MapViewportUtils.paddingFractionForZoomBucket(zoomBucket),
-        );
-      }
-    } catch (_) {
-      // Map not ready yet.
+    if (_travelModeEnabled) {
+      zoomBucket = MapViewportUtils.zoomBucket(_cameraZoom);
+      final visible = await _getVisibleGeoBounds();
+      if (visible == null) return;
+      bounds = MapViewportUtils.expandBounds(
+        visible,
+        MapViewportUtils.paddingFractionForZoomBucket(zoomBucket),
+      );
     }
 
     await _loadMarkers(
@@ -3217,42 +3703,35 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   Future<void> _loadMarkers({
     LatLng? center,
-    LatLngBounds? bounds,
+    GeoBounds? bounds,
     bool force = false,
     int? zoomBucket,
   }) async {
     final queryCenter = center ?? _userLocation ?? _effectiveCenter;
+    final artworkProvider = context.read<ArtworkProvider>();
+    final themeProvider = context.read<ThemeProvider>();
 
     int? bucket = zoomBucket;
     if (_travelModeEnabled && bucket == null) {
       bucket = MapViewportUtils.zoomBucket(_cameraZoom);
-      try {
-        bucket = MapViewportUtils.zoomBucket(_mapController.camera.zoom);
-      } catch (_) {}
     }
 
-    LatLngBounds? queryBounds = bounds;
+    GeoBounds? queryBounds = bounds;
     if (_travelModeEnabled && queryBounds == null) {
-      try {
-        final cam = _mapController.camera;
-        final effectiveBucket = bucket ?? MapViewportUtils.zoomBucket(cam.zoom);
-        queryBounds = MapViewportUtils.expandBounds(
-          cam.visibleBounds,
-          MapViewportUtils.paddingFractionForZoomBucket(effectiveBucket),
-        );
-        bucket = effectiveBucket;
-      } catch (_) {
-        // Map not ready.
-      }
+      final visible = await _getVisibleGeoBounds();
+      if (visible == null) return;
+      final effectiveBucket = bucket ?? MapViewportUtils.zoomBucket(_cameraZoom);
+      queryBounds = MapViewportUtils.expandBounds(
+        visible,
+        MapViewportUtils.paddingFractionForZoomBucket(effectiveBucket),
+      );
+      bucket = effectiveBucket;
     }
 
     final requestId = ++_markerRequestId;
     _isLoadingMarkers = true;
 
     try {
-      // Capture providers before awaiting to avoid BuildContext across async gaps.
-      final artworkProvider = context.read<ArtworkProvider>();
-
       final int? travelLimit = bucket == null
           ? null
           : MapViewportUtils.markerLimitForZoomBucket(bucket);
@@ -3303,9 +3782,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           } else {
             _activeMarker = null;
             _markerOverlayExpanded = false;
+            _activeMarkerAnchor = null;
           }
         }
       });
+      unawaited(_syncMapMarkers(themeProvider: themeProvider));
+      _queueOverlayAnchorRefresh();
       _lastMarkerFetchCenter = result.center;
       _lastMarkerFetchTime = result.fetchedAt;
       if (_travelModeEnabled && queryBounds != null && bucket != null) {
@@ -3324,158 +3806,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
   }
 
-  void _queueMarkerRefresh(MapCamera camera, {required bool fromGesture}) {
-    if (_travelModeEnabled) {
-      final visibleBounds = camera.visibleBounds;
-      final bucket = MapViewportUtils.zoomBucket(camera.zoom);
-      final shouldRefetch = MapViewportUtils.shouldRefetchTravelMode(
-        visibleBounds: visibleBounds,
-        loadedBounds: _loadedTravelBounds,
-        zoomBucket: bucket,
-        loadedZoomBucket: _loadedTravelZoomBucket,
-        hasMarkers: _artMarkers.isNotEmpty,
-      );
-
-      if (!shouldRefetch) return;
-
-      final queryBounds = MapViewportUtils.expandBounds(
-        visibleBounds,
-        MapViewportUtils.paddingFractionForZoomBucket(bucket),
-      );
-
-      final debounceTime = fromGesture
-          ? const Duration(milliseconds: 450)
-          : const Duration(milliseconds: 350);
-
-      _markerRefreshDebouncer(debounceTime, () {
-        unawaited(_loadMarkers(
-          center: camera.center,
-          bounds: queryBounds,
-          force: false,
-          zoomBucket: bucket,
-        ));
-      });
-      return;
-    }
-
-    final center = camera.center;
-    final shouldRefresh = MapMarkerHelper.shouldRefreshMarkers(
-      newCenter: center,
-      lastCenter: _lastMarkerFetchCenter,
-      lastFetchTime: _lastMarkerFetchTime,
-      distance: _distance,
-      refreshInterval: _markerRefreshInterval,
-      refreshDistanceMeters: _markerRefreshDistanceMeters,
-      hasMarkers: _artMarkers.isNotEmpty,
-    );
-
-    if (!shouldRefresh) return;
-
-    _markerRefreshDebouncer(
-      fromGesture ? const Duration(milliseconds: 350) : Duration.zero,
-      () => _loadMarkers(center: center, force: true),
-    );
-  }
-
-  Marker _buildPendingMarker(LatLng point, ThemeProvider themeProvider) {
-    final accent = themeProvider.accentColor;
-    final fg = ThemeData.estimateBrightnessForColor(accent) == Brightness.dark
-        ? KubusColors.textPrimaryDark
-        : KubusColors.textPrimaryLight;
-    return Marker(
-      point: point,
-      width: 42,
-      height: 42,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        decoration: BoxDecoration(
-          color: accent.withValues(alpha: 0.85),
-          shape: BoxShape.rectangle,
-          border: Border.all(color: fg.withValues(alpha: 0.92), width: 3),
-          boxShadow: [
-            BoxShadow(
-              color: accent.withValues(alpha: 0.35),
-              blurRadius: 10,
-              spreadRadius: 2,
-            ),
-          ],
-        ),
-        child: Icon(Icons.push_pin, color: fg, size: 22),
-      ),
-    );
-  }
-
-  List<Marker> _buildArtMarkerPins(ThemeProvider themeProvider) {
-    final zoom = _effectiveZoom;
-    final bool useClustering = zoom < 12;
-    final List<Marker> markers = [];
-
-    if (!useClustering) {
-      final scale = _scaleForZoom(zoom);
-      return _artMarkers
-          .map((marker) =>
-              _buildArtMarkerPin(marker, themeProvider, scaleOverride: scale))
-          .toList();
-    }
-
-    final level = (GridUtils.resolvePrimaryGridLevel(zoom) - 2).clamp(3, 14);
-    final Map<String, _ClusterBucket> buckets = {};
-    for (final marker in _artMarkers) {
-      final cell = GridUtils.gridCellForLevel(marker.position, level);
-      final key = '${cell.gridLevel}:${cell.uIndex}:${cell.vIndex}';
-      buckets.putIfAbsent(key, () => _ClusterBucket(cell, <ArtMarker>[]));
-      buckets[key]!.markers.add(marker);
-    }
-
-    final baseScale = _scaleForZoom(zoom);
-    for (final bucket in buckets.values) {
-      if (bucket.markers.length == 1) {
-        markers.add(_buildArtMarkerPin(bucket.markers.first, themeProvider,
-            scaleOverride: baseScale));
-      } else {
-        markers.add(_buildClusterMarker(bucket, themeProvider, baseScale));
-      }
-    }
-    return markers;
-  }
-
-  Marker _buildArtMarkerPin(ArtMarker marker, ThemeProvider themeProvider,
-      {double? scaleOverride}) {
-    final Color color = _resolveArtMarkerColor(marker, themeProvider);
-    final IconData icon = _resolveArtMarkerIcon(marker.type);
-    final double scale = scaleOverride ?? _scaleForZoom(_effectiveZoom);
-    final double cubeSize = 46 * scale;
-    final double markerWidth = 60 * scale;
-    final double markerHeight = 72 * scale;
-    final bool isSelected = _activeMarker?.id == marker.id;
-    final bool isHovered = _hoveredMarkerId == marker.id;
-
-    return Marker(
-      point: marker.position,
-      width: markerWidth,
-      height: markerHeight,
-      child: MouseRegion(
-        key: ValueKey('marker:${marker.id}'),
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _hoveredMarkerId = marker.id),
-        onExit: (_) => setState(() {
-          if (_hoveredMarkerId == marker.id) _hoveredMarkerId = null;
-        }),
-        child: GestureDetector(
-          onTap: () => _handleMarkerTap(marker),
-          child: ArtMarkerCube(
-            marker: marker,
-            baseColor: color,
-            icon: icon,
-            size: cubeSize,
-            isSelected: isSelected,
-            isHovered: isHovered,
-          ),
-        ),
-      ),
-    );
-  }
-
   void _handleMarkerTap(
     ArtMarker marker, {
     _MarkerOverlayMode overlayMode = _MarkerOverlayMode.anchored,
@@ -3487,6 +3817,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _markerOverlayExpanded = false; // Reset expand state for new marker
     });
     _maybeRecordPresenceVisitForMarker(marker);
+    unawaited(_syncMapMarkers(themeProvider: context.read<ThemeProvider>()));
+    _queueOverlayAnchorRefresh();
 
     final primaryExhibition = marker.resolvedExhibitionSummary;
     final isExhibitionMarker = marker.isExhibitionMarker;
@@ -3526,44 +3858,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     } catch (_) {}
   }
 
-  Marker _buildClusterMarker(
-      _ClusterBucket bucket, ThemeProvider themeProvider, double scale) {
-    final dominant =
-        _resolveArtMarkerColor(bucket.markers.first, themeProvider);
-    final count = bucket.markers.length;
-    final cubeSize = (54 * scale) + (count > 9 ? 6 * scale : 0);
-    final markerWidth = cubeSize;
-    final markerHeight = cubeSize * 1.15;
-    return Marker(
-      point: bucket.cell.center,
-      width: markerWidth,
-      height: markerHeight,
-      child: GestureDetector(
-        key: ValueKey('cluster:${bucket.cell.anchorKey}'),
-        onTap: () =>
-            _moveCamera(bucket.cell.center, math.min(18.0, _effectiveZoom + 2)),
-        child: ArtMarkerClusterCube(
-          count: count,
-          baseColor: dominant,
-          size: cubeSize,
-        ),
-      ),
-    );
-  }
-
   void _handleMarkerCreated(ArtMarker marker) {
     if (!marker.hasValidPosition) return;
 
     if (_travelModeEnabled) {
-      try {
-        final bounds = _mapController.camera.visibleBounds;
-        if (!bounds.contains(marker.position)) {
-          return;
-        }
-      } catch (_) {
-        // Ignore socket events until map initializes.
-        return;
-      }
+      final loadedBounds = _loadedTravelBounds;
+      if (loadedBounds == null) return;
+      if (!MapViewportUtils.containsPoint(loadedBounds, marker.position)) return;
     } else {
       final withinRadius =
           _distance.as(LengthUnit.Kilometer, _cameraCenter, marker.position) <=
@@ -3579,6 +3880,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         _artMarkers = List<ArtMarker>.from(_artMarkers)..add(marker);
       }
     });
+    unawaited(_syncMapMarkers(themeProvider: context.read<ThemeProvider>()));
   }
 
   void _handleMarkerDeleted(String markerId) {
@@ -3587,16 +3889,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         _artMarkers.removeWhere((m) => m.id == markerId);
       });
     } catch (_) {}
+    unawaited(_syncMapMarkers(themeProvider: context.read<ThemeProvider>()));
   }
 
-  Marker _buildMarkerOverlay(
+  Widget _buildMarkerOverlayCard(
     ArtMarker marker,
     Artwork? artwork,
-    ThemeProvider themeProvider, {
-    LatLng? pointOverride,
-    Alignment? alignmentOverride,
-    double? gapOverride,
-  }) {
+    ThemeProvider themeProvider,
+  ) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final baseColor = _resolveArtMarkerColor(marker, themeProvider);
@@ -3633,7 +3933,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         ? rawDescription
         : (_markerOverlayExpanded
             ? rawDescription
-            : '${rawDescription.substring(0, maxPreviewChars)}â€¦');
+            : '${rawDescription.substring(0, maxPreviewChars)}…');
 
     final showChips =
         _hasMetadataChips(marker, artwork) || canPresentExhibition;
@@ -3641,56 +3941,38 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final artworkProvider = context.read<ArtworkProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Use a large fixed height that accommodates expanded content
-    // The actual content will size itself with AnimatedSize
-    const double maxOverlayHeight = 600;
-
-    final point = pointOverride ?? marker.position;
-    final alignment = alignmentOverride ?? Alignment.bottomCenter;
-    // Gap between the marker's anchor point (pin) and the overlay card.
-    // Keep this tiny for desktop so the UI feels connected to the marker.
-    final gap = gapOverride ?? 10.0;
-    final translateY = alignment == Alignment.bottomCenter ? -gap : 0.0;
-
-    return Marker(
-      point: point,
-      width: 300,
-      height: maxOverlayHeight,
-      alignment: alignment,
-      child: Transform.translate(
-        offset: Offset(0, translateY),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 280),
-          child: AnimatedSize(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOutCubic,
-            alignment: Alignment.topCenter,
-            child: Material(
-              color: Colors.transparent,
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: baseColor.withValues(alpha: 0.35),
-                    width: 1.1,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: baseColor.withValues(alpha: 0.22),
-                      blurRadius: 20,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 280),
+      child: AnimatedSize(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        alignment: Alignment.topCenter,
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: baseColor.withValues(alpha: 0.35),
+                width: 1.1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: baseColor.withValues(alpha: 0.22),
+                  blurRadius: 20,
+                  offset: const Offset(0, 4),
                 ),
-                child: LiquidGlassPanel(
-                  padding: const EdgeInsets.all(14),
-                  borderRadius: BorderRadius.circular(18),
-                  showBorder: false,
-                  backgroundColor: scheme.surface.withValues(alpha: 0.45),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+              ],
+            ),
+            child: LiquidGlassPanel(
+              padding: const EdgeInsets.all(14),
+              borderRadius: BorderRadius.circular(18),
+              showBorder: false,
+              backgroundColor: scheme.surface.withValues(alpha: 0.45),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                         // Header row: Title + distance + close button
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -3758,10 +4040,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                               tooltip: l10n.commonClose,
                               scheme: scheme,
                               isDark: isDark,
-                              onTap: () => setState(() {
-                                _activeMarker = null;
-                                _markerOverlayExpanded = false;
-                              }),
+                              onTap: () {
+                                setState(() {
+                                  _activeMarker = null;
+                                  _markerOverlayExpanded = false;
+                                  _activeMarkerAnchor = null;
+                                });
+                                unawaited(_syncMapMarkers(themeProvider: context.read<ThemeProvider>()));
+                              },
                             ),
                           ],
                         ),
@@ -3974,13 +4260,47 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                             ),
                           ),
                         ),
-                    ],
-                  ),
-                ),
+                ],
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildMarkerOverlayLayer({
+    required ThemeProvider themeProvider,
+    required ArtworkProvider artworkProvider,
+  }) {
+    final marker = _activeMarker;
+    if (marker == null) return const SizedBox.shrink();
+
+    final artwork = marker.isExhibitionMarker
+        ? null
+        : artworkProvider.getArtworkById(marker.artworkId ?? '');
+
+    final card = _buildMarkerOverlayCard(marker, artwork, themeProvider);
+
+    if (_markerOverlayMode == _MarkerOverlayMode.centered) {
+      return Positioned.fill(
+        child: Align(
+          alignment: Alignment.center,
+          child: card,
+        ),
+      );
+    }
+
+    if (_activeMarkerAnchor == null) return const SizedBox.shrink();
+
+    return Positioned.fill(
+      child: CompositedTransformFollower(
+        link: _markerOverlayLink,
+        showWhenUnlinked: false,
+        targetAnchor: Alignment.center,
+        followerAnchor: Alignment.bottomCenter,
+        offset: const Offset(0, -10),
+        child: card,
       ),
     );
   }

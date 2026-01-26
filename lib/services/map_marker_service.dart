@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'dart:collection';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../models/art_marker.dart';
 import '../providers/storage_provider.dart';
+import '../utils/geo_bounds.dart';
 import 'art_marker_service.dart';
 import 'backend_api_service.dart';
 import 'socket_service.dart';
@@ -60,7 +60,7 @@ class MapMarkerService {
   bool _socketRegistered = false;
   LatLng? _lastQueryCenter;
   double _lastQueryRadiusKm = 5.0;
-  LatLngBounds? _lastQueryBounds;
+  GeoBounds? _lastQueryBounds;
   bool _lastQueryWasBounds = false;
 
   // Query cache (LRU) to keep Travel Mode panning smooth.
@@ -122,14 +122,14 @@ class MapMarkerService {
 
   @visibleForTesting
   static String buildBoundsQueryKey({
-    required LatLngBounds bounds,
+    required GeoBounds bounds,
     required int limit,
     int? zoomBucket,
     String? filtersKey,
   }) {
     final decimals = _decimalsForZoomBucket(zoomBucket);
     final fKey = _filtersKeyOrEmpty(filtersKey);
-    final crossesDateline = bounds.west > bounds.east;
+    final crossesDateline = bounds.crossesDateline;
     return [
       'b',
       'zb=${zoomBucket ?? '-'}',
@@ -187,7 +187,7 @@ class MapMarkerService {
     return future;
   }
 
-  bool _boundsContains(LatLngBounds bounds, LatLng point) {
+  bool _boundsContains(GeoBounds bounds, LatLng point) {
     final south = bounds.south;
     final north = bounds.north;
     final west = bounds.west;
@@ -275,7 +275,7 @@ class MapMarkerService {
 
   Future<List<ArtMarker>> loadMarkersInBounds({
     required LatLng center,
-    required LatLngBounds bounds,
+    required GeoBounds bounds,
     int? limit,
     bool forceRefresh = false,
     int? zoomBucket,
@@ -376,7 +376,8 @@ class MapMarkerService {
     if (!_isValidPosition(marker.position)) return;
 
     final shouldKeep = _lastQueryWasBounds
-        ? (_lastQueryBounds != null && _boundsContains(_lastQueryBounds!, marker.position))
+        ? (_lastQueryBounds != null &&
+            _boundsContains(_lastQueryBounds!, marker.position))
         : (_lastQueryCenter != null &&
             _distance.as(LengthUnit.Kilometer, _lastQueryCenter!, marker.position) <=
                 _lastQueryRadiusKm + 0.5);

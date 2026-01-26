@@ -1,12 +1,12 @@
 import 'package:art_kubus/services/map_marker_service.dart';
-import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:art_kubus/utils/geo_bounds.dart';
 
 void main() {
   group('MapMarkerService.buildBoundsQueryKey', () {
     test('includes zoom bucket, limit, filters, and quantized coords', () {
-      final bounds = LatLngBounds(
+      final bounds = GeoBounds.fromCorners(
         const LatLng(12.123456, 34.123456),
         const LatLng(12.987654, 34.987654),
       );
@@ -41,7 +41,7 @@ void main() {
     });
 
     test('marks dateline-crossing bounds', () {
-      final bounds = LatLngBounds(
+      final bounds = GeoBounds.fromCorners(
         const LatLng(-10, 170),
         const LatLng(10, -170),
       );
@@ -82,4 +82,3 @@ void main() {
     });
   });
 }
-

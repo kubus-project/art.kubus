@@ -46,15 +46,12 @@ dependencies:
   image_picker: ^1.1.1
   provider: ^6.1.5
   location: ^8.0.1
-  flutter_map: ^7.0.2 # Keeping compatible with flutter_map_geojson
   latlong2: ^0.9.1
-  flutter_map_cancellable_tile_provider: ^3.0.2
-  flutter_map_geojson: ^1.0.8
+  maplibre_gl: ^0.25.0
   shared_preferences: ^2.5.3
   flutter_secure_storage: ^8.0.0
   local_auth: ^2.1.5
   geolocator: ^10.1.0
-  proj4dart: any
 
   # UI and Theming
   google_fonts: ^6.2.1
@@ -154,6 +151,8 @@ flutter:
   assets:
     - assets/images/logo.png
     - assets/images/logo_black.png
+    - assets/map_styles/kubus_light.json
+    - assets/map_styles/kubus_dark.json
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

@@ -1,0 +1,34 @@
+{
+  "version": 8,
+  "name": "Kubus Light (Raster)",
+  "sources": {
+    "carto": {
+      "type": "raster",
+      "tileSize": 256,
+      "tiles": [
+        "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+        "https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+        "https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+        "https://d.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"
+      ],
+      "attribution": "© OpenStreetMap contributors, © CARTO"
+    }
+  },
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {
+        "background-color": "#FFFFFF"
+      }
+    },
+    {
+      "id": "carto-raster",
+      "type": "raster",
+      "source": "carto",
+      "paint": {
+        "raster-opacity": 1.0
+      }
+    }
+  ]
+}

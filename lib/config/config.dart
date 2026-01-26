@@ -73,6 +73,20 @@ class AppConfig {
   /// Map: optional isometric-like perspective on the map canvas.
   static const bool enableMapIsometricView = true;
 
+  /// MapLibre map style assets (theme-specific).
+  ///
+  /// Keep these configurable via build-time defines so production can switch
+  /// styles without code changes:
+  /// `--dart-define=MAP_STYLE_LIGHT_ASSET=assets/map_styles/kubus_light.json`
+  static const String mapStyleLightAsset = String.fromEnvironment(
+    'MAP_STYLE_LIGHT_ASSET',
+    defaultValue: 'assets/map_styles/kubus_light.json',
+  );
+  static const String mapStyleDarkAsset = String.fromEnvironment(
+    'MAP_STYLE_DARK_ASSET',
+    defaultValue: 'assets/map_styles/kubus_dark.json',
+  );
+
   /// Collaboration (events/exhibitions)
   static const bool enableCollabInvites = true;
   static const bool enableCollabInviteNotifications = true;

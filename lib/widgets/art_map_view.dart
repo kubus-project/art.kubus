@@ -1,75 +1,98 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:latlong2/latlong.dart' as ll;
+import 'package:maplibre_gl/maplibre_gl.dart' as ml;
 
-import '../providers/tile_providers.dart';
-
-/// Shared FlutterMap layer used by both mobile and desktop map screens.
+/// Shared MapLibre layer used by both mobile and desktop map screens.
+///
+/// UI overlays (filters, marker cards, discovery progress, etc.) remain
+/// Flutter widgets layered above this view.
 class ArtMapView extends StatelessWidget {
   const ArtMapView({
     super.key,
-    required this.mapController,
     required this.initialCenter,
     required this.initialZoom,
     required this.minZoom,
     required this.maxZoom,
     required this.isDarkMode,
-    required this.isRetina,
-    required this.markers,
-    this.tileProviders,
-    this.onPositionChanged,
-    this.onTap,
-    this.onLongPress,
-    this.onMapReady,
-    this.interactionOptions,
+    required this.styleAsset,
+    required this.onMapCreated,
+    this.onStyleLoaded,
+    this.onCameraMove,
+    this.onCameraIdle,
+    this.onMapClick,
+    this.onMapLongClick,
+    this.rotateGesturesEnabled = true,
+    this.scrollGesturesEnabled = true,
+    this.zoomGesturesEnabled = true,
+    this.tiltGesturesEnabled = true,
+    this.compassEnabled = false,
   });
 
-  final MapController mapController;
-  final LatLng initialCenter;
+  final ll.LatLng initialCenter;
   final double initialZoom;
   final double minZoom;
   final double maxZoom;
   final bool isDarkMode;
-  final bool isRetina;
-  final TileProviders? tileProviders;
-  final List<Marker> markers;
-  final void Function(MapCamera, bool)? onPositionChanged;
-  final void Function(TapPosition, LatLng)? onTap;
-  final void Function(TapPosition, LatLng)? onLongPress;
-  final VoidCallback? onMapReady;
-  final InteractionOptions? interactionOptions;
+  final String styleAsset;
+
+  final void Function(ml.MapLibreMapController controller) onMapCreated;
+  final VoidCallback? onStyleLoaded;
+  final void Function(ml.CameraPosition position)? onCameraMove;
+  final VoidCallback? onCameraIdle;
+
+  final void Function(math.Point<double> point, ll.LatLng latLng)? onMapClick;
+  final void Function(math.Point<double> point, ll.LatLng latLng)? onMapLongClick;
+
+  final bool rotateGesturesEnabled;
+  final bool scrollGesturesEnabled;
+  final bool zoomGesturesEnabled;
+  final bool tiltGesturesEnabled;
+  final bool compassEnabled;
 
   @override
   Widget build(BuildContext context) {
-    return FlutterMap(
-      key: ValueKey('${isDarkMode ? 'dark' : 'light'}-${isRetina ? 'retina' : 'std'}'),
-      mapController: mapController,
-      options: MapOptions(
-        initialCenter: initialCenter,
-        initialZoom: initialZoom,
-        minZoom: minZoom,
-        maxZoom: maxZoom,
-        onMapReady: onMapReady,
-        onPositionChanged: onPositionChanged,
-        onTap: onTap,
-        onLongPress: onLongPress,
-        interactionOptions: interactionOptions ?? const InteractionOptions(),
+    // Force a clean map instance when switching styles; this avoids rare
+    // renderer/state bugs on web and ensures dark/light swaps are reliable.
+    final mapKey = ValueKey<String>('maplibre-${isDarkMode ? 'dark' : 'light'}-$styleAsset');
+
+    return ml.MapLibreMap(
+      key: mapKey,
+      styleString: styleAsset,
+      initialCameraPosition: ml.CameraPosition(
+        target: ml.LatLng(initialCenter.latitude, initialCenter.longitude),
+        zoom: initialZoom,
       ),
-      children: [
-        if (tileProviders != null)
-          (isRetina
-              ? tileProviders!.getTileLayer()
-              : tileProviders!.getNonRetinaTileLayer())
-        else
-          TileLayer(
-            urlTemplate: isDarkMode
-                ? 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png'
-                : 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png',
-            subdomains: const ['a', 'b', 'c'],
-            userAgentPackageName: 'com.art.kubus',
-          ),
-        MarkerLayer(markers: markers),
-      ],
+      minMaxZoomPreference: ml.MinMaxZoomPreference(minZoom, maxZoom),
+      rotateGesturesEnabled: rotateGesturesEnabled,
+      scrollGesturesEnabled: scrollGesturesEnabled,
+      zoomGesturesEnabled: zoomGesturesEnabled,
+      tiltGesturesEnabled: tiltGesturesEnabled,
+      compassEnabled: compassEnabled,
+      myLocationEnabled: false,
+      myLocationTrackingMode: ml.MyLocationTrackingMode.none,
+      onMapCreated: onMapCreated,
+      onStyleLoadedCallback: onStyleLoaded,
+      onCameraMove: onCameraMove,
+      onCameraIdle: onCameraIdle,
+      onMapClick: onMapClick == null
+          ? null
+          : (math.Point<double> point, ml.LatLng latLng) {
+              onMapClick!(
+                point,
+                ll.LatLng(latLng.latitude, latLng.longitude),
+              );
+            },
+      onMapLongClick: onMapLongClick == null
+          ? null
+          : (math.Point<double> point, ml.LatLng latLng) {
+              onMapLongClick!(
+                point,
+                ll.LatLng(latLng.latitude, latLng.longitude),
+              );
+            },
+      trackCameraPosition: true,
     );
   }
 }
