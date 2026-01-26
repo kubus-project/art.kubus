@@ -1,3 +1,5 @@
+import 'dart:async' show unawaited;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -34,16 +36,27 @@ class MapMarkerHelper {
     required double radiusKm,
     int? limit,
     bool forceRefresh = false,
+    int? zoomBucket,
+    String? filtersKey,
+    int maxArtworkHydration = 70,
   }) async {
     final markers = await mapMarkerService.loadMarkers(
       center: center,
       radiusKm: radiusKm,
       limit: limit,
       forceRefresh: forceRefresh,
+      zoomBucket: zoomBucket,
+      filtersKey: filtersKey,
     );
 
     final filteredMarkers = markers.where((marker) => marker.hasValidPosition).toList();
-    await hydrateMarkersWithArtworks(artworkProvider, filteredMarkers);
+    unawaited(
+      hydrateMarkersWithArtworks(
+        artworkProvider,
+        filteredMarkers,
+        maxPrefetch: maxArtworkHydration,
+      ),
+    );
 
     return MapMarkerLoadResult(
       markers: filteredMarkers,
@@ -62,16 +75,27 @@ class MapMarkerHelper {
     required LatLngBounds bounds,
     int? limit,
     bool forceRefresh = false,
+    int? zoomBucket,
+    String? filtersKey,
+    int maxArtworkHydration = 90,
   }) async {
     final markers = await mapMarkerService.loadMarkersInBounds(
       center: center,
       bounds: bounds,
       limit: limit,
       forceRefresh: forceRefresh,
+      zoomBucket: zoomBucket,
+      filtersKey: filtersKey,
     );
 
     final filteredMarkers = markers.where((marker) => marker.hasValidPosition).toList();
-    await hydrateMarkersWithArtworks(artworkProvider, filteredMarkers);
+    unawaited(
+      hydrateMarkersWithArtworks(
+        artworkProvider,
+        filteredMarkers,
+        maxPrefetch: maxArtworkHydration,
+      ),
+    );
 
     return MapMarkerLoadResult(
       markers: filteredMarkers,
@@ -109,6 +133,7 @@ class MapMarkerHelper {
   static Future<void> hydrateMarkersWithArtworks(
     ArtworkProvider artworkProvider,
     List<ArtMarker> markers,
+    {int maxPrefetch = 80}
   ) async {
     final missingIds = <String>{};
 
@@ -118,6 +143,7 @@ class MapMarkerHelper {
       if (artworkId == null || artworkId.isEmpty) continue;
       if (artworkProvider.getArtworkById(artworkId) == null) {
         missingIds.add(artworkId);
+        if (missingIds.length >= maxPrefetch) break;
       }
     }
 
@@ -125,7 +151,9 @@ class MapMarkerHelper {
       try {
         await artworkProvider.fetchArtworkIfNeeded(artworkId);
       } catch (e) {
-        debugPrint('MapMarkerHelper: failed to hydrate artwork $artworkId: $e');
+        if (kDebugMode) {
+          debugPrint('MapMarkerHelper: failed to hydrate artwork $artworkId: $e');
+        }
       }
     }
 

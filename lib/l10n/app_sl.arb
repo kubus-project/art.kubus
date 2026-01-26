@@ -1081,6 +1081,18 @@
   "@mapTravelModeDisableTooltip": {
     "description": "Namig (tooltip) za preklop načina potovanja, ko je trenutno VKLOPLJEN."
   },
+  "mapIsometricViewEnableTooltip": "Vklopi izometrični pogled",
+  "@mapIsometricViewEnableTooltip": {
+    "description": "Namig (tooltip) za preklop izometričnega pogleda, ko je trenutno IZKLOPLJEN."
+  },
+  "mapIsometricViewDisableTooltip": "Izklopi izometrični pogled",
+  "@mapIsometricViewDisableTooltip": {
+    "description": "Namig (tooltip) za preklop izometričnega pogleda, ko je trenutno VKLOPLJEN."
+  },
+  "mapExhibitionsUnavailableToast": "Razstave trenutno niso na voljo.",
+  "@mapExhibitionsUnavailableToast": {
+    "description": "Obvestilo (SnackBar), ko razstav ni mogoče odpreti z zemljevida (funkcija izklopljena ali API ni na voljo)."
+  },
   "mapTutorialStepMapTitle": "Zemljevid",
   "@mapTutorialStepMapTitle": {
     "description": "Naslov prvega koraka interaktivnega vodiča po zemljevidu (coach marks)."

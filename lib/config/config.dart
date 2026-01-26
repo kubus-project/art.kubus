@@ -70,6 +70,9 @@ class AppConfig {
   /// Map: allow expanding marker radius via "Travel mode".
   static const bool enableMapTravelMode = true;
 
+  /// Map: optional isometric-like perspective on the map canvas.
+  static const bool enableMapIsometricView = true;
+
   /// Collaboration (events/exhibitions)
   static const bool enableCollabInvites = true;
   static const bool enableCollabInviteNotifications = true;
@@ -286,6 +289,7 @@ class AppConfig {
       case 'externalImageProxy': return enableExternalImageProxy;
       case 'rePromptLoginOnExpiry': return enableRePromptLoginOnExpiry;
       case 'mapTravelMode': return enableMapTravelMode;
+      case 'mapIsometricView': return enableMapIsometricView;
       default: return false;
     }
   }
@@ -359,6 +363,7 @@ class PreferenceKeys {
   /// Map UX
   static const String mapTravelModeEnabledV1 = 'map_travel_mode_enabled_v1';
   static const String mapTravelTutorialSeenV1 = 'map_travel_tutorial_seen_v1';
+  static const String mapIsometricViewEnabledV1 = 'map_isometric_view_enabled_v1';
 
   /// Interactive map onboarding tutorial (coach marks)
   static const String mapOnboardingMobileSeenV2 = 'map_onboarding_mobile_seen_v2';

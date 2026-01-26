@@ -256,14 +256,14 @@ class AppColorUtils {
   // Map Marker Subject Colors - centralized color definitions for marker types
   // --------------------------------------------------------------------------
 
-  /// Dedicated color for Exhibition markers - distinct from events
-  static const Color exhibitionColor = Color(0xFF8E24AA); // Deep purple
+  /// Dedicated color for Exhibition markers (theme-aware when roles are provided).
+  static const Color exhibitionColor = KubusColors.achievementGoldDark;
 
-  /// Dedicated color for Event markers
-  static const Color eventColor = Color(0xFFFF7043); // Deep orange
+  /// Dedicated color for Event markers (fallback)
+  static const Color eventColor = KubusColors.accentOrangeDark;
 
-  /// Dedicated color for Institution markers
-  static const Color institutionColor = Color(0xFF5C6BC0); // Indigo
+  /// Dedicated color for Institution markers (fallback)
+  static const Color institutionColor = KubusColors.successDark;
 
   /// Get color for a map marker based on its type and metadata.
   /// This is the single source of truth for marker colors across desktop/mobile.
@@ -271,7 +271,9 @@ class AppColorUtils {
     required String markerType,
     Map<String, dynamic>? metadata,
     required ColorScheme scheme,
+    KubusColorRoles? roles,
   }) {
+    final resolvedRoles = roles;
     final subjectType = (metadata?['subjectType'] ?? metadata?['subject_type'])
         ?.toString()
         .toLowerCase();
@@ -280,24 +282,33 @@ class AppColorUtils {
             ?.toString()
             .toLowerCase();
 
+    final exhibitionAccent = resolvedRoles?.achievementGold ?? exhibitionColor;
+    final eventAccent = resolvedRoles?.statCoral ?? eventColor;
+    final institutionAccent = resolvedRoles?.statGreen ?? institutionColor;
+    final artworkAccent = resolvedRoles?.statTeal ?? KubusColors.accentTealDark;
+    final residencyAccent = resolvedRoles?.statAmber ?? KubusColors.warningDark;
+    final dropAccent = resolvedRoles?.lockedFeature ?? KubusColors.accentOrangeDark;
+    final groupAccent = resolvedRoles?.statGreen ?? KubusColors.successDark;
+    final experienceAccent = scheme.primary;
+
     // Check if this is an exhibition marker
     if (_isExhibitionMarker(markerType, subjectType, category, metadata)) {
-      return exhibitionColor;
+      return exhibitionAccent;
     }
 
     // Check subject type metadata first
     if (subjectType != null && subjectType.isNotEmpty) {
       if (subjectType.contains('institution') ||
           subjectType.contains('museum')) {
-        return institutionColor;
+        return institutionAccent;
       }
       if (subjectType.contains('event')) {
-        return eventColor;
+        return eventAccent;
       }
       if (subjectType.contains('group') ||
           subjectType.contains('dao') ||
           subjectType.contains('collective')) {
-        return purpleAccent;
+        return groupAccent;
       }
     }
 
@@ -305,17 +316,17 @@ class AppColorUtils {
     final normalizedType = markerType.toLowerCase();
     switch (normalizedType) {
       case 'artwork':
-        return tealAccent;
+        return artworkAccent;
       case 'institution':
-        return institutionColor;
+        return institutionAccent;
       case 'event':
-        return eventColor;
+        return eventAccent;
       case 'residency':
-        return purpleAccent;
+        return residencyAccent;
       case 'drop':
-        return coralAccent;
+        return dropAccent;
       case 'experience':
-        return cyanAccent;
+        return experienceAccent;
       case 'other':
       default:
         return scheme.outline;

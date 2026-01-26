@@ -3,6 +3,70 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../models/art_marker.dart';
+import '../utils/app_color_utils.dart';
+import '../utils/design_tokens.dart';
+import '../utils/kubus_color_roles.dart';
+
+@immutable
+class CubeMarkerStyle {
+  static const double selectedScale = 1.08;
+  static const double hoveredScale = 1.04;
+  static const Duration animationDuration = Duration(milliseconds: 140);
+
+  const CubeMarkerStyle({
+    required this.shadowColor,
+    required this.iconBackgroundColor,
+    required this.iconShadowColor,
+    required this.edgeColor,
+    required this.highlightColor,
+  });
+
+  final Color shadowColor;
+  final Color iconBackgroundColor;
+  final Color iconShadowColor;
+  final Color edgeColor;
+  final Color highlightColor;
+
+  factory CubeMarkerStyle.resolve(
+    BuildContext context, {
+    required Color baseColor,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final shadow = scheme.shadow;
+
+    return CubeMarkerStyle(
+      shadowColor: shadow,
+      iconBackgroundColor: scheme.surface.withValues(alpha: isDark ? 0.92 : 0.96),
+      iconShadowColor: shadow.withValues(alpha: 0.16),
+      edgeColor: shadow.withValues(alpha: 0.35),
+      highlightColor: AppColorUtils.shiftLightness(
+        baseColor,
+        isDark ? 0.28 : 0.20,
+      ).withValues(alpha: 0.30),
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other is CubeMarkerStyle &&
+            other.shadowColor == shadowColor &&
+            other.iconBackgroundColor == iconBackgroundColor &&
+            other.iconShadowColor == iconShadowColor &&
+            other.edgeColor == edgeColor &&
+            other.highlightColor == highlightColor);
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        shadowColor,
+        iconBackgroundColor,
+        iconShadowColor,
+        edgeColor,
+        highlightColor,
+      );
+}
 
 /// A stylised, responsive isometric cube marker used on the discovery map.
 ///
@@ -16,6 +80,8 @@ class ArtMarkerCube extends StatelessWidget {
     required this.icon,
     this.size = 64,
     this.glow = false,
+    this.isSelected = false,
+    this.isHovered = false,
   });
 
   final ArtMarker marker;
@@ -23,90 +89,237 @@ class ArtMarkerCube extends StatelessWidget {
   final IconData icon;
   final double size;
   final bool glow;
+  final bool isSelected;
+  final bool isHovered;
 
   @override
   Widget build(BuildContext context) {
-    final _CubePalette palette = _CubePalette.fromBase(baseColor);
+    final style = CubeMarkerStyle.resolve(context, baseColor: baseColor);
+    final tier = marker.signalTier;
+    final bool showGlow = glow ||
+        isSelected ||
+        isHovered ||
+        tier == ArtMarkerSignal.featured ||
+        tier == ArtMarkerSignal.legendary;
+    final double scale = isSelected
+        ? CubeMarkerStyle.selectedScale
+        : isHovered
+            ? CubeMarkerStyle.hoveredScale
+            : 1.0;
+
+    final _CubePalette palette = _CubePalette.fromBase(
+      baseColor,
+      edgeColor: style.edgeColor,
+    );
     // Cube body occupies 70% height, rest is for shadow/spacing
     final double cubeBodyHeight = size * 0.85;
     final double totalHeight = size * 1.15;
 
-    return SizedBox(
-      width: size,
-      height: totalHeight,
-      child: Stack(
-        alignment: Alignment.center,
-        clipBehavior: Clip.none,
-        children: [
-          // Ground shadow (ellipse beneath cube)
-          Positioned(
-            bottom: 0,
-            child: Transform(
-              alignment: Alignment.center,
-              transform: Matrix4.identity()..scaleByDouble(1.0, 0.35, 1.0, 1.0),
-              child: Container(
-                width: size * 0.72,
-                height: size * 0.72,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      Colors.black.withValues(alpha: glow ? 0.35 : 0.22),
-                      Colors.black.withValues(alpha: 0.08),
-                      Colors.transparent,
-                    ],
-                    stops: const [0.0, 0.55, 1.0],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          // Optional colored glow beneath cube
-          if (glow)
+    return AnimatedScale(
+      scale: scale,
+      duration: CubeMarkerStyle.animationDuration,
+      curve: Curves.easeOutCubic,
+      child: SizedBox(
+        width: size,
+        height: totalHeight,
+        child: Stack(
+          alignment: Alignment.center,
+          clipBehavior: Clip.none,
+          children: [
+            // Ground shadow (ellipse beneath cube)
             Positioned(
-              bottom: size * 0.02,
+              bottom: 0,
               child: Transform(
                 alignment: Alignment.center,
-                transform: Matrix4.identity()..scaleByDouble(1.0, 0.32, 1.0, 1.0),
+                transform:
+                    Matrix4.identity()..scaleByDouble(1.0, 0.35, 1.0, 1.0),
                 child: Container(
-                  width: size * 0.9,
-                  height: size * 0.9,
+                  width: size * 0.72,
+                  height: size * 0.72,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        baseColor.withValues(alpha: 0.45),
-                        baseColor.withValues(alpha: 0.15),
+                        style.shadowColor.withValues(
+                          alpha: showGlow ? 0.32 : 0.20,
+                        ),
+                        style.shadowColor.withValues(alpha: 0.08),
                         Colors.transparent,
                       ],
-                      stops: const [0.0, 0.5, 1.0],
+                      stops: const [0.0, 0.55, 1.0],
                     ),
                   ),
                 ),
               ),
             ),
-          // Isometric cube with icon on top
-          Positioned(
-            bottom: size * 0.12,
-            child: CustomPaint(
-              size: Size(size * 0.88, cubeBodyHeight),
-              painter: _IsometricCubePainter(
-                palette: palette,
-                icon: icon,
+            // Optional colored glow beneath cube
+            if (showGlow)
+              Positioned(
+                bottom: size * 0.02,
+                child: Transform(
+                  alignment: Alignment.center,
+                  transform:
+                      Matrix4.identity()..scaleByDouble(1.0, 0.32, 1.0, 1.0),
+                  child: Container(
+                    width: size * 0.9,
+                    height: size * 0.9,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          baseColor.withValues(alpha: isSelected ? 0.48 : 0.40),
+                          baseColor.withValues(alpha: isSelected ? 0.18 : 0.14),
+                          Colors.transparent,
+                        ],
+                        stops: const [0.0, 0.5, 1.0],
+                      ),
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ),
-          // Signal tier indicator (subtle ring around base)
-          if (marker.signalTier != ArtMarkerSignal.subtle)
+            // Isometric cube with icon on top
             Positioned(
-              bottom: size * 0.04,
-              child: _SignalIndicator(
-                tier: marker.signalTier,
-                baseColor: baseColor,
-                size: size * 0.68,
+              bottom: size * 0.12,
+              child: RepaintBoundary(
+                child: CustomPaint(
+                  size: Size(size * 0.88, cubeBodyHeight),
+                  painter: _IsometricCubePainter(
+                    palette: palette,
+                    style: style,
+                    icon: icon,
+                    label: null,
+                    labelStyle: null,
+                  ),
+                ),
               ),
             ),
-        ],
+            // Signal tier indicator (subtle ring around base)
+            if (tier != ArtMarkerSignal.subtle)
+              Positioned(
+                bottom: size * 0.04,
+                child: _SignalIndicator(
+                  tier: tier,
+                  baseColor: baseColor,
+                  size: size * 0.68,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A cube marker variant that renders an aggregated cluster count on the top face.
+class ArtMarkerClusterCube extends StatelessWidget {
+  const ArtMarkerClusterCube({
+    super.key,
+    required this.count,
+    required this.baseColor,
+    this.size = 70,
+    this.isSelected = false,
+    this.isHovered = false,
+  });
+
+  final int count;
+  final Color baseColor;
+  final double size;
+  final bool isSelected;
+  final bool isHovered;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = CubeMarkerStyle.resolve(context, baseColor: baseColor);
+    final bool showGlow = isSelected || isHovered || count >= 10;
+    final double scale = isSelected
+        ? CubeMarkerStyle.selectedScale
+        : isHovered
+            ? CubeMarkerStyle.hoveredScale
+            : 1.0;
+
+    final palette = _CubePalette.fromBase(baseColor, edgeColor: style.edgeColor);
+    final cubeBodyHeight = size * 0.85;
+    final totalHeight = size * 1.15;
+    final label = count > 99 ? '99+' : '$count';
+    final labelStyle = KubusTextStyles.badgeCount.copyWith(
+      color: palette.topAccent,
+    );
+
+    return AnimatedScale(
+      scale: scale,
+      duration: CubeMarkerStyle.animationDuration,
+      curve: Curves.easeOutCubic,
+      child: SizedBox(
+        width: size,
+        height: totalHeight,
+        child: Stack(
+          alignment: Alignment.center,
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              bottom: 0,
+              child: Transform(
+                alignment: Alignment.center,
+                transform:
+                    Matrix4.identity()..scaleByDouble(1.0, 0.35, 1.0, 1.0),
+                child: Container(
+                  width: size * 0.72,
+                  height: size * 0.72,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        style.shadowColor.withValues(alpha: showGlow ? 0.30 : 0.18),
+                        style.shadowColor.withValues(alpha: 0.07),
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.55, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            if (showGlow)
+              Positioned(
+                bottom: size * 0.02,
+                child: Transform(
+                  alignment: Alignment.center,
+                  transform:
+                      Matrix4.identity()..scaleByDouble(1.0, 0.32, 1.0, 1.0),
+                  child: Container(
+                    width: size * 0.9,
+                    height: size * 0.9,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          baseColor.withValues(alpha: 0.42),
+                          baseColor.withValues(alpha: 0.14),
+                          Colors.transparent,
+                        ],
+                        stops: const [0.0, 0.5, 1.0],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            Positioned(
+              bottom: size * 0.12,
+              child: RepaintBoundary(
+                child: CustomPaint(
+                  size: Size(size * 0.88, cubeBodyHeight),
+                  painter: _IsometricCubePainter(
+                    palette: palette,
+                    style: style,
+                    icon: null,
+                    label: label,
+                    labelStyle: labelStyle,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -115,11 +328,17 @@ class ArtMarkerCube extends StatelessWidget {
 class _IsometricCubePainter extends CustomPainter {
   const _IsometricCubePainter({
     required this.palette,
+    required this.style,
     required this.icon,
+    required this.label,
+    required this.labelStyle,
   });
 
   final _CubePalette palette;
-  final IconData icon;
+  final CubeMarkerStyle style;
+  final IconData? icon;
+  final String? label;
+  final TextStyle? labelStyle;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -135,7 +354,7 @@ class _IsometricCubePainter extends CustomPainter {
     canvas.drawPath(
       shadowPath,
       Paint()
-        ..color = Colors.black.withValues(alpha: 0.18)
+        ..color = style.shadowColor.withValues(alpha: 0.18)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
     );
 
@@ -275,7 +494,7 @@ class _IsometricCubePainter extends CustomPainter {
 
     // Highlight along top edges for depth
     final Paint highlightPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.28)
+      ..color = style.highlightColor
       ..strokeWidth = size.width * 0.012
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
@@ -289,10 +508,11 @@ class _IsometricCubePainter extends CustomPainter {
     canvas.drawPath(highlight, highlightPaint);
 
     // Draw icon on top face in isometric perspective
-    _drawIconOnTopFace(canvas, size, cube);
+    _drawGlyphOnTopFace(canvas, size, cube);
   }
 
-  void _drawIconOnTopFace(Canvas canvas, Size size, _ProjectedCube cube) {
+  void _drawGlyphOnTopFace(Canvas canvas, Size size, _ProjectedCube cube) {
+    assert(icon != null || (label != null && labelStyle != null));
     // Calculate center of top face
     final topCenter = Offset(
       (cube.vertex(_CubeVertex.backLeftTop).dx +
@@ -312,7 +532,7 @@ class _IsometricCubePainter extends CustomPainter {
 
     // Draw icon background circle (white with subtle shadow)
     final Paint circleShadowPaint = Paint()
-      ..color = Colors.black.withValues(alpha: 0.15)
+      ..color = style.iconShadowColor
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
 
     canvas.drawOval(
@@ -326,7 +546,7 @@ class _IsometricCubePainter extends CustomPainter {
 
     // Icon background (white ellipse matching isometric perspective)
     final Paint circlePaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.95);
+      ..color = style.iconBackgroundColor;
     canvas.drawOval(
       Rect.fromCenter(
         center: topCenter,
@@ -350,32 +570,48 @@ class _IsometricCubePainter extends CustomPainter {
       borderPaint,
     );
 
-    // Draw the icon using a TextPainter
-    final TextPainter iconPainter = TextPainter(
-      text: TextSpan(
-        text: String.fromCharCode(icon.codePoint),
-        style: TextStyle(
-          fontSize: size.width * 0.28,
-          fontFamily: icon.fontFamily,
-          package: icon.fontPackage,
-          color: palette.topAccent,
+    final TextPainter glyphPainter;
+    if (icon != null) {
+      glyphPainter = TextPainter(
+        text: TextSpan(
+          text: String.fromCharCode(icon!.codePoint),
+          style: TextStyle(
+            fontSize: size.width * 0.28,
+            fontFamily: icon!.fontFamily,
+            package: icon!.fontPackage,
+            color: palette.topAccent,
+          ),
         ),
-      ),
-      textDirection: TextDirection.ltr,
-    );
-    iconPainter.layout();
+        textDirection: TextDirection.ltr,
+      );
+    } else {
+      glyphPainter = TextPainter(
+        text: TextSpan(
+          text: label,
+          style: labelStyle?.copyWith(
+            fontSize: size.width * 0.22,
+          ),
+        ),
+        textAlign: TextAlign.center,
+        textDirection: TextDirection.ltr,
+      );
+    }
+    glyphPainter.layout();
 
-    // Position icon in center of top face
-    final iconOffset = Offset(
-      topCenter.dx - iconPainter.width / 2,
-      topCenter.dy - iconPainter.height / 2 - size.height * 0.015,
+    // Position glyph in center of top face
+    final glyphOffset = Offset(
+      topCenter.dx - glyphPainter.width / 2,
+      topCenter.dy - glyphPainter.height / 2 - size.height * 0.015,
     );
-    iconPainter.paint(canvas, iconOffset);
+    glyphPainter.paint(canvas, glyphOffset);
   }
 
   @override
   bool shouldRepaint(covariant _IsometricCubePainter oldDelegate) {
-    return oldDelegate.palette != palette || oldDelegate.icon != icon;
+    return oldDelegate.palette != palette ||
+        oldDelegate.icon != icon ||
+        oldDelegate.label != label ||
+        oldDelegate.style != style;
   }
 }
 
@@ -395,10 +631,11 @@ class _SignalIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color glowColor;
     final double opacity;
+    final roles = KubusColorRoles.of(context);
 
     switch (tier) {
       case ArtMarkerSignal.legendary:
-        glowColor = Colors.amber;
+        glowColor = roles.achievementGold;
         opacity = 0.7;
         break;
       case ArtMarkerSignal.featured:
@@ -459,7 +696,10 @@ class _CubePalette {
   final Color base;
   final Color edge;
 
-  factory _CubePalette.fromBase(Color color) {
+  factory _CubePalette.fromBase(
+    Color color, {
+    required Color edgeColor,
+  }) {
     final normalized = _normalizeBase(color);
     final hsl = HSLColor.fromColor(normalized);
 
@@ -481,7 +721,7 @@ class _CubePalette {
       // Base shadow
       base: normalized.withValues(alpha: 0.4),
       // Edges for definition
-      edge: Colors.black.withValues(alpha: 0.35),
+      edge: edgeColor.withValues(alpha: 0.35),
     );
   }
 
