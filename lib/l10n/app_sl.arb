@@ -3042,5 +3042,23 @@
   "communitySubjectPickerEmptyArtwork": "Ni najdenih umetnin.",
   "communitySubjectPickerEmptyExhibition": "Ni najdenih razstav.",
   "communitySubjectPickerEmptyCollection": "Ni najdenih zbirk.",
-  "communitySubjectPickerEmptyInstitution": "Ni najdenih institucij."
+  "communitySubjectPickerEmptyInstitution": "Ni najdenih institucij.",
+
+  "supportSectionTitle": "Podpri",
+  "supportSectionSubtitle": "Pomagaj nam graditi art.kubus — vsaka donacija šteje.",
+  "supportSectionMoreInfo": "Več informacij",
+  "supportMethodKofi": "Ko-fi",
+  "supportMethodKofiHint": "Podpora v velikosti kave",
+  "supportMethodPaypal": "PayPal",
+  "supportMethodPaypalHint": "Doniraj prek PayPala",
+  "supportMethodGithubSponsors": "GitHub Sponsors",
+  "supportMethodGithubSponsorsHint": "Podpri prek GitHuba",
+  "supportDialogTitle": "Kaj omogoča tvoja podpora",
+  "supportDialogSubtitle": "Tri ravni — vsaka je pomembna. Hvala, ker nam pomagaš graditi naprej.",
+  "supportTier5Amount": "5 €",
+  "supportTier5Body": "Pomaga pokriti mesečne stroške infrastrukture.",
+  "supportTier15Amount": "15 €",
+  "supportTier15Body": "Podpira stalne tedenske izboljšave.",
+  "supportTier50Amount": "50 €",
+  "supportTier50Body": "Financira eno osredotočeno razvojno sejo (nova funkcija / popravki / posodobitve vsebin)."
 }
