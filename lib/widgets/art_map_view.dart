@@ -219,6 +219,22 @@ class _ArtMapViewState extends State<ArtMapView> {
                 'ArtMapView: map created (style="$resolved", platform=${defaultTargetPlatform.name}, web=$kIsWeb)',
               );
               widget.onMapCreated(controller);
+              if (kIsWeb) {
+                // MapLibre GL JS sometimes initializes while the element is still
+                // measuring (0x0) during the first frame, especially when the
+                // map is mounted behind onboarding / tab transitions. A forced
+                // resize after layout makes the map reliably paint on web.
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  try {
+                    controller.forceResizeWebMap();
+                  } catch (e, st) {
+                    AppConfig.debugPrint('ArtMapView: forceResizeWebMap failed: $e');
+                    if (kDebugMode) {
+                      AppConfig.debugPrint('ArtMapView: forceResizeWebMap stack: $st');
+                    }
+                  }
+                });
+              }
             },
             onStyleLoadedCallback: () {
               _styleLoaded = true;
@@ -229,6 +245,16 @@ class _ArtMapViewState extends State<ArtMapView> {
                 AppConfig.debugPrint('ArtMapView: style loaded in ${elapsedMs}ms');
               } else {
                 AppConfig.debugPrint('ArtMapView: style loaded');
+              }
+              if (kIsWeb) {
+                try {
+                  _controller?.forceResizeWebMap();
+                } catch (e, st) {
+                  AppConfig.debugPrint('ArtMapView: forceResizeWebMap after style load failed: $e');
+                  if (kDebugMode) {
+                    AppConfig.debugPrint('ArtMapView: resize-after-style stack: $st');
+                  }
+                }
               }
               if (_pendingStyleApply) {
                 _pendingStyleApply = false;
