@@ -2,13 +2,13 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:web/web.dart' as web;
 
 import '../../utils/kubus_color_roles.dart';
 import '../../widgets/app_logo.dart';
 import '../../widgets/gradient_icon_card.dart';
 import '../../widgets/glass_components.dart';
 import '../../services/backend_api_service.dart';
+import '../../services/window_close_helper.dart';
 
 class EmailVerificationSuccessScreen extends StatefulWidget {
   const EmailVerificationSuccessScreen({
@@ -93,13 +93,9 @@ class _EmailVerificationSuccessScreenState extends State<EmailVerificationSucces
       debugPrint('EmailVerificationSuccessScreen: Calling window.close()');
     }
     
-    try {
-      // Try to close the window using the web API
-      web.window.close();
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('EmailVerificationSuccessScreen: window.close() threw exception: $e');
-      }
+    final initiated = attemptCloseWindow();
+    if (!initiated && kDebugMode) {
+      debugPrint('EmailVerificationSuccessScreen: window.close() not supported on this platform');
     }
     
     // After a short delay, check if window is still open

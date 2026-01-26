@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:art_kubus/widgets/glass_components.dart';
 
@@ -20,6 +19,7 @@ import '../../providers/marker_management_provider.dart';
 import '../../providers/tile_providers.dart';
 import '../../utils/map_marker_subject_loader.dart';
 import '../../utils/marker_subject_utils.dart';
+import '../../utils/maplibre_style_utils.dart';
 import '../../widgets/art_map_view.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
@@ -53,6 +53,7 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
   final _formKey = GlobalKey<FormState>();
   ml.MapLibreMapController? _mapController;
   bool _styleReady = false;
+  bool _styleInitializationInProgress = false;
   late LatLng _position;
 
   late final TextEditingController _nameController;
@@ -109,6 +110,8 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
 
   @override
   void dispose() {
+    _mapController = null;
+    _styleReady = false;
     _nameController.dispose();
     _descriptionController.dispose();
     _categoryController.dispose();
@@ -130,13 +133,8 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
     unawaited(_moveCameraTo(_position));
   }
 
-  String _rgba(Color color, {double? alphaOverride}) {
-    int clamp255(double value) => value.round().clamp(0, 255);
-    final r = clamp255(color.r * 255.0);
-    final g = clamp255(color.g * 255.0);
-    final b = clamp255(color.b * 255.0);
-    final a = alphaOverride ?? color.a;
-    return 'rgba($r,$g,$b,${a.toStringAsFixed(3)})';
+  String _hexRgb(Color color) {
+    return MapLibreStyleUtils.hexRgb(color);
   }
 
   Future<void> _handleMapStyleLoaded({
@@ -145,32 +143,41 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
     final controller = _mapController;
     if (controller == null) return;
 
-    _styleReady = true;
+    if (_styleInitializationInProgress) return;
+    _styleInitializationInProgress = true;
+    _styleReady = false;
 
     try {
-      await controller.removeLayer(_editorLayerId);
-    } catch (_) {}
-    try {
-      await controller.removeSource(_editorSourceId);
-    } catch (_) {}
+      try {
+        await controller.removeLayer(_editorLayerId);
+      } catch (_) {}
+      try {
+        await controller.removeSource(_editorSourceId);
+      } catch (_) {}
 
-    await controller.addGeoJsonSource(
-      _editorSourceId,
-      _editorPositionCollection(_position),
-      promoteId: 'id',
-    );
+      await controller.addGeoJsonSource(
+        _editorSourceId,
+        _editorPositionCollection(_position),
+        promoteId: 'id',
+      );
 
-    await controller.addCircleLayer(
-      _editorSourceId,
-      _editorLayerId,
-      ml.CircleLayerProperties(
-        circleRadius: 7,
-        circleColor: _rgba(scheme.primary),
-        circleOpacity: 1.0,
-        circleStrokeWidth: 2,
-        circleStrokeColor: _rgba(scheme.surface),
-      ),
-    );
+      await controller.addCircleLayer(
+        _editorSourceId,
+        _editorLayerId,
+        ml.CircleLayerProperties(
+          circleRadius: 7,
+          circleColor: _hexRgb(scheme.primary),
+          circleOpacity: 1.0,
+          circleStrokeWidth: 2,
+          circleStrokeColor: _hexRgb(scheme.surface),
+        ),
+      );
+
+      if (!mounted) return;
+      _styleReady = true;
+    } finally {
+      _styleInitializationInProgress = false;
+    }
   }
 
   Map<String, dynamic> _editorPositionCollection(LatLng position) {
@@ -194,9 +201,9 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
     final controller = _mapController;
     if (controller == null || !_styleReady) return;
 
-    await controller.editGeoJsonSource(
+    await controller.setGeoJsonSource(
       _editorSourceId,
-      jsonEncode(_editorPositionCollection(_position)),
+      _editorPositionCollection(_position),
     );
   }
 
@@ -770,6 +777,7 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                   styleAsset: tileProviders.mapStyleAsset(isDarkMode: isDarkMode),
                   onMapCreated: (controller) {
                     _mapController = controller;
+                    _styleReady = false;
                   },
                   onStyleLoaded: () {
                     unawaited(
