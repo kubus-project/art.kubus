@@ -1,3 +1,7 @@
+// @ts-nocheck
+// This file is a Flutter web template and contains `{{...}}` placeholders that
+// are replaced during `flutter build web`. IDE TypeScript checking will flag
+// those placeholders as syntax errors unless disabled.
 {{flutter_js}}
 
 {{flutter_build_config}}
@@ -10,10 +14,10 @@ _flutter.loader.load({
     serviceWorkerVersion: {{flutter_service_worker_version}},
   },
   config: {
-    // MapLibre GL on web uses WebGL; running Flutter itself on CanvasKit (also WebGL)
-    // can starve/kill the map's context on some GPUs/browsers, resulting in an
-    // invisible map. HTML renderer keeps Flutter off WebGL and allows MapLibre
-    // to own the WebGL context reliably.
-    renderer: "html",
+    // Keep this aligned with the build output. If you build with
+    // `--web-renderer canvaskit`, forcing `html` here will cause:
+    // "FlutterLoader could not find a build compatible with configuration..."
+    renderer: "canvaskit",
+    canvasKitBaseUrl: "/canvaskit/",
   },
 });
