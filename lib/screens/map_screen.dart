@@ -57,7 +57,9 @@ import '../widgets/art_map_view.dart';
 import 'dart:ui' as ui;
 import '../services/search_service.dart';
 import '../services/backend_api_service.dart';
+import '../services/map_style_service.dart';
 import '../config/config.dart';
+import '../utils/maplibre_style_utils.dart';
 import 'events/exhibition_detail_screen.dart';
 import '../widgets/glass_components.dart';
 import '../widgets/tutorial/interactive_tutorial_overlay.dart';
@@ -138,7 +140,7 @@ class MapScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MapScreen>
-    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
+    with WidgetsBindingObserver, TickerProviderStateMixin {
   static const String _kPrefLocationPermissionRequested =
       'map_location_permission_requested';
   static const String _kPrefLocationServiceRequested =
@@ -153,9 +155,12 @@ class _MapScreenState extends State<MapScreen>
   StreamSubscription<CompassEvent>? _compassSubscription;
   StreamSubscription<LocationData>? _mobileLocationSubscription;
   StreamSubscription<Position>? _webPositionSubscription;
+  bool _mobileLocationStreamStarted = false;
+  bool _mobileLocationStreamFailed = false;
   bool _programmaticCameraMove = false;
   double _lastBearing = 0.0;
   bool _mapStyleReady = false;
+  bool _styleInitializationInProgress = false;
   final Set<String> _registeredMapImages = <String>{};
   static const String _markerSourceId = 'kubus_markers';
   static const String _markerLayerId = 'kubus_marker_layer';
@@ -556,13 +561,24 @@ class _MapScreenState extends State<MapScreen>
   void dispose() {
     _mapDeepLinkProvider?.removeListener(_handleMapDeepLinkProviderChanged);
     _mapDeepLinkProvider = null;
+    _mapController = null;
+    _mapStyleReady = false;
+    _registeredMapImages.clear();
     _timer?.cancel();
     _searchDebounce?.cancel();
     _searchController.dispose();
     _searchFocusNode.dispose();
-    _compassSubscription?.cancel();
-    _mobileLocationSubscription?.cancel();
-    _webPositionSubscription?.cancel();
+    if (_compassSubscription != null) {
+      unawaited(_compassSubscription!.cancel().catchError((_) {/* ignore */}));
+    }
+    if (_mobileLocationSubscription != null) {
+      unawaited(
+        _mobileLocationSubscription!.cancel().catchError((_) {/* ignore */}),
+      );
+    }
+    if (_webPositionSubscription != null) {
+      unawaited(_webPositionSubscription!.cancel().catchError((_) {/* ignore */}));
+    }
     _proximityCheckTimer?.cancel();
     _markerRefreshDebouncer.dispose();
     _markerSocketSubscription?.cancel();
@@ -649,9 +665,7 @@ class _MapScreenState extends State<MapScreen>
       vsync: this,
     );
 
-    if (!kIsWeb) {
-      _subscribeToMobileLocationStream();
-    } else {
+    if (kIsWeb) {
       _startWebLocationStream();
     }
 
@@ -1770,6 +1784,22 @@ class _MapScreenState extends State<MapScreen>
           resolvedPosition =
               LatLng(locationData.latitude!, locationData.longitude!);
         }
+
+        // Start the continuous stream only once we have a working service +
+        // granted permission. Starting it too early can crash certain OEM
+        // builds / emulators (plugin-side EventSink not ready).
+        if (!_mobileLocationStreamStarted && !_mobileLocationStreamFailed) {
+          _mobileLocationStreamStarted = true;
+          try {
+            _subscribeToMobileLocationStream();
+          } catch (e) {
+            _mobileLocationStreamFailed = true;
+            _mobileLocationStreamStarted = false;
+            AppConfig.debugPrint(
+              'MapScreen: failed to start mobile location stream: $e',
+            );
+          }
+        }
       }
 
       if (resolvedPosition != null) {
@@ -1809,16 +1839,37 @@ class _MapScreenState extends State<MapScreen>
     if (kIsWeb || _mobileLocation == null) {
       return;
     }
-    _mobileLocationSubscription?.cancel();
+    if (_mobileLocationSubscription != null) {
+      unawaited(
+        _mobileLocationSubscription!
+            .cancel()
+            .catchError((_) {/* ignore */}),
+      );
+    }
     try {
-      _mobileLocationSubscription =
-          _mobileLocation!.onLocationChanged.listen((event) {
-        if (event.latitude != null && event.longitude != null) {
-          _updateCurrentPosition(
-            LatLng(event.latitude!, event.longitude!),
+      _mobileLocationSubscription = _mobileLocation!.onLocationChanged.listen(
+        (event) {
+          if (event.latitude != null && event.longitude != null) {
+            _updateCurrentPosition(
+              LatLng(event.latitude!, event.longitude!),
+            );
+          }
+        },
+        onError: (Object error, StackTrace st) {
+          AppConfig.debugPrint(
+            'MapScreen: mobile location stream error: $error',
           );
-        }
-      });
+          try {
+            if (_mobileLocationSubscription != null) {
+              unawaited(
+                _mobileLocationSubscription!
+                    .cancel()
+                    .catchError((_) {/* ignore */}),
+              );
+            }
+          } catch (_) {}
+        },
+      );
     } catch (e) {
       AppConfig.debugPrint(
           'MapScreen: failed to subscribe to mobile location stream: $e');
@@ -2208,7 +2259,7 @@ class _MapScreenState extends State<MapScreen>
     final isDark = themeProvider.isDarkMode;
     final tileProviders = Provider.of<TileProviders?>(context, listen: false);
     final styleAsset = tileProviders?.mapStyleAsset(isDarkMode: isDark) ??
-        (isDark ? AppConfig.mapStyleDarkAsset : AppConfig.mapStyleLightAsset);
+        MapStyleService.primaryStyleRef(isDarkMode: isDark);
 
     return ArtMapView(
       initialCenter: _currentPosition ?? _cameraCenter,
@@ -2219,6 +2270,8 @@ class _MapScreenState extends State<MapScreen>
       styleAsset: styleAsset,
       onMapCreated: (controller) {
         _mapController = controller;
+        _mapStyleReady = false;
+        _registeredMapImages.clear();
       },
       onStyleLoaded: () {
         unawaited(_handleMapStyleLoaded(themeProvider));
@@ -2276,92 +2329,114 @@ class _MapScreenState extends State<MapScreen>
     final controller = _mapController;
     if (controller == null) return;
     if (!mounted) return;
+    if (_styleInitializationInProgress) return;
 
     final scheme = Theme.of(context).colorScheme;
-    _mapStyleReady = true;
+    _styleInitializationInProgress = true;
+    _mapStyleReady = false;
     _registeredMapImages.clear();
 
-    Future<void> safeRemoveLayer(String id) async {
+    try {
+      final Set<String> existingLayerIds = <String>{};
       try {
-        await controller.removeLayer(id);
+        final raw = await controller.getLayerIds();
+        for (final id in raw) {
+          if (id is String) existingLayerIds.add(id);
+        }
       } catch (_) {}
+
+      Future<void> safeRemoveLayer(String id) async {
+        if (!existingLayerIds.contains(id)) return;
+        try {
+          await controller.removeLayer(id);
+        } catch (_) {}
+        existingLayerIds.remove(id);
+      }
+
+      Future<void> safeRemoveSource(String id) async {
+        try {
+          await controller.removeSource(id);
+        } catch (_) {}
+      }
+
+      await safeRemoveLayer(_markerLayerId);
+      await safeRemoveSource(_markerSourceId);
+      await safeRemoveLayer(_locationLayerId);
+      await safeRemoveSource(_locationSourceId);
+
+      await controller.addGeoJsonSource(
+        _markerSourceId,
+        const <String, dynamic>{
+          'type': 'FeatureCollection',
+          'features': <dynamic>[],
+        },
+        promoteId: 'id',
+      );
+
+      await controller.addSymbolLayer(
+        _markerSourceId,
+        _markerLayerId,
+        ml.SymbolLayerProperties(
+          iconImage: <dynamic>['get', 'icon'],
+          iconSize: <dynamic>[
+            'interpolate',
+            ['linear'],
+            ['zoom'],
+            3,
+            0.5,
+            15,
+            1.0,
+            24,
+            1.5,
+          ],
+          iconAllowOverlap: true,
+          iconIgnorePlacement: true,
+          iconAnchor: 'center',
+          iconPitchAlignment: 'map',
+          iconRotationAlignment: 'map',
+        ),
+      );
+      await controller.addGeoJsonSource(
+        _locationSourceId,
+        const <String, dynamic>{
+          'type': 'FeatureCollection',
+          'features': <dynamic>[],
+        },
+        promoteId: 'id',
+      );
+      await controller.addCircleLayer(
+        _locationSourceId,
+        _locationLayerId,
+        ml.CircleLayerProperties(
+          circleRadius: 6,
+          circleColor: _hexRgb(scheme.secondary),
+          circleOpacity: 1.0,
+          circleStrokeWidth: 2,
+          circleStrokeColor: _hexRgb(scheme.surface),
+        ),
+      );
+
+      if (!mounted) return;
+      _mapStyleReady = true;
+
+      await _applyIsometricCamera(enabled: _isometricViewEnabled);
+      await _syncUserLocation(themeProvider: themeProvider);
+      await _syncMapMarkers(themeProvider: themeProvider);
+    } catch (e, st) {
+      _mapStyleReady = false;
+      if (kDebugMode) {
+        AppConfig.debugPrint('MapScreen: style init failed: $e');
+      }
+      if (kDebugMode) {
+        AppConfig.debugPrint('MapScreen: style init stack: $st');
+      }
+    } finally {
+      _styleInitializationInProgress = false;
     }
-
-    Future<void> safeRemoveSource(String id) async {
-      try {
-        await controller.removeSource(id);
-      } catch (_) {}
-    }
-
-    await safeRemoveLayer(_markerLayerId);
-    await safeRemoveSource(_markerSourceId);
-    await safeRemoveLayer(_locationLayerId);
-    await safeRemoveSource(_locationSourceId);
-
-    await controller.addGeoJsonSource(
-      _markerSourceId,
-      const <String, dynamic>{
-        'type': 'FeatureCollection',
-        'features': <dynamic>[],
-      },
-      promoteId: 'id',
-    );
-
-    await controller.addSymbolLayer(
-      _markerSourceId,
-      _markerLayerId,
-      ml.SymbolLayerProperties(
-        iconImage: <dynamic>['get', 'icon'],
-        iconSize: <dynamic>[
-          'interpolate',
-          ['linear'],
-          ['zoom'],
-          3,
-          0.5,
-          15,
-          1.0,
-          24,
-          1.5,
-        ],
-        iconAllowOverlap: true,
-        iconIgnorePlacement: true,
-        iconAnchor: 'center',
-        iconPitchAlignment: 'map',
-        iconRotationAlignment: 'map',
-      ),
-    );
-    await controller.addGeoJsonSource(
-      _locationSourceId,
-      const <String, dynamic>{
-        'type': 'FeatureCollection',
-        'features': <dynamic>[],
-      },
-      promoteId: 'id',
-    );
-    await controller.addCircleLayer(
-      _locationSourceId,
-      _locationLayerId,
-      ml.CircleLayerProperties(
-        circleRadius: 6,
-        circleColor: _rgba(scheme.secondary),
-        circleOpacity: 1.0,
-        circleStrokeWidth: 2,
-        circleStrokeColor: _rgba(scheme.surface),
-      ),
-    );
-
-    await _applyIsometricCamera(enabled: _isometricViewEnabled);
-    await _syncUserLocation(themeProvider: themeProvider);
-    await _syncMapMarkers(themeProvider: themeProvider);
   }
 
-  String _rgba(Color color, {double? alphaOverride}) {
-    int clamp255(double value) => value.round().clamp(0, 255);
-    final r = clamp255(color.r * 255.0);
-    final g = clamp255(color.g * 255.0);
-    final b = clamp255(color.b * 255.0);
-    final a = alphaOverride ?? color.a;
-    return 'rgba($r,$g,$b,${a.toStringAsFixed(3)})';
+  String _hexRgb(Color color) {
+    return MapLibreStyleUtils.hexRgb(color);
   }
 
   Future<void> _applyIsometricCamera({required bool enabled, bool adjustZoomForScale = false}) async {
@@ -2467,7 +2542,7 @@ class _MapScreenState extends State<MapScreen>
             ],
           };
 
-    await controller.editGeoJsonSource(_locationSourceId, jsonEncode(data));
+    await controller.setGeoJsonSource(_locationSourceId, data);
   }
 
   Future<void> _syncMapMarkers({required ThemeProvider themeProvider}) async {
@@ -2493,36 +2568,36 @@ class _MapScreenState extends State<MapScreen>
       for (final cluster in clusters) {
         if (cluster.markers.length == 1) {
           final marker = cluster.markers.first;
-          features.add(
-            await _markerFeatureFor(
+          final feature = await _markerFeatureFor(
               marker: marker,
               themeProvider: themeProvider,
               scheme: scheme,
               roles: roles,
               isDark: isDark,
-            ),
-          );
+            );
+          if (!mounted) return;
+          if (feature.isNotEmpty) features.add(feature);
         } else {
-          features.add(
-            await _clusterFeatureFor(
+          final feature = await _clusterFeatureFor(
               cluster: cluster,
               scheme: scheme,
               isDark: isDark,
-            ),
-          );
+            );
+          if (!mounted) return;
+          if (feature.isNotEmpty) features.add(feature);
         }
       }
     } else {
       for (final marker in visibleMarkers) {
-        features.add(
-          await _markerFeatureFor(
+        final feature = await _markerFeatureFor(
             marker: marker,
             themeProvider: themeProvider,
             scheme: scheme,
             roles: roles,
             isDark: isDark,
-          ),
-        );
+          );
+        if (!mounted) return;
+        if (feature.isNotEmpty) features.add(feature);
       }
     }
 
@@ -2530,7 +2605,8 @@ class _MapScreenState extends State<MapScreen>
       'type': 'FeatureCollection',
       'features': features,
     };
-    await controller.editGeoJsonSource(_markerSourceId, jsonEncode(collection));
+    if (!mounted) return;
+    await controller.setGeoJsonSource(_markerSourceId, collection);
   }
 
   Future<Map<String, dynamic>> _markerFeatureFor({
@@ -2560,7 +2636,15 @@ class _MapScreenState extends State<MapScreen>
         isDark: isDark,
         forceGlow: selected,
       );
-      await controller.addImage(iconId, bytes);
+      if (!mounted) return const <String, dynamic>{};
+      try {
+        await controller.addImage(iconId, bytes);
+      } catch (e) {
+        if (kDebugMode) {
+          AppConfig.debugPrint('MapScreen: addImage failed ($iconId): $e');
+        }
+        return const <String, dynamic>{};
+      }
       _registeredMapImages.add(iconId);
     }
 
@@ -2612,7 +2696,15 @@ class _MapScreenState extends State<MapScreen>
         scheme: scheme,
         isDark: isDark,
       );
-      await controller.addImage(iconId, bytes);
+      if (!mounted) return const <String, dynamic>{};
+      try {
+        await controller.addImage(iconId, bytes);
+      } catch (e) {
+        if (kDebugMode) {
+          AppConfig.debugPrint('MapScreen: addImage failed ($iconId): $e');
+        }
+        return const <String, dynamic>{};
+      }
       _registeredMapImages.add(iconId);
     }
 

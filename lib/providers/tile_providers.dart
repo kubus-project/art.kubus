@@ -3,7 +3,7 @@ import 'dart:ui' show PlatformDispatcher;
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 
-import '../config/config.dart';
+import '../services/map_style_service.dart';
 import '../utils/grid_utils.dart';
 import 'themeprovider.dart';
 
@@ -39,7 +39,7 @@ class TileProviders with WidgetsBindingObserver {
 
   /// MapLibre style asset for the current theme.
   String mapStyleAsset({required bool isDarkMode}) {
-    return isDarkMode ? AppConfig.mapStyleDarkAsset : AppConfig.mapStyleLightAsset;
+    return MapStyleService.primaryStyleRef(isDarkMode: isDarkMode);
   }
 
   /// Snap a map position to the underlying isometric grid for a given grid level.
@@ -56,4 +56,3 @@ class TileProviders with WidgetsBindingObserver {
     themeProvider.removeListener(_updateThemeMode);
   }
 }
-
