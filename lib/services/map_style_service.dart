@@ -1,8 +1,6 @@
 import 'dart:async';
-import 'dart:developer' as dev;
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 
 import '../config/config.dart';
 
@@ -13,9 +11,6 @@ class MapStyleService {
 
   /// Dev-only fallback style (public demo tiles; do not rely on this for prod).
   static const String devFallbackStyleUrl = 'https://demotiles.maplibre.org/style.json';
-
-  static final Map<String, Future<String>> _resolvedStyleCache =
-      <String, Future<String>>{};
 
   static bool get devFallbackEnabled => AppConfig.isDevelopment && kDebugMode;
 
@@ -34,12 +29,22 @@ class MapStyleService {
   /// Notes:
   /// - On **web** we return a URL to the bundled asset so MapLibre GL JS loads it
   ///   natively (avoids JS worker transfer issues with Dart-created objects).
-  /// - On **native** we load asset JSON and pass the raw JSON string.
+  /// - On **native**, prefer passing asset/file paths. Raw JSON is only
+  ///   supported on Android in `maplibre_gl`.
   static Future<String> resolveStyleString(String styleRef) {
     final trimmed = styleRef.trimLeft();
     if (trimmed.isEmpty) return Future<String>.value(styleRef);
 
     if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+      // Raw JSON styles are only supported on Android by `maplibre_gl`.
+      // Keep as-is so Android continues to work; other platforms should pass a
+      // URL/asset/file style reference instead.
+      if (kDebugMode && defaultTargetPlatform != TargetPlatform.android) {
+        AppConfig.debugPrint(
+          'MapStyleService: raw JSON styleString is not supported on '
+          '${defaultTargetPlatform.name}; prefer an asset path or URL.',
+        );
+      }
       return Future<String>.value(styleRef);
     }
 
@@ -55,22 +60,9 @@ class MapStyleService {
       return Future<String>.value(_toWebAssetUrl(trimmed));
     }
 
-    return _resolvedStyleCache.putIfAbsent(trimmed, () async {
-      try {
-        return await rootBundle.loadString(trimmed);
-      } catch (e, st) {
-        if (kDebugMode) {
-          dev.log(
-            'Failed to load map style from assets: $trimmed',
-            name: 'MapStyleService',
-            error: e,
-            stackTrace: st,
-          );
-        }
-        // Fall back to original string. It may be a valid file path.
-        return styleRef;
-      }
-    });
+    // Native platforms: pass asset path or file path directly.
+    // This is the most compatible option across Android/iOS/desktop.
+    return Future<String>.value(trimmed);
   }
 
   static String _toWebAssetUrl(String styleRef) {

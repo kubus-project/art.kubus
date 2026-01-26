@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:developer' as dev;
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -7,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart' as ll;
 import 'package:maplibre_gl/maplibre_gl.dart' as ml;
 
+import '../config/config.dart';
 import '../services/map_style_service.dart';
 import 'kubus_snackbar.dart';
 
@@ -70,6 +70,7 @@ class _ArtMapViewState extends State<ArtMapView> {
   Timer? _styleLoadTimer;
   bool _styleLoaded = false;
   bool _didDevFallback = false;
+  Stopwatch? _styleStopwatch;
 
   @override
   void initState() {
@@ -109,6 +110,7 @@ class _ArtMapViewState extends State<ArtMapView> {
     _styleLoaded = false;
     _didDevFallback = false;
     _styleRequestId++;
+    _styleStopwatch = Stopwatch()..start();
   }
 
   Future<void> _applyStyleToController() async {
@@ -124,13 +126,9 @@ class _ArtMapViewState extends State<ArtMapView> {
     try {
       await controller.setStyle(styleString);
     } catch (e, st) {
+      AppConfig.debugPrint('ArtMapView: failed to apply style via setStyle: $e');
       if (kDebugMode) {
-        dev.log(
-          'Failed to apply style via setStyle.',
-          name: 'ArtMapView',
-          error: e,
-          stackTrace: st,
-        );
+        AppConfig.debugPrint('ArtMapView: setStyle stack: $st');
       }
     }
   }
@@ -148,12 +146,7 @@ class _ArtMapViewState extends State<ArtMapView> {
 
       _didDevFallback = true;
 
-      if (kDebugMode) {
-        dev.log(
-          'Map style load timeout; switching to dev fallback.',
-          name: 'ArtMapView',
-        );
-      }
+      AppConfig.debugPrint('ArtMapView: style load timeout; switching to dev fallback');
 
       final messenger = ScaffoldMessenger.maybeOf(context);
       messenger?.showKubusSnackBar(
@@ -222,11 +215,21 @@ class _ArtMapViewState extends State<ArtMapView> {
               _controller = controller;
               _resetStyleLoadState();
               _startStyleHealthCheck();
+              AppConfig.debugPrint(
+                'ArtMapView: map created (style="$resolved", platform=${defaultTargetPlatform.name}, web=$kIsWeb)',
+              );
               widget.onMapCreated(controller);
             },
             onStyleLoadedCallback: () {
               _styleLoaded = true;
+              _styleStopwatch?.stop();
               _styleLoadTimer?.cancel();
+              final elapsedMs = _styleStopwatch?.elapsedMilliseconds;
+              if (elapsedMs != null) {
+                AppConfig.debugPrint('ArtMapView: style loaded in ${elapsedMs}ms');
+              } else {
+                AppConfig.debugPrint('ArtMapView: style loaded');
+              }
               if (_pendingStyleApply) {
                 _pendingStyleApply = false;
                 _resetStyleLoadState();

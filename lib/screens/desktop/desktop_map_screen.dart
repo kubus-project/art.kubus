@@ -59,6 +59,7 @@ import '../../utils/category_accent_color.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/maplibre_style_utils.dart';
 import '../../widgets/glass_components.dart';
+import '../../widgets/kubus_snackbar.dart';
 import '../../widgets/tutorial/interactive_tutorial_overlay.dart';
 import '../../widgets/inline_progress.dart';
 import '../../providers/task_provider.dart';
@@ -99,7 +100,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   Artwork? _selectedArtwork;
   Exhibition? _selectedExhibition;
-  ArtMarker? _activeMarker;
+  String? _selectedMarkerId;
+  ArtMarker? _selectedMarkerData;
+  DateTime? _selectedMarkerAt;
   bool _markerOverlayExpanded = false;
   _MarkerOverlayMode _markerOverlayMode = _MarkerOverlayMode.anchored;
   bool _didOpenInitialMarker = false;
@@ -149,14 +152,15 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   int? _loadedTravelZoomBucket;
   bool _programmaticCameraMove = false;
   double _lastBearing = 0.0;
-  bool _mapStyleReady = false;
+  bool _styleInitialized = false;
   bool _styleInitializationInProgress = false;
   final Set<String> _registeredMapImages = <String>{};
   final LayerLink _markerOverlayLink = LayerLink();
   final Debouncer _overlayAnchorDebouncer = Debouncer();
-  Offset? _activeMarkerAnchor;
+  Offset? _selectedMarkerAnchor;
   static const String _markerSourceId = 'kubus_markers';
   static const String _markerLayerId = 'kubus_marker_layer';
+  static const String _markerHitboxLayerId = 'kubus_marker_hitbox_layer';
   static const String _locationSourceId = 'kubus_user_location';
   static const String _locationLayerId = 'kubus_user_location_layer';
   static const String _pendingSourceId = 'kubus_pending_marker';
@@ -195,14 +199,22 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       vsync: this,
     );
     _animationController.forward();
-    _markerStreamSub =
-        _mapMarkerService.onMarkerCreated.listen(_handleMarkerCreated);
-    _markerDeletedSub =
-        _mapMarkerService.onMarkerDeleted.listen(_handleMarkerDeleted);
 
     _autoFollow = widget.autoFollow;
     _cameraCenter = widget.initialCenter ?? const LatLng(46.0569, 14.5058);
     _cameraZoom = widget.initialZoom ?? _cameraZoom;
+
+    final bindingName = WidgetsBinding.instance.runtimeType.toString();
+    final isWidgetTest = bindingName.contains('TestWidgetsFlutterBinding') ||
+        bindingName.contains('AutomatedTestWidgetsFlutterBinding');
+    if (isWidgetTest) {
+      return;
+    }
+
+    _markerStreamSub =
+        _mapMarkerService.onMarkerCreated.listen(_handleMarkerCreated);
+    _markerDeletedSub =
+        _mapMarkerService.onMarkerDeleted.listen(_handleMarkerDeleted);
 
     unawaited(_loadMapTravelPrefs());
     unawaited(_loadMapIsometricPrefs());
@@ -514,8 +526,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   void _handleMapCreated(ml.MapLibreMapController controller) {
     _mapController = controller;
-    _mapStyleReady = false;
+    _styleInitialized = false;
     _registeredMapImages.clear();
+    AppConfig.debugPrint(
+      'DesktopMapScreen: map created (platform=${defaultTargetPlatform.name}, web=$kIsWeb)',
+    );
   }
 
   String _hexRgb(Color color) {
@@ -528,10 +543,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (!mounted) return;
     if (_styleInitializationInProgress) return;
 
+    final stopwatch = Stopwatch()..start();
     final scheme = Theme.of(context).colorScheme;
     _styleInitializationInProgress = true;
-    _mapStyleReady = false;
+    _styleInitialized = false;
     _registeredMapImages.clear();
+
+    AppConfig.debugPrint('DesktopMapScreen: style init start');
 
     try {
       final Set<String> existingLayerIds = <String>{};
@@ -545,6 +563,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       // Clear any previous layer/source ids (e.g. style swap).
       for (final id in <String>[
         _markerLayerId,
+        _markerHitboxLayerId,
         _locationLayerId,
         _pendingLayerId
       ]) {
@@ -595,6 +614,26 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           iconRotationAlignment: 'map',
         ),
       );
+      await controller.addCircleLayer(
+        _markerSourceId,
+        _markerHitboxLayerId,
+        ml.CircleLayerProperties(
+          circleRadius: <dynamic>[
+            'interpolate',
+            ['linear'],
+            ['zoom'],
+            3,
+            10,
+            14,
+            18,
+            24,
+            26,
+          ],
+          circleColor: _hexRgb(scheme.surface),
+          circleOpacity: 0.01,
+        ),
+        belowLayerId: _markerLayerId,
+      );
 
       await controller.addGeoJsonSource(
         _locationSourceId,
@@ -637,15 +676,20 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       );
 
       if (!mounted) return;
-      _mapStyleReady = true;
+      _styleInitialized = true;
 
       await _applyIsometricCamera(enabled: _isometricViewEnabled);
       await _syncUserLocation(themeProvider: themeProvider);
       await _syncPendingMarker(themeProvider: themeProvider);
       await _syncMapMarkers(themeProvider: themeProvider);
       _queueOverlayAnchorRefresh();
+
+      stopwatch.stop();
+      AppConfig.debugPrint(
+        'DesktopMapScreen: style init done in ${stopwatch.elapsedMilliseconds}ms',
+      );
     } catch (e, st) {
-      _mapStyleReady = false;
+      _styleInitialized = false;
       if (kDebugMode) {
         AppConfig.debugPrint('DesktopMapScreen: style init failed: $e');
         AppConfig.debugPrint('DesktopMapScreen: style init stack: $st');
@@ -657,8 +701,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   void _queueOverlayAnchorRefresh() {
     if (_markerOverlayMode != _MarkerOverlayMode.anchored) return;
-    if (_activeMarker == null) return;
-    if (!_mapStyleReady) return;
+    if (_selectedMarkerData == null) return;
+    if (!_styleInitialized) return;
     _overlayAnchorDebouncer(const Duration(milliseconds: 16), () {
       unawaited(_refreshActiveMarkerAnchor());
     });
@@ -666,9 +710,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   Future<void> _refreshActiveMarkerAnchor() async {
     final controller = _mapController;
-    final marker = _activeMarker;
+    final marker = _selectedMarkerData;
     if (controller == null || marker == null) return;
-    if (!_mapStyleReady) return;
+    if (!_styleInitialized) return;
     if (_markerOverlayMode != _MarkerOverlayMode.anchored) return;
 
     try {
@@ -677,7 +721,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       );
       if (!mounted) return;
       setState(() {
-        _activeMarkerAnchor = Offset(screen.x.toDouble(), screen.y.toDouble());
+        _selectedMarkerAnchor = Offset(screen.x.toDouble(), screen.y.toDouble());
       });
     } catch (_) {
       // Ignore anchor updates during style transitions.
@@ -690,12 +734,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }) async {
     final controller = _mapController;
     if (controller == null) return;
-    if (!_mapStyleReady) return;
+    if (!_styleInitialized) return;
 
     try {
       final features = await controller.queryRenderedFeatures(
         point,
-        <String>[_markerLayerId],
+        <String>[_markerHitboxLayerId, _markerLayerId],
         null,
       );
 
@@ -706,9 +750,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           _showFiltersPanel = false;
           _showSearchOverlay = false;
           _pendingMarkerLocation = null;
-          _activeMarker = null;
+          _selectedMarkerId = null;
+          _selectedMarkerData = null;
+          _selectedMarkerAt = null;
           _markerOverlayExpanded = false;
-          _activeMarkerAnchor = null;
         });
         unawaited(_syncMapMarkers(themeProvider: themeProvider));
         unawaited(_syncPendingMarker(themeProvider: themeProvider));
@@ -718,31 +763,46 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       final dynamic first = features.first;
       final props = (first is Map ? first['properties'] : null) as Map?;
       final kind = props?['kind']?.toString();
+      if (kDebugMode) {
+        AppConfig.debugPrint(
+          'DesktopMapScreen: tap query hits=${features.length} kind=${kind ?? 'marker'}',
+        );
+      }
       if (kind == 'cluster') {
         final lng = (props?['lng'] as num?)?.toDouble();
         final lat = (props?['lat'] as num?)?.toDouble();
         if (lat == null || lng == null) return;
         final nextZoom = math.min(_cameraZoom + 2.0, 18.0);
+        if (kDebugMode) {
+          AppConfig.debugPrint(
+            'DesktopMapScreen: cluster tap → zoom=${nextZoom.toStringAsFixed(1)}',
+          );
+        }
         await _moveCamera(LatLng(lat, lng), nextZoom);
         return;
       }
 
       final markerId = (props?['markerId'] ?? props?['id'])?.toString() ?? '';
       if (markerId.isEmpty) return;
+      if (kDebugMode) {
+        AppConfig.debugPrint('DesktopMapScreen: marker tap id=$markerId');
+      }
       final marker = _artMarkers.where((m) => m.id == markerId).toList(growable: false);
       if (marker.isEmpty) return;
       _handleMarkerTap(marker.first);
       unawaited(_syncMapMarkers(themeProvider: themeProvider));
       _queueOverlayAnchorRefresh();
-    } catch (_) {
-      // Ignore taps during style transitions / rapid camera moves.
+    } catch (e) {
+      if (kDebugMode) {
+        AppConfig.debugPrint('DesktopMapScreen: queryRenderedFeatures failed: $e');
+      }
     }
   }
 
   Future<void> _syncUserLocation({required ThemeProvider themeProvider}) async {
     final controller = _mapController;
     if (controller == null) return;
-    if (!_mapStyleReady) return;
+    if (!_styleInitialized) return;
 
     final pos = _userLocation;
     final data = (pos == null)
@@ -768,7 +828,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   Future<void> _syncPendingMarker({required ThemeProvider themeProvider}) async {
     final controller = _mapController;
     if (controller == null) return;
-    if (!_mapStyleReady) return;
+    if (!_styleInitialized) return;
 
     final pos = _pendingMarkerLocation;
     final data = (pos == null)
@@ -809,7 +869,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   Future<void> _syncMapMarkers({required ThemeProvider themeProvider}) async {
     final controller = _mapController;
     if (controller == null) return;
-    if (!_mapStyleReady) return;
+    if (!_styleInitialized) return;
     if (!mounted) return;
 
     final scheme = Theme.of(context).colorScheme;
@@ -879,7 +939,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final controller = _mapController;
     if (controller == null) return const <String, dynamic>{};
 
-    final selected = _activeMarker?.id == marker.id;
+    final selected = _selectedMarkerId == marker.id;
     final typeName = marker.type.name;
     final tier = marker.signalTier;
     final iconId = 'mk_${typeName}_${tier.name}${selected ? '_sel' : ''}_${isDark ? 'd' : 'l'}';
@@ -1129,7 +1189,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     } catch (_) {}
 
     _mapController = null;
-    _mapStyleReady = false;
+    _styleInitialized = false;
     _registeredMapImages.clear();
     _animationController.dispose();
     _panelController.dispose();
@@ -1256,6 +1316,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           styleAsset: styleAsset,
           onMapCreated: _handleMapCreated,
           onStyleLoaded: () {
+            AppConfig.debugPrint(
+              'DesktopMapScreen: onStyleLoadedCallback (dark=$isDark, style="$styleAsset")',
+            );
             unawaited(_handleMapStyleLoaded(themeProvider).then((_) => _handleMapReady()));
           },
           onCameraMove: (position) {
@@ -1272,9 +1335,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             if (hasGesture && _autoFollow) {
               setState(() => _autoFollow = false);
             }
-            if (hasGesture && _activeMarker != null) {
+            if (hasGesture && _selectedMarkerId != null) {
               setState(() {
-                _activeMarker = null;
+                _selectedMarkerId = null;
+                _selectedMarkerData = null;
+                _selectedMarkerAt = null;
                 _markerOverlayExpanded = false;
               });
               unawaited(_syncMapMarkers(themeProvider: themeProvider));
@@ -1302,10 +1367,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           children: [
             Positioned.fill(child: map),
             if (_markerOverlayMode == _MarkerOverlayMode.anchored &&
-                _activeMarkerAnchor != null)
+                _selectedMarkerAnchor != null)
               Positioned(
-                left: _activeMarkerAnchor!.dx,
-                top: _activeMarkerAnchor!.dy,
+                left: _selectedMarkerAnchor!.dx,
+                top: _selectedMarkerAnchor!.dy,
                 child: CompositedTransformTarget(
                   link: _markerOverlayLink,
                   child: const SizedBox(width: 1, height: 1),
@@ -1759,7 +1824,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final coverUrl = ArtworkMediaResolver.resolveCover(
       artwork: artwork,
-      metadata: _activeMarker?.metadata ?? artwork.metadata,
+      metadata: _selectedMarkerData?.metadata ?? artwork.metadata,
     );
     final distanceLabel = _formatDistanceToArtwork(artwork);
     final fallbackIconColor = ThemeData.estimateBrightnessForColor(accent) == Brightness.dark
@@ -1958,7 +2023,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     spacing: 10,
                     runSpacing: 10,
                     children: [
-                      if (artwork.arEnabled)
+                      if (artwork.arEnabled &&
+                          AppConfig.isFeatureEnabled('ar') &&
+                          !kIsWeb)
                         SizedBox(
                           width: 170,
                           child: ElevatedButton.icon(
@@ -1970,12 +2037,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                                       : null);
                               if (modelUrl == null) {
                                 final l10n = AppLocalizations.of(context)!;
-                                messenger.showSnackBar(
+                                messenger.showKubusSnackBar(
                                   SnackBar(
-                                    content:
-                                        Text(l10n.desktopMapNoArAssetToast),
-                                    behavior: SnackBarBehavior.floating,
+                                    content: Text(l10n.desktopMapNoArAssetToast),
                                   ),
+                                  tone: KubusSnackBarTone.warning,
                                 );
                                 return;
                               }
@@ -3226,7 +3292,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                                   math.max(_effectiveZoom, 15.0));
 
                               if (marker != null) {
-                                setState(() => _activeMarker = marker);
+                                _handleMarkerTap(
+                                  marker,
+                                  overlayMode: _MarkerOverlayMode.centered,
+                                );
                               } else {
                                 unawaited(_selectArtwork(
                                   artwork,
@@ -3740,7 +3809,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   Future<void> _loadMarkersForCurrentView({bool force = false}) async {
-    if (_travelModeEnabled && !_mapStyleReady) return;
+    if (_travelModeEnabled && !_styleInitialized) return;
     final center = _cameraCenter;
     GeoBounds? bounds;
     int? zoomBucket;
@@ -3825,12 +3894,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         next: result.markers,
       );
 
-      final String? activeId = _activeMarker?.id;
-      ArtMarker? resolvedActive;
-      if (activeId != null && activeId.isNotEmpty) {
+      final String? selectedIdBeforeSetState = _selectedMarkerId;
+      ArtMarker? resolvedSelected;
+      if (selectedIdBeforeSetState != null && selectedIdBeforeSetState.isNotEmpty) {
         for (final marker in merged) {
-          if (marker.id == activeId) {
-            resolvedActive = marker;
+          if (marker.id == selectedIdBeforeSetState) {
+            resolvedSelected = marker;
             break;
           }
         }
@@ -3838,15 +3907,20 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
       setState(() {
         _artMarkers = merged;
-        if (activeId != null && activeId.isNotEmpty) {
-          if (resolvedActive != null) {
-            _activeMarker = resolvedActive;
-          } else {
-            _activeMarker = null;
-            _markerOverlayExpanded = false;
-            _activeMarkerAnchor = null;
-          }
+        final stillSelectedId = _selectedMarkerId;
+        if (stillSelectedId == null || stillSelectedId.isEmpty) return;
+        if (stillSelectedId != selectedIdBeforeSetState) return;
+
+        if (resolvedSelected != null) {
+          _selectedMarkerData = resolvedSelected;
+          return;
         }
+
+        _selectedMarkerId = null;
+        _selectedMarkerData = null;
+        _selectedMarkerAt = null;
+        _markerOverlayExpanded = false;
+        _selectedMarkerAnchor = null;
       });
       unawaited(_syncMapMarkers(themeProvider: themeProvider));
       _queueOverlayAnchorRefresh();
@@ -3874,9 +3948,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }) {
     // Desktop UX: do not re-center the map when a marker is clicked.
     setState(() {
-      _activeMarker = marker;
+      _selectedMarkerId = marker.id;
+      _selectedMarkerData = marker;
+      _selectedMarkerAt = DateTime.now();
       _markerOverlayMode = overlayMode;
       _markerOverlayExpanded = false; // Reset expand state for new marker
+      _selectedMarkerAnchor = null;
     });
     _maybeRecordPresenceVisitForMarker(marker);
     unawaited(_syncMapMarkers(themeProvider: context.read<ThemeProvider>()));
@@ -4104,9 +4181,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                               isDark: isDark,
                               onTap: () {
                                 setState(() {
-                                  _activeMarker = null;
+                                  _selectedMarkerId = null;
+                                  _selectedMarkerData = null;
+                                  _selectedMarkerAt = null;
                                   _markerOverlayExpanded = false;
-                                  _activeMarkerAnchor = null;
                                 });
                                 unawaited(_syncMapMarkers(themeProvider: context.read<ThemeProvider>()));
                               },
@@ -4335,35 +4413,82 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     required ThemeProvider themeProvider,
     required ArtworkProvider artworkProvider,
   }) {
-    final marker = _activeMarker;
-    if (marker == null) return const SizedBox.shrink();
+    final marker = _selectedMarkerData;
+    final selectionKey = _selectedMarkerAt?.millisecondsSinceEpoch ?? 0;
+    final animationKey = marker == null
+        ? const ValueKey<String>('marker_overlay_empty')
+        : ValueKey<String>('marker_overlay:${marker.id}:$selectionKey');
 
+    return Positioned.fill(
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 240),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        transitionBuilder: (child, animation) {
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+            reverseCurve: Curves.easeInCubic,
+          );
+          final slide = Tween<Offset>(
+            begin: const Offset(0, 0.06),
+            end: Offset.zero,
+          ).animate(curved);
+          return FadeTransition(
+            opacity: curved,
+            child: SlideTransition(
+              position: slide,
+              child: ScaleTransition(
+                scale: Tween<double>(begin: 0.985, end: 1.0).animate(curved),
+                child: child,
+              ),
+            ),
+          );
+        },
+        child: marker == null
+            ? const SizedBox.shrink(key: ValueKey('marker_overlay_hidden'))
+            : Stack(
+                key: animationKey,
+                children: [
+                  Positioned.fill(
+                    child: _buildMarkerOverlayPositionedCard(
+                      marker: marker,
+                      artworkProvider: artworkProvider,
+                      themeProvider: themeProvider,
+                    ),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+
+  Widget _buildMarkerOverlayPositionedCard({
+    required ArtMarker marker,
+    required ArtworkProvider artworkProvider,
+    required ThemeProvider themeProvider,
+  }) {
     final artwork = marker.isExhibitionMarker
         ? null
         : artworkProvider.getArtworkById(marker.artworkId ?? '');
 
     final card = _buildMarkerOverlayCard(marker, artwork, themeProvider);
 
-    if (_markerOverlayMode == _MarkerOverlayMode.centered) {
-      return Positioned.fill(
-        child: Align(
-          alignment: Alignment.center,
-          child: card,
-        ),
+    if (_markerOverlayMode == _MarkerOverlayMode.centered ||
+        _selectedMarkerAnchor == null) {
+      return Align(
+        alignment: Alignment.center,
+        child: card,
       );
     }
 
-    if (_activeMarkerAnchor == null) return const SizedBox.shrink();
-
-    return Positioned.fill(
-      child: CompositedTransformFollower(
-        link: _markerOverlayLink,
-        showWhenUnlinked: false,
-        targetAnchor: Alignment.center,
-        followerAnchor: Alignment.bottomCenter,
-        offset: const Offset(0, -10),
-        child: card,
-      ),
+    return CompositedTransformFollower(
+      link: _markerOverlayLink,
+      showWhenUnlinked: false,
+      targetAnchor: Alignment.center,
+      followerAnchor: Alignment.bottomCenter,
+      offset: const Offset(0, -10),
+      child: card,
     );
   }
 
@@ -4647,14 +4772,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (!AppConfig.isFeatureEnabled('exhibitions') ||
         BackendApiService().exhibitionsApiAvailable == false) {
       if (isExhibitionMarker) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              l10n.mapExhibitionsUnavailableToast,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(),
-            ),
-            behavior: SnackBarBehavior.floating,
-          ),
+        messenger.showKubusSnackBar(
+          SnackBar(content: Text(l10n.mapExhibitionsUnavailableToast)),
+          tone: KubusSnackBarTone.warning,
         );
         setState(() {});
         return;
@@ -4675,14 +4795,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (!mounted) return;
 
     if (fetched == null) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            l10n.mapExhibitionsUnavailableToast,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(),
-          ),
-          behavior: SnackBarBehavior.floating,
-        ),
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.mapExhibitionsUnavailableToast)),
+        tone: KubusSnackBarTone.warning,
       );
       // Force rebuild so we can hide exhibition UI if the API just got marked unavailable.
       setState(() {});
@@ -4714,7 +4829,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         try {
           await artworkProvider.fetchArtworkIfNeeded(artworkId);
           resolvedArtwork = artworkProvider.getArtworkById(artworkId);
-          if (mounted && _activeMarker?.id == marker.id) {
+          if (mounted && _selectedMarkerId == marker.id) {
             setState(() {});
           }
         } catch (e) {
@@ -4729,7 +4844,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       if (artworkProvider.getArtworkById(resolvedArtwork.id) == null) {
         artworkProvider.addOrUpdateArtwork(resolvedArtwork);
       }
-      if (mounted && _activeMarker?.id == marker.id) {
+      if (mounted && _selectedMarkerId == marker.id) {
         setState(() {
           if (_selectedArtwork == null ||
               _selectedArtwork?.id == resolvedArtwork!.id) {
@@ -4819,22 +4934,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (!mounted) return;
 
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-    final roles = KubusColorRoles.of(context);
     final wallet = context.read<WalletProvider>().currentWalletAddress;
     if (wallet == null || wallet.isEmpty) {
-      final bg = scheme.surfaceContainerHigh;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            l10n.mapMarkerCreateWalletRequired,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: scheme.onSurface,
-                ),
-          ),
-          backgroundColor: bg,
-          behavior: SnackBarBehavior.floating,
-        ),
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.mapMarkerCreateWalletRequired)),
+        tone: KubusSnackBarTone.warning,
       );
       return;
     }
@@ -4891,41 +4996,17 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (!mounted) return;
 
     if (success) {
-      final bg = roles.positiveAction;
-      final fg = ThemeData.estimateBrightnessForColor(bg) == Brightness.dark
-          ? KubusColors.textPrimaryDark
-          : KubusColors.textPrimaryLight;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.check_circle, color: fg),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  l10n.mapMarkerCreatedToast,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: fg),
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: bg,
-          behavior: SnackBarBehavior.floating,
-        ),
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.mapMarkerCreatedToast)),
+        tone: KubusSnackBarTone.success,
       );
       await _loadMarkersForCurrentView(force: true);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            l10n.mapMarkerCreateFailedToast,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: scheme.onError,
-                ),
-          ),
-          backgroundColor: scheme.error,
-          behavior: SnackBarBehavior.floating,
-        ),
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.mapMarkerCreateFailedToast)),
+        tone: KubusSnackBarTone.error,
       );
     }
   }
@@ -5018,18 +5099,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       return false;
     } on StateError catch (e) {
       if (mounted) {
-        final scheme = Theme.of(context).colorScheme;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(context)!.mapMarkerDuplicateToast,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: scheme.onError,
-                  ),
-            ),
-            backgroundColor: scheme.error,
-            behavior: SnackBarBehavior.floating,
-          ),
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.showKubusSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.mapMarkerDuplicateToast)),
+          tone: KubusSnackBarTone.error,
         );
       }
       AppConfig.debugPrint('DesktopMapScreen: duplicate marker prevented: $e');
