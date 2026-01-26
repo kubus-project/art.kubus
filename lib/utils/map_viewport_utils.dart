@@ -1,7 +1,8 @@
 import 'dart:math' as math;
 
-import 'package:flutter_map/flutter_map.dart' show LatLngBounds;
 import 'package:latlong2/latlong.dart';
+
+import 'geo_bounds.dart';
 
 /// Utilities for viewport-based marker loading on FlutterMap.
 ///
@@ -53,8 +54,8 @@ class MapViewportUtils {
   /// Returns `true` if Travel Mode should refetch based on bounds coverage and
   /// zoom bucket changes.
   static bool shouldRefetchTravelMode({
-    required LatLngBounds visibleBounds,
-    required LatLngBounds? loadedBounds,
+    required GeoBounds visibleBounds,
+    required GeoBounds? loadedBounds,
     required int zoomBucket,
     required int? loadedZoomBucket,
     required bool hasMarkers,
@@ -70,12 +71,11 @@ class MapViewportUtils {
   ///
   /// For dateline-crossing bounds, this returns the input bounds unmodified to
   /// stay conservative.
-  static LatLngBounds expandBounds(LatLngBounds bounds, double paddingFraction) {
+  static GeoBounds expandBounds(GeoBounds bounds, double paddingFraction) {
     final clamped = paddingFraction.clamp(0.0, 0.6).toDouble();
     if (clamped <= 0) return bounds;
 
-    final crossesDateline = bounds.west > bounds.east;
-    if (crossesDateline) return bounds;
+    if (bounds.crossesDateline) return bounds;
 
     final latSpan = (bounds.north - bounds.south).abs();
     final lngSpan = (bounds.east - bounds.west).abs();
@@ -88,14 +88,16 @@ class MapViewportUtils {
     final west = (bounds.west - lngPad).clamp(-180.0, 180.0);
     final east = (bounds.east + lngPad).clamp(-180.0, 180.0);
 
-    return LatLngBounds(
-      LatLng(south, west),
-      LatLng(north, east),
+    return GeoBounds(
+      south: south,
+      west: west,
+      north: north,
+      east: east,
     );
   }
 
   /// Returns `true` if [outer] fully contains [inner] (all four corners).
-  static bool containsBounds(LatLngBounds outer, LatLngBounds inner) {
+  static bool containsBounds(GeoBounds outer, GeoBounds inner) {
     return containsPoint(outer, LatLng(inner.south, inner.west)) &&
         containsPoint(outer, LatLng(inner.south, inner.east)) &&
         containsPoint(outer, LatLng(inner.north, inner.west)) &&
@@ -103,7 +105,7 @@ class MapViewportUtils {
   }
 
   /// Returns `true` if [bounds] contains [point], including dateline crossing.
-  static bool containsPoint(LatLngBounds bounds, LatLng point) {
+  static bool containsPoint(GeoBounds bounds, LatLng point) {
     final south = bounds.south;
     final north = bounds.north;
     final west = bounds.west;

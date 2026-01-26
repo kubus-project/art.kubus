@@ -1,0 +1,35 @@
+{
+  "version": 8,
+  "name": "Kubus Dark (Raster)",
+  "sources": {
+    "carto": {
+      "type": "raster",
+      "tileSize": 256,
+      "tiles": [
+        "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+        "https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+        "https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+        "https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
+      ],
+      "attribution": "© OpenStreetMap contributors, © CARTO"
+    }
+  },
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {
+        "background-color": "#0B0B0C"
+      }
+    },
+    {
+      "id": "carto-raster",
+      "type": "raster",
+      "source": "carto",
+      "paint": {
+        "raster-opacity": 1.0
+      }
+    }
+  ]
+}
+

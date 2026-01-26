@@ -1,12 +1,12 @@
-import 'dart:async' show unawaited;
+import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../models/art_marker.dart';
 import '../providers/artwork_provider.dart';
 import '../services/map_marker_service.dart';
+import 'geo_bounds.dart';
 
 class MapMarkerLoadResult {
   const MapMarkerLoadResult({
@@ -19,7 +19,7 @@ class MapMarkerLoadResult {
   final List<ArtMarker> markers;
   final LatLng center;
   final DateTime fetchedAt;
-  final LatLngBounds? bounds;
+  final GeoBounds? bounds;
 }
 
 class MapMarkerHelper {
@@ -72,7 +72,7 @@ class MapMarkerHelper {
     required ArtworkProvider artworkProvider,
     required MapMarkerService mapMarkerService,
     required LatLng center,
-    required LatLngBounds bounds,
+    required GeoBounds bounds,
     int? limit,
     bool forceRefresh = false,
     int? zoomBucket,
