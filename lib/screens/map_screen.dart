@@ -195,6 +195,8 @@ class _MapScreenState extends State<MapScreen>
   DateTime? _markerTapRippleAt;
   Color? _markerTapRippleColor;
   bool _markerOverlayExpanded = false;
+  Offset? _selectedMarkerAnchor;
+  final Debouncer _overlayAnchorDebouncer = Debouncer();
   bool _didOpenInitialMarker = false;
   MapDeepLinkProvider? _mapDeepLinkProvider;
   bool _handlingDeepLinkIntent = false;
@@ -1257,6 +1259,7 @@ class _MapScreenState extends State<MapScreen>
       _selectedMarkerId = marker.id;
       _selectedMarkerData = marker;
       _selectedMarkerAt = DateTime.now();
+      _selectedMarkerAnchor = null;
       // Selecting an item implies exploration; stop snapping back to user.
       _autoFollow = false;
       _selectedMarkerViewportSignature = null;
@@ -1264,6 +1267,7 @@ class _MapScreenState extends State<MapScreen>
     });
     unawaited(_syncMapMarkers(themeProvider: context.read<ThemeProvider>()));
     unawaited(_playMarkerSelectionFeedback(marker));
+    _queueOverlayAnchorRefresh();
     if (marker.isExhibitionMarker) return;
     _ensureLinkedArtworkLoaded(marker);
   }
@@ -1287,6 +1291,7 @@ class _MapScreenState extends State<MapScreen>
       _selectedMarkerId = null;
       _selectedMarkerData = null;
       _selectedMarkerAt = null;
+      _selectedMarkerAnchor = null;
       _selectedMarkerViewportSignature = null;
       _markerOverlayExpanded = false;
     });
@@ -1986,6 +1991,7 @@ class _MapScreenState extends State<MapScreen>
     required ArtMarker marker,
     required double overlayHeight,
   }) {
+    if (_selectedMarkerAnchor != null) return;
     final screen = MediaQuery.of(context);
     final topSafe = screen.padding.top;
     final size = screen.size;
@@ -2018,6 +2024,33 @@ class _MapScreenState extends State<MapScreen>
         ),
       );
     });
+  }
+
+  void _queueOverlayAnchorRefresh() {
+    if (_selectedMarkerData == null) return;
+    if (!_styleInitialized) return;
+    _overlayAnchorDebouncer(const Duration(milliseconds: 16), () {
+      unawaited(_refreshSelectedMarkerAnchor());
+    });
+  }
+
+  Future<void> _refreshSelectedMarkerAnchor() async {
+    final controller = _mapController;
+    final marker = _selectedMarkerData;
+    if (controller == null || marker == null) return;
+    if (!_styleInitialized) return;
+
+    try {
+      final screen = await controller.toScreenLocation(
+        ml.LatLng(marker.position.latitude, marker.position.longitude),
+      );
+      if (!mounted) return;
+      setState(() {
+        _selectedMarkerAnchor = Offset(screen.x.toDouble(), screen.y.toDouble());
+      });
+    } catch (_) {
+      // Ignore projection failures during style transitions.
+    }
   }
 
   void _updateCurrentPosition(LatLng position, {bool shouldCenter = false}) {
@@ -2370,15 +2403,18 @@ class _MapScreenState extends State<MapScreen>
             _selectedMarkerId = null;
             _selectedMarkerData = null;
             _selectedMarkerAt = null;
+            _selectedMarkerAnchor = null;
             _selectedMarkerViewportSignature = null;
             _markerOverlayExpanded = false;
           });
           unawaited(_syncMapMarkers(themeProvider: themeProvider));
         }
+        _queueOverlayAnchorRefresh();
         _queueMarkerRefresh(fromGesture: hasGesture);
       },
       onCameraIdle: () {
         _programmaticCameraMove = false;
+        _queueOverlayAnchorRefresh();
         _queueMarkerRefresh(fromGesture: false);
       },
       onMapClick: (point, _) => unawaited(_handleMapTap(point, themeProvider)),
@@ -2652,7 +2688,7 @@ class _MapScreenState extends State<MapScreen>
     final controller = _mapController;
     if (controller == null) return null;
 
-    const double maxDistance = 36.0;
+    const double maxDistance = 64.0;
     ArtMarker? best;
     double bestDistance = maxDistance;
 
@@ -2943,7 +2979,7 @@ class _MapScreenState extends State<MapScreen>
                   : Stack(
                       key: animationKey,
                       children: [
-                        _buildCenteredMarkerOverlay(themeProvider),
+                        _buildAnchoredMarkerOverlay(themeProvider),
                       ],
                     ),
             ),
@@ -3001,7 +3037,7 @@ class _MapScreenState extends State<MapScreen>
     );
   }
 
-  Widget _buildCenteredMarkerOverlay(ThemeProvider themeProvider) {
+  Widget _buildAnchoredMarkerOverlay(ThemeProvider themeProvider) {
     final marker = _selectedMarkerData;
     if (marker == null) return const SizedBox.shrink();
 
@@ -3072,269 +3108,281 @@ class _MapScreenState extends State<MapScreen>
       showTypeLabel: canPresentExhibition,
     );
 
-    _scheduleEnsureActiveMarkerOverlayInView(
-      marker: marker,
-      overlayHeight: estimatedHeight,
-    );
+    if (_selectedMarkerAnchor == null) {
+      _scheduleEnsureActiveMarkerOverlayInView(
+        marker: marker,
+        overlayHeight: estimatedHeight,
+      );
+    }
 
     return Positioned.fill(
       child: IgnorePointer(
         ignoring: false,
-        child: Align(
-          // Slightly higher than perfect center so it feels anchored to the map.
-          alignment: const Alignment(0, -0.12),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 360),
-              child: AnimatedSize(
-                duration: const Duration(milliseconds: 220),
-                curve: Curves.easeOutCubic,
-                child: Material(
-                  color: Colors.transparent,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius:
-                          BorderRadius.circular(KubusRadius.lg),
-                      border: Border.all(
-                        color: baseColor.withValues(alpha: 0.35),
-                        width: KubusSizes.hairline,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: baseColor.withValues(alpha: 0.22),
-                          blurRadius: 20,
-                          offset: const Offset(0, 12),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final anchor = _selectedMarkerAnchor;
+            const double cardWidth = 360;
+            final double maxWidth = math.min(cardWidth, constraints.maxWidth - 32);
+            final double leftSafe = 16;
+            final double rightSafe = constraints.maxWidth - maxWidth - 16;
+            final double topSafe = MediaQuery.of(context).padding.top + 12;
+            final double bottomSafe = constraints.maxHeight - estimatedHeight - 12;
+
+            double left = (anchor?.dx ?? (constraints.maxWidth / 2)) - (maxWidth / 2);
+            left = left.clamp(leftSafe, rightSafe);
+
+            double top = (anchor?.dy ?? (constraints.maxHeight / 2)) - estimatedHeight - 16;
+            if (top < topSafe) {
+              top = (anchor?.dy ?? (constraints.maxHeight / 2)) + 16;
+            }
+            top = top.clamp(topSafe, bottomSafe);
+
+            return Stack(
+              children: [
+                Positioned(
+                  left: left,
+                  top: top,
+                  width: maxWidth,
+                  child: AnimatedSize(
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutCubic,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(KubusRadius.lg),
+                          border: Border.all(
+                            color: baseColor.withValues(alpha: 0.35),
+                            width: KubusSizes.hairline,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: baseColor.withValues(alpha: 0.22),
+                              blurRadius: 20,
+                              offset: const Offset(0, 12),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    child: LiquidGlassPanel(
-                      padding: const EdgeInsets.all(KubusSpacing.md),
-                      borderRadius:
-                          BorderRadius.circular(KubusRadius.lg),
-                      showBorder: false,
-                      backgroundColor: scheme.surface.withValues(alpha: 0.45),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
+                        child: LiquidGlassPanel(
+                          padding: const EdgeInsets.all(KubusSpacing.md),
+                          borderRadius: BorderRadius.circular(KubusRadius.lg),
+                          showBorder: false,
+                          backgroundColor: scheme.surface.withValues(alpha: 0.45),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    if (canPresentExhibition) ...[
-                                      Text(
-                                        'Razstava',
-                                        style: KubusTypography
-                                            .textTheme.labelSmall
-                                            ?.copyWith(
-                                          fontWeight: FontWeight.w700,
-                                          color: baseColor,
-                                          height: 1.0,
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        if (canPresentExhibition) ...[
+                                          Text(
+                                            'Razstava',
+                                            style: KubusTypography.textTheme.labelSmall?.copyWith(
+                                              fontWeight: FontWeight.w700,
+                                              color: baseColor,
+                                              height: 1.0,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                        ],
+                                        Text(
+                                          displayTitle,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: KubusTypography.textTheme.titleSmall?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                            height: 1.2,
+                                            color: scheme.onSurface,
+                                          ),
                                         ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  if (distanceText != null)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
                                       ),
-                                      const SizedBox(height: 2),
-                                    ],
-                                    Text(
-                                      displayTitle,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: KubusTypography.textTheme.titleSmall
-                                          ?.copyWith(
-                                        fontWeight: FontWeight.w700,
-                                        height: 1.2,
-                                        color: scheme.onSurface,
+                                      decoration: BoxDecoration(
+                                        color: baseColor.withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(999),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.near_me, size: 12, color: baseColor),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            distanceText,
+                                            style: KubusTypography.textTheme.labelSmall?.copyWith(
+                                              fontWeight: FontWeight.w700,
+                                              color: baseColor,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                  ],
+                                  const SizedBox(width: 6),
+                                  _glassIconButton(
+                                    icon: Icons.close,
+                                    tooltip: l10n.commonClose,
+                                    onTap: _dismissSelectedMarker,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(KubusRadius.md),
+                                child: SizedBox(
+                                  height: 120,
+                                  width: double.infinity,
+                                  child: imageUrl != null
+                                      ? Image.network(
+                                          imageUrl,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) =>
+                                              _markerImageFallback(baseColor, scheme, marker),
+                                          loadingBuilder: (context, child, progress) {
+                                            if (progress == null) return child;
+                                            return Container(
+                                              color: baseColor.withValues(alpha: 0.12),
+                                              child: const Center(
+                                                child: CircularProgressIndicator(strokeWidth: 2),
+                                              ),
+                                            );
+                                          },
+                                        )
+                                      : _markerImageFallback(baseColor, scheme, marker),
                                 ),
                               ),
-                              const SizedBox(width: 10),
-                              if (distanceText != null)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: baseColor.withValues(alpha: 0.12),
-                                    borderRadius: BorderRadius.circular(999),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.near_me,
-                                          size: 12, color: baseColor),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        distanceText,
-                                        style: KubusTypography
-                                            .textTheme.labelSmall
-                                            ?.copyWith(
-                                          fontWeight: FontWeight.w700,
-                                          color: baseColor,
-                                        ),
-                                      ),
-                                    ],
+
+                              if (visibleDescription.isNotEmpty) ...[
+                                const SizedBox(height: 10),
+                                Text(
+                                  visibleDescription,
+                                  style: KubusTypography.textTheme.bodySmall?.copyWith(
+                                    color: scheme.onSurfaceVariant,
+                                    height: 1.4,
+                                    fontSize: 12,
                                   ),
                                 ),
-                              const SizedBox(width: 6),
-                              _glassIconButton(
-                                icon: Icons.close,
-                                tooltip: l10n.commonClose,
-                                onTap: _dismissSelectedMarker,
+                              ],
+
+                              if (canExpand) ...[
+                                const SizedBox(height: 6),
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: TextButton(
+                                    onPressed: () => setState(
+                                      () => _markerOverlayExpanded = !_markerOverlayExpanded,
+                                    ),
+                                    child: Text(
+                                      _markerOverlayExpanded
+                                          ? l10n.commonCollapse
+                                          : l10n.commonExpand,
+                                      style: KubusTypography.textTheme.labelMedium
+                                          ?.copyWith(color: baseColor),
+                                    ),
+                                  ),
+                                ),
+                              ],
+
+                              if (showChips) ...[
+                                const SizedBox(height: 10),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    if (canPresentExhibition)
+                                      _glassChip(
+                                        label: 'POAP',
+                                        icon: Icons.verified_outlined,
+                                        selected: true,
+                                        accent: baseColor,
+                                        onTap: null,
+                                      ),
+                                    if (artwork != null &&
+                                        artwork.category.isNotEmpty &&
+                                        artwork.category != 'General')
+                                      _glassChip(
+                                        label: artwork.category,
+                                        icon: Icons.palette,
+                                        selected: false,
+                                        accent: baseColor,
+                                        onTap: null,
+                                      ),
+                                    if (marker.metadata?['subjectCategory'] != null ||
+                                        marker.metadata?['subject_category'] != null)
+                                      _glassChip(
+                                        label: (marker.metadata!['subjectCategory'] ??
+                                                marker.metadata!['subject_category'])
+                                            .toString(),
+                                        icon: Icons.category_outlined,
+                                        selected: false,
+                                        accent: baseColor,
+                                        onTap: null,
+                                      ),
+                                    if (artwork != null && artwork.rewards > 0)
+                                      _glassChip(
+                                        label: '+${artwork.rewards}',
+                                        icon: Icons.card_giftcard,
+                                        selected: false,
+                                        accent: baseColor,
+                                        onTap: null,
+                                      ),
+                                  ],
+                                ),
+                              ],
+
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                child: FilledButton.icon(
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: baseColor,
+                                    foregroundColor: actionFg,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 10,
+                                    ),
+                                  ),
+                                  onPressed: canPresentExhibition
+                                      ? () => _openExhibitionFromMarker(
+                                          marker, primaryExhibition, artwork)
+                                      : () => _openMarkerDetail(marker, artwork),
+                                  icon: Icon(
+                                    canPresentExhibition
+                                        ? Icons.museum_outlined
+                                        : Icons.arrow_forward,
+                                    size: 18,
+                                  ),
+                                  label: Text(
+                                    canPresentExhibition
+                                        ? 'Odpri razstavo'
+                                        : l10n.commonViewDetails,
+                                    style: KubusTypography.textTheme.labelLarge
+                                        ?.copyWith(fontWeight: FontWeight.w700),
+                                  ),
+                                ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 10),
-
-                          ClipRRect(
-                            borderRadius:
-                                BorderRadius.circular(KubusRadius.md),
-                            child: SizedBox(
-                              height: 120,
-                              width: double.infinity,
-                              child: imageUrl != null
-                                  ? Image.network(
-                                      imageUrl,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) =>
-                                          _markerImageFallback(baseColor, scheme, marker),
-                                      loadingBuilder: (context, child, progress) {
-                                        if (progress == null) return child;
-                                        return Container(
-                                          color: baseColor.withValues(alpha: 0.12),
-                                          child: const Center(
-                                            child: CircularProgressIndicator(
-                                                strokeWidth: 2),
-                                          ),
-                                        );
-                                      },
-                                    )
-                                  : _markerImageFallback(baseColor, scheme, marker),
-                            ),
-                          ),
-
-                          if (visibleDescription.isNotEmpty) ...[
-                            const SizedBox(height: 10),
-                            Text(
-                              visibleDescription,
-                              style: KubusTypography.textTheme.bodySmall?.copyWith(
-                                color: scheme.onSurfaceVariant,
-                                height: 1.4,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-
-                          if (canExpand) ...[
-                            const SizedBox(height: 6),
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: TextButton(
-                                onPressed: () => setState(
-                                  () => _markerOverlayExpanded = !_markerOverlayExpanded,
-                                ),
-                                child: Text(
-                                  _markerOverlayExpanded
-                                      ? l10n.commonCollapse
-                                      : l10n.commonExpand,
-                                  style: KubusTypography.textTheme.labelMedium
-                                      ?.copyWith(color: baseColor),
-                                ),
-                              ),
-                            ),
-                          ],
-
-                          if (showChips) ...[
-                            const SizedBox(height: 10),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                if (canPresentExhibition)
-                                  _glassChip(
-                                    label: 'POAP',
-                                    icon: Icons.verified_outlined,
-                                    selected: true,
-                                    accent: baseColor,
-                                    onTap: null,
-                                  ),
-                                if (artwork != null &&
-                                    artwork.category.isNotEmpty &&
-                                    artwork.category != 'General')
-                                  _glassChip(
-                                    label: artwork.category,
-                                    icon: Icons.palette,
-                                    selected: false,
-                                    accent: baseColor,
-                                    onTap: null,
-                                  ),
-                                if (marker.metadata?['subjectCategory'] != null ||
-                                    marker.metadata?['subject_category'] != null)
-                                  _glassChip(
-                                    label: (marker.metadata!['subjectCategory'] ??
-                                            marker.metadata!['subject_category'])
-                                        .toString(),
-                                    icon: Icons.category_outlined,
-                                    selected: false,
-                                    accent: baseColor,
-                                    onTap: null,
-                                  ),
-                                if (artwork != null && artwork.rewards > 0)
-                                  _glassChip(
-                                    label: '+${artwork.rewards}',
-                                    icon: Icons.card_giftcard,
-                                    selected: false,
-                                    accent: baseColor,
-                                    onTap: null,
-                                  ),
-                              ],
-                            ),
-                          ],
-
-                          const SizedBox(height: 12),
-                          SizedBox(
-                            width: double.infinity,
-                            child: FilledButton.icon(
-                              style: FilledButton.styleFrom(
-                                backgroundColor: baseColor,
-                                foregroundColor: actionFg,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 10,
-                                ),
-                              ),
-                              onPressed: canPresentExhibition
-                                  ? () => _openExhibitionFromMarker(
-                                      marker, primaryExhibition, artwork)
-                                  : () => _openMarkerDetail(marker, artwork),
-                              icon: Icon(
-                                canPresentExhibition
-                                    ? Icons.museum_outlined
-                                    : Icons.arrow_forward,
-                                size: 18,
-                              ),
-                              label: Text(
-                                canPresentExhibition
-                                    ? 'Odpri razstavo'
-                                    : l10n.commonViewDetails,
-                                style: KubusTypography.textTheme.labelLarge
-                                    ?.copyWith(fontWeight: FontWeight.w700),
-                              ),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ),
-          ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -4527,7 +4575,7 @@ class _MapScreenState extends State<MapScreen>
                                                   ? '${l10n.mapResultsDiscoveredLabel(
                                                       artworks.length,
                                                       (discoveryProgress * 100).round(),
-                                                    )} â€¢ ${l10n.mapTravelModeStatusTravelling}'
+                                                    )} ${l10n.mapTravelModeStatusTravelling}'
                                                   : l10n.mapResultsDiscoveredLabel(
                                                       artworks.length,
                                                       (discoveryProgress * 100).round(),
