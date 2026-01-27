@@ -231,6 +231,7 @@ class _MapScreenState extends State<MapScreen>
   bool _useGridLayout = false;
   final DraggableScrollableController _sheetController =
       DraggableScrollableController();
+  bool _isSheetInteracting = false;
   double _markerRadiusKm = 5.0;
   bool _travelModeEnabled = false;
   bool _isometricViewEnabled = false;
@@ -1262,6 +1263,11 @@ class _MapScreenState extends State<MapScreen>
     _ensureLinkedArtworkLoaded(marker);
   }
 
+  void _setSheetInteracting(bool value) {
+    if (_isSheetInteracting == value) return;
+    setState(() => _isSheetInteracting = value);
+  }
+
   void _dismissSelectedMarker() {
     if (_selectedMarkerId == null && _selectedMarkerData == null) return;
     setState(() {
@@ -2231,7 +2237,10 @@ class _MapScreenState extends State<MapScreen>
       children: [
         KeyedSubtree(
           key: _tutorialMapKey,
-          child: _buildMap(themeProvider),
+          child: IgnorePointer(
+            ignoring: _isSheetInteracting,
+            child: _buildMap(themeProvider),
+          ),
         ),
         _buildTopOverlays(theme, taskProvider), // This will likely be refactored into _buildSearchAndFilters()
         _buildPrimaryControls(theme), // This will likely be refactored into _buildSearchAndFilters()
@@ -2541,7 +2550,13 @@ class _MapScreenState extends State<MapScreen>
         <String>[_markerHitboxLayerId, _markerLayerId],
         null,
       );
-      if (features.isEmpty) return;
+      if (features.isEmpty) {
+        final fallbackMarker = await _fallbackPickMarkerAtPoint(point);
+        if (fallbackMarker == null) return;
+        _handleMarkerTap(fallbackMarker);
+        unawaited(_syncMapMarkers(themeProvider: themeProvider));
+        return;
+      }
 
       final dynamic first = features.first;
       final props = (first is Map ? first['properties'] : null) as Map?;
@@ -2583,7 +2598,45 @@ class _MapScreenState extends State<MapScreen>
       if (kDebugMode) {
         AppConfig.debugPrint('MapScreen: queryRenderedFeatures failed: $e');
       }
+      final fallbackMarker = await _fallbackPickMarkerAtPoint(point);
+      if (fallbackMarker == null) return;
+      _handleMarkerTap(fallbackMarker);
+      unawaited(_syncMapMarkers(themeProvider: themeProvider));
     }
+  }
+
+  Future<ArtMarker?> _fallbackPickMarkerAtPoint(
+    math.Point<double> point,
+  ) async {
+    final controller = _mapController;
+    if (controller == null) return null;
+
+    const double maxDistance = 36.0;
+    ArtMarker? best;
+    double bestDistance = maxDistance;
+
+    final visibleMarkers = _artMarkers.where(
+      (marker) => _markerLayerVisibility[marker.type] ?? true,
+    );
+
+    for (final marker in visibleMarkers) {
+      try {
+        final screen = await controller.toScreenLocation(
+          ml.LatLng(marker.position.latitude, marker.position.longitude),
+        );
+        final dx = screen.x.toDouble() - point.x;
+        final dy = screen.y.toDouble() - point.y;
+        final distance = math.sqrt(dx * dx + dy * dy);
+        if (distance <= bestDistance) {
+          bestDistance = distance;
+          best = marker;
+        }
+      } catch (_) {
+        // Ignore projection failures during style transitions.
+      }
+    }
+
+    return best;
   }
 
   Future<void> _syncUserLocation({required ThemeProvider themeProvider}) async {
@@ -4339,146 +4392,150 @@ class _MapScreenState extends State<MapScreen>
     final scheme = theme.colorScheme;
     return Align(
       alignment: Alignment.bottomCenter,
-      child: DraggableScrollableSheet(
-        controller: _sheetController,
-        // Keep the collapsed state slightly more visible while still letting it sit
-        // behind the glass navbar.
-        initialChildSize: 0.16,
-        minChildSize: 0.16,
-        maxChildSize: 0.85,
-        snap: true,
-        snapSizes: const [0.16, 0.24, 0.50, 0.85],
-        builder: (context, scrollController) {
-          final l10n = AppLocalizations.of(context)!;
-          final isDark = theme.brightness == Brightness.dark;
-          final radius = const BorderRadius.vertical(
-            top: Radius.circular(KubusRadius.xl),
-          );
-          final glassTint = scheme.surface.withValues(alpha: isDark ? 0.46 : 0.56);
-          return Container(
-            decoration: BoxDecoration(
-              borderRadius: radius,
-              border: Border.all(
-                color: scheme.outlineVariant.withValues(alpha: 0.25),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: scheme.shadow.withValues(alpha: 0.18),
-                  blurRadius: 24,
-                  offset: const Offset(0, -6),
+      child: Listener(
+        onPointerDown: (_) => _setSheetInteracting(true),
+        onPointerUp: (_) => _setSheetInteracting(false),
+        onPointerCancel: (_) => _setSheetInteracting(false),
+        child: DraggableScrollableSheet(
+          controller: _sheetController,
+          // Keep the collapsed state slightly more visible while still letting it sit
+          // behind the glass navbar.
+          initialChildSize: 0.16,
+          minChildSize: 0.16,
+          maxChildSize: 0.85,
+          snap: true,
+          snapSizes: const [0.16, 0.24, 0.50, 0.85],
+          builder: (context, scrollController) {
+            final l10n = AppLocalizations.of(context)!;
+            final isDark = theme.brightness == Brightness.dark;
+            final radius = const BorderRadius.vertical(
+              top: Radius.circular(KubusRadius.xl),
+            );
+            final glassTint = scheme.surface.withValues(alpha: isDark ? 0.46 : 0.56);
+            return Container(
+              decoration: BoxDecoration(
+                borderRadius: radius,
+                border: Border.all(
+                  color: scheme.outlineVariant.withValues(alpha: 0.25),
                 ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: radius,
-              child: LiquidGlassPanel(
-                padding: EdgeInsets.zero,
-                margin: EdgeInsets.zero,
-                borderRadius: BorderRadius.zero,
-                showBorder: false,
-                backgroundColor: glassTint,
-                child: CustomScrollView(
-                  controller: scrollController,
-                  slivers: [
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Center(
-                              child: Container(
-                                width: 48,
-                                height: 4,
-                                decoration: BoxDecoration(
-                                  color: scheme.outlineVariant.withValues(alpha: 0.85),
-                                  borderRadius: BorderRadius.circular(2),
+                boxShadow: [
+                  BoxShadow(
+                    color: scheme.shadow.withValues(alpha: 0.18),
+                    blurRadius: 24,
+                    offset: const Offset(0, -6),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: radius,
+                child: LiquidGlassPanel(
+                  padding: EdgeInsets.zero,
+                  margin: EdgeInsets.zero,
+                  borderRadius: BorderRadius.zero,
+                  showBorder: false,
+                  backgroundColor: glassTint,
+                  child: CustomScrollView(
+                    controller: scrollController,
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Center(
+                                child: Container(
+                                  width: 48,
+                                  height: 4,
+                                  decoration: BoxDecoration(
+                                    color: scheme.outlineVariant.withValues(alpha: 0.85),
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        l10n.mapNearbyArtTitle,
-                                        key: _tutorialNearbyTitleKey,
-                                        style: KubusTypography.textTheme.titleMedium
-                                            ?.copyWith(
-                                          fontWeight: FontWeight.w700,
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          l10n.mapNearbyArtTitle,
+                                          key: _tutorialNearbyTitleKey,
+                                          style: KubusTypography.textTheme.titleMedium
+                                              ?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                          ),
                                         ),
-                                      ),
-                                      Text(
-                                            _travelModeEnabled
-                                                ? '${l10n.mapResultsDiscoveredLabel(
-                                                    artworks.length,
-                                                    (discoveryProgress * 100).round(),
-                                                  )} â€¢ ${l10n.mapTravelModeStatusTravelling}'
-                                                : l10n.mapResultsDiscoveredLabel(
-                                                    artworks.length,
-                                                    (discoveryProgress * 100).round(),
-                                                  ),
-                                        style: KubusTypography.textTheme.bodySmall
-                                            ?.copyWith(
-                                          color: scheme.onSurfaceVariant,
+                                        Text(
+                                              _travelModeEnabled
+                                                  ? '${l10n.mapResultsDiscoveredLabel(
+                                                      artworks.length,
+                                                      (discoveryProgress * 100).round(),
+                                                    )} â€¢ ${l10n.mapTravelModeStatusTravelling}'
+                                                  : l10n.mapResultsDiscoveredLabel(
+                                                      artworks.length,
+                                                      (discoveryProgress * 100).round(),
+                                                    ),
+                                          style: KubusTypography.textTheme.bodySmall
+                                              ?.copyWith(
+                                            color: scheme.onSurfaceVariant,
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
-                                ),
-                                _glassIconButton(
-                                  icon: Icons.radar,
-                                      tooltip: _travelModeEnabled
-                                          ? l10n.mapTravelModeStatusTravellingTooltip
-                                          : l10n.mapNearbyRadiusTooltip(
-                                              _effectiveMarkerRadiusKm.toInt(),
-                                            ),
-                                      onTap:
-                                          _travelModeEnabled ? null : _openMarkerRadiusDialog,
-                                ),
-                                const SizedBox(width: 8),
-                                _glassIconButton(
-                                  icon:
-                                      _useGridLayout ? Icons.view_list : Icons.grid_view,
-                                  tooltip: _useGridLayout
-                                      ? l10n.mapShowListViewTooltip
-                                      : l10n.mapShowGridViewTooltip,
-                                  onTap: () =>
-                                      setState(() => _useGridLayout = !_useGridLayout),
-                                ),
-                                const SizedBox(width: 8),
-                                PopupMenuButton<_ArtworkSort>(
-                                  tooltip: l10n.mapSortResultsTooltip,
-                                  onSelected: (value) => setState(() => _sort = value),
-                                  itemBuilder: (context) => [
-                                    for (final sort in _ArtworkSort.values)
-                                      PopupMenuItem(
-                                        value: sort,
-                                        child: Row(
-                                          children: [
-                                            Expanded(child: Text(sort.label(l10n))),
-                                            if (sort == _sort)
-                                              Icon(Icons.check, color: scheme.primary),
-                                          ],
-                                        ),
-                                      ),
-                                  ],
-                                  child: _glassIconButton(
-                                    icon: Icons.sort,
+                                  _glassIconButton(
+                                    icon: Icons.radar,
+                                        tooltip: _travelModeEnabled
+                                            ? l10n.mapTravelModeStatusTravellingTooltip
+                                            : l10n.mapNearbyRadiusTooltip(
+                                                _effectiveMarkerRadiusKm.toInt(),
+                                              ),
+                                        onTap:
+                                            _travelModeEnabled ? null : _openMarkerRadiusDialog,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _glassIconButton(
+                                    icon:
+                                        _useGridLayout ? Icons.view_list : Icons.grid_view,
+                                    tooltip: _useGridLayout
+                                        ? l10n.mapShowListViewTooltip
+                                        : l10n.mapShowGridViewTooltip,
+                                    onTap: () =>
+                                        setState(() => _useGridLayout = !_useGridLayout),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  PopupMenuButton<_ArtworkSort>(
                                     tooltip: l10n.mapSortResultsTooltip,
-                                    onTap: null,
+                                    onSelected: (value) => setState(() => _sort = value),
+                                    itemBuilder: (context) => [
+                                      for (final sort in _ArtworkSort.values)
+                                        PopupMenuItem(
+                                          value: sort,
+                                          child: Row(
+                                            children: [
+                                              Expanded(child: Text(sort.label(l10n))),
+                                              if (sort == _sort)
+                                                Icon(Icons.check, color: scheme.primary),
+                                            ],
+                                          ),
+                                        ),
+                                    ],
+                                    child: _glassIconButton(
+                                      icon: Icons.sort,
+                                      tooltip: l10n.mapSortResultsTooltip,
+                                      onTap: null,
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                          ],
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
                 if (isLoading)
                   const SliverFillRemaining(
                     hasScrollBody: false,
@@ -4551,6 +4608,7 @@ class _MapScreenState extends State<MapScreen>
           );
         },
       ),
+    )
     );
   }
 
