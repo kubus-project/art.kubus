@@ -1,4 +1,5 @@
 import 'package:art_kubus/services/share/share_deep_link_parser.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/themeprovider.dart';
@@ -111,24 +112,36 @@ class _MainAppState extends State<MainApp> {
 
     final currentIndex = context.watch<MainTabProvider>().currentIndex;
 
-    return UserPersonaOnboardingGate(
-      child: AnimatedGradientBackground(
-        // The app's base gradient needs to paint behind BOTH the app bar area
-        // (status bar) and the bottom navigation bar. Screens should keep their
-        // scaffolds transparent so this background remains visible.
-        animate: true,
-        intensity: 0.22,
-        child: Scaffold(
-          backgroundColor: Colors.transparent,
-          extendBody: true,
-          body: IndexedStack(
-            index: currentIndex,
-            // Keep heavy AR resources out of the tree unless the AR tab is active.
-            children: _buildScreens(currentIndex),
-          ),
-          bottomNavigationBar: _buildBottomNavigationBar(),
-        ),
+    final mapNeedsPlatformViewBackgroundPassthrough = kIsWeb && currentIndex == 0;
+
+    final scaffold = Scaffold(
+      backgroundColor: Colors.transparent,
+      extendBody: true,
+      body: IndexedStack(
+        index: currentIndex,
+        // Keep heavy AR resources out of the tree unless the AR tab is active.
+        children: _buildScreens(currentIndex),
       ),
+      bottomNavigationBar: _buildBottomNavigationBar(),
+    );
+
+    return UserPersonaOnboardingGate(
+      // On web, MapLibre is rendered via a platform view (MapLibre GL JS).
+      // When using the CanvasKit renderer, any full-screen Flutter-painted
+      // background can end up covering the DOM-based map surface.
+      //
+      // Keep the Kubus gradient everywhere else, but let the map tab "punch
+      // through" so the web map remains visible.
+      child: mapNeedsPlatformViewBackgroundPassthrough
+          ? scaffold
+          : AnimatedGradientBackground(
+              // The app's base gradient needs to paint behind BOTH the app bar area
+              // (status bar) and the bottom navigation bar. Screens should keep their
+              // scaffolds transparent so this background remains visible.
+              animate: true,
+              intensity: 0.22,
+              child: scaffold,
+            ),
     );
   }
 

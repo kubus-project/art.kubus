@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:art_kubus/utils/design_tokens.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -585,14 +586,15 @@ class _DesktopShellState extends State<DesktopShell>
 
             return Stack(
               children: [
-                Positioned.fill(
-                  child: AnimatedGradientBackground(
-                    duration: const Duration(seconds: 12),
-                    intensity: 0.25,
-                    colors: _backgroundColorsForRoute(context, effectiveRoute),
-                    child: const SizedBox.expand(),
+                if (!(kIsWeb && effectiveRoute == '/explore'))
+                  Positioned.fill(
+                    child: AnimatedGradientBackground(
+                      duration: const Duration(seconds: 12),
+                      intensity: 0.25,
+                      colors: _backgroundColorsForRoute(context, effectiveRoute),
+                      child: const SizedBox.expand(),
+                    ),
                   ),
-                ),
                 Scaffold(
                   backgroundColor: Colors.transparent,
                   body: Row(

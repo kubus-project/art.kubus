@@ -40,9 +40,11 @@
       try {
         if (window.maplibregl && typeof window.maplibregl.setWorkerUrl === 'function') {
           window.maplibregl.setWorkerUrl('vendor/maplibre-gl/maplibre-gl-csp-worker.js');
+        } else {
+          console.error('MapLibre GL JS not available (window.maplibregl is missing).');
         }
       } catch (e) {
-        // Intentionally swallow; the Flutter app will still boot even if MapLibre is unavailable.
+        console.error('MapLibre GL JS worker setup failed:', e);
       }
     })();
   </script>
