@@ -216,7 +216,6 @@ class _AppLauncherState extends State<AppLauncher> {
           if (!_initialized) {
             return MaterialApp(
               debugShowCheckedModeBanner: false,
-              color: Colors.transparent,
               navigatorKey: appNavigatorKey,
               locale: localeProvider.locale,
               supportedLocales: AppLocalizations.supportedLocales,
@@ -226,15 +225,13 @@ class _AppLauncherState extends State<AppLauncher> {
               darkTheme: themeProvider.darkTheme,
               themeMode: themeProvider.themeMode,
               builder: (context, child) {
-                final resolvedChild = child ?? const SizedBox.shrink();
-                // On web, MapLibre renders via a DOM platform view (MapLibre GL JS).
-                // A full-screen Flutter-painted backdrop can hide it under the
-                // CanvasKit canvas. Keep the fallback backdrop on non-web only.
-                if (kIsWeb) return resolvedChild;
+                // Safety net: if any route uses transparency and forgets to
+                // paint its own backdrop, we'd otherwise see the host page's
+                // HTML background.
                 return AnimatedGradientBackground(
                   animate: false,
                   intensity: 0.22,
-                  child: resolvedChild,
+                  child: child ?? const SizedBox.shrink(),
                 );
               },
               home: Scaffold(body: const AppLoading()),
@@ -531,7 +528,6 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
         return MaterialApp(
           title: 'art.kubus',
           debugShowCheckedModeBanner: false,
-          color: Colors.transparent,
           navigatorKey: appNavigatorKey,
           navigatorObservers: [_telemetryObserver],
           locale: localeProvider.locale,
@@ -542,16 +538,10 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
           darkTheme: themeProvider.darkTheme,
           themeMode: themeProvider.themeMode,
            builder: (context, child) {
-             final content = SecurityGateOverlay(child: child ?? const SizedBox.shrink());
-             // Web: don’t paint a full-screen Flutter backdrop behind the app,
-             // otherwise the MapLibre DOM platform view can end up hidden.
-             if (kIsWeb) return content;
-             // Non-web: keep the global backdrop to prevent transparent scaffold
-             // bleed-through when using glass/gradient UI.
              return AnimatedGradientBackground(
                animate: false,
                intensity: 0.22,
-               child: content,
+               child: SecurityGateOverlay(child: child ?? const SizedBox.shrink()),
              );
            },
            onGenerateRoute: (settings) {
