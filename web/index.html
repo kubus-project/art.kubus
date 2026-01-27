@@ -49,6 +49,33 @@
     })();
   </script>
 
+  <script>
+    // Optional web debugging: add `?debug_map=1` to log platform-view insertion.
+    (function () {
+      try {
+        var params = new URLSearchParams(location.search || '');
+        if (params.get('debug_map') !== '1') return;
+
+        console.info('[kubus web] debug_map=1 enabled');
+        console.info('[kubus web] maplibregl available:', !!window.maplibregl);
+        try {
+          if (window.maplibregl && typeof window.maplibregl.getVersion === 'function') {
+            console.info('[kubus web] maplibregl version:', window.maplibregl.getVersion());
+          }
+        } catch (_) {}
+
+        var logViews = function () {
+          var els = document.querySelectorAll('flt-platform-view, flt-platform-view-slot');
+          console.info('[kubus web] platform views:', els.length, els);
+        };
+
+        logViews();
+        var mo = new MutationObserver(function () { logViews(); });
+        mo.observe(document.documentElement, { childList: true, subtree: true });
+      } catch (_) {}
+    })();
+  </script>
+
   <meta property="og:site_name" content="art.kubus">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://app.kubus.site/">
@@ -263,6 +290,12 @@
       document.getElementById("splash-branding")?.remove();
       document.body.style.background = "transparent";
     }
+
+    // Remove the native splash once Flutter paints its first frame.
+    // This prevents the splash logo from remaining visible behind/above the app.
+    window.addEventListener('flutter-first-frame', function() {
+      try { removeSplashFromWeb(); } catch (_) {}
+    });
   </script>
 </head>
 <body>
