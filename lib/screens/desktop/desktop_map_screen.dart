@@ -537,6 +537,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     return MapLibreStyleUtils.hexRgb(color);
   }
 
+  double _markerPixelRatio() {
+    if (kIsWeb) return 1.0;
+    final dpr = WidgetsBinding.instance.platformDispatcher.implicitView?.devicePixelRatio ?? 1.0;
+    return dpr.clamp(1.0, 2.5);
+  }
+
   Future<void> _handleMapStyleLoaded(ThemeProvider themeProvider) async {
     final controller = _mapController;
     if (controller == null) return;
@@ -614,21 +620,27 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           iconRotationAlignment: 'map',
         ),
       );
+      final hitboxScale = kIsWeb ? 1.35 : 1.0;
+      final hitboxRadius = <dynamic>[
+        '*',
+        <dynamic>[
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          3,
+          10,
+          14,
+          18,
+          24,
+          26,
+        ],
+        hitboxScale,
+      ];
       await controller.addCircleLayer(
         _markerSourceId,
         _markerHitboxLayerId,
         ml.CircleLayerProperties(
-          circleRadius: <dynamic>[
-            'interpolate',
-            ['linear'],
-            ['zoom'],
-            3,
-            10,
-            14,
-            18,
-            24,
-            26,
-          ],
+          circleRadius: hitboxRadius,
           circleColor: _hexRgb(scheme.surface),
           circleOpacity: 0.01,
         ),
@@ -996,6 +1008,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         roles: roles,
         isDark: isDark,
         forceGlow: selected,
+        pixelRatio: _markerPixelRatio(),
       );
       if (!mounted) return const <String, dynamic>{};
       try {
@@ -1052,6 +1065,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         baseColor: baseColor,
         scheme: scheme,
         isDark: isDark,
+        pixelRatio: _markerPixelRatio(),
       );
       if (!mounted) return const <String, dynamic>{};
       try {
