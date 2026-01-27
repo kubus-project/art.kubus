@@ -32,8 +32,20 @@
 
   <!-- MapLibre GL JS (required by maplibre_gl on web) -->
   <!-- Vendored locally to avoid CSP / CDN availability issues in production. -->
-  <script src="vendor/maplibre-gl/maplibre-gl.js"></script>
+  <!-- Use the CSP build + explicit worker URL to support strict CSP (no blob: workers). -->
+  <script src="vendor/maplibre-gl/maplibre-gl-csp.js"></script>
   <link href="vendor/maplibre-gl/maplibre-gl.css" rel="stylesheet" />
+  <script>
+    (function () {
+      try {
+        if (window.maplibregl && typeof window.maplibregl.setWorkerUrl === 'function') {
+          window.maplibregl.setWorkerUrl('vendor/maplibre-gl/maplibre-gl-csp-worker.js');
+        }
+      } catch (e) {
+        // Intentionally swallow; the Flutter app will still boot even if MapLibre is unavailable.
+      }
+    })();
+  </script>
 
   <meta property="og:site_name" content="art.kubus">
   <meta property="og:type" content="website">
