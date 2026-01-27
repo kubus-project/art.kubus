@@ -232,9 +232,14 @@ class _MapScreenState extends State<MapScreen>
   final DraggableScrollableController _sheetController =
       DraggableScrollableController();
   bool _isSheetInteracting = false;
+  bool _isSheetBlocking = true;
+  double _nearbySheetExtent = _nearbySheetMin;
   double _markerRadiusKm = 5.0;
   bool _travelModeEnabled = false;
   bool _isometricViewEnabled = false;
+
+  static const double _nearbySheetMin = 0.16;
+  static const double _nearbySheetMax = 0.85;
 
   // Travel mode is viewport-based (bounds query), not huge-radius.
   double get _effectiveMarkerRadiusKm => _markerRadiusKm;
@@ -1268,6 +1273,14 @@ class _MapScreenState extends State<MapScreen>
     setState(() => _isSheetInteracting = value);
   }
 
+  void _setSheetBlocking(bool value, double extent) {
+    if (_isSheetBlocking == value && _nearbySheetExtent == extent) return;
+    setState(() {
+      _isSheetBlocking = value;
+      _nearbySheetExtent = extent;
+    });
+  }
+
   void _dismissSelectedMarker() {
     if (_selectedMarkerId == null && _selectedMarkerData == null) return;
     setState(() {
@@ -2233,45 +2246,61 @@ class _MapScreenState extends State<MapScreen>
     final discoveryProgress = taskProvider.getOverallProgress();
     final isLoadingArtworks = artworkProvider.isLoading('load_artworks');
 
-    final stack = Stack(
-      children: [
-        KeyedSubtree(
-          key: _tutorialMapKey,
-          child: IgnorePointer(
-            ignoring: _isSheetInteracting,
-            child: _buildMap(themeProvider),
-          ),
-        ),
-        _buildTopOverlays(theme, taskProvider), // This will likely be refactored into _buildSearchAndFilters()
-        _buildPrimaryControls(theme), // This will likely be refactored into _buildSearchAndFilters()
-        _buildBottomSheet( // This will likely be refactored into _buildDraggablePanel()
-          theme,
-          filteredArtworks,
-          discoveryProgress,
-          isLoadingArtworks,
-        ),
-        _buildMarkerOverlay(themeProvider),
-        if (_isSearching) _buildSuggestionSheet(theme), // This will likely be refactored into _buildSearchAndFilters()
-        if (_showMapTutorial)
-          Builder(
-            builder: (context) {
-              final l10n = AppLocalizations.of(context)!;
-              final steps = _buildMapTutorialSteps(l10n);
-              final idx = _mapTutorialIndex.clamp(0, steps.length - 1);
-              return InteractiveTutorialOverlay(
-                steps: steps,
-                currentIndex: idx,
-                onNext: _tutorialNext,
-                onBack: _tutorialBack,
-                onSkip: _dismissMapTutorial,
-                skipLabel: l10n.commonSkip,
-                backLabel: l10n.commonBack,
-                nextLabel: l10n.commonNext,
-                doneLabel: l10n.commonDone,
-              );
-            },
-          ),
-      ],
+    final stack = LayoutBuilder(
+      builder: (context, constraints) {
+        final sheetHeight = constraints.maxHeight * _nearbySheetExtent;
+        return Stack(
+          children: [
+            KeyedSubtree(
+              key: _tutorialMapKey,
+              child: IgnorePointer(
+                ignoring: _isSheetInteracting,
+                child: _buildMap(themeProvider),
+              ),
+            ),
+            if (_isSheetBlocking)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: sheetHeight,
+                child: const AbsorbPointer(
+                  absorbing: true,
+                  child: SizedBox.expand(),
+                ),
+              ),
+            _buildTopOverlays(theme, taskProvider), // This will likely be refactored into _buildSearchAndFilters()
+            _buildPrimaryControls(theme), // This will likely be refactored into _buildSearchAndFilters()
+            _buildBottomSheet( // This will likely be refactored into _buildDraggablePanel()
+              theme,
+              filteredArtworks,
+              discoveryProgress,
+              isLoadingArtworks,
+            ),
+            _buildMarkerOverlay(themeProvider),
+            if (_isSearching) _buildSuggestionSheet(theme), // This will likely be refactored into _buildSearchAndFilters()
+            if (_showMapTutorial)
+              Builder(
+                builder: (context) {
+                  final l10n = AppLocalizations.of(context)!;
+                  final steps = _buildMapTutorialSteps(l10n);
+                  final idx = _mapTutorialIndex.clamp(0, steps.length - 1);
+                  return InteractiveTutorialOverlay(
+                    steps: steps,
+                    currentIndex: idx,
+                    onNext: _tutorialNext,
+                    onBack: _tutorialBack,
+                    onSkip: _dismissMapTutorial,
+                    skipLabel: l10n.commonSkip,
+                    backLabel: l10n.commonBack,
+                    nextLabel: l10n.commonNext,
+                    doneLabel: l10n.commonDone,
+                  );
+                },
+              ),
+          ],
+        );
+      },
     );
 
     return Scaffold(
@@ -2435,21 +2464,27 @@ class _MapScreenState extends State<MapScreen>
           iconRotationAlignment: 'map',
         ),
       );
+      final hitboxScale = kIsWeb ? 1.35 : 1.0;
+      final hitboxRadius = <dynamic>[
+        '*',
+        <dynamic>[
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          3,
+          10,
+          14,
+          18,
+          24,
+          26,
+        ],
+        hitboxScale,
+      ];
       await controller.addCircleLayer(
         _markerSourceId,
         _markerHitboxLayerId,
         ml.CircleLayerProperties(
-          circleRadius: <dynamic>[
-            'interpolate',
-            ['linear'],
-            ['zoom'],
-            3,
-            10,
-            14,
-            18,
-            24,
-            26,
-          ],
+          circleRadius: hitboxRadius,
           circleColor: _hexRgb(scheme.surface),
           circleOpacity: 0.01,
         ),
@@ -2501,6 +2536,12 @@ class _MapScreenState extends State<MapScreen>
 
   String _hexRgb(Color color) {
     return MapLibreStyleUtils.hexRgb(color);
+  }
+
+  double _markerPixelRatio() {
+    if (kIsWeb) return 1.0;
+    final dpr = WidgetsBinding.instance.platformDispatcher.implicitView?.devicePixelRatio ?? 1.0;
+    return dpr.clamp(1.0, 2.5);
   }
 
   Future<void> _applyIsometricCamera({required bool enabled, bool adjustZoomForScale = false}) async {
@@ -2758,6 +2799,7 @@ class _MapScreenState extends State<MapScreen>
         roles: roles,
         isDark: isDark,
         forceGlow: selected,
+        pixelRatio: _markerPixelRatio(),
       );
       if (!mounted) return const <String, dynamic>{};
       try {
@@ -2818,6 +2860,7 @@ class _MapScreenState extends State<MapScreen>
         baseColor: baseColor,
         scheme: scheme,
         isDark: isDark,
+        pixelRatio: _markerPixelRatio(),
       );
       if (!mounted) return const <String, dynamic>{};
       try {
@@ -4396,79 +4439,90 @@ class _MapScreenState extends State<MapScreen>
         onPointerDown: (_) => _setSheetInteracting(true),
         onPointerUp: (_) => _setSheetInteracting(false),
         onPointerCancel: (_) => _setSheetInteracting(false),
-        child: DraggableScrollableSheet(
-          controller: _sheetController,
-          // Keep the collapsed state slightly more visible while still letting it sit
-          // behind the glass navbar.
-          initialChildSize: 0.16,
-          minChildSize: 0.16,
-          maxChildSize: 0.85,
-          snap: true,
-          snapSizes: const [0.16, 0.24, 0.50, 0.85],
-          builder: (context, scrollController) {
-            final l10n = AppLocalizations.of(context)!;
-            final isDark = theme.brightness == Brightness.dark;
-            final radius = const BorderRadius.vertical(
-              top: Radius.circular(KubusRadius.xl),
-            );
-            final glassTint = scheme.surface.withValues(alpha: isDark ? 0.46 : 0.56);
-            return Container(
-              decoration: BoxDecoration(
-                borderRadius: radius,
-                border: Border.all(
-                  color: scheme.outlineVariant.withValues(alpha: 0.25),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: scheme.shadow.withValues(alpha: 0.18),
-                    blurRadius: 24,
-                    offset: const Offset(0, -6),
+        child: NotificationListener<DraggableScrollableNotification>(
+          onNotification: (notification) {
+            final blocking = notification.extent > (_nearbySheetMin + 0.01);
+            _setSheetBlocking(blocking, notification.extent);
+            return false;
+          },
+          child: DraggableScrollableSheet(
+            controller: _sheetController,
+            // Keep the collapsed state slightly more visible while still letting it sit
+            // behind the glass navbar.
+            initialChildSize: _nearbySheetMin,
+            minChildSize: _nearbySheetMin,
+            maxChildSize: _nearbySheetMax,
+            snap: true,
+            snapSizes: const [_nearbySheetMin, 0.24, 0.50, _nearbySheetMax],
+            builder: (context, scrollController) {
+              final l10n = AppLocalizations.of(context)!;
+              final isDark = theme.brightness == Brightness.dark;
+              final radius = const BorderRadius.vertical(
+                top: Radius.circular(KubusRadius.xl),
+              );
+              final glassTint = scheme.surface.withValues(alpha: isDark ? 0.46 : 0.56);
+              return GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onHorizontalDragStart: (_) {},
+                onHorizontalDragUpdate: (_) {},
+                onHorizontalDragEnd: (_) {},
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: radius,
+                    border: Border.all(
+                      color: scheme.outlineVariant.withValues(alpha: 0.25),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: scheme.shadow.withValues(alpha: 0.18),
+                        blurRadius: 24,
+                        offset: const Offset(0, -6),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: radius,
-                child: LiquidGlassPanel(
-                  padding: EdgeInsets.zero,
-                  margin: EdgeInsets.zero,
-                  borderRadius: BorderRadius.zero,
-                  showBorder: false,
-                  backgroundColor: glassTint,
-                  child: CustomScrollView(
-                    controller: scrollController,
-                    slivers: [
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Center(
-                                child: Container(
-                                  width: 48,
-                                  height: 4,
-                                  decoration: BoxDecoration(
-                                    color: scheme.outlineVariant.withValues(alpha: 0.85),
-                                    borderRadius: BorderRadius.circular(2),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              Row(
+                  child: ClipRRect(
+                    borderRadius: radius,
+                    child: LiquidGlassPanel(
+                      padding: EdgeInsets.zero,
+                      margin: EdgeInsets.zero,
+                      borderRadius: BorderRadius.zero,
+                      showBorder: false,
+                      backgroundColor: glassTint,
+                      child: CustomScrollView(
+                        controller: scrollController,
+                        slivers: [
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          l10n.mapNearbyArtTitle,
-                                          key: _tutorialNearbyTitleKey,
-                                          style: KubusTypography.textTheme.titleMedium
-                                              ?.copyWith(
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                        ),
-                                        Text(
+                                  Center(
+                                    child: Container(
+                                      width: 48,
+                                      height: 4,
+                                      decoration: BoxDecoration(
+                                        color: scheme.outlineVariant.withValues(alpha: 0.85),
+                                        borderRadius: BorderRadius.circular(2),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              l10n.mapNearbyArtTitle,
+                                              key: _tutorialNearbyTitleKey,
+                                              style: KubusTypography.textTheme.titleMedium
+                                                  ?.copyWith(
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                            Text(
                                               _travelModeEnabled
                                                   ? '${l10n.mapResultsDiscoveredLabel(
                                                       artworks.length,
@@ -4478,16 +4532,15 @@ class _MapScreenState extends State<MapScreen>
                                                       artworks.length,
                                                       (discoveryProgress * 100).round(),
                                                     ),
-                                          style: KubusTypography.textTheme.bodySmall
-                                              ?.copyWith(
-                                            color: scheme.onSurfaceVariant,
-                                          ),
+                                              style: KubusTypography.textTheme.bodySmall?.copyWith(
+                                                color: scheme.onSurfaceVariant,
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                      ],
-                                    ),
-                                  ),
-                                  _glassIconButton(
-                                    icon: Icons.radar,
+                                      ),
+                                      _glassIconButton(
+                                        icon: Icons.radar,
                                         tooltip: _travelModeEnabled
                                             ? l10n.mapTravelModeStatusTravellingTooltip
                                             : l10n.mapNearbyRadiusTooltip(
@@ -4495,120 +4548,122 @@ class _MapScreenState extends State<MapScreen>
                                               ),
                                         onTap:
                                             _travelModeEnabled ? null : _openMarkerRadiusDialog,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  _glassIconButton(
-                                    icon:
-                                        _useGridLayout ? Icons.view_list : Icons.grid_view,
-                                    tooltip: _useGridLayout
-                                        ? l10n.mapShowListViewTooltip
-                                        : l10n.mapShowGridViewTooltip,
-                                    onTap: () =>
-                                        setState(() => _useGridLayout = !_useGridLayout),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  PopupMenuButton<_ArtworkSort>(
-                                    tooltip: l10n.mapSortResultsTooltip,
-                                    onSelected: (value) => setState(() => _sort = value),
-                                    itemBuilder: (context) => [
-                                      for (final sort in _ArtworkSort.values)
-                                        PopupMenuItem(
-                                          value: sort,
-                                          child: Row(
-                                            children: [
-                                              Expanded(child: Text(sort.label(l10n))),
-                                              if (sort == _sort)
-                                                Icon(Icons.check, color: scheme.primary),
-                                            ],
-                                          ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      _glassIconButton(
+                                        icon:
+                                            _useGridLayout ? Icons.view_list : Icons.grid_view,
+                                        tooltip: _useGridLayout
+                                            ? l10n.mapShowListViewTooltip
+                                            : l10n.mapShowGridViewTooltip,
+                                        onTap: () =>
+                                            setState(() => _useGridLayout = !_useGridLayout),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      PopupMenuButton<_ArtworkSort>(
+                                        tooltip: l10n.mapSortResultsTooltip,
+                                        onSelected: (value) => setState(() => _sort = value),
+                                        itemBuilder: (context) => [
+                                          for (final sort in _ArtworkSort.values)
+                                            PopupMenuItem(
+                                              value: sort,
+                                              child: Row(
+                                                children: [
+                                                  Expanded(child: Text(sort.label(l10n))),
+                                                  if (sort == _sort)
+                                                    Icon(Icons.check, color: scheme.primary),
+                                                ],
+                                              ),
+                                            ),
+                                        ],
+                                        child: _glassIconButton(
+                                          icon: Icons.sort,
+                                          tooltip: l10n.mapSortResultsTooltip,
+                                          onTap: null,
                                         ),
+                                      ),
                                     ],
-                                    child: _glassIconButton(
-                                      icon: Icons.sort,
-                                      tooltip: l10n.mapSortResultsTooltip,
-                                      onTap: null,
-                                    ),
                                   ),
+                                  const SizedBox(height: 8),
                                 ],
                               ),
-                              const SizedBox(height: 8),
-                            ],
-                          ),
-                        ),
-                      ),
-                if (isLoading)
-                  const SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: Center(child: CircularProgressIndicator()),
-                  )
-                else if (artworks.isEmpty)
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: Padding(
-                      padding:
-                          EdgeInsets.only(bottom: KubusLayout.mainBottomNavBarHeight),
-                      child: _buildEmptyState(theme),
-                    ),
-                  )
-                else if (_useGridLayout)
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    sliver: SliverGrid(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final artwork = artworks[index];
-                          return _ArtworkListTile(
-                            artwork: artwork,
-                            currentPosition: _currentPosition,
-                            onOpenDetails: () => _openArtwork(artwork),
-                            onMarkDiscovered: () => _markAsDiscovered(artwork),
-                            dense: true,
-                          );
-                        },
-                        childCount: artworks.length,
-                      ),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        mainAxisSpacing: 12,
-                        crossAxisSpacing: 12,
-                        childAspectRatio: 0.92,
-                      ),
-                    ),
-                  )
-                else
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final artwork = artworks[index];
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: _ArtworkListTile(
-                              artwork: artwork,
-                              currentPosition: _currentPosition,
-                              onOpenDetails: () => _openArtwork(artwork),
-                              onMarkDiscovered: () => _markAsDiscovered(artwork),
                             ),
-                          );
-                        },
-                        childCount: artworks.length,
+                          ),
+                          if (isLoading)
+                            const SliverFillRemaining(
+                              hasScrollBody: false,
+                              child: Center(child: CircularProgressIndicator()),
+                            )
+                          else if (artworks.isEmpty)
+                            SliverFillRemaining(
+                              hasScrollBody: false,
+                              child: Padding(
+                                padding: EdgeInsets.only(
+                                    bottom: KubusLayout.mainBottomNavBarHeight),
+                                child: _buildEmptyState(theme),
+                              ),
+                            )
+                          else if (_useGridLayout)
+                            SliverPadding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              sliver: SliverGrid(
+                                delegate: SliverChildBuilderDelegate(
+                                  (context, index) {
+                                    final artwork = artworks[index];
+                                    return _ArtworkListTile(
+                                      artwork: artwork,
+                                      currentPosition: _currentPosition,
+                                      onOpenDetails: () => _openArtwork(artwork),
+                                      onMarkDiscovered: () => _markAsDiscovered(artwork),
+                                      dense: true,
+                                    );
+                                  },
+                                  childCount: artworks.length,
+                                ),
+                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 2,
+                                  mainAxisSpacing: 12,
+                                  crossAxisSpacing: 12,
+                                  childAspectRatio: 0.92,
+                                ),
+                              ),
+                            )
+                          else
+                            SliverPadding(
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                              sliver: SliverList(
+                                delegate: SliverChildBuilderDelegate(
+                                  (context, index) {
+                                    final artwork = artworks[index];
+                                    return Padding(
+                                      padding: const EdgeInsets.only(bottom: 12),
+                                      child: _ArtworkListTile(
+                                        artwork: artwork,
+                                        currentPosition: _currentPosition,
+                                        onOpenDetails: () => _openArtwork(artwork),
+                                        onMarkDiscovered: () => _markAsDiscovered(artwork),
+                                      ),
+                                    );
+                                  },
+                                  childCount: artworks.length,
+                                ),
+                              ),
+                            ),
+                          // Let content scroll above the navbar when expanded, while still
+                          // allowing the sheet itself to sit behind the glass navbar.
+                          const SliverToBoxAdapter(
+                            child: SizedBox(height: KubusLayout.mainBottomNavBarHeight),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                // Let content scroll above the navbar when expanded, while still
-                // allowing the sheet itself to sit behind the glass navbar.
-                const SliverToBoxAdapter(
-                  child: SizedBox(height: KubusLayout.mainBottomNavBarHeight),
                 ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
+              );
+            },
+          ),
+        ),
       ),
-    )
     );
   }
 
