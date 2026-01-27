@@ -829,7 +829,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final controller = _mapController;
     if (controller == null) return null;
 
-    const double maxDistance = 40.0;
+    const double maxDistance = 64.0;
     ArtMarker? best;
     double bestDistance = maxDistance;
 
