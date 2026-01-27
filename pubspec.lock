@@ -957,7 +957,7 @@ packages:
     source: hosted
     version: "0.25.0"
   maplibre_gl_web:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: maplibre_gl_web
       sha256: af0e48bf96e8dd99f8b958a1953126971eb8a0527b9735441d4f24df3913f5a2

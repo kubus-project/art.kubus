@@ -48,6 +48,8 @@ dependencies:
   location: ^8.0.1
   latlong2: ^0.9.1
   maplibre_gl: ^0.25.0
+  # Explicit web implementation registration hardening (release cache edge-cases).
+  maplibre_gl_web: ^0.25.0
   shared_preferences: ^2.5.3
   flutter_secure_storage: ^8.0.0
   local_auth: ^2.1.5
