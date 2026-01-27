@@ -744,6 +744,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       );
 
       if (features.isEmpty) {
+        final fallbackMarker = await _fallbackPickMarkerAtPoint(point);
+        if (fallbackMarker != null) {
+          _handleMarkerTap(fallbackMarker);
+          unawaited(_syncMapMarkers(themeProvider: themeProvider));
+          _queueOverlayAnchorRefresh();
+          return;
+        }
         setState(() {
           _selectedArtwork = null;
           _selectedExhibition = null;
@@ -796,7 +803,42 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       if (kDebugMode) {
         AppConfig.debugPrint('DesktopMapScreen: queryRenderedFeatures failed: $e');
       }
+      final fallbackMarker = await _fallbackPickMarkerAtPoint(point);
+      if (fallbackMarker == null) return;
+      _handleMarkerTap(fallbackMarker);
+      unawaited(_syncMapMarkers(themeProvider: themeProvider));
+      _queueOverlayAnchorRefresh();
     }
+  }
+
+  Future<ArtMarker?> _fallbackPickMarkerAtPoint(
+    math.Point<double> point,
+  ) async {
+    final controller = _mapController;
+    if (controller == null) return null;
+
+    const double maxDistance = 40.0;
+    ArtMarker? best;
+    double bestDistance = maxDistance;
+
+    for (final marker in _artMarkers) {
+      try {
+        final screen = await controller.toScreenLocation(
+          ml.LatLng(marker.position.latitude, marker.position.longitude),
+        );
+        final dx = screen.x.toDouble() - point.x;
+        final dy = screen.y.toDouble() - point.y;
+        final distance = math.sqrt(dx * dx + dy * dy);
+        if (distance <= bestDistance) {
+          bestDistance = distance;
+          best = marker;
+        }
+      } catch (_) {
+        // Ignore projection failures during style transitions.
+      }
+    }
+
+    return best;
   }
 
   Future<void> _syncUserLocation({required ThemeProvider themeProvider}) async {
