@@ -55,6 +55,7 @@ import 'core/app_navigator.dart';
 import 'core/shell_entry_screen.dart';
 import 'core/url_strategy.dart';
 import 'core/deep_link_bootstrap_screen.dart';
+import 'core/maplibre_web_registration.dart';
 import 'main_app.dart';
   import 'screens/auth/sign_in_screen.dart';
   import 'screens/auth/register_screen.dart';
@@ -120,6 +121,11 @@ void main() {
         // hash-based strategy and a direct visit to /marker/<id> is treated as
         // route '/' (Home).
         configureUrlStrategy();
+
+        // Web hardening: ensure MapLibre's web implementation is registered.
+        // Without this, some release deployments can end up using the
+        // method-channel implementation and throw "TargetPlatform.windows...".
+        ensureMapLibreWebRegistration();
 
         // Now forward Flutter framework errors to this zone so the runZonedGuarded
         // error handler receives them.
