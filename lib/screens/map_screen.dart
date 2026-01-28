@@ -2501,20 +2501,17 @@ class _MapScreenState extends State<MapScreen>
         ),
       );
       final hitboxScale = kIsWeb ? 1.35 : 1.0;
+      // MapLibre requires zoom expressions at top level of interpolate/step
       final hitboxRadius = <dynamic>[
-        '*',
-        <dynamic>[
-          'interpolate',
-          ['linear'],
-          ['zoom'],
-          3,
-          10,
-          14,
-          18,
-          24,
-          26,
-        ],
-        hitboxScale,
+        'interpolate',
+        ['linear'],
+        ['zoom'],
+        3,
+        10 * hitboxScale,
+        14,
+        18 * hitboxScale,
+        24,
+        26 * hitboxScale,
       ];
       await controller.addCircleLayer(
         _markerSourceId,
