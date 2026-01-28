@@ -21,6 +21,9 @@ class SearchService {
       : _backendApi = backendApi ?? BackendApiService();
 
   final BackendApiService _backendApi;
+  
+  /// Request versioning to cancel stale results when user types fast.
+  int _requestVersion = 0;
 
   Future<List<MapSearchSuggestion>> fetchSuggestions({
     required BuildContext context,
@@ -30,6 +33,9 @@ class SearchService {
   }) async {
     final trimmed = query.trim();
     if (trimmed.length < 2) return const [];
+
+    // Increment version for this request
+    final myVersion = ++_requestVersion;
 
     // Capture providers before async gaps to avoid context-after-await lints.
     ArtworkProvider? artworkProvider;
@@ -44,10 +50,19 @@ class SearchService {
     List<Map<String, dynamic>> normalized = [];
     try {
       final raw = await _backendApi.getSearchSuggestions(query: trimmed, limit: limit);
+      
+      // Check if this request is still current (user may have typed more)
+      if (myVersion != _requestVersion) return const [];
+      
       normalized = _backendApi.normalizeSearchSuggestions(raw);
     } catch (_) {
+      // Check staleness even on error path
+      if (myVersion != _requestVersion) return const [];
       normalized = <Map<String, dynamic>>[];
     }
+
+    // Final staleness check before returning
+    if (myVersion != _requestVersion) return const [];
 
     // Apply scope filters
     final allowedTypes = _allowedTypesForScope(scope);
