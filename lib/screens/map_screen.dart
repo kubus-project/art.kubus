@@ -3476,8 +3476,9 @@ class _MapScreenState extends State<MapScreen>
                                                     baseColor, scheme, marker),
                                             loadingBuilder:
                                                 (context, child, progress) {
-                                              if (progress == null)
+                                              if (progress == null) {
                                                 return child;
+                                              }
                                               return Container(
                                                 color: baseColor.withValues(
                                                     alpha: 0.12),

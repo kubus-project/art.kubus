@@ -4185,8 +4185,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (_travelModeEnabled) {
       final loadedBounds = _loadedTravelBounds;
       if (loadedBounds == null) return;
-      if (!MapViewportUtils.containsPoint(loadedBounds, marker.position))
+      if (!MapViewportUtils.containsPoint(loadedBounds, marker.position)) {
         return;
+      }
     } else {
       final withinRadius =
           _distance.as(LengthUnit.Kilometer, _cameraCenter, marker.position) <=
