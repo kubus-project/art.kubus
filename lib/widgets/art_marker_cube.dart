@@ -8,6 +8,44 @@ import '../models/art_marker.dart';
 import '../utils/app_color_utils.dart';
 import '../utils/design_tokens.dart';
 import '../utils/kubus_color_roles.dart';
+import 'rotatable_cube_painter.dart';
+
+// Re-export rotatable cube components for convenience.
+export 'rotatable_cube_painter.dart'
+    show
+        RotatableCubeMarker,
+        RotatableCubePainter,
+        RotatableCubePalette,
+        RotatableCubeStyle,
+        RotatableCubeTokens,
+        CubeFaceVisibility,
+        CubeFace;
+
+/// Design tokens for cube marker sizing.
+///
+/// For camera-relative 3D markers, use [RotatableCubeTokens] instead.
+class CubeMarkerTokens {
+  CubeMarkerTokens._();
+
+  /// Base size for static isometric cube markers at zoom 15.
+  /// This is the size used for pre-rendered PNG icons.
+  static const double staticSizeAtZoom15 = 46.0;
+
+  /// Base size for real-time rotatable cube markers at zoom 15.
+  /// Reduced by ~12% from static markers for a cleaner overlay appearance.
+  static const double rotatableSizeAtZoom15 =
+      RotatableCubeTokens.baseSizeAtZoom15;
+
+  /// Width of the pre-rendered marker PNG.
+  static const double pngWidth = 56.0;
+
+  /// Height of the pre-rendered marker PNG.
+  static const double pngHeight = 72.0;
+
+  /// Computes rotatable cube size for a given zoom level.
+  static double sizeForZoom(double zoom) =>
+      RotatableCubeTokens.sizeForZoom(zoom);
+}
 
 @immutable
 class CubeMarkerStyle {
@@ -51,7 +89,8 @@ class CubeMarkerStyle {
 
     return CubeMarkerStyle(
       shadowColor: shadow,
-      iconBackgroundColor: scheme.surface.withValues(alpha: isDark ? 0.92 : 0.96),
+      iconBackgroundColor:
+          scheme.surface.withValues(alpha: isDark ? 0.92 : 0.96),
       iconShadowColor: shadow.withValues(alpha: 0.16),
       edgeColor: shadow.withValues(alpha: 0.35),
       highlightColor: AppColorUtils.shiftLightness(
@@ -145,8 +184,8 @@ class ArtMarkerCube extends StatelessWidget {
               bottom: 0,
               child: Transform(
                 alignment: Alignment.center,
-                transform:
-                    Matrix4.identity()..scaleByDouble(1.0, 0.35, 1.0, 1.0),
+                transform: Matrix4.identity()
+                  ..scaleByDouble(1.0, 0.35, 1.0, 1.0),
                 child: Container(
                   width: size * 0.72,
                   height: size * 0.72,
@@ -172,8 +211,8 @@ class ArtMarkerCube extends StatelessWidget {
                 bottom: size * 0.02,
                 child: Transform(
                   alignment: Alignment.center,
-                  transform:
-                      Matrix4.identity()..scaleByDouble(1.0, 0.32, 1.0, 1.0),
+                  transform: Matrix4.identity()
+                    ..scaleByDouble(1.0, 0.32, 1.0, 1.0),
                   child: Container(
                     width: size * 0.9,
                     height: size * 0.9,
@@ -251,7 +290,8 @@ class ArtMarkerClusterCube extends StatelessWidget {
             ? CubeMarkerStyle.hoveredScale
             : 1.0;
 
-    final palette = _CubePalette.fromBase(baseColor, edgeColor: style.edgeColor);
+    final palette =
+        _CubePalette.fromBase(baseColor, edgeColor: style.edgeColor);
     final cubeBodyHeight = size * 0.85;
     final totalHeight = size * 1.15;
     final label = count > 99 ? '99+' : '$count';
@@ -274,8 +314,8 @@ class ArtMarkerClusterCube extends StatelessWidget {
               bottom: 0,
               child: Transform(
                 alignment: Alignment.center,
-                transform:
-                    Matrix4.identity()..scaleByDouble(1.0, 0.35, 1.0, 1.0),
+                transform: Matrix4.identity()
+                  ..scaleByDouble(1.0, 0.35, 1.0, 1.0),
                 child: Container(
                   width: size * 0.72,
                   height: size * 0.72,
@@ -283,7 +323,8 @@ class ArtMarkerClusterCube extends StatelessWidget {
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        style.shadowColor.withValues(alpha: showGlow ? 0.30 : 0.18),
+                        style.shadowColor
+                            .withValues(alpha: showGlow ? 0.30 : 0.18),
                         style.shadowColor.withValues(alpha: 0.07),
                         Colors.transparent,
                       ],
@@ -298,8 +339,8 @@ class ArtMarkerClusterCube extends StatelessWidget {
                 bottom: size * 0.02,
                 child: Transform(
                   alignment: Alignment.center,
-                  transform:
-                      Matrix4.identity()..scaleByDouble(1.0, 0.32, 1.0, 1.0),
+                  transform: Matrix4.identity()
+                    ..scaleByDouble(1.0, 0.32, 1.0, 1.0),
                   child: Container(
                     width: size * 0.9,
                     height: size * 0.9,
@@ -559,8 +600,7 @@ class _IsometricCubePainter extends CustomPainter {
     );
 
     // Icon background (white ellipse matching isometric perspective)
-    final Paint circlePaint = Paint()
-      ..color = style.iconBackgroundColor;
+    final Paint circlePaint = Paint()..color = style.iconBackgroundColor;
     canvas.drawOval(
       Rect.fromCenter(
         center: topCenter,
@@ -943,10 +983,18 @@ Color _normalizeBase(Color color) {
 ///
 /// This keeps marker rendering native (no Flutter widget markers on top of the
 /// map) while preserving the exact Kubus cube styling.
+///
+/// For real-time camera-relative markers, use [RotatableCubeMarker] instead.
 class ArtMarkerCubeIconRenderer {
-  static const double markerCubeSizeAtZoom15 = 46;
-  static const double markerWidthAtZoom15 = 56;
-  static const double markerHeightAtZoom15 = 72;
+  /// @deprecated Use [CubeMarkerTokens.staticSizeAtZoom15] instead.
+  static const double markerCubeSizeAtZoom15 =
+      CubeMarkerTokens.staticSizeAtZoom15;
+
+  /// @deprecated Use [CubeMarkerTokens.pngWidth] instead.
+  static const double markerWidthAtZoom15 = CubeMarkerTokens.pngWidth;
+
+  /// @deprecated Use [CubeMarkerTokens.pngHeight] instead.
+  static const double markerHeightAtZoom15 = CubeMarkerTokens.pngHeight;
 
   /// Renders a marker as a full 3D isometric cube when [isIsometric] is true,
   /// or as a flat top-down view (just the top face with shadow) when false.
@@ -1031,7 +1079,8 @@ class ArtMarkerCubeIconRenderer {
     // Flat marker is a square (top-down view of the cube)
     const double size = 52.0;
     const double height = 52.0;
-    final palette = _CubePalette.fromBase(baseColor, edgeColor: style.edgeColor);
+    final palette =
+        _CubePalette.fromBase(baseColor, edgeColor: style.edgeColor);
 
     return _renderPng(
       width: size,
@@ -1228,7 +1277,8 @@ class ArtMarkerCubeIconRenderer {
     );
     final showGlow = count >= 10;
     final label = count > 99 ? '99+' : '$count';
-    final palette = _CubePalette.fromBase(baseColor, edgeColor: style.edgeColor);
+    final palette =
+        _CubePalette.fromBase(baseColor, edgeColor: style.edgeColor);
     final labelStyle = KubusTextStyles.badgeCount.copyWith(
       color: palette.topAccent,
     );
@@ -1269,7 +1319,8 @@ class ArtMarkerCubeIconRenderer {
     final canvas = Canvas(recorder);
     final logicalSize = Size(width, height);
 
-    final pr = pixelRatio.isFinite ? pixelRatio.clamp(1.0, 4.0).toDouble() : 2.0;
+    final pr =
+        pixelRatio.isFinite ? pixelRatio.clamp(1.0, 4.0).toDouble() : 2.0;
     canvas.scale(pr, pr);
     paint(canvas, logicalSize);
 
@@ -1326,7 +1377,8 @@ class ArtMarkerCubeIconRenderer {
 
     final cubeBodyHeight = cubeSize * 0.85;
     final cubeW = cubeSize * 0.88;
-    final cubeOffset = Offset((width - cubeW) / 2, height - cubeSize * 0.12 - cubeBodyHeight);
+    final cubeOffset =
+        Offset((width - cubeW) / 2, height - cubeSize * 0.12 - cubeBodyHeight);
 
     canvas.save();
     canvas.translate(cubeOffset.dx, cubeOffset.dy);
