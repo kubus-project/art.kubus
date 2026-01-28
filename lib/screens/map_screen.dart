@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
@@ -161,6 +161,9 @@ class _MapScreenState extends State<MapScreen>
   bool _mobileLocationStreamFailed = false;
   bool _programmaticCameraMove = false;
   double _lastBearing = 0.0;
+  double _lastPitch = 0.0;
+  DateTime _lastCameraUpdateTime = DateTime.now();
+  static const Duration _cameraUpdateThrottle = Duration(milliseconds: 16); // ~60fps
   bool _styleInitialized = false;
   bool _styleInitializationInProgress = false;
   final Set<String> _registeredMapImages = <String>{};
@@ -377,7 +380,8 @@ class _MapScreenState extends State<MapScreen>
     if (!AppConfig.isFeatureEnabled('mapTravelMode')) return;
     try {
       final prefs = await SharedPreferences.getInstance();
-      final enabled = prefs.getBool(PreferenceKeys.mapTravelModeEnabledV1) ?? false;
+      final enabled =
+          prefs.getBool(PreferenceKeys.mapTravelModeEnabledV1) ?? false;
       if (!mounted) return;
       setState(() {
         _travelModeEnabled = enabled;
@@ -441,7 +445,8 @@ class _MapScreenState extends State<MapScreen>
       // Best-effort.
     }
 
-    unawaited(_applyIsometricCamera(enabled: enabled, adjustZoomForScale: true));
+    unawaited(
+        _applyIsometricCamera(enabled: enabled, adjustZoomForScale: true));
   }
 
   Future<void> _maybeShowInteractiveMapTutorial() async {
@@ -449,7 +454,8 @@ class _MapScreenState extends State<MapScreen>
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      final seen = prefs.getBool(PreferenceKeys.mapOnboardingMobileSeenV2) ?? false;
+      final seen =
+          prefs.getBool(PreferenceKeys.mapOnboardingMobileSeenV2) ?? false;
       if (seen) return;
 
       // Wait until the UI is laid out so we can compute highlight rects.
@@ -584,7 +590,8 @@ class _MapScreenState extends State<MapScreen>
         _locationServiceRequested = p2;
       });
     } catch (e) {
-      AppConfig.debugPrint('MapScreen: failed to load persisted permission flags: $e');
+      AppConfig.debugPrint(
+          'MapScreen: failed to load persisted permission flags: $e');
     }
   }
 
@@ -608,7 +615,8 @@ class _MapScreenState extends State<MapScreen>
       );
     }
     if (_webPositionSubscription != null) {
-      unawaited(_webPositionSubscription!.cancel().catchError((_) {/* ignore */}));
+      unawaited(
+          _webPositionSubscription!.cancel().catchError((_) {/* ignore */}));
     }
     _proximityCheckTimer?.cancel();
     _markerRefreshDebouncer.dispose();
@@ -727,7 +735,8 @@ class _MapScreenState extends State<MapScreen>
         (_) => _checkProximityNotifications(),
       );
     } catch (e) {
-      AppConfig.debugPrint('MapScreen: failed to initialize AR integration: $e');
+      AppConfig.debugPrint(
+          'MapScreen: failed to initialize AR integration: $e');
     }
   }
 
@@ -763,7 +772,8 @@ class _MapScreenState extends State<MapScreen>
 
     _didOpenInitialMarker = true;
 
-    final existing = _artMarkers.where((m) => m.id == markerId).toList(growable: false);
+    final existing =
+        _artMarkers.where((m) => m.id == markerId).toList(growable: false);
     if (existing.isNotEmpty) {
       _showArtMarkerDialog(existing.first);
       return;
@@ -832,7 +842,8 @@ class _MapScreenState extends State<MapScreen>
       return;
     }
 
-    final existing = _artMarkers.where((m) => m.id == id).toList(growable: false);
+    final existing =
+        _artMarkers.where((m) => m.id == id).toList(growable: false);
     if (existing.isNotEmpty) {
       _showArtMarkerDialog(existing.first);
       return;
@@ -870,7 +881,8 @@ class _MapScreenState extends State<MapScreen>
     if (_travelModeEnabled && queryBounds == null) {
       final visible = await _getVisibleGeoBounds();
       if (visible != null) {
-        final effectiveBucket = bucket ?? MapViewportUtils.zoomBucket(_lastZoom);
+        final effectiveBucket =
+            bucket ?? MapViewportUtils.zoomBucket(_lastZoom);
         queryBounds = MapViewportUtils.expandBounds(
           visible,
           MapViewportUtils.paddingFractionForZoomBucket(effectiveBucket),
@@ -917,7 +929,8 @@ class _MapScreenState extends State<MapScreen>
 
       final String? selectedIdBeforeSetState = _selectedMarkerId;
       ArtMarker? resolvedSelected;
-      if (selectedIdBeforeSetState != null && selectedIdBeforeSetState.isNotEmpty) {
+      if (selectedIdBeforeSetState != null &&
+          selectedIdBeforeSetState.isNotEmpty) {
         for (final marker in merged) {
           if (marker.id == selectedIdBeforeSetState) {
             resolvedSelected = marker;
@@ -968,7 +981,8 @@ class _MapScreenState extends State<MapScreen>
       if (!marker.hasValidPosition) return;
       if (_travelModeEnabled) {
         final bounds = _loadedTravelBounds;
-        if (bounds == null || !MapViewportUtils.containsPoint(bounds, marker.position)) {
+        if (bounds == null ||
+            !MapViewportUtils.containsPoint(bounds, marker.position)) {
           return;
         }
       } else if (_currentPosition != null) {
@@ -1215,7 +1229,8 @@ class _MapScreenState extends State<MapScreen>
         distance: distance,
       )
           .catchError((e) {
-        AppConfig.debugPrint('MapScreen: showARProximityNotification failed: $e');
+        AppConfig.debugPrint(
+            'MapScreen: showARProximityNotification failed: $e');
       });
     }
 
@@ -1309,7 +1324,8 @@ class _MapScreenState extends State<MapScreen>
     if (controller == null) return;
     if (!_styleInitialized) return;
 
-    final baseColor = _resolveArtMarkerColor(marker, context.read<ThemeProvider>());
+    final baseColor =
+        _resolveArtMarkerColor(marker, context.read<ThemeProvider>());
 
     try {
       final point = await controller.toScreenLocation(
@@ -1626,7 +1642,8 @@ class _MapScreenState extends State<MapScreen>
       );
 
       if (marker != null) {
-        AppConfig.debugPrint('MapScreen: marker created and saved: ${marker.id}');
+        AppConfig.debugPrint(
+            'MapScreen: marker created and saved: ${marker.id}');
 
         // Keep the management surface in sync even when markers are created
         // outside of ManageMarkersScreen.
@@ -1661,7 +1678,8 @@ class _MapScreenState extends State<MapScreen>
         });
         return true;
       } else {
-        AppConfig.debugPrint('MapScreen: failed to create marker (returned null)');
+        AppConfig.debugPrint(
+            'MapScreen: failed to create marker (returned null)');
       }
 
       return false;
@@ -1676,7 +1694,8 @@ class _MapScreenState extends State<MapScreen>
       AppConfig.debugPrint('MapScreen: duplicate marker prevented: $e');
       return false;
     } catch (e) {
-      AppConfig.debugPrint('MapScreen: Error creating marker at current location: $e');
+      AppConfig.debugPrint(
+          'MapScreen: Error creating marker at current location: $e');
       return false;
     }
   }
@@ -1882,9 +1901,7 @@ class _MapScreenState extends State<MapScreen>
     }
     if (_mobileLocationSubscription != null) {
       unawaited(
-        _mobileLocationSubscription!
-            .cancel()
-            .catchError((_) {/* ignore */}),
+        _mobileLocationSubscription!.cancel().catchError((_) {/* ignore */}),
       );
     }
     try {
@@ -1935,7 +1952,8 @@ class _MapScreenState extends State<MapScreen>
         );
       });
     } catch (e) {
-      AppConfig.debugPrint('MapScreen: unable to start web location stream: $e');
+      AppConfig.debugPrint(
+          'MapScreen: unable to start web location stream: $e');
     }
   }
 
@@ -1974,17 +1992,24 @@ class _MapScreenState extends State<MapScreen>
     }
 
     _programmaticCameraMove = true;
-    await controller.animateCamera(
-      ml.CameraUpdate.newCameraPosition(
-        ml.CameraPosition(
-          target: target,
-          zoom: targetZoom,
-          bearing: targetRotation,
-          tilt: targetPitch,
+    try {
+      await controller.animateCamera(
+        ml.CameraUpdate.newCameraPosition(
+          ml.CameraPosition(
+            target: target,
+            zoom: targetZoom,
+            bearing: targetRotation,
+            tilt: targetPitch,
+          ),
         ),
-      ),
-      duration: duration,
-    );
+        duration: duration,
+      );
+    } catch (e, st) {
+      AppConfig.debugPrint('MapScreen: animateCamera failed: $e');
+      if (kDebugMode) {
+        AppConfig.debugPrint('MapScreen: animateCamera stack: $st');
+      }
+    }
   }
 
   void _scheduleEnsureActiveMarkerOverlayInView({
@@ -2046,7 +2071,8 @@ class _MapScreenState extends State<MapScreen>
       );
       if (!mounted) return;
       setState(() {
-        _selectedMarkerAnchor = Offset(screen.x.toDouble(), screen.y.toDouble());
+        _selectedMarkerAnchor =
+            Offset(screen.x.toDouble(), screen.y.toDouble());
       });
     } catch (_) {
       // Ignore projection failures during style transitions.
@@ -2183,8 +2209,8 @@ class _MapScreenState extends State<MapScreen>
             const SizedBox(width: 8),
             Text(
               l10n.mapArtDiscoveredTitle,
-              style:
-                  KubusTypography.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              style: KubusTypography.textTheme.titleLarge
+                  ?.copyWith(fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -2211,16 +2237,16 @@ class _MapScreenState extends State<MapScreen>
             const SizedBox(height: 16),
             Text(
               artwork.title,
-              style:
-                  KubusTypography.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              style: KubusTypography.textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Center(
               child: ArtworkCreatorByline(
                 artwork: artwork,
-                style:
-                    KubusTypography.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                style: KubusTypography.textTheme.bodySmall
+                    ?.copyWith(color: scheme.onSurfaceVariant),
                 maxLines: 1,
               ),
             ),
@@ -2252,15 +2278,16 @@ class _MapScreenState extends State<MapScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child:
-                Text(l10n.commonContinueExploring, style: KubusTypography.textTheme.labelLarge),
+            child: Text(l10n.commonContinueExploring,
+                style: KubusTypography.textTheme.labelLarge),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.of(context).pop();
               openArtwork(context, artwork.id, source: 'map_discovery_dialog');
             },
-            child: Text(l10n.commonViewDetails, style: KubusTypography.textTheme.labelLarge),
+            child: Text(l10n.commonViewDetails,
+                style: KubusTypography.textTheme.labelLarge),
           ),
         ],
       ),
@@ -2302,16 +2329,24 @@ class _MapScreenState extends State<MapScreen>
                   child: SizedBox.expand(),
                 ),
               ),
-            _buildTopOverlays(theme, taskProvider), // This will likely be refactored into _buildSearchAndFilters()
-            _buildPrimaryControls(theme), // This will likely be refactored into _buildSearchAndFilters()
-            _buildBottomSheet( // This will likely be refactored into _buildDraggablePanel()
+            // 3D marker overlay renders Flutter widgets on top of the map
+            // Only active when isometric view is enabled
+            _build3DMarkerOverlay(themeProvider),
+            _buildTopOverlays(theme,
+                taskProvider), // This will likely be refactored into _buildSearchAndFilters()
+            _buildPrimaryControls(
+                theme), // This will likely be refactored into _buildSearchAndFilters()
+            _buildBottomSheet(
+              // This will likely be refactored into _buildDraggablePanel()
               theme,
               filteredArtworks,
               discoveryProgress,
               isLoadingArtworks,
             ),
             _buildMarkerOverlay(themeProvider),
-            if (_isSearching) _buildSuggestionSheet(theme), // This will likely be refactored into _buildSearchAndFilters()
+            if (_isSearching)
+              _buildSuggestionSheet(
+                  theme), // This will likely be refactored into _buildSearchAndFilters()
             if (_showMapTutorial)
               Builder(
                 builder: (context) {
@@ -2387,11 +2422,18 @@ class _MapScreenState extends State<MapScreen>
         }
       },
       onCameraMove: (position) {
-        _cameraCenter = LatLng(position.target.latitude, position.target.longitude);
+        _cameraCenter =
+            LatLng(position.target.latitude, position.target.longitude);
         _lastZoom = position.zoom;
         _lastBearing = position.bearing;
+        _lastPitch = position.tilt;
         final bucket = MapViewportUtils.zoomBucket(position.zoom);
-        if (bucket != _renderZoomBucket) {
+        // Throttle setState for 3D overlay repaints to ~60fps max
+        final now = DateTime.now();
+        final shouldUpdate = _isometricViewEnabled &&
+            now.difference(_lastCameraUpdateTime) > _cameraUpdateThrottle;
+        if (bucket != _renderZoomBucket || shouldUpdate) {
+          _lastCameraUpdateTime = now;
           setState(() => _renderZoomBucket = bucket);
         }
         final hasGesture = !_programmaticCameraMove;
@@ -2573,20 +2615,22 @@ class _MapScreenState extends State<MapScreen>
 
   double _markerPixelRatio() {
     if (kIsWeb) return 1.0;
-    final dpr = WidgetsBinding.instance.platformDispatcher.implicitView?.devicePixelRatio ?? 1.0;
+    final dpr = WidgetsBinding
+            .instance.platformDispatcher.implicitView?.devicePixelRatio ??
+        1.0;
     return dpr.clamp(1.0, 2.5);
   }
 
-  Future<void> _applyIsometricCamera({required bool enabled, bool adjustZoomForScale = false}) async {
+  Future<void> _applyIsometricCamera(
+      {required bool enabled, bool adjustZoomForScale = false}) async {
     final controller = _mapController;
     if (controller == null) return;
 
     final shouldEnable =
         enabled && AppConfig.isFeatureEnabled('mapIsometricView');
     final targetPitch = shouldEnable ? 54.736 : 0.0;
-    final targetBearing = shouldEnable
-        ? (_lastBearing.abs() < 1.0 ? 18.0 : _lastBearing)
-        : 0.0;
+    final targetBearing =
+        shouldEnable ? (_lastBearing.abs() < 1.0 ? 18.0 : _lastBearing) : 0.0;
     double targetZoom = _lastZoom;
     if (adjustZoomForScale) {
       const scale = 1.2;
@@ -2766,20 +2810,20 @@ class _MapScreenState extends State<MapScreen>
         if (cluster.markers.length == 1) {
           final marker = cluster.markers.first;
           final feature = await _markerFeatureFor(
-              marker: marker,
-              themeProvider: themeProvider,
-              scheme: scheme,
-              roles: roles,
-              isDark: isDark,
-            );
+            marker: marker,
+            themeProvider: themeProvider,
+            scheme: scheme,
+            roles: roles,
+            isDark: isDark,
+          );
           if (!mounted) return;
           if (feature.isNotEmpty) features.add(feature);
         } else {
           final feature = await _clusterFeatureFor(
-              cluster: cluster,
-              scheme: scheme,
-              isDark: isDark,
-            );
+            cluster: cluster,
+            scheme: scheme,
+            isDark: isDark,
+          );
           if (!mounted) return;
           if (feature.isNotEmpty) features.add(feature);
         }
@@ -2787,12 +2831,12 @@ class _MapScreenState extends State<MapScreen>
     } else {
       for (final marker in visibleMarkers) {
         final feature = await _markerFeatureFor(
-            marker: marker,
-            themeProvider: themeProvider,
-            scheme: scheme,
-            roles: roles,
-            isDark: isDark,
-          );
+          marker: marker,
+          themeProvider: themeProvider,
+          scheme: scheme,
+          roles: roles,
+          isDark: isDark,
+        );
         if (!mounted) return;
         if (feature.isNotEmpty) features.add(feature);
       }
@@ -2929,6 +2973,140 @@ class _MapScreenState extends State<MapScreen>
     };
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // 3D Marker Overlay - Real-time Flutter overlay with RotatableCubeMarker
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// Builds a Flutter overlay that renders 3D cube markers on top of the map.
+  /// Each marker is projected to screen coordinates and responds to camera
+  /// bearing/pitch in real-time.
+  Widget _build3DMarkerOverlay(ThemeProvider themeProvider) {
+    // Only render when isometric view is enabled
+    if (!_isometricViewEnabled) return const SizedBox.shrink();
+
+    final controller = _mapController;
+    if (controller == null || !_styleInitialized) {
+      return const SizedBox.shrink();
+    }
+
+    // Filter to visible markers only
+    final visibleMarkers = _artMarkers.where((m) {
+      return _markerLayerVisibility[m.type] ?? true;
+    }).toList();
+
+    // Limit marker count to prevent performance issues
+    const int maxOverlayMarkers = 50;
+    final markersToRender = visibleMarkers.length > maxOverlayMarkers
+        ? visibleMarkers.take(maxOverlayMarkers).toList()
+        : visibleMarkers;
+
+    return Positioned.fill(
+      child: IgnorePointer(
+        ignoring: false,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return FutureBuilder<List<_Marker3DScreenData>>(
+              // Use a key that changes with camera state to trigger rebuild
+              key: ValueKey('3d_overlay_${_lastBearing.toStringAsFixed(1)}_${_lastPitch.toStringAsFixed(1)}'),
+              future: _projectMarkersToScreen(
+                markersToRender,
+                controller,
+                constraints,
+              ),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+
+                final projectedMarkers = snapshot.data!;
+                return Stack(
+                  children: projectedMarkers.map((data) {
+                    return _build3DMarkerWidget(data, themeProvider);
+                  }).toList(),
+                );
+              },
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  /// Projects markers to screen coordinates, culling those outside viewport.
+  Future<List<_Marker3DScreenData>> _projectMarkersToScreen(
+    List<ArtMarker> markers,
+    ml.MapLibreMapController controller,
+    BoxConstraints constraints,
+  ) async {
+    final List<_Marker3DScreenData> results = [];
+    // Margin outside viewport to keep markers that are partially visible
+    const double cullMargin = 60.0;
+
+    for (final marker in markers) {
+      try {
+        final screen = await controller.toScreenLocation(
+          ml.LatLng(marker.position.latitude, marker.position.longitude),
+        );
+        final x = screen.x.toDouble();
+        final y = screen.y.toDouble();
+
+        // Cull markers outside viewport + margin
+        if (x < -cullMargin ||
+            y < -cullMargin ||
+            x > constraints.maxWidth + cullMargin ||
+            y > constraints.maxHeight + cullMargin) {
+          continue;
+        }
+
+        results.add(_Marker3DScreenData(
+          marker: marker,
+          screenX: x,
+          screenY: y,
+        ));
+      } catch (_) {
+        // Skip markers that fail projection (e.g., during style transitions)
+      }
+    }
+
+    return results;
+  }
+
+  /// Builds a single 3D marker widget at its projected screen position.
+  Widget _build3DMarkerWidget(
+    _Marker3DScreenData data,
+    ThemeProvider themeProvider,
+  ) {
+    final marker = data.marker;
+    final isSelected = _selectedMarkerId == marker.id;
+    final baseColor = _resolveArtMarkerColor(marker, themeProvider);
+    final icon = _resolveArtMarkerIcon(marker.type);
+
+    // Compute marker size based on zoom
+    final markerSize = RotatableCubeTokens.sizeForZoom(_lastZoom);
+
+    return Positioned(
+      // Center the marker on its projected point
+      left: data.screenX - (markerSize / 2),
+      top: data.screenY - (markerSize / 2),
+      child: GestureDetector(
+        onTap: () => _handleMarkerTap(marker),
+        behavior: HitTestBehavior.opaque,
+        child: SizedBox(
+          width: markerSize,
+          height: markerSize,
+          child: RotatableCubeMarker(
+            baseColor: baseColor,
+            icon: icon,
+            bearing: _lastBearing,
+            pitch: _lastPitch,
+            zoom: _lastZoom,
+            isSelected: isSelected,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildMarkerOverlay(ThemeProvider themeProvider) {
     final marker = _selectedMarkerData;
     final selectionKey = _selectedMarkerAt?.millisecondsSinceEpoch ?? 0;
@@ -2968,14 +3146,16 @@ class _MapScreenState extends State<MapScreen>
                   child: SlideTransition(
                     position: slide,
                     child: ScaleTransition(
-                      scale: Tween<double>(begin: 0.985, end: 1.0).animate(curved),
+                      scale:
+                          Tween<double>(begin: 0.985, end: 1.0).animate(curved),
                       child: child,
                     ),
                   ),
                 );
               },
               child: marker == null
-                  ? const SizedBox.shrink(key: ValueKey('marker_overlay_hidden'))
+                  ? const SizedBox.shrink(
+                      key: ValueKey('marker_overlay_hidden'))
                   : Stack(
                       key: animationKey,
                       children: [
@@ -3043,14 +3223,17 @@ class _MapScreenState extends State<MapScreen>
 
     final artwork = marker.isExhibitionMarker
         ? null
-        : context.read<ArtworkProvider>().getArtworkById(marker.artworkId ?? '');
+        : context
+            .read<ArtworkProvider>()
+            .getArtworkById(marker.artworkId ?? '');
 
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final baseColor = _resolveArtMarkerColor(marker, themeProvider);
-    final actionFg = ThemeData.estimateBrightnessForColor(baseColor) == Brightness.dark
-        ? KubusColors.textPrimaryDark
-        : KubusColors.textPrimaryLight;
+    final actionFg =
+        ThemeData.estimateBrightnessForColor(baseColor) == Brightness.dark
+            ? KubusColors.textPrimaryDark
+            : KubusColors.textPrimaryLight;
 
     final primaryExhibition = marker.resolvedExhibitionSummary;
     final exhibitionsFeatureEnabled = AppConfig.isFeatureEnabled('exhibitions');
@@ -3096,8 +3279,10 @@ class _MapScreenState extends State<MapScreen>
       metadata: marker.metadata,
     );
 
-    final showChips = _hasMetadataChips(marker, artwork) || canPresentExhibition;
-    final buttonLabel = canPresentExhibition ? 'Odpri razstavo' : l10n.commonViewDetails;
+    final showChips =
+        _hasMetadataChips(marker, artwork) || canPresentExhibition;
+    final buttonLabel =
+        canPresentExhibition ? 'Odpri razstavo' : l10n.commonViewDetails;
 
     final estimatedHeight = _computeMobileMarkerHeight(
       title: displayTitle,
@@ -3122,19 +3307,24 @@ class _MapScreenState extends State<MapScreen>
           builder: (context, constraints) {
             final anchor = _selectedMarkerAnchor;
             const double cardWidth = 360;
-            final double maxWidth = math.min(cardWidth, constraints.maxWidth - 32);
+            final double maxWidth =
+                math.min(cardWidth, constraints.maxWidth - 32);
             final double leftSafe = 16;
             final double rightSafe = constraints.maxWidth - maxWidth - 16;
             final double topSafe = MediaQuery.of(context).padding.top + 12;
-            final double bottomSafe = constraints.maxHeight - estimatedHeight - 12;
+            final double bottomSafe =
+                constraints.maxHeight - estimatedHeight - 12;
 
             // Account for marker height - larger offset for isometric 3D cubes
             final markerOffset = _isometricViewEnabled ? 45.0 : 32.0;
 
-            double left = (anchor?.dx ?? (constraints.maxWidth / 2)) - (maxWidth / 2);
+            double left =
+                (anchor?.dx ?? (constraints.maxWidth / 2)) - (maxWidth / 2);
             left = left.clamp(leftSafe, rightSafe);
 
-            double top = (anchor?.dy ?? (constraints.maxHeight / 2)) - estimatedHeight - markerOffset;
+            double top = (anchor?.dy ?? (constraints.maxHeight / 2)) -
+                estimatedHeight -
+                markerOffset;
             if (top < topSafe) {
               top = (anchor?.dy ?? (constraints.maxHeight / 2)) + markerOffset;
             }
@@ -3170,7 +3360,8 @@ class _MapScreenState extends State<MapScreen>
                           padding: const EdgeInsets.all(KubusSpacing.md),
                           borderRadius: BorderRadius.circular(KubusRadius.lg),
                           showBorder: false,
-                          backgroundColor: scheme.surface.withValues(alpha: 0.45),
+                          backgroundColor:
+                              scheme.surface.withValues(alpha: 0.45),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -3180,12 +3371,15 @@ class _MapScreenState extends State<MapScreen>
                                 children: [
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         if (canPresentExhibition) ...[
                                           Text(
                                             'Razstava',
-                                            style: KubusTypography.textTheme.labelSmall?.copyWith(
+                                            style: KubusTypography
+                                                .textTheme.labelSmall
+                                                ?.copyWith(
                                               fontWeight: FontWeight.w700,
                                               color: baseColor,
                                               height: 1.0,
@@ -3197,7 +3391,9 @@ class _MapScreenState extends State<MapScreen>
                                           displayTitle,
                                           maxLines: 2,
                                           overflow: TextOverflow.ellipsis,
-                                          style: KubusTypography.textTheme.titleSmall?.copyWith(
+                                          style: KubusTypography
+                                              .textTheme.titleSmall
+                                              ?.copyWith(
                                             fontWeight: FontWeight.w700,
                                             height: 1.2,
                                             color: scheme.onSurface,
@@ -3214,17 +3410,22 @@ class _MapScreenState extends State<MapScreen>
                                         vertical: 4,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: baseColor.withValues(alpha: 0.12),
-                                        borderRadius: BorderRadius.circular(999),
+                                        color:
+                                            baseColor.withValues(alpha: 0.12),
+                                        borderRadius:
+                                            BorderRadius.circular(999),
                                       ),
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Icon(Icons.near_me, size: 12, color: baseColor),
+                                          Icon(Icons.near_me,
+                                              size: 12, color: baseColor),
                                           const SizedBox(width: 4),
                                           Text(
                                             distanceText,
-                                            style: KubusTypography.textTheme.labelSmall?.copyWith(
+                                            style: KubusTypography
+                                                .textTheme.labelSmall
+                                                ?.copyWith(
                                               fontWeight: FontWeight.w700,
                                               color: baseColor,
                                             ),
@@ -3241,9 +3442,9 @@ class _MapScreenState extends State<MapScreen>
                                 ],
                               ),
                               const SizedBox(height: 10),
-
                               ClipRRect(
-                                borderRadius: BorderRadius.circular(KubusRadius.md),
+                                borderRadius:
+                                    BorderRadius.circular(KubusRadius.md),
                                 child: SizedBox(
                                   height: 120,
                                   width: double.infinity,
@@ -3252,52 +3453,58 @@ class _MapScreenState extends State<MapScreen>
                                           imageUrl,
                                           fit: BoxFit.cover,
                                           errorBuilder: (_, __, ___) =>
-                                              _markerImageFallback(baseColor, scheme, marker),
-                                          loadingBuilder: (context, child, progress) {
+                                              _markerImageFallback(
+                                                  baseColor, scheme, marker),
+                                          loadingBuilder:
+                                              (context, child, progress) {
                                             if (progress == null) return child;
                                             return Container(
-                                              color: baseColor.withValues(alpha: 0.12),
+                                              color: baseColor.withValues(
+                                                  alpha: 0.12),
                                               child: const Center(
-                                                child: CircularProgressIndicator(strokeWidth: 2),
+                                                child:
+                                                    CircularProgressIndicator(
+                                                        strokeWidth: 2),
                                               ),
                                             );
                                           },
                                         )
-                                      : _markerImageFallback(baseColor, scheme, marker),
+                                      : _markerImageFallback(
+                                          baseColor, scheme, marker),
                                 ),
                               ),
-
                               if (visibleDescription.isNotEmpty) ...[
                                 const SizedBox(height: 10),
                                 Text(
                                   visibleDescription,
-                                  style: KubusTypography.textTheme.bodySmall?.copyWith(
+                                  style: KubusTypography.textTheme.bodySmall
+                                      ?.copyWith(
                                     color: scheme.onSurfaceVariant,
                                     height: 1.4,
                                     fontSize: 12,
                                   ),
                                 ),
                               ],
-
                               if (canExpand) ...[
                                 const SizedBox(height: 6),
                                 Align(
                                   alignment: Alignment.centerLeft,
                                   child: TextButton(
                                     onPressed: () => setState(
-                                      () => _markerOverlayExpanded = !_markerOverlayExpanded,
+                                      () => _markerOverlayExpanded =
+                                          !_markerOverlayExpanded,
                                     ),
                                     child: Text(
                                       _markerOverlayExpanded
                                           ? l10n.commonCollapse
                                           : l10n.commonExpand,
-                                      style: KubusTypography.textTheme.labelMedium
+                                      style: KubusTypography
+                                          .textTheme.labelMedium
                                           ?.copyWith(color: baseColor),
                                     ),
                                   ),
                                 ),
                               ],
-
                               if (showChips) ...[
                                 const SizedBox(height: 10),
                                 Wrap(
@@ -3322,11 +3529,15 @@ class _MapScreenState extends State<MapScreen>
                                         accent: baseColor,
                                         onTap: null,
                                       ),
-                                    if (marker.metadata?['subjectCategory'] != null ||
-                                        marker.metadata?['subject_category'] != null)
+                                    if (marker.metadata?['subjectCategory'] !=
+                                            null ||
+                                        marker.metadata?['subject_category'] !=
+                                            null)
                                       _glassChip(
-                                        label: (marker.metadata!['subjectCategory'] ??
-                                                marker.metadata!['subject_category'])
+                                        label: (marker.metadata![
+                                                    'subjectCategory'] ??
+                                                marker.metadata![
+                                                    'subject_category'])
                                             .toString(),
                                         icon: Icons.category_outlined,
                                         selected: false,
@@ -3344,7 +3555,6 @@ class _MapScreenState extends State<MapScreen>
                                   ],
                                 ),
                               ],
-
                               const SizedBox(height: 12),
                               SizedBox(
                                 width: double.infinity,
@@ -3360,7 +3570,8 @@ class _MapScreenState extends State<MapScreen>
                                   onPressed: canPresentExhibition
                                       ? () => _openExhibitionFromMarker(
                                           marker, primaryExhibition, artwork)
-                                      : () => _openMarkerDetail(marker, artwork),
+                                      : () =>
+                                          _openMarkerDetail(marker, artwork),
                                   icon: Icon(
                                     canPresentExhibition
                                         ? Icons.museum_outlined
@@ -3613,7 +3824,8 @@ class _MapScreenState extends State<MapScreen>
     final buttonTextPainter = TextPainter(
       text: TextSpan(
         text: buttonLabel,
-        style: KubusTypography.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
+        style: KubusTypography.textTheme.labelMedium
+            ?.copyWith(fontWeight: FontWeight.w600),
       ),
       textDirection: TextDirection.ltr,
     )..layout();
@@ -3647,8 +3859,6 @@ class _MapScreenState extends State<MapScreen>
         marker.metadata?['subject_category'] != null ||
         (artwork != null && artwork.rewards > 0);
   }
-
-
 
   Widget _markerImageFallback(
       Color baseColor, ColorScheme scheme, ArtMarker marker) {
@@ -3840,7 +4050,8 @@ class _MapScreenState extends State<MapScreen>
 
     for (final marker in markers) {
       final cell = GridUtils.gridCellForLevel(marker.position, level);
-      buckets.putIfAbsent(cell.anchorKey, () => _ClusterBucket(cell, <ArtMarker>[]));
+      buckets.putIfAbsent(
+          cell.anchorKey, () => _ClusterBucket(cell, <ArtMarker>[]));
       buckets[cell.anchorKey]!.markers.add(marker);
     }
 
@@ -3891,7 +4102,8 @@ class _MapScreenState extends State<MapScreen>
                 color: hintColor,
               ),
               prefixIcon: Icon(Icons.search, color: hintColor),
-              prefixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+              prefixIconConstraints:
+                  const BoxConstraints(minWidth: 44, minHeight: 44),
               suffixIcon: _searchQuery.isNotEmpty
                   ? IconButton(
                       tooltip: l10n.mapClearSearchTooltip,
@@ -3917,7 +4129,9 @@ class _MapScreenState extends State<MapScreen>
                       child: IconButton(
                         key: _tutorialFilterButtonKey,
                         icon: Icon(
-                          _filtersExpanded ? Icons.filter_alt_off : Icons.filter_alt,
+                          _filtersExpanded
+                              ? Icons.filter_alt_off
+                              : Icons.filter_alt,
                           color: hintColor,
                         ),
                         onPressed: () {
@@ -3927,9 +4141,11 @@ class _MapScreenState extends State<MapScreen>
                         },
                       ),
                     ),
-              suffixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+              suffixIconConstraints:
+                  const BoxConstraints(minWidth: 44, minHeight: 44),
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
             ),
             onTap: () {
               setState(() => _isSearching = true);
@@ -4016,74 +4232,75 @@ class _MapScreenState extends State<MapScreen>
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxHeight: 260),
             child: Builder(builder: (context) {
-            if (_searchQuery.trim().length < 2) {
-              return Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  l10n.mapSearchMinCharsHint,
-                  style: KubusTypography.textTheme.bodyMedium?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              );
-            }
-
-            if (_isFetchingSuggestions) {
-              return const Padding(
-                padding: EdgeInsets.all(24),
-                child: Center(child: CircularProgressIndicator()),
-              );
-            }
-
-            if (_searchSuggestions.isEmpty) {
-              return Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  l10n.mapNoSuggestions,
-                  style: KubusTypography.textTheme.bodyMedium?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              );
-            }
-
-            return ListView.separated(
-              shrinkWrap: true,
-              itemCount: _searchSuggestions.length,
-              separatorBuilder: (_, __) => Divider(
-                height: 1,
-                color: scheme.outlineVariant.withValues(alpha: 0.6),
-              ),
-              itemBuilder: (context, index) {
-                final suggestion = _searchSuggestions[index];
-                return ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: accent.withValues(alpha: 0.14),
-                    child: Icon(
-                      suggestion.icon,
-                      color: accent,
+              if (_searchQuery.trim().length < 2) {
+                return Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    l10n.mapSearchMinCharsHint,
+                    style: KubusTypography.textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
                     ),
                   ),
-                  title: Text(
-                    suggestion.label,
-                    style: KubusTypography.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: scheme.onSurface,
-                    ),
-                  ),
-                  subtitle: suggestion.subtitle == null
-                      ? null
-                      : Text(
-                          suggestion.subtitle!,
-                          style: KubusTypography.textTheme.bodySmall?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                            fontSize: 12,
-                          ),
-                        ),
-                  onTap: () => _handleSuggestionTap(suggestion),
                 );
-              },
-            );
+              }
+
+              if (_isFetchingSuggestions) {
+                return const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+
+              if (_searchSuggestions.isEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    l10n.mapNoSuggestions,
+                    style: KubusTypography.textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                );
+              }
+
+              return ListView.separated(
+                shrinkWrap: true,
+                itemCount: _searchSuggestions.length,
+                separatorBuilder: (_, __) => Divider(
+                  height: 1,
+                  color: scheme.outlineVariant.withValues(alpha: 0.6),
+                ),
+                itemBuilder: (context, index) {
+                  final suggestion = _searchSuggestions[index];
+                  return ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: accent.withValues(alpha: 0.14),
+                      child: Icon(
+                        suggestion.icon,
+                        color: accent,
+                      ),
+                    ),
+                    title: Text(
+                      suggestion.label,
+                      style: KubusTypography.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: scheme.onSurface,
+                      ),
+                    ),
+                    subtitle: suggestion.subtitle == null
+                        ? null
+                        : Text(
+                            suggestion.subtitle!,
+                            style:
+                                KubusTypography.textTheme.bodySmall?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                              fontSize: 12,
+                            ),
+                          ),
+                    onTap: () => _handleSuggestionTap(suggestion),
+                  );
+                },
+              );
             }),
           ),
         ),
@@ -4170,7 +4387,8 @@ class _MapScreenState extends State<MapScreen>
     return Container(
       decoration: BoxDecoration(
         borderRadius: radius,
-        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.30)),
+        border:
+            Border.all(color: scheme.outlineVariant.withValues(alpha: 0.30)),
         boxShadow: [
           BoxShadow(
             color: scheme.shadow.withValues(alpha: isDark ? 0.18 : 0.12),
@@ -4270,7 +4488,8 @@ class _MapScreenState extends State<MapScreen>
       duration: const Duration(milliseconds: 220),
       decoration: BoxDecoration(
         borderRadius: radius,
-        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.30)),
+        border:
+            Border.all(color: scheme.outlineVariant.withValues(alpha: 0.30)),
         boxShadow: [
           BoxShadow(
             color: scheme.shadow.withValues(alpha: isDark ? 0.16 : 0.10),
@@ -4432,7 +4651,8 @@ class _MapScreenState extends State<MapScreen>
                   ? l10n.mapTravelModeDisableTooltip
                   : l10n.mapTravelModeEnableTooltip,
               active: _travelModeEnabled,
-              onTap: () => unawaited(_setTravelModeEnabled(!_travelModeEnabled)),
+              onTap: () =>
+                  unawaited(_setTravelModeEnabled(!_travelModeEnabled)),
             ),
             const SizedBox(height: 12),
           ],
@@ -4511,7 +4731,8 @@ class _MapScreenState extends State<MapScreen>
               final radius = const BorderRadius.vertical(
                 top: Radius.circular(KubusRadius.xl),
               );
-              final glassTint = scheme.surface.withValues(alpha: isDark ? 0.46 : 0.56);
+              final glassTint =
+                  scheme.surface.withValues(alpha: isDark ? 0.46 : 0.56);
               return GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onHorizontalDragStart: (_) {},
@@ -4553,7 +4774,8 @@ class _MapScreenState extends State<MapScreen>
                                       width: 48,
                                       height: 4,
                                       decoration: BoxDecoration(
-                                        color: scheme.outlineVariant.withValues(alpha: 0.85),
+                                        color: scheme.outlineVariant
+                                            .withValues(alpha: 0.85),
                                         borderRadius: BorderRadius.circular(2),
                                       ),
                                     ),
@@ -4563,12 +4785,14 @@ class _MapScreenState extends State<MapScreen>
                                     children: [
                                       Expanded(
                                         child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
                                             Text(
                                               l10n.mapNearbyArtTitle,
                                               key: _tutorialNearbyTitleKey,
-                                              style: KubusTypography.textTheme.titleMedium
+                                              style: KubusTypography
+                                                  .textTheme.titleMedium
                                                   ?.copyWith(
                                                 fontWeight: FontWeight.w700,
                                               ),
@@ -4577,13 +4801,18 @@ class _MapScreenState extends State<MapScreen>
                                               _travelModeEnabled
                                                   ? '${l10n.mapResultsDiscoveredLabel(
                                                       artworks.length,
-                                                      (discoveryProgress * 100).round(),
+                                                      (discoveryProgress * 100)
+                                                          .round(),
                                                     )} ${l10n.mapTravelModeStatusTravelling}'
-                                                  : l10n.mapResultsDiscoveredLabel(
+                                                  : l10n
+                                                      .mapResultsDiscoveredLabel(
                                                       artworks.length,
-                                                      (discoveryProgress * 100).round(),
+                                                      (discoveryProgress * 100)
+                                                          .round(),
                                                     ),
-                                              style: KubusTypography.textTheme.bodySmall?.copyWith(
+                                              style: KubusTypography
+                                                  .textTheme.bodySmall
+                                                  ?.copyWith(
                                                 color: scheme.onSurfaceVariant,
                                               ),
                                             ),
@@ -4593,36 +4822,45 @@ class _MapScreenState extends State<MapScreen>
                                       _glassIconButton(
                                         icon: Icons.radar,
                                         tooltip: _travelModeEnabled
-                                            ? l10n.mapTravelModeStatusTravellingTooltip
+                                            ? l10n
+                                                .mapTravelModeStatusTravellingTooltip
                                             : l10n.mapNearbyRadiusTooltip(
-                                                _effectiveMarkerRadiusKm.toInt(),
+                                                _effectiveMarkerRadiusKm
+                                                    .toInt(),
                                               ),
-                                        onTap:
-                                            _travelModeEnabled ? null : _openMarkerRadiusDialog,
+                                        onTap: _travelModeEnabled
+                                            ? null
+                                            : _openMarkerRadiusDialog,
                                       ),
                                       const SizedBox(width: 8),
                                       _glassIconButton(
-                                        icon:
-                                            _useGridLayout ? Icons.view_list : Icons.grid_view,
+                                        icon: _useGridLayout
+                                            ? Icons.view_list
+                                            : Icons.grid_view,
                                         tooltip: _useGridLayout
                                             ? l10n.mapShowListViewTooltip
                                             : l10n.mapShowGridViewTooltip,
-                                        onTap: () =>
-                                            setState(() => _useGridLayout = !_useGridLayout),
+                                        onTap: () => setState(() =>
+                                            _useGridLayout = !_useGridLayout),
                                       ),
                                       const SizedBox(width: 8),
                                       PopupMenuButton<_ArtworkSort>(
                                         tooltip: l10n.mapSortResultsTooltip,
-                                        onSelected: (value) => setState(() => _sort = value),
+                                        onSelected: (value) =>
+                                            setState(() => _sort = value),
                                         itemBuilder: (context) => [
-                                          for (final sort in _ArtworkSort.values)
+                                          for (final sort
+                                              in _ArtworkSort.values)
                                             PopupMenuItem(
                                               value: sort,
                                               child: Row(
                                                 children: [
-                                                  Expanded(child: Text(sort.label(l10n))),
+                                                  Expanded(
+                                                      child: Text(
+                                                          sort.label(l10n))),
                                                   if (sort == _sort)
-                                                    Icon(Icons.check, color: scheme.primary),
+                                                    Icon(Icons.check,
+                                                        color: scheme.primary),
                                                 ],
                                               ),
                                             ),
@@ -4656,31 +4894,38 @@ class _MapScreenState extends State<MapScreen>
                             )
                           else if (_useGridLayout)
                             SliverPadding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 16),
                               sliver: SliverGrid(
                                 delegate: SliverChildBuilderDelegate(
                                   (context, index) {
                                     final artwork = artworks[index];
                                     // Find marker for subject color
-                                    final marker = _artMarkers.cast<ArtMarker?>().firstWhere(
-                                      (m) => m?.artworkId == artwork.id,
-                                      orElse: () => null,
-                                    );
+                                    final marker = _artMarkers
+                                        .cast<ArtMarker?>()
+                                        .firstWhere(
+                                          (m) => m?.artworkId == artwork.id,
+                                          orElse: () => null,
+                                        );
                                     final subjectColor = marker != null
-                                        ? _resolveArtMarkerColor(marker, context.read<ThemeProvider>())
+                                        ? _resolveArtMarkerColor(marker,
+                                            context.read<ThemeProvider>())
                                         : null;
                                     return _ArtworkListTile(
                                       artwork: artwork,
                                       currentPosition: _currentPosition,
-                                      onOpenDetails: () => _openArtwork(artwork),
-                                      onMarkDiscovered: () => _markAsDiscovered(artwork),
+                                      onOpenDetails: () =>
+                                          _openArtwork(artwork),
+                                      onMarkDiscovered: () =>
+                                          _markAsDiscovered(artwork),
                                       dense: true,
                                       subjectColor: subjectColor,
                                     );
                                   },
                                   childCount: artworks.length,
                                 ),
-                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
                                   crossAxisCount: 2,
                                   mainAxisSpacing: 12,
                                   crossAxisSpacing: 12,
@@ -4696,20 +4941,26 @@ class _MapScreenState extends State<MapScreen>
                                   (context, index) {
                                     final artwork = artworks[index];
                                     // Find marker for subject color
-                                    final marker = _artMarkers.cast<ArtMarker?>().firstWhere(
-                                      (m) => m?.artworkId == artwork.id,
-                                      orElse: () => null,
-                                    );
+                                    final marker = _artMarkers
+                                        .cast<ArtMarker?>()
+                                        .firstWhere(
+                                          (m) => m?.artworkId == artwork.id,
+                                          orElse: () => null,
+                                        );
                                     final subjectColor = marker != null
-                                        ? _resolveArtMarkerColor(marker, context.read<ThemeProvider>())
+                                        ? _resolveArtMarkerColor(marker,
+                                            context.read<ThemeProvider>())
                                         : null;
                                     return Padding(
-                                      padding: const EdgeInsets.only(bottom: 12),
+                                      padding:
+                                          const EdgeInsets.only(bottom: 12),
                                       child: _ArtworkListTile(
                                         artwork: artwork,
                                         currentPosition: _currentPosition,
-                                        onOpenDetails: () => _openArtwork(artwork),
-                                        onMarkDiscovered: () => _markAsDiscovered(artwork),
+                                        onOpenDetails: () =>
+                                            _openArtwork(artwork),
+                                        onMarkDiscovered: () =>
+                                            _markAsDiscovered(artwork),
                                         subjectColor: subjectColor,
                                       ),
                                     );
@@ -4721,7 +4972,8 @@ class _MapScreenState extends State<MapScreen>
                           // Let content scroll above the navbar when expanded, while still
                           // allowing the sheet itself to sit behind the glass navbar.
                           const SliverToBoxAdapter(
-                            child: SizedBox(height: KubusLayout.mainBottomNavBarHeight),
+                            child: SizedBox(
+                                height: KubusLayout.mainBottomNavBarHeight),
                           ),
                         ],
                       ),
@@ -4950,7 +5202,8 @@ class _MapIconButton extends StatelessWidget {
     final background = active
         ? scheme.primary.withValues(alpha: 0.20)
         : scheme.surface.withValues(alpha: 0.46);
-    final radius = BorderRadius.circular(999);
+    // Use rectangular radius from design tokens to match desktop parity
+    final radius = BorderRadius.circular(KubusRadius.md);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Tooltip(
@@ -4961,13 +5214,13 @@ class _MapIconButton extends StatelessWidget {
           borderRadius: radius,
           onTap: onTap,
           child: Container(
-            width: 50,
-            height: 50,
+            width: 46,
+            height: 46,
             decoration: BoxDecoration(
               borderRadius: radius,
               border: Border.all(
-                color:
-                    (active ? scheme.primary : borderColor).withValues(alpha: 0.40),
+                color: (active ? scheme.primary : borderColor)
+                    .withValues(alpha: 0.40),
               ),
               boxShadow: [
                 BoxShadow(
@@ -5000,6 +5253,7 @@ class _ArtworkListTile extends StatelessWidget {
   final VoidCallback onOpenDetails;
   final VoidCallback onMarkDiscovered;
   final bool dense;
+
   /// Optional subject-based accent color. If null, falls back to hash-based color.
   final Color? subjectColor;
 
@@ -5105,8 +5359,8 @@ class _ArtworkListTile extends StatelessWidget {
                             const SizedBox(width: 6),
                             Text(
                               distanceLabel,
-                              style:
-                                  KubusTypography.textTheme.labelSmall?.copyWith(
+                              style: KubusTypography.textTheme.labelSmall
+                                  ?.copyWith(
                                 color: scheme.onSurface,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -5148,7 +5402,8 @@ class _ArtworkListTile extends StatelessWidget {
                       onPressed: isDiscovered ? null : onMarkDiscovered,
                       style: IconButton.styleFrom(
                         backgroundColor: isDiscovered
-                            ? scheme.surfaceContainerHighest.withValues(alpha: 0.35)
+                            ? scheme.surfaceContainerHighest
+                                .withValues(alpha: 0.35)
                             : accent.withValues(alpha: 0.16),
                         foregroundColor:
                             isDiscovered ? scheme.onSurfaceVariant : accent,
@@ -5170,7 +5425,7 @@ class _ArtworkListTile extends StatelessWidget {
   Color _accentForArtwork(ColorScheme scheme) {
     // Use subject color if provided (from marker), otherwise fall back to hash-based
     if (subjectColor != null) return subjectColor!;
-    
+
     // Deterministic but varied: distribute artworks across the app's semantic palette.
     final key = artwork.id.isNotEmpty ? artwork.id : artwork.title;
     final hash = key.hashCode.abs();
@@ -5279,4 +5534,18 @@ class _ClusterBucket {
   _ClusterBucket(this.cell, this.markers);
   final GridCell cell;
   final List<ArtMarker> markers;
+}
+
+/// Data class for 3D marker screen projection results.
+@immutable
+class _Marker3DScreenData {
+  const _Marker3DScreenData({
+    required this.marker,
+    required this.screenX,
+    required this.screenY,
+  });
+
+  final ArtMarker marker;
+  final double screenX;
+  final double screenY;
 }

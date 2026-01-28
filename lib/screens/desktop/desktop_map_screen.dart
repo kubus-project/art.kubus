@@ -152,6 +152,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   int? _loadedTravelZoomBucket;
   bool _programmaticCameraMove = false;
   double _lastBearing = 0.0;
+  double _lastPitch = 0.0;
+  DateTime _lastCameraUpdateTime = DateTime.now();
+  static const Duration _cameraUpdateThrottle = Duration(milliseconds: 16); // ~60fps
   bool _styleInitialized = false;
   bool _styleInitializationInProgress = false;
   final Set<String> _registeredMapImages = <String>{};
@@ -1197,17 +1200,24 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
 
     _programmaticCameraMove = true;
-    await controller.animateCamera(
-      ml.CameraUpdate.newCameraPosition(
-        ml.CameraPosition(
-          target: ml.LatLng(_cameraCenter.latitude, _cameraCenter.longitude),
-          zoom: targetZoom,
-          bearing: targetBearing,
-          tilt: targetPitch,
+    try {
+      await controller.animateCamera(
+        ml.CameraUpdate.newCameraPosition(
+          ml.CameraPosition(
+            target: ml.LatLng(_cameraCenter.latitude, _cameraCenter.longitude),
+            zoom: targetZoom,
+            bearing: targetBearing,
+            tilt: targetPitch,
+          ),
         ),
-      ),
-      duration: const Duration(milliseconds: 320),
-    );
+        duration: const Duration(milliseconds: 320),
+      );
+    } catch (e, st) {
+      AppConfig.debugPrint('DesktopMapScreen: animateCamera failed: $e');
+      if (kDebugMode) {
+        AppConfig.debugPrint('DesktopMapScreen: animateCamera stack: $st');
+      }
+    }
   }
 
   Future<void> _moveCamera(LatLng target, double zoom) async {
@@ -1221,20 +1231,27 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
 
     _programmaticCameraMove = true;
-    await controller.animateCamera(
-      ml.CameraUpdate.newCameraPosition(
-        ml.CameraPosition(
-          target: ml.LatLng(target.latitude, target.longitude),
-          zoom: zoom,
-          bearing: _lastBearing,
-          tilt:
-              _isometricViewEnabled && AppConfig.isFeatureEnabled('mapIsometricView')
-                  ? 54.736
-                  : 0.0,
+    try {
+      await controller.animateCamera(
+        ml.CameraUpdate.newCameraPosition(
+          ml.CameraPosition(
+            target: ml.LatLng(target.latitude, target.longitude),
+            zoom: zoom,
+            bearing: _lastBearing,
+            tilt:
+                _isometricViewEnabled && AppConfig.isFeatureEnabled('mapIsometricView')
+                    ? 54.736
+                    : 0.0,
+          ),
         ),
-      ),
-      duration: const Duration(milliseconds: 320),
-    );
+        duration: const Duration(milliseconds: 320),
+      );
+    } catch (e, st) {
+      AppConfig.debugPrint('DesktopMapScreen: _moveCamera animateCamera failed: $e');
+      if (kDebugMode) {
+        AppConfig.debugPrint('DesktopMapScreen: _moveCamera animateCamera stack: $st');
+      }
+    }
   }
 
   @override
@@ -1381,9 +1398,15 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             _cameraCenter = LatLng(position.target.latitude, position.target.longitude);
             _cameraZoom = position.zoom;
             _lastBearing = position.bearing;
+            _lastPitch = position.tilt;
 
             final bucket = MapViewportUtils.zoomBucket(position.zoom);
-            if (bucket != _renderZoomBucket) {
+            // Throttle setState for 3D overlay repaints to ~60fps max
+            final now = DateTime.now();
+            final shouldUpdate = _isometricViewEnabled &&
+                now.difference(_lastCameraUpdateTime) > _cameraUpdateThrottle;
+            if (bucket != _renderZoomBucket || shouldUpdate) {
+              _lastCameraUpdateTime = now;
               setState(() => _renderZoomBucket = bucket);
             }
 
@@ -1422,6 +1445,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         return Stack(
           children: [
             Positioned.fill(child: map),
+            // 3D marker overlay (when isometric view enabled)
+            _build3DMarkerOverlay(themeProvider),
             if (_markerOverlayMode == _MarkerOverlayMode.anchored &&
                 _selectedMarkerAnchor != null)
               Positioned(
@@ -4475,6 +4500,132 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     );
   }
 
+  /// Builds the real-time 3D marker overlay when isometric view is enabled.
+  Widget _build3DMarkerOverlay(ThemeProvider themeProvider) {
+    // Only render when isometric view is enabled
+    if (!_isometricViewEnabled) return const SizedBox.shrink();
+
+    final controller = _mapController;
+    if (controller == null || !_styleInitialized) {
+      return const SizedBox.shrink();
+    }
+
+    // Desktop uses all markers (filtering is applied via _getFilteredArtworks)
+    final visibleMarkers = _artMarkers;
+
+    // Limit marker count to prevent performance issues
+    const int maxOverlayMarkers = 50;
+    final markersToRender = visibleMarkers.length > maxOverlayMarkers
+        ? visibleMarkers.take(maxOverlayMarkers).toList()
+        : visibleMarkers;
+
+    return Positioned.fill(
+      child: IgnorePointer(
+        ignoring: false,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return FutureBuilder<List<_Marker3DScreenData>>(
+              // Use a key that changes with camera state to trigger rebuild
+              key: ValueKey('3d_overlay_${_lastBearing.toStringAsFixed(1)}_${_lastPitch.toStringAsFixed(1)}'),
+              future: _projectMarkersToScreen(
+                markersToRender,
+                controller,
+                constraints,
+              ),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+
+                final projectedMarkers = snapshot.data!;
+                return Stack(
+                  children: projectedMarkers.map((data) {
+                    return _build3DMarkerWidget(data, themeProvider);
+                  }).toList(),
+                );
+              },
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  /// Projects markers to screen coordinates, culling those outside viewport.
+  Future<List<_Marker3DScreenData>> _projectMarkersToScreen(
+    List<ArtMarker> markers,
+    ml.MapLibreMapController controller,
+    BoxConstraints constraints,
+  ) async {
+    final List<_Marker3DScreenData> results = [];
+    // Margin outside viewport to keep markers that are partially visible
+    const double cullMargin = 60.0;
+
+    for (final marker in markers) {
+      try {
+        final screen = await controller.toScreenLocation(
+          ml.LatLng(marker.position.latitude, marker.position.longitude),
+        );
+        final x = screen.x.toDouble();
+        final y = screen.y.toDouble();
+
+        // Cull markers outside viewport + margin
+        if (x < -cullMargin ||
+            y < -cullMargin ||
+            x > constraints.maxWidth + cullMargin ||
+            y > constraints.maxHeight + cullMargin) {
+          continue;
+        }
+
+        results.add(_Marker3DScreenData(
+          marker: marker,
+          screenX: x,
+          screenY: y,
+        ));
+      } catch (_) {
+        // Skip markers that fail projection (e.g., during style transitions)
+      }
+    }
+
+    return results;
+  }
+
+  /// Builds a single 3D marker widget at its projected screen position.
+  Widget _build3DMarkerWidget(
+    _Marker3DScreenData data,
+    ThemeProvider themeProvider,
+  ) {
+    final marker = data.marker;
+    final isSelected = _selectedMarkerId == marker.id;
+    final baseColor = _resolveArtMarkerColor(marker, themeProvider);
+    final icon = _resolveArtMarkerIcon(marker.type);
+
+    // Compute marker size based on zoom
+    final markerSize = RotatableCubeTokens.sizeForZoom(_cameraZoom);
+
+    return Positioned(
+      // Center the marker on its projected point
+      left: data.screenX - (markerSize / 2),
+      top: data.screenY - (markerSize / 2),
+      child: GestureDetector(
+        onTap: () => _handleMarkerTap(marker),
+        behavior: HitTestBehavior.opaque,
+        child: SizedBox(
+          width: markerSize,
+          height: markerSize,
+          child: RotatableCubeMarker(
+            baseColor: baseColor,
+            icon: icon,
+            bearing: _lastBearing,
+            pitch: _lastPitch,
+            zoom: _cameraZoom,
+            isSelected: isSelected,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildMarkerOverlayLayer({
     required ThemeProvider themeProvider,
     required ArtworkProvider artworkProvider,
@@ -5352,4 +5503,18 @@ class _ClusterBucket {
   _ClusterBucket(this.cell, this.markers);
   final GridCell cell;
   final List<ArtMarker> markers;
+}
+
+/// Data class for 3D marker screen projection results.
+@immutable
+class _Marker3DScreenData {
+  const _Marker3DScreenData({
+    required this.marker,
+    required this.screenX,
+    required this.screenY,
+  });
+
+  final ArtMarker marker;
+  final double screenX;
+  final double screenY;
 }

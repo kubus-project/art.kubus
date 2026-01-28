@@ -392,21 +392,26 @@ class TelemetryService {
   }
 
   String _platformName() {
+    // Early return on web avoids reaching the platform switch.
     if (kIsWeb) return 'web';
+    // Use assignment pattern to avoid "unreachable code" JS warnings from DDC.
+    // (DDC emits defensive code after exhaustive switches that triggers browser warnings.)
+    String platform;
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
-        return 'android';
+        platform = 'android';
       case TargetPlatform.iOS:
-        return 'ios';
+        platform = 'ios';
       case TargetPlatform.macOS:
-        return 'macos';
+        platform = 'macos';
       case TargetPlatform.windows:
-        return 'windows';
+        platform = 'windows';
       case TargetPlatform.linux:
-        return 'linux';
+        platform = 'linux';
       case TargetPlatform.fuchsia:
-        return 'fuchsia';
+        platform = 'fuchsia';
     }
+    return platform;
   }
 
   void _rotateSessionIfNeeded() {
