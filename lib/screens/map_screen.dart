@@ -2819,8 +2819,10 @@ class _MapScreenState extends State<MapScreen>
     final selected = _selectedMarkerId == marker.id;
     final typeName = marker.type.name;
     final tier = marker.signalTier;
+    // Include isometric state in icon ID so we regenerate icons when view mode changes
+    final isoSuffix = _isometricViewEnabled ? '_iso' : '_flat';
     final iconId =
-        'mk_${typeName}_${tier.name}${selected ? '_sel' : ''}_${isDark ? 'd' : 'l'}';
+        'mk_${typeName}_${tier.name}${selected ? '_sel' : ''}_${isDark ? 'd' : 'l'}$isoSuffix';
 
     if (!_registeredMapImages.contains(iconId)) {
       final baseColor = _resolveArtMarkerColor(marker, themeProvider);
@@ -2833,6 +2835,7 @@ class _MapScreenState extends State<MapScreen>
         isDark: isDark,
         forceGlow: selected,
         pixelRatio: _markerPixelRatio(),
+        isIsometric: _isometricViewEnabled,
       );
       if (!mounted) return const <String, dynamic>{};
       try {
@@ -3125,12 +3128,15 @@ class _MapScreenState extends State<MapScreen>
             final double topSafe = MediaQuery.of(context).padding.top + 12;
             final double bottomSafe = constraints.maxHeight - estimatedHeight - 12;
 
+            // Account for marker height - larger offset for isometric 3D cubes
+            final markerOffset = _isometricViewEnabled ? 45.0 : 32.0;
+
             double left = (anchor?.dx ?? (constraints.maxWidth / 2)) - (maxWidth / 2);
             left = left.clamp(leftSafe, rightSafe);
 
-            double top = (anchor?.dy ?? (constraints.maxHeight / 2)) - estimatedHeight - 16;
+            double top = (anchor?.dy ?? (constraints.maxHeight / 2)) - estimatedHeight - markerOffset;
             if (top < topSafe) {
-              top = (anchor?.dy ?? (constraints.maxHeight / 2)) + 16;
+              top = (anchor?.dy ?? (constraints.maxHeight / 2)) + markerOffset;
             }
             top = top.clamp(topSafe, bottomSafe);
 
@@ -4655,12 +4661,21 @@ class _MapScreenState extends State<MapScreen>
                                 delegate: SliverChildBuilderDelegate(
                                   (context, index) {
                                     final artwork = artworks[index];
+                                    // Find marker for subject color
+                                    final marker = _artMarkers.cast<ArtMarker?>().firstWhere(
+                                      (m) => m?.artworkId == artwork.id,
+                                      orElse: () => null,
+                                    );
+                                    final subjectColor = marker != null
+                                        ? _resolveArtMarkerColor(marker, context.read<ThemeProvider>())
+                                        : null;
                                     return _ArtworkListTile(
                                       artwork: artwork,
                                       currentPosition: _currentPosition,
                                       onOpenDetails: () => _openArtwork(artwork),
                                       onMarkDiscovered: () => _markAsDiscovered(artwork),
                                       dense: true,
+                                      subjectColor: subjectColor,
                                     );
                                   },
                                   childCount: artworks.length,
@@ -4680,6 +4695,14 @@ class _MapScreenState extends State<MapScreen>
                                 delegate: SliverChildBuilderDelegate(
                                   (context, index) {
                                     final artwork = artworks[index];
+                                    // Find marker for subject color
+                                    final marker = _artMarkers.cast<ArtMarker?>().firstWhere(
+                                      (m) => m?.artworkId == artwork.id,
+                                      orElse: () => null,
+                                    );
+                                    final subjectColor = marker != null
+                                        ? _resolveArtMarkerColor(marker, context.read<ThemeProvider>())
+                                        : null;
                                     return Padding(
                                       padding: const EdgeInsets.only(bottom: 12),
                                       child: _ArtworkListTile(
@@ -4687,6 +4710,7 @@ class _MapScreenState extends State<MapScreen>
                                         currentPosition: _currentPosition,
                                         onOpenDetails: () => _openArtwork(artwork),
                                         onMarkDiscovered: () => _markAsDiscovered(artwork),
+                                        subjectColor: subjectColor,
                                       ),
                                     );
                                   },
@@ -4976,6 +5000,8 @@ class _ArtworkListTile extends StatelessWidget {
   final VoidCallback onOpenDetails;
   final VoidCallback onMarkDiscovered;
   final bool dense;
+  /// Optional subject-based accent color. If null, falls back to hash-based color.
+  final Color? subjectColor;
 
   const _ArtworkListTile({
     required this.artwork,
@@ -4983,6 +5009,7 @@ class _ArtworkListTile extends StatelessWidget {
     required this.onOpenDetails,
     required this.onMarkDiscovered,
     this.dense = false,
+    this.subjectColor,
   });
 
   @override
@@ -5141,6 +5168,9 @@ class _ArtworkListTile extends StatelessWidget {
   }
 
   Color _accentForArtwork(ColorScheme scheme) {
+    // Use subject color if provided (from marker), otherwise fall back to hash-based
+    if (subjectColor != null) return subjectColor!;
+    
     // Deterministic but varied: distribute artworks across the app's semantic palette.
     final key = artwork.id.isNotEmpty ? artwork.id : artwork.title;
     final hash = key.hashCode.abs();

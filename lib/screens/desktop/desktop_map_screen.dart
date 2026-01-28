@@ -993,7 +993,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final selected = _selectedMarkerId == marker.id;
     final typeName = marker.type.name;
     final tier = marker.signalTier;
-    final iconId = 'mk_${typeName}_${tier.name}${selected ? '_sel' : ''}_${isDark ? 'd' : 'l'}';
+    // Include isometric state in icon ID so we regenerate icons when view mode changes
+    final isoSuffix = _isometricViewEnabled ? '_iso' : '_flat';
+    final iconId = 'mk_${typeName}_${tier.name}${selected ? '_sel' : ''}_${isDark ? 'd' : 'l'}$isoSuffix';
 
     if (!_registeredMapImages.contains(iconId)) {
       final baseColor = _resolveArtMarkerColor(marker, themeProvider);
@@ -1006,6 +1008,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         isDark: isDark,
         forceGlow: selected,
         pixelRatio: _markerPixelRatio(),
+        isIsometric: _isometricViewEnabled,
       );
       if (!mounted) return const <String, dynamic>{};
       try {
@@ -3325,6 +3328,24 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                           _calculateDistance(basePosition, artwork.position);
                       final distanceText = _formatDistance(meters);
 
+                      // Find marker for this artwork to get subject-based color
+                      ArtMarker? marker;
+                      for (final m in _artMarkers) {
+                        if (m.artworkId == artwork.id) {
+                          marker = m;
+                          break;
+                        }
+                      }
+                      // Use marker color if available, otherwise fallback to artwork type
+                      final cardAccent = marker != null
+                          ? _resolveArtMarkerColor(marker, themeProvider)
+                          : AppColorUtils.markerSubjectColor(
+                              markerType: 'artwork',
+                              metadata: null,
+                              scheme: scheme,
+                              roles: KubusColorRoles.of(context),
+                            );
+
                       return LiquidGlassPanel(
                         padding: const EdgeInsets.all(10),
                         borderRadius: BorderRadius.circular(14),
@@ -3333,14 +3354,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                           color: Colors.transparent,
                           child: InkWell(
                             onTap: () {
-                              ArtMarker? marker;
-                              for (final m in _artMarkers) {
-                                if (m.artworkId == artwork.id) {
-                                  marker = m;
-                                  break;
-                                }
-                              }
-
                               _moveCamera(artwork.position,
                                   math.max(_effectiveZoom, 15.0));
 
@@ -3378,14 +3391,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                                         child: Container(
                                           padding: const EdgeInsets.all(4),
                                           decoration: BoxDecoration(
-                                            color: accent,
+                                            color: cardAccent,
                                             borderRadius:
                                                 BorderRadius.circular(6),
                                           ),
                                           child: Icon(
                                             Icons.view_in_ar,
                                             size: 12,
-                                            color: ThemeData.estimateBrightnessForColor(accent) == Brightness.dark
+                                            color: ThemeData.estimateBrightnessForColor(cardAccent) == Brightness.dark
                                                 ? KubusColors.textPrimaryDark
                                                 : KubusColors.textPrimaryLight,
                                           ),
@@ -3429,7 +3442,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                                               horizontal: 8, vertical: 3),
                                           decoration: BoxDecoration(
                                             color:
-                                                accent.withValues(alpha: 0.12),
+                                                cardAccent.withValues(alpha: 0.12),
                                             borderRadius:
                                                 BorderRadius.circular(999),
                                           ),
@@ -3438,7 +3451,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                               fontSize: 11,
                                               fontWeight: FontWeight.w600,
-                                              color: accent,
+                                              color: cardAccent,
                                             ),
                                           ),
                                         ),
@@ -4535,12 +4548,19 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       );
     }
 
+    // Offset the card above the marker - larger offset for isometric 3D cubes
+    // In isometric mode cubes are taller (~72px at zoom 15), in flat mode ~52px
+    // Account for icon scaling at different zoom levels
+    final baseOffset = _isometricViewEnabled ? 45.0 : 32.0;
+    final zoomFactor = (_cameraZoom / 15.0).clamp(0.5, 1.5);
+    final verticalOffset = baseOffset * zoomFactor;
+
     return CompositedTransformFollower(
       link: _markerOverlayLink,
       showWhenUnlinked: false,
       targetAnchor: Alignment.center,
       followerAnchor: Alignment.bottomCenter,
-      offset: const Offset(0, -10),
+      offset: Offset(0, -verticalOffset),
       child: card,
     );
   }

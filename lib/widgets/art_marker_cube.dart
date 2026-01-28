@@ -948,6 +948,8 @@ class ArtMarkerCubeIconRenderer {
   static const double markerWidthAtZoom15 = 56;
   static const double markerHeightAtZoom15 = 72;
 
+  /// Renders a marker as a full 3D isometric cube when [isIsometric] is true,
+  /// or as a flat top-down view (just the top face with shadow) when false.
   static Future<Uint8List> renderMarkerPng({
     required Color baseColor,
     required IconData icon,
@@ -957,6 +959,7 @@ class ArtMarkerCubeIconRenderer {
     required bool isDark,
     bool forceGlow = false,
     double pixelRatio = 2.0,
+    bool isIsometric = true,
   }) async {
     final style = CubeMarkerStyle.fromScheme(
       scheme: scheme,
@@ -967,6 +970,20 @@ class ArtMarkerCubeIconRenderer {
     final showGlow = forceGlow ||
         tier == ArtMarkerSignal.featured ||
         tier == ArtMarkerSignal.legendary;
+
+    // Use flat rendering when not in isometric mode
+    if (!isIsometric) {
+      return _renderFlatMarkerPng(
+        baseColor: baseColor,
+        icon: icon,
+        tier: tier,
+        style: style,
+        roles: roles,
+        showGlow: showGlow,
+        forceGlow: forceGlow,
+        pixelRatio: pixelRatio,
+      );
+    }
 
     return _renderPng(
       width: markerWidthAtZoom15,
@@ -996,6 +1013,203 @@ class ArtMarkerCubeIconRenderer {
           isSelected: forceGlow,
         );
       },
+    );
+  }
+
+  /// Renders a flat (top-down) marker showing only the top face with shadow.
+  /// Used when isometric view is disabled.
+  static Future<Uint8List> _renderFlatMarkerPng({
+    required Color baseColor,
+    required IconData icon,
+    required ArtMarkerSignal tier,
+    required CubeMarkerStyle style,
+    required KubusColorRoles roles,
+    required bool showGlow,
+    required bool forceGlow,
+    double pixelRatio = 2.0,
+  }) async {
+    // Flat marker is a square (top-down view of the cube)
+    const double size = 52.0;
+    const double height = 52.0;
+    final palette = _CubePalette.fromBase(baseColor, edgeColor: style.edgeColor);
+
+    return _renderPng(
+      width: size,
+      height: height,
+      pixelRatio: pixelRatio,
+      paint: (canvas, logicalSize) {
+        final center = Offset(logicalSize.width / 2, logicalSize.height / 2);
+        final squareSize = size * 0.84;
+        final halfSize = squareSize / 2;
+
+        // Draw shadow beneath the square
+        canvas.drawRect(
+          Rect.fromCenter(
+            center: center + const Offset(0, 2),
+            width: squareSize + 4,
+            height: squareSize * 0.15,
+          ),
+          Paint()
+            ..color = style.shadowColor.withValues(alpha: 0.25)
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+        );
+
+        // Draw colored glow if needed
+        if (showGlow) {
+          canvas.drawRect(
+            Rect.fromCenter(
+              center: center,
+              width: squareSize + 12,
+              height: squareSize + 12,
+            ),
+            Paint()
+              ..color = baseColor.withValues(alpha: forceGlow ? 0.45 : 0.35)
+              ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
+          );
+        }
+
+        // Draw main square (top face color)
+        final squareRect = Rect.fromCenter(
+          center: center,
+          width: squareSize,
+          height: squareSize,
+        );
+        final gradient = ui.Gradient.linear(
+          Offset(center.dx - halfSize, center.dy - halfSize),
+          Offset(center.dx + halfSize, center.dy + halfSize),
+          [palette.topAccent, palette.top],
+        );
+        canvas.drawRect(
+          squareRect,
+          Paint()..shader = gradient,
+        );
+
+        // Draw border around square
+        canvas.drawRect(
+          squareRect,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.5
+            ..color = palette.edge,
+        );
+
+        // Draw inner square for icon background
+        final iconSize = squareSize * 0.65;
+        final iconRect = Rect.fromCenter(
+          center: center,
+          width: iconSize,
+          height: iconSize,
+        );
+        canvas.drawRect(
+          iconRect,
+          Paint()
+            ..color = style.iconShadowColor
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
+        );
+        canvas.drawRect(
+          iconRect,
+          Paint()..color = style.iconBackgroundColor,
+        );
+        canvas.drawRect(
+          iconRect,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.0
+            ..color = palette.topAccent.withValues(alpha: 0.5),
+        );
+
+        // Draw icon
+        final glyphPainter = TextPainter(
+          text: TextSpan(
+            text: String.fromCharCode(icon.codePoint),
+            style: TextStyle(
+              fontSize: squareSize * 0.4,
+              fontFamily: icon.fontFamily,
+              package: icon.fontPackage,
+              color: palette.topAccent,
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        );
+        glyphPainter.layout();
+        final glyphOffset = Offset(
+          center.dx - glyphPainter.width / 2,
+          center.dy - glyphPainter.height / 2,
+        );
+        glyphPainter.paint(canvas, glyphOffset);
+
+        // Draw signal ring if applicable
+        if (tier != ArtMarkerSignal.subtle) {
+          _paintFlatSignalRing(
+            canvas,
+            center: center,
+            squareSize: squareSize + 4,
+            tier: tier,
+            baseColor: baseColor,
+            roles: roles,
+          );
+        }
+      },
+    );
+  }
+
+  /// Paints a signal ring for flat markers (square outline instead of circular)
+  static void _paintFlatSignalRing(
+    Canvas canvas, {
+    required Offset center,
+    required double squareSize,
+    required ArtMarkerSignal tier,
+    required Color baseColor,
+    required KubusColorRoles roles,
+  }) {
+    Color glowColor;
+    double opacity;
+    double strokeWidth;
+    double blur;
+
+    switch (tier) {
+      case ArtMarkerSignal.legendary:
+        glowColor = roles.achievementGold;
+        opacity = 0.7;
+        strokeWidth = 2.5;
+        blur = 6;
+        break;
+      case ArtMarkerSignal.featured:
+        glowColor = baseColor;
+        opacity = 0.55;
+        strokeWidth = 1.5;
+        blur = 4;
+        break;
+      case ArtMarkerSignal.active:
+        glowColor = baseColor;
+        opacity = 0.35;
+        strokeWidth = 1.5;
+        blur = 3;
+        break;
+      case ArtMarkerSignal.subtle:
+        return;
+    }
+
+    final rect = Rect.fromCenter(
+      center: center,
+      width: squareSize,
+      height: squareSize,
+    );
+
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth
+        ..color = glowColor.withValues(alpha: opacity),
+    );
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth
+        ..color = glowColor.withValues(alpha: opacity * 0.6)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, blur),
     );
   }
 
