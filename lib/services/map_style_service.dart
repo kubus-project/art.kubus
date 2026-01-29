@@ -85,17 +85,13 @@ class MapStyleService {
       normalized = normalized.substring(1);
     }
 
-    // Normalize accidental double-prefixes like `assets/assets/...`.
+    // Flutter web serves bundled assets under `assets/<assetPath>`.
+    // If the asset path itself starts with `assets/`, the final URL should be
+    // `assets/assets/...`.
     if (normalized.startsWith('assets/assets/')) {
-      normalized = normalized.substring('assets/'.length);
-    }
-
-    // If the style already points inside the web `assets/` folder, keep it.
-    if (normalized.startsWith('assets/')) {
       return normalized;
     }
 
-    // Flutter web serves bundled assets under `assets/<assetPath>`.
     return 'assets/$normalized';
   }
 
