@@ -100,7 +100,14 @@ jobs:
         run: flutter analyze
 
       - name: Flutter test
-        run: flutter test ${{ steps.defines.outputs.args }}
+        run: flutter test --coverage ${{ steps.defines.outputs.args }}
+
+      - name: Upload Flutter coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-coverage
+          path: coverage/lcov.info
+          if-no-files-found: warn
 
       - name: Flutter build web
         run: flutter build web --release ${{ steps.defines.outputs.args }}
@@ -157,6 +164,14 @@ jobs:
           NODE_ENV: test
         working-directory: backend
         run: npm test
+
+      - name: Upload backend coverage
+        if: ${{ steps.present.outputs.ok == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage
+          if-no-files-found: warn
 
       - name: Skip backend checks (submodule not available)
         if: ${{ steps.present.outputs.ok != 'true' }}

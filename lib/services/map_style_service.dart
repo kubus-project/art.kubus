@@ -74,8 +74,14 @@ class MapStyleService {
   }
 
   static String _toWebAssetUrl(String styleRef) {
-    var normalized = styleRef;
-    if (normalized.startsWith('/')) {
+    var normalized = styleRef.trim();
+    if (normalized.isEmpty) return normalized;
+
+    normalized = normalized.replaceAll('\\', '/');
+    if (normalized.startsWith('./')) {
+      normalized = normalized.substring(2);
+    }
+    while (normalized.startsWith('/')) {
       normalized = normalized.substring(1);
     }
 
@@ -91,5 +97,10 @@ class MapStyleService {
 
     // Flutter web serves bundled assets under `assets/<assetPath>`.
     return 'assets/$normalized';
+  }
+
+  @visibleForTesting
+  static String normalizeWebAssetUrlForTest(String styleRef) {
+    return _toWebAssetUrl(styleRef);
   }
 }

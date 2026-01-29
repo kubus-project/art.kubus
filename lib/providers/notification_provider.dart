@@ -1,13 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/backend_api_service.dart';
 import '../services/socket_service.dart';
 import '../services/push_notification_service.dart';
 import '../utils/wallet_utils.dart';
+import 'app_refresh_provider.dart';
 
 class NotificationProvider extends ChangeNotifier {
   final BackendApiService _backend = BackendApiService();
@@ -20,7 +21,7 @@ class NotificationProvider extends ChangeNotifier {
   bool _hasNew = false;
   int _lastNotifVersion = 0;
   int _lastGlobalVersion = 0;
-  dynamic _boundRefreshProvider;
+  AppRefreshProvider? _boundRefreshProvider;
   String? _lastNotifHash;
   DateTime? _lastNotifTimestamp;
   bool _initialized = false;
@@ -29,13 +30,21 @@ class NotificationProvider extends ChangeNotifier {
   bool _socketListenersRegistered = false;
   bool _connectListenerRegistered = false;
   String? _currentWallet;
-  Timer? _subscriptionMonitorTimer;
   Timer? _scheduledServerSync;
-  Timer? _autoRefreshTimer;
+  DateTime? _scheduledServerSyncDueAt;
+  Timer? _cadenceTimer;
+  Duration? _cadenceInterval;
+  DateTime? _lastSubscriptionCheckAt;
   DateTime? _lastServerSync;
   static const String _prefsUnreadPrefix = 'notifications_unread_count_';
   final Duration _minServerSyncInterval = const Duration(seconds: 8);
-  final Duration _autoRefreshInterval = const Duration(seconds: 90);
+  final Duration _foregroundCadence = const Duration(seconds: 55);
+  final Duration _backgroundCadence = const Duration(seconds: 150);
+  final Duration _subscriptionCheckInterval = const Duration(seconds: 70);
+
+  int _debugCadenceTicks = 0;
+  int _debugSyncs = 0;
+  int _debugSkippedSyncs = 0;
 
   // Only community notifications (messages handled by ChatProvider)
   int get unreadCount => _communityUnreadCount;
@@ -119,9 +128,7 @@ class NotificationProvider extends ChangeNotifier {
 
       // Refresh unread count immediately so UI reflects backend state.
       await refresh(force: true);
-      _startAutoRefreshLoop();
-      // Start subscription monitor to ensure we remain subscribed to user's socket room
-      _startSubscriptionMonitor();
+      _ensureCadenceTimer(forceRestart: true);
       debugPrint('NotificationProvider.initialize: COMPLETE, unread=$_communityUnreadCount');
     } finally {
       _initializing = false;
@@ -170,68 +177,94 @@ class NotificationProvider extends ChangeNotifier {
     unawaited(refresh(force: true));
   }
 
-  void _startSubscriptionMonitor() {
-    try {
-      _subscriptionMonitorTimer?.cancel();
-      _subscriptionMonitorTimer = Timer.periodic(const Duration(seconds: 45), (_) async {
-        try {
-          final expectedWallet = WalletUtils.canonical(_currentWallet);
-          if (expectedWallet.isEmpty) return;
-          final subscribed = WalletUtils.canonical(_socket.currentSubscribedWallet);
-          if (subscribed.isEmpty || subscribed != expectedWallet) {
-            debugPrint('NotificationProvider: subscription monitor detected mismatch (subscribed=$subscribed expected=$_currentWallet), attempting resubscribe');
-            var ok = false;
-            try {
-              ok = await _socket.connectAndSubscribe(_backend.baseUrl, _currentWallet!);
-            } catch (e) {
-              debugPrint('NotificationProvider: subscription monitor connectAndSubscribe threw: $e');
-            }
-            debugPrint('NotificationProvider: subscription monitor connectAndSubscribe -> $ok');
-            if (!ok) {
-              debugPrint('NotificationProvider: subscription monitor fallback to subscribeUser');
-              _socket.subscribeUser(_currentWallet!);
-            }
-              // extra reconnect logic handled by connectAndSubscribe above and fallback to subscribeUser
-          }
-        } catch (e) {
-          debugPrint('NotificationProvider._startSubscriptionMonitor check failed: $e');
-        }
-      });
-    } catch (e) {
-      debugPrint('NotificationProvider._startSubscriptionMonitor failed to start: $e');
+  void _ensureCadenceTimer({bool forceRestart = false}) {
+    final interval = _computeCadenceInterval();
+    if (interval == null) {
+      _cadenceTimer?.cancel();
+      _cadenceTimer = null;
+      _cadenceInterval = null;
+      return;
+    }
+
+    if (!forceRestart && _cadenceTimer != null && _cadenceInterval == interval) {
+      return;
+    }
+
+    _cadenceTimer?.cancel();
+    _cadenceInterval = interval;
+    if (kDebugMode) {
+      debugPrint('NotificationProvider: cadence interval set to ${interval.inSeconds}s');
+    }
+    _cadenceTimer = Timer.periodic(interval, (_) {
+      if (!_initialized) return;
+      if (_currentWallet == null || _currentWallet!.isEmpty) return;
+      if (!_isForeground) return;
+      _debugCadenceTicks++;
+      _maybeCheckSubscription();
+      _scheduleServerSync();
+    });
+  }
+
+  Duration? _computeCadenceInterval() {
+    if (!_initialized) return null;
+    if (_currentWallet == null || _currentWallet!.isEmpty) return null;
+    if (!_isForeground) return null;
+    final active = _isNotificationsSurfaceActive;
+    return active ? _foregroundCadence : _backgroundCadence;
+  }
+
+  bool get _isForeground => _boundRefreshProvider?.isAppForeground ?? true;
+
+  bool get _isNotificationsSurfaceActive {
+    return _boundRefreshProvider?.isViewActive(
+          AppRefreshProvider.viewNotifications,
+          grace: const Duration(minutes: 2),
+        ) ??
+        true;
+  }
+
+  void handleAppForegroundChanged(bool isForeground) {
+    _ensureCadenceTimer(forceRestart: true);
+    if (isForeground) {
+      _scheduleServerSync(force: true);
     }
   }
 
-  void _startAutoRefreshLoop() {
-    try {
-      _autoRefreshTimer?.cancel();
-      _autoRefreshTimer = Timer.periodic(_autoRefreshInterval, (_) {
-        if (!_initialized) return;
-        if (_currentWallet == null || _currentWallet!.isEmpty) return;
-        _scheduleServerSync();
-      });
-    } catch (e) {
-      debugPrint('NotificationProvider._startAutoRefreshLoop failed: $e');
-    }
+  void handleViewVisibilityChanged() {
+    _ensureCadenceTimer(forceRestart: true);
   }
 
   void _stopAutoRefreshLoop() {
-    try {
-      _autoRefreshTimer?.cancel();
-      _autoRefreshTimer = null;
-    } catch (_) {}
+    _cadenceTimer?.cancel();
+    _cadenceTimer = null;
+    _cadenceInterval = null;
   }
 
   void _scheduleServerSync({Duration? delay, bool force = false}) {
     if ((_currentWallet == null || _currentWallet!.isEmpty) && !_initializing) {
       return;
     }
+    if (_refreshInFlight && !force) {
+      _debugSkippedSyncs++;
+      return;
+    }
     final computedDelay = force
         ? (delay ?? Duration.zero)
         : _computeSyncDelay(delay);
+    final dueAt = DateTime.now().add(computedDelay);
+    if (!force &&
+        _scheduledServerSync != null &&
+        (_scheduledServerSync?.isActive ?? false) &&
+        _scheduledServerSyncDueAt != null &&
+        _scheduledServerSyncDueAt!.isBefore(dueAt)) {
+      _debugSkippedSyncs++;
+      return;
+    }
     _scheduledServerSync?.cancel();
+    _scheduledServerSyncDueAt = dueAt;
     _scheduledServerSync = Timer(computedDelay, () {
       _scheduledServerSync = null;
+      _scheduledServerSyncDueAt = null;
       unawaited(_syncUnreadCount(force: force));
     });
   }
@@ -308,6 +341,7 @@ class NotificationProvider extends ChangeNotifier {
 
     if (_refreshInFlight && !force) {
       debugPrint('NotificationProvider.refresh: already in flight, skipping');
+      _debugSkippedSyncs++;
       return;
     }
 
@@ -336,6 +370,7 @@ class NotificationProvider extends ChangeNotifier {
       await _persistUnreadCount(count);
 
       debugPrint('NotificationProvider.refresh: count=$count (was $oldCount)');
+      _debugSyncs++;
 
       if (count != oldCount || (_hasNew != (oldCount > 0))) {
         notifyListeners();
@@ -384,28 +419,38 @@ class NotificationProvider extends ChangeNotifier {
   }
 
   /// Bind to the AppRefreshProvider to receive global or specific refresh triggers.
-  void bindToRefresh(dynamic appRefresh) {
+  void bindToRefresh(AppRefreshProvider appRefresh) {
     try {
-      if (appRefresh == null) return;
       if (identical(_boundRefreshProvider, appRefresh)) return;
       _boundRefreshProvider = appRefresh;
-      _lastNotifVersion = appRefresh.notificationsVersion ?? 0;
-      _lastGlobalVersion = appRefresh.globalVersion ?? 0;
+      _lastNotifVersion = appRefresh.notificationsVersion;
+      _lastGlobalVersion = appRefresh.globalVersion;
       appRefresh.addListener(() {
         try {
-          if ((appRefresh.notificationsVersion ?? 0) != _lastNotifVersion) {
-            _lastNotifVersion = appRefresh.notificationsVersion ?? 0;
-            refresh(force: true);
-          } else if ((appRefresh.globalVersion ?? 0) != _lastGlobalVersion) {
-            _lastGlobalVersion = appRefresh.globalVersion ?? 0;
-            refresh(force: true);
+          if (appRefresh.notificationsVersion != _lastNotifVersion) {
+            _lastNotifVersion = appRefresh.notificationsVersion;
+            if (_isNotificationsSurfaceActive || _isForeground) {
+              refresh(force: true);
+            }
+          } else if (appRefresh.globalVersion != _lastGlobalVersion) {
+            _lastGlobalVersion = appRefresh.globalVersion;
+            if (_isNotificationsSurfaceActive || _isForeground) {
+              refresh(force: true);
+            }
           }
         } catch (e) { /* ignore */ }
       });
+      _ensureCadenceTimer(forceRestart: true);
     } catch (e) {
       // ignore
     }
   }
+
+  Map<String, int> get debugCounters => <String, int>{
+        'cadenceTicks': _debugCadenceTicks,
+        'syncs': _debugSyncs,
+        'skippedSyncs': _debugSkippedSyncs,
+      };
 
   void increment([int by = 1]) {
     _communityUnreadCount += by;
@@ -562,11 +607,38 @@ class NotificationProvider extends ChangeNotifier {
       _socket.removeConnectListener(_handleSocketReconnect);
       _connectListenerRegistered = false;
     }
-    _subscriptionMonitorTimer?.cancel();
-    _subscriptionMonitorTimer = null;
     _scheduledServerSync?.cancel();
     _scheduledServerSync = null;
+    _scheduledServerSyncDueAt = null;
     _stopAutoRefreshLoop();
     super.dispose();
+  }
+
+  void _maybeCheckSubscription() {
+    final now = DateTime.now();
+    final last = _lastSubscriptionCheckAt;
+    if (last != null && now.difference(last) < _subscriptionCheckInterval) {
+      return;
+    }
+    _lastSubscriptionCheckAt = now;
+    try {
+      final expectedWallet = WalletUtils.canonical(_currentWallet);
+      if (expectedWallet.isEmpty) return;
+      final subscribed = WalletUtils.canonical(_socket.currentSubscribedWallet);
+      if (subscribed.isEmpty || subscribed != expectedWallet) {
+        debugPrint(
+            'NotificationProvider: subscription check mismatch (subscribed=$subscribed expected=$_currentWallet), attempting resubscribe');
+        _socket.connectAndSubscribe(_backend.baseUrl, _currentWallet!).then((ok) {
+          debugPrint('NotificationProvider: connectAndSubscribe -> $ok');
+          if (!ok) {
+            _socket.subscribeUser(_currentWallet!);
+          }
+        }).catchError((e) {
+          debugPrint('NotificationProvider: connectAndSubscribe error: $e');
+        });
+      }
+    } catch (e) {
+      debugPrint('NotificationProvider._maybeCheckSubscription failed: $e');
+    }
   }
 }

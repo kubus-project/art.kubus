@@ -37,14 +37,21 @@ class ArtContentService {
         final jsonResponse = jsonDecode(response.body) as Map<String, dynamic>;
         final fileUrl = jsonResponse['url'] as String?;
         if (fileUrl != null) {
-          debugPrint('ArtContentService: Uploaded media to $fileUrl');
+          if (kDebugMode) {
+            debugPrint('ArtContentService: Uploaded media to $fileUrl');
+          }
           return fileUrl;
         }
       } else {
-        debugPrint('ArtContentService: Upload failed - ${response.statusCode}: ${response.body}');
+        if (kDebugMode) {
+          debugPrint(
+              'ArtContentService: Upload failed - ${response.statusCode}: ${response.body}');
+        }
       }
     } catch (e) {
-      debugPrint('ArtContentService: HTTP upload error: $e');
+      if (kDebugMode) {
+        debugPrint('ArtContentService: HTTP upload error: $e');
+      }
     }
     return null;
   }
@@ -61,7 +68,9 @@ class ArtContentService {
         }
       }
     } catch (e) {
-      debugPrint('ArtContentService: Error fetching storage stats: $e');
+      if (kDebugMode) {
+        debugPrint('ArtContentService: Error fetching storage stats: $e');
+      }
     }
     return {};
   }

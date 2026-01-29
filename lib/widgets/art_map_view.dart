@@ -57,6 +57,15 @@ class ArtMapView extends StatefulWidget {
   final bool tiltGesturesEnabled;
   final bool compassEnabled;
 
+  @visibleForTesting
+  static bool isStyleReadyForTest({
+    required bool styleLoaded,
+    required bool styleFailed,
+    required bool pendingStyleApply,
+  }) {
+    return styleLoaded && !styleFailed && !pendingStyleApply;
+  }
+
   @override
   State<ArtMapView> createState() => _ArtMapViewState();
 }
@@ -226,6 +235,12 @@ class _ArtMapViewState extends State<ArtMapView> {
           return const SizedBox.expand(child: ColoredBox(color: Colors.transparent));
         }
 
+        final styleReady = ArtMapView.isStyleReadyForTest(
+          styleLoaded: _styleLoaded,
+          styleFailed: _styleFailed,
+          pendingStyleApply: _pendingStyleApply,
+        );
+
         return SizedBox.expand(
           child: Stack(
             children: [
@@ -246,10 +261,12 @@ class _ArtMapViewState extends State<ArtMapView> {
                   widget.minZoom,
                   widget.maxZoom,
                 ),
-                rotateGesturesEnabled: widget.rotateGesturesEnabled,
-                scrollGesturesEnabled: widget.scrollGesturesEnabled,
-                zoomGesturesEnabled: widget.zoomGesturesEnabled,
-                tiltGesturesEnabled: widget.tiltGesturesEnabled,
+                rotateGesturesEnabled:
+                  widget.rotateGesturesEnabled && styleReady,
+                scrollGesturesEnabled:
+                  widget.scrollGesturesEnabled && styleReady,
+                zoomGesturesEnabled: widget.zoomGesturesEnabled && styleReady,
+                tiltGesturesEnabled: widget.tiltGesturesEnabled && styleReady,
                 compassEnabled: widget.compassEnabled,
                 myLocationEnabled: false,
                 myLocationTrackingMode: ml.MyLocationTrackingMode.none,
@@ -317,7 +334,7 @@ class _ArtMapViewState extends State<ArtMapView> {
                 onMapClick: widget.onMapClick == null
                     ? null
                     : (math.Point<double> point, ml.LatLng latLng) {
-                        if (!_styleLoaded) return;
+                        if (!styleReady) return;
                         widget.onMapClick!(
                           point,
                           ll.LatLng(latLng.latitude, latLng.longitude),
@@ -326,7 +343,7 @@ class _ArtMapViewState extends State<ArtMapView> {
                 onMapLongClick: widget.onMapLongClick == null
                     ? null
                     : (math.Point<double> point, ml.LatLng latLng) {
-                        if (!_styleLoaded) return;
+                        if (!styleReady) return;
                         widget.onMapLongClick!(
                           point,
                           ll.LatLng(latLng.latitude, latLng.longitude),

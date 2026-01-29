@@ -27,7 +27,9 @@ class ARContentService {
       StorageProvider provider) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_storageProviderKey, provider.name);
-    debugPrint('ARContentService: Storage provider set to ${provider.name}');
+    if (kDebugMode) {
+      debugPrint('ARContentService: Storage provider set to ${provider.name}');
+    }
   }
 
   /// Get preferred IPFS gateway
@@ -55,7 +57,9 @@ class ARContentService {
 
       return response.statusCode == 200;
     } catch (e) {
-      debugPrint('IPFS gateway test failed for $gateway: $e');
+      if (kDebugMode) {
+        debugPrint('IPFS gateway test failed for $gateway: $e');
+      }
       return false;
     }
   }
@@ -101,7 +105,9 @@ class ARContentService {
           return await _loadFromIPFS(marker);
       }
     } catch (e) {
-      debugPrint('ARContentService: Error loading content: $e');
+      if (kDebugMode) {
+        debugPrint('ARContentService: Error loading content: $e');
+      }
       return null;
     }
   }
@@ -120,13 +126,17 @@ class ARContentService {
           );
 
       if (response.statusCode == 200) {
-        debugPrint('ARContentService: Loaded from IPFS - ${marker.modelCID}');
+        if (kDebugMode) {
+          debugPrint('ARContentService: Loaded from IPFS - ${marker.modelCID}');
+        }
         return url;
       }
 
       return null;
     } catch (e) {
-      debugPrint('ARContentService: IPFS load failed: $e');
+      if (kDebugMode) {
+        debugPrint('ARContentService: IPFS load failed: $e');
+      }
       return null;
     }
   }
@@ -135,7 +145,9 @@ class ARContentService {
   static String? _loadFromHTTP(ArtMarker marker) {
     if (marker.modelURL == null) return null;
 
-    debugPrint('ARContentService: Using HTTP URL - ${marker.modelURL}');
+    if (kDebugMode) {
+      debugPrint('ARContentService: Using HTTP URL - ${marker.modelURL}');
+    }
     return marker.modelURL;
   }
 
@@ -148,8 +160,10 @@ class ARContentService {
     // Validate API keys are configured
     if (StorageConfig.pinataApiKey == 'YOUR_PINATA_API_KEY' ||
         StorageConfig.pinataSecretKey == 'YOUR_PINATA_SECRET_KEY') {
-      debugPrint(
-          'ARContentService: Pinata credentials not configured. Set PINATA_API_KEY and PINATA_SECRET_KEY.');
+      if (kDebugMode) {
+        debugPrint(
+            'ARContentService: Pinata credentials not configured. Set PINATA_API_KEY and PINATA_SECRET_KEY.');
+      }
       return null;
     }
 
@@ -183,15 +197,21 @@ class ARContentService {
       if (response.statusCode == 200) {
         final jsonResponse = jsonDecode(response.body);
         final cid = jsonResponse['IpfsHash'] as String;
-        debugPrint('ARContentService: Uploaded to IPFS - CID: $cid');
+        if (kDebugMode) {
+          debugPrint('ARContentService: Uploaded to IPFS - CID: $cid');
+        }
         return cid;
       }
 
-      debugPrint(
-          'ARContentService: Upload failed - ${response.statusCode}: ${response.body}');
+      if (kDebugMode) {
+        debugPrint(
+            'ARContentService: Upload failed - ${response.statusCode}: ${response.body}');
+      }
       return null;
     } catch (e) {
-      debugPrint('ARContentService: IPFS upload error: $e');
+      if (kDebugMode) {
+        debugPrint('ARContentService: IPFS upload error: $e');
+      }
       return null;
     }
   }
@@ -263,6 +283,8 @@ class ARContentService {
   static Future<void> clearCache() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_ipfsGatewayKey);
-    debugPrint('ARContentService: Cache cleared');
+    if (kDebugMode) {
+      debugPrint('ARContentService: Cache cleared');
+    }
   }
 }

@@ -7,6 +7,9 @@ import 'providers/profile_provider.dart';
 import 'providers/deep_link_provider.dart';
 import 'providers/deferred_onboarding_provider.dart';
 import 'providers/main_tab_provider.dart';
+import 'providers/app_refresh_provider.dart';
+import 'providers/notification_provider.dart';
+import 'providers/presence_provider.dart';
 import 'core/mobile_shell_registry.dart';
 import 'services/telemetry/telemetry_service.dart';
 import 'utils/share_deep_link_navigation.dart';
@@ -40,6 +43,7 @@ class _MainAppState extends State<MainApp> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final index = context.read<MainTabProvider>().currentIndex;
+      _syncRefreshVisibility(index);
       _syncTelemetryForIndex(index);
       _lastTelemetryIndex = index;
     });
@@ -86,6 +90,7 @@ class _MainAppState extends State<MainApp> {
     _lastTelemetryIndex = index;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      _syncRefreshVisibility(index);
       _syncTelemetryForIndex(index);
     });
   }
@@ -326,6 +331,26 @@ class _MainAppState extends State<MainApp> {
     }
 
     TelemetryService().setActiveScreen(screenName: name, screenRoute: route);
+  }
+
+  void _syncRefreshVisibility(int index) {
+    if (DesktopBreakpoints.isDesktop(context)) return;
+    try {
+      final refreshProvider = Provider.of<AppRefreshProvider>(context, listen: false);
+      final notificationProvider =
+          Provider.of<NotificationProvider>(context, listen: false);
+      final presenceProvider =
+          Provider.of<PresenceProvider>(context, listen: false);
+      final isCommunity = index == 2;
+      final isProfile = index == 4;
+
+      refreshProvider.setViewActive(AppRefreshProvider.viewCommunity, isCommunity);
+      refreshProvider.setViewActive(AppRefreshProvider.viewChat, isCommunity);
+      refreshProvider.setViewActive(AppRefreshProvider.viewNotifications, isCommunity);
+      refreshProvider.setViewActive(AppRefreshProvider.viewProfile, isProfile);
+      notificationProvider.handleViewVisibilityChanged();
+      presenceProvider.handleViewVisibilityChanged();
+    } catch (_) {}
   }
 }
 

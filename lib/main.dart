@@ -516,12 +516,18 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     final securityGate = Provider.of<SecurityGateProvider>(ctx, listen: false);
     final refreshProvider = Provider.of<AppRefreshProvider>(ctx, listen: false);
     final presenceProvider = Provider.of<PresenceProvider>(ctx, listen: false);
+    final notificationProvider = Provider.of<NotificationProvider>(ctx, listen: false);
+    final isForeground =
+        state != AppLifecycleState.paused && state != AppLifecycleState.inactive;
+    refreshProvider.setAppForeground(isForeground);
+    notificationProvider.handleAppForegroundChanged(isForeground);
+    presenceProvider.handleAppForegroundChanged(isForeground);
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
       securityGate.onAppLifecycleChanged(state);
     } else if (state == AppLifecycleState.resumed) {
       securityGate.onAppLifecycleChanged(state);
       // Refresh core surfaces after returning to foreground (no manual reload needed).
-      refreshProvider.triggerAll();
+      refreshProvider.triggerForegroundRefresh();
       unawaited(presenceProvider.onAppResumed());
       unawaited(SocketService().connect());
     }

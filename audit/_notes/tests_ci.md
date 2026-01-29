@@ -4,7 +4,14 @@
 - CI runs Flutter verification (analyze, test, web build) when Flutter-related paths change and runs backend lint/tests when backend changes are detected.
 - Backend npm scripts define `lint` and `test` (with Jest coverage enabled).
 - Test suites exist in both Flutter (`test/`) and backend (`backend/__tests__/`).
-- Coverage gaps: Flutter CI does not collect coverage, and backend coverage is not published or enforced with thresholds.
+- Coverage artifacts are now collected for Flutter and backend in CI; thresholds remain unenforced.
+
+## Verification (local)
+- Windows: `flutter analyze` ✅
+- Windows: `flutter test` ✅
+- Windows: `flutter build web` ✅ (wasm dry-run warnings from third-party packages)
+- Windows: `npm run lint` ✅
+- Windows: `npm test` ✅ (41 suites, 174 tests)
 
 ## Findings
 
@@ -24,16 +31,17 @@
 
 ### AK-AUD-004 — Coverage gaps (collection/publishing/enforcement)
 **Details:**
-- Flutter CI runs `flutter test` without `--coverage`, so no coverage is generated in CI.
-- Backend Jest runs with `--coverage`, but CI does not publish artifacts or enforce thresholds; no `coverageThreshold` configuration is present in `backend/package.json`.
+- Flutter CI now runs `flutter test --coverage` and uploads `coverage/lcov.info` as an artifact.
+- Backend Jest runs with `--coverage`, and CI uploads the `backend/coverage` artifact.
+- Coverage thresholds are still not enforced; no `coverageThreshold` configuration is present in `backend/package.json`.
 
 **Evidence:**
-- `.github/workflows/ci.yml` lines **102–103** (Flutter test command lacks `--coverage`).
+- `.github/workflows/ci.yml` lines **102–117** (Flutter test uses `--coverage` and uploads `flutter-coverage`).
 - `backend/package.json` lines **1–77** (no `jest` config / `coverageThreshold` entries).
-- `.github/workflows/ci.yml` lines **154–159** (backend tests run but no coverage upload/publish step).
+- `.github/workflows/ci.yml` lines **154–168** (backend tests run and upload `backend-coverage`).
 
 ## Top P0/P1
-- **P1:** CI does not collect Flutter coverage, and backend coverage is not enforced or published (see AK-AUD-004).
+- **P1:** Coverage thresholds are not enforced (see AK-AUD-004).
 - **P0:** None observed.
 
 ## Files Reviewed

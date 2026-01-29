@@ -14,7 +14,7 @@ class PresenceProvider extends ChangeNotifier {
   static const Duration _visitDebounce = Duration(milliseconds: 400);
   static const Duration _visitDedupeWindow = Duration(minutes: 5);
   // Keep presence feeling "live" without spamming the backend.
-  static const Duration _autoRefreshInterval = Duration(seconds: 20);
+  static const Duration _baseAutoRefreshInterval = Duration(seconds: 20);
   static const Duration _heartbeatInterval = Duration(seconds: 30);
 
   /// Prevent unbounded watched-wallet growth (e.g., scrolling long feeds).
@@ -38,6 +38,7 @@ class PresenceProvider extends ChangeNotifier {
   final Set<String> _watchedWalletsLower = <String>{};
   final Map<String, DateTime> _watchedWalletLastRequestedAt = <String, DateTime>{};
   Timer? _autoRefreshTimer;
+  Duration? _autoRefreshIntervalCurrent;
 
   Timer? _heartbeatTimer;
   bool _heartbeatInFlight = false;
@@ -50,6 +51,10 @@ class PresenceProvider extends ChangeNotifier {
   int _lastGlobalVersion = 0;
   int _lastCommunityVersion = 0;
   int _lastChatVersion = 0;
+
+  int _debugAutoRefreshTicks = 0;
+  int _debugAutoRefreshSkipped = 0;
+  int _debugHeartbeats = 0;
 
   final Map<String, _PresenceCacheEntry> _cacheByWalletLower = <String, _PresenceCacheEntry>{};
 
@@ -167,15 +172,37 @@ class PresenceProvider extends ChangeNotifier {
   }
 
   void _ensureAutoRefreshTimer() {
-    if (_autoRefreshTimer != null) return;
     if (!AppConfig.isFeatureEnabled('presence')) return;
-    if (_watchedWalletsLower.isEmpty) return;
+    final interval = _computeAutoRefreshInterval();
+    if (interval == null) {
+      _autoRefreshTimer?.cancel();
+      _autoRefreshTimer = null;
+      _autoRefreshIntervalCurrent = null;
+      return;
+    }
 
-    _autoRefreshTimer = Timer.periodic(_autoRefreshInterval, (_) {
+    if (_autoRefreshTimer != null && _autoRefreshIntervalCurrent == interval) {
+      return;
+    }
+
+    _autoRefreshTimer?.cancel();
+    _autoRefreshIntervalCurrent = interval;
+    if (kDebugMode) {
+      debugPrint(
+        'PresenceProvider: auto-refresh interval=${interval.inSeconds}s (watchers=${_watchedWalletsLower.length})',
+      );
+    }
+
+    _autoRefreshTimer = Timer.periodic(interval, (_) {
       if (!AppConfig.isFeatureEnabled('presence')) return;
+      if (!_isForeground) {
+        _debugAutoRefreshSkipped++;
+        return;
+      }
       if (_watchedWalletsLower.isEmpty) {
         _autoRefreshTimer?.cancel();
         _autoRefreshTimer = null;
+        _autoRefreshIntervalCurrent = null;
         return;
       }
 
@@ -184,9 +211,11 @@ class PresenceProvider extends ChangeNotifier {
       if (_watchedWalletsLower.isEmpty) {
         _autoRefreshTimer?.cancel();
         _autoRefreshTimer = null;
+        _autoRefreshIntervalCurrent = null;
         return;
       }
 
+      _debugAutoRefreshTicks++;
       final cutoff = now.subtract(_watchedWalletTtl);
       for (final key in _watchedWalletsLower) {
         final lastRequested = _watchedWalletLastRequestedAt[key];
@@ -196,6 +225,39 @@ class PresenceProvider extends ChangeNotifier {
       }
       _scheduleBatchFetch();
     });
+  }
+
+  Duration? _computeAutoRefreshInterval() {
+    if (!AppConfig.isFeatureEnabled('presence')) return null;
+    if (_watchedWalletsLower.isEmpty) return null;
+    if (!_isForeground) return null;
+
+    final watcherCount = _watchedWalletsLower.length;
+    Duration interval = _baseAutoRefreshInterval;
+    if (watcherCount >= 80) {
+      interval = const Duration(seconds: 50);
+    } else if (watcherCount >= 40) {
+      interval = const Duration(seconds: 35);
+    } else if (watcherCount >= 20) {
+      interval = const Duration(seconds: 28);
+    }
+
+    if (!_isPresenceSurfaceActive) {
+      final doubled = interval.inSeconds * 2;
+      interval = Duration(seconds: doubled.clamp(35, 120));
+    }
+
+    return interval;
+  }
+
+  bool get _isForeground => _boundRefreshProvider?.isAppForeground ?? true;
+
+  bool get _isPresenceSurfaceActive {
+    final refresh = _boundRefreshProvider;
+    if (refresh == null) return true;
+    return refresh.isViewActive(AppRefreshProvider.viewCommunity) ||
+        refresh.isViewActive(AppRefreshProvider.viewChat) ||
+        refresh.isViewActive(AppRefreshProvider.viewProfile);
   }
 
   void _pruneWatchedWallets(DateTime now) {
@@ -226,6 +288,12 @@ class PresenceProvider extends ChangeNotifier {
     if (!_initialized) return;
 
     if (!AppConfig.isFeatureEnabled('presence')) {
+      _heartbeatTimer?.cancel();
+      _heartbeatTimer = null;
+      return;
+    }
+
+    if (!_isForeground) {
       _heartbeatTimer?.cancel();
       _heartbeatTimer = null;
       return;
@@ -275,6 +343,7 @@ class PresenceProvider extends ChangeNotifier {
       await _api.ensureAuthLoaded(walletAddress: wallet);
       await _api.pingPresence(walletAddress: wallet);
       _lastHeartbeatAt = DateTime.now();
+      _debugHeartbeats++;
     } catch (e) {
       if (kDebugMode) {
         debugPrint('PresenceProvider: heartbeat failed: $e');
@@ -282,6 +351,20 @@ class PresenceProvider extends ChangeNotifier {
     } finally {
       _heartbeatInFlight = false;
     }
+  }
+
+  void handleAppForegroundChanged(bool isForeground) {
+    _ensureAutoRefreshTimer();
+    _ensureHeartbeatTimer();
+    if (!isForeground) {
+      _autoRefreshTimer?.cancel();
+      _autoRefreshTimer = null;
+      _autoRefreshIntervalCurrent = null;
+    }
+  }
+
+  void handleViewVisibilityChanged() {
+    _ensureAutoRefreshTimer();
   }
 
   void recordVisit({required String type, required String id}) {
@@ -385,6 +468,12 @@ class PresenceProvider extends ChangeNotifier {
     }
     super.dispose();
   }
+
+  Map<String, int> get debugCounters => <String, int>{
+        'autoRefreshTicks': _debugAutoRefreshTicks,
+        'autoRefreshSkipped': _debugAutoRefreshSkipped,
+        'heartbeats': _debugHeartbeats,
+      };
 
   Future<void> _flushVisit() async {
     final pending = _pendingVisit;

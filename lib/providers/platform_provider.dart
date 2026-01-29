@@ -37,25 +37,19 @@ class PlatformProvider with ChangeNotifier {
     PlatformType platform = PlatformType.web;
 
     if (!kIsWeb) {
-      switch (defaultTargetPlatform) {
-        case TargetPlatform.android:
-          platform = PlatformType.android;
-          break;
-        case TargetPlatform.iOS:
-          platform = PlatformType.ios;
-          break;
-        case TargetPlatform.windows:
-          platform = PlatformType.windows;
-          break;
-        case TargetPlatform.macOS:
-          platform = PlatformType.macos;
-          break;
-        case TargetPlatform.linux:
-          platform = PlatformType.linux;
-          break;
-        case TargetPlatform.fuchsia:
-          platform = PlatformType.fuchsia;
-          break;
+      final target = defaultTargetPlatform;
+      if (target == TargetPlatform.android) {
+        platform = PlatformType.android;
+      } else if (target == TargetPlatform.iOS) {
+        platform = PlatformType.ios;
+      } else if (target == TargetPlatform.windows) {
+        platform = PlatformType.windows;
+      } else if (target == TargetPlatform.macOS) {
+        platform = PlatformType.macos;
+      } else if (target == TargetPlatform.linux) {
+        platform = PlatformType.linux;
+      } else if (target == TargetPlatform.fuchsia) {
+        platform = PlatformType.fuchsia;
       }
     }
 

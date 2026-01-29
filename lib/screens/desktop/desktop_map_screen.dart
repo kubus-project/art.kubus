@@ -160,6 +160,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   static const Duration _cameraUpdateThrottle =
       Duration(milliseconds: 16); // ~60fps
   bool _styleInitialized = false;
+  bool _styleReady = false;
   bool _styleInitializationInProgress = false;
   final Set<String> _registeredMapImages = <String>{};
   final LayerLink _markerOverlayLink = LayerLink();
@@ -581,6 +582,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   void _handleMapCreated(ml.MapLibreMapController controller) {
     _mapController = controller;
     _styleInitialized = false;
+    _styleReady = false;
     _registeredMapImages.clear();
     AppConfig.debugPrint(
       'DesktopMapScreen: map created (platform=${defaultTargetPlatform.name}, web=$kIsWeb)',
@@ -831,7 +833,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   void _queueOverlayAnchorRefresh() {
     if (_markerOverlayMode != _MarkerOverlayMode.anchored) return;
     if (_selectedMarkerData == null) return;
-    if (!_styleInitialized) return;
+    if (!_styleReady) return;
     _overlayAnchorDebouncer(const Duration(milliseconds: 16), () {
       unawaited(_refreshActiveMarkerAnchor());
     });
@@ -841,7 +843,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final controller = _mapController;
     final marker = _selectedMarkerData;
     if (controller == null || marker == null) return;
-    if (!_styleInitialized) return;
+    if (!_styleReady) return;
     if (_markerOverlayMode != _MarkerOverlayMode.anchored) return;
 
     try {
@@ -864,7 +866,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }) async {
     final controller = _mapController;
     if (controller == null) return;
-    if (!_styleInitialized) return;
+    if (!_styleReady) return;
 
     try {
       final layerIds = _is3DMarkerModeActive
@@ -1561,6 +1563,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             AppConfig.debugPrint(
               'DesktopMapScreen: onStyleLoadedCallback (dark=$isDark, style="$styleAsset")',
             );
+            if (mounted) {
+              setState(() {
+                _styleReady = true;
+              });
+            } else {
+              _styleReady = true;
+            }
             unawaited(_handleMapStyleLoaded(themeProvider)
                 .then((_) => _handleMapReady()));
           },
