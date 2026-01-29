@@ -876,14 +876,23 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               _cubeIconLayerId,
             ]
           : <String>[_markerHitboxLayerId, _markerLayerId];
-      final features = await controller.queryRenderedFeatures(
-        point,
-        layerIds,
-        null,
-      );
+      final queryPoints = _tapQueryPoints(point);
+      List<dynamic> features = const <dynamic>[];
+      for (final candidate in queryPoints) {
+        features = await controller.queryRenderedFeatures(
+          candidate,
+          layerIds,
+          null,
+        );
+        if (features.isNotEmpty) break;
+      }
 
       if (features.isEmpty) {
-        final fallbackMarker = await _fallbackPickMarkerAtPoint(point);
+        ArtMarker? fallbackMarker;
+        for (final candidate in queryPoints) {
+          fallbackMarker = await _fallbackPickMarkerAtPoint(candidate);
+          if (fallbackMarker != null) break;
+        }
         if (fallbackMarker != null) {
           _handleMarkerTap(fallbackMarker);
           unawaited(_syncMapMarkers(themeProvider: themeProvider));
@@ -944,12 +953,27 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         AppConfig.debugPrint(
             'DesktopMapScreen: queryRenderedFeatures failed: $e');
       }
-      final fallbackMarker = await _fallbackPickMarkerAtPoint(point);
+      final queryPoints = _tapQueryPoints(point);
+      ArtMarker? fallbackMarker;
+      for (final candidate in queryPoints) {
+        fallbackMarker = await _fallbackPickMarkerAtPoint(candidate);
+        if (fallbackMarker != null) break;
+      }
       if (fallbackMarker == null) return;
       _handleMarkerTap(fallbackMarker);
       unawaited(_syncMapMarkers(themeProvider: themeProvider));
       _queueOverlayAnchorRefresh();
     }
+  }
+
+  List<math.Point<double>> _tapQueryPoints(math.Point<double> point) {
+    if (!kIsWeb) return <math.Point<double>>[point];
+    final dpr = MediaQuery.of(context).devicePixelRatio;
+    if (dpr <= 1.01) return <math.Point<double>>[point];
+    return <math.Point<double>>[
+      point,
+      math.Point<double>(point.x * dpr, point.y * dpr),
+    ];
   }
 
   Future<ArtMarker?> _fallbackPickMarkerAtPoint(
