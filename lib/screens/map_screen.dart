@@ -174,6 +174,7 @@ class _MapScreenState extends State<MapScreen>
   static const String _markerHitboxLayerId = 'kubus_marker_hitbox_layer';
   static const String _cubeSourceId = 'kubus_marker_cubes';
   static const String _cubeLayerId = 'kubus_marker_cubes_layer';
+  static const String _cubeIconLayerId = 'kubus_marker_cubes_icon_layer';
   static const String _locationSourceId = 'kubus_user_location';
   static const String _locationLayerId = 'kubus_user_location_layer';
   static const double _cubePitchThreshold = 5.0;
@@ -206,6 +207,7 @@ class _MapScreenState extends State<MapScreen>
   bool _markerOverlayExpanded = false;
   Offset? _selectedMarkerAnchor;
   final Debouncer _overlayAnchorDebouncer = Debouncer();
+  final Debouncer _cubeSyncDebouncer = Debouncer();
   bool _didOpenInitialMarker = false;
   MapDeepLinkProvider? _mapDeepLinkProvider;
   bool _handlingDeepLinkIntent = false;
@@ -627,6 +629,7 @@ class _MapScreenState extends State<MapScreen>
     _markerRefreshDebouncer.dispose();
     _markerSocketSubscription?.cancel();
     _markerDeletedSubscription?.cancel();
+    _cubeSyncDebouncer.dispose();
     _animationController.dispose();
     _locationIndicatorController?.dispose();
     _sheetController.dispose();
@@ -1362,9 +1365,8 @@ class _MapScreenState extends State<MapScreen>
 
     try {
       await controller.setLayerVisibility(_cubeLayerId, shouldShowCubes);
+      await controller.setLayerVisibility(_cubeIconLayerId, shouldShowCubes);
       await controller.setLayerVisibility(_markerLayerId, !shouldShowCubes);
-      await controller.setLayerVisibility(
-          _markerHitboxLayerId, !shouldShowCubes);
     } catch (_) {
       // Best-effort: layer visibility may fail during style swaps.
     }
@@ -2513,13 +2515,19 @@ class _MapScreenState extends State<MapScreen>
           unawaited(_updateMarkerRenderMode());
         }
         final bucket = MapViewportUtils.zoomBucket(position.zoom);
+        final bucketChanged = bucket != _renderZoomBucket;
         // Throttle setState for 3D overlay repaints to ~60fps max
         final now = DateTime.now();
         final shouldUpdate = _isometricViewEnabled &&
             now.difference(_lastCameraUpdateTime) > _cameraUpdateThrottle;
-        if (bucket != _renderZoomBucket || shouldUpdate) {
+        if (bucketChanged || shouldUpdate) {
           _lastCameraUpdateTime = now;
           setState(() => _renderZoomBucket = bucket);
+        }
+        if (bucketChanged && _is3DMarkerModeActive) {
+          _cubeSyncDebouncer(const Duration(milliseconds: 60), () {
+            unawaited(_syncMarkerCubes(themeProvider: themeProvider));
+          });
         }
         final hasGesture = !_programmaticCameraMove;
         if (hasGesture && _autoFollow) {
@@ -2593,6 +2601,7 @@ class _MapScreenState extends State<MapScreen>
       await safeRemoveLayer(_markerLayerId);
       await safeRemoveLayer(_markerHitboxLayerId);
       await safeRemoveLayer(_cubeLayerId);
+      await safeRemoveLayer(_cubeIconLayerId);
       await safeRemoveSource(_markerSourceId);
       await safeRemoveSource(_cubeSourceId);
       await safeRemoveLayer(_locationLayerId);
@@ -2665,6 +2674,38 @@ class _MapScreenState extends State<MapScreen>
           circleRadius: hitboxRadius,
           circleColor: _hexRgb(scheme.surface),
           circleOpacity: 0.01,
+        ),
+        belowLayerId: _markerLayerId,
+      );
+
+      await controller.addSymbolLayer(
+        _markerSourceId,
+        _cubeIconLayerId,
+        ml.SymbolLayerProperties(
+          iconImage: <dynamic>['get', 'icon'],
+          iconSize: <dynamic>[
+            'interpolate',
+            ['linear'],
+            ['zoom'],
+            3,
+            0.5,
+            15,
+            1.0,
+            24,
+            1.5,
+          ],
+          iconOpacity: <dynamic>[
+            'case',
+            ['==', ['get', 'kind'], 'cluster'],
+            1.0,
+            1.0,
+          ],
+          iconAllowOverlap: true,
+          iconIgnorePlacement: true,
+          iconAnchor: 'center',
+          iconPitchAlignment: 'map',
+          iconRotationAlignment: 'map',
+          visibility: 'none',
         ),
         belowLayerId: _markerLayerId,
       );
@@ -2786,7 +2827,11 @@ class _MapScreenState extends State<MapScreen>
 
     try {
       final layerIds = _is3DMarkerModeActive
-          ? <String>[_cubeLayerId]
+          ? <String>[
+              _markerHitboxLayerId,
+              _cubeLayerId,
+              _cubeIconLayerId,
+            ]
           : <String>[_markerHitboxLayerId, _markerLayerId];
       final features = await controller.queryRenderedFeatures(
         point,

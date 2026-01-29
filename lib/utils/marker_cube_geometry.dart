@@ -34,8 +34,12 @@ class MarkerCubeGeometry {
   }
 
   static double metersPerPixel(double zoom, double latitude) {
+    const double earthRadiusMeters = 6378137.0;
+    const double tileSize = 512.0;
     final latRad = latitude * (math.pi / 180.0);
-    return 156543.03392 * math.cos(latRad) / math.pow(2.0, zoom);
+    final scale = math.pow(2.0, zoom).toDouble();
+    return (2 * math.pi * earthRadiusMeters * math.cos(latRad)) /
+        (tileSize * scale);
   }
 
   static Map<String, dynamic> cubeFeatureForMarker({
