@@ -4,6 +4,7 @@
 - Express server entry is centralized in `backend/src/server.js` with middleware, feature gates, and route wiring. DB access is a thin `pg` pool wrapper. Redis is used for admin sessions and cache with memory fallback. 
 - Primary heavy DB work is concentrated in `publicSyncService.fullSync()` (full-table reads + row-by-row sync) and stats snapshot/series endpoints that fan out into multiple COUNT queries.
 - One potential N+1 pattern exists in `publicSyncService.syncCommunityPostRow()` where missing hydrated fields triggers an extra query per row.
+- Analytics ingestion utilities (IP masking, ingest path normalization, and event shaping) are duplicated between `statsService` and `webAnalyticsService`, increasing drift risk.
 
 ## Findings
 
@@ -40,6 +41,10 @@ Platform snapshots and per-entity snapshots issue multiple COUNT queries (includ
 Analytics ingestion writes to `analytics_events` and optionally mirrors to `public.web_analytics_events`.
 **Evidence:** `backend/src/services/webAnalyticsService.js` lines 186–243.
 
+### AK-AUD-009 — Analytics helper duplication across services
+Both `statsService` and `webAnalyticsService` implement overlapping helpers for IP masking and ingest-path normalization, creating drift risk when behavior changes in one service but not the other.
+**Evidence:** `backend/src/services/statsService.js` lines 2035–2104 (`maskIpForAnalytics`, ingest path inference in `trackAnalyticsEvent()`); `backend/src/services/webAnalyticsService.js` lines 24–120 (`maskIp`, ingest path inference in `trackWebEvent()`).
+
 ## Top P0/P1
 - **P1:** OrbitDB full sync does full-table reads + row-by-row processing (high DB load / long runtime).  
   **Evidence:** `backend/src/services/publicSyncService.js` lines 639–675.
@@ -47,6 +52,18 @@ Analytics ingestion writes to `analytics_events` and optionally mirrors to `publ
   **Evidence:** `backend/src/services/publicSyncService.js` lines 555–560.
 - **P1:** Stats snapshot fanout of COUNT queries on hot tables (e.g., `analytics_events`).  
   **Evidence:** `backend/src/services/statsService.js` lines 708–735, 800–819, 842–855.
+
+## Follow-up status (2026-01-29)
+- **AK-AUD-005 (full sync load)**: **Resolved** — `fullSync()` now paginates with `ORBITDB_SYNC_BATCH_SIZE` and bounded concurrency.
+- **AK-AUD-006 (N+1 in community posts)**: **Mitigated** — batch sync skips per-row hydration when data is already pre-joined.
+- **AK-AUD-007 (stats fanout)**: **Mitigated** — platform snapshot counts now use a single aggregate query to reduce query fanout.
+- **AK-AUD-009 (analytics helper duplication)**: **Resolved** — shared helpers extracted into `backend/src/utils/analyticsUtils.js` and reused by stats + web analytics services.
+
+## Fix Evidence (2026-01-29)
+- `backend/src/services/publicSyncService.js`: `fullSync()` now uses batch paging + concurrency, and community post sync can skip hydration with `hydrateIfNeeded: false` during batch runs.
+- `backend/src/services/statsService.js`: platform snapshot counts now come from a single aggregate query.
+- `backend/src/utils/analyticsUtils.js`: shared `clampText`, `maskIp`, and `normalizeIngestPath` helpers.
+- `backend/src/services/statsService.js` + `backend/src/services/webAnalyticsService.js`: reuse shared analytics helpers.
 
 ## Files Reviewed
 - `backend/src/server.js`

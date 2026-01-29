@@ -23,14 +23,19 @@ class RecentActivityProvider extends ChangeNotifier {
   final UserActionService _actions;
 
   final int _maxItems = 60;
+  static const Duration _minRefreshInterval = Duration(seconds: 25);
   List<RecentActivity> _activities = const [];
   bool _isLoading = false;
   bool _initialized = false;
   bool _initializing = false;
   String? _error;
   DateTime? _lastSync;
+  DateTime? _lastRefreshStartedAt;
   NotificationProvider? _notificationProvider;
   Timer? _refreshDebounce;
+
+  int _debugRefreshCount = 0;
+  int _debugRefreshSkipped = 0;
 
   List<RecentActivity> get activities => List.unmodifiable(_activities);
   List<RecentActivity> get unreadActivities =>
@@ -65,6 +70,15 @@ class RecentActivityProvider extends ChangeNotifier {
 
   Future<void> refresh({bool force = false}) async {
     if (_isLoading && !force) return;
+    final now = DateTime.now();
+    if (!force && _lastRefreshStartedAt != null) {
+      final elapsed = now.difference(_lastRefreshStartedAt!);
+      if (elapsed < _minRefreshInterval) {
+        _debugRefreshSkipped++;
+        return;
+      }
+    }
+    _lastRefreshStartedAt = now;
     _isLoading = true;
     if (_activities.isEmpty) {
       notifyListeners();
@@ -80,6 +94,7 @@ class RecentActivityProvider extends ChangeNotifier {
       _activities = merged.take(_maxItems).toList();
       _lastSync = DateTime.now();
       _error = null;
+      _debugRefreshCount++;
     } catch (e, st) {
       if (kDebugMode) {
         debugPrint('RecentActivityProvider.refresh error: $e\n$st');
@@ -108,6 +123,11 @@ class RecentActivityProvider extends ChangeNotifier {
       refresh();
     });
   }
+
+  Map<String, int> get debugCounters => <String, int>{
+        'refreshCount': _debugRefreshCount,
+        'refreshSkipped': _debugRefreshSkipped,
+      };
 
   List<RecentActivity> _mapActivities(List<dynamic> rawList) {
     final List<RecentActivity> mapped = [];

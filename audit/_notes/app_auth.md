@@ -33,6 +33,17 @@ Reviewed auth lifecycle across providers, services, onboarding/sign-in, token st
     - Backend API will retry once only when re-auth is successful; otherwise it returns the original 401/403: `lib/services/backend_api_service.dart` lines 736–770.
   - **Root cause:** When users disable app lock (PIN off and auto-lock set to “Never”), token-expiry reauth is skipped and there is no guaranteed fallback prompt, leading to repeated 401s and a degraded experience without a clear recovery path.
 
+## Fix Evidence (2026-01-29)
+- **AK-AUD-003** resolved by routing expired-token sessions to sign-in when app lock is disabled, while preserving onboarding no-reauth for fresh installs.
+  - `lib/providers/security_gate_provider.dart`: `handleAuthFailure` now:
+    - skips re-auth + avoids sign-in when `shouldPrompt == false` and onboarding is shown;
+    - forces `/sign-in` when `shouldPrompt == true` and `hasAppLock == false`.
+  - Tests added:
+    - `test/security_gate_provider_test.dart`: cold start no session → no reauth prompt; token expiry + lock off → sign-in route; token expiry + lock on → lock flow.
+
+## Verification
+- `flutter test test/security_gate_provider_test.dart`
+
 ## Top P0/P1
 - **P1:** AK-AUD-001 — Re-auth prompt before explicit sign-in (wallet-only local account).
 - **P1:** AK-AUD-002 — Re-auth gating uses auto-lock defaults even without PIN.

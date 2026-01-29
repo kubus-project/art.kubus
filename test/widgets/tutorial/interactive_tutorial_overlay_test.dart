@@ -7,6 +7,7 @@ void main() {
       (tester) async {
     int tapCount = 0;
     int panCount = 0;
+    int scaleCount = 0;
     final targetKey = GlobalKey();
 
     final steps = <TutorialStepDefinition>[
@@ -23,11 +24,15 @@ void main() {
           body: Stack(
             children: [
               Positioned.fill(
-                child: GestureDetector(
+                child: Listener(
                   behavior: HitTestBehavior.opaque,
-                  onTap: () => tapCount += 1,
-                  onPanUpdate: (_) => panCount += 1,
-                  child: const SizedBox.expand(),
+                  onPointerMove: (_) => panCount += 1,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => tapCount += 1,
+                    onScaleUpdate: (_) => scaleCount += 1,
+                    child: const SizedBox.expand(),
+                  ),
                 ),
               ),
               Center(
@@ -62,10 +67,26 @@ void main() {
     );
     await tester.pump();
 
+    final gesture1 = await tester.startGesture(
+      const Offset(120, 120),
+      pointer: 1,
+    );
+    final gesture2 = await tester.startGesture(
+      const Offset(200, 120),
+      pointer: 2,
+    );
+    await tester.pump();
+    await gesture1.moveTo(const Offset(100, 120));
+    await gesture2.moveTo(const Offset(220, 120));
+    await tester.pump();
+    await gesture1.up();
+    await gesture2.up();
+
     await tester.tapAt(const Offset(5, 5));
     await tester.pump();
 
     expect(tapCount, 0);
     expect(panCount, 0);
+    expect(scaleCount, 0);
   });
 }

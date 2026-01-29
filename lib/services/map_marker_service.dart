@@ -217,6 +217,56 @@ class MapMarkerService {
     return point.longitude >= west || point.longitude <= east;
   }
 
+  Future<List<ArtMarker>> _loadMarkersInternal({
+    required String key,
+    required Duration ttl,
+    required bool forceRefresh,
+    required Future<List<ArtMarker>> Function() fetcher,
+    required void Function(List<ArtMarker> markers) onCacheHit,
+    required void Function(List<ArtMarker> markers) onSuccess,
+  }) async {
+    if (_rateLimitUntil != null && DateTime.now().isBefore(_rateLimitUntil!)) {
+      final cached = _peekCachedMarkers(key) ?? _cachedMarkers;
+      return _filterValidMarkers(cached);
+    }
+
+    if (!forceRefresh) {
+      final cached = _getFreshCachedMarkers(key, ttl);
+      if (cached != null) {
+        _debugCacheHits += 1;
+        _cachedMarkers
+          ..clear()
+          ..addAll(cached);
+        onCacheHit(cached);
+        return _filterValidMarkers(cached);
+      }
+    }
+
+    return _dedupeInFlight(key, () async {
+      try {
+        final markers = await fetcher();
+
+        _rateLimitUntil = null;
+        final filtered = _filterValidMarkers(markers);
+        _putCacheEntry(key, filtered);
+        _cachedMarkers
+          ..clear()
+          ..addAll(filtered);
+        onSuccess(filtered);
+        return filtered;
+      } catch (e) {
+        final message = e.toString().toLowerCase();
+        if (message.contains('rate limit') ||
+            message.contains('429') ||
+            message.contains('too many')) {
+          _rateLimitUntil = DateTime.now().add(_rateLimitBackoff);
+        }
+        final cached = _peekCachedMarkers(key) ?? _cachedMarkers;
+        return _filterValidMarkers(cached);
+      }
+    });
+  }
+
   Future<List<ArtMarker>> loadMarkers({
     required LatLng center,
     double radiusKm = 5.0,
@@ -237,57 +287,29 @@ class MapMarkerService {
       filtersKey: filtersKey,
     );
 
-    if (_rateLimitUntil != null && DateTime.now().isBefore(_rateLimitUntil!)) {
-      final cached = _peekCachedMarkers(key) ?? _cachedMarkers;
-      return _filterValidMarkers(cached);
-    }
-
-    if (!forceRefresh) {
-      final cached = _getFreshCachedMarkers(key, _radiusCacheTtl);
-      if (cached != null) {
-        _debugCacheHits += 1;
-        _cachedMarkers
-          ..clear()
-          ..addAll(cached);
+    return _loadMarkersInternal(
+      key: key,
+      ttl: _radiusCacheTtl,
+      forceRefresh: forceRefresh,
+      fetcher: () => _backendApi.getNearbyArtMarkers(
+        latitude: center.latitude,
+        longitude: center.longitude,
+        radiusKm: radiusKm,
+        limit: requestedLimit,
+      ),
+      onCacheHit: (_) {
         _lastQueryCenter = center;
         _lastQueryRadiusKm = radiusKm;
         _lastQueryBounds = null;
         _lastQueryWasBounds = false;
-        return _filterValidMarkers(cached);
-      }
-    }
-
-    return _dedupeInFlight(key, () async {
-      try {
-        final markers = await _backendApi.getNearbyArtMarkers(
-          latitude: center.latitude,
-          longitude: center.longitude,
-          radiusKm: radiusKm,
-          limit: requestedLimit,
-        );
-
-        _rateLimitUntil = null;
-        final filtered = _filterValidMarkers(markers);
-        _putCacheEntry(key, filtered);
-        _cachedMarkers
-          ..clear()
-          ..addAll(filtered);
+      },
+      onSuccess: (_) {
         _lastQueryCenter = center;
         _lastQueryRadiusKm = radiusKm;
         _lastQueryBounds = null;
         _lastQueryWasBounds = false;
-        return filtered;
-      } catch (e) {
-        final message = e.toString().toLowerCase();
-        if (message.contains('rate limit') ||
-            message.contains('429') ||
-            message.contains('too many')) {
-          _rateLimitUntil = DateTime.now().add(_rateLimitBackoff);
-        }
-        final cached = _peekCachedMarkers(key) ?? _cachedMarkers;
-        return _filterValidMarkers(cached);
-      }
-    });
+      },
+    );
   }
 
   Future<List<ArtMarker>> loadMarkersInBounds({
@@ -309,58 +331,30 @@ class MapMarkerService {
       filtersKey: filtersKey,
     );
 
-    if (_rateLimitUntil != null && DateTime.now().isBefore(_rateLimitUntil!)) {
-      final cached = _peekCachedMarkers(key) ?? _cachedMarkers;
-      return _filterValidMarkers(cached);
-    }
-
-    if (!forceRefresh) {
-      final cached = _getFreshCachedMarkers(key, _boundsCacheTtl);
-      if (cached != null) {
-        _debugCacheHits += 1;
-        _cachedMarkers
-          ..clear()
-          ..addAll(cached);
+    return _loadMarkersInternal(
+      key: key,
+      ttl: _boundsCacheTtl,
+      forceRefresh: forceRefresh,
+      fetcher: () => _backendApi.getArtMarkersInBounds(
+        latitude: center.latitude,
+        longitude: center.longitude,
+        minLat: bounds.south,
+        maxLat: bounds.north,
+        minLng: bounds.west,
+        maxLng: bounds.east,
+        limit: requestedLimit,
+      ),
+      onCacheHit: (_) {
         _lastQueryCenter = center;
         _lastQueryBounds = bounds;
         _lastQueryWasBounds = true;
-        return _filterValidMarkers(cached);
-      }
-    }
-
-    return _dedupeInFlight(key, () async {
-      try {
-        final markers = await _backendApi.getArtMarkersInBounds(
-          latitude: center.latitude,
-          longitude: center.longitude,
-          minLat: bounds.south,
-          maxLat: bounds.north,
-          minLng: bounds.west,
-          maxLng: bounds.east,
-          limit: requestedLimit,
-        );
-
-        _rateLimitUntil = null;
-        final filtered = _filterValidMarkers(markers);
-        _putCacheEntry(key, filtered);
-        _cachedMarkers
-          ..clear()
-          ..addAll(filtered);
+      },
+      onSuccess: (_) {
         _lastQueryCenter = center;
         _lastQueryBounds = bounds;
         _lastQueryWasBounds = true;
-        return filtered;
-      } catch (e) {
-        final message = e.toString().toLowerCase();
-        if (message.contains('rate limit') ||
-            message.contains('429') ||
-            message.contains('too many')) {
-          _rateLimitUntil = DateTime.now().add(_rateLimitBackoff);
-        }
-        final cached = _peekCachedMarkers(key) ?? _cachedMarkers;
-        return _filterValidMarkers(cached);
-      }
-    });
+      },
+    );
   }
 
   double get lastQueryRadiusKm => _lastQueryRadiusKm;

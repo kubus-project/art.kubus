@@ -13,6 +13,7 @@ import '../models/user_profile.dart';
 import '../services/event_bus.dart';
 import '../utils/media_url_resolver.dart';
 import '../utils/wallet_utils.dart';
+import 'app_refresh_provider.dart';
 
 class ChatProvider extends ChangeNotifier {
   ChatProvider() {
@@ -408,7 +409,7 @@ class ChatProvider extends ChangeNotifier {
   // VoidCallback? _userServiceListener;
 
   bool _initialized = false;
-  dynamic _boundRefreshProvider;
+  AppRefreshProvider? _boundRefreshProvider;
   int _lastChatVersion = 0;
   int _lastGlobalVersion = 0;
   // Throttle for notifyListeners to avoid update storms
@@ -743,21 +744,24 @@ class ChatProvider extends ChangeNotifier {
   }
 
   /// Bind to AppRefreshProvider for global or targeted chat refresh triggers
-  void bindToRefresh(dynamic appRefresh) {
+  void bindToRefresh(AppRefreshProvider appRefresh) {
     try {
-      if (appRefresh == null) return;
       if (identical(_boundRefreshProvider, appRefresh)) return;
       _boundRefreshProvider = appRefresh;
-      _lastChatVersion = appRefresh.chatVersion ?? 0;
-      _lastGlobalVersion = appRefresh.globalVersion ?? 0;
+      _lastChatVersion = appRefresh.chatVersion;
+      _lastGlobalVersion = appRefresh.globalVersion;
       appRefresh.addListener(() {
         try {
-          if ((appRefresh.chatVersion ?? 0) != _lastChatVersion) {
-            _lastChatVersion = appRefresh.chatVersion ?? 0;
-            refreshConversations();
-          } else if ((appRefresh.globalVersion ?? 0) != _lastGlobalVersion) {
-            _lastGlobalVersion = appRefresh.globalVersion ?? 0;
-            refreshConversations();
+          if (appRefresh.chatVersion != _lastChatVersion) {
+            _lastChatVersion = appRefresh.chatVersion;
+            if (appRefresh.isViewActive(AppRefreshProvider.viewChat) || appRefresh.isAppForeground) {
+              refreshConversations();
+            }
+          } else if (appRefresh.globalVersion != _lastGlobalVersion) {
+            _lastGlobalVersion = appRefresh.globalVersion;
+            if (appRefresh.isViewActive(AppRefreshProvider.viewChat) || appRefresh.isAppForeground) {
+              refreshConversations();
+            }
           }
         } catch (e) { debugPrint('ChatProvider.bindToRefresh handler error: $e'); }
       });

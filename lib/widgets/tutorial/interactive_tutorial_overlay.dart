@@ -158,6 +158,9 @@ class InteractiveTutorialOverlay extends StatelessWidget {
             onPointerDown: (_) {},
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
+              onScaleStart: (_) {},
+              onScaleUpdate: (_) {},
+              onScaleEnd: (_) {},
               onTapUp: (details) {
                 if (highlightRect == null) return;
                 if (!_isInside(highlightRect, details.globalPosition)) return;

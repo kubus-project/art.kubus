@@ -4,48 +4,26 @@
 Baseline review of backend authN/authZ coverage, input validation, rate limiting, headers, error handling, secret handling, and audit logging. Several authZ gaps exist in messaging routes (conversation membership not enforced), and some endpoints expose data or allow actions without sufficient authorization or validation. Marker edit/delete permissions are enforced but can 403 due to identifier mismatches between stored `createdBy` and token payloads.
 
 ## Top P0/P1
-- **P0:** Conversation messages + membership endpoints lack membership checks, enabling authenticated users to read/post/modify conversations they are not part of.
-- **P1:** Notifications create endpoint is open to any authenticated user (spam/abuse vector).
-- **P1:** Achievements user/stats endpoints are public (no auth) and expose user progress.
-- **P1:** JWT secret fallback to `dev-secret` when `JWT_SECRET` is unset; production misconfig yields weak auth.
-- **P1:** Input validation gaps on messages/notifications/achievements routes (no schema validation/limits).
+- **P0 (resolved):** Conversation messages + membership endpoints now enforce membership checks.
+- **P1 (resolved):** Notifications create endpoint restricted to admin/system for cross-user targets.
+- **P1 (resolved):** Achievements user/stats endpoints require auth and ownership.
+- **P1 (resolved):** JWT secret missing in production fails fast via runtime config validation.
+- **P1 (resolved):** Input validation added for messages/notifications/achievements routes.
 
 ## Findings
 
 ### AK-AUD-001 — Missing conversation membership authorization (messages read/write/metadata) **(P0)**
-**Evidence:**
-- `backend/src/routes/messages.js` lines **228–239**: `GET /:conversationId/messages` is gated by `verifyToken` but **does not** call `ensureConversationMember` (lines 56–64) or verify membership before returning messages.
-- `backend/src/routes/messages.js` lines **471–625**: `POST /:conversationId/messages` inserts messages and emits socket events without membership checks.
-- `backend/src/routes/messages.js` lines **628–676**: `PUT /:conversationId/read` marks a conversation as read without membership checks.
-- `backend/src/routes/messages.js` lines **846–899**: `GET /:conversationId/members` returns member lists without membership checks.
-- `backend/src/routes/messages.js` lines **902–949**: `POST /:conversationId/members` allows adding members to any conversation without verifying requester’s membership or role.
-- `backend/src/routes/messages.js` lines **1088–1134**: `POST /:conversationId/avatar` allows avatar updates without membership checks.
-- `backend/src/routes/messages.js` lines **744–808** show `ensureConversationMember(...)` is only used for reactions, not for read/write/member management.
-
-**Impact:** Any authenticated user who can guess/obtain a conversation ID can read messages, post messages, modify read state, list members, add members, or change avatars.
-
-**Root cause:** Membership enforcement exists but is not wired into most message-related routes.
+**Status:** Resolved.
 
 ---
 
 ### AK-AUD-002 — Notifications creation is broadly authorized (spam/abuse risk) **(P1)**
-**Evidence:**
-- `backend/src/routes/notifications.js` lines **149–188**: `POST /api/notifications` requires only `verifyToken` and accepts arbitrary `targetWallet`, with no role/permission gating or anti-abuse checks beyond global rate limiting.
-
-**Impact:** Any authenticated user can generate notifications for any wallet, enabling spam or social-engineering signals.
-
-**Root cause:** “Internal use” endpoint is exposed with general auth but no authorization policy.
+**Status:** Resolved.
 
 ---
 
 ### AK-AUD-003 — Achievements user data endpoints are public **(P1)**
-**Evidence:**
-- `backend/src/routes/achievements.js` lines **29–72**: `GET /api/achievements/user/:walletAddress` has no `verifyToken` and returns unlocked achievements and progress for any wallet.
-- `backend/src/routes/achievements.js` lines **195–234**: `GET /api/achievements/stats/:walletAddress` has no `verifyToken` and returns per-user stats.
-
-**Impact:** Any client can enumerate achievement progress for any wallet (privacy leakage).
-
-**Root cause:** Public endpoints without authN or access controls.
+**Status:** Resolved.
 
 ---
 
@@ -68,36 +46,34 @@ Baseline review of backend authN/authZ coverage, input validation, rate limiting
 ---
 
 ### AK-AUD-005 — Input validation gaps on messages/notifications/achievements **(P1)**
-**Evidence:**
-- Validation middleware exists but is not applied to these routes: `backend/src/middleware/validation.js` lines **1–200** (no message/notification/achievement schemas).
-- Messages accept arbitrary bodies/attachments without schema validation: `backend/src/routes/messages.js` lines **228–625**.
-- Notifications creation accepts arbitrary `data` without schema validation: `backend/src/routes/notifications.js` lines **149–188**.
-- Achievement `unlock`/`progress` accept raw body fields without schema validation: `backend/src/routes/achievements.js` lines **78–187**.
-
-**Impact:** Malformed or unexpected payloads can be persisted; inconsistent data increases downstream risk and can cause client crashes or noisy logs.
-
-**Root cause:** Missing express-validator schemas and validation enforcement for these routes.
+**Status:** Resolved.
 
 ---
 
 ### AK-AUD-006 — JWT secret fallback to a hardcoded default **(P1)**
-**Evidence:**
-- `backend/src/middleware/auth.js` line **45** uses `process.env.JWT_SECRET || 'dev-secret'` (also in optionalAuth at line **121**).
-- `backend/src/server.js` lines **344–353** allow admin sessions to fall back to a dev secret in non-prod; session secret fallback is set at line **395** if not provided.
-
-**Impact:** If `JWT_SECRET` is unset in production, authentication can be forged using the default secret, compromising all protected endpoints.
-
-**Root cause:** Default secret value without a hard-fail guard outside admin sessions.
+**Status:** Resolved.
 
 ---
 
 ### AK-AUD-007 — Error details exposed in non-production, risk if NODE_ENV mis-set **(P2)**
-**Evidence:**
-- `backend/src/middleware/errorHandler.js` lines **67–75** include error message and stack when `NODE_ENV` is not `production`.
+**Status:** Mitigated — behavior unchanged, but production config is validated and documented.
 
-**Impact:** If environment configuration is incorrect, stack traces and internal error messages can leak to clients.
+## Fix Evidence (2026-01-29)
+- **AK-AUD-001**: Conversation-scoped routes now apply `requireConversationMember` on list, create, read, members, and avatar update endpoints in `backend/src/routes/messages.js`.
+- **AK-AUD-002**: `POST /api/notifications` now blocks cross-user creation unless caller has admin/system role (`backend/src/routes/notifications.js`).
+- **AK-AUD-003**: Achievement user + stats endpoints require auth and enforce ownership (`backend/src/routes/achievements.js`).
+- **AK-AUD-005**: Validation schemas for messages, notifications, and achievements are defined in `backend/src/middleware/validation.js` and applied in their routes.
+- **AK-AUD-006**: Runtime config validation enforces `JWT_SECRET` in production (`backend/src/config/validateEnv.js`), and auth middleware no longer uses a dev-secret fallback.
+- **AK-AUD-007**: Error handler still exposes stacks in non-prod; keep `NODE_ENV=production` in deployments.
 
-**Root cause:** Conditional error exposure based on `NODE_ENV` without defense-in-depth.
+## Follow-up status (2026-01-29)
+- **AK-AUD-001**: Resolved.
+- **AK-AUD-002**: Resolved.
+- **AK-AUD-003**: Resolved.
+- **AK-AUD-004**: Open (ownership mismatch handling; see marker audit follow-ups).
+- **AK-AUD-005**: Resolved.
+- **AK-AUD-006**: Resolved.
+- **AK-AUD-007**: Mitigated (requires correct production env).
 
 ---
 

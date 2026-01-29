@@ -168,6 +168,7 @@ class _MapScreenState extends State<MapScreen>
   static const Duration _cameraUpdateThrottle =
       Duration(milliseconds: 16); // ~60fps
   bool _styleInitialized = false;
+  bool _styleReady = false;
   bool _styleInitializationInProgress = false;
   final Set<String> _registeredMapImages = <String>{};
   static const String _markerSourceId = 'kubus_markers';
@@ -216,6 +217,10 @@ class _MapScreenState extends State<MapScreen>
   String? _lastDeepLinkMarkerId;
   DateTime? _lastDeepLinkHandledAt;
   Timer? _proximityCheckTimer;
+  LatLng? _lastProximityPosition;
+  Duration _proximityInterval = _minProximityInterval;
+  int _debugProximityChecks = 0;
+  int _debugProximitySkips = 0;
   StreamSubscription<ArtMarker>? _markerSocketSubscription;
   StreamSubscription<String>? _markerDeletedSubscription;
   final Debouncer _markerRefreshDebouncer = Debouncer();
@@ -292,6 +297,11 @@ class _MapScreenState extends State<MapScreen>
       1200; // Increased to reduce API calls
   static const Duration _markerRefreshInterval =
       Duration(minutes: 5); // Increased from 150s to 5 min
+  static const Duration _minProximityInterval = Duration(seconds: 8);
+  static const Duration _midProximityInterval = Duration(seconds: 12);
+  static const Duration _maxProximityInterval = Duration(seconds: 20);
+  static const double _proximitySlowMoveThresholdMeters = 6.0;
+  static const double _proximityMoveThresholdMeters = 25.0;
   bool _isLoadingMarkers = false; // Tracks the latest marker request
   int _markerRequestId = 0;
 
@@ -436,13 +446,7 @@ class _MapScreenState extends State<MapScreen>
       _webPositionSubscription?.resume();
     } catch (_) {}
 
-    if (_proximityCheckTimer == null ||
-        !(_proximityCheckTimer?.isActive ?? false)) {
-      _proximityCheckTimer = Timer.periodic(
-        const Duration(seconds: 10),
-        (_) => _checkProximityNotifications(),
-      );
-    }
+    _scheduleProximityCheck(reset: true);
 
     _flushPendingMarkerRefresh();
   }
@@ -796,11 +800,8 @@ class _MapScreenState extends State<MapScreen>
       _markerDeletedSubscription =
           _mapMarkerService.onMarkerDeleted.listen(_handleMarkerDeleted);
 
-      // Start proximity checking timer (every 10 seconds)
-      _proximityCheckTimer = Timer.periodic(
-        const Duration(seconds: 10),
-        (_) => _checkProximityNotifications(),
-      );
+      // Start adaptive proximity checks only while the map is visible.
+      _scheduleProximityCheck(reset: true);
     } catch (e) {
       AppConfig.debugPrint(
           'MapScreen: failed to initialize AR integration: $e');
@@ -1148,10 +1149,34 @@ class _MapScreenState extends State<MapScreen>
     }
   }
 
+  void _scheduleProximityCheck({bool reset = false}) {
+    if (!_pollingEnabled) return;
+    if (reset) {
+      _proximityCheckTimer?.cancel();
+      _proximityCheckTimer = null;
+    }
+    if (_proximityCheckTimer != null && (_proximityCheckTimer?.isActive ?? false)) {
+      return;
+    }
+    _proximityCheckTimer = Timer(_proximityInterval, _handleProximityTick);
+  }
+
+  void _handleProximityTick() {
+    _proximityCheckTimer = null;
+    if (!_pollingEnabled) {
+      _debugProximitySkips++;
+      return;
+    }
+    _checkProximityNotifications();
+    _scheduleProximityCheck();
+  }
+
   void _checkProximityNotifications() {
     if (_currentPosition == null) return;
+    if (!_pollingEnabled) return;
 
     final currentLatLng = _currentPosition!;
+    _debugProximityChecks++;
 
     for (final marker in _artMarkers) {
       // Check if already notified
@@ -1186,6 +1211,28 @@ class _MapScreenState extends State<MapScreen>
 
       return distance > 100; // Reset notification if moved far away
     });
+
+    final lastPos = _lastProximityPosition;
+    if (lastPos != null) {
+      final movedMeters = _distanceCalculator.as(
+        LengthUnit.Meter,
+        lastPos,
+        currentLatLng,
+      );
+      if (movedMeters < _proximitySlowMoveThresholdMeters) {
+        _proximityInterval = _maxProximityInterval;
+      } else if (movedMeters < _proximityMoveThresholdMeters) {
+        _proximityInterval = _midProximityInterval;
+      } else {
+        _proximityInterval = _minProximityInterval;
+      }
+    }
+    _lastProximityPosition = currentLatLng;
+    if (kDebugMode && (_debugProximityChecks % 20 == 0)) {
+      AppConfig.debugPrint(
+        'MapScreen: proximity checks=$_debugProximityChecks interval=${_proximityInterval.inSeconds}s skipped=$_debugProximitySkips',
+      );
+    }
   }
 
   Future<GeoBounds?> _getVisibleGeoBounds() async {
@@ -1400,7 +1447,6 @@ class _MapScreenState extends State<MapScreen>
   }
 
   bool get _shouldBlockMapGestures {
-    if (kIsWeb) return false;
     return _isSheetBlocking || _isSheetInteracting;
   }
 
@@ -1438,7 +1484,7 @@ class _MapScreenState extends State<MapScreen>
   Future<void> _updateMarkerRenderMode() async {
     final controller = _mapController;
     if (controller == null) return;
-    if (!_styleInitialized) return;
+    if (!_styleReady) return;
 
     final shouldShowCubes = _is3DMarkerModeActive;
     if (shouldShowCubes == _cubeLayerVisible) return;
@@ -2232,7 +2278,7 @@ class _MapScreenState extends State<MapScreen>
 
   void _queueOverlayAnchorRefresh() {
     if (_selectedMarkerData == null) return;
-    if (!_styleInitialized) return;
+    if (!_styleReady) return;
     _overlayAnchorDebouncer(const Duration(milliseconds: 16), () {
       unawaited(_refreshSelectedMarkerAnchor());
     });
@@ -2242,7 +2288,7 @@ class _MapScreenState extends State<MapScreen>
     final controller = _mapController;
     final marker = _selectedMarkerData;
     if (controller == null || marker == null) return;
-    if (!_styleInitialized) return;
+    if (!_styleReady) return;
 
     try {
       final screen = await controller.toScreenLocation(
@@ -2588,6 +2634,7 @@ class _MapScreenState extends State<MapScreen>
       onMapCreated: (controller) {
         _mapController = controller;
         _styleInitialized = false;
+        _styleReady = false;
         _registeredMapImages.clear();
         AppConfig.debugPrint(
           'MapScreen: map created (dark=$isDark, style="$styleAsset")',
@@ -2595,6 +2642,13 @@ class _MapScreenState extends State<MapScreen>
       },
       onStyleLoaded: () {
         AppConfig.debugPrint('MapScreen: onStyleLoadedCallback');
+        if (mounted) {
+          setState(() {
+            _styleReady = true;
+          });
+        } else {
+          _styleReady = true;
+        }
         unawaited(_handleMapStyleLoaded(themeProvider));
 
         // Travel mode must start with a bounds query once the map is ready,
@@ -2932,7 +2986,7 @@ class _MapScreenState extends State<MapScreen>
   ) async {
     final controller = _mapController;
     if (controller == null) return;
-    if (!_styleInitialized) return;
+    if (!_styleReady) return;
 
     try {
       final layerIds = _is3DMarkerModeActive

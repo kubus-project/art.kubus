@@ -74,13 +74,16 @@ class AppBootstrapService {
     final shouldLoadWeb3 = AppConfig.enableWeb3;
     final shouldLoadCommunity = AppConfig.enableUserProfiles;
 
-    final futures = <Future<void>>[
+    final p0 = <Future<void>>[
       _runTask('cache', cacheProvider.initialize),
       _runTask('saved_items', savedItemsProvider.initialize),
       _runTask('navigation', navigationProvider.initialize),
       _runTask('stats', statsProvider.initialize),
       _runTask('presence', presenceProvider.initialize),
       _runTask('tasks', () => Future<void>.sync(taskProvider.initializeProgress)),
+    ];
+
+    final p1 = <Future<void>>[
       _runTask('artworks', () => artworkProvider.loadArtworks(refresh: true)),
       _runTask('collectibles', () => collectiblesProvider.initialize(loadMockIfEmpty: AppConfig.isDevelopment)),
       _runTask('institutions', () => institutionProvider.initialize(seedMockIfEmpty: AppConfig.isDevelopment)),
@@ -88,31 +91,31 @@ class AppBootstrapService {
 
     final hasAuth = (backend.getAuthToken() ?? '').trim().isNotEmpty;
     if (AppConfig.isFeatureEnabled('collabInvites') && hasAuth) {
-      futures.add(_runTask('collab_invites', () async {
+      p1.add(_runTask('collab_invites', () async {
         await collabProvider.initialize(refresh: true);
         collabProvider.startInvitePolling();
       }));
     }
 
     if (shouldLoadCommunity) {
-      futures.add(_runTask('recent_activity', () => recentActivityProvider.initialize(force: true)));
-      futures.add(_runTask(
+      p1.add(_runTask('recent_activity', () => recentActivityProvider.initialize(force: true)));
+      p1.add(_runTask(
         'notifications',
         () => notificationProvider.initialize(walletOverride: resolvedWallet, force: true),
       ));
-      futures.add(_runTask('community_groups', () => communityHubProvider.loadGroups(refresh: true)));
-      futures.add(_runTask('chat', () => chatProvider.initialize(initialWallet: resolvedWallet)));
+      p1.add(_runTask('community_groups', () => communityHubProvider.loadGroups(refresh: true)));
+      p1.add(_runTask('chat', () => chatProvider.initialize(initialWallet: resolvedWallet)));
     }
 
     if (shouldLoadWeb3) {
-      futures.add(_runTask('web3_provider', () => web3Provider.initialize(attemptRestore: true)));
+      p1.add(_runTask('web3_provider', () => web3Provider.initialize(attemptRestore: true)));
       if (resolvedWallet != null && resolvedWallet.isNotEmpty) {
-        futures.add(_runTask('wallet_refresh', () => walletProvider.refreshData()));
-        futures.add(_runTask('profile_refresh', () async {
+        p1.add(_runTask('wallet_refresh', () => walletProvider.refreshData()));
+        p1.add(_runTask('profile_refresh', () async {
           await profileProvider.loadProfile(resolvedWallet);
           await profileProvider.refreshStats();
         }));
-        futures.add(_runTask('stats_snapshot', () => statsProvider.ensureSnapshot(
+        p1.add(_runTask('stats_snapshot', () => statsProvider.ensureSnapshot(
               entityType: 'user',
               entityId: resolvedWallet,
               metrics: const ['followers', 'following', 'posts', 'artworks', 'viewsReceived'],
@@ -122,13 +125,25 @@ class AppBootstrapService {
     }
 
     if (hasAuth) {
-      futures.add(_runTask('marker_management', () => markerManagementProvider.initialize(force: true)));
+      p1.add(_runTask('marker_management', () => markerManagementProvider.initialize(force: true)));
     }
 
-    await Future.wait(futures, eagerError: false);
+    await Future.wait(p0, eagerError: false);
 
-    // Signal listeners (including desktop screens) that fresh data is ready.
-    appRefreshProvider.triggerAll();
+    if (p1.isNotEmpty) {
+      await Future<void>.delayed(const Duration(milliseconds: 650));
+      await Future.wait(p1, eagerError: false);
+    }
+
+    if (kDebugMode) {
+      debugPrint('AppBootstrapService: warm-up tiers complete (p0=${p0.length}, p1=${p1.length})');
+    }
+
+    // Signal listeners with view-aware targeted refreshes (avoid global fan-out).
+    appRefreshProvider.triggerNotifications(onlyIfActive: true);
+    appRefreshProvider.triggerChat(onlyIfActive: true);
+    appRefreshProvider.triggerCommunity(onlyIfActive: true);
+    appRefreshProvider.triggerProfile(onlyIfActive: true);
   }
 
   Future<void> _runTask(String label, FutureOr<void> Function() task) async {

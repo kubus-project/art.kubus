@@ -332,31 +332,38 @@ class SecurityGateProvider extends ChangeNotifier implements AuthSessionCoordina
 
     // Only prompt for re-auth if:
     // 1. Feature is enabled AND
-    // 2. User has a local account (token + wallet) AND
-    // 3. User has app lock enabled (PIN or auto-lock is set)
+    // 2. User has a local account/session
+    // 3. User has app lock configured (PIN or biometrics)
     final shouldPrompt = await AuthGatingService.shouldPromptReauth(prefs: prefs);
     final hasAppLock = requirePin || biometricsEnabled;
     
-    if (!shouldPrompt || !hasAppLock) {
-      // Fresh installs (no stored session) or users without app lock enabled
-      // must never show the "sign in again" lock. In that case, either let 
-      // onboarding proceed or route to sign-in.
-      if (!shouldPrompt) {
-        final showOnboarding = await AuthGatingService.shouldShowFirstRunOnboarding(
-          prefs: prefs,
-          onboardingState: prefs == null ? null : await OnboardingStateService.load(prefs: prefs),
-        );
+    if (!shouldPrompt) {
+      // Fresh installs (no stored session) must never show the "sign in again" lock.
+      // Let onboarding proceed; only route to sign-in for true returning sessions.
+      final showOnboarding = await AuthGatingService.shouldShowFirstRunOnboarding(
+        prefs: prefs,
+        onboardingState: prefs == null ? null : await OnboardingStateService.load(prefs: prefs),
+      );
 
-        if (!showOnboarding) {
-          _cooldownUntil = DateTime.now().add(_promptCooldown);
-          final navigator = appNavigatorKey.currentState;
-          if (navigator != null && navigator.mounted) {
-            navigator.pushNamedAndRemoveUntil('/sign-in', (_) => false);
-          }
+      if (!showOnboarding) {
+        _cooldownUntil = DateTime.now().add(_promptCooldown);
+        final navigator = appNavigatorKey.currentState;
+        if (navigator != null && navigator.mounted) {
+          navigator.pushNamedAndRemoveUntil('/sign-in', (_) => false);
         }
       }
       _cooldownUntil = DateTime.now().add(_promptCooldown);
-      return const AuthReauthResult(AuthReauthOutcome.notEnabled, message: 'Re-auth not enabled or app lock not configured');
+      return const AuthReauthResult(AuthReauthOutcome.notEnabled, message: 'Re-auth not enabled for non-session users');
+    }
+
+    if (!hasAppLock) {
+      // Token expired but no app lock configured: force sign-in to restore session.
+      _cooldownUntil = DateTime.now().add(_promptCooldown);
+      final navigator = appNavigatorKey.currentState;
+      if (navigator != null && navigator.mounted) {
+        navigator.pushNamedAndRemoveUntil('/sign-in', (_) => false);
+      }
+      return const AuthReauthResult(AuthReauthOutcome.notEnabled, message: 'App lock not configured; sign-in required');
     }
 
     await lock(SecurityLockReason.tokenExpired, context: context);

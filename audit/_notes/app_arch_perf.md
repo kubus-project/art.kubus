@@ -97,3 +97,59 @@ Multiple providers/services are well-structured with caching and in-flight dedup
 - `lib/services/map_marker_service.dart`
 - `lib/services/stats_api_service.dart`
 - `lib/providers/artwork_provider.dart`
+
+## Updates & Evidence (Jan 29, 2026)
+
+### AK-AUD-001 — Warm-up fan-out + view-aware refresh
+**Change:** Warm-up now runs in two tiers (P0 then P1 with a short delay), and global `triggerAll()` was replaced by targeted, view-aware refresh triggers.
+
+**Evidence:**
+- `lib/services/app_bootstrap_service.dart` now splits warm-up into `p0`/`p1`, adds a 650ms stagger, and calls `triggerNotifications/Chat/Community/Profile(onlyIfActive: true)`.
+- `lib/providers/app_refresh_provider.dart` now tracks view visibility + foreground state, includes trigger cooldowns, and exposes debug counters.
+- `lib/main_app.dart` marks active views on tab changes.
+- `lib/main.dart` sets foreground state and uses `triggerForegroundRefresh()` on resume.
+
+**Dev-only evidence hooks:**
+- `AppRefreshProvider.debugCounters` increments for trigger/skip/cooldown paths.
+- `AppBootstrapService` logs tier counts in debug builds.
+
+---
+
+### AK-AUD-002 — Map polling + proximity timers
+**Change:** Proximity checks are now adaptive and visibility-aware (only scheduled when the map is visible + app foreground). Interval adjusts based on movement.
+
+**Evidence:**
+- `lib/screens/map_screen.dart` now uses `_scheduleProximityCheck()` and a movement-based interval (8–20s).
+
+**Dev-only evidence hooks:**
+- Debug counters `_debugProximityChecks`/`_debugProximitySkips`, periodic debug logging every 20 checks.
+
+---
+
+### AK-AUD-004 — Notifications refresh cadence + overlap reduction
+**Change:** Consolidated to a single cadence timer that also handles subscription checks; sync scheduling now avoids overlaps and re-schedules intelligently.
+
+**Evidence:**
+- `lib/providers/notification_provider.dart` removes dual timers and uses `_ensureCadenceTimer()` + `_maybeCheckSubscription()`.
+- `_scheduleServerSync()` now tracks due-at time to avoid longer replacements; skips when in-flight.
+- `RecentActivityProvider` now throttles refresh calls to prevent cascades.
+
+**Dev-only evidence hooks:**
+- `NotificationProvider.debugCounters` (`cadenceTicks`, `syncs`, `skippedSyncs`).
+- `RecentActivityProvider.debugCounters` (`refreshCount`, `refreshSkipped`).
+
+---
+
+### AK-AUD-005 — Presence cadence
+**Change:** Presence auto-refresh now adapts based on watched-wallet count, app foreground, and relevant view activity. Heartbeat pauses when backgrounded.
+
+**Evidence:**
+- `lib/providers/presence_provider.dart` computes adaptive interval and restarts timers on view/foreground changes.
+
+**Dev-only evidence hooks:**
+- `PresenceProvider.debugCounters` (`autoRefreshTicks`, `autoRefreshSkipped`, `heartbeats`).
+
+## Verification
+- Not run in this update (no automated test run requested). Manual verification suggested:
+	- Launch app, switch tabs to community/profile and observe debug counters/logs.
+	- Background/foreground app and confirm notification cadence resumes with targeted refresh.
