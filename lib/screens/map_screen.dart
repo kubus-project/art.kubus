@@ -61,6 +61,7 @@ import '../services/backend_api_service.dart';
 import '../services/map_style_service.dart';
 import '../config/config.dart';
 import '../utils/maplibre_style_utils.dart';
+import '../utils/marker_cube_geometry.dart';
 import 'events/exhibition_detail_screen.dart';
 import '../widgets/glass_components.dart';
 import '../widgets/kubus_snackbar.dart';
@@ -171,8 +172,12 @@ class _MapScreenState extends State<MapScreen>
   static const String _markerSourceId = 'kubus_markers';
   static const String _markerLayerId = 'kubus_marker_layer';
   static const String _markerHitboxLayerId = 'kubus_marker_hitbox_layer';
+  static const String _cubeSourceId = 'kubus_marker_cubes';
+  static const String _cubeLayerId = 'kubus_marker_cubes_layer';
   static const String _locationSourceId = 'kubus_user_location';
   static const String _locationLayerId = 'kubus_user_location_layer';
+  static const double _cubePitchThreshold = 5.0;
+  bool _cubeLayerVisible = false;
 
   // Avoid repeatedly requesting permission/service on each timer tick
   bool _locationPermissionRequested = false;
@@ -434,7 +439,6 @@ class _MapScreenState extends State<MapScreen>
   Future<void> _setIsometricViewEnabled(bool enabled) async {
     if (!AppConfig.isFeatureEnabled('mapIsometricView')) return;
     if (!mounted) return;
-
     setState(() {
       _isometricViewEnabled = enabled;
     });
@@ -1310,6 +1314,11 @@ class _MapScreenState extends State<MapScreen>
     });
   }
 
+  bool get _shouldBlockMapGestures {
+    if (kIsWeb) return false;
+    return _isSheetBlocking || _isSheetInteracting;
+  }
+
   void _dismissSelectedMarker() {
     if (_selectedMarkerId == null && _selectedMarkerData == null) return;
     setState(() {
@@ -1321,6 +1330,62 @@ class _MapScreenState extends State<MapScreen>
       _markerOverlayExpanded = false;
     });
     unawaited(_syncMapMarkers(themeProvider: context.read<ThemeProvider>()));
+  }
+
+  bool _assertMarkerModeInvariant() {
+    if (_selectedMarkerId == null && _selectedMarkerData != null) return false;
+    if (_selectedMarkerId != null && _selectedMarkerData == null) return false;
+    return true;
+  }
+
+  bool get _is3DMarkerModeActive {
+    if (!AppConfig.isFeatureEnabled('mapIsometricView')) return false;
+    return _lastPitch > _cubePitchThreshold;
+  }
+
+  bool _assertMarkerRenderModeInvariant() {
+    if (!_styleInitialized) return true;
+    if (_cubeLayerVisible && !_is3DMarkerModeActive) return false;
+    if (!_cubeLayerVisible && _is3DMarkerModeActive) return false;
+    return true;
+  }
+
+  Future<void> _updateMarkerRenderMode() async {
+    final controller = _mapController;
+    if (controller == null) return;
+    if (!_styleInitialized) return;
+
+    final shouldShowCubes = _is3DMarkerModeActive;
+    if (shouldShowCubes == _cubeLayerVisible) return;
+
+    _cubeLayerVisible = shouldShowCubes;
+
+    try {
+      await controller.setLayerVisibility(_cubeLayerId, shouldShowCubes);
+      await controller.setLayerVisibility(_markerLayerId, !shouldShowCubes);
+      await controller.setLayerVisibility(
+          _markerHitboxLayerId, !shouldShowCubes);
+    } catch (_) {
+      // Best-effort: layer visibility may fail during style swaps.
+    }
+
+    if (!mounted) return;
+    if (shouldShowCubes) {
+      final themeProvider = context.read<ThemeProvider>();
+      await _syncMarkerCubes(themeProvider: themeProvider);
+    } else {
+      try {
+        await controller.setGeoJsonSource(
+          _cubeSourceId,
+          const <String, dynamic>{
+            'type': 'FeatureCollection',
+            'features': <dynamic>[],
+          },
+        );
+      } catch (_) {
+        // Ignore source update failures during transitions.
+      }
+    }
   }
 
   Future<void> _playMarkerSelectionFeedback(ArtMarker marker) async {
@@ -2306,6 +2371,8 @@ class _MapScreenState extends State<MapScreen>
 
   @override
   Widget build(BuildContext context) {
+    assert(_assertMarkerModeInvariant());
+    assert(_assertMarkerRenderModeInvariant());
     final theme = Theme.of(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
     final artworkProvider = Provider.of<ArtworkProvider>(context);
@@ -2324,10 +2391,17 @@ class _MapScreenState extends State<MapScreen>
             KeyedSubtree(
               key: _tutorialMapKey,
               child: IgnorePointer(
-                ignoring: _isSheetInteracting,
+                ignoring: _shouldBlockMapGestures,
                 child: _buildMap(themeProvider),
               ),
             ),
+            if (_shouldBlockMapGestures)
+              const Positioned.fill(
+                child: ModalBarrier(
+                  dismissible: false,
+                  color: Colors.transparent,
+                ),
+              ),
             if (_isSheetBlocking)
               Positioned(
                 left: 0,
@@ -2339,9 +2413,6 @@ class _MapScreenState extends State<MapScreen>
                   child: SizedBox.expand(),
                 ),
               ),
-            // 3D marker overlay renders Flutter widgets on top of the map
-            // Only active when isometric view is enabled
-            _build3DMarkerOverlay(themeProvider),
             _buildTopOverlays(theme,
                 taskProvider), // This will likely be refactored into _buildSearchAndFilters()
             _buildPrimaryControls(
@@ -2437,6 +2508,10 @@ class _MapScreenState extends State<MapScreen>
         _lastZoom = position.zoom;
         _lastBearing = position.bearing;
         _lastPitch = position.tilt;
+        final shouldShowCubes = _is3DMarkerModeActive;
+        if (shouldShowCubes != _cubeLayerVisible) {
+          unawaited(_updateMarkerRenderMode());
+        }
         final bucket = MapViewportUtils.zoomBucket(position.zoom);
         // Throttle setState for 3D overlay repaints to ~60fps max
         final now = DateTime.now();
@@ -2466,14 +2541,15 @@ class _MapScreenState extends State<MapScreen>
       },
       onCameraIdle: () {
         _programmaticCameraMove = false;
+        unawaited(_updateMarkerRenderMode());
         _queueOverlayAnchorRefresh();
         _queueMarkerRefresh(fromGesture: false);
       },
       onMapClick: (point, _) => unawaited(_handleMapTap(point, themeProvider)),
-      rotateGesturesEnabled: true,
-      scrollGesturesEnabled: true,
-      zoomGesturesEnabled: true,
-      tiltGesturesEnabled: true,
+      rotateGesturesEnabled: !_shouldBlockMapGestures,
+      scrollGesturesEnabled: !_shouldBlockMapGestures,
+      zoomGesturesEnabled: !_shouldBlockMapGestures,
+      tiltGesturesEnabled: !_shouldBlockMapGestures,
     );
   }
 
@@ -2516,12 +2592,23 @@ class _MapScreenState extends State<MapScreen>
 
       await safeRemoveLayer(_markerLayerId);
       await safeRemoveLayer(_markerHitboxLayerId);
+      await safeRemoveLayer(_cubeLayerId);
       await safeRemoveSource(_markerSourceId);
+      await safeRemoveSource(_cubeSourceId);
       await safeRemoveLayer(_locationLayerId);
       await safeRemoveSource(_locationSourceId);
 
       await controller.addGeoJsonSource(
         _markerSourceId,
+        const <String, dynamic>{
+          'type': 'FeatureCollection',
+          'features': <dynamic>[],
+        },
+        promoteId: 'id',
+      );
+
+      await controller.addGeoJsonSource(
+        _cubeSourceId,
         const <String, dynamic>{
           'type': 'FeatureCollection',
           'features': <dynamic>[],
@@ -2544,6 +2631,12 @@ class _MapScreenState extends State<MapScreen>
             1.0,
             24,
             1.5,
+          ],
+          iconOpacity: <dynamic>[
+            'case',
+            ['==', ['get', 'kind'], 'cluster'],
+            1.0,
+            1.0,
           ],
           iconAllowOverlap: true,
           iconIgnorePlacement: true,
@@ -2575,6 +2668,21 @@ class _MapScreenState extends State<MapScreen>
         ),
         belowLayerId: _markerLayerId,
       );
+
+      await controller.addFillExtrusionLayer(
+        _cubeSourceId,
+        _cubeLayerId,
+        ml.FillExtrusionLayerProperties(
+          fillExtrusionColor: <dynamic>['get', 'color'],
+          fillExtrusionHeight: <dynamic>['get', 'height'],
+          fillExtrusionBase: 0.0,
+          fillExtrusionOpacity: 1.0,
+          fillExtrusionVerticalGradient: false,
+          visibility: 'none',
+        ),
+        belowLayerId: _markerLayerId,
+      );
+
       await controller.addGeoJsonSource(
         _locationSourceId,
         const <String, dynamic>{
@@ -2601,6 +2709,7 @@ class _MapScreenState extends State<MapScreen>
       await _applyIsometricCamera(enabled: _isometricViewEnabled);
       await _syncUserLocation(themeProvider: themeProvider);
       await _syncMapMarkers(themeProvider: themeProvider);
+      await _updateMarkerRenderMode();
 
       stopwatch.stop();
       AppConfig.debugPrint(
@@ -2662,6 +2771,9 @@ class _MapScreenState extends State<MapScreen>
       ),
       duration: const Duration(milliseconds: 320),
     );
+
+    if (!mounted) return;
+    unawaited(_updateMarkerRenderMode());
   }
 
   Future<void> _handleMapTap(
@@ -2673,9 +2785,12 @@ class _MapScreenState extends State<MapScreen>
     if (!_styleInitialized) return;
 
     try {
+      final layerIds = _is3DMarkerModeActive
+          ? <String>[_cubeLayerId]
+          : <String>[_markerHitboxLayerId, _markerLayerId];
       final features = await controller.queryRenderedFeatures(
         point,
-        <String>[_markerHitboxLayerId, _markerLayerId],
+        layerIds,
         null,
       );
       if (features.isEmpty) {
@@ -2858,6 +2973,52 @@ class _MapScreenState extends State<MapScreen>
     };
     if (!mounted) return;
     await controller.setGeoJsonSource(_markerSourceId, collection);
+
+    if (_is3DMarkerModeActive) {
+      await _syncMarkerCubes(themeProvider: themeProvider);
+    }
+  }
+
+  Future<void> _syncMarkerCubes({required ThemeProvider themeProvider}) async {
+    final controller = _mapController;
+    if (controller == null) return;
+    if (!_styleInitialized) return;
+    if (!mounted) return;
+    if (!_is3DMarkerModeActive) return;
+
+    final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
+    final zoom = _lastZoom;
+    final visibleMarkers = _artMarkers
+        .where((m) => (_markerLayerVisibility[m.type] ?? true))
+        .where((m) => m.hasValidPosition)
+        .toList(growable: false);
+
+    final features = <Map<String, dynamic>>[];
+    for (final marker in visibleMarkers) {
+      final baseColor = AppColorUtils.markerSubjectColor(
+        markerType: marker.type.name,
+        metadata: marker.metadata,
+        scheme: scheme,
+        roles: roles,
+      );
+      final colorHex = MarkerCubeGeometry.toHex(baseColor);
+      features.add(
+        MarkerCubeGeometry.cubeFeatureForMarker(
+          marker: marker,
+          colorHex: colorHex,
+          zoom: zoom,
+        ),
+      );
+    }
+
+    final collection = <String, dynamic>{
+      'type': 'FeatureCollection',
+      'features': features,
+    };
+
+    if (!mounted) return;
+    await controller.setGeoJsonSource(_cubeSourceId, collection);
   }
 
   Future<Map<String, dynamic>> _markerFeatureFor({
@@ -2873,10 +3034,8 @@ class _MapScreenState extends State<MapScreen>
     final selected = _selectedMarkerId == marker.id;
     final typeName = marker.type.name;
     final tier = marker.signalTier;
-    // Include isometric state in icon ID so we regenerate icons when view mode changes
-    final isoSuffix = _isometricViewEnabled ? '_iso' : '_flat';
     final iconId =
-        'mk_${typeName}_${tier.name}${selected ? '_sel' : ''}_${isDark ? 'd' : 'l'}$isoSuffix';
+      'mk_${typeName}_${tier.name}${selected ? '_sel' : ''}_${isDark ? 'd' : 'l'}';
 
     if (!_registeredMapImages.contains(iconId)) {
       final baseColor = _resolveArtMarkerColor(marker, themeProvider);
@@ -2889,7 +3048,6 @@ class _MapScreenState extends State<MapScreen>
         isDark: isDark,
         forceGlow: selected,
         pixelRatio: _markerPixelRatio(),
-        isIsometric: _isometricViewEnabled,
       );
       if (!mounted) return const <String, dynamic>{};
       try {
@@ -2975,147 +3133,13 @@ class _MapScreenState extends State<MapScreen>
         'icon': iconId,
         'lat': center.latitude,
         'lng': center.longitude,
+        'renderMode': 'cluster',
       },
       'geometry': <String, dynamic>{
         'type': 'Point',
         'coordinates': <double>[center.longitude, center.latitude],
       },
     };
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // 3D Marker Overlay - Real-time Flutter overlay with RotatableCubeMarker
-  // ─────────────────────────────────────────────────────────────────────────
-
-  /// Builds a Flutter overlay that renders 3D cube markers on top of the map.
-  /// Each marker is projected to screen coordinates and responds to camera
-  /// bearing/pitch in real-time.
-  Widget _build3DMarkerOverlay(ThemeProvider themeProvider) {
-    // Only render when isometric view is enabled
-    if (!_isometricViewEnabled) return const SizedBox.shrink();
-
-    final controller = _mapController;
-    if (controller == null || !_styleInitialized) {
-      return const SizedBox.shrink();
-    }
-
-    // Filter to visible markers only
-    final visibleMarkers = _artMarkers.where((m) {
-      return _markerLayerVisibility[m.type] ?? true;
-    }).toList();
-
-    // Limit marker count to prevent performance issues
-    const int maxOverlayMarkers = 50;
-    final markersToRender = visibleMarkers.length > maxOverlayMarkers
-        ? visibleMarkers.take(maxOverlayMarkers).toList()
-        : visibleMarkers;
-
-    return Positioned.fill(
-      child: IgnorePointer(
-        ignoring: false,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return FutureBuilder<List<_Marker3DScreenData>>(
-              // Use a key that changes with camera state to trigger rebuild
-              key: ValueKey(
-                  '3d_overlay_${_lastBearing.toStringAsFixed(1)}_${_lastPitch.toStringAsFixed(1)}'),
-              future: _projectMarkersToScreen(
-                markersToRender,
-                controller,
-                constraints,
-              ),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const SizedBox.shrink();
-                }
-
-                final projectedMarkers = snapshot.data!;
-                return Stack(
-                  children: projectedMarkers.map((data) {
-                    return _build3DMarkerWidget(data, themeProvider);
-                  }).toList(),
-                );
-              },
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  /// Projects markers to screen coordinates, culling those outside viewport.
-  Future<List<_Marker3DScreenData>> _projectMarkersToScreen(
-    List<ArtMarker> markers,
-    ml.MapLibreMapController controller,
-    BoxConstraints constraints,
-  ) async {
-    final List<_Marker3DScreenData> results = [];
-    // Margin outside viewport to keep markers that are partially visible
-    const double cullMargin = 60.0;
-
-    for (final marker in markers) {
-      try {
-        final screen = await controller.toScreenLocation(
-          ml.LatLng(marker.position.latitude, marker.position.longitude),
-        );
-        final x = screen.x.toDouble();
-        final y = screen.y.toDouble();
-
-        // Cull markers outside viewport + margin
-        if (x < -cullMargin ||
-            y < -cullMargin ||
-            x > constraints.maxWidth + cullMargin ||
-            y > constraints.maxHeight + cullMargin) {
-          continue;
-        }
-
-        results.add(_Marker3DScreenData(
-          marker: marker,
-          screenX: x,
-          screenY: y,
-        ));
-      } catch (_) {
-        // Skip markers that fail projection (e.g., during style transitions)
-      }
-    }
-
-    return results;
-  }
-
-  /// Builds a single 3D marker widget at its projected screen position.
-  Widget _build3DMarkerWidget(
-    _Marker3DScreenData data,
-    ThemeProvider themeProvider,
-  ) {
-    final marker = data.marker;
-    final isSelected = _selectedMarkerId == marker.id;
-    final baseColor = _resolveArtMarkerColor(marker, themeProvider);
-    final icon = _resolveArtMarkerIcon(marker.type);
-
-    // Compute marker size based on zoom
-    final markerSize = RotatableCubeTokens.sizeForZoom(_lastZoom);
-
-    return Positioned(
-      // Center the marker on its projected point
-      left: data.screenX - (markerSize / 2),
-      top: data.screenY - (markerSize / 2),
-      child: GestureDetector(
-        onTap: () => _handleMarkerTap(marker),
-        behavior: HitTestBehavior.opaque,
-        child: SizedBox(
-          width: markerSize,
-          height: markerSize,
-          child: RotatableCubeMarker(
-            baseColor: baseColor,
-            icon: icon,
-            bearing: _lastBearing,
-            pitch: _lastPitch,
-            zoom: _lastZoom,
-            isSelected: isSelected,
-          ),
-        ),
-      ),
-    );
   }
 
   Widget _buildMarkerOverlay(ThemeProvider themeProvider) {
@@ -3128,14 +3152,21 @@ class _MapScreenState extends State<MapScreen>
     return Positioned.fill(
       child: Stack(
         children: [
-          IgnorePointer(
-            ignoring: marker == null,
-            child: GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onTap: _dismissSelectedMarker,
-              child: const SizedBox.expand(),
+          if (marker != null)
+            Positioned.fill(
+              child: Listener(
+                behavior: HitTestBehavior.opaque,
+                onPointerDown: (_) {},
+                onPointerMove: (_) {},
+                onPointerUp: (_) {},
+                onPointerSignal: (_) {},
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: _dismissSelectedMarker,
+                  child: const SizedBox.expand(),
+                ),
+              ),
             ),
-          ),
           _buildMarkerTapRipple(),
           Positioned.fill(
             child: AnimatedSwitcher(
@@ -3326,8 +3357,8 @@ class _MapScreenState extends State<MapScreen>
             final double bottomSafe =
                 constraints.maxHeight - estimatedHeight - 12;
 
-            // Account for marker height - larger offset for isometric 3D cubes
-            final markerOffset = _isometricViewEnabled ? 45.0 : 32.0;
+            // Account for marker height (flat square markers).
+            const double markerOffset = 32.0;
 
             double left =
                 (anchor?.dx ?? (constraints.maxWidth / 2)) - (maxWidth / 2);
@@ -5622,18 +5653,4 @@ class _ClusterBucket {
   _ClusterBucket(this.cell, this.markers);
   final GridCell cell;
   final List<ArtMarker> markers;
-}
-
-/// Data class for 3D marker screen projection results.
-@immutable
-class _Marker3DScreenData {
-  const _Marker3DScreenData({
-    required this.marker,
-    required this.screenX,
-    required this.screenY,
-  });
-
-  final ArtMarker marker;
-  final double screenX;
-  final double screenY;
 }
