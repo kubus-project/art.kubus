@@ -152,23 +152,28 @@ class InteractiveTutorialOverlay extends StatelessWidget {
       clipBehavior: Clip.none,
       children: [
         Positioned.fill(
-          child: GestureDetector(
+          child: Listener(
             behavior: HitTestBehavior.opaque,
-            onTapUp: (details) {
-              if (highlightRect == null) return;
-              if (!_isInside(highlightRect, details.globalPosition)) return;
+            onPointerSignal: (_) {},
+            onPointerDown: (_) {},
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTapUp: (details) {
+                if (highlightRect == null) return;
+                if (!_isInside(highlightRect, details.globalPosition)) return;
 
-              final onTargetTap = _step.onTargetTap;
-              if (onTargetTap != null) onTargetTap();
-              if (_step.advanceOnTargetTap && !isLast) {
-                onNext();
-              }
-            },
-            child: CustomPaint(
-              painter: _CoachMarkPainter(
-                highlightRect: highlightRect,
-                color: Colors.black.withValues(alpha: 0.55),
-                accent: scheme.primary,
+                final onTargetTap = _step.onTargetTap;
+                if (onTargetTap != null) onTargetTap();
+                if (_step.advanceOnTargetTap && !isLast) {
+                  onNext();
+                }
+              },
+              child: CustomPaint(
+                painter: _CoachMarkPainter(
+                  highlightRect: highlightRect,
+                  color: Colors.black.withValues(alpha: 0.55),
+                  accent: scheme.primary,
+                ),
               ),
             ),
           ),

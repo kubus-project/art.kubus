@@ -10,8 +10,23 @@ void main() {
     expect(await AuthGatingService.shouldPromptReauth(), isFalse);
   });
 
+  test('shouldPromptReauth is false with wallet only', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'wallet_address': 'wallet-only',
+      'has_wallet': true,
+    });
+    expect(await AuthGatingService.shouldPromptReauth(), isFalse);
+  });
+
   test('shouldPromptReauth is true with stored token', () async {
     SharedPreferences.setMockInitialValues(<String, Object>{'jwt_token': 'token'});
+    expect(await AuthGatingService.shouldPromptReauth(), isTrue);
+  });
+
+  test('shouldPromptReauth is true with auth onboarding completion', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'auth_onboarding_completed': true,
+    });
     expect(await AuthGatingService.shouldPromptReauth(), isTrue);
   });
 }

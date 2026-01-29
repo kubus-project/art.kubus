@@ -92,7 +92,7 @@ class DesktopMapScreen extends StatefulWidget {
 }
 
 class _DesktopMapScreenState extends State<DesktopMapScreen>
-    with TickerProviderStateMixin {
+  with WidgetsBindingObserver, TickerProviderStateMixin {
   ml.MapLibreMapController? _mapController;
   late AnimationController _animationController;
   late AnimationController _panelController;
@@ -143,6 +143,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   StreamSubscription<ArtMarker>? _markerStreamSub;
   StreamSubscription<String>? _markerDeletedSub;
   final Debouncer _markerRefreshDebouncer = Debouncer();
+  bool _isAppForeground = true;
+  bool _pendingMarkerRefresh = false;
+  bool _pendingMarkerRefreshForce = false;
   LatLng _cameraCenter = const LatLng(46.0569, 14.5058);
   LatLng? _queuedCameraTarget;
   double? _queuedCameraZoom;
@@ -200,6 +203,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 600),
       vsync: this,
@@ -535,6 +539,43 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     } else if (_artMarkers.isEmpty && !_isLoadingMarkers) {
       unawaited(_loadMarkersForCurrentView(force: true));
     }
+  }
+
+  bool get _pollingEnabled => _isAppForeground;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _isAppForeground =
+        state != AppLifecycleState.paused && state != AppLifecycleState.inactive;
+    if (_pollingEnabled) {
+      _resumePolling();
+    } else {
+      _pausePolling();
+    }
+    super.didChangeAppLifecycleState(state);
+  }
+
+  void _pausePolling() {
+    _markerRefreshDebouncer.cancel();
+  }
+
+  void _resumePolling() {
+    _flushPendingMarkerRefresh();
+  }
+
+  void _queuePendingMarkerRefresh({bool force = false}) {
+    _pendingMarkerRefresh = true;
+    if (force) {
+      _pendingMarkerRefreshForce = true;
+    }
+  }
+
+  void _flushPendingMarkerRefresh() {
+    if (!_pendingMarkerRefresh || !_pollingEnabled) return;
+    final shouldForce = _pendingMarkerRefreshForce;
+    _pendingMarkerRefresh = false;
+    _pendingMarkerRefreshForce = false;
+    unawaited(_loadMarkersForCurrentView(force: shouldForce));
   }
 
   void _handleMapCreated(ml.MapLibreMapController controller) {
@@ -1220,6 +1261,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   void _queueMarkerRefresh({required bool fromGesture}) {
+    if (!_pollingEnabled) {
+      _queuePendingMarkerRefresh();
+      return;
+    }
     if (_mapController == null) return;
 
     final center = _cameraCenter;
@@ -1380,6 +1425,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _markerStreamSub?.cancel();
     _markerDeletedSub?.cancel();
     _searchController.dispose();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
@@ -1395,9 +1441,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       body: Stack(
         children: [
           // Map layer
-          KeyedSubtree(
-            key: _tutorialMapKey,
-            child: _buildMapLayer(themeProvider),
+          AbsorbPointer(
+            absorbing: _showMapTutorial,
+            child: KeyedSubtree(
+              key: _tutorialMapKey,
+              child: _buildMapLayer(themeProvider),
+            ),
           ),
 
           // Top bar
@@ -1455,6 +1504,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               );
             },
           ),
+
+          if (_showMapTutorial)
+            const Positioned.fill(
+              child: ModalBarrier(
+                dismissible: false,
+                color: Colors.transparent,
+              ),
+            ),
 
           if (_showMapTutorial)
             Builder(
@@ -4089,6 +4146,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   Future<void> _loadMarkersForCurrentView({bool force = false}) async {
+    if (!_pollingEnabled) {
+      _queuePendingMarkerRefresh(force: force);
+      return;
+    }
     if (_travelModeEnabled && !_styleInitialized) return;
     final center = _cameraCenter;
     GeoBounds? bounds;
@@ -4118,6 +4179,16 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     bool force = false,
     int? zoomBucket,
   }) async {
+    if (!_pollingEnabled) {
+      _queuePendingMarkerRefresh(force: force);
+      return;
+    }
+
+    if (_isLoadingMarkers) {
+      _queuePendingMarkerRefresh(force: force);
+      return;
+    }
+
     final queryCenter = center ?? _userLocation ?? _effectiveCenter;
     final artworkProvider = context.read<ArtworkProvider>();
     final themeProvider = context.read<ThemeProvider>();
@@ -4221,6 +4292,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       if (requestId == _markerRequestId) {
         _isLoadingMarkers = false;
       }
+      _flushPendingMarkerRefresh();
     }
   }
 

@@ -497,6 +497,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('jwt_token', token);
+      await prefs.setBool(PreferenceKeys.hasCompletedAuthOnboarding, true);
       AppConfig.debugPrint('BackendApiService: Auth token written to SharedPreferences fallback');
     } catch (e) {
       AppConfig.debugPrint('BackendApiService: failed to write prefs token: $e');

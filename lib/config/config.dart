@@ -344,9 +344,9 @@ class AppConfig {
 /// App version and build information
 class AppInfo {
   static const String appName = 'art.kubus';
-  static const String version = '0.2.6';
-  static const int buildNumber = 14;
-  static const String buildDate = '2026-01-17';
+  static const String version = '0.3.0';
+  static const int buildNumber = 15;
+  static const String buildDate = '2026-01-29';
   
   /// Get full version string
   static String get fullVersion => '$version+$buildNumber';
@@ -360,6 +360,7 @@ class PreferenceKeys {
   static const String isFirstLaunch = 'is_first_launch';
   static const String hasSeenWelcome = 'has_seen_welcome';
   static const String hasCompletedOnboarding = 'has_completed_onboarding';
+  static const String hasCompletedAuthOnboarding = 'auth_onboarding_completed';
   static const String walletAddress = 'wallet_address';
   /// User persona UX preference (stored per-wallet by ProfileProvider).
   static const String userPersona = 'user_persona';

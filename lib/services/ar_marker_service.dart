@@ -5,7 +5,7 @@ import '../models/art_marker.dart';
 import '../models/artwork.dart';
 import '../providers/storage_provider.dart';
 import 'ar_content_service.dart';
-import 'art_marker_service.dart';
+import 'map_marker_service.dart';
 
 /// Dedicated service responsible for crafting AR-ready markers
 /// for existing artworks. Handles model uploads and ensures the
@@ -107,6 +107,6 @@ class ARMarkerService {
       isPublic: isPublic,
     );
 
-    return ArtMarkerService().saveMarker(payloadMarker);
+    return MapMarkerService().saveMarker(payloadMarker);
   }
 }

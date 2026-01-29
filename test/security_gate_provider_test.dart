@@ -7,7 +7,10 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {
-    SharedPreferences.setMockInitialValues(<String, Object>{'jwt_token': 'stored-token'});
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'jwt_token': 'stored-token',
+      'requirePin': true,
+    });
   });
 
   test('SecurityGateProvider coalesces concurrent auth failures', () async {
@@ -36,6 +39,26 @@ void main() {
     final r2 = await f2;
     expect(r1.outcome, AuthReauthOutcome.cancelled);
     expect(r2.outcome, AuthReauthOutcome.cancelled);
+    expect(gate.isResolving, isFalse);
+    expect(gate.isLocked, isFalse);
+  });
+
+  test('SecurityGateProvider does not prompt reauth on cold start wallet-only', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'wallet_address': 'wallet-only',
+      'has_wallet': true,
+    });
+
+    final gate = SecurityGateProvider(promptCooldown: Duration.zero);
+    final result = await gate.handleAuthFailure(
+      const AuthFailureContext(
+        statusCode: 401,
+        method: 'GET',
+        path: '/api/profiles/me',
+      ),
+    );
+
+    expect(result.outcome, AuthReauthOutcome.notEnabled);
     expect(gate.isResolving, isFalse);
     expect(gate.isLocked, isFalse);
   });

@@ -185,7 +185,7 @@ class SecurityGateProvider extends ChangeNotifier implements AuthSessionCoordina
 
   bool _shouldAutoLock() {
     if (!_hasLocalAccount) return false;
-    if (!requirePin) return false;
+    if (!requirePin && !biometricsEnabled) return false;
     final seconds = autoLockSeconds;
     if (seconds == 0) return false;
     return true;
@@ -215,7 +215,8 @@ class SecurityGateProvider extends ChangeNotifier implements AuthSessionCoordina
     }
     final wallet = _walletProvider;
     final hasPin = await wallet?.hasPin() ?? false;
-    if (reason == SecurityLockReason.autoLock && (!requirePin || !hasPin)) return;
+    final canUseBiometrics = biometricsEnabled && (await wallet?.canUseBiometrics() ?? false);
+    if (reason == SecurityLockReason.autoLock && !(hasPin || canUseBiometrics)) return;
     if (reason == SecurityLockReason.sensitiveAction && !hasPin) return;
 
     if (_locked && _inFlight != null) {
@@ -305,11 +306,14 @@ class SecurityGateProvider extends ChangeNotifier implements AuthSessionCoordina
     // Don't prompt for re-auth on auth endpoints (signup, email verification, etc).
     // These are endpoints that don't require an existing session.
     final path = (context.path).toLowerCase();
-    final isAuthEndpoint = path.contains('/auth/') && 
-        (path.contains('register') || 
-         path.contains('verify') || 
-         path.contains('signup') ||
-         path.contains('login/email'));
+    final isAuthEndpoint = path.contains('/auth/') &&
+      (path.contains('/auth/login') ||
+       path.contains('/auth/register') ||
+       path.contains('/auth/verify-email') ||
+       path.contains('/auth/resend-verification') ||
+       path.contains('/auth/forgot-password') ||
+       path.contains('/auth/reset-password') ||
+       path.contains('/auth/signup'));
     
     // Also skip re-auth on email verification routes (user waiting for verification)
     final isEmailVerificationRoute = path.contains('/verify-email');
@@ -323,6 +327,7 @@ class SecurityGateProvider extends ChangeNotifier implements AuthSessionCoordina
     try {
       prefs = await SharedPreferences.getInstance();
       _hasLocalAccount = AuthGatingService.hasLocalAccountSync(prefs: prefs);
+      _settings ??= SettingsState.fromPrefs(prefs);
     } catch (_) {}
 
     // Only prompt for re-auth if:
@@ -330,7 +335,7 @@ class SecurityGateProvider extends ChangeNotifier implements AuthSessionCoordina
     // 2. User has a local account (token + wallet) AND
     // 3. User has app lock enabled (PIN or auto-lock is set)
     final shouldPrompt = await AuthGatingService.shouldPromptReauth(prefs: prefs);
-    final hasAppLock = requirePin || (autoLockSeconds != 0 && autoLockSeconds > 0);
+    final hasAppLock = requirePin || biometricsEnabled;
     
     if (!shouldPrompt || !hasAppLock) {
       // Fresh installs (no stored session) or users without app lock enabled

@@ -12,10 +12,18 @@ class MapStyleService {
   /// Dev-only fallback style (public demo tiles; do not rely on this for prod).
   static const String devFallbackStyleUrl = 'https://demotiles.maplibre.org/style.json';
 
+  /// Production-safe fallback styles bundled with the app.
+  static const String bundledLightStyleAsset = 'assets/map_styles/kubus_light.json';
+  static const String bundledDarkStyleAsset = 'assets/map_styles/kubus_dark.json';
+
   static bool get devFallbackEnabled => AppConfig.isDevelopment && kDebugMode;
 
   static String primaryStyleRef({required bool isDarkMode}) {
     return isDarkMode ? AppConfig.mapStyleDarkAsset : AppConfig.mapStyleLightAsset;
+  }
+
+  static String fallbackStyleRef({required bool isDarkMode}) {
+    return isDarkMode ? bundledDarkStyleAsset : bundledLightStyleAsset;
   }
 
   /// Resolves a map style reference into a `styleString` compatible with `maplibre_gl`.
@@ -71,11 +79,13 @@ class MapStyleService {
       normalized = normalized.substring(1);
     }
 
+    // Normalize accidental double-prefixes like `assets/assets/...`.
+    if (normalized.startsWith('assets/assets/')) {
+      normalized = normalized.substring('assets/'.length);
+    }
+
     // If the style already points inside the web `assets/` folder, keep it.
-    if (normalized.startsWith('assets/assets/') ||
-        normalized.startsWith('assets/packages/') ||
-        normalized.startsWith('assets/fonts/') ||
-        normalized.startsWith('assets/shaders/')) {
+    if (normalized.startsWith('assets/')) {
       return normalized;
     }
 

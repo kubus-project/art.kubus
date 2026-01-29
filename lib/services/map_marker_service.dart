@@ -6,7 +6,6 @@ import 'package:latlong2/latlong.dart';
 import '../models/art_marker.dart';
 import '../providers/storage_provider.dart';
 import '../utils/geo_bounds.dart';
-import 'art_marker_service.dart';
 import 'backend_api_service.dart';
 import 'socket_service.dart';
 
@@ -25,11 +24,9 @@ class _MarkerCacheEntry {
 class MapMarkerService {
   MapMarkerService._internal({
     BackendApiService? backendApiService,
-    ArtMarkerService? artMarkerService,
     SocketService? socketService,
     bool enableSocketBridge = true,
   })  : _backendApi = backendApiService ?? BackendApiService(),
-        _artMarkerService = artMarkerService ?? ArtMarkerService(),
         _socket = socketService ?? SocketService(),
         _enableSocketBridge = enableSocketBridge;
 
@@ -39,17 +36,14 @@ class MapMarkerService {
   @visibleForTesting
   static MapMarkerService createForTest({
     BackendApiService? backendApiService,
-    ArtMarkerService? artMarkerService,
   }) {
     return MapMarkerService._internal(
       backendApiService: backendApiService,
-      artMarkerService: artMarkerService,
       enableSocketBridge: false,
     );
   }
 
   final BackendApiService _backendApi;
-  final ArtMarkerService _artMarkerService;
   final List<ArtMarker> _cachedMarkers = [];
   final StreamController<ArtMarker> _markerStreamController =
       StreamController<ArtMarker>.broadcast();
@@ -77,6 +71,24 @@ class MapMarkerService {
   static const Duration _rateLimitBackoff = Duration(minutes: 30); // Increased from 15 to 30 minutes
   DateTime? _rateLimitUntil;
   final Distance _distance = const Distance();
+
+  int _debugLoadCalls = 0;
+  int _debugCacheHits = 0;
+  int _debugInFlightDedupes = 0;
+
+  @visibleForTesting
+  MapMarkerServiceStats get debugStats => MapMarkerServiceStats(
+        loadCalls: _debugLoadCalls,
+        cacheHits: _debugCacheHits,
+        inFlightDedupes: _debugInFlightDedupes,
+      );
+
+  @visibleForTesting
+  void resetDebugStats() {
+    _debugLoadCalls = 0;
+    _debugCacheHits = 0;
+    _debugInFlightDedupes = 0;
+  }
 
   void _log(String message) {
     if (!kDebugMode) return;
@@ -178,7 +190,10 @@ class MapMarkerService {
     Future<List<ArtMarker>> Function() task,
   ) {
     final existing = _inFlightByKey[key];
-    if (existing != null) return existing;
+    if (existing != null) {
+      _debugInFlightDedupes += 1;
+      return existing;
+    }
 
     final future = task().whenComplete(() {
       _inFlightByKey.remove(key);
@@ -210,6 +225,7 @@ class MapMarkerService {
     int? zoomBucket,
     String? filtersKey,
   }) async {
+    _debugLoadCalls += 1;
     _ensureSocketBridge();
 
     final requestedLimit = limit ?? 100;
@@ -229,6 +245,7 @@ class MapMarkerService {
     if (!forceRefresh) {
       final cached = _getFreshCachedMarkers(key, _radiusCacheTtl);
       if (cached != null) {
+        _debugCacheHits += 1;
         _cachedMarkers
           ..clear()
           ..addAll(cached);
@@ -281,6 +298,7 @@ class MapMarkerService {
     int? zoomBucket,
     String? filtersKey,
   }) async {
+    _debugLoadCalls += 1;
     _ensureSocketBridge();
 
     final requestedLimit = limit ?? 100;
@@ -299,6 +317,7 @@ class MapMarkerService {
     if (!forceRefresh) {
       final cached = _getFreshCachedMarkers(key, _boundsCacheTtl);
       if (cached != null) {
+        _debugCacheHits += 1;
         _cachedMarkers
           ..clear()
           ..addAll(cached);
@@ -353,6 +372,66 @@ class MapMarkerService {
     _lastQueryCenter = null;
     _lastQueryBounds = null;
     _lastQueryWasBounds = false;
+  }
+
+  /// Fetch markers from the backend using geospatial filters.
+  Future<List<ArtMarker>> fetchMarkers({
+    double? latitude,
+    double? longitude,
+    double? radiusKm,
+  }) async {
+    try {
+      if (latitude == null || longitude == null) return const <ArtMarker>[];
+      return await _backendApi.getNearbyArtMarkers(
+        latitude: latitude,
+        longitude: longitude,
+        radiusKm: radiusKm ?? 5,
+      );
+    } catch (e) {
+      _log('MapMarkerService: fetchMarkers failed: $e');
+    }
+    return const <ArtMarker>[];
+  }
+
+  /// Create or update an art marker record in the backend.
+  Future<ArtMarker?> saveMarker(ArtMarker marker) async {
+    try {
+      final payload = <String, dynamic>{
+        'id': marker.id,
+        'name': marker.name,
+        'description': marker.description,
+        'category': marker.category,
+        'markerType': marker.type.name,
+        'type': 'geolocation',
+        'latitude': marker.position.latitude,
+        'longitude': marker.position.longitude,
+        'artworkId': marker.artworkId,
+        'modelCID': marker.modelCID,
+        'modelURL': marker.modelURL,
+        'storageProvider': marker.storageProvider.name,
+        'scale': marker.scale,
+        'rotation': marker.rotation,
+        'enableAnimation': marker.enableAnimation,
+        'enableInteraction': marker.enableInteraction,
+        'metadata': marker.metadata ?? {},
+        'tags': marker.tags,
+        'activationRadius': marker.activationRadius,
+        'requiresProximity': marker.requiresProximity,
+        'isPublic': marker.isPublic,
+        'createdBy': marker.createdBy,
+      };
+
+      final hasId = marker.id.toString().trim().isNotEmpty;
+      if (hasId) {
+        final saved = await _backendApi.updateArtMarkerRecord(marker.id, payload);
+        return saved ?? marker;
+      }
+      final created = await _backendApi.createArtMarkerRecord(payload);
+      return created ?? marker;
+    } catch (e) {
+      _log('MapMarkerService: saveMarker failed: $e');
+    }
+    return null;
   }
 
   void notifyMarkerDeleted(String markerId) {
@@ -424,7 +503,7 @@ class MapMarkerService {
         }
 
         // Remote check (fetch nearby markers to ensure uniqueness)
-        final nearby = await _artMarkerService.fetchMarkers(
+        final nearby = await fetchMarkers(
           latitude: location.latitude,
           longitude: location.longitude,
           radiusKm: 25,
@@ -469,7 +548,7 @@ class MapMarkerService {
         isPublic: isPublic,
       );
 
-      final persistedMarker = await _artMarkerService.saveMarker(marker);
+      final persistedMarker = await saveMarker(marker);
       if (persistedMarker != null) {
         _cachedMarkers.add(persistedMarker);
         return persistedMarker;
@@ -590,4 +669,17 @@ class MapMarkerService {
       return null;
     }
   }
+}
+
+@immutable
+class MapMarkerServiceStats {
+  const MapMarkerServiceStats({
+    required this.loadCalls,
+    required this.cacheHits,
+    required this.inFlightDedupes,
+  });
+
+  final int loadCalls;
+  final int cacheHits;
+  final int inFlightDedupes;
 }
