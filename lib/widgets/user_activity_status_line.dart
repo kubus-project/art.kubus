@@ -140,10 +140,12 @@ class _UserActivityStatusLineState extends State<UserActivityStatusLine> {
     final timeAgo = _timeAgo(l10n, lastSeenAt);
     final timeText = l10n.presenceLastSeenLabel(timeAgo);
 
-    final canShowLocation = AppConfig.isFeatureEnabled('presenceLastVisitedLocation') &&
-        p.lastVisited != null &&
+    final lastVisited = p.lastVisited;
+    final canShowLocation =
+      AppConfig.isFeatureEnabled('presenceLastVisitedLocation') &&
+        lastVisited != null &&
         (p.lastVisitedTitle ?? '').trim().isNotEmpty &&
-        p.lastVisited!.isExpired == false;
+        lastVisited.isExpired == false;
 
     if (!canShowLocation) {
       _stopToggleTimer();
@@ -163,11 +165,12 @@ class _UserActivityStatusLineState extends State<UserActivityStatusLine> {
       });
     }
 
-    final locationText = l10n.presenceLastSeenAtLabel((p.lastVisitedTitle ?? '').trim());
+    final locationText =
+      l10n.presenceLastSeenAtLabel((p.lastVisitedTitle ?? '').trim());
     final activeChild = _showLocation
         ? InkWell(
             key: const ValueKey('presence_location'),
-            onTap: () => _openLastVisited(context, p.lastVisited!),
+        onTap: () => _openLastVisited(context, lastVisited),
             child: Text(
               locationText,
               textAlign: widget.textAlign,

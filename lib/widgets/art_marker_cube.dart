@@ -382,24 +382,31 @@ class ArtMarkerCubeIconRenderer {
         );
 
         // Draw icon
-        final glyphPainter = TextPainter(
-          text: TextSpan(
-            text: String.fromCharCode(icon.codePoint),
-            style: TextStyle(
-              fontSize: squareSize * 0.4,
-              fontFamily: icon.fontFamily,
-              package: icon.fontPackage,
-              color: palette.topAccent,
+        if (icon.codePoint != 0) {
+          final fontFamily = icon.fontFamily ?? 'MaterialIcons';
+          final glyphPainter = TextPainter(
+            text: TextSpan(
+              text: String.fromCharCode(icon.codePoint),
+              style: TextStyle(
+                fontSize: squareSize * 0.4,
+                fontFamily: fontFamily,
+                fontFamilyFallback: const <String>[
+                  'MaterialIcons',
+                  'Material Symbols Outlined',
+                ],
+                package: icon.fontPackage,
+                color: palette.topAccent,
+              ),
             ),
-          ),
-          textDirection: TextDirection.ltr,
-        );
-        glyphPainter.layout();
-        final glyphOffset = Offset(
-          center.dx - glyphPainter.width / 2,
-          center.dy - glyphPainter.height / 2,
-        );
-        glyphPainter.paint(canvas, glyphOffset);
+            textDirection: TextDirection.ltr,
+          );
+          glyphPainter.layout();
+          final glyphOffset = Offset(
+            center.dx - glyphPainter.width / 2,
+            center.dy - glyphPainter.height / 2,
+          );
+          glyphPainter.paint(canvas, glyphOffset);
+        }
 
         // Draw signal ring if applicable
         if (tier != ArtMarkerSignal.subtle) {

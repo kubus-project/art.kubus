@@ -403,6 +403,7 @@ class RotatableCubePainter extends CustomPainter {
     required this.style,
     required this.bearing,
     required this.pitch,
+    this.topFaceImage,
     this.icon,
     this.label,
     this.labelStyle,
@@ -416,6 +417,9 @@ class RotatableCubePainter extends CustomPainter {
 
   /// Map pitch in degrees (0-60, 0 = top-down).
   final double pitch;
+
+  /// Optional texture for the top face (typically the 2D marker tile).
+  final ui.Image? topFaceImage;
 
   /// Icon to display on top face.
   final IconData? icon;
@@ -472,8 +476,8 @@ class RotatableCubePainter extends CustomPainter {
     // Draw edges for visible faces
     _drawEdges(canvas, projector, visibleFaces);
 
-    // Draw icon/label on top face if visible
-    if (visibility.top && (icon != null || label != null)) {
+    // Draw top-face content (texture or icon/label) if visible
+    if (visibility.top && (topFaceImage != null || icon != null || label != null)) {
       _drawTopFaceContent(canvas, size, projector);
     }
   }
@@ -603,6 +607,29 @@ class RotatableCubePainter extends CustomPainter {
     final topVertices = _CubeVertices.verticesForFace(CubeFace.top);
     final topProjected = topVertices.map(projector.project).toList();
 
+    final image = topFaceImage;
+    if (image != null) {
+      final vertices = ui.Vertices(
+        ui.VertexMode.triangleFan,
+        topProjected,
+        textureCoordinates: <Offset>[
+          const Offset(0, 0),
+          Offset(image.width.toDouble(), 0),
+          Offset(image.width.toDouble(), image.height.toDouble()),
+          Offset(0, image.height.toDouble()),
+        ],
+      );
+      final paint = Paint()
+        ..shader = ui.ImageShader(
+          image,
+          ui.TileMode.clamp,
+          ui.TileMode.clamp,
+          Matrix4.identity().storage,
+        );
+      canvas.drawVertices(vertices, BlendMode.srcOver, paint);
+      return;
+    }
+
     // Calculate center of projected top face
     final topCenter = Offset(
       (topProjected[0].dx +
@@ -661,13 +688,18 @@ class RotatableCubePainter extends CustomPainter {
 
     // Draw icon or label
     final TextPainter glyphPainter;
-    if (icon != null) {
+    if (icon != null && icon!.codePoint != 0) {
+      final fontFamily = icon!.fontFamily ?? 'MaterialIcons';
       glyphPainter = TextPainter(
         text: TextSpan(
           text: String.fromCharCode(icon!.codePoint),
           style: TextStyle(
             fontSize: faceWidth * 0.4,
-            fontFamily: icon!.fontFamily,
+            fontFamily: fontFamily,
+            fontFamilyFallback: const <String>[
+              'MaterialIcons',
+              'Material Symbols Outlined',
+            ],
             package: icon!.fontPackage,
             color: palette.topAccent,
           ),
@@ -699,6 +731,7 @@ class RotatableCubePainter extends CustomPainter {
         oldDelegate.pitch != pitch ||
         oldDelegate.palette != palette ||
         oldDelegate.style != style ||
+        oldDelegate.topFaceImage != topFaceImage ||
         oldDelegate.icon != icon ||
         oldDelegate.label != label;
   }
@@ -715,6 +748,7 @@ class RotatableCubeMarker extends StatelessWidget {
     required this.icon,
     required this.bearing,
     required this.pitch,
+    this.topFaceImage,
     this.size,
     this.zoom = 15.0,
     this.isSelected = false,
@@ -729,6 +763,9 @@ class RotatableCubeMarker extends StatelessWidget {
 
   /// Map pitch in degrees (0-60).
   final double pitch;
+
+  /// Optional texture for the top face (2D marker tile).
+  final ui.Image? topFaceImage;
 
   /// Override size. If null, computed from [zoom].
   final double? size;
@@ -779,6 +816,7 @@ class RotatableCubeMarker extends StatelessWidget {
               style: style,
               bearing: bearing,
               pitch: pitch,
+              topFaceImage: topFaceImage,
               icon: icon,
             ),
           ),

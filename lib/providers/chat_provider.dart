@@ -37,6 +37,9 @@ class ChatProvider extends ChangeNotifier {
     try {
       debugPrint('ChatProvider._onMembersUpdated: payload=$data');
       // Refresh conversations so UI reflects membership changes
+      if (!_hasAuthContext) {
+        return;
+      }
       refreshConversations().then((_) {
         debugPrint('ChatProvider._onMembersUpdated: refreshConversations completed');
       }).catchError((e) {
@@ -418,6 +421,8 @@ class ChatProvider extends ChangeNotifier {
   DateTime _lastNotifyReset = DateTime.now();
   String _lastStateSignature = '';
   int _lastTotalUnread = 0;
+  DateTime? _lastUnauthorizedAt;
+  final Duration _unauthCooldown = const Duration(seconds: 30);
 
   String _computeStateSignature() {
     try {
@@ -501,6 +506,8 @@ class ChatProvider extends ChangeNotifier {
   Map<String, int> get unreadCounts => _unreadCounts;
   User? getCachedUser(String wallet) => _userCache[wallet];
   bool get isAuthenticated => (_api.getAuthToken() ?? '').isNotEmpty;
+  bool get _hasAuthToken => (_api.getAuthToken() ?? '').isNotEmpty;
+  bool get _hasAuthContext => _hasAuthToken || ((_currentWallet ?? '').isNotEmpty);
 
   Future<void> initialize({String? initialWallet}) async {
     final normalizedInitialWallet = (initialWallet ?? '').trim();
@@ -752,6 +759,9 @@ class ChatProvider extends ChangeNotifier {
       _lastGlobalVersion = appRefresh.globalVersion;
       appRefresh.addListener(() {
         try {
+          if (!_hasAuthContext) {
+            return;
+          }
           if (appRefresh.chatVersion != _lastChatVersion) {
             _lastChatVersion = appRefresh.chatVersion;
             if (appRefresh.isViewActive(AppRefreshProvider.viewChat) || appRefresh.isAppForeground) {
@@ -773,30 +783,29 @@ class ChatProvider extends ChangeNotifier {
 
   Future<void> refreshConversations() async {
     try {
-      debugPrint('ChatProvider.refreshConversations: isAuthenticated=${(_api.getAuthToken() ?? '').isNotEmpty}');
+      debugPrint('ChatProvider.refreshConversations: isAuthenticated=$_hasAuthToken');
+      if (!_hasAuthContext) {
+        return;
+      }
+      if (_lastUnauthorizedAt != null &&
+          DateTime.now().difference(_lastUnauthorizedAt!) < _unauthCooldown) {
+        return;
+      }
       // Ensure we attempt to issue or load auth token before making protected call
-      try { await _api.ensureAuthLoaded(walletAddress: _currentWallet); } catch (_) {}
-      final resp = await _api.fetchConversations();
-      // If unauthorized, try the centralized ensureAuthLoaded once (single issuance attempt), then retry one time
-      if (resp['status'] == 401) {
-        debugPrint('ChatProvider.refreshConversations: received 401, calling ensureAuthLoaded and retrying once');
+      if (!_hasAuthToken && (_currentWallet ?? '').isNotEmpty) {
         try {
           await _api.ensureAuthLoaded(walletAddress: _currentWallet);
-          final respRetry = await _api.fetchConversations();
-          if (respRetry['success'] == true) {
-            final items = (respRetry['data'] as List<dynamic>?) ?? [];
-            await _hydrateConversationsFromPayload(items);
-            debugPrint('ChatProvider.refreshConversations: loaded ${_conversations.length} conversations after retry');
-            return;
-          }
-        } catch (e) {
-          debugPrint('ChatProvider.refreshConversations: retry after 401 failed: $e');
-        }
+        } catch (_) {}
+      }
+      final resp = await _api.fetchConversations();
+      if (resp['status'] == 401) {
+        _lastUnauthorizedAt = DateTime.now();
         return;
       }
       if (resp['success'] == true) {
         final items = (resp['data'] as List<dynamic>?) ?? [];
         await _hydrateConversationsFromPayload(items);
+        _lastUnauthorizedAt = null;
         debugPrint('ChatProvider.refreshConversations: loaded ${_conversations.length} conversations');
       }
     } catch (e) {

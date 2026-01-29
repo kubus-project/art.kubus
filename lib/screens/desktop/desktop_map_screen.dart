@@ -1,5 +1,6 @@
 ﻿import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -58,7 +59,6 @@ import '../../utils/design_tokens.dart';
 import '../../utils/category_accent_color.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/maplibre_style_utils.dart';
-import '../../utils/marker_cube_geometry.dart';
 import '../../widgets/glass_components.dart';
 import '../../widgets/kubus_snackbar.dart';
 import '../../widgets/tutorial/interactive_tutorial_overlay.dart';
@@ -177,8 +177,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   static const String _locationLayerId = 'kubus_user_location_layer';
   static const String _pendingSourceId = 'kubus_pending_marker';
   static const String _pendingLayerId = 'kubus_pending_marker_layer';
-  static const double _cubePitchThreshold = 5.0;
   bool _cubeLayerVisible = false;
+  bool _cubeModeActive = false;
+  final Map<String, Offset> _cubeAnchors = <String, Offset>{};
+  final Map<String, ui.Image> _cubeTopFaceCache = <String, ui.Image>{};
+  final Map<String, Future<ui.Image>> _cubeTopFaceInflight =
+      <String, Future<ui.Image>>{};
+  double? _lastCubeSyncZoom;
+  double? _lastCubeSyncPitch;
   static const double _markerRefreshDistanceMeters = 1200;
   static const Duration _markerRefreshInterval = Duration(minutes: 5);
 
@@ -895,7 +901,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         }
         if (fallbackMarker != null) {
           _handleMarkerTap(fallbackMarker);
-          unawaited(_syncMapMarkers(themeProvider: themeProvider));
           _queueOverlayAnchorRefresh();
           return;
         }
@@ -946,7 +951,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           _artMarkers.where((m) => m.id == markerId).toList(growable: false);
       if (marker.isEmpty) return;
       _handleMarkerTap(marker.first);
-      unawaited(_syncMapMarkers(themeProvider: themeProvider));
       _queueOverlayAnchorRefresh();
     } catch (e) {
       if (kDebugMode) {
@@ -961,7 +965,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       }
       if (fallbackMarker == null) return;
       _handleMarkerTap(fallbackMarker);
-      unawaited(_syncMapMarkers(themeProvider: themeProvider));
       _queueOverlayAnchorRefresh();
     }
   }
@@ -1603,6 +1606,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             _cameraZoom = position.zoom;
             _lastBearing = position.bearing;
             _lastPitch = position.tilt;
+            _updateCubeModeForPitch(_lastPitch);
             final shouldShowCubes = _is3DMarkerModeActive;
             if (shouldShowCubes != _cubeLayerVisible) {
               unawaited(_updateMarkerRenderMode());
@@ -1618,7 +1622,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               _lastCameraUpdateTime = now;
               setState(() => _renderZoomBucket = bucket);
             }
-            if (bucketChanged && _is3DMarkerModeActive) {
+            if (_is3DMarkerModeActive) {
               _cubeSyncDebouncer(const Duration(milliseconds: 60), () {
                 unawaited(_syncMarkerCubes(themeProvider: themeProvider));
               });
@@ -1643,6 +1647,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           },
           onCameraIdle: () {
             _programmaticCameraMove = false;
+            _updateCubeModeForPitch(_lastPitch);
             unawaited(_updateMarkerRenderMode());
             _queueMarkerRefresh(fromGesture: false);
             _queueOverlayAnchorRefresh();
@@ -1667,6 +1672,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         return Stack(
           children: [
             Positioned.fill(child: map),
+            _buildCubeOverlay(themeProvider),
             if (_markerOverlayMode == _MarkerOverlayMode.anchored &&
                 _selectedMarkerAnchor != null)
               Positioned(
@@ -1684,6 +1690,60 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           ],
         );
       },
+    );
+  }
+
+  Widget _buildCubeOverlay(ThemeProvider themeProvider) {
+    if (!_is3DMarkerModeActive) return const SizedBox.shrink();
+    if (_cubeAnchors.isEmpty) return const SizedBox.shrink();
+
+    final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
+    final isDark = themeProvider.isDarkMode;
+    final zoom = _cameraZoom;
+
+    final cubes = <Widget>[];
+    for (final entry in _cubeAnchors.entries) {
+      final marker =
+          _artMarkers.where((m) => m.id == entry.key).firstOrNull;
+      if (marker == null || !marker.hasValidPosition) continue;
+
+      final baseColor = AppColorUtils.markerSubjectColor(
+        markerType: marker.type.name,
+        metadata: marker.metadata,
+        scheme: scheme,
+        roles: roles,
+      );
+      final selected = _selectedMarkerId == marker.id;
+      final key = _cubeTopFaceKey(
+        marker: marker,
+        isDark: isDark,
+        selected: selected,
+      );
+      final topFaceImage = _cubeTopFaceCache[key];
+      final cubeSize = RotatableCubeTokens.sizeForZoom(zoom);
+      final anchor = entry.value;
+
+      cubes.add(
+        Positioned(
+          left: anchor.dx - (cubeSize / 2),
+          top: anchor.dy - (cubeSize / 2),
+          child: RotatableCubeMarker(
+            baseColor: baseColor,
+            icon: _resolveArtMarkerIcon(marker.type),
+            bearing: _lastBearing,
+            pitch: _lastPitch,
+            zoom: zoom,
+            isSelected: selected,
+            topFaceImage: topFaceImage,
+          ),
+        ),
+      );
+    }
+
+    return IgnorePointer(
+      ignoring: true,
+      child: Stack(children: cubes),
     );
   }
 
@@ -2024,104 +2084,112 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         link: _searchFieldLink,
         showWhenUnlinked: false,
         offset: const Offset(0, 52),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            maxWidth: 520,
-            maxHeight: 360,
-          ),
-          child: LiquidGlassPanel(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            margin: EdgeInsets.zero,
-            borderRadius: BorderRadius.circular(12),
-            blurSigma: KubusGlassEffects.blurSigmaLight,
-            backgroundColor: glassTint,
-            child: Builder(
-              builder: (context) {
-                if (trimmedQuery.length < 2) {
-                  return Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(
-                      l10n.mapSearchMinCharsHint,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: scheme.onSurface.withValues(alpha: 0.6),
-                          ),
-                    ),
-                  );
-                }
-
-                if (_isFetchingSearch) {
-                  return const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Center(child: CircularProgressIndicator()),
-                  );
-                }
-
-                if (_searchSuggestions.isEmpty) {
-                  return Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.search_off,
-                          color: scheme.onSurface.withValues(alpha: 0.4),
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          l10n.commonNoResultsFound,
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
-                              ?.copyWith(
-                                color: scheme.onSurface.withValues(alpha: 0.6),
-                              ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                return ListView.separated(
-                  shrinkWrap: true,
-                  itemCount: _searchSuggestions.length,
-                  separatorBuilder: (_, __) => Divider(
-                    height: 1,
-                    color: scheme.outlineVariant,
-                  ),
-                  itemBuilder: (context, index) {
-                    final suggestion = _searchSuggestions[index];
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor:
-                            themeProvider.accentColor.withValues(alpha: 0.10),
-                        child: Icon(
-                          suggestion.icon,
-                          color: themeProvider.accentColor,
-                        ),
-                      ),
-                      title: Text(
-                        suggestion.label,
+        child: UnconstrainedBox(
+          alignment: Alignment.topLeft,
+          constrainedAxis: Axis.horizontal,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              maxWidth: 520,
+              maxHeight: 360,
+            ),
+            child: LiquidGlassPanel(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              margin: EdgeInsets.zero,
+              borderRadius: BorderRadius.circular(12),
+              blurSigma: KubusGlassEffects.blurSigmaLight,
+              backgroundColor: glassTint,
+              child: Builder(
+                builder: (context) {
+                  if (trimmedQuery.length < 2) {
+                    return Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(
+                        l10n.mapSearchMinCharsHint,
                         style: Theme.of(context)
                             .textTheme
                             .bodyMedium
-                            ?.copyWith(fontWeight: FontWeight.w600),
-                      ),
-                      subtitle: suggestion.subtitle == null
-                          ? null
-                          : Text(
-                              suggestion.subtitle!,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(
-                                    color:
-                                        scheme.onSurface.withValues(alpha: 0.6),
-                                  ),
+                            ?.copyWith(
+                              color: scheme.onSurface.withValues(alpha: 0.6),
                             ),
-                      onTap: () => _handleSuggestionTap(suggestion),
+                      ),
                     );
-                  },
-                );
-              },
+                  }
+
+                  if (_isFetchingSearch) {
+                    return const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+
+                  if (_searchSuggestions.isEmpty) {
+                    return Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.search_off,
+                            color: scheme.onSurface.withValues(alpha: 0.4),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            l10n.commonNoResultsFound,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  color:
+                                      scheme.onSurface.withValues(alpha: 0.6),
+                                ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  return ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: _searchSuggestions.length,
+                    separatorBuilder: (_, __) => Divider(
+                      height: 1,
+                      color: scheme.outlineVariant,
+                    ),
+                    itemBuilder: (context, index) {
+                      final suggestion = _searchSuggestions[index];
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor:
+                              themeProvider.accentColor.withValues(alpha: 0.10),
+                          child: Icon(
+                            suggestion.icon,
+                            color: themeProvider.accentColor,
+                          ),
+                        ),
+                        title: Text(
+                          suggestion.label,
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(fontWeight: FontWeight.w600),
+                        ),
+                        subtitle: suggestion.subtitle == null
+                            ? null
+                            : Text(
+                                suggestion.subtitle!,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      color: scheme.onSurface
+                                          .withValues(alpha: 0.6),
+                                    ),
+                              ),
+                        onTap: () => _handleSuggestionTap(suggestion),
+                      );
+                    },
+                  );
+                },
+              ),
             ),
           ),
         ),
@@ -4450,7 +4518,25 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   bool get _is3DMarkerModeActive {
     if (!AppConfig.isFeatureEnabled('mapIsometricView')) return false;
-    return _lastPitch > _cubePitchThreshold;
+    return _cubeModeActive;
+  }
+
+  void _updateCubeModeForPitch(double pitch) {
+    if (!AppConfig.isFeatureEnabled('mapIsometricView')) {
+      _cubeModeActive = false;
+      return;
+    }
+    const double enterThreshold = 8.0;
+    const double exitThreshold = 4.0;
+    if (_cubeModeActive) {
+      if (pitch < exitThreshold) {
+        _cubeModeActive = false;
+      }
+    } else {
+      if (pitch > enterThreshold) {
+        _cubeModeActive = true;
+      }
+    }
   }
 
   bool _assertMarkerRenderModeInvariant() {
@@ -4471,8 +4557,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _cubeLayerVisible = shouldShowCubes;
 
     try {
-      await controller.setLayerVisibility(_cubeLayerId, shouldShowCubes);
-      await controller.setLayerVisibility(_cubeIconLayerId, shouldShowCubes);
+      await controller.setLayerVisibility(_cubeLayerId, false);
+      await controller.setLayerVisibility(_cubeIconLayerId, false);
       await controller.setLayerVisibility(_markerLayerId, !shouldShowCubes);
     } catch (_) {
       // Best-effort: layer visibility may fail during style swaps.
@@ -4483,17 +4569,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       final themeProvider = context.read<ThemeProvider>();
       await _syncMarkerCubes(themeProvider: themeProvider);
     } else {
-      try {
-        await controller.setGeoJsonSource(
-          _cubeSourceId,
-          const <String, dynamic>{
-            'type': 'FeatureCollection',
-            'features': <dynamic>[],
-          },
-        );
-      } catch (_) {
-        // Ignore source update failures during transitions.
-      }
+      if (!mounted) return;
+      setState(() => _cubeAnchors.clear());
     }
   }
 
@@ -4504,37 +4581,108 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (!mounted) return;
     if (!_is3DMarkerModeActive) return;
 
-    final scheme = Theme.of(context).colorScheme;
-    final roles = KubusColorRoles.of(context);
-    final zoom = _cameraZoom;
+    final isDark = themeProvider.isDarkMode;
     final visibleMarkers =
         _artMarkers.where((m) => m.hasValidPosition).toList(growable: false);
 
-    final features = <Map<String, dynamic>>[];
+    final zoom = _cameraZoom;
+    final pitch = _lastPitch;
+    final lastZoom = _lastCubeSyncZoom;
+    final lastPitch = _lastCubeSyncPitch;
+    if (lastZoom != null && lastPitch != null) {
+      final zoomDelta = (zoom - lastZoom).abs();
+      final pitchDelta = (pitch - lastPitch).abs();
+      if (zoomDelta < 0.05 && pitchDelta < 0.5) {
+        return;
+      }
+    }
+
+    final anchors = <String, Offset>{};
     for (final marker in visibleMarkers) {
-      final baseColor = AppColorUtils.markerSubjectColor(
-        markerType: marker.type.name,
-        metadata: marker.metadata,
-        scheme: scheme,
-        roles: roles,
-      );
-      final colorHex = MarkerCubeGeometry.toHex(baseColor);
-      features.add(
-        MarkerCubeGeometry.cubeFeatureForMarker(
+      try {
+        final screen = await controller.toScreenLocation(
+          ml.LatLng(marker.position.latitude, marker.position.longitude),
+        );
+        anchors[marker.id] = Offset(screen.x.toDouble(), screen.y.toDouble());
+      } catch (_) {
+        // Ignore projection failures during style transitions.
+      }
+
+      final selected = _selectedMarkerId == marker.id;
+      unawaited(
+        _ensureCubeTopFaceImage(
           marker: marker,
-          colorHex: colorHex,
-          zoom: zoom,
+          isDark: isDark,
+          selected: selected,
         ),
       );
     }
 
-    final collection = <String, dynamic>{
-      'type': 'FeatureCollection',
-      'features': features,
-    };
-
     if (!mounted) return;
-    await controller.setGeoJsonSource(_cubeSourceId, collection);
+    _lastCubeSyncZoom = zoom;
+    _lastCubeSyncPitch = pitch;
+    setState(() {
+      _cubeAnchors
+        ..clear()
+        ..addAll(anchors);
+    });
+  }
+
+  String _cubeTopFaceKey({
+    required ArtMarker marker,
+    required bool isDark,
+    required bool selected,
+  }) {
+    return 'mk_${marker.type.name}_${marker.signalTier.name}'
+        '${selected ? '_sel' : ''}_${isDark ? 'd' : 'l'}';
+  }
+
+  Future<void> _ensureCubeTopFaceImage({
+    required ArtMarker marker,
+    required bool isDark,
+    required bool selected,
+  }) async {
+    final key = _cubeTopFaceKey(
+      marker: marker,
+      isDark: isDark,
+      selected: selected,
+    );
+    if (_cubeTopFaceCache.containsKey(key)) return;
+    final inflight = _cubeTopFaceInflight[key];
+    if (inflight != null) {
+      await inflight;
+      return;
+    }
+
+    final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
+    final baseColor = _resolveArtMarkerColor(marker, context.read<ThemeProvider>());
+
+    final future = () async {
+      final bytes = await ArtMarkerCubeIconRenderer.renderMarkerPng(
+        baseColor: baseColor,
+        icon: _resolveArtMarkerIcon(marker.type),
+        tier: marker.signalTier,
+        scheme: scheme,
+        roles: roles,
+        isDark: isDark,
+        forceGlow: selected,
+        pixelRatio: _markerPixelRatio(),
+      );
+      final codec = await ui.instantiateImageCodec(bytes);
+      final frame = await codec.getNextFrame();
+      return frame.image;
+    }();
+
+    _cubeTopFaceInflight[key] = future;
+    try {
+      final image = await future;
+      if (!mounted) return;
+      _cubeTopFaceCache[key] = image;
+      setState(() {});
+    } finally {
+      _cubeTopFaceInflight.remove(key);
+    }
   }
 
   Widget _buildMarkerOverlayCard(
@@ -5033,7 +5181,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       targetAnchor: Alignment.center,
       followerAnchor: Alignment.bottomCenter,
       offset: Offset(0, -verticalOffset),
-      child: wrappedCard,
+      child: UnconstrainedBox(
+        alignment: Alignment.bottomCenter,
+        constrainedAxis: Axis.horizontal,
+        child: wrappedCard,
+      ),
     );
   }
 

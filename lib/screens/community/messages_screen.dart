@@ -43,8 +43,6 @@ class _MessagesScreenState extends State<MessagesScreen> {
     super.initState();
     _chatProvider = Provider.of<ChatProvider>(context, listen: false);
     _cacheProvider = Provider.of<CacheProvider>(context, listen: false);
-    _chatProvider.initialize();
-    _chatProvider.refreshConversations();
     _chatProvider.addListener(_onChatProviderChanged);
     // Persisted user cache initialization moved to profile/wallet flows; MessagesScreen reads cache if available.
     // However, to avoid flicker we ensure that the persisted cache is initialized here as soon as we detect a persisted wallet
