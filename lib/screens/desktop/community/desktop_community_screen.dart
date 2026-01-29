@@ -187,7 +187,6 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadFeed();
       _loadSidebarData();
-      _initializeChat();
       unawaited(_syncFollowingWallets());
 
       try {
@@ -327,11 +326,6 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         ),
       );
     }
-  }
-
-  Future<void> _initializeChat() async {
-    final chatProvider = context.read<ChatProvider>();
-    await chatProvider.initialize();
   }
 
   Future<void> _loadFeed() async {

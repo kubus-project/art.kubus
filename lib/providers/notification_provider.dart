@@ -45,6 +45,8 @@ class NotificationProvider extends ChangeNotifier {
   int _debugCadenceTicks = 0;
   int _debugSyncs = 0;
   int _debugSkippedSyncs = 0;
+  bool get _hasAuthToken => (_backend.getAuthToken() ?? '').isNotEmpty;
+  bool get _hasAuthContext => _hasAuthToken || ((_currentWallet ?? '').isNotEmpty);
 
   // Only community notifications (messages handled by ChatProvider)
   int get unreadCount => _communityUnreadCount;
@@ -138,11 +140,13 @@ class NotificationProvider extends ChangeNotifier {
   Future<String?> _resolveWallet(String? override) async {
     if (override != null && override.isNotEmpty) return override;
     try {
-      final me = await _backend.getMyProfile();
-      if (me['success'] == true && me['data'] != null) {
-        final data = me['data'] as Map<String, dynamic>;
-        final wallet = (data['wallet_address'] ?? data['walletAddress'] ?? data['wallet'])?.toString();
-        if (wallet != null && wallet.isNotEmpty) return wallet;
+      if (_hasAuthToken) {
+        final me = await _backend.getMyProfile();
+        if (me['success'] == true && me['data'] != null) {
+          final data = me['data'] as Map<String, dynamic>;
+          final wallet = (data['wallet_address'] ?? data['walletAddress'] ?? data['wallet'])?.toString();
+          if (wallet != null && wallet.isNotEmpty) return wallet;
+        }
       }
     } catch (e) {
       debugPrint('NotificationProvider._resolveWallet: getMyProfile failed: $e');
@@ -174,7 +178,9 @@ class NotificationProvider extends ChangeNotifier {
     // When socket reconnects (after background or connectivity issues), refresh
     // the unread count so badges remain accurate without waiting for the next
     // server push event.
-    unawaited(refresh(force: true));
+    if (_hasAuthContext) {
+      unawaited(refresh(force: true));
+    }
   }
 
   void _ensureCadenceTimer({bool forceRestart = false}) {
@@ -244,6 +250,9 @@ class NotificationProvider extends ChangeNotifier {
     if ((_currentWallet == null || _currentWallet!.isEmpty) && !_initializing) {
       return;
     }
+    if (!_hasAuthContext) {
+      return;
+    }
     if (_refreshInFlight && !force) {
       _debugSkippedSyncs++;
       return;
@@ -311,7 +320,9 @@ class NotificationProvider extends ChangeNotifier {
 
   Future<void> refresh({bool force = false}) async {
     if ((_currentWallet == null || _currentWallet!.isEmpty) && !_initializing) {
-      debugPrint('NotificationProvider.refresh: no wallet, attempting rehydrate');
+      if (!_hasAuthToken) {
+        return;
+      }
       try {
         final resolved = await _resolveWallet(null);
         if (resolved != null && resolved.isNotEmpty) {
@@ -325,6 +336,10 @@ class NotificationProvider extends ChangeNotifier {
       }
     }
 
+    if (!_hasAuthContext) {
+      return;
+    }
+
     if (force) {
       _scheduledServerSync?.cancel();
       await _syncUnreadCount(force: true);
@@ -336,6 +351,10 @@ class NotificationProvider extends ChangeNotifier {
 
   Future<void> _syncUnreadCount({bool force = false}) async {
     if ((_currentWallet == null || _currentWallet!.isEmpty) && !_initializing) {
+      return;
+    }
+
+    if (!_hasAuthContext) {
       return;
     }
 
@@ -427,6 +446,9 @@ class NotificationProvider extends ChangeNotifier {
       _lastGlobalVersion = appRefresh.globalVersion;
       appRefresh.addListener(() {
         try {
+          if (!_hasAuthContext) {
+            return;
+          }
           if (appRefresh.notificationsVersion != _lastNotifVersion) {
             _lastNotifVersion = appRefresh.notificationsVersion;
             if (_isNotificationsSurfaceActive || _isForeground) {

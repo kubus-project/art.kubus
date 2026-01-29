@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:geolocator/geolocator.dart';
@@ -62,7 +63,6 @@ import '../services/backend_api_service.dart';
 import '../services/map_style_service.dart';
 import '../config/config.dart';
 import '../utils/maplibre_style_utils.dart';
-import '../utils/marker_cube_geometry.dart';
 import 'events/exhibition_detail_screen.dart';
 import '../widgets/glass_components.dart';
 import '../widgets/kubus_snackbar.dart';
@@ -179,8 +179,14 @@ class _MapScreenState extends State<MapScreen>
   static const String _cubeIconLayerId = 'kubus_marker_cubes_icon_layer';
   static const String _locationSourceId = 'kubus_user_location';
   static const String _locationLayerId = 'kubus_user_location_layer';
-  static const double _cubePitchThreshold = 5.0;
   bool _cubeLayerVisible = false;
+  bool _cubeModeActive = false;
+  final Map<String, Offset> _cubeAnchors = <String, Offset>{};
+  final Map<String, ui.Image> _cubeTopFaceCache = <String, ui.Image>{};
+  final Map<String, Future<ui.Image>> _cubeTopFaceInflight =
+      <String, Future<ui.Image>>{};
+  double? _lastCubeSyncZoom;
+  double? _lastCubeSyncPitch;
 
   // Avoid repeatedly requesting permission/service on each timer tick
   bool _locationPermissionRequested = false;
@@ -236,6 +242,7 @@ class _MapScreenState extends State<MapScreen>
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   Timer? _searchDebounce;
+  Timer? _sheetInteractionResetTimer;
   List<MapSearchSuggestion> _searchSuggestions = [];
   final SearchService _searchService = SearchService();
 
@@ -695,6 +702,7 @@ class _MapScreenState extends State<MapScreen>
     _registeredMapImages.clear();
     _timer?.cancel();
     _searchDebounce?.cancel();
+    _sheetInteractionResetTimer?.cancel();
     _searchController.dispose();
     _searchFocusNode.dispose();
     if (_compassSubscription != null) {
@@ -1471,7 +1479,25 @@ class _MapScreenState extends State<MapScreen>
 
   bool get _is3DMarkerModeActive {
     if (!AppConfig.isFeatureEnabled('mapIsometricView')) return false;
-    return _lastPitch > _cubePitchThreshold;
+    return _cubeModeActive;
+  }
+
+  void _updateCubeModeForPitch(double pitch) {
+    if (!AppConfig.isFeatureEnabled('mapIsometricView')) {
+      _cubeModeActive = false;
+      return;
+    }
+    const double enterThreshold = 8.0;
+    const double exitThreshold = 4.0;
+    if (_cubeModeActive) {
+      if (pitch < exitThreshold) {
+        _cubeModeActive = false;
+      }
+    } else {
+      if (pitch > enterThreshold) {
+        _cubeModeActive = true;
+      }
+    }
   }
 
   bool _assertMarkerRenderModeInvariant() {
@@ -1492,8 +1518,8 @@ class _MapScreenState extends State<MapScreen>
     _cubeLayerVisible = shouldShowCubes;
 
     try {
-      await controller.setLayerVisibility(_cubeLayerId, shouldShowCubes);
-      await controller.setLayerVisibility(_cubeIconLayerId, shouldShowCubes);
+      await controller.setLayerVisibility(_cubeLayerId, false);
+      await controller.setLayerVisibility(_cubeIconLayerId, false);
       await controller.setLayerVisibility(_markerLayerId, !shouldShowCubes);
     } catch (_) {
       // Best-effort: layer visibility may fail during style swaps.
@@ -1504,17 +1530,8 @@ class _MapScreenState extends State<MapScreen>
       final themeProvider = context.read<ThemeProvider>();
       await _syncMarkerCubes(themeProvider: themeProvider);
     } else {
-      try {
-        await controller.setGeoJsonSource(
-          _cubeSourceId,
-          const <String, dynamic>{
-            'type': 'FeatureCollection',
-            'features': <dynamic>[],
-          },
-        );
-      } catch (_) {
-        // Ignore source update failures during transitions.
-      }
+      if (!mounted) return;
+      setState(() => _cubeAnchors.clear());
     }
   }
 
@@ -2545,6 +2562,7 @@ class _MapScreenState extends State<MapScreen>
                 child: _buildMap(themeProvider),
               ),
             ),
+            _buildCubeOverlay(themeProvider),
             if (_shouldBlockMapGestures)
               const Positioned.fill(
                 child: ModalBarrier(
@@ -2673,6 +2691,7 @@ class _MapScreenState extends State<MapScreen>
         _lastZoom = position.zoom;
         _lastBearing = position.bearing;
         _lastPitch = position.tilt;
+        _updateCubeModeForPitch(_lastPitch);
         final shouldShowCubes = _is3DMarkerModeActive;
         if (shouldShowCubes != _cubeLayerVisible) {
           unawaited(_updateMarkerRenderMode());
@@ -2687,7 +2706,7 @@ class _MapScreenState extends State<MapScreen>
           _lastCameraUpdateTime = now;
           setState(() => _renderZoomBucket = bucket);
         }
-        if (bucketChanged && _is3DMarkerModeActive) {
+        if (_is3DMarkerModeActive) {
           _cubeSyncDebouncer(const Duration(milliseconds: 60), () {
             unawaited(_syncMarkerCubes(themeProvider: themeProvider));
           });
@@ -2712,6 +2731,7 @@ class _MapScreenState extends State<MapScreen>
       },
       onCameraIdle: () {
         _programmaticCameraMove = false;
+        _updateCubeModeForPitch(_lastPitch);
         unawaited(_updateMarkerRenderMode());
         _queueOverlayAnchorRefresh();
         _queueMarkerRefresh(fromGesture: false);
@@ -2721,6 +2741,60 @@ class _MapScreenState extends State<MapScreen>
       scrollGesturesEnabled: !_shouldBlockMapGestures,
       zoomGesturesEnabled: !_shouldBlockMapGestures,
       tiltGesturesEnabled: !_shouldBlockMapGestures,
+    );
+  }
+
+  Widget _buildCubeOverlay(ThemeProvider themeProvider) {
+    if (!_is3DMarkerModeActive) return const SizedBox.shrink();
+    if (_cubeAnchors.isEmpty) return const SizedBox.shrink();
+
+    final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
+    final isDark = themeProvider.isDarkMode;
+    final zoom = _lastZoom;
+
+    final cubes = <Widget>[];
+    for (final entry in _cubeAnchors.entries) {
+      final marker =
+          _artMarkers.where((m) => m.id == entry.key).firstOrNull;
+      if (marker == null || !marker.hasValidPosition) continue;
+
+      final baseColor = AppColorUtils.markerSubjectColor(
+        markerType: marker.type.name,
+        metadata: marker.metadata,
+        scheme: scheme,
+        roles: roles,
+      );
+      final selected = _selectedMarkerId == marker.id;
+      final key = _cubeTopFaceKey(
+        marker: marker,
+        isDark: isDark,
+        selected: selected,
+      );
+      final topFaceImage = _cubeTopFaceCache[key];
+      final cubeSize = RotatableCubeTokens.sizeForZoom(zoom);
+      final anchor = entry.value;
+
+      cubes.add(
+        Positioned(
+          left: anchor.dx - (cubeSize / 2),
+          top: anchor.dy - (cubeSize / 2),
+          child: RotatableCubeMarker(
+            baseColor: baseColor,
+            icon: _resolveArtMarkerIcon(marker.type),
+            bearing: _lastBearing,
+            pitch: _lastPitch,
+            zoom: zoom,
+            isSelected: selected,
+            topFaceImage: topFaceImage,
+          ),
+        ),
+      );
+    }
+
+    return IgnorePointer(
+      ignoring: true,
+      child: Stack(children: cubes),
     );
   }
 
@@ -3014,7 +3088,6 @@ class _MapScreenState extends State<MapScreen>
         }
         if (fallbackMarker == null) return;
         _handleMarkerTap(fallbackMarker);
-        unawaited(_syncMapMarkers(themeProvider: themeProvider));
         return;
       }
 
@@ -3053,7 +3126,6 @@ class _MapScreenState extends State<MapScreen>
           _artMarkers.where((m) => m.id == markerId).toList(growable: false);
       if (marker.isEmpty) return;
       _handleMarkerTap(marker.first);
-      unawaited(_syncMapMarkers(themeProvider: themeProvider));
     } catch (e) {
       if (kDebugMode) {
         AppConfig.debugPrint('MapScreen: queryRenderedFeatures failed: $e');
@@ -3066,7 +3138,6 @@ class _MapScreenState extends State<MapScreen>
       }
       if (fallbackMarker == null) return;
       _handleMarkerTap(fallbackMarker);
-      unawaited(_syncMapMarkers(themeProvider: themeProvider));
     }
   }
 
@@ -3218,39 +3289,110 @@ class _MapScreenState extends State<MapScreen>
     if (!mounted) return;
     if (!_is3DMarkerModeActive) return;
 
-    final scheme = Theme.of(context).colorScheme;
-    final roles = KubusColorRoles.of(context);
-    final zoom = _lastZoom;
+    final isDark = themeProvider.isDarkMode;
     final visibleMarkers = _artMarkers
         .where((m) => (_markerLayerVisibility[m.type] ?? true))
         .where((m) => m.hasValidPosition)
         .toList(growable: false);
 
-    final features = <Map<String, dynamic>>[];
+    final zoom = _lastZoom;
+    final pitch = _lastPitch;
+    final lastZoom = _lastCubeSyncZoom;
+    final lastPitch = _lastCubeSyncPitch;
+    if (lastZoom != null && lastPitch != null) {
+      final zoomDelta = (zoom - lastZoom).abs();
+      final pitchDelta = (pitch - lastPitch).abs();
+      if (zoomDelta < 0.05 && pitchDelta < 0.5) {
+        return;
+      }
+    }
+
+    final anchors = <String, Offset>{};
     for (final marker in visibleMarkers) {
-      final baseColor = AppColorUtils.markerSubjectColor(
-        markerType: marker.type.name,
-        metadata: marker.metadata,
-        scheme: scheme,
-        roles: roles,
-      );
-      final colorHex = MarkerCubeGeometry.toHex(baseColor);
-      features.add(
-        MarkerCubeGeometry.cubeFeatureForMarker(
+      try {
+        final screen = await controller.toScreenLocation(
+          ml.LatLng(marker.position.latitude, marker.position.longitude),
+        );
+        anchors[marker.id] = Offset(screen.x.toDouble(), screen.y.toDouble());
+      } catch (_) {
+        // Ignore projection failures during style transitions.
+      }
+
+      final selected = _selectedMarkerId == marker.id;
+      unawaited(
+        _ensureCubeTopFaceImage(
           marker: marker,
-          colorHex: colorHex,
-          zoom: zoom,
+          isDark: isDark,
+          selected: selected,
         ),
       );
     }
 
-    final collection = <String, dynamic>{
-      'type': 'FeatureCollection',
-      'features': features,
-    };
-
     if (!mounted) return;
-    await controller.setGeoJsonSource(_cubeSourceId, collection);
+    _lastCubeSyncZoom = zoom;
+    _lastCubeSyncPitch = pitch;
+    setState(() {
+      _cubeAnchors
+        ..clear()
+        ..addAll(anchors);
+    });
+  }
+
+  String _cubeTopFaceKey({
+    required ArtMarker marker,
+    required bool isDark,
+    required bool selected,
+  }) {
+    return 'mk_${marker.type.name}_${marker.signalTier.name}'
+        '${selected ? '_sel' : ''}_${isDark ? 'd' : 'l'}';
+  }
+
+  Future<void> _ensureCubeTopFaceImage({
+    required ArtMarker marker,
+    required bool isDark,
+    required bool selected,
+  }) async {
+    final key = _cubeTopFaceKey(
+      marker: marker,
+      isDark: isDark,
+      selected: selected,
+    );
+    if (_cubeTopFaceCache.containsKey(key)) return;
+    final inflight = _cubeTopFaceInflight[key];
+    if (inflight != null) {
+      await inflight;
+      return;
+    }
+
+    final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
+    final baseColor = _resolveArtMarkerColor(marker, context.read<ThemeProvider>());
+
+    final future = () async {
+      final bytes = await ArtMarkerCubeIconRenderer.renderMarkerPng(
+        baseColor: baseColor,
+        icon: _resolveArtMarkerIcon(marker.type),
+        tier: marker.signalTier,
+        scheme: scheme,
+        roles: roles,
+        isDark: isDark,
+        forceGlow: selected,
+        pixelRatio: _markerPixelRatio(),
+      );
+      final codec = await ui.instantiateImageCodec(bytes);
+      final frame = await codec.getNextFrame();
+      return frame.image;
+    }();
+
+    _cubeTopFaceInflight[key] = future;
+    try {
+      final image = await future;
+      if (!mounted) return;
+      _cubeTopFaceCache[key] = image;
+      setState(() {});
+    } finally {
+      _cubeTopFaceInflight.remove(key);
+    }
   }
 
   Future<Map<String, dynamic>> _markerFeatureFor({
@@ -5061,6 +5203,14 @@ class _MapScreenState extends State<MapScreen>
         onPointerDown: (_) => _setSheetInteracting(true),
         onPointerUp: (_) => _setSheetInteracting(false),
         onPointerCancel: (_) => _setSheetInteracting(false),
+        onPointerSignal: (_) {
+          _setSheetInteracting(true);
+          _sheetInteractionResetTimer?.cancel();
+          _sheetInteractionResetTimer =
+              Timer(const Duration(milliseconds: 140), () {
+            _setSheetInteracting(false);
+          });
+        },
         child: NotificationListener<DraggableScrollableNotification>(
           onNotification: (notification) {
             final blocking = notification.extent > (_nearbySheetMin + 0.01);
@@ -5086,6 +5236,10 @@ class _MapScreenState extends State<MapScreen>
                   scheme.surface.withValues(alpha: isDark ? 0.46 : 0.56);
               return GestureDetector(
                 behavior: HitTestBehavior.opaque,
+                onVerticalDragStart: (_) {},
+                onVerticalDragUpdate: (_) {},
+                onVerticalDragEnd: (_) {},
+                onVerticalDragCancel: () {},
                 onHorizontalDragStart: (_) {},
                 onHorizontalDragUpdate: (_) {},
                 onHorizontalDragEnd: (_) {},
@@ -5111,222 +5265,236 @@ class _MapScreenState extends State<MapScreen>
                       borderRadius: BorderRadius.zero,
                       showBorder: false,
                       backgroundColor: glassTint,
-                      child: CustomScrollView(
-                        controller: scrollController,
-                        slivers: [
-                          SliverToBoxAdapter(
-                            child: Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Center(
-                                    child: Container(
-                                      width: 48,
-                                      height: 4,
-                                      decoration: BoxDecoration(
-                                        color: scheme.outlineVariant
-                                            .withValues(alpha: 0.85),
-                                        borderRadius: BorderRadius.circular(2),
+                      child: NotificationListener<ScrollNotification>(
+                        onNotification: (notification) {
+                          if (notification is ScrollStartNotification) {
+                            _setSheetInteracting(true);
+                          } else if (notification is ScrollEndNotification) {
+                            _setSheetInteracting(false);
+                          } else if (notification is UserScrollNotification &&
+                              notification.direction == ScrollDirection.idle) {
+                            _setSheetInteracting(false);
+                          }
+                          return false;
+                        },
+                        child: CustomScrollView(
+                          controller: scrollController,
+                          slivers: [
+                            SliverToBoxAdapter(
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Center(
+                                      child: Container(
+                                        width: 48,
+                                        height: 4,
+                                        decoration: BoxDecoration(
+                                          color: scheme.outlineVariant
+                                              .withValues(alpha: 0.85),
+                                          borderRadius: BorderRadius.circular(2),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              l10n.mapNearbyArtTitle,
-                                              key: _tutorialNearbyTitleKey,
-                                              style: KubusTypography
-                                                  .textTheme.titleMedium
-                                                  ?.copyWith(
-                                                fontWeight: FontWeight.w700,
+                                    const SizedBox(height: 12),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                l10n.mapNearbyArtTitle,
+                                                key: _tutorialNearbyTitleKey,
+                                                style: KubusTypography
+                                                    .textTheme.titleMedium
+                                                    ?.copyWith(
+                                                  fontWeight: FontWeight.w700,
+                                                ),
                                               ),
-                                            ),
-                                            Text(
-                                              _travelModeEnabled
-                                                  ? '${l10n.mapResultsDiscoveredLabel(
-                                                      artworks.length,
-                                                      (discoveryProgress * 100)
-                                                          .round(),
-                                                    )} ${l10n.mapTravelModeStatusTravelling}'
-                                                  : l10n
-                                                      .mapResultsDiscoveredLabel(
-                                                      artworks.length,
-                                                      (discoveryProgress * 100)
-                                                          .round(),
-                                                    ),
-                                              style: KubusTypography
-                                                  .textTheme.bodySmall
-                                                  ?.copyWith(
-                                                color: scheme.onSurfaceVariant,
+                                              Text(
+                                                _travelModeEnabled
+                                                    ? '${l10n.mapResultsDiscoveredLabel(
+                                                        artworks.length,
+                                                        (discoveryProgress * 100)
+                                                            .round(),
+                                                      )} ${l10n.mapTravelModeStatusTravelling}'
+                                                    : l10n
+                                                        .mapResultsDiscoveredLabel(
+                                                        artworks.length,
+                                                        (discoveryProgress * 100)
+                                                            .round(),
+                                                      ),
+                                                style: KubusTypography
+                                                    .textTheme.bodySmall
+                                                    ?.copyWith(
+                                                  color: scheme.onSurfaceVariant,
+                                                ),
                                               ),
-                                            ),
-                                          ],
+                                            ],
+                                          ),
                                         ),
-                                      ),
-                                      _glassIconButton(
-                                        icon: Icons.radar,
-                                        tooltip: _travelModeEnabled
-                                            ? l10n
-                                                .mapTravelModeStatusTravellingTooltip
-                                            : l10n.mapNearbyRadiusTooltip(
-                                                _effectiveMarkerRadiusKm
-                                                    .toInt(),
-                                              ),
-                                        onTap: _travelModeEnabled
-                                            ? null
-                                            : _openMarkerRadiusDialog,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      _glassIconButton(
-                                        icon: _useGridLayout
-                                            ? Icons.view_list
-                                            : Icons.grid_view,
-                                        tooltip: _useGridLayout
-                                            ? l10n.mapShowListViewTooltip
-                                            : l10n.mapShowGridViewTooltip,
-                                        onTap: () => setState(() =>
-                                            _useGridLayout = !_useGridLayout),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      PopupMenuButton<_ArtworkSort>(
-                                        tooltip: l10n.mapSortResultsTooltip,
-                                        onSelected: (value) =>
-                                            setState(() => _sort = value),
-                                        itemBuilder: (context) => [
-                                          for (final sort
-                                              in _ArtworkSort.values)
-                                            PopupMenuItem(
-                                              value: sort,
-                                              child: Row(
-                                                children: [
-                                                  Expanded(
-                                                      child: Text(
-                                                          sort.label(l10n))),
-                                                  if (sort == _sort)
-                                                    Icon(Icons.check,
-                                                        color: scheme.primary),
-                                                ],
-                                              ),
-                                            ),
-                                        ],
-                                        child: _glassIconButton(
-                                          icon: Icons.sort,
+                                        _glassIconButton(
+                                          icon: Icons.radar,
+                                          tooltip: _travelModeEnabled
+                                              ? l10n
+                                                  .mapTravelModeStatusTravellingTooltip
+                                              : l10n.mapNearbyRadiusTooltip(
+                                                  _effectiveMarkerRadiusKm.toInt(),
+                                                ),
+                                          onTap: _travelModeEnabled
+                                              ? null
+                                              : _openMarkerRadiusDialog,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        _glassIconButton(
+                                          icon: _useGridLayout
+                                              ? Icons.view_list
+                                              : Icons.grid_view,
+                                          tooltip: _useGridLayout
+                                              ? l10n.mapShowListViewTooltip
+                                              : l10n.mapShowGridViewTooltip,
+                                          onTap: () => setState(() =>
+                                              _useGridLayout = !_useGridLayout),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        PopupMenuButton<_ArtworkSort>(
                                           tooltip: l10n.mapSortResultsTooltip,
-                                          onTap: null,
+                                          onSelected: (value) =>
+                                              setState(() => _sort = value),
+                                          itemBuilder: (context) => [
+                                            for (final sort in _ArtworkSort.values)
+                                              PopupMenuItem(
+                                                value: sort,
+                                                child: Row(
+                                                  children: [
+                                                    Expanded(
+                                                        child:
+                                                            Text(sort.label(l10n))),
+                                                    if (sort == _sort)
+                                                      Icon(Icons.check,
+                                                          color: scheme.primary),
+                                                  ],
+                                                ),
+                                              ),
+                                          ],
+                                          child: _glassIconButton(
+                                            icon: Icons.sort,
+                                            tooltip: l10n.mapSortResultsTooltip,
+                                            onTap: null,
+                                          ),
                                         ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                ],
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
-                          if (isLoading)
-                            const SliverFillRemaining(
-                              hasScrollBody: false,
-                              child: Center(child: CircularProgressIndicator()),
-                            )
-                          else if (artworks.isEmpty)
-                            SliverFillRemaining(
-                              hasScrollBody: false,
-                              child: Padding(
-                                padding: EdgeInsets.only(
-                                    bottom: KubusLayout.mainBottomNavBarHeight),
-                                child: _buildEmptyState(theme),
-                              ),
-                            )
-                          else if (_useGridLayout)
-                            SliverPadding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 16),
-                              sliver: SliverGrid(
-                                delegate: SliverChildBuilderDelegate(
-                                  (context, index) {
-                                    final artwork = artworks[index];
-                                    // Find marker for subject color
-                                    final marker = _artMarkers
-                                        .cast<ArtMarker?>()
-                                        .firstWhere(
-                                          (m) => m?.artworkId == artwork.id,
-                                          orElse: () => null,
-                                        );
-                                    final subjectColor = marker != null
-                                        ? _resolveArtMarkerColor(marker,
-                                            context.read<ThemeProvider>())
-                                        : null;
-                                    return _ArtworkListTile(
-                                      artwork: artwork,
-                                      currentPosition: _currentPosition,
-                                      onOpenDetails: () =>
-                                          _openArtwork(artwork),
-                                      onMarkDiscovered: () =>
-                                          _markAsDiscovered(artwork),
-                                      dense: true,
-                                      subjectColor: subjectColor,
-                                    );
-                                  },
-                                  childCount: artworks.length,
+                            if (isLoading)
+                              const SliverFillRemaining(
+                                hasScrollBody: false,
+                                child: Center(
+                                    child: CircularProgressIndicator()),
+                              )
+                            else if (artworks.isEmpty)
+                              SliverFillRemaining(
+                                hasScrollBody: false,
+                                child: Padding(
+                                  padding: EdgeInsets.only(
+                                      bottom: KubusLayout.mainBottomNavBarHeight),
+                                  child: _buildEmptyState(theme),
                                 ),
-                                gridDelegate:
-                                    const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 2,
-                                  mainAxisSpacing: 12,
-                                  crossAxisSpacing: 12,
-                                  childAspectRatio: 0.92,
-                                ),
-                              ),
-                            )
-                          else
-                            SliverPadding(
-                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                              sliver: SliverList(
-                                delegate: SliverChildBuilderDelegate(
-                                  (context, index) {
-                                    final artwork = artworks[index];
-                                    // Find marker for subject color
-                                    final marker = _artMarkers
-                                        .cast<ArtMarker?>()
-                                        .firstWhere(
-                                          (m) => m?.artworkId == artwork.id,
-                                          orElse: () => null,
-                                        );
-                                    final subjectColor = marker != null
-                                        ? _resolveArtMarkerColor(marker,
-                                            context.read<ThemeProvider>())
-                                        : null;
-                                    return Padding(
-                                      padding:
-                                          const EdgeInsets.only(bottom: 12),
-                                      child: _ArtworkListTile(
+                              )
+                            else if (_useGridLayout)
+                              SliverPadding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 16),
+                                sliver: SliverGrid(
+                                  delegate: SliverChildBuilderDelegate(
+                                    (context, index) {
+                                      final artwork = artworks[index];
+                                      // Find marker for subject color
+                                      final marker = _artMarkers
+                                          .cast<ArtMarker?>()
+                                          .firstWhere(
+                                            (m) => m?.artworkId == artwork.id,
+                                            orElse: () => null,
+                                          );
+                                      final subjectColor = marker != null
+                                          ? _resolveArtMarkerColor(marker,
+                                              context.read<ThemeProvider>())
+                                          : null;
+                                      return _ArtworkListTile(
                                         artwork: artwork,
                                         currentPosition: _currentPosition,
-                                        onOpenDetails: () =>
-                                            _openArtwork(artwork),
+                                        onSelectMarker: () =>
+                                            _selectMarkerFromArtwork(artwork),
+                                        onOpenDetails: () => _openArtwork(artwork),
                                         onMarkDiscovered: () =>
                                             _markAsDiscovered(artwork),
+                                        dense: true,
                                         subjectColor: subjectColor,
-                                      ),
-                                    );
-                                  },
-                                  childCount: artworks.length,
+                                      );
+                                    },
+                                    childCount: artworks.length,
+                                  ),
+                                  gridDelegate:
+                                      const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 2,
+                                    mainAxisSpacing: 12,
+                                    crossAxisSpacing: 12,
+                                    childAspectRatio: 0.92,
+                                  ),
                                 ),
-                              ),
+                              )
+                              else
+                                SliverPadding(
+                                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                                sliver: SliverList(
+                                  delegate: SliverChildBuilderDelegate(
+                                    (context, index) {
+                                      final artwork = artworks[index];
+                                      // Find marker for subject color
+                                      final marker = _artMarkers
+                                          .cast<ArtMarker?>()
+                                          .firstWhere(
+                                            (m) => m?.artworkId == artwork.id,
+                                            orElse: () => null,
+                                          );
+                                      final subjectColor = marker != null
+                                          ? _resolveArtMarkerColor(marker,
+                                              context.read<ThemeProvider>())
+                                          : null;
+                                      return Padding(
+                                        padding:
+                                            const EdgeInsets.only(bottom: 12),
+                                        child: _ArtworkListTile(
+                                          artwork: artwork,
+                                          currentPosition: _currentPosition,
+                                          onSelectMarker: () =>
+                                              _selectMarkerFromArtwork(artwork),
+                                          onOpenDetails: () => _openArtwork(artwork),
+                                          onMarkDiscovered: () =>
+                                              _markAsDiscovered(artwork),
+                                          subjectColor: subjectColor,
+                                        ),
+                                      );
+                                    },
+                                    childCount: artworks.length,
+                                  ),
+                                  ),
+                                ),
+                            // Let content scroll above the navbar when expanded, while still
+                            // allowing the sheet itself to sit behind the glass navbar.
+                            const SliverToBoxAdapter(
+                              child: SizedBox(
+                                  height: KubusLayout.mainBottomNavBarHeight),
                             ),
-                          // Let content scroll above the navbar when expanded, while still
-                          // allowing the sheet itself to sit behind the glass navbar.
-                          const SliverToBoxAdapter(
-                            child: SizedBox(
-                                height: KubusLayout.mainBottomNavBarHeight),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -5491,6 +5659,29 @@ class _MapScreenState extends State<MapScreen>
     await openArtwork(context, artwork.id, source: 'map');
   }
 
+  void _selectMarkerFromArtwork(Artwork artwork) {
+    final marker = _artMarkers
+            .where((m) => m.artworkId == artwork.id)
+            .firstOrNull ??
+        _findOrCreateMarkerForArtwork(
+          artwork.id,
+          artwork.hasValidLocation ? artwork.position : null,
+          artwork.title,
+        );
+
+    if (marker == null) {
+      unawaited(_openArtwork(artwork));
+      return;
+    }
+
+    _handleMarkerTap(marker);
+    if (marker.hasValidPosition) {
+      unawaited(
+        _animateMapTo(marker.position, zoom: math.max(_lastZoom, 15)),
+      );
+    }
+  }
+
   String _markerTypeLabel(AppLocalizations l10n, ArtMarkerType type) {
     switch (type) {
       case ArtMarkerType.artwork:
@@ -5601,6 +5792,7 @@ class _MapIconButton extends StatelessWidget {
 class _ArtworkListTile extends StatelessWidget {
   final Artwork artwork;
   final LatLng? currentPosition;
+  final VoidCallback onSelectMarker;
   final VoidCallback onOpenDetails;
   final VoidCallback onMarkDiscovered;
   final bool dense;
@@ -5611,6 +5803,7 @@ class _ArtworkListTile extends StatelessWidget {
   const _ArtworkListTile({
     required this.artwork,
     required this.currentPosition,
+    required this.onSelectMarker,
     required this.onOpenDetails,
     required this.onMarkDiscovered,
     this.dense = false,
@@ -5635,7 +5828,7 @@ class _ArtworkListTile extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         borderRadius: borderRadius,
-        onTap: onOpenDetails,
+        onTap: onSelectMarker,
         child: Container(
           decoration: BoxDecoration(
             borderRadius: borderRadius,
