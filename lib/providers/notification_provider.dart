@@ -35,7 +35,7 @@ class NotificationProvider extends ChangeNotifier {
   DateTime? _lastServerSync;
   static const String _prefsUnreadPrefix = 'notifications_unread_count_';
   final Duration _minServerSyncInterval = const Duration(seconds: 8);
-  final Duration _autoRefreshInterval = const Duration(seconds: 45);
+  final Duration _autoRefreshInterval = const Duration(seconds: 90);
 
   // Only community notifications (messages handled by ChatProvider)
   int get unreadCount => _communityUnreadCount;
@@ -173,7 +173,7 @@ class NotificationProvider extends ChangeNotifier {
   void _startSubscriptionMonitor() {
     try {
       _subscriptionMonitorTimer?.cancel();
-      _subscriptionMonitorTimer = Timer.periodic(const Duration(seconds: 25), (_) async {
+      _subscriptionMonitorTimer = Timer.periodic(const Duration(seconds: 45), (_) async {
         try {
           final expectedWallet = WalletUtils.canonical(_currentWallet);
           if (expectedWallet.isEmpty) return;

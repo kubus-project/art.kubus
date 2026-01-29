@@ -225,6 +225,12 @@ class SocketService {
   }
 
   // Stream getters for consumers
+  bool get isConnected => _socket?.connected == true;
+
+  bool isSubscribedToConversation(String conversationId) {
+    return _subscribedConversations.contains(conversationId);
+  }
+
   Stream<Map<String, dynamic>> get onMessageReceived => _messageController.stream;
   Stream<Map<String, dynamic>> get onMessageRead => _messageReadController.stream;
   Stream<Map<String, dynamic>> get onConversationMemberRead => _conversationMemberReadController.stream;
@@ -760,8 +766,6 @@ class SocketService {
     _notificationHandlerRegistered = false;
     _connectCompleter = null;
   }
-
-  bool get isConnected => _socket?.connected ?? false;
 
   /// Returns the wallet address the socket is currently subscribed to (user room), or null.
   String? get currentSubscribedWallet => _currentSubscribedWallet;

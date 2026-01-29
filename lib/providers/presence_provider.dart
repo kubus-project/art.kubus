@@ -14,7 +14,7 @@ class PresenceProvider extends ChangeNotifier {
   static const Duration _visitDebounce = Duration(milliseconds: 400);
   static const Duration _visitDedupeWindow = Duration(minutes: 5);
   // Keep presence feeling "live" without spamming the backend.
-  static const Duration _autoRefreshInterval = Duration(seconds: 10);
+  static const Duration _autoRefreshInterval = Duration(seconds: 20);
   static const Duration _heartbeatInterval = Duration(seconds: 30);
 
   /// Prevent unbounded watched-wallet growth (e.g., scrolling long feeds).

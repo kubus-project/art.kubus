@@ -8,7 +8,7 @@ import '../community/community_interactions.dart';
 import './ar_manager.dart';
 import './ar_content_service.dart';
 import './art_content_service.dart';
-import './art_marker_service.dart';
+import './map_marker_service.dart';
 
 /// Integration service orchestrating AR experiences and physical marker flows
 class ARIntegrationService {
@@ -18,7 +18,7 @@ class ARIntegrationService {
   ARIntegrationService._internal();
 
   final ARManager _arManager = ARManager();
-  final ArtMarkerService _artMarkerService = ArtMarkerService();
+  final MapMarkerService _mapMarkerService = MapMarkerService();
   final List<ArtMarker> _nearbyMarkers = [];
   LatLng? _currentLocation;
   DateTime? _lastMarkerRefresh;
@@ -76,10 +76,10 @@ class ARIntegrationService {
       _lastMarkerRefresh = DateTime.now();
       _lastMarkerLocation = location;
       // Fetch markers from backend
-      final markers = await _artMarkerService.fetchMarkers(
-        latitude: location.latitude,
-        longitude: location.longitude,
+      final markers = await _mapMarkerService.loadMarkers(
+        center: location,
         radiusKm: 1.0, // 1km radius
+        limit: 80,
       );
 
       _nearbyMarkers.clear();
@@ -190,7 +190,7 @@ class ARIntegrationService {
       );
 
       // Save to backend
-      await _artMarkerService.saveMarker(updatedMarker);
+      await _mapMarkerService.saveMarker(updatedMarker);
 
       // Notify callbacks
       onARInteractionComplete?.call(artwork.id);

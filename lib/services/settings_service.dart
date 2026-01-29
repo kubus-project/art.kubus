@@ -134,6 +134,7 @@ class SettingsService {
       'walletAddress',
       'has_wallet',
       'user_id',
+      PreferenceKeys.hasCompletedAuthOnboarding,
       'completed_onboarding',
       'notification_permission_granted',
       'last_inactive_ts',

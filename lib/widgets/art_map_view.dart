@@ -69,7 +69,9 @@ class _ArtMapViewState extends State<ArtMapView> {
 
   Timer? _styleLoadTimer;
   bool _styleLoaded = false;
-  bool _didDevFallback = false;
+  bool _didFallback = false;
+  bool _styleFailed = false;
+  String? _styleFailureReason;
   Stopwatch? _styleStopwatch;
 
   @override
@@ -108,9 +110,57 @@ class _ArtMapViewState extends State<ArtMapView> {
   void _resetStyleLoadState() {
     _styleLoadTimer?.cancel();
     _styleLoaded = false;
-    _didDevFallback = false;
+    _didFallback = false;
+    _styleFailed = false;
+    _styleFailureReason = null;
     _styleRequestId++;
     _styleStopwatch = Stopwatch()..start();
+  }
+
+  void _markStyleFailure(String reason) {
+    if (!mounted) return;
+    if (_styleLoaded) return;
+    setState(() {
+      _styleFailed = true;
+      _styleFailureReason = reason;
+    });
+  }
+
+  Future<void> _attemptFallbackStyle() async {
+    if (_didFallback) return;
+
+    final controller = _controller;
+    if (controller == null) return;
+
+    _didFallback = true;
+
+    final fallbackRef = MapStyleService.devFallbackEnabled
+        ? MapStyleService.devFallbackStyleUrl
+        : MapStyleService.fallbackStyleRef(isDarkMode: widget.isDarkMode);
+
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    messenger?.showKubusSnackBar(
+      SnackBar(
+        content: Text(
+          MapStyleService.devFallbackEnabled
+              ? 'Map style failed to load; using a fallback style.'
+              : 'Map style failed to load; using a bundled fallback style.',
+        ),
+        duration: const Duration(seconds: 4),
+      ),
+      tone: KubusSnackBarTone.warning,
+    );
+
+    try {
+      final resolved = await MapStyleService.resolveStyleString(fallbackRef);
+      if (!mounted) return;
+      await controller.setStyle(resolved);
+    } catch (e, st) {
+      AppConfig.debugPrint('ArtMapView: failed to apply fallback style: $e');
+      if (kDebugMode) {
+        AppConfig.debugPrint('ArtMapView: fallback style stack: $st');
+      }
+    }
   }
 
   Future<void> _applyStyleToController() async {
@@ -130,6 +180,8 @@ class _ArtMapViewState extends State<ArtMapView> {
       if (kDebugMode) {
         AppConfig.debugPrint('ArtMapView: setStyle stack: $st');
       }
+      _markStyleFailure('Failed to apply map style.');
+      unawaited(_attemptFallbackStyle());
     }
   }
 
@@ -138,26 +190,14 @@ class _ArtMapViewState extends State<ArtMapView> {
     _styleLoadTimer = Timer(MapStyleService.styleLoadTimeout, () {
       if (!mounted) return;
       if (_styleLoaded) return;
-      if (_didDevFallback) return;
-      if (!MapStyleService.devFallbackEnabled) return;
+      if (_didFallback) return;
 
       final controller = _controller;
       if (controller == null) return;
 
-      _didDevFallback = true;
-
-      AppConfig.debugPrint('ArtMapView: style load timeout; switching to dev fallback');
-
-      final messenger = ScaffoldMessenger.maybeOf(context);
-      messenger?.showKubusSnackBar(
-        const SnackBar(
-          content: Text('Map style failed to load; using a fallback style.'),
-          duration: Duration(seconds: 4),
-        ),
-        tone: KubusSnackBarTone.warning,
-      );
-
-      unawaited(controller.setStyle(MapStyleService.devFallbackStyleUrl));
+      _markStyleFailure('Map style failed to load.');
+      AppConfig.debugPrint('ArtMapView: style load timeout; switching to fallback');
+      unawaited(_attemptFallbackStyle());
     });
   }
 
@@ -187,106 +227,218 @@ class _ArtMapViewState extends State<ArtMapView> {
         }
 
         return SizedBox.expand(
-          child: ml.MapLibreMap(
-            styleString: resolved,
-            initialCameraPosition: ml.CameraPosition(
-              target: ml.LatLng(
-                widget.initialCenter.latitude,
-                widget.initialCenter.longitude,
-              ),
-              zoom: widget.initialZoom,
-            ),
-            // We don't use the plugin's annotation managers (we manage sources/layers
-            // directly). Disabling them avoids plugin-managed sources being added
-            // during style swaps, which can cause platform errors.
-            annotationOrder: const <ml.AnnotationType>[],
-            minMaxZoomPreference: ml.MinMaxZoomPreference(
-              widget.minZoom,
-              widget.maxZoom,
-            ),
-            rotateGesturesEnabled: widget.rotateGesturesEnabled,
-            scrollGesturesEnabled: widget.scrollGesturesEnabled,
-            zoomGesturesEnabled: widget.zoomGesturesEnabled,
-            tiltGesturesEnabled: widget.tiltGesturesEnabled,
-            compassEnabled: widget.compassEnabled,
-            myLocationEnabled: false,
-            myLocationTrackingMode: ml.MyLocationTrackingMode.none,
-            onMapCreated: (controller) {
-              _controller = controller;
-              _resetStyleLoadState();
-              _startStyleHealthCheck();
-              AppConfig.debugPrint(
-                'ArtMapView: map created (style="$resolved", platform=${defaultTargetPlatform.name}, web=$kIsWeb)',
-              );
-              widget.onMapCreated(controller);
-              if (kIsWeb) {
-                // MapLibre GL JS sometimes initializes while the element is still
-                // measuring (0x0) during the first frame, especially when the
-                // map is mounted behind onboarding / tab transitions. A forced
-                // resize after layout makes the map reliably paint on web.
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  try {
-                    controller.forceResizeWebMap();
-                  } catch (e, st) {
-                    AppConfig.debugPrint('ArtMapView: forceResizeWebMap failed: $e');
-                    if (kDebugMode) {
-                      AppConfig.debugPrint('ArtMapView: forceResizeWebMap stack: $st');
+          child: Stack(
+            children: [
+              ml.MapLibreMap(
+                styleString: resolved,
+                initialCameraPosition: ml.CameraPosition(
+                  target: ml.LatLng(
+                    widget.initialCenter.latitude,
+                    widget.initialCenter.longitude,
+                  ),
+                  zoom: widget.initialZoom,
+                ),
+                // We don't use the plugin's annotation managers (we manage sources/layers
+                // directly). Disabling them avoids plugin-managed sources being added
+                // during style swaps, which can cause platform errors.
+                annotationOrder: const <ml.AnnotationType>[],
+                minMaxZoomPreference: ml.MinMaxZoomPreference(
+                  widget.minZoom,
+                  widget.maxZoom,
+                ),
+                rotateGesturesEnabled: widget.rotateGesturesEnabled,
+                scrollGesturesEnabled: widget.scrollGesturesEnabled,
+                zoomGesturesEnabled: widget.zoomGesturesEnabled,
+                tiltGesturesEnabled: widget.tiltGesturesEnabled,
+                compassEnabled: widget.compassEnabled,
+                myLocationEnabled: false,
+                myLocationTrackingMode: ml.MyLocationTrackingMode.none,
+                onMapCreated: (controller) {
+                  _controller = controller;
+                  _resetStyleLoadState();
+                  _startStyleHealthCheck();
+                  AppConfig.debugPrint(
+                    'ArtMapView: map created (style="$resolved", platform=${defaultTargetPlatform.name}, web=$kIsWeb)',
+                  );
+                  widget.onMapCreated(controller);
+                  if (kIsWeb) {
+                    // MapLibre GL JS sometimes initializes while the element is still
+                    // measuring (0x0) during the first frame, especially when the
+                    // map is mounted behind onboarding / tab transitions. A forced
+                    // resize after layout makes the map reliably paint on web.
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      try {
+                        controller.forceResizeWebMap();
+                      } catch (e, st) {
+                        AppConfig.debugPrint('ArtMapView: forceResizeWebMap failed: $e');
+                        if (kDebugMode) {
+                          AppConfig.debugPrint('ArtMapView: forceResizeWebMap stack: $st');
+                        }
+                      }
+                    });
+                  }
+                },
+                onStyleLoadedCallback: () {
+                  _styleStopwatch?.stop();
+                  _styleLoadTimer?.cancel();
+                  final elapsedMs = _styleStopwatch?.elapsedMilliseconds;
+                  if (elapsedMs != null) {
+                    AppConfig.debugPrint('ArtMapView: style loaded in ${elapsedMs}ms');
+                  } else {
+                    AppConfig.debugPrint('ArtMapView: style loaded');
+                  }
+                  if (kIsWeb) {
+                    try {
+                      _controller?.forceResizeWebMap();
+                    } catch (e, st) {
+                      AppConfig.debugPrint('ArtMapView: forceResizeWebMap after style load failed: $e');
+                      if (kDebugMode) {
+                        AppConfig.debugPrint('ArtMapView: resize-after-style stack: $st');
+                      }
                     }
                   }
-                });
-              }
-            },
-            onStyleLoadedCallback: () {
-              _styleLoaded = true;
-              _styleStopwatch?.stop();
-              _styleLoadTimer?.cancel();
-              final elapsedMs = _styleStopwatch?.elapsedMilliseconds;
-              if (elapsedMs != null) {
-                AppConfig.debugPrint('ArtMapView: style loaded in ${elapsedMs}ms');
-              } else {
-                AppConfig.debugPrint('ArtMapView: style loaded');
-              }
-              if (kIsWeb) {
-                try {
-                  _controller?.forceResizeWebMap();
-                } catch (e, st) {
-                  AppConfig.debugPrint('ArtMapView: forceResizeWebMap after style load failed: $e');
-                  if (kDebugMode) {
-                    AppConfig.debugPrint('ArtMapView: resize-after-style stack: $st');
+                  if (_pendingStyleApply) {
+                    _pendingStyleApply = false;
+                    _resetStyleLoadState();
+                    _startStyleHealthCheck();
+                    unawaited(_applyStyleToController());
+                    return;
                   }
-                }
-              }
-              if (_pendingStyleApply) {
-                _pendingStyleApply = false;
-                _resetStyleLoadState();
-                _startStyleHealthCheck();
-                unawaited(_applyStyleToController());
-                return;
-              }
-              widget.onStyleLoaded?.call();
-            },
-            onCameraMove: widget.onCameraMove,
-            onCameraIdle: widget.onCameraIdle,
-            onMapClick: widget.onMapClick == null
-                ? null
-                : (math.Point<double> point, ml.LatLng latLng) {
-                    widget.onMapClick!(
-                      point,
-                      ll.LatLng(latLng.latitude, latLng.longitude),
-                    );
-                  },
-            onMapLongClick: widget.onMapLongClick == null
-                ? null
-                : (math.Point<double> point, ml.LatLng latLng) {
-                    widget.onMapLongClick!(
-                      point,
-                      ll.LatLng(latLng.latitude, latLng.longitude),
-                    );
-                  },
-            trackCameraPosition: true,
+                  if (!mounted) return;
+                  setState(() {
+                    _styleLoaded = true;
+                    _styleFailed = false;
+                    _styleFailureReason = null;
+                  });
+                  widget.onStyleLoaded?.call();
+                },
+                onCameraMove: widget.onCameraMove,
+                onCameraIdle: widget.onCameraIdle,
+                onMapClick: widget.onMapClick == null
+                    ? null
+                    : (math.Point<double> point, ml.LatLng latLng) {
+                        if (!_styleLoaded) return;
+                        widget.onMapClick!(
+                          point,
+                          ll.LatLng(latLng.latitude, latLng.longitude),
+                        );
+                      },
+                onMapLongClick: widget.onMapLongClick == null
+                    ? null
+                    : (math.Point<double> point, ml.LatLng latLng) {
+                        if (!_styleLoaded) return;
+                        widget.onMapLongClick!(
+                          point,
+                          ll.LatLng(latLng.latitude, latLng.longitude),
+                        );
+                      },
+                trackCameraPosition: true,
+              ),
+              if (_styleFailed && !_styleLoaded)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    ignoring: false,
+                    child: Container(
+                      color: Colors.black.withValues(alpha: 0.15),
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.all(20),
+                      child: _StyleErrorCard(
+                        reason: _styleFailureReason ?? 'Map style failed to load.',
+                        onRetry: () {
+                          if (!mounted) return;
+                          setState(() {
+                            _styleFailed = false;
+                            _styleFailureReason = null;
+                          });
+                          _resetStyleLoadState();
+                          _refreshStyleFuture();
+                          _startStyleHealthCheck();
+                          unawaited(_applyStyleToController());
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
         );
       },
+    );
+  }
+}
+
+class _StyleErrorCard extends StatelessWidget {
+  const _StyleErrorCard({
+    required this.reason,
+    required this.onRetry,
+  });
+
+  final String reason;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = scheme.surface.withValues(alpha: isDark ? 0.92 : 0.97);
+    final border = scheme.outlineVariant.withValues(alpha: 0.40);
+    final titleColor = scheme.error;
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 360),
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: border),
+            boxShadow: [
+              BoxShadow(
+                color: scheme.shadow.withValues(alpha: isDark ? 0.28 : 0.18),
+                blurRadius: 18,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded, color: titleColor),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Map style error',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: titleColor,
+                        ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                reason,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+              ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: FilledButton.icon(
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh, size: 18),
+                  label: const Text('Retry'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

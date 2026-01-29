@@ -722,7 +722,7 @@ class ChatProvider extends ChangeNotifier {
   void _startSubscriptionMonitor() {
     try {
       _subscriptionMonitorTimer?.cancel();
-      _subscriptionMonitorTimer = Timer.periodic(const Duration(seconds: 25), (_) async {
+      _subscriptionMonitorTimer = Timer.periodic(const Duration(seconds: 45), (_) async {
         try {
           final expectedWallet = WalletUtils.canonical(_currentWallet);
           if (expectedWallet.isEmpty) return;
@@ -1695,22 +1695,26 @@ class ChatProvider extends ChangeNotifier {
       await markRead(nid);
     } catch (e) { debugPrint('ChatProvider.openConversation: markRead failed: $e'); }
 
-    // Start periodic polling to keep the open conversation in sync in case socket events are missed
+    // Start periodic polling only when socket sync is unavailable.
     try {
       _pollTimer?.cancel();
-      _pollTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
-        try {
-          final resp = await _api.fetchMessages(nid);
-          if (resp['success'] == true) {
-            final items = (resp['data'] as List<dynamic>?) ?? [];
-            final list = items.map((i) => ChatMessage.fromJson(i as Map<String, dynamic>)).toList();
-            _messages[nid] = list;
-            _safeNotifyListeners();
+      final shouldPoll = !_socket.isConnected ||
+          !_socket.isSubscribedToConversation(nid);
+      if (shouldPoll) {
+        _pollTimer = Timer.periodic(const Duration(seconds: 12), (timer) async {
+          try {
+            final resp = await _api.fetchMessages(nid);
+            if (resp['success'] == true) {
+              final items = (resp['data'] as List<dynamic>?) ?? [];
+              final list = items.map((i) => ChatMessage.fromJson(i as Map<String, dynamic>)).toList();
+              _messages[nid] = list;
+              _safeNotifyListeners();
+            }
+          } catch (e) {
+            debugPrint('ChatProvider: periodic fetchMessages failed for $nid: $e');
           }
-        } catch (e) {
-          debugPrint('ChatProvider: periodic fetchMessages failed for $nid: $e');
-        }
-      });
+        });
+      }
     } catch (e) {
       debugPrint('ChatProvider: Failed to start poll timer for conversation $nid: $e');
     }

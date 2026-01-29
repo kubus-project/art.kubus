@@ -11,12 +11,6 @@ class AuthGatingService {
     'authToken',
   ];
 
-  static const List<String> _walletKeys = <String>[
-    'wallet_address',
-    'wallet',
-    'walletAddress',
-  ];
-
   static bool _hasNonEmptyPref(SharedPreferences prefs, String key) {
     final value = (prefs.getString(key) ?? '').trim();
     return value.isNotEmpty;
@@ -26,10 +20,9 @@ class AuthGatingService {
     required SharedPreferences prefs,
   }) {
     final hasToken = _tokenKeys.any((key) => _hasNonEmptyPref(prefs, key));
-    final hasWallet = (prefs.getBool('has_wallet') ?? false) ||
-        _walletKeys.any((key) => _hasNonEmptyPref(prefs, key));
-    final hasUserId = _hasNonEmptyPref(prefs, 'user_id');
-    return hasToken || hasWallet || hasUserId;
+    final hasAuthOnboarding =
+        prefs.getBool(PreferenceKeys.hasCompletedAuthOnboarding) ?? false;
+    return hasToken || hasAuthOnboarding;
   }
 
   static Future<bool> hasLocalAccount({SharedPreferences? prefs}) async {

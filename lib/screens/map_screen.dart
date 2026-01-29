@@ -20,6 +20,7 @@ import '../providers/wallet_provider.dart';
 import '../providers/themeprovider.dart';
 import '../providers/map_deep_link_provider.dart';
 import '../providers/navigation_provider.dart';
+import '../providers/main_tab_provider.dart';
 import '../providers/exhibitions_provider.dart';
 import '../providers/marker_management_provider.dart';
 import '../providers/presence_provider.dart';
@@ -210,6 +211,7 @@ class _MapScreenState extends State<MapScreen>
   final Debouncer _cubeSyncDebouncer = Debouncer();
   bool _didOpenInitialMarker = false;
   MapDeepLinkProvider? _mapDeepLinkProvider;
+  MainTabProvider? _tabProvider;
   bool _handlingDeepLinkIntent = false;
   String? _lastDeepLinkMarkerId;
   DateTime? _lastDeepLinkHandledAt;
@@ -217,6 +219,10 @@ class _MapScreenState extends State<MapScreen>
   StreamSubscription<ArtMarker>? _markerSocketSubscription;
   StreamSubscription<String>? _markerDeletedSubscription;
   final Debouncer _markerRefreshDebouncer = Debouncer();
+  bool _isMapTabVisible = true;
+  bool _isAppForeground = true;
+  bool _pendingMarkerRefresh = false;
+  bool _pendingMarkerRefreshForce = false;
 
   // UI State
   bool _isSearching = false;
@@ -370,6 +376,14 @@ class _MapScreenState extends State<MapScreen>
   void didChangeDependencies() {
     super.didChangeDependencies();
 
+    final tabProvider = Provider.of<MainTabProvider>(context);
+    if (_tabProvider != tabProvider) {
+      _tabProvider?.removeListener(_handleTabProviderChanged);
+      _tabProvider = tabProvider;
+      _tabProvider?.addListener(_handleTabProviderChanged);
+      _handleTabProviderChanged();
+    }
+
     final provider = Provider.of<MapDeepLinkProvider>(context);
     if (_mapDeepLinkProvider == provider) return;
 
@@ -382,6 +396,70 @@ class _MapScreenState extends State<MapScreen>
       if (!mounted) return;
       _handleMapDeepLinkProviderChanged();
     });
+  }
+
+  bool get _pollingEnabled => _isAppForeground && _isMapTabVisible;
+
+  void _handleTabProviderChanged() {
+    final isVisible = (_tabProvider?.currentIndex ?? 0) == 0;
+    _setMapTabVisible(isVisible);
+  }
+
+  void _setMapTabVisible(bool isVisible) {
+    if (_isMapTabVisible == isVisible) return;
+    _isMapTabVisible = isVisible;
+    if (_pollingEnabled) {
+      _resumePolling();
+    } else {
+      _pausePolling();
+    }
+  }
+
+  void _pausePolling() {
+    _timer?.cancel();
+    _proximityCheckTimer?.cancel();
+    _markerRefreshDebouncer.cancel();
+    try {
+      _mobileLocationSubscription?.pause();
+    } catch (_) {}
+    try {
+      _webPositionSubscription?.pause();
+    } catch (_) {}
+  }
+
+  void _resumePolling() {
+    _startLocationTimer();
+    try {
+      _mobileLocationSubscription?.resume();
+    } catch (_) {}
+    try {
+      _webPositionSubscription?.resume();
+    } catch (_) {}
+
+    if (_proximityCheckTimer == null ||
+        !(_proximityCheckTimer?.isActive ?? false)) {
+      _proximityCheckTimer = Timer.periodic(
+        const Duration(seconds: 10),
+        (_) => _checkProximityNotifications(),
+      );
+    }
+
+    _flushPendingMarkerRefresh();
+  }
+
+  void _queuePendingMarkerRefresh({bool force = false}) {
+    _pendingMarkerRefresh = true;
+    if (force) {
+      _pendingMarkerRefreshForce = true;
+    }
+  }
+
+  void _flushPendingMarkerRefresh() {
+    if (!_pendingMarkerRefresh || !_pollingEnabled) return;
+    final shouldForce = _pendingMarkerRefreshForce;
+    _pendingMarkerRefresh = false;
+    _pendingMarkerRefreshForce = false;
+    unawaited(_loadMarkersForCurrentView(forceRefresh: shouldForce));
   }
 
   Future<void> _loadMapTravelPrefs() async {
@@ -606,6 +684,8 @@ class _MapScreenState extends State<MapScreen>
   void dispose() {
     _mapDeepLinkProvider?.removeListener(_handleMapDeepLinkProviderChanged);
     _mapDeepLinkProvider = null;
+    _tabProvider?.removeListener(_handleTabProviderChanged);
+    _tabProvider = null;
     _mapController = null;
     _styleInitialized = false;
     _registeredMapImages.clear();
@@ -640,33 +720,12 @@ class _MapScreenState extends State<MapScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _lastLifecycleState = state;
-    // pause polling/subscriptions while backgrounded to avoid extra prompts and conserve battery
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive) {
-      _timer?.cancel();
-      try {
-        _mobileLocationSubscription?.pause();
-      } catch (_) {}
-      try {
-        _webPositionSubscription?.pause();
-      } catch (_) {}
-      _proximityCheckTimer?.cancel();
-    } else if (state == AppLifecycleState.resumed) {
-      // resume polling when app returns to foreground
-      _startLocationTimer();
-      try {
-        _mobileLocationSubscription?.resume();
-      } catch (_) {}
-      try {
-        _webPositionSubscription?.resume();
-      } catch (_) {}
-      if (_proximityCheckTimer == null ||
-          !(_proximityCheckTimer?.isActive ?? false)) {
-        _proximityCheckTimer = Timer.periodic(
-          const Duration(seconds: 10),
-          (_) => _checkProximityNotifications(),
-        );
-      }
+    _isAppForeground =
+        state != AppLifecycleState.paused && state != AppLifecycleState.inactive;
+    if (_pollingEnabled) {
+      _resumePolling();
+    } else {
+      _pausePolling();
     }
     super.didChangeAppLifecycleState(state);
   }
@@ -749,6 +808,10 @@ class _MapScreenState extends State<MapScreen>
   }
 
   Future<void> _loadMarkersForCurrentView({bool forceRefresh = false}) async {
+    if (!_pollingEnabled) {
+      _queuePendingMarkerRefresh(force: forceRefresh);
+      return;
+    }
     LatLng? center;
     GeoBounds? bounds;
     int? zoomBucket;
@@ -876,6 +939,16 @@ class _MapScreenState extends State<MapScreen>
       GeoBounds? bounds,
       bool forceRefresh = false,
       int? zoomBucket}) async {
+    if (!_pollingEnabled) {
+      _queuePendingMarkerRefresh(force: forceRefresh);
+      return;
+    }
+
+    if (_isLoadingMarkers) {
+      _queuePendingMarkerRefresh(force: forceRefresh);
+      return;
+    }
+
     final queryCenter = center ?? _currentPosition ?? _cameraCenter;
     final artworkProvider = context.read<ArtworkProvider>();
     final themeProvider = context.read<ThemeProvider>();
@@ -981,6 +1054,7 @@ class _MapScreenState extends State<MapScreen>
       if (requestId == _markerRequestId) {
         _isLoadingMarkers = false;
       }
+      _flushPendingMarkerRefresh();
     }
   }
 
@@ -1054,6 +1128,10 @@ class _MapScreenState extends State<MapScreen>
   }
 
   Future<void> _maybeRefreshMarkers(LatLng center, {bool force = false}) async {
+    if (!_pollingEnabled) {
+      _queuePendingMarkerRefresh(force: force);
+      return;
+    }
     final shouldRefresh = MapMarkerHelper.shouldRefreshMarkers(
       newCenter: center,
       lastCenter: _lastMarkerFetchCenter,
@@ -1125,6 +1203,10 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _queueMarkerRefresh({required bool fromGesture}) {
+    if (!_pollingEnabled) {
+      _queuePendingMarkerRefresh();
+      return;
+    }
     final controller = _mapController;
     if (controller == null) return;
 
@@ -1967,9 +2049,20 @@ class _MapScreenState extends State<MapScreen>
         _lastLifecycleState == AppLifecycleState.inactive) {
       return;
     }
+    if (!_pollingEnabled) return;
+    if (_isLocationStreamActive) return;
     _timer = Timer.periodic(const Duration(seconds: 10), (timer) {
       _getLocation(fromTimer: true, promptForPermission: false);
     });
+  }
+
+  bool get _isLocationStreamActive {
+    if (kIsWeb) {
+      return _webPositionSubscription != null &&
+          !(_webPositionSubscription?.isPaused ?? false);
+    }
+    return _mobileLocationSubscription != null &&
+        !(_mobileLocationSubscription?.isPaused ?? false);
   }
 
   void _subscribeToMobileLocationStream() {
@@ -1994,6 +2087,8 @@ class _MapScreenState extends State<MapScreen>
           AppConfig.debugPrint(
             'MapScreen: mobile location stream error: $error',
           );
+          _mobileLocationStreamFailed = true;
+          _mobileLocationStreamStarted = false;
           try {
             if (_mobileLocationSubscription != null) {
               unawaited(
@@ -2003,8 +2098,11 @@ class _MapScreenState extends State<MapScreen>
               );
             }
           } catch (_) {}
+          _startLocationTimer();
         },
       );
+      _timer?.cancel();
+      _timer = null;
     } catch (e) {
       AppConfig.debugPrint(
           'MapScreen: failed to subscribe to mobile location stream: $e');
@@ -2028,9 +2126,13 @@ class _MapScreenState extends State<MapScreen>
           LatLng(position.latitude, position.longitude),
         );
       });
+      _timer?.cancel();
+      _timer = null;
     } catch (e) {
       AppConfig.debugPrint(
           'MapScreen: unable to start web location stream: $e');
+      _webPositionSubscription = null;
+      _startLocationTimer();
     }
   }
 
@@ -2393,7 +2495,7 @@ class _MapScreenState extends State<MapScreen>
             KeyedSubtree(
               key: _tutorialMapKey,
               child: IgnorePointer(
-                ignoring: _shouldBlockMapGestures,
+                ignoring: _shouldBlockMapGestures || _showMapTutorial,
                 child: _buildMap(themeProvider),
               ),
             ),
@@ -2430,6 +2532,13 @@ class _MapScreenState extends State<MapScreen>
             if (_isSearching)
               _buildSuggestionSheet(
                   theme), // This will likely be refactored into _buildSearchAndFilters()
+            if (_showMapTutorial)
+              const Positioned.fill(
+                child: ModalBarrier(
+                  dismissible: false,
+                  color: Colors.transparent,
+                ),
+              ),
             if (_showMapTutorial)
               Builder(
                 builder: (context) {
