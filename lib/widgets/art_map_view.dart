@@ -241,10 +241,8 @@ class _ArtMapViewState extends State<ArtMapView> {
           pendingStyleApply: _pendingStyleApply,
         );
 
-        return SizedBox.expand(
-          child: Stack(
-            children: [
-              ml.MapLibreMap(
+        final mapWidget = kIsWeb
+            ? ml.MapLibreMap(
                 styleString: resolved,
                 initialCameraPosition: ml.CameraPosition(
                   target: ml.LatLng(
@@ -262,14 +260,12 @@ class _ArtMapViewState extends State<ArtMapView> {
                   widget.maxZoom,
                 ),
                 rotateGesturesEnabled:
-                  widget.rotateGesturesEnabled && styleReady,
+                    widget.rotateGesturesEnabled && styleReady,
                 scrollGesturesEnabled:
-                  widget.scrollGesturesEnabled && styleReady,
+                    widget.scrollGesturesEnabled && styleReady,
                 zoomGesturesEnabled: widget.zoomGesturesEnabled && styleReady,
                 tiltGesturesEnabled: widget.tiltGesturesEnabled && styleReady,
                 compassEnabled: widget.compassEnabled,
-                myLocationEnabled: false,
-                myLocationTrackingMode: ml.MyLocationTrackingMode.none,
                 onMapCreated: (controller) {
                   _controller = controller;
                   _resetStyleLoadState();
@@ -278,22 +274,16 @@ class _ArtMapViewState extends State<ArtMapView> {
                     'ArtMapView: map created (style="$resolved", platform=${defaultTargetPlatform.name}, web=$kIsWeb)',
                   );
                   widget.onMapCreated(controller);
-                  if (kIsWeb) {
-                    // MapLibre GL JS sometimes initializes while the element is still
-                    // measuring (0x0) during the first frame, especially when the
-                    // map is mounted behind onboarding / tab transitions. A forced
-                    // resize after layout makes the map reliably paint on web.
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      try {
-                        controller.forceResizeWebMap();
-                      } catch (e, st) {
-                        AppConfig.debugPrint('ArtMapView: forceResizeWebMap failed: $e');
-                        if (kDebugMode) {
-                          AppConfig.debugPrint('ArtMapView: forceResizeWebMap stack: $st');
-                        }
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    try {
+                      controller.forceResizeWebMap();
+                    } catch (e, st) {
+                      AppConfig.debugPrint('ArtMapView: forceResizeWebMap failed: $e');
+                      if (kDebugMode) {
+                        AppConfig.debugPrint('ArtMapView: forceResizeWebMap stack: $st');
                       }
-                    });
-                  }
+                    }
+                  });
                 },
                 onStyleLoadedCallback: () {
                   _styleStopwatch?.stop();
@@ -304,14 +294,12 @@ class _ArtMapViewState extends State<ArtMapView> {
                   } else {
                     AppConfig.debugPrint('ArtMapView: style loaded');
                   }
-                  if (kIsWeb) {
-                    try {
-                      _controller?.forceResizeWebMap();
-                    } catch (e, st) {
-                      AppConfig.debugPrint('ArtMapView: forceResizeWebMap after style load failed: $e');
-                      if (kDebugMode) {
-                        AppConfig.debugPrint('ArtMapView: resize-after-style stack: $st');
-                      }
+                  try {
+                    _controller?.forceResizeWebMap();
+                  } catch (e, st) {
+                    AppConfig.debugPrint('ArtMapView: forceResizeWebMap after style load failed: $e');
+                    if (kDebugMode) {
+                      AppConfig.debugPrint('ArtMapView: resize-after-style stack: $st');
                     }
                   }
                   if (_pendingStyleApply) {
@@ -350,7 +338,93 @@ class _ArtMapViewState extends State<ArtMapView> {
                         );
                       },
                 trackCameraPosition: true,
-              ),
+              )
+            : ml.MapLibreMap(
+                styleString: resolved,
+                initialCameraPosition: ml.CameraPosition(
+                  target: ml.LatLng(
+                    widget.initialCenter.latitude,
+                    widget.initialCenter.longitude,
+                  ),
+                  zoom: widget.initialZoom,
+                ),
+                // We don't use the plugin's annotation managers (we manage sources/layers
+                // directly). Disabling them avoids plugin-managed sources being added
+                // during style swaps, which can cause platform errors.
+                annotationOrder: const <ml.AnnotationType>[],
+                minMaxZoomPreference: ml.MinMaxZoomPreference(
+                  widget.minZoom,
+                  widget.maxZoom,
+                ),
+                rotateGesturesEnabled:
+                    widget.rotateGesturesEnabled && styleReady,
+                scrollGesturesEnabled:
+                    widget.scrollGesturesEnabled && styleReady,
+                zoomGesturesEnabled: widget.zoomGesturesEnabled && styleReady,
+                tiltGesturesEnabled: widget.tiltGesturesEnabled && styleReady,
+                compassEnabled: widget.compassEnabled,
+                myLocationEnabled: false,
+                myLocationTrackingMode: ml.MyLocationTrackingMode.none,
+                onMapCreated: (controller) {
+                  _controller = controller;
+                  _resetStyleLoadState();
+                  _startStyleHealthCheck();
+                  AppConfig.debugPrint(
+                    'ArtMapView: map created (style="$resolved", platform=${defaultTargetPlatform.name}, web=$kIsWeb)',
+                  );
+                  widget.onMapCreated(controller);
+                },
+                onStyleLoadedCallback: () {
+                  _styleStopwatch?.stop();
+                  _styleLoadTimer?.cancel();
+                  final elapsedMs = _styleStopwatch?.elapsedMilliseconds;
+                  if (elapsedMs != null) {
+                    AppConfig.debugPrint('ArtMapView: style loaded in ${elapsedMs}ms');
+                  } else {
+                    AppConfig.debugPrint('ArtMapView: style loaded');
+                  }
+                  if (_pendingStyleApply) {
+                    _pendingStyleApply = false;
+                    _resetStyleLoadState();
+                    _startStyleHealthCheck();
+                    unawaited(_applyStyleToController());
+                    return;
+                  }
+                  if (!mounted) return;
+                  setState(() {
+                    _styleLoaded = true;
+                    _styleFailed = false;
+                    _styleFailureReason = null;
+                  });
+                  widget.onStyleLoaded?.call();
+                },
+                onCameraMove: widget.onCameraMove,
+                onCameraIdle: widget.onCameraIdle,
+                onMapClick: widget.onMapClick == null
+                    ? null
+                    : (math.Point<double> point, ml.LatLng latLng) {
+                        if (!styleReady) return;
+                        widget.onMapClick!(
+                          point,
+                          ll.LatLng(latLng.latitude, latLng.longitude),
+                        );
+                      },
+                onMapLongClick: widget.onMapLongClick == null
+                    ? null
+                    : (math.Point<double> point, ml.LatLng latLng) {
+                        if (!styleReady) return;
+                        widget.onMapLongClick!(
+                          point,
+                          ll.LatLng(latLng.latitude, latLng.longitude),
+                        );
+                      },
+                trackCameraPosition: true,
+              );
+
+        return SizedBox.expand(
+          child: Stack(
+            children: [
+              mapWidget,
               if (_styleFailed && !_styleLoaded)
                 Positioned.fill(
                   child: IgnorePointer(
