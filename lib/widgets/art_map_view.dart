@@ -1,10 +1,8 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart' as ll;
 import 'package:maplibre_gl/maplibre_gl.dart' as ml;
 
@@ -59,6 +57,10 @@ class ArtMapView extends StatefulWidget {
   final bool tiltGesturesEnabled;
   final bool compassEnabled;
 
+  /// Test-only helper used by widget/service tests to validate the style-ready
+  /// gating logic.
+  ///
+  /// This is intentionally a pure function with no widget state access.
   @visibleForTesting
   static bool isStyleReadyForTest({
     required bool styleLoaded,
@@ -212,127 +214,6 @@ class _ArtMapViewState extends State<ArtMapView> {
     });
   }
 
-  bool get _webDebugMapEnabled {
-    if (!kIsWeb) return false;
-    try {
-      return Uri.base.queryParameters['debug_map'] == '1';
-    } catch (_) {
-      return false;
-    }
-  }
-
-  void _webDiagPrint(String message) {
-    if (!_webDebugMapEnabled) return;
-    // Intentionally use `print` so logs show up in release web builds.
-    // This is gated behind `?debug_map=1`.
-    // ignore: avoid_print
-    print(message);
-  }
-
-  Future<void> _runWebMapDiagnosticsIfEnabled(String styleRef) async {
-    if (!_webDebugMapEnabled) return;
-
-    // Keep this strictly opt-in to avoid shipping noisy logs.
-    // This is a pure connectivity probe to help diagnose blank-map reports on web
-    // (CSP blocks, worker restrictions, blocked tile/glyph domains, etc.).
-    http.Client? client;
-    try {
-      client = http.Client();
-
-      Map<String, dynamic> decoded;
-      final trimmed = styleRef.trimLeft();
-      if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
-        _webDiagPrint('ArtMapView(web diag): style is inline JSON (length=${styleRef.length})');
-        final dynamic rawDecoded = jsonDecode(styleRef);
-        if (rawDecoded is! Map<String, dynamic>) {
-          _webDiagPrint('ArtMapView(web diag): inline style JSON was not an object');
-          return;
-        }
-        decoded = rawDecoded;
-      } else {
-        // The plugin supports passing style refs as URLs/asset paths.
-        // On web we want to probe fetchability (CSP, origin, etc.).
-        final styleUri = Uri.base.resolve(styleRef);
-        final styleResp = await client.get(styleUri);
-        _webDiagPrint(
-          'ArtMapView(web diag): style GET ${styleUri.toString()} -> ${styleResp.statusCode}',
-        );
-
-        if (styleResp.statusCode < 200 || styleResp.statusCode >= 300) {
-          final body = styleResp.body;
-          _webDiagPrint(
-            'ArtMapView(web diag): style fetch failed, body=${body.substring(0, math.min(200, body.length))}',
-          );
-          return;
-        }
-
-        final dynamic rawDecoded = jsonDecode(styleResp.body);
-        if (rawDecoded is! Map<String, dynamic>) {
-          _webDiagPrint('ArtMapView(web diag): style JSON was not an object');
-          return;
-        }
-        decoded = rawDecoded;
-      }
-
-      final glyphs = decoded['glyphs']?.toString();
-      if (glyphs != null && glyphs.isNotEmpty) {
-        final glyphUrl = glyphs
-            .replaceAll('{fontstack}', Uri.encodeComponent('Open Sans Regular'))
-            .replaceAll('{range}', '0-255');
-        try {
-          final glyphUri = Uri.parse(glyphUrl);
-          final glyphResp = await client.get(glyphUri);
-          _webDiagPrint(
-            'ArtMapView(web diag): glyphs GET ${glyphUri.toString()} -> ${glyphResp.statusCode}',
-          );
-        } catch (e) {
-          _webDiagPrint('ArtMapView(web diag): glyphs fetch failed: $e');
-        }
-      }
-
-      final sources = decoded['sources'];
-      if (sources is Map<String, dynamic>) {
-        String? firstTileTemplate;
-        for (final entry in sources.entries) {
-          final src = entry.value;
-          if (src is! Map<String, dynamic>) continue;
-          final type = src['type']?.toString();
-          if (type != 'raster' && type != 'vector') continue;
-          final tiles = src['tiles'];
-          if (tiles is List && tiles.isNotEmpty) {
-            firstTileTemplate = tiles.first?.toString();
-            if (firstTileTemplate != null && firstTileTemplate.isNotEmpty) break;
-          }
-        }
-
-        if (firstTileTemplate != null) {
-          final tileUrl = firstTileTemplate
-              .replaceAll('{z}', '0')
-              .replaceAll('{x}', '0')
-              .replaceAll('{y}', '0');
-          try {
-            final tileUri = Uri.parse(tileUrl);
-            final tileResp = await client.get(tileUri);
-            _webDiagPrint(
-              'ArtMapView(web diag): tile GET ${tileUri.toString()} -> ${tileResp.statusCode}',
-            );
-          } catch (e) {
-            _webDiagPrint('ArtMapView(web diag): tile fetch failed: $e');
-          }
-        } else {
-          _webDiagPrint('ArtMapView(web diag): no tile sources found in style');
-        }
-      }
-    } catch (e, st) {
-      _webDiagPrint('ArtMapView(web diag): failed: $e');
-      if (kDebugMode) {
-        _webDiagPrint('ArtMapView(web diag): stack: $st');
-      }
-    } finally {
-      client?.close();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final bindingName = WidgetsBinding.instance.runtimeType.toString();
@@ -358,193 +239,114 @@ class _ArtMapViewState extends State<ArtMapView> {
           return const SizedBox.expand(child: ColoredBox(color: Colors.transparent));
         }
 
-        final styleReady = ArtMapView.isStyleReadyForTest(
-          styleLoaded: _styleLoaded,
-          styleFailed: _styleFailed,
-          pendingStyleApply: _pendingStyleApply,
-        );
-
-        final mapWidget = kIsWeb
-            ? ml.MapLibreMap(
-                key: ValueKey<String>('art_map_web:${widget.styleAsset}:${widget.isDarkMode}'),
-                styleString: resolved,
-                initialCameraPosition: ml.CameraPosition(
-                  target: ml.LatLng(
-                    widget.initialCenter.latitude,
-                    widget.initialCenter.longitude,
-                  ),
-                  zoom: widget.initialZoom,
-                ),
-                // We don't use the plugin's annotation managers (we manage sources/layers
-                // directly). Disabling them avoids plugin-managed sources being added
-                // during style swaps, which can cause platform errors.
-                annotationOrder: const <ml.AnnotationType>[],
-                minMaxZoomPreference: ml.MinMaxZoomPreference(
-                  widget.minZoom,
-                  widget.maxZoom,
-                ),
-                rotateGesturesEnabled:
-                    widget.rotateGesturesEnabled && styleReady,
-                scrollGesturesEnabled:
-                    widget.scrollGesturesEnabled && styleReady,
-                zoomGesturesEnabled: widget.zoomGesturesEnabled && styleReady,
-                tiltGesturesEnabled: widget.tiltGesturesEnabled && styleReady,
-                compassEnabled: widget.compassEnabled,
-                // Web-only: helps reduce WebGL context loss/blank frames in some
-                // compositing scenarios (e.g. heavy overlays/filters).
-                webPreserveDrawingBuffer: true,
-                // Explicitly disable location features on web.
-                // Some plugin versions default these on and attempt to send
-                // unsupported location render options to the web implementation.
-                myLocationEnabled: false,
-                myLocationTrackingMode: ml.MyLocationTrackingMode.none,
-                onMapCreated: (controller) {
-                  _controller = controller;
-                  _resetStyleLoadState();
-                  _startStyleHealthCheck();
-                  AppConfig.debugPrint(
-                    'ArtMapView: map created (style="$resolved", platform=${defaultTargetPlatform.name}, web=$kIsWeb)',
-                  );
-                  widget.onMapCreated(controller);
-                },
-                onStyleLoadedCallback: () {
-                  _styleStopwatch?.stop();
-                  _styleLoadTimer?.cancel();
-                  final elapsedMs = _styleStopwatch?.elapsedMilliseconds;
-                  if (elapsedMs != null) {
-                    AppConfig.debugPrint('ArtMapView: style loaded in ${elapsedMs}ms');
-                  } else {
-                    AppConfig.debugPrint('ArtMapView: style loaded');
-                  }
-
-                  // Optional: on web, run a one-shot connectivity probe when
-                  // `?debug_map=1` is present.
-                  unawaited(_runWebMapDiagnosticsIfEnabled(resolved));
-
-                  if (_pendingStyleApply) {
-                    _pendingStyleApply = false;
-                    _resetStyleLoadState();
-                    _startStyleHealthCheck();
-                    unawaited(_applyStyleToController());
-                    return;
-                  }
-                  if (!mounted) return;
-                  setState(() {
-                    _styleLoaded = true;
-                    _styleFailed = false;
-                    _styleFailureReason = null;
-                  });
-                  widget.onStyleLoaded?.call();
-                },
-                onCameraMove: widget.onCameraMove,
-                onCameraIdle: widget.onCameraIdle,
-                onMapClick: widget.onMapClick == null
-                    ? null
-                    : (math.Point<double> point, ml.LatLng latLng) {
-                        if (!styleReady) return;
-                        widget.onMapClick!(
-                          point,
-                          ll.LatLng(latLng.latitude, latLng.longitude),
-                        );
-                      },
-                onMapLongClick: widget.onMapLongClick == null
-                    ? null
-                    : (math.Point<double> point, ml.LatLng latLng) {
-                        if (!styleReady) return;
-                        widget.onMapLongClick!(
-                          point,
-                          ll.LatLng(latLng.latitude, latLng.longitude),
-                        );
-                      },
-                trackCameraPosition: true,
-              )
-            : ml.MapLibreMap(
-                key: ValueKey<String>('art_map_native:${widget.styleAsset}:${widget.isDarkMode}'),
-                styleString: resolved,
-                initialCameraPosition: ml.CameraPosition(
-                  target: ml.LatLng(
-                    widget.initialCenter.latitude,
-                    widget.initialCenter.longitude,
-                  ),
-                  zoom: widget.initialZoom,
-                ),
-                // We don't use the plugin's annotation managers (we manage sources/layers
-                // directly). Disabling them avoids plugin-managed sources being added
-                // during style swaps, which can cause platform errors.
-                annotationOrder: const <ml.AnnotationType>[],
-                minMaxZoomPreference: ml.MinMaxZoomPreference(
-                  widget.minZoom,
-                  widget.maxZoom,
-                ),
-                rotateGesturesEnabled:
-                    widget.rotateGesturesEnabled && styleReady,
-                scrollGesturesEnabled:
-                    widget.scrollGesturesEnabled && styleReady,
-                zoomGesturesEnabled: widget.zoomGesturesEnabled && styleReady,
-                tiltGesturesEnabled: widget.tiltGesturesEnabled && styleReady,
-                compassEnabled: widget.compassEnabled,
-                myLocationEnabled: false,
-                myLocationTrackingMode: ml.MyLocationTrackingMode.none,
-                onMapCreated: (controller) {
-                  _controller = controller;
-                  _resetStyleLoadState();
-                  _startStyleHealthCheck();
-                  AppConfig.debugPrint(
-                    'ArtMapView: map created (style="$resolved", platform=${defaultTargetPlatform.name}, web=$kIsWeb)',
-                  );
-                  widget.onMapCreated(controller);
-                },
-                onStyleLoadedCallback: () {
-                  _styleStopwatch?.stop();
-                  _styleLoadTimer?.cancel();
-                  final elapsedMs = _styleStopwatch?.elapsedMilliseconds;
-                  if (elapsedMs != null) {
-                    AppConfig.debugPrint('ArtMapView: style loaded in ${elapsedMs}ms');
-                  } else {
-                    AppConfig.debugPrint('ArtMapView: style loaded');
-                  }
-                  if (_pendingStyleApply) {
-                    _pendingStyleApply = false;
-                    _resetStyleLoadState();
-                    _startStyleHealthCheck();
-                    unawaited(_applyStyleToController());
-                    return;
-                  }
-                  if (!mounted) return;
-                  setState(() {
-                    _styleLoaded = true;
-                    _styleFailed = false;
-                    _styleFailureReason = null;
-                  });
-                  widget.onStyleLoaded?.call();
-                },
-                onCameraMove: widget.onCameraMove,
-                onCameraIdle: widget.onCameraIdle,
-                onMapClick: widget.onMapClick == null
-                    ? null
-                    : (math.Point<double> point, ml.LatLng latLng) {
-                        if (!styleReady) return;
-                        widget.onMapClick!(
-                          point,
-                          ll.LatLng(latLng.latitude, latLng.longitude),
-                        );
-                      },
-                onMapLongClick: widget.onMapLongClick == null
-                    ? null
-                    : (math.Point<double> point, ml.LatLng latLng) {
-                        if (!styleReady) return;
-                        widget.onMapLongClick!(
-                          point,
-                          ll.LatLng(latLng.latitude, latLng.longitude),
-                        );
-                      },
-                trackCameraPosition: true,
-              );
-
         return SizedBox.expand(
           child: Stack(
             children: [
-              mapWidget,
+              ml.MapLibreMap(
+                styleString: resolved,
+                initialCameraPosition: ml.CameraPosition(
+                  target: ml.LatLng(
+                    widget.initialCenter.latitude,
+                    widget.initialCenter.longitude,
+                  ),
+                  zoom: widget.initialZoom,
+                ),
+                // We don't use the plugin's annotation managers (we manage sources/layers
+                // directly). Disabling them avoids plugin-managed sources being added
+                // during style swaps, which can cause platform errors.
+                annotationOrder: const <ml.AnnotationType>[],
+                minMaxZoomPreference: ml.MinMaxZoomPreference(
+                  widget.minZoom,
+                  widget.maxZoom,
+                ),
+                rotateGesturesEnabled: widget.rotateGesturesEnabled,
+                scrollGesturesEnabled: widget.scrollGesturesEnabled,
+                zoomGesturesEnabled: widget.zoomGesturesEnabled,
+                tiltGesturesEnabled: widget.tiltGesturesEnabled,
+                compassEnabled: widget.compassEnabled,
+                myLocationEnabled: false,
+                myLocationTrackingMode: ml.MyLocationTrackingMode.none,
+                onMapCreated: (controller) {
+                  _controller = controller;
+                  _resetStyleLoadState();
+                  _startStyleHealthCheck();
+                  AppConfig.debugPrint(
+                    'ArtMapView: map created (style="$resolved", platform=${defaultTargetPlatform.name}, web=$kIsWeb)',
+                  );
+                  widget.onMapCreated(controller);
+                  if (kIsWeb) {
+                    // MapLibre GL JS sometimes initializes while the element is still
+                    // measuring (0x0) during the first frame, especially when the
+                    // map is mounted behind onboarding / tab transitions. A forced
+                    // resize after layout makes the map reliably paint on web.
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      try {
+                        controller.forceResizeWebMap();
+                      } catch (e, st) {
+                        AppConfig.debugPrint('ArtMapView: forceResizeWebMap failed: $e');
+                        if (kDebugMode) {
+                          AppConfig.debugPrint('ArtMapView: forceResizeWebMap stack: $st');
+                        }
+                      }
+                    });
+                  }
+                },
+                onStyleLoadedCallback: () {
+                  _styleStopwatch?.stop();
+                  _styleLoadTimer?.cancel();
+                  final elapsedMs = _styleStopwatch?.elapsedMilliseconds;
+                  if (elapsedMs != null) {
+                    AppConfig.debugPrint('ArtMapView: style loaded in ${elapsedMs}ms');
+                  } else {
+                    AppConfig.debugPrint('ArtMapView: style loaded');
+                  }
+                  if (kIsWeb) {
+                    try {
+                      _controller?.forceResizeWebMap();
+                    } catch (e, st) {
+                      AppConfig.debugPrint('ArtMapView: forceResizeWebMap after style load failed: $e');
+                      if (kDebugMode) {
+                        AppConfig.debugPrint('ArtMapView: resize-after-style stack: $st');
+                      }
+                    }
+                  }
+                  if (_pendingStyleApply) {
+                    _pendingStyleApply = false;
+                    _resetStyleLoadState();
+                    _startStyleHealthCheck();
+                    unawaited(_applyStyleToController());
+                    return;
+                  }
+                  if (!mounted) return;
+                  setState(() {
+                    _styleLoaded = true;
+                    _styleFailed = false;
+                    _styleFailureReason = null;
+                  });
+                  widget.onStyleLoaded?.call();
+                },
+                onCameraMove: widget.onCameraMove,
+                onCameraIdle: widget.onCameraIdle,
+                onMapClick: widget.onMapClick == null
+                    ? null
+                    : (math.Point<double> point, ml.LatLng latLng) {
+                        if (!_styleLoaded) return;
+                        widget.onMapClick!(
+                          point,
+                          ll.LatLng(latLng.latitude, latLng.longitude),
+                        );
+                      },
+                onMapLongClick: widget.onMapLongClick == null
+                    ? null
+                    : (math.Point<double> point, ml.LatLng latLng) {
+                        if (!_styleLoaded) return;
+                        widget.onMapLongClick!(
+                          point,
+                          ll.LatLng(latLng.latitude, latLng.longitude),
+                        );
+                      },
+                trackCameraPosition: true,
+              ),
               if (_styleFailed && !_styleLoaded)
                 Positioned.fill(
                   child: IgnorePointer(

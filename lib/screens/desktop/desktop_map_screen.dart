@@ -58,6 +58,7 @@ import '../../utils/design_tokens.dart';
 import '../../utils/category_accent_color.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/maplibre_style_utils.dart';
+import '../../utils/marker_cube_geometry.dart';
 import '../../widgets/glass_components.dart';
 import '../../widgets/kubus_snackbar.dart';
 import '../../widgets/tutorial/interactive_tutorial_overlay.dart';
@@ -159,7 +160,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   static const Duration _cameraUpdateThrottle =
       Duration(milliseconds: 16); // ~60fps
   bool _styleInitialized = false;
-  bool _styleReady = false;
   bool _styleInitializationInProgress = false;
   final Set<String> _registeredMapImages = <String>{};
   final LayerLink _markerOverlayLink = LayerLink();
@@ -176,11 +176,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   static const String _locationLayerId = 'kubus_user_location_layer';
   static const String _pendingSourceId = 'kubus_pending_marker';
   static const String _pendingLayerId = 'kubus_pending_marker_layer';
+  static const double _cubePitchThreshold = 5.0;
   bool _cubeLayerVisible = false;
-  bool _cubeModeActive = false;
-  final Map<String, Offset> _cubeAnchors = <String, Offset>{};
-  double? _lastCubeSyncZoom;
-  double? _lastCubeSyncPitch;
   static const double _markerRefreshDistanceMeters = 1200;
   static const Duration _markerRefreshInterval = Duration(minutes: 5);
 
@@ -360,21 +357,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   void _dismissMapTutorial() {
     if (!mounted) return;
     setState(() => _showMapTutorial = false);
-    // Web MapLibre is a platform view; after removing a full-screen overlay
-    // (tutorial), force a resize on the next frame to keep the WebGL canvas
-    // in sync with its container.
-    if (kIsWeb) {
-      final controller = _mapController;
-      if (controller != null) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          try {
-            controller.forceResizeWebMap();
-          } catch (_) {
-            // Best-effort.
-          }
-        });
-      }
-    }
     unawaited(_setMapTutorialSeen());
   }
 
@@ -599,7 +581,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   void _handleMapCreated(ml.MapLibreMapController controller) {
     _mapController = controller;
     _styleInitialized = false;
-    _styleReady = false;
     _registeredMapImages.clear();
     AppConfig.debugPrint(
       'DesktopMapScreen: map created (platform=${defaultTargetPlatform.name}, web=$kIsWeb)',
@@ -611,42 +592,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   double _markerPixelRatio() {
-    // IMPORTANT:
-    // `MapLibreMapController.addImage()` does not accept a pixelRatio parameter.
-    // If we bake DPR into the PNG on web, the icon renders physically larger.
-    // So on web we must render at 1.0 to preserve marker size.
     if (kIsWeb) return 1.0;
-
     final dpr = WidgetsBinding
             .instance.platformDispatcher.implicitView?.devicePixelRatio ??
         1.0;
     return dpr.clamp(1.0, 2.5);
   }
-
-  double _webPixelRatio() {
-    if (!kIsWeb) return 1.0;
-    final dpr = WidgetsBinding
-            .instance.platformDispatcher.implicitView?.devicePixelRatio ??
-        1.0;
-    return dpr.isFinite ? dpr.clamp(1.0, 3.0) : 1.0;
-  }
-
-  Offset _screenToFlutterOffset(dynamic screen) {
-    final dx = (screen.x as num).toDouble();
-    final dy = (screen.y as num).toDouble();
-    if (!kIsWeb) return Offset(dx, dy);
-    final dpr = _webPixelRatio();
-    if (dpr <= 1.01) return Offset(dx, dy);
-    return Offset(dx / dpr, dy / dpr);
-  }
-
-  math.Point<double> _normalizeTapPoint(math.Point<double> point) {
-    if (!kIsWeb) return point;
-    final dpr = _webPixelRatio();
-    if (dpr <= 1.01) return point;
-    return math.Point<double>(point.x / dpr, point.y / dpr);
-  }
-
 
   Future<void> _handleMapStyleLoaded(ThemeProvider themeProvider) async {
     final controller = _mapController;
@@ -705,17 +656,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         },
         promoteId: 'id',
       );
-      final enableCubes = !kIsWeb && AppConfig.isFeatureEnabled('mapIsometricView');
-      if (enableCubes) {
-        await controller.addGeoJsonSource(
-          _cubeSourceId,
-          const <String, dynamic>{
-            'type': 'FeatureCollection',
-            'features': <dynamic>[]
-          },
-          promoteId: 'id',
-        );
-      }
+      await controller.addGeoJsonSource(
+        _cubeSourceId,
+        const <String, dynamic>{
+          'type': 'FeatureCollection',
+          'features': <dynamic>[]
+        },
+        promoteId: 'id',
+      );
       await controller.addSymbolLayer(
         _markerSourceId,
         _markerLayerId,
@@ -769,75 +717,71 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         belowLayerId: _markerLayerId,
       );
 
-      if (enableCubes) {
-        await controller.addSymbolLayer(
-          _markerSourceId,
-          _cubeIconLayerId,
-          ml.SymbolLayerProperties(
-            iconImage: <dynamic>['get', 'icon'],
-            iconSize: <dynamic>[
-              'interpolate',
-              ['linear'],
-              ['zoom'],
-              3,
-              0.5,
-              15,
-              1.0,
-              24,
-              1.5,
-            ],
-            iconOpacity: <dynamic>[
-              'case',
-              ['==', ['get', 'kind'], 'cluster'],
-              1.0,
-              1.0,
-            ],
-            iconAllowOverlap: true,
-            iconIgnorePlacement: true,
-            iconAnchor: 'center',
-            iconPitchAlignment: 'map',
-            iconRotationAlignment: 'map',
-            visibility: 'none',
-          ),
-          belowLayerId: _markerLayerId,
-        );
+      await controller.addSymbolLayer(
+        _markerSourceId,
+        _cubeIconLayerId,
+        ml.SymbolLayerProperties(
+          iconImage: <dynamic>['get', 'icon'],
+          iconSize: <dynamic>[
+            'interpolate',
+            ['linear'],
+            ['zoom'],
+            3,
+            0.5,
+            15,
+            1.0,
+            24,
+            1.5,
+          ],
+          iconOpacity: <dynamic>[
+            'case',
+            ['==', ['get', 'kind'], 'cluster'],
+            1.0,
+            1.0,
+          ],
+          iconAllowOverlap: true,
+          iconIgnorePlacement: true,
+          iconAnchor: 'center',
+          iconPitchAlignment: 'map',
+          iconRotationAlignment: 'map',
+          visibility: 'none',
+        ),
+        belowLayerId: _markerLayerId,
+      );
 
-        await controller.addFillExtrusionLayer(
-          _cubeSourceId,
-          _cubeLayerId,
-          ml.FillExtrusionLayerProperties(
-            fillExtrusionColor: <dynamic>['get', 'color'],
-            fillExtrusionHeight: <dynamic>['get', 'height'],
-            fillExtrusionBase: 0.0,
-            fillExtrusionOpacity: 1.0,
-            fillExtrusionVerticalGradient: false,
-            visibility: 'none',
-          ),
-          belowLayerId: _markerLayerId,
-        );
-      }
+      await controller.addFillExtrusionLayer(
+        _cubeSourceId,
+        _cubeLayerId,
+        ml.FillExtrusionLayerProperties(
+          fillExtrusionColor: <dynamic>['get', 'color'],
+          fillExtrusionHeight: <dynamic>['get', 'height'],
+          fillExtrusionBase: 0.0,
+          fillExtrusionOpacity: 1.0,
+          fillExtrusionVerticalGradient: false,
+          visibility: 'none',
+        ),
+        belowLayerId: _markerLayerId,
+      );
 
-      if (!kIsWeb) {
-        await controller.addGeoJsonSource(
-          _locationSourceId,
-          const <String, dynamic>{
-            'type': 'FeatureCollection',
-            'features': <dynamic>[]
-          },
-          promoteId: 'id',
-        );
-        await controller.addCircleLayer(
-          _locationSourceId,
-          _locationLayerId,
-          ml.CircleLayerProperties(
-            circleRadius: 6,
-            circleColor: _hexRgb(scheme.secondary),
-            circleOpacity: 1.0,
-            circleStrokeWidth: 2,
-            circleStrokeColor: _hexRgb(scheme.surface),
-          ),
-        );
-      }
+      await controller.addGeoJsonSource(
+        _locationSourceId,
+        const <String, dynamic>{
+          'type': 'FeatureCollection',
+          'features': <dynamic>[]
+        },
+        promoteId: 'id',
+      );
+      await controller.addCircleLayer(
+        _locationSourceId,
+        _locationLayerId,
+        ml.CircleLayerProperties(
+          circleRadius: 6,
+          circleColor: _hexRgb(scheme.secondary),
+          circleOpacity: 1.0,
+          circleStrokeWidth: 2,
+          circleStrokeColor: _hexRgb(scheme.surface),
+        ),
+      );
 
       await controller.addGeoJsonSource(
         _pendingSourceId,
@@ -875,10 +819,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       );
     } catch (e, st) {
       _styleInitialized = false;
-      if (_webDebugMapEnabled) {
-        _webDiagPrint('DesktopMapScreen(web diag): style init failed: $e');
-        _webDiagPrint('DesktopMapScreen(web diag): style init stack: $st');
-      }
       if (kDebugMode) {
         AppConfig.debugPrint('DesktopMapScreen: style init failed: $e');
         AppConfig.debugPrint('DesktopMapScreen: style init stack: $st');
@@ -891,7 +831,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   void _queueOverlayAnchorRefresh() {
     if (_markerOverlayMode != _MarkerOverlayMode.anchored) return;
     if (_selectedMarkerData == null) return;
-    if (!_styleReady) return;
+    if (!_styleInitialized) return;
     _overlayAnchorDebouncer(const Duration(milliseconds: 16), () {
       unawaited(_refreshActiveMarkerAnchor());
     });
@@ -901,7 +841,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final controller = _mapController;
     final marker = _selectedMarkerData;
     if (controller == null || marker == null) return;
-    if (!_styleReady) return;
+    if (!_styleInitialized) return;
     if (_markerOverlayMode != _MarkerOverlayMode.anchored) return;
 
     try {
@@ -910,7 +850,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       );
       if (!mounted) return;
       setState(() {
-        _selectedMarkerAnchor = _screenToFlutterOffset(screen);
+        _selectedMarkerAnchor =
+            Offset(screen.x.toDouble(), screen.y.toDouble());
       });
     } catch (_) {
       // Ignore anchor updates during style transitions.
@@ -923,7 +864,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }) async {
     final controller = _mapController;
     if (controller == null) return;
-    if (!_styleReady) return;
+    if (!_styleInitialized) return;
 
     try {
       final layerIds = _is3DMarkerModeActive
@@ -933,25 +874,17 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               _cubeIconLayerId,
             ]
           : <String>[_markerHitboxLayerId, _markerLayerId];
-      final queryPoints = _tapQueryPoints(point);
-      List<dynamic> features = const <dynamic>[];
-      for (final candidate in queryPoints) {
-        features = await controller.queryRenderedFeatures(
-          candidate,
-          layerIds,
-          null,
-        );
-        if (features.isNotEmpty) break;
-      }
+      final features = await controller.queryRenderedFeatures(
+        point,
+        layerIds,
+        null,
+      );
 
       if (features.isEmpty) {
-        ArtMarker? fallbackMarker;
-        for (final candidate in queryPoints) {
-          fallbackMarker = await _fallbackPickMarkerAtPoint(candidate);
-          if (fallbackMarker != null) break;
-        }
+        final fallbackMarker = await _fallbackPickMarkerAtPoint(point);
         if (fallbackMarker != null) {
           _handleMarkerTap(fallbackMarker);
+          unawaited(_syncMapMarkers(themeProvider: themeProvider));
           _queueOverlayAnchorRefresh();
           return;
         }
@@ -1002,33 +935,19 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           _artMarkers.where((m) => m.id == markerId).toList(growable: false);
       if (marker.isEmpty) return;
       _handleMarkerTap(marker.first);
+      unawaited(_syncMapMarkers(themeProvider: themeProvider));
       _queueOverlayAnchorRefresh();
     } catch (e) {
       if (kDebugMode) {
         AppConfig.debugPrint(
             'DesktopMapScreen: queryRenderedFeatures failed: $e');
       }
-      final queryPoints = _tapQueryPoints(point);
-      ArtMarker? fallbackMarker;
-      for (final candidate in queryPoints) {
-        fallbackMarker = await _fallbackPickMarkerAtPoint(candidate);
-        if (fallbackMarker != null) break;
-      }
+      final fallbackMarker = await _fallbackPickMarkerAtPoint(point);
       if (fallbackMarker == null) return;
       _handleMarkerTap(fallbackMarker);
+      unawaited(_syncMapMarkers(themeProvider: themeProvider));
       _queueOverlayAnchorRefresh();
     }
-  }
-
-  List<math.Point<double>> _tapQueryPoints(math.Point<double> point) {
-    if (!kIsWeb) return <math.Point<double>>[point];
-    final dpr = MediaQuery.of(context).devicePixelRatio;
-    if (dpr <= 1.01) return <math.Point<double>>[point];
-    return <math.Point<double>>[
-      point,
-      math.Point<double>(point.x * dpr, point.y * dpr),
-      math.Point<double>(point.x / dpr, point.y / dpr),
-    ];
   }
 
   Future<ArtMarker?> _fallbackPickMarkerAtPoint(
@@ -1046,9 +965,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         final screen = await controller.toScreenLocation(
           ml.LatLng(marker.position.latitude, marker.position.longitude),
         );
-        final normalized = _screenToFlutterOffset(screen);
-        final dx = normalized.dx - point.x;
-        final dy = normalized.dy - point.y;
+        final dx = screen.x.toDouble() - point.x;
+        final dy = screen.y.toDouble() - point.y;
         final distance = math.sqrt(dx * dx + dy * dy);
         if (distance <= bestDistance) {
           bestDistance = distance;
@@ -1063,7 +981,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   Future<void> _syncUserLocation({required ThemeProvider themeProvider}) async {
-    if (kIsWeb) return;
     final controller = _mapController;
     if (controller == null) return;
     if (!_styleInitialized) return;
@@ -1089,13 +1006,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             ],
           };
 
-    try {
-      await controller.setGeoJsonSource(_locationSourceId, data);
-    } catch (e) {
-      if (kDebugMode) {
-        AppConfig.debugPrint('DesktopMapScreen: setGeoJsonSource(location) failed: $e');
-      }
-    }
+    await controller.setGeoJsonSource(_locationSourceId, data);
   }
 
   Future<void> _syncPendingMarker(
@@ -1125,13 +1036,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             ],
           };
 
-    try {
-      await controller.setGeoJsonSource(_pendingSourceId, data);
-    } catch (e) {
-      if (kDebugMode) {
-        AppConfig.debugPrint('DesktopMapScreen: setGeoJsonSource(pending) failed: $e');
-      }
-    }
+    await controller.setGeoJsonSource(_pendingSourceId, data);
   }
 
   List<_ClusterBucket> _clusterMarkers(List<ArtMarker> markers, double zoom) {
@@ -1211,14 +1116,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       'features': features,
     };
     if (!mounted) return;
-    try {
-      await controller.setGeoJsonSource(_markerSourceId, collection);
-    } catch (e) {
-      if (kDebugMode) {
-        AppConfig.debugPrint('DesktopMapScreen: setGeoJsonSource(markers) failed: $e');
-      }
-      return;
-    }
+    await controller.setGeoJsonSource(_markerSourceId, collection);
 
     if (_is3DMarkerModeActive) {
       await _syncMarkerCubes(themeProvider: themeProvider);
@@ -1663,13 +1561,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             AppConfig.debugPrint(
               'DesktopMapScreen: onStyleLoadedCallback (dark=$isDark, style="$styleAsset")',
             );
-            if (mounted) {
-              setState(() {
-                _styleReady = true;
-              });
-            } else {
-              _styleReady = true;
-            }
             unawaited(_handleMapStyleLoaded(themeProvider)
                 .then((_) => _handleMapReady()));
           },
@@ -1679,7 +1570,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             _cameraZoom = position.zoom;
             _lastBearing = position.bearing;
             _lastPitch = position.tilt;
-            _updateCubeModeForPitch(_lastPitch);
             final shouldShowCubes = _is3DMarkerModeActive;
             if (shouldShowCubes != _cubeLayerVisible) {
               unawaited(_updateMarkerRenderMode());
@@ -1695,7 +1585,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               _lastCameraUpdateTime = now;
               setState(() => _renderZoomBucket = bucket);
             }
-            if (_is3DMarkerModeActive) {
+            if (bucketChanged && _is3DMarkerModeActive) {
               _cubeSyncDebouncer(const Duration(milliseconds: 60), () {
                 unawaited(_syncMarkerCubes(themeProvider: themeProvider));
               });
@@ -1720,16 +1610,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           },
           onCameraIdle: () {
             _programmaticCameraMove = false;
-            _updateCubeModeForPitch(_lastPitch);
             unawaited(_updateMarkerRenderMode());
             _queueMarkerRefresh(fromGesture: false);
             _queueOverlayAnchorRefresh();
           },
           onMapClick: (point, _) {
-            unawaited(_handleMapTap(
-              _normalizeTapPoint(point),
-              themeProvider: themeProvider,
-            ));
+            unawaited(_handleMapTap(point, themeProvider: themeProvider));
           },
           onMapLongClick: (_, point) {
             setState(() {
@@ -1748,7 +1634,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         return Stack(
           children: [
             Positioned.fill(child: map),
-            _buildCubeOverlay(themeProvider),
             if (_markerOverlayMode == _MarkerOverlayMode.anchored &&
                 _selectedMarkerAnchor != null)
               Positioned(
@@ -1767,12 +1652,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         );
       },
     );
-  }
-
-  Widget _buildCubeOverlay(ThemeProvider themeProvider) {
-    // 3D cubes are rendered via MapLibre fill-extrusion.
-    // Do not draw Flutter overlay cubes.
-    return const SizedBox.shrink();
   }
 
   Future<void> _refreshUserLocation({bool animate = false}) async {
@@ -2112,112 +1991,104 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         link: _searchFieldLink,
         showWhenUnlinked: false,
         offset: const Offset(0, 52),
-        child: UnconstrainedBox(
-          alignment: Alignment.topLeft,
-          constrainedAxis: Axis.horizontal,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: 520,
-              maxHeight: 360,
-            ),
-            child: LiquidGlassPanel(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              margin: EdgeInsets.zero,
-              borderRadius: BorderRadius.circular(12),
-              blurSigma: KubusGlassEffects.blurSigmaLight,
-              backgroundColor: glassTint,
-              child: Builder(
-                builder: (context) {
-                  if (trimmedQuery.length < 2) {
-                    return Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Text(
-                        l10n.mapSearchMinCharsHint,
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodyMedium
-                            ?.copyWith(
-                              color: scheme.onSurface.withValues(alpha: 0.6),
-                            ),
-                      ),
-                    );
-                  }
-
-                  if (_isFetchingSearch) {
-                    return const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Center(child: CircularProgressIndicator()),
-                    );
-                  }
-
-                  if (_searchSuggestions.isEmpty) {
-                    return Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.search_off,
-                            color: scheme.onSurface.withValues(alpha: 0.4),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxWidth: 520,
+            maxHeight: 360,
+          ),
+          child: LiquidGlassPanel(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            margin: EdgeInsets.zero,
+            borderRadius: BorderRadius.circular(12),
+            blurSigma: KubusGlassEffects.blurSigmaLight,
+            backgroundColor: glassTint,
+            child: Builder(
+              builder: (context) {
+                if (trimmedQuery.length < 2) {
+                  return Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      l10n.mapSearchMinCharsHint,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: scheme.onSurface.withValues(alpha: 0.6),
                           ),
-                          const SizedBox(width: 12),
-                          Text(
-                            l10n.commonNoResultsFound,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(
-                                  color:
-                                      scheme.onSurface.withValues(alpha: 0.6),
-                                ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-
-                  return ListView.separated(
-                    shrinkWrap: true,
-                    itemCount: _searchSuggestions.length,
-                    separatorBuilder: (_, __) => Divider(
-                      height: 1,
-                      color: scheme.outlineVariant,
                     ),
-                    itemBuilder: (context, index) {
-                      final suggestion = _searchSuggestions[index];
-                      return ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor:
-                              themeProvider.accentColor.withValues(alpha: 0.10),
-                          child: Icon(
-                            suggestion.icon,
-                            color: themeProvider.accentColor,
-                          ),
+                  );
+                }
+
+                if (_isFetchingSearch) {
+                  return const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+
+                if (_searchSuggestions.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.search_off,
+                          color: scheme.onSurface.withValues(alpha: 0.4),
                         ),
-                        title: Text(
-                          suggestion.label,
+                        const SizedBox(width: 12),
+                        Text(
+                          l10n.commonNoResultsFound,
                           style: Theme.of(context)
                               .textTheme
                               .bodyMedium
-                              ?.copyWith(fontWeight: FontWeight.w600),
-                        ),
-                        subtitle: suggestion.subtitle == null
-                            ? null
-                            : Text(
-                                suggestion.subtitle!,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(
-                                      color: scheme.onSurface
-                                          .withValues(alpha: 0.6),
-                                    ),
+                              ?.copyWith(
+                                color: scheme.onSurface.withValues(alpha: 0.6),
                               ),
-                        onTap: () => _handleSuggestionTap(suggestion),
-                      );
-                    },
+                        ),
+                      ],
+                    ),
                   );
-                },
-              ),
+                }
+
+                return ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: _searchSuggestions.length,
+                  separatorBuilder: (_, __) => Divider(
+                    height: 1,
+                    color: scheme.outlineVariant,
+                  ),
+                  itemBuilder: (context, index) {
+                    final suggestion = _searchSuggestions[index];
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor:
+                            themeProvider.accentColor.withValues(alpha: 0.10),
+                        child: Icon(
+                          suggestion.icon,
+                          color: themeProvider.accentColor,
+                        ),
+                      ),
+                      title: Text(
+                        suggestion.label,
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodyMedium
+                            ?.copyWith(fontWeight: FontWeight.w600),
+                      ),
+                      subtitle: suggestion.subtitle == null
+                          ? null
+                          : Text(
+                              suggestion.subtitle!,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    color:
+                                        scheme.onSurface.withValues(alpha: 0.6),
+                                  ),
+                            ),
+                      onTap: () => _handleSuggestionTap(suggestion),
+                    );
+                  },
+                );
+              },
             ),
           ),
         ),
@@ -4107,66 +3978,35 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _searchSuggestions = [];
     });
 
-    final messenger = ScaffoldMessenger.of(context);
-    final l10n = AppLocalizations.of(context);
-    void showInvalidSelection() {
-      messenger.showKubusSnackBar(
-        SnackBar(
-          content: Text(
-            l10n?.activityNavigationUnableToOpenToast ??
-                'Unable to open this item right now.',
-          ),
-        ),
-      );
-    }
-
-    final position = suggestion.position;
-    if (position != null) {
+    if (suggestion.position != null) {
       _moveCamera(
-        position,
+        suggestion.position!,
         math.max(_effectiveZoom, 15.0),
       );
     }
 
-    final resolvedId = suggestion.id?.trim();
-    if (suggestion.type == 'artwork') {
-      if (resolvedId == null || resolvedId.isEmpty) {
-        showInvalidSelection();
-        return;
-      }
+    if (suggestion.type == 'artwork' && suggestion.id != null) {
       unawaited(_selectArtworkById(
-        resolvedId,
+        suggestion.id!,
         focusPosition: suggestion.position,
         openDetail: true,
       ));
-      return;
-    }
-
-    if (suggestion.type == 'profile') {
-      if (resolvedId == null || resolvedId.isEmpty) {
-        showInvalidSelection();
-        return;
-      }
+    } else if (suggestion.type == 'profile' && suggestion.id != null) {
       final shellScope = DesktopShellScope.of(context);
       if (shellScope != null) {
         shellScope.pushScreen(
           DesktopSubScreen(
             title: suggestion.subtitle ?? suggestion.label,
-            child: UserProfileScreen(userId: resolvedId),
+            child: UserProfileScreen(userId: suggestion.id!),
           ),
         );
       } else {
         unawaited(Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (_) => UserProfileScreen(userId: resolvedId),
+            builder: (_) => UserProfileScreen(userId: suggestion.id!),
           ),
         ));
       }
-      return;
-    }
-
-    if (resolvedId == null || resolvedId.isEmpty) {
-      showInvalidSelection();
     }
   }
 
@@ -4576,46 +4416,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   bool get _is3DMarkerModeActive {
-    // Web uses maplibre-gl-js via the federated plugin. Some advanced style
-    // operations (notably fill-extrusion) can fail depending on browser/GPU.
-    // Keep the web map reliable by disabling the 3D marker mode there.
-    if (kIsWeb) return false;
     if (!AppConfig.isFeatureEnabled('mapIsometricView')) return false;
-    return _cubeModeActive;
-  }
-
-  bool get _webDebugMapEnabled {
-    if (!kIsWeb) return false;
-    try {
-      return Uri.base.queryParameters['debug_map'] == '1';
-    } catch (_) {
-      return false;
-    }
-  }
-
-  void _webDiagPrint(String message) {
-    if (!_webDebugMapEnabled) return;
-    // Ensure logs show up on release web builds.
-    // ignore: avoid_print
-    print(message);
-  }
-
-  void _updateCubeModeForPitch(double pitch) {
-    if (!AppConfig.isFeatureEnabled('mapIsometricView')) {
-      _cubeModeActive = false;
-      return;
-    }
-    const double enterThreshold = 8.0;
-    const double exitThreshold = 4.0;
-    if (_cubeModeActive) {
-      if (pitch < exitThreshold) {
-        _cubeModeActive = false;
-      }
-    } else {
-      if (pitch > enterThreshold) {
-        _cubeModeActive = true;
-      }
-    }
+    return _lastPitch > _cubePitchThreshold;
   }
 
   bool _assertMarkerRenderModeInvariant() {
@@ -4636,18 +4438,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _cubeLayerVisible = shouldShowCubes;
 
     try {
-      await controller.setLayerVisibility(
-        _cubeLayerId,
-        shouldShowCubes,
-      );
-      await controller.setLayerVisibility(
-        _cubeIconLayerId,
-        shouldShowCubes,
-      );
-      await controller.setLayerVisibility(
-        _markerLayerId,
-        !shouldShowCubes,
-      );
+      await controller.setLayerVisibility(_cubeLayerId, shouldShowCubes);
+      await controller.setLayerVisibility(_cubeIconLayerId, shouldShowCubes);
+      await controller.setLayerVisibility(_markerLayerId, !shouldShowCubes);
     } catch (_) {
       // Best-effort: layer visibility may fail during style swaps.
     }
@@ -4657,8 +4450,17 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       final themeProvider = context.read<ThemeProvider>();
       await _syncMarkerCubes(themeProvider: themeProvider);
     } else {
-      if (!mounted) return;
-      setState(() => _cubeAnchors.clear());
+      try {
+        await controller.setGeoJsonSource(
+          _cubeSourceId,
+          const <String, dynamic>{
+            'type': 'FeatureCollection',
+            'features': <dynamic>[],
+          },
+        );
+      } catch (_) {
+        // Ignore source update failures during transitions.
+      }
     }
   }
 
@@ -4669,109 +4471,37 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (!mounted) return;
     if (!_is3DMarkerModeActive) return;
 
-    final zoom = _cameraZoom;
-    final pitch = _lastPitch;
-    final lastZoom = _lastCubeSyncZoom;
-    final lastPitch = _lastCubeSyncPitch;
-    if (lastZoom != null && lastPitch != null) {
-      final zoomDelta = (zoom - lastZoom).abs();
-      final pitchDelta = (pitch - lastPitch).abs();
-      if (zoomDelta < 0.05 && pitchDelta < 0.5) {
-        return;
-      }
-    }
-
-    const earthRadiusMeters = 6378137.0;
-    const tileSize = 512.0;
-    double metersPerPixelAt(double latDeg, double zoom) {
-      final latRad = latDeg * math.pi / 180.0;
-      final cosLat = math.cos(latRad);
-      final denom = tileSize * math.pow(2.0, zoom);
-      if (denom == 0) return 0;
-      return (cosLat.abs() < 1e-6 ? 1e-6 : cosLat.abs()) *
-          (2.0 * math.pi * earthRadiusMeters) /
-          denom;
-    }
-
-    double degLatFromMeters(double meters) {
-      return (meters / earthRadiusMeters) * (180.0 / math.pi);
-    }
-
-    double degLonFromMeters(double meters, double latDeg) {
-      final latRad = latDeg * math.pi / 180.0;
-      final cosLat = math.cos(latRad);
-      final denom =
-          earthRadiusMeters * (cosLat.abs() < 1e-6 ? 1e-6 : cosLat.abs());
-      return (meters / denom) * (180.0 / math.pi);
-    }
-
     final scheme = Theme.of(context).colorScheme;
     final roles = KubusColorRoles.of(context);
+    final zoom = _cameraZoom;
     final visibleMarkers =
         _artMarkers.where((m) => m.hasValidPosition).toList(growable: false);
 
-    final desiredSizePx = RotatableCubeTokens.sizeForZoom(zoom);
-    final features = <dynamic>[];
-
+    final features = <Map<String, dynamic>>[];
     for (final marker in visibleMarkers) {
-      final lat = marker.position.latitude;
-      final lon = marker.position.longitude;
-      final mpp = metersPerPixelAt(lat, zoom);
-      final halfMeters = (desiredSizePx / 2.0) * mpp;
-      final dLat = degLatFromMeters(halfMeters);
-      final dLon = degLonFromMeters(halfMeters, lat);
-
-      final heightMeters = (desiredSizePx * mpp).clamp(2.0, 48.0);
-
       final baseColor = AppColorUtils.markerSubjectColor(
         markerType: marker.type.name,
         metadata: marker.metadata,
         scheme: scheme,
         roles: roles,
       );
-
+      final colorHex = MarkerCubeGeometry.toHex(baseColor);
       features.add(
-        <String, dynamic>{
-          'type': 'Feature',
-          'id': marker.id,
-          'properties': <String, dynamic>{
-            'id': marker.id,
-            'markerId': marker.id,
-            'kind': 'cube',
-            'height': heightMeters,
-            'color': _hexRgb(baseColor),
-          },
-          'geometry': <String, dynamic>{
-            'type': 'Polygon',
-            'coordinates': <dynamic>[
-              <dynamic>[
-                <double>[lon - dLon, lat - dLat],
-                <double>[lon + dLon, lat - dLat],
-                <double>[lon + dLon, lat + dLat],
-                <double>[lon - dLon, lat + dLat],
-                <double>[lon - dLon, lat - dLat],
-              ],
-            ],
-          },
-        },
+        MarkerCubeGeometry.cubeFeatureForMarker(
+          marker: marker,
+          colorHex: colorHex,
+          zoom: zoom,
+        ),
       );
     }
 
-    await controller.setGeoJsonSource(
-      _cubeSourceId,
-      <String, dynamic>{
-        'type': 'FeatureCollection',
-        'features': features,
-      },
-    );
+    final collection = <String, dynamic>{
+      'type': 'FeatureCollection',
+      'features': features,
+    };
 
     if (!mounted) return;
-    _lastCubeSyncZoom = zoom;
-    _lastCubeSyncPitch = pitch;
-    if (_cubeAnchors.isNotEmpty) {
-      setState(() => _cubeAnchors.clear());
-    }
-    return;
+    await controller.setGeoJsonSource(_cubeSourceId, collection);
   }
 
   Widget _buildMarkerOverlayCard(
@@ -5270,11 +5000,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       targetAnchor: Alignment.center,
       followerAnchor: Alignment.bottomCenter,
       offset: Offset(0, -verticalOffset),
-      child: UnconstrainedBox(
-        alignment: Alignment.bottomCenter,
-        constrainedAxis: Axis.horizontal,
-        child: wrappedCard,
-      ),
+      child: wrappedCard,
     );
   }
 
