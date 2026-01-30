@@ -1,6 +1,5 @@
 param(
   [string]$BaseHref = '/',
-  [ValidateSet('canvaskit', 'html', 'auto')][string]$Renderer = 'canvaskit',
   [switch]$DisableServiceWorker,
   [switch]$EnableSourceMaps
 )
@@ -8,7 +7,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $root = Split-Path -Parent $PSScriptRoot
-$webArgs = @('build', 'web', "--base-href=$BaseHref", "--web-renderer=$Renderer", '--no-web-resources-cdn')
+$webArgs = @('build', 'web', "--base-href=$BaseHref", '--no-web-resources-cdn')
 
 if ($DisableServiceWorker) {
   $webArgs += '--pwa-strategy=none'

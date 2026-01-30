@@ -14,10 +14,11 @@ _flutter.loader.load({
     serviceWorkerVersion: {{flutter_service_worker_version}},
   },
   config: {
-    // Keep this aligned with the build output. If you build with
-    // `--web-renderer canvaskit`, forcing `html` here will cause:
-    // "FlutterLoader could not find a build compatible with configuration..."
-    renderer: "canvaskit",
-    canvasKitBaseUrl: "/canvaskit/",
+    // MapLibre (web) uses maplibre-gl-js (WebGL). We run the Flutter app with
+    // the HTML renderer to avoid CanvasKit+WASM/WebGL compositing crashes seen
+    // in production (e.g. canvaskit.wasm "index out of bounds").
+    //
+    // IMPORTANT: Build the web bundle with `--web-renderer=html` to match.
+    renderer: "html",
   },
 });
