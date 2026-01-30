@@ -7,17 +7,17 @@ void main() {
 
     expect(
       MapStyleService.normalizeWebAssetUrlForTest(stylePath),
-      'assets/map_styles/kubus_light.json',
+      'assets/assets/map_styles/kubus_light.json',
     );
 
     expect(
       MapStyleService.normalizeWebAssetUrlForTest('assets/assets/map_styles/kubus_light.json'),
-      'assets/map_styles/kubus_light.json',
+      'assets/assets/map_styles/kubus_light.json',
     );
 
     expect(
       MapStyleService.normalizeWebAssetUrlForTest('/assets/map_styles/kubus_light.json'),
-      'assets/map_styles/kubus_light.json',
+      'assets/assets/map_styles/kubus_light.json',
     );
 
     expect(
@@ -27,7 +27,7 @@ void main() {
 
     expect(
       MapStyleService.normalizeWebAssetUrlForTest('assets\\map_styles\\kubus_light.json'),
-      'assets/map_styles/kubus_light.json',
+      'assets/assets/map_styles/kubus_light.json',
     );
   });
 }

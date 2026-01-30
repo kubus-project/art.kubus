@@ -626,6 +626,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     return Offset(dx / dpr, dy / dpr);
   }
 
+  math.Point<double> _normalizeTapPoint(math.Point<double> point) {
+    if (!kIsWeb) return point;
+    final dpr = _webPixelRatio();
+    if (dpr <= 1.01) return point;
+    return math.Point<double>(point.x / dpr, point.y / dpr);
+  }
+
 
   Future<void> _handleMapStyleLoaded(ThemeProvider themeProvider) async {
     final controller = _mapController;
@@ -1677,7 +1684,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             _queueOverlayAnchorRefresh();
           },
           onMapClick: (point, _) {
-            unawaited(_handleMapTap(point, themeProvider: themeProvider));
+            unawaited(_handleMapTap(
+              _normalizeTapPoint(point),
+              themeProvider: themeProvider,
+            ));
           },
           onMapLongClick: (_, point) {
             setState(() {
