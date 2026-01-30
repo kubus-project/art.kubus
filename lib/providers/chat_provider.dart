@@ -848,6 +848,49 @@ class ChatProvider extends ChangeNotifier {
     }
   }
 
+  void _upsertConversationMetadataForMessage(
+    String conversationId,
+    ChatMessage message,
+  ) {
+    final convId = conversationId.trim();
+    if (convId.isEmpty) return;
+    final index = _conversations.indexWhere((c) => c.id == convId);
+    if (index == -1) return;
+
+    final existing = _conversations[index];
+    final lastAt = existing.lastMessageAt;
+    final shouldUpdateTimestamp = lastAt == null ||
+        message.createdAt.isAfter(lastAt) ||
+        message.createdAt.isAtSameMomentAs(lastAt);
+
+    final updated = Conversation(
+      id: existing.id,
+      title: existing.title,
+      rawTitle: existing.rawTitle,
+      isGroup: existing.isGroup,
+      createdBy: existing.createdBy,
+      lastMessageAt: shouldUpdateTimestamp ? message.createdAt : existing.lastMessageAt,
+      lastMessage: shouldUpdateTimestamp ? message.message : existing.lastMessage,
+      displayAvatar: existing.displayAvatar,
+      memberWallets: existing.memberWallets,
+      memberProfiles: existing.memberProfiles,
+      memberCount: existing.memberCount,
+      counterpartProfile: existing.counterpartProfile,
+    );
+
+    if (!shouldUpdateTimestamp) {
+      _conversations[index] = updated;
+      return;
+    }
+
+    if (index == 0) {
+      _conversations[0] = updated;
+    } else {
+      _conversations.removeAt(index);
+      _conversations.insert(0, updated);
+    }
+  }
+
   void _onMessageReceived(Map<String, dynamic> data) {
     try {
       final convId = ((data['conversationId'] ?? data['conversation_id']) ?? '').toString();
@@ -910,6 +953,7 @@ class ChatProvider extends ChangeNotifier {
           debugPrint('ChatProvider: Background fetchMessages failed for conv $convId: $e');
         });
       }
+      _upsertConversationMetadataForMessage(convId, msg);
       // Only increment unread count when the conversation is not currently open
       if (!(_openConversationId != null && _openConversationId == convId)) {
         _unreadCounts[convId] = (_unreadCounts[convId] ?? 0) + 1;
@@ -1077,6 +1121,7 @@ class ChatProvider extends ChangeNotifier {
     }
     final newList = <ChatMessage>[msg, ...existing];
     _messages[nid] = newList;
+    _upsertConversationMetadataForMessage(nid, msg);
     debugPrint('ChatProvider.sendMessage: Added message ${msg.id} to conv $nid, total messages: ${newList.length}');
     _safeNotifyListeners(force: true);
   }

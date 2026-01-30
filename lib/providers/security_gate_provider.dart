@@ -11,7 +11,6 @@ import '../services/auth_session_coordinator.dart';
 import '../services/backend_api_service.dart';
 import '../services/pin_hashing.dart';
 import '../services/settings_service.dart';
-import '../services/onboarding_state_service.dart';
 import '../providers/notification_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/wallet_provider.dart';
@@ -330,6 +329,17 @@ class SecurityGateProvider extends ChangeNotifier implements AuthSessionCoordina
       _settings ??= SettingsState.fromPrefs(prefs);
     } catch (_) {}
 
+    if (prefs != null) {
+      final sessionStatus = AuthGatingService.evaluateStoredSession(prefs: prefs);
+      if (sessionStatus == StoredSessionStatus.refreshRequired) {
+        final refreshed = await BackendApiService().refreshAuthTokenFromStorage();
+        if (refreshed) {
+          _cooldownUntil = DateTime.now().add(_promptCooldown);
+          return const AuthReauthResult(AuthReauthOutcome.success);
+        }
+      }
+    }
+
     // Only prompt for re-auth if:
     // 1. Feature is enabled AND
     // 2. User has a local account/session
@@ -338,14 +348,7 @@ class SecurityGateProvider extends ChangeNotifier implements AuthSessionCoordina
     final hasAppLock = requirePin || biometricsEnabled;
     
     if (!shouldPrompt) {
-      // Fresh installs (no stored session) must never show the "sign in again" lock.
-      // Let onboarding proceed; only route to sign-in for true returning sessions.
-      final showOnboarding = await AuthGatingService.shouldShowFirstRunOnboarding(
-        prefs: prefs,
-        onboardingState: prefs == null ? null : await OnboardingStateService.load(prefs: prefs),
-      );
-
-      if (!showOnboarding) {
+      if (_hasLocalAccount) {
         _cooldownUntil = DateTime.now().add(_promptCooldown);
         final navigator = appNavigatorKey.currentState;
         if (navigator != null && navigator.mounted) {

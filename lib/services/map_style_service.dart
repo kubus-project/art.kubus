@@ -16,7 +16,8 @@ class MapStyleService {
   static const String bundledLightStyleAsset = 'assets/map_styles/kubus_light.json';
   static const String bundledDarkStyleAsset = 'assets/map_styles/kubus_dark.json';
 
-  static bool get devFallbackEnabled => AppConfig.isDevelopment && kDebugMode;
+  static bool get devFallbackEnabled =>
+      AppConfig.isDevelopment && kDebugMode && !kIsWeb;
 
   static String primaryStyleRef({required bool isDarkMode}) {
     return isDarkMode ? AppConfig.mapStyleDarkAsset : AppConfig.mapStyleLightAsset;
@@ -86,9 +87,11 @@ class MapStyleService {
     }
 
     // Flutter web serves bundled assets under `assets/<assetPath>`.
-    // If the asset path itself starts with `assets/`, the final URL should be
-    // `assets/assets/...`.
+    // If the path already begins with `assets/`, don't prepend again.
     if (normalized.startsWith('assets/assets/')) {
+      return normalized.substring('assets/'.length);
+    }
+    if (normalized.startsWith('assets/')) {
       return normalized;
     }
 

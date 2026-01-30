@@ -1,4 +1,5 @@
 ﻿import 'dart:async';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -2980,27 +2981,54 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       );
     }
 
-    if (suggestion.type == 'artwork' && suggestion.id != null) {
-      await openArtwork(context, suggestion.id!, source: 'desktop_home_search');
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context);
+    void showInvalidSelection() {
+      messenger.showKubusSnackBar(
+        SnackBar(
+          content: Text(
+            l10n?.activityNavigationUnableToOpenToast ??
+                'Unable to open this item right now.',
+          ),
+        ),
+      );
+    }
+
+    final resolvedId = suggestion.id?.trim();
+    if (suggestion.type == 'artwork') {
+      if (resolvedId == null || resolvedId.isEmpty) {
+        showInvalidSelection();
+        return;
+      }
+      await openArtwork(context, resolvedId, source: 'desktop_home_search');
       return;
     }
 
-    if (suggestion.type == 'profile' && suggestion.id != null) {
+    if (suggestion.type == 'profile') {
+      if (resolvedId == null || resolvedId.isEmpty) {
+        showInvalidSelection();
+        return;
+      }
       final shellScope = DesktopShellScope.of(context);
       if (shellScope != null) {
         shellScope.pushScreen(
           DesktopSubScreen(
             title: suggestion.subtitle ?? suggestion.label,
-            child: UserProfileScreen(userId: suggestion.id!),
+            child: UserProfileScreen(userId: resolvedId),
           ),
         );
       } else {
         await Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (_) => UserProfileScreen(userId: suggestion.id!),
+            builder: (_) => UserProfileScreen(userId: resolvedId),
           ),
         );
       }
+      return;
+    }
+
+    if (resolvedId == null || resolvedId.isEmpty) {
+      showInvalidSelection();
       return;
     }
 

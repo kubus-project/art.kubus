@@ -771,25 +771,27 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         belowLayerId: _markerLayerId,
       );
 
-      await controller.addGeoJsonSource(
-        _locationSourceId,
-        const <String, dynamic>{
-          'type': 'FeatureCollection',
-          'features': <dynamic>[]
-        },
-        promoteId: 'id',
-      );
-      await controller.addCircleLayer(
-        _locationSourceId,
-        _locationLayerId,
-        ml.CircleLayerProperties(
-          circleRadius: 6,
-          circleColor: _hexRgb(scheme.secondary),
-          circleOpacity: 1.0,
-          circleStrokeWidth: 2,
-          circleStrokeColor: _hexRgb(scheme.surface),
-        ),
-      );
+      if (!kIsWeb) {
+        await controller.addGeoJsonSource(
+          _locationSourceId,
+          const <String, dynamic>{
+            'type': 'FeatureCollection',
+            'features': <dynamic>[]
+          },
+          promoteId: 'id',
+        );
+        await controller.addCircleLayer(
+          _locationSourceId,
+          _locationLayerId,
+          ml.CircleLayerProperties(
+            circleRadius: 6,
+            circleColor: _hexRgb(scheme.secondary),
+            circleOpacity: 1.0,
+            circleStrokeWidth: 2,
+            circleStrokeColor: _hexRgb(scheme.surface),
+          ),
+        );
+      }
 
       await controller.addGeoJsonSource(
         _pendingSourceId,
@@ -1010,6 +1012,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   Future<void> _syncUserLocation({required ThemeProvider themeProvider}) async {
+    if (kIsWeb) return;
     final controller = _mapController;
     if (controller == null) return;
     if (!_styleInitialized) return;
@@ -4079,35 +4082,66 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _searchSuggestions = [];
     });
 
-    if (suggestion.position != null) {
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context);
+    void showInvalidSelection() {
+      messenger.showKubusSnackBar(
+        SnackBar(
+          content: Text(
+            l10n?.activityNavigationUnableToOpenToast ??
+                'Unable to open this item right now.',
+          ),
+        ),
+      );
+    }
+
+    final position = suggestion.position;
+    if (position != null) {
       _moveCamera(
-        suggestion.position!,
+        position,
         math.max(_effectiveZoom, 15.0),
       );
     }
 
-    if (suggestion.type == 'artwork' && suggestion.id != null) {
+    final resolvedId = suggestion.id?.trim();
+    if (suggestion.type == 'artwork') {
+      if (resolvedId == null || resolvedId.isEmpty) {
+        showInvalidSelection();
+        return;
+      }
       unawaited(_selectArtworkById(
-        suggestion.id!,
+        resolvedId,
         focusPosition: suggestion.position,
         openDetail: true,
       ));
-    } else if (suggestion.type == 'profile' && suggestion.id != null) {
+      return;
+    }
+
+    if (suggestion.type == 'profile') {
+      if (resolvedId == null || resolvedId.isEmpty) {
+        showInvalidSelection();
+        return;
+      }
       final shellScope = DesktopShellScope.of(context);
       if (shellScope != null) {
         shellScope.pushScreen(
           DesktopSubScreen(
             title: suggestion.subtitle ?? suggestion.label,
-            child: UserProfileScreen(userId: suggestion.id!),
+            child: UserProfileScreen(userId: resolvedId),
           ),
         );
       } else {
         unawaited(Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (_) => UserProfileScreen(userId: suggestion.id!),
+            builder: (_) => UserProfileScreen(userId: resolvedId),
           ),
         ));
       }
+      return;
+    }
+
+    if (resolvedId == null || resolvedId.isEmpty) {
+      showInvalidSelection();
     }
   }
 
