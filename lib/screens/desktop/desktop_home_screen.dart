@@ -162,6 +162,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   }
 
   Future<void> _loadInitialData() async {
+    if (!mounted) return;
     final artworkProvider = context.read<ArtworkProvider>();
     final communityProvider = context.read<CommunityHubProvider>();
     final configProvider = context.read<ConfigProvider>();
@@ -171,14 +172,19 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       await artworkProvider.loadArtworks();
     }
 
+    if (!mounted) return;
+
     if (!communityProvider.groupsInitialized &&
         !communityProvider.groupsLoading) {
       await communityProvider.loadGroups();
     }
 
+    if (!mounted) return;
+
     if (communityProvider.artFeedPosts.isEmpty &&
         !communityProvider.artFeedLoading) {
       final center = await _resolveArtFeedLocation(configProvider);
+      if (!mounted) return;
       await communityProvider.loadArtFeed(
         latitude: center.lat ?? 46.05,
         longitude: center.lng ?? 14.50,
@@ -188,12 +194,19 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       );
     }
 
+    if (!mounted) return;
+
     await _loadPopularCommunityPosts();
   }
 
   Future<void> _loadPopularCommunityPosts({bool force = false}) async {
     if (_popularCommunityLoading) return;
     if (!force && _popularCommunityPosts.isNotEmpty) return;
+
+    // This method can be awaited from other long async chains.
+    // Guard before touching context to avoid "State no longer has a context"
+    // crashes when the widget is disposed mid-flight (common on web routing).
+    if (!mounted) return;
 
     final communityProvider = context.read<CommunityHubProvider>();
     final configProvider = context.read<ConfigProvider>();
