@@ -715,10 +715,32 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           circleRadius: hitboxRadius,
           circleColor: _hexRgb(scheme.surface),
           circleOpacity: 0.01,
+          // Shift hitbox up ~8px to align with visual cube center (PNG is 72px tall, cube is 46px centered higher)
+          circleTranslate: const <dynamic>[0, -8],
+          // Maintain constant screen-space hitbox size regardless of pitch (3D mode)
+          circlePitchScale: 'viewport',
+          circlePitchAlignment: 'viewport',
         ),
         belowLayerId: _markerLayerId,
       );
 
+      // Add fill-extrusion layer FIRST (for 3D cubes) so it renders BELOW the icon layer.
+      await controller.addFillExtrusionLayer(
+        _cubeSourceId,
+        _cubeLayerId,
+        ml.FillExtrusionLayerProperties(
+          fillExtrusionColor: <dynamic>['get', 'color'],
+          fillExtrusionHeight: <dynamic>['get', 'height'],
+          fillExtrusionBase: 0.0,
+          fillExtrusionOpacity: 1.0,
+          fillExtrusionVerticalGradient: false,
+          visibility: 'none',
+        ),
+        belowLayerId: _markerLayerId,
+      );
+
+      // Add symbol layer for cube TOP FACE icons AFTER fill-extrusion so they render ABOVE the cubes.
+      // This creates the visual effect of the 2D marker appearing on top of the 3D cube.
       await controller.addSymbolLayer(
         _markerSourceId,
         _cubeIconLayerId,
@@ -746,20 +768,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           iconAnchor: 'center',
           iconPitchAlignment: 'map',
           iconRotationAlignment: 'map',
-          visibility: 'none',
-        ),
-        belowLayerId: _markerLayerId,
-      );
-
-      await controller.addFillExtrusionLayer(
-        _cubeSourceId,
-        _cubeLayerId,
-        ml.FillExtrusionLayerProperties(
-          fillExtrusionColor: <dynamic>['get', 'color'],
-          fillExtrusionHeight: <dynamic>['get', 'height'],
-          fillExtrusionBase: 0.0,
-          fillExtrusionOpacity: 1.0,
-          fillExtrusionVerticalGradient: false,
           visibility: 'none',
         ),
         belowLayerId: _markerLayerId,
@@ -5028,9 +5036,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     if (_markerOverlayMode == _MarkerOverlayMode.centered ||
         _selectedMarkerAnchor == null) {
-      return Align(
-        alignment: Alignment.center,
-        child: wrappedCard,
+      // Use UnconstrainedBox to prevent Positioned.fill from passing
+      // full-screen constraints to the card, which caused the 1-frame
+      // "correct then huge" snap issue on desktop.
+      return Center(
+        child: UnconstrainedBox(
+          child: wrappedCard,
+        ),
       );
     }
 
@@ -5040,13 +5052,63 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final zoomFactor = (_cameraZoom / 15.0).clamp(0.5, 1.5);
     final verticalOffset = baseOffset * zoomFactor;
 
-    return CompositedTransformFollower(
-      link: _markerOverlayLink,
-      showWhenUnlinked: false,
-      targetAnchor: Alignment.center,
-      followerAnchor: Alignment.bottomCenter,
-      offset: Offset(0, -verticalOffset),
-      child: wrappedCard,
+    // Use LayoutBuilder + Positioned for proper viewport clamping
+    // instead of CompositedTransformFollower which has no viewport awareness.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final anchor = _selectedMarkerAnchor!;
+        const double cardWidth = 280; // Match maxWidth in _buildMarkerOverlayCard
+        const double padding = 16;
+        // Estimate card height (actual card uses maxHeight from viewportHeight * 0.6)
+        final viewportHeight = MediaQuery.of(context).size.height;
+        final estimatedCardHeight = math.min(viewportHeight * 0.5, 400.0);
+
+        // Center horizontally around anchor, clamped to viewport
+        double left = anchor.dx - (cardWidth / 2);
+        left = left.clamp(padding, constraints.maxWidth - cardWidth - padding);
+
+        // Calculate available space above and below marker
+        final topSafe = MediaQuery.of(context).padding.top + padding;
+        final bottomPadding = padding;
+        final spaceAbove = anchor.dy - topSafe - verticalOffset;
+        final spaceBelow = constraints.maxHeight - anchor.dy - verticalOffset - bottomPadding;
+
+        // Position above marker by default, fallback below if not enough space
+        double top;
+        if (estimatedCardHeight <= spaceAbove) {
+          // Fits above marker
+          top = anchor.dy - estimatedCardHeight - verticalOffset;
+        } else if (estimatedCardHeight <= spaceBelow) {
+          // Fits below marker
+          top = anchor.dy + verticalOffset;
+        } else {
+          // Neither fits fully - use whichever has more space
+          top = spaceAbove >= spaceBelow
+              ? topSafe
+              : constraints.maxHeight - estimatedCardHeight - bottomPadding;
+        }
+
+        // Final clamp to ensure card never goes off-screen
+        top = top.clamp(topSafe, math.max(topSafe, constraints.maxHeight - estimatedCardHeight - bottomPadding));
+
+        if (kDebugMode) {
+          AppConfig.debugPrint(
+            'DesktopMapScreen: card positioned at ($left, $top) anchor=(${anchor.dx.toStringAsFixed(0)}, ${anchor.dy.toStringAsFixed(0)}) '
+            'spaceAbove=${spaceAbove.toStringAsFixed(0)} spaceBelow=${spaceBelow.toStringAsFixed(0)}',
+          );
+        }
+
+        return Stack(
+          children: [
+            Positioned(
+              left: left,
+              top: top,
+              width: cardWidth,
+              child: wrappedCard,
+            ),
+          ],
+        );
+      },
     );
   }
 

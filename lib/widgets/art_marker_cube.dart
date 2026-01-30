@@ -274,6 +274,7 @@ class ArtMarkerCubeIconRenderer {
       roles: roles,
       showGlow: showGlow,
       forceGlow: forceGlow,
+      isDark: isDark,
       pixelRatio: pixelRatio,
     );
   }
@@ -288,6 +289,7 @@ class ArtMarkerCubeIconRenderer {
     required KubusColorRoles roles,
     required bool showGlow,
     required bool forceGlow,
+    required bool isDark,
     double pixelRatio = 2.0,
   }) async {
     // Flat marker is a square matching the previous isometric footprint.
@@ -356,46 +358,24 @@ class ArtMarkerCubeIconRenderer {
             ..color = palette.edge,
         );
 
-        // Draw inner square for icon background
-        final iconSize = squareSize * 0.65;
-        final iconRect = Rect.fromCenter(
-          center: center,
-          width: iconSize,
-          height: iconSize,
-        );
-        canvas.drawRect(
-          iconRect,
-          Paint()
-            ..color = style.iconShadowColor
-            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
-        );
-        canvas.drawRect(
-          iconRect,
-          Paint()..color = style.iconBackgroundColor,
-        );
-        canvas.drawRect(
-          iconRect,
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.0
-            ..color = palette.topAccent.withValues(alpha: 0.5),
-        );
-
-        // Draw icon
+        // Draw icon directly on the subject-colored marker body.
+        // No background box - just the icon glyph.
+        // Icon color is theme-based: white in dark mode, black in light mode.
         if (icon.codePoint != 0) {
           final fontFamily = icon.fontFamily ?? 'MaterialIcons';
+          final iconColor = isDark ? const Color(0xFFFFFFFF) : const Color(0xFF000000);
           final glyphPainter = TextPainter(
             text: TextSpan(
               text: String.fromCharCode(icon.codePoint),
               style: TextStyle(
-                fontSize: squareSize * 0.4,
+                fontSize: squareSize * 0.5,
                 fontFamily: fontFamily,
                 fontFamilyFallback: const <String>[
                   'MaterialIcons',
                   'Material Symbols Outlined',
                 ],
                 package: icon.fontPackage,
-                color: palette.topAccent,
+                color: iconColor,
               ),
             ),
             textDirection: TextDirection.ltr,
@@ -500,8 +480,10 @@ class ArtMarkerCubeIconRenderer {
     final label = count > 99 ? '99+' : '$count';
     final palette =
         _CubePalette.fromBase(baseColor, edgeColor: style.edgeColor);
+    // Cluster label color is theme-based: white in dark mode, black in light mode.
+    final labelColor = isDark ? const Color(0xFFFFFFFF) : const Color(0xFF000000);
     final labelStyle = KubusTextStyles.badgeCount.copyWith(
-      color: palette.topAccent,
+      color: labelColor,
     );
 
     return _renderFlatClusterPng(
@@ -581,30 +563,8 @@ class ArtMarkerCubeIconRenderer {
             ..color = palette.edge,
         );
 
-        final labelSize = squareSize * 0.65;
-        final labelRect = Rect.fromCenter(
-          center: center,
-          width: labelSize,
-          height: labelSize,
-        );
-        canvas.drawRect(
-          labelRect,
-          Paint()
-            ..color = style.iconShadowColor
-            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
-        );
-        canvas.drawRect(
-          labelRect,
-          Paint()..color = style.iconBackgroundColor,
-        );
-        canvas.drawRect(
-          labelRect,
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.0
-            ..color = palette.topAccent.withValues(alpha: 0.5),
-        );
-
+        // Draw cluster count label directly on the subject-colored marker body.
+        // No background box - just the label text.
         final labelPainter = TextPainter(
           text: TextSpan(text: label, style: labelStyle),
           textAlign: TextAlign.center,
@@ -633,6 +593,16 @@ class ArtMarkerCubeIconRenderer {
     final pr =
         pixelRatio.isFinite ? pixelRatio.clamp(1.0, 4.0).toDouble() : 2.0;
     canvas.scale(pr, pr);
+
+    // Clear canvas to fully transparent to prevent black box artifacts.
+    // Without this, uninitialized pixels may render as black on some platforms.
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, width, height),
+      Paint()
+        ..color = const Color(0x00000000)
+        ..blendMode = BlendMode.clear,
+    );
+
     paint(canvas, logicalSize);
 
     final picture = recorder.endRecording();
