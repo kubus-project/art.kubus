@@ -74,8 +74,8 @@ class InstitutionProvider extends ChangeNotifier {
       final institutionsJson = await api.listInstitutions(limit: 100, offset: 0);
       final nextInstitutions = institutionsJson.map((e) => Institution.fromJson(e)).toList();
 
-      // Fetch events globally; if backend prefers per-institution, this is still fine
-      final eventsJson = await api.listEvents(limit: 200, offset: 0);
+      // Fetch events globally; backend validates limit max=100, so request max allowed.
+      final eventsJson = await api.listEvents(limit: 100, offset: 0);
       final nextEvents = eventsJson.map((e) => Event.fromJson(e)).toList();
 
       // If backend endpoints are unavailable (404) the API returns empty lists.
