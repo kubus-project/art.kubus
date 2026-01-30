@@ -13,6 +13,38 @@ class WalletUtils {
     return wallet.trim();
   }
 
+  /// Returns true if the string looks like a valid wallet address format.
+  ///
+  /// Supports:
+  /// - Ethereum (0x + 40 hex chars)
+  /// - Solana (base58, 32-44 chars, no spaces, alphanumeric)
+  /// - Other base58/base64 identifiers (>= 32 chars, no spaces or special chars)
+  ///
+  /// Returns false for display names, usernames, or obviously non-wallet strings.
+  static bool looksLikeWallet(String? wallet) {
+    final normalized = normalize(wallet);
+    if (normalized.isEmpty) return false;
+    // Reject known placeholder strings
+    const placeholders = {'unknown', 'anonymous', 'n/a', 'none', 'null', 'undefined'};
+    if (placeholders.contains(normalized.toLowerCase())) return false;
+    // Reject strings with spaces (display names typically have spaces)
+    if (normalized.contains(' ')) return false;
+    // Reject strings with special characters typical of names but not wallets
+    if (RegExp(r'[+@#\$%\^&\*\(\)!,\?]').hasMatch(normalized)) return false;
+    // Ethereum address: 0x + 40 hex characters
+    if (RegExp(r'^0x[a-fA-F0-9]{40}$').hasMatch(normalized)) return true;
+    // Solana address: base58, typically 32-44 characters
+    // Base58 alphabet: 123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz
+    if (normalized.length >= 32 && normalized.length <= 44) {
+      if (RegExp(r'^[1-9A-HJ-NP-Za-km-z]+$').hasMatch(normalized)) return true;
+    }
+    // Generic: long alphanumeric string (>= 32 chars) without spaces
+    if (normalized.length >= 32 && RegExp(r'^[a-zA-Z0-9_-]+$').hasMatch(normalized)) {
+      return true;
+    }
+    return false;
+  }
+
   /// Returns a canonical representation for comparisons (case preserved).
   static String canonical(String? wallet) => normalize(wallet);
 

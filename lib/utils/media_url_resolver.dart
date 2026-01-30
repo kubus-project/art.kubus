@@ -19,6 +19,56 @@ class MediaUrlResolver {
     'avif',
   };
 
+  // Rate limit tracking for media proxy
+  static DateTime? _proxyRateLimitUntil;
+  static int _proxyFailureCount = 0;
+
+  /// Call this when a media proxy request fails with 429 or similar rate limit error.
+  static void markProxyRateLimited() {
+    _proxyFailureCount++;
+    // Exponential backoff: 5min, 10min, 20min based on failure count (capped at 3 failures)
+    final backoff = Duration(minutes: 5 * (1 << (_proxyFailureCount - 1).clamp(0, 2)));
+    _proxyRateLimitUntil = DateTime.now().add(backoff);
+    if (foundation.kDebugMode) {
+      foundation.debugPrint('MediaUrlResolver: proxy rate-limited until $_proxyRateLimitUntil (failures: $_proxyFailureCount)');
+    }
+  }
+
+  /// Call this when a media proxy request succeeds to reset the failure counter.
+  static void markProxySuccess() {
+    _proxyFailureCount = 0;
+    _proxyRateLimitUntil = null;
+  }
+
+  /// Check if we should skip proxying due to rate limiting.
+  static bool get _isProxyRateLimited {
+    if (_proxyRateLimitUntil == null) return false;
+    if (DateTime.now().isAfter(_proxyRateLimitUntil!)) {
+      // Rate limit window expired, allow retry but keep failure count for backoff
+      _proxyRateLimitUntil = null;
+      return false;
+    }
+    return true;
+  }
+
+  // Domains known to require CORS proxy (selective proxying)
+  static const Set<String> _corsProblematicDomains = {
+    'wikimedia.org',
+    'wikipedia.org',
+    'upload.wikimedia.org',
+    'commons.wikimedia.org',
+  };
+
+  static bool _needsProxy(String url) {
+    try {
+      final uri = Uri.parse(url);
+      final host = uri.host.toLowerCase();
+      return _corsProblematicDomains.any((d) => host.endsWith(d));
+    } catch (_) {
+      return false;
+    }
+  }
+
   static bool _looksLikeImageUrl(String url) {
     try {
       final uri = Uri.parse(url);
@@ -78,13 +128,18 @@ class MediaUrlResolver {
     // requires upstream CORS headers. For third-party hosts that don't set CORS,
     // route through our backend proxy (which is same-origin to the app's API).
     if (foundation.kIsWeb && AppConfig.isFeatureEnabled('externalImageProxy')) {
+      // Skip proxying if rate-limited
+      if (_isProxyRateLimited) {
+        return resolved;
+      }
       final lowerResolved = resolved.toLowerCase();
       final isHttp = lowerResolved.startsWith('http://') || lowerResolved.startsWith('https://');
       if (
           isHttp &&
           _looksLikeImageUrl(resolved) &&
           !_isSameHostAsBackend(resolved) &&
-          !lowerResolved.contains('/api/media/proxy')
+          !lowerResolved.contains('/api/media/proxy') &&
+          _needsProxy(resolved) // Only proxy known CORS-problematic domains
       ) {
         return _proxyImageUrl(resolved);
       }

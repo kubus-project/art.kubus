@@ -871,7 +871,9 @@ class _MapScreenState extends State<MapScreen>
     final intent = provider.consumePending();
     if (intent == null) return;
 
-    unawaited(_handleMapDeepLinkIntent(intent));
+    unawaited(_handleMapDeepLinkIntent(intent).catchError((e) {
+      if (kDebugMode) debugPrint('MapScreen: deep link intent error: $e');
+    }));
   }
 
   Future<void> _handleMapDeepLinkIntent(MapDeepLinkIntent intent) async {
@@ -2595,22 +2597,32 @@ class _MapScreenState extends State<MapScreen>
       },
       onStyleLoaded: () {
         AppConfig.debugPrint('MapScreen: onStyleLoadedCallback');
-        unawaited(_handleMapStyleLoaded(themeProvider));
+        unawaited(_handleMapStyleLoaded(themeProvider).catchError((e) {
+          if (kDebugMode) debugPrint('MapScreen: style loaded error: $e');
+        }));
 
         // Travel mode must start with a bounds query once the map is ready,
         // otherwise the first load may be anchored to the default center.
         if (_travelModeEnabled) {
           unawaited(
             _loadMarkersForCurrentView(forceRefresh: true)
-                .then((_) => _maybeOpenInitialMarker()),
+                .then((_) => _maybeOpenInitialMarker())
+                .catchError((e) {
+                  if (kDebugMode) debugPrint('MapScreen: initial marker load error: $e');
+                }),
           );
         } else if (_artMarkers.isEmpty && !_isLoadingMarkers) {
           unawaited(
             _loadMarkersForCurrentView(forceRefresh: true)
-                .then((_) => _maybeOpenInitialMarker()),
+                .then((_) => _maybeOpenInitialMarker())
+                .catchError((e) {
+                  if (kDebugMode) debugPrint('MapScreen: initial marker load error: $e');
+                }),
           );
         } else {
-          unawaited(_maybeOpenInitialMarker());
+          unawaited(_maybeOpenInitialMarker().catchError((e) {
+            if (kDebugMode) debugPrint('MapScreen: open initial marker error: $e');
+          }));
         }
       },
       onCameraMove: (position) {
@@ -3384,7 +3396,8 @@ class _MapScreenState extends State<MapScreen>
           duration: const Duration(milliseconds: 520),
           curve: Curves.easeOutCubic,
           builder: (context, t, _) {
-            final radius = maxRadius * t;
+            // Ensure minimum size to prevent 0x0 SizedBox layout issues on web
+            final radius = math.max(1.0, maxRadius * t);
             final alpha = (1.0 - t) * 0.26;
             return SizedBox(
               width: radius * 2,

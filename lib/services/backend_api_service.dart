@@ -1957,7 +1957,14 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       if (normalized.isEmpty || ['unknown', 'anonymous', 'n/a', 'none'].contains(normalized.toLowerCase())) {
         throw Exception('Profile not found');
       }
-      final uri = Uri.parse('$baseUrl/api/profiles/$walletAddress');
+      // Validate wallet format to prevent 404s from display names or malformed identifiers
+      if (!WalletUtils.looksLikeWallet(normalized)) {
+        AppConfig.debugPrint('BackendApiService.getProfileByWallet: rejecting non-wallet identifier: $normalized');
+        throw Exception('Invalid wallet address format');
+      }
+      // URL-encode the wallet address for safe path segments
+      final encodedWallet = Uri.encodeComponent(normalized);
+      final uri = Uri.parse('$baseUrl/api/profiles/$encodedWallet');
       final dynamic data = await _fetchJson(uri, includeAuth: false, allowOrbitFallback: true);
       final raw = data['data'] ?? data;
       if (raw is Map<String, dynamic>) {
