@@ -221,6 +221,14 @@ class _ArtMapViewState extends State<ArtMapView> {
     }
   }
 
+  void _webDiagPrint(String message) {
+    if (!_webDebugMapEnabled) return;
+    // Intentionally use `print` so logs show up in release web builds.
+    // This is gated behind `?debug_map=1`.
+    // ignore: avoid_print
+    print(message);
+  }
+
   Future<void> _runWebMapDiagnosticsIfEnabled(String styleRef) async {
     if (!_webDebugMapEnabled) return;
 
@@ -231,38 +239,54 @@ class _ArtMapViewState extends State<ArtMapView> {
     try {
       client = http.Client();
 
-      final styleUri = Uri.parse(styleRef);
-      final styleResp = await client.get(styleUri);
-      AppConfig.debugPrint(
-        'ArtMapView(web diag): style GET ${styleUri.toString()} -> ${styleResp.statusCode}',
-      );
-
-      if (styleResp.statusCode < 200 || styleResp.statusCode >= 300) {
-        AppConfig.debugPrint(
-          'ArtMapView(web diag): style fetch failed, body=${styleResp.body.substring(0, math.min(200, styleResp.body.length))}',
+      Map<String, dynamic> decoded;
+      final trimmed = styleRef.trimLeft();
+      if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+        _webDiagPrint('ArtMapView(web diag): style is inline JSON (length=${styleRef.length})');
+        final dynamic rawDecoded = jsonDecode(styleRef);
+        if (rawDecoded is! Map<String, dynamic>) {
+          _webDiagPrint('ArtMapView(web diag): inline style JSON was not an object');
+          return;
+        }
+        decoded = rawDecoded;
+      } else {
+        // The plugin supports passing style refs as URLs/asset paths.
+        // On web we want to probe fetchability (CSP, origin, etc.).
+        final styleUri = Uri.base.resolve(styleRef);
+        final styleResp = await client.get(styleUri);
+        _webDiagPrint(
+          'ArtMapView(web diag): style GET ${styleUri.toString()} -> ${styleResp.statusCode}',
         );
-        return;
-      }
 
-      final dynamic decoded = jsonDecode(styleResp.body);
-      if (decoded is! Map<String, dynamic>) {
-        AppConfig.debugPrint('ArtMapView(web diag): style JSON was not an object');
-        return;
+        if (styleResp.statusCode < 200 || styleResp.statusCode >= 300) {
+          final body = styleResp.body;
+          _webDiagPrint(
+            'ArtMapView(web diag): style fetch failed, body=${body.substring(0, math.min(200, body.length))}',
+          );
+          return;
+        }
+
+        final dynamic rawDecoded = jsonDecode(styleResp.body);
+        if (rawDecoded is! Map<String, dynamic>) {
+          _webDiagPrint('ArtMapView(web diag): style JSON was not an object');
+          return;
+        }
+        decoded = rawDecoded;
       }
 
       final glyphs = decoded['glyphs']?.toString();
       if (glyphs != null && glyphs.isNotEmpty) {
         final glyphUrl = glyphs
-            .replaceAll('{fontstack}', 'Open Sans Regular')
+            .replaceAll('{fontstack}', Uri.encodeComponent('Open Sans Regular'))
             .replaceAll('{range}', '0-255');
         try {
           final glyphUri = Uri.parse(glyphUrl);
           final glyphResp = await client.get(glyphUri);
-          AppConfig.debugPrint(
+          _webDiagPrint(
             'ArtMapView(web diag): glyphs GET ${glyphUri.toString()} -> ${glyphResp.statusCode}',
           );
         } catch (e) {
-          AppConfig.debugPrint('ArtMapView(web diag): glyphs fetch failed: $e');
+          _webDiagPrint('ArtMapView(web diag): glyphs fetch failed: $e');
         }
       }
 
@@ -289,20 +313,20 @@ class _ArtMapViewState extends State<ArtMapView> {
           try {
             final tileUri = Uri.parse(tileUrl);
             final tileResp = await client.get(tileUri);
-            AppConfig.debugPrint(
+            _webDiagPrint(
               'ArtMapView(web diag): tile GET ${tileUri.toString()} -> ${tileResp.statusCode}',
             );
           } catch (e) {
-            AppConfig.debugPrint('ArtMapView(web diag): tile fetch failed: $e');
+            _webDiagPrint('ArtMapView(web diag): tile fetch failed: $e');
           }
         } else {
-          AppConfig.debugPrint('ArtMapView(web diag): no tile sources found in style');
+          _webDiagPrint('ArtMapView(web diag): no tile sources found in style');
         }
       }
     } catch (e, st) {
-      AppConfig.debugPrint('ArtMapView(web diag): failed: $e');
+      _webDiagPrint('ArtMapView(web diag): failed: $e');
       if (kDebugMode) {
-        AppConfig.debugPrint('ArtMapView(web diag): stack: $st');
+        _webDiagPrint('ArtMapView(web diag): stack: $st');
       }
     } finally {
       client?.close();
@@ -342,6 +366,7 @@ class _ArtMapViewState extends State<ArtMapView> {
 
         final mapWidget = kIsWeb
             ? ml.MapLibreMap(
+                key: ValueKey<String>('art_map_web:${widget.styleAsset}:${widget.isDarkMode}'),
                 styleString: resolved,
                 initialCameraPosition: ml.CameraPosition(
                   target: ml.LatLng(
@@ -365,6 +390,9 @@ class _ArtMapViewState extends State<ArtMapView> {
                 zoomGesturesEnabled: widget.zoomGesturesEnabled && styleReady,
                 tiltGesturesEnabled: widget.tiltGesturesEnabled && styleReady,
                 compassEnabled: widget.compassEnabled,
+                // Web-only: helps reduce WebGL context loss/blank frames in some
+                // compositing scenarios (e.g. heavy overlays/filters).
+                webPreserveDrawingBuffer: true,
                 // Explicitly disable location features on web.
                 // Some plugin versions default these on and attempt to send
                 // unsupported location render options to the web implementation.
@@ -431,6 +459,7 @@ class _ArtMapViewState extends State<ArtMapView> {
                 trackCameraPosition: true,
               )
             : ml.MapLibreMap(
+                key: ValueKey<String>('art_map_native:${widget.styleAsset}:${widget.isDarkMode}'),
                 styleString: resolved,
                 initialCameraPosition: ml.CameraPosition(
                   target: ml.LatLng(
