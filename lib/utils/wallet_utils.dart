@@ -41,4 +41,20 @@ class WalletUtils {
     }
     return '';
   }
+
+  /// Returns true if [value] looks like a valid Solana wallet address.
+  /// Solana addresses are base58 encoded public keys, typically 32-44 characters,
+  /// containing only alphanumeric characters (no 0, O, I, l to avoid ambiguity).
+  static bool looksLikeWalletAddress(String? value) {
+    if (value == null) return false;
+    final trimmed = value.trim();
+    // Solana addresses are typically 32-44 chars, base58 (no 0, O, I, l)
+    if (trimmed.length < 32 || trimmed.length > 44) return false;
+    // Base58 alphabet: 123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz
+    // Quick check: must not contain spaces, must be alphanumeric
+    if (trimmed.contains(' ')) return false;
+    // Check for invalid base58 characters
+    final invalidChars = RegExp(r'[^123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]');
+    return !invalidChars.hasMatch(trimmed);
+  }
 }
