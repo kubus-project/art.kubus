@@ -694,17 +694,19 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         ),
       );
       final hitboxScale = kIsWeb ? 1.35 : 1.0;
-      // MapLibre requires zoom expressions at top level of interpolate/step
+      // Increased hitbox radius to better cover the visual marker (56x72 PNG icon).
+      // This compensates for icon anchor offset where the visible cube center
+      // doesn't align perfectly with the GeoJSON coordinate.
       final hitboxRadius = <dynamic>[
         'interpolate',
         ['linear'],
         ['zoom'],
         3,
-        10 * hitboxScale,
+        14 * hitboxScale,  // Increased from 10
         14,
-        18 * hitboxScale,
+        24 * hitboxScale,  // Increased from 18 to cover ~48px diameter
         24,
-        26 * hitboxScale,
+        32 * hitboxScale,  // Increased from 26
       ];
       await controller.addCircleLayer(
         _markerSourceId,
@@ -866,21 +868,52 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (controller == null) return;
     if (!_styleInitialized) return;
 
+    // Debug instrumentation (kDebugMode only)
+    if (kDebugMode) {
+      final dpr = MediaQuery.of(context).devicePixelRatio;
+      AppConfig.debugPrint(
+        'DesktopMapScreen: tap at (${point.x.toStringAsFixed(1)}, ${point.y.toStringAsFixed(1)}) '
+        'pitch=${_lastPitch.toStringAsFixed(1)} bearing=${_lastBearing.toStringAsFixed(1)} '
+        'zoom=${_cameraZoom.toStringAsFixed(2)} dpr=$dpr 3D=$_is3DMarkerModeActive',
+      );
+    }
+
     try {
-      final layerIds = _is3DMarkerModeActive
-          ? <String>[
-              _markerHitboxLayerId,
-              _cubeLayerId,
-              _cubeIconLayerId,
-            ]
-          : <String>[_markerHitboxLayerId, _markerLayerId];
-      final features = await controller.queryRenderedFeatures(
-        point,
+      // Query all marker-related layers regardless of 3D mode for reliable hit-testing.
+      // The hitbox layer is always present and provides the most reliable tap detection.
+      final layerIds = <String>[
+        _markerHitboxLayerId,
+        _markerLayerId,
+        if (_is3DMarkerModeActive) ...[_cubeLayerId, _cubeIconLayerId],
+      ];
+
+      // Use a tolerance rectangle around the tap point for more reliable hit-testing.
+      // This compensates for icon anchor offset and touch inaccuracy.
+      const double tapTolerance = 12.0;
+      final rect = Rect.fromCenter(
+        center: Offset(point.x, point.y),
+        width: tapTolerance * 2,
+        height: tapTolerance * 2,
+      );
+      final features = await controller.queryRenderedFeaturesInRect(
+        rect,
         layerIds,
         null,
       );
 
+      if (kDebugMode && features.isNotEmpty) {
+        final dynamic first = features.first;
+        final props = (first is Map ? first['properties'] : null) as Map?;
+        AppConfig.debugPrint(
+          'DesktopMapScreen: queryRenderedFeaturesInRect hits=${features.length} '
+          'first.markerId=${props?['markerId'] ?? props?['id']} kind=${props?['kind']}',
+        );
+      }
+
       if (features.isEmpty) {
+        if (kDebugMode) {
+          AppConfig.debugPrint('DesktopMapScreen: no features in rect, trying fallback picker');
+        }
         final fallbackMarker = await _fallbackPickMarkerAtPoint(point);
         if (fallbackMarker != null) {
           _handleMarkerTap(fallbackMarker);
@@ -956,7 +989,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final controller = _mapController;
     if (controller == null) return null;
 
-    const double maxDistance = 64.0;
+    // Increase tolerance when map is pitched (3D) since projection becomes less accurate
+    final double maxDistance = _is3DMarkerModeActive ? 80.0 : 64.0;
     ArtMarker? best;
     double bestDistance = maxDistance;
 
@@ -4300,6 +4334,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     ArtMarker marker, {
     _MarkerOverlayMode overlayMode = _MarkerOverlayMode.anchored,
   }) {
+    // Guard against rapid repeated taps on the same marker
+    if (_selectedMarkerId == marker.id && _selectedMarkerAt != null) {
+      final elapsed = DateTime.now().difference(_selectedMarkerAt!);
+      if (elapsed.inMilliseconds < 300) return;
+    }
     // Desktop UX: do not re-center the map when a marker is clicked.
     setState(() {
       _selectedMarkerId = marker.id;
@@ -4553,8 +4592,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final artworkProvider = context.read<ArtworkProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    // Clamp maxHeight to 60% of viewport to prevent oversized cards on desktop
+    final viewportHeight = MediaQuery.of(context).size.height;
+    final maxCardHeight = math.min(viewportHeight * 0.6, 520.0);
+
     return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 280),
+      constraints: BoxConstraints(maxWidth: 280, maxHeight: maxCardHeight),
       child: AnimatedSize(
         duration: const Duration(milliseconds: 220),
         curve: Curves.easeOutCubic,
@@ -4581,10 +4624,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               borderRadius: BorderRadius.circular(18),
               showBorder: false,
               backgroundColor: scheme.surface.withValues(alpha: 0.45),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+              // Wrap in SingleChildScrollView to handle overflow when content exceeds maxHeight
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                   // Header row: Title + distance + close button
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -4882,12 +4927,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     ),
                   ),
                 ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
+              ), // Close Column
+            ), // Close SingleChildScrollView
+            ), // Close LiquidGlassPanel
+          ), // Close Container
+        ), // Close Material
+      ), // Close AnimatedSize
+    ); // Close ConstrainedBox
   }
 
   Widget _buildMarkerOverlayLayer({

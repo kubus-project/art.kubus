@@ -1370,6 +1370,11 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _handleMarkerTap(ArtMarker marker) {
+    // Guard against rapid repeated taps on the same marker
+    if (_selectedMarkerId == marker.id && _selectedMarkerAt != null) {
+      final elapsed = DateTime.now().difference(_selectedMarkerAt!);
+      if (elapsed.inMilliseconds < 300) return;
+    }
     _maybeRecordPresenceVisitForMarker(marker);
     setState(() {
       _selectedMarkerId = marker.id;
@@ -2776,17 +2781,19 @@ class _MapScreenState extends State<MapScreen>
         ),
       );
       final hitboxScale = kIsWeb ? 1.35 : 1.0;
-      // MapLibre requires zoom expressions at top level of interpolate/step
+      // Increased hitbox radius to better cover the visual marker (56x72 PNG icon).
+      // This compensates for icon anchor offset where the visible cube center
+      // doesn't align perfectly with the GeoJSON coordinate.
       final hitboxRadius = <dynamic>[
         'interpolate',
         ['linear'],
         ['zoom'],
         3,
-        10 * hitboxScale,
+        14 * hitboxScale,  // Increased from 10
         14,
-        18 * hitboxScale,
+        24 * hitboxScale,  // Increased from 18 to cover ~48px diameter
         24,
-        26 * hitboxScale,
+        32 * hitboxScale,  // Increased from 26
       ];
       await controller.addCircleLayer(
         _markerSourceId,
@@ -2946,20 +2953,52 @@ class _MapScreenState extends State<MapScreen>
     if (controller == null) return;
     if (!_styleInitialized) return;
 
+    // Debug instrumentation (kDebugMode only)
+    if (kDebugMode) {
+      final dpr = MediaQuery.of(context).devicePixelRatio;
+      AppConfig.debugPrint(
+        'MapScreen: tap at (${point.x.toStringAsFixed(1)}, ${point.y.toStringAsFixed(1)}) '
+        'pitch=${_lastPitch.toStringAsFixed(1)} bearing=${_lastBearing.toStringAsFixed(1)} '
+        'zoom=${_lastZoom.toStringAsFixed(2)} dpr=$dpr 3D=$_is3DMarkerModeActive',
+      );
+    }
+
     try {
-      final layerIds = _is3DMarkerModeActive
-          ? <String>[
-              _markerHitboxLayerId,
-              _cubeLayerId,
-              _cubeIconLayerId,
-            ]
-          : <String>[_markerHitboxLayerId, _markerLayerId];
-      final features = await controller.queryRenderedFeatures(
-        point,
+      // Query all marker-related layers regardless of 3D mode for reliable hit-testing.
+      // The hitbox layer is always present and provides the most reliable tap detection.
+      final layerIds = <String>[
+        _markerHitboxLayerId,
+        _markerLayerId,
+        if (_is3DMarkerModeActive) ...[_cubeLayerId, _cubeIconLayerId],
+      ];
+
+      // Use a tolerance rectangle around the tap point for more reliable hit-testing.
+      // This compensates for icon anchor offset and touch inaccuracy.
+      const double tapTolerance = 12.0;
+      final rect = Rect.fromCenter(
+        center: Offset(point.x, point.y),
+        width: tapTolerance * 2,
+        height: tapTolerance * 2,
+      );
+      final features = await controller.queryRenderedFeaturesInRect(
+        rect,
         layerIds,
         null,
       );
+
+      if (kDebugMode && features.isNotEmpty) {
+        final dynamic first = features.first;
+        final props = (first is Map ? first['properties'] : null) as Map?;
+        AppConfig.debugPrint(
+          'MapScreen: queryRenderedFeaturesInRect hits=${features.length} '
+          'first.markerId=${props?['markerId'] ?? props?['id']} kind=${props?['kind']}',
+        );
+      }
+
       if (features.isEmpty) {
+        if (kDebugMode) {
+          AppConfig.debugPrint('MapScreen: no features in rect, trying fallback picker');
+        }
         final fallbackMarker = await _fallbackPickMarkerAtPoint(point);
         if (fallbackMarker == null) return;
         _handleMarkerTap(fallbackMarker);
@@ -3020,7 +3059,8 @@ class _MapScreenState extends State<MapScreen>
     final controller = _mapController;
     if (controller == null) return null;
 
-    const double maxDistance = 64.0;
+    // Increase tolerance when map is pitched (3D) since projection becomes less accurate
+    final double maxDistance = _is3DMarkerModeActive ? 80.0 : 64.0;
     ArtMarker? best;
     double bestDistance = maxDistance;
 
@@ -3518,11 +3558,17 @@ class _MapScreenState extends State<MapScreen>
             const double cardWidth = 360;
             final double maxWidth =
                 math.min(cardWidth, constraints.maxWidth - 32);
+            // Clamp maxHeight to 55% of viewport to prevent oversized cards
+            final double maxCardHeight = math.min(
+              constraints.maxHeight * 0.55,
+              480,
+            );
             final double leftSafe = 16;
             final double rightSafe = constraints.maxWidth - maxWidth - 16;
             final double topSafe = MediaQuery.of(context).padding.top + 12;
+            // Use maxCardHeight for bottom safe calculation
             final double bottomSafe =
-                constraints.maxHeight - estimatedHeight - 12;
+                constraints.maxHeight - maxCardHeight - 12;
 
             // Account for marker height (flat square markers).
             const double markerOffset = 32.0;
@@ -3531,13 +3577,23 @@ class _MapScreenState extends State<MapScreen>
                 (anchor?.dx ?? (constraints.maxWidth / 2)) - (maxWidth / 2);
             left = left.clamp(leftSafe, rightSafe);
 
+            // Position above marker by default, below if not enough space
             double top = (anchor?.dy ?? (constraints.maxHeight / 2)) -
                 estimatedHeight -
                 markerOffset;
             if (top < topSafe) {
               top = (anchor?.dy ?? (constraints.maxHeight / 2)) + markerOffset;
             }
-            top = top.clamp(topSafe, bottomSafe);
+            // Ensure card stays within viewport bounds
+            top = top.clamp(topSafe, math.max(topSafe, bottomSafe));
+
+            if (kDebugMode) {
+              AppConfig.debugPrint(
+                'MapScreen: card anchor=(${anchor?.dx.toStringAsFixed(0)}, ${anchor?.dy.toStringAsFixed(0)}) '
+                'pos=(${left.toStringAsFixed(0)}, ${top.toStringAsFixed(0)}) '
+                'maxH=${maxCardHeight.toStringAsFixed(0)} estH=${estimatedHeight.toStringAsFixed(0)}',
+              );
+            }
 
             return Stack(
               children: [
@@ -3553,16 +3609,19 @@ class _MapScreenState extends State<MapScreen>
                     onPointerMove: (_) {},
                     onPointerUp: (_) {},
                     onPointerSignal: (_) {},
-                    child: AnimatedSize(
-                      duration: const Duration(milliseconds: 220),
-                      curve: Curves.easeOutCubic,
-                      child: Material(
-                        color: Colors.transparent,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(KubusRadius.lg),
-                            border: Border.all(
-                              color: baseColor.withValues(alpha: 0.35),
+                    // Add maxHeight constraint to prevent card growing beyond viewport
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxHeight: maxCardHeight),
+                      child: AnimatedSize(
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeOutCubic,
+                        child: Material(
+                          color: Colors.transparent,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(KubusRadius.lg),
+                              border: Border.all(
+                                color: baseColor.withValues(alpha: 0.35),
                               width: KubusSizes.hairline,
                             ),
                             boxShadow: [
@@ -3579,10 +3638,12 @@ class _MapScreenState extends State<MapScreen>
                             showBorder: false,
                             backgroundColor:
                                 scheme.surface.withValues(alpha: 0.45),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
+                            // Wrap in SingleChildScrollView to handle overflow when content exceeds maxHeight
+                            child: SingleChildScrollView(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
                                 Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
@@ -3811,13 +3872,15 @@ class _MapScreenState extends State<MapScreen>
                                   ),
                                 ),
                               ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+                              ), // Close Column
+                            ), // Close SingleChildScrollView
+                          ), // Close LiquidGlassPanel
+                        ), // Close Container
+                      ), // Close Material
+                    ), // Close AnimatedSize
+                  ), // Close ConstrainedBox
+                ), // Close Listener
+              ), // Close Positioned
               ],
             );
           },
@@ -3963,7 +4026,8 @@ class _MapScreenState extends State<MapScreen>
     required String buttonLabel,
     bool showTypeLabel = false,
   }) {
-    const double cardWidth = 240;
+    // FIX: Use same width as actual card render (was 240, should be 360)
+    const double cardWidth = 360;
     const double horizontalPadding = 12;
     const double verticalPadding = 12;
     final double contentWidth = cardWidth - (horizontalPadding * 2);
