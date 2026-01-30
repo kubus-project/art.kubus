@@ -600,12 +600,32 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   double _markerPixelRatio() {
-    if (kIsWeb) return 1.0;
     final dpr = WidgetsBinding
             .instance.platformDispatcher.implicitView?.devicePixelRatio ??
         1.0;
+    if (kIsWeb) {
+      return dpr.clamp(1.0, 3.0);
+    }
     return dpr.clamp(1.0, 2.5);
   }
+
+  double _webPixelRatio() {
+    if (!kIsWeb) return 1.0;
+    final dpr = WidgetsBinding
+            .instance.platformDispatcher.implicitView?.devicePixelRatio ??
+        1.0;
+    return dpr.isFinite ? dpr.clamp(1.0, 3.0) : 1.0;
+  }
+
+  Offset _screenToFlutterOffset(dynamic screen) {
+    final dx = (screen.x as num).toDouble();
+    final dy = (screen.y as num).toDouble();
+    if (!kIsWeb) return Offset(dx, dy);
+    final dpr = _webPixelRatio();
+    if (dpr <= 1.01) return Offset(dx, dy);
+    return Offset(dx / dpr, dy / dpr);
+  }
+
 
   Future<void> _handleMapStyleLoaded(ThemeProvider themeProvider) async {
     final controller = _mapController;
@@ -860,8 +880,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       );
       if (!mounted) return;
       setState(() {
-        _selectedMarkerAnchor =
-            Offset(screen.x.toDouble(), screen.y.toDouble());
+        _selectedMarkerAnchor = _screenToFlutterOffset(screen);
       });
     } catch (_) {
       // Ignore anchor updates during style transitions.
@@ -978,6 +997,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     return <math.Point<double>>[
       point,
       math.Point<double>(point.x * dpr, point.y * dpr),
+      math.Point<double>(point.x / dpr, point.y / dpr),
     ];
   }
 
@@ -996,8 +1016,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         final screen = await controller.toScreenLocation(
           ml.LatLng(marker.position.latitude, marker.position.longitude),
         );
-        final dx = screen.x.toDouble() - point.x;
-        final dy = screen.y.toDouble() - point.y;
+        final normalized = _screenToFlutterOffset(screen);
+        final dx = normalized.dx - point.x;
+        final dy = normalized.dy - point.y;
         final distance = math.sqrt(dx * dx + dy * dy);
         if (distance <= bestDistance) {
           bestDistance = distance;
@@ -4637,7 +4658,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         final screen = await controller.toScreenLocation(
           ml.LatLng(marker.position.latitude, marker.position.longitude),
         );
-        anchors[marker.id] = Offset(screen.x.toDouble(), screen.y.toDouble());
+        anchors[marker.id] = _screenToFlutterOffset(screen);
       } catch (_) {
         // Ignore projection failures during style transitions.
       }

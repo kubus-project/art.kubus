@@ -1555,7 +1555,7 @@ class _MapScreenState extends State<MapScreen>
       );
       if (!mounted) return;
       setState(() {
-        _markerTapRippleOffset = Offset(point.x.toDouble(), point.y.toDouble());
+        _markerTapRippleOffset = _screenToFlutterOffset(point);
         _markerTapRippleAt = DateTime.now();
         _markerTapRippleColor = baseColor;
       });
@@ -2223,10 +2223,7 @@ class _MapScreenState extends State<MapScreen>
     if (offset != Offset.zero) {
       try {
         final screen = await controller.toScreenLocation(target);
-        final shifted = math.Point<double>(
-          screen.x.toDouble() + offset.dx,
-          screen.y.toDouble() + offset.dy,
-        );
+        final shifted = _screenPointWithLogicalOffset(screen, offset);
         target = await controller.toLatLng(shifted);
       } catch (_) {
         // If projection isn't available yet, fall back to centering on the marker.
@@ -2313,8 +2310,7 @@ class _MapScreenState extends State<MapScreen>
       );
       if (!mounted) return;
       setState(() {
-        _selectedMarkerAnchor =
-            Offset(screen.x.toDouble(), screen.y.toDouble());
+        _selectedMarkerAnchor = _screenToFlutterOffset(screen);
       });
     } catch (_) {
       // Ignore projection failures during style transitions.
@@ -3013,11 +3009,47 @@ class _MapScreenState extends State<MapScreen>
   }
 
   double _markerPixelRatio() {
-    if (kIsWeb) return 1.0;
     final dpr = WidgetsBinding
             .instance.platformDispatcher.implicitView?.devicePixelRatio ??
         1.0;
+    if (kIsWeb) {
+      return dpr.clamp(1.0, 3.0);
+    }
     return dpr.clamp(1.0, 2.5);
+  }
+
+  double _webPixelRatio() {
+    if (!kIsWeb) return 1.0;
+    final dpr = WidgetsBinding
+            .instance.platformDispatcher.implicitView?.devicePixelRatio ??
+        1.0;
+    return dpr.isFinite ? dpr.clamp(1.0, 3.0) : 1.0;
+  }
+
+  Offset _screenToFlutterOffset(dynamic screen) {
+    final dx = (screen.x as num).toDouble();
+    final dy = (screen.y as num).toDouble();
+    if (!kIsWeb) return Offset(dx, dy);
+    final dpr = _webPixelRatio();
+    if (dpr <= 1.01) return Offset(dx, dy);
+    return Offset(dx / dpr, dy / dpr);
+  }
+
+  math.Point<double> _screenPointWithLogicalOffset(
+    dynamic screen,
+    Offset offset,
+  ) {
+    if (offset == Offset.zero) {
+      return math.Point<double>(
+        screen.x.toDouble(),
+        screen.y.toDouble(),
+      );
+    }
+    final scale = kIsWeb ? _webPixelRatio() : 1.0;
+    return math.Point<double>(
+      screen.x.toDouble() + (offset.dx * scale),
+      screen.y.toDouble() + (offset.dy * scale),
+    );
   }
 
   Future<void> _applyIsometricCamera(
@@ -3150,6 +3182,7 @@ class _MapScreenState extends State<MapScreen>
     return <math.Point<double>>[
       point,
       math.Point<double>(point.x * dpr, point.y * dpr),
+      math.Point<double>(point.x / dpr, point.y / dpr),
     ];
   }
 
@@ -3172,8 +3205,9 @@ class _MapScreenState extends State<MapScreen>
         final screen = await controller.toScreenLocation(
           ml.LatLng(marker.position.latitude, marker.position.longitude),
         );
-        final dx = screen.x.toDouble() - point.x;
-        final dy = screen.y.toDouble() - point.y;
+        final normalized = _screenToFlutterOffset(screen);
+        final dx = normalized.dx - point.x;
+        final dy = normalized.dy - point.y;
         final distance = math.sqrt(dx * dx + dy * dy);
         if (distance <= bestDistance) {
           bestDistance = distance;
@@ -3316,7 +3350,7 @@ class _MapScreenState extends State<MapScreen>
         final screen = await controller.toScreenLocation(
           ml.LatLng(marker.position.latitude, marker.position.longitude),
         );
-        anchors[marker.id] = Offset(screen.x.toDouble(), screen.y.toDouble());
+        anchors[marker.id] = _screenToFlutterOffset(screen);
       } catch (_) {
         // Ignore projection failures during style transitions.
       }
