@@ -87,11 +87,9 @@ class MapStyleService {
     }
 
     // Flutter web serves bundled assets under `assets/<assetPath>`.
-    // If the path already begins with `assets/`, don't prepend again.
+    // For assets declared as `assets/...`, the web path becomes
+    // `assets/assets/...` (Flutter prepends the `assets/` prefix).
     if (normalized.startsWith('assets/assets/')) {
-      return normalized.substring('assets/'.length);
-    }
-    if (normalized.startsWith('assets/')) {
       return normalized;
     }
 
