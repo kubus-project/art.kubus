@@ -260,7 +260,12 @@ class _MapScreenState extends State<MapScreen>
   final DraggableScrollableController _sheetController =
       DraggableScrollableController();
   bool _isSheetInteracting = false;
-  bool _isSheetBlocking = true;
+  // IMPORTANT (web/platform-view): default to NOT blocking the map.
+  // We only block map gestures when the sheet is actually expanded or actively
+  // being dragged/scrolling. Some browsers do not immediately emit a
+  // DraggableScrollableNotification on first layout; starting in a blocking
+  // state can make the map appear "not interactable".
+  bool _isSheetBlocking = false;
   double _nearbySheetExtent = _nearbySheetMin;
   double _markerRadiusKm = 5.0;
   bool _travelModeEnabled = false;
@@ -1454,8 +1459,34 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _setSheetInteracting(bool value) {
-    if (_isSheetInteracting == value) return;
+    if (!mounted) return;
+    if (_isSheetInteracting == value) {
+      if (!value) {
+        _sheetInteractionResetTimer?.cancel();
+        _sheetInteractionResetTimer = null;
+      }
+      return;
+    }
     setState(() => _isSheetInteracting = value);
+    if (!value) {
+      _sheetInteractionResetTimer?.cancel();
+      _sheetInteractionResetTimer = null;
+    }
+  }
+
+  // Keeps the sheet "interacting" flag from getting stuck on web when pointer
+  // up/cancel events are lost due to platform-view/event ordering.
+  void _touchSheetInteracting() {
+    if (mounted && !_isSheetInteracting) {
+      setState(() => _isSheetInteracting = true);
+    }
+    if (!kIsWeb) return;
+    _sheetInteractionResetTimer?.cancel();
+    _sheetInteractionResetTimer = Timer(const Duration(milliseconds: 650), () {
+      if (!mounted) return;
+      if (!_isSheetInteracting) return;
+      setState(() => _isSheetInteracting = false);
+    });
   }
 
   void _setSheetBlocking(bool value, double extent) {
@@ -5301,17 +5332,11 @@ class _MapScreenState extends State<MapScreen>
     return Align(
       alignment: Alignment.bottomCenter,
       child: Listener(
-        onPointerDown: (_) => _setSheetInteracting(true),
+        onPointerDown: (_) => _touchSheetInteracting(),
+        onPointerMove: (_) => _touchSheetInteracting(),
         onPointerUp: (_) => _setSheetInteracting(false),
         onPointerCancel: (_) => _setSheetInteracting(false),
-        onPointerSignal: (_) {
-          _setSheetInteracting(true);
-          _sheetInteractionResetTimer?.cancel();
-          _sheetInteractionResetTimer =
-              Timer(const Duration(milliseconds: 140), () {
-            _setSheetInteracting(false);
-          });
-        },
+        onPointerSignal: (_) => _touchSheetInteracting(),
         child: NotificationListener<DraggableScrollableNotification>(
           onNotification: (notification) {
             final blocking = notification.extent > (_nearbySheetMin + 0.01);

@@ -14,11 +14,30 @@ _flutter.loader.load({
     serviceWorkerVersion: {{flutter_service_worker_version}},
   },
   config: {
-    // MapLibre (web) uses maplibre-gl-js (WebGL). We run the Flutter app with
-    // the HTML renderer to avoid CanvasKit+WASM/WebGL compositing crashes seen
-    // in production (e.g. canvaskit.wasm "index out of bounds").
+    // MapLibre (web) uses maplibre-gl-js (WebGL).
     //
-    // IMPORTANT: Build the web bundle with `--web-renderer=html` to match.
-    renderer: "html",
+    // We *prefer* the HTML renderer to reduce the risk of CanvasKit+WASM/WebGL
+    // compositing crashes seen in production (e.g. canvaskit.wasm
+    // "index out of bounds").
+    //
+    // IMPORTANT:
+    // - On Flutter 3.38+ the loader selects between the *builds* emitted into
+    //   the web bundle (commonly CanvasKit, and optionally skwasm when building
+    //   with `--wasm`).
+    // - The loader can only select renderers that exist in `_flutter.buildConfig.builds`.
+    //   Forcing a renderer that is not present will prevent the app from loading.
+    //
+    // If the current bundle does not include an HTML build, do not force it
+    // (forcing a missing renderer causes:
+    //   "FlutterLoader could not find a build compatible...").
+    renderer: (() => {
+      try {
+        const builds = (_flutter?.buildConfig?.builds ?? []).filter(Boolean);
+        const hasHtml = builds.some((b) => b && b.renderer === 'html');
+        return hasHtml ? 'html' : undefined;
+      } catch (_) {
+        return undefined;
+      }
+    })(),
   },
 });
