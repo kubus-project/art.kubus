@@ -2732,7 +2732,8 @@ class _MapScreenState extends State<MapScreen>
         _queueOverlayAnchorRefresh();
         _queueMarkerRefresh(fromGesture: false);
       },
-      onMapClick: (point, _) => unawaited(_handleMapTap(point, themeProvider)),
+        onMapClick: (point, _) =>
+          unawaited(_handleMapTap(_normalizeTapPoint(point), themeProvider)),
       rotateGesturesEnabled: !_shouldBlockMapGestures,
       scrollGesturesEnabled: !_shouldBlockMapGestures,
       zoomGesturesEnabled: !_shouldBlockMapGestures,
@@ -3050,6 +3051,13 @@ class _MapScreenState extends State<MapScreen>
       screen.x.toDouble() + (offset.dx * scale),
       screen.y.toDouble() + (offset.dy * scale),
     );
+  }
+
+  math.Point<double> _normalizeTapPoint(math.Point<double> point) {
+    if (!kIsWeb) return point;
+    final dpr = _webPixelRatio();
+    if (dpr <= 1.01) return point;
+    return math.Point<double>(point.x / dpr, point.y / dpr);
   }
 
   Future<void> _applyIsometricCamera(
