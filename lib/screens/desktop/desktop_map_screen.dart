@@ -1,6 +1,5 @@
 ﻿import 'dart:async';
 import 'dart:math' as math;
-import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -180,9 +179,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   bool _cubeLayerVisible = false;
   bool _cubeModeActive = false;
   final Map<String, Offset> _cubeAnchors = <String, Offset>{};
-  final Map<String, ui.Image> _cubeTopFaceCache = <String, ui.Image>{};
-  final Map<String, Future<ui.Image>> _cubeTopFaceInflight =
-      <String, Future<ui.Image>>{};
   double? _lastCubeSyncZoom;
   double? _lastCubeSyncPitch;
   static const double _markerRefreshDistanceMeters = 1200;
@@ -600,12 +596,15 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   double _markerPixelRatio() {
+    // IMPORTANT:
+    // `MapLibreMapController.addImage()` does not accept a pixelRatio parameter.
+    // If we bake DPR into the PNG on web, the icon renders physically larger.
+    // So on web we must render at 1.0 to preserve marker size.
+    if (kIsWeb) return 1.0;
+
     final dpr = WidgetsBinding
             .instance.platformDispatcher.implicitView?.devicePixelRatio ??
         1.0;
-    if (kIsWeb) {
-      return dpr.clamp(1.0, 3.0);
-    }
     return dpr.clamp(1.0, 2.5);
   }
 
@@ -1728,57 +1727,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   Widget _buildCubeOverlay(ThemeProvider themeProvider) {
-    if (!_is3DMarkerModeActive) return const SizedBox.shrink();
-    if (_cubeAnchors.isEmpty) return const SizedBox.shrink();
-
-    final scheme = Theme.of(context).colorScheme;
-    final roles = KubusColorRoles.of(context);
-    final isDark = themeProvider.isDarkMode;
-    final zoom = _cameraZoom;
-
-    final cubes = <Widget>[];
-    for (final entry in _cubeAnchors.entries) {
-      final marker =
-          _artMarkers.where((m) => m.id == entry.key).firstOrNull;
-      if (marker == null || !marker.hasValidPosition) continue;
-
-      final baseColor = AppColorUtils.markerSubjectColor(
-        markerType: marker.type.name,
-        metadata: marker.metadata,
-        scheme: scheme,
-        roles: roles,
-      );
-      final selected = _selectedMarkerId == marker.id;
-      final key = _cubeTopFaceKey(
-        marker: marker,
-        isDark: isDark,
-        selected: selected,
-      );
-      final topFaceImage = _cubeTopFaceCache[key];
-      final cubeSize = RotatableCubeTokens.sizeForZoom(zoom);
-      final anchor = entry.value;
-
-      cubes.add(
-        Positioned(
-          left: anchor.dx - (cubeSize / 2),
-          top: anchor.dy - (cubeSize / 2),
-          child: RotatableCubeMarker(
-            baseColor: baseColor,
-            icon: _resolveArtMarkerIcon(marker.type),
-            bearing: _lastBearing,
-            pitch: _lastPitch,
-            zoom: zoom,
-            isSelected: selected,
-            topFaceImage: topFaceImage,
-          ),
-        ),
-      );
-    }
-
-    return IgnorePointer(
-      ignoring: true,
-      child: Stack(children: cubes),
-    );
+    // 3D cubes are rendered via MapLibre fill-extrusion.
+    // Do not draw Flutter overlay cubes.
+    return const SizedBox.shrink();
   }
 
   Future<void> _refreshUserLocation({bool animate = false}) async {
@@ -4622,9 +4573,18 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _cubeLayerVisible = shouldShowCubes;
 
     try {
-      await controller.setLayerVisibility(_cubeLayerId, false);
-      await controller.setLayerVisibility(_cubeIconLayerId, false);
-      await controller.setLayerVisibility(_markerLayerId, !shouldShowCubes);
+      await controller.setLayerVisibility(
+        _cubeLayerId,
+        shouldShowCubes,
+      );
+      await controller.setLayerVisibility(
+        _cubeIconLayerId,
+        shouldShowCubes,
+      );
+      await controller.setLayerVisibility(
+        _markerLayerId,
+        !shouldShowCubes,
+      );
     } catch (_) {
       // Best-effort: layer visibility may fail during style swaps.
     }
@@ -4646,10 +4606,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (!mounted) return;
     if (!_is3DMarkerModeActive) return;
 
-    final isDark = themeProvider.isDarkMode;
-    final visibleMarkers =
-        _artMarkers.where((m) => m.hasValidPosition).toList(growable: false);
-
     final zoom = _cameraZoom;
     final pitch = _lastPitch;
     final lastZoom = _lastCubeSyncZoom;
@@ -4662,92 +4618,97 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       }
     }
 
-    final anchors = <String, Offset>{};
-    for (final marker in visibleMarkers) {
-      try {
-        final screen = await controller.toScreenLocation(
-          ml.LatLng(marker.position.latitude, marker.position.longitude),
-        );
-        anchors[marker.id] = _screenToFlutterOffset(screen);
-      } catch (_) {
-        // Ignore projection failures during style transitions.
-      }
-
-      final selected = _selectedMarkerId == marker.id;
-      unawaited(
-        _ensureCubeTopFaceImage(
-          marker: marker,
-          isDark: isDark,
-          selected: selected,
-        ),
-      );
+    const earthRadiusMeters = 6378137.0;
+    const tileSize = 512.0;
+    double metersPerPixelAt(double latDeg, double zoom) {
+      final latRad = latDeg * math.pi / 180.0;
+      final cosLat = math.cos(latRad);
+      final denom = tileSize * math.pow(2.0, zoom);
+      if (denom == 0) return 0;
+      return (cosLat.abs() < 1e-6 ? 1e-6 : cosLat.abs()) *
+          (2.0 * math.pi * earthRadiusMeters) /
+          denom;
     }
 
-    if (!mounted) return;
-    _lastCubeSyncZoom = zoom;
-    _lastCubeSyncPitch = pitch;
-    setState(() {
-      _cubeAnchors
-        ..clear()
-        ..addAll(anchors);
-    });
-  }
+    double degLatFromMeters(double meters) {
+      return (meters / earthRadiusMeters) * (180.0 / math.pi);
+    }
 
-  String _cubeTopFaceKey({
-    required ArtMarker marker,
-    required bool isDark,
-    required bool selected,
-  }) {
-    return 'mk_${marker.type.name}_${marker.signalTier.name}'
-        '${selected ? '_sel' : ''}_${isDark ? 'd' : 'l'}';
-  }
-
-  Future<void> _ensureCubeTopFaceImage({
-    required ArtMarker marker,
-    required bool isDark,
-    required bool selected,
-  }) async {
-    final key = _cubeTopFaceKey(
-      marker: marker,
-      isDark: isDark,
-      selected: selected,
-    );
-    if (_cubeTopFaceCache.containsKey(key)) return;
-    final inflight = _cubeTopFaceInflight[key];
-    if (inflight != null) {
-      await inflight;
-      return;
+    double degLonFromMeters(double meters, double latDeg) {
+      final latRad = latDeg * math.pi / 180.0;
+      final cosLat = math.cos(latRad);
+      final denom =
+          earthRadiusMeters * (cosLat.abs() < 1e-6 ? 1e-6 : cosLat.abs());
+      return (meters / denom) * (180.0 / math.pi);
     }
 
     final scheme = Theme.of(context).colorScheme;
     final roles = KubusColorRoles.of(context);
-    final baseColor = _resolveArtMarkerColor(marker, context.read<ThemeProvider>());
+    final visibleMarkers =
+        _artMarkers.where((m) => m.hasValidPosition).toList(growable: false);
 
-    final future = () async {
-      final bytes = await ArtMarkerCubeIconRenderer.renderMarkerPng(
-        baseColor: baseColor,
-        icon: _resolveArtMarkerIcon(marker.type),
-        tier: marker.signalTier,
+    final desiredSizePx = RotatableCubeTokens.sizeForZoom(zoom);
+    final features = <dynamic>[];
+
+    for (final marker in visibleMarkers) {
+      final lat = marker.position.latitude;
+      final lon = marker.position.longitude;
+      final mpp = metersPerPixelAt(lat, zoom);
+      final halfMeters = (desiredSizePx / 2.0) * mpp;
+      final dLat = degLatFromMeters(halfMeters);
+      final dLon = degLonFromMeters(halfMeters, lat);
+
+      final heightMeters = (desiredSizePx * mpp).clamp(2.0, 48.0);
+
+      final baseColor = AppColorUtils.markerSubjectColor(
+        markerType: marker.type.name,
+        metadata: marker.metadata,
         scheme: scheme,
         roles: roles,
-        isDark: isDark,
-        forceGlow: selected,
-        pixelRatio: _markerPixelRatio(),
       );
-      final codec = await ui.instantiateImageCodec(bytes);
-      final frame = await codec.getNextFrame();
-      return frame.image;
-    }();
 
-    _cubeTopFaceInflight[key] = future;
-    try {
-      final image = await future;
-      if (!mounted) return;
-      _cubeTopFaceCache[key] = image;
-      setState(() {});
-    } finally {
-      _cubeTopFaceInflight.remove(key);
+      features.add(
+        <String, dynamic>{
+          'type': 'Feature',
+          'id': marker.id,
+          'properties': <String, dynamic>{
+            'id': marker.id,
+            'markerId': marker.id,
+            'kind': 'cube',
+            'height': heightMeters,
+            'color': _hexRgb(baseColor),
+          },
+          'geometry': <String, dynamic>{
+            'type': 'Polygon',
+            'coordinates': <dynamic>[
+              <dynamic>[
+                <double>[lon - dLon, lat - dLat],
+                <double>[lon + dLon, lat - dLat],
+                <double>[lon + dLon, lat + dLat],
+                <double>[lon - dLon, lat + dLat],
+                <double>[lon - dLon, lat - dLat],
+              ],
+            ],
+          },
+        },
+      );
     }
+
+    await controller.setGeoJsonSource(
+      _cubeSourceId,
+      <String, dynamic>{
+        'type': 'FeatureCollection',
+        'features': features,
+      },
+    );
+
+    if (!mounted) return;
+    _lastCubeSyncZoom = zoom;
+    _lastCubeSyncPitch = pitch;
+    if (_cubeAnchors.isNotEmpty) {
+      setState(() => _cubeAnchors.clear());
+    }
+    return;
   }
 
   Widget _buildMarkerOverlayCard(
