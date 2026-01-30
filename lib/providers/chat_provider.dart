@@ -14,6 +14,7 @@ import '../services/event_bus.dart';
 import '../utils/media_url_resolver.dart';
 import '../utils/wallet_utils.dart';
 import 'app_refresh_provider.dart';
+import 'profile_provider.dart';
 
 class ChatProvider extends ChangeNotifier {
   ChatProvider() {
@@ -423,6 +424,7 @@ class ChatProvider extends ChangeNotifier {
   int _lastTotalUnread = 0;
   DateTime? _lastUnauthorizedAt;
   final Duration _unauthCooldown = const Duration(seconds: 30);
+  String _lastAuthSignature = '';
 
   String _computeStateSignature() {
     try {
@@ -780,6 +782,39 @@ class ChatProvider extends ChangeNotifier {
         // Force a notify when UI-driven fetches merge into the provider cache.
         // This bypasses the signature dedupe check so profile/avatar updates
         // take effect immediately in UI widgets that rely on provider state.
+
+  void bindAuthContext({ProfileProvider? profileProvider, String? walletAddress, bool? isSignedIn}) {
+    try {
+      final profileWallet = WalletUtils.normalize(profileProvider?.currentUser?.walletAddress);
+      final wallet = WalletUtils.normalize(walletAddress);
+      final resolvedWallet = profileWallet.isNotEmpty ? profileWallet : wallet;
+      final signedIn = isSignedIn ?? (profileProvider?.isSignedIn ?? false);
+      final token = (_api.getAuthToken() ?? '').trim();
+      final signature = '${token.isNotEmpty}:${resolvedWallet.toLowerCase()}:${signedIn.toString()}';
+
+      if (signature == _lastAuthSignature) return;
+      _lastAuthSignature = signature;
+
+      final hasSession = token.isNotEmpty || resolvedWallet.isNotEmpty || signedIn;
+      if (!hasSession) return;
+
+      if (resolvedWallet.isNotEmpty && !WalletUtils.equals(resolvedWallet, _currentWallet)) {
+        unawaited(setCurrentWallet(resolvedWallet));
+        return;
+      }
+
+      if (!_initialized) {
+        unawaited(initialize(initialWallet: resolvedWallet.isNotEmpty ? resolvedWallet : null));
+        return;
+      }
+
+      if (_conversations.isEmpty || !_hasAuthToken) {
+        unawaited(refreshConversations());
+      }
+    } catch (e) {
+      debugPrint('ChatProvider.bindAuthContext failed: $e');
+    }
+  }
 
   Future<void> refreshConversations() async {
     try {

@@ -288,14 +288,6 @@ class _AppLauncherState extends State<AppLauncher> {
               ),
               ChangeNotifierProvider(create: (context) => SavedItemsProvider()),
               ChangeNotifierProvider(create: (context) => CommunitySubjectProvider()),
-              ChangeNotifierProxyProvider<AppRefreshProvider, ChatProvider>(
-                create: (context) => ChatProvider(),
-                update: (context, appRefreshProvider, chatProvider) {
-                  final provider = chatProvider ?? ChatProvider();
-                  provider.bindToRefresh(appRefreshProvider);
-                  return provider;
-                },
-              ),
               ChangeNotifierProxyProvider<AppRefreshProvider, NotificationProvider>(
                 create: (context) => NotificationProvider(),
                 update: (context, appRefreshProvider, notificationProvider) {
@@ -389,6 +381,19 @@ class _AppLauncherState extends State<AppLauncher> {
                 create: (context) => WalletProvider(
                   solanaWalletService: context.read<SolanaWalletService>(),
                 ),
+              ),
+              ChangeNotifierProxyProvider3<AppRefreshProvider, ProfileProvider, WalletProvider, ChatProvider>(
+                create: (context) => ChatProvider(),
+                update: (context, appRefreshProvider, profileProvider, walletProvider, chatProvider) {
+                  final provider = chatProvider ?? ChatProvider();
+                  provider.bindToRefresh(appRefreshProvider);
+                  provider.bindAuthContext(
+                    profileProvider: profileProvider,
+                    walletAddress: walletProvider.currentWalletAddress,
+                    isSignedIn: profileProvider.isSignedIn,
+                  );
+                  return provider;
+                },
               ),
               ChangeNotifierProxyProvider3<ProfileProvider, WalletProvider, NotificationProvider, SecurityGateProvider>(
                 lazy: false,
