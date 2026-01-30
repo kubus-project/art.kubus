@@ -98,7 +98,7 @@ flutter build web
 flutter build web --base-href=/
 
 # Using the helper script (recommended)
-./scripts/build_web_release.ps1 -BaseHref '/' -Renderer canvaskit
+./scripts/build_web_release.ps1 -BaseHref '/'
 ```
 
 ### Android

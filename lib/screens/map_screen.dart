@@ -1490,8 +1490,28 @@ class _MapScreenState extends State<MapScreen>
   }
 
   bool get _is3DMarkerModeActive {
+    // Web uses maplibre-gl-js via the federated plugin. Some advanced style
+    // operations (notably fill-extrusion) can fail depending on browser/GPU.
+    // Keep the web map reliable by disabling the 3D marker mode there.
+    if (kIsWeb) return false;
     if (!AppConfig.isFeatureEnabled('mapIsometricView')) return false;
     return _cubeModeActive;
+  }
+
+  bool get _webDebugMapEnabled {
+    if (!kIsWeb) return false;
+    try {
+      return Uri.base.queryParameters['debug_map'] == '1';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  void _webDiagPrint(String message) {
+    if (!_webDebugMapEnabled) return;
+    // Ensure logs show up on release web builds.
+    // ignore: avoid_print
+    print(message);
   }
 
   void _updateCubeModeForPitch(double pitch) {
@@ -2823,14 +2843,17 @@ class _MapScreenState extends State<MapScreen>
         promoteId: 'id',
       );
 
-      await controller.addGeoJsonSource(
-        _cubeSourceId,
-        const <String, dynamic>{
-          'type': 'FeatureCollection',
-          'features': <dynamic>[],
-        },
-        promoteId: 'id',
-      );
+      final enableCubes = !kIsWeb && AppConfig.isFeatureEnabled('mapIsometricView');
+      if (enableCubes) {
+        await controller.addGeoJsonSource(
+          _cubeSourceId,
+          const <String, dynamic>{
+            'type': 'FeatureCollection',
+            'features': <dynamic>[],
+          },
+          promoteId: 'id',
+        );
+      }
 
       await controller.addSymbolLayer(
         _markerSourceId,
@@ -2885,51 +2908,53 @@ class _MapScreenState extends State<MapScreen>
         belowLayerId: _markerLayerId,
       );
 
-      await controller.addSymbolLayer(
-        _markerSourceId,
-        _cubeIconLayerId,
-        ml.SymbolLayerProperties(
-          iconImage: <dynamic>['get', 'icon'],
-          iconSize: <dynamic>[
-            'interpolate',
-            ['linear'],
-            ['zoom'],
-            3,
-            0.5,
-            15,
-            1.0,
-            24,
-            1.5,
-          ],
-          iconOpacity: <dynamic>[
-            'case',
-            ['==', ['get', 'kind'], 'cluster'],
-            1.0,
-            1.0,
-          ],
-          iconAllowOverlap: true,
-          iconIgnorePlacement: true,
-          iconAnchor: 'center',
-          iconPitchAlignment: 'map',
-          iconRotationAlignment: 'map',
-          visibility: 'none',
-        ),
-        belowLayerId: _markerLayerId,
-      );
+      if (enableCubes) {
+        await controller.addSymbolLayer(
+          _markerSourceId,
+          _cubeIconLayerId,
+          ml.SymbolLayerProperties(
+            iconImage: <dynamic>['get', 'icon'],
+            iconSize: <dynamic>[
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              3,
+              0.5,
+              15,
+              1.0,
+              24,
+              1.5,
+            ],
+            iconOpacity: <dynamic>[
+              'case',
+              ['==', ['get', 'kind'], 'cluster'],
+              1.0,
+              1.0,
+            ],
+            iconAllowOverlap: true,
+            iconIgnorePlacement: true,
+            iconAnchor: 'center',
+            iconPitchAlignment: 'map',
+            iconRotationAlignment: 'map',
+            visibility: 'none',
+          ),
+          belowLayerId: _markerLayerId,
+        );
 
-      await controller.addFillExtrusionLayer(
-        _cubeSourceId,
-        _cubeLayerId,
-        ml.FillExtrusionLayerProperties(
-          fillExtrusionColor: <dynamic>['get', 'color'],
-          fillExtrusionHeight: <dynamic>['get', 'height'],
-          fillExtrusionBase: 0.0,
-          fillExtrusionOpacity: 1.0,
-          fillExtrusionVerticalGradient: false,
-          visibility: 'none',
-        ),
-        belowLayerId: _markerLayerId,
-      );
+        await controller.addFillExtrusionLayer(
+          _cubeSourceId,
+          _cubeLayerId,
+          ml.FillExtrusionLayerProperties(
+            fillExtrusionColor: <dynamic>['get', 'color'],
+            fillExtrusionHeight: <dynamic>['get', 'height'],
+            fillExtrusionBase: 0.0,
+            fillExtrusionOpacity: 1.0,
+            fillExtrusionVerticalGradient: false,
+            visibility: 'none',
+          ),
+          belowLayerId: _markerLayerId,
+        );
+      }
 
       if (!kIsWeb) {
         await controller.addGeoJsonSource(
@@ -2967,6 +2992,10 @@ class _MapScreenState extends State<MapScreen>
       );
     } catch (e, st) {
       _styleInitialized = false;
+      if (_webDebugMapEnabled) {
+        _webDiagPrint('MapScreen(web diag): style init failed: $e');
+        _webDiagPrint('MapScreen(web diag): style init stack: $st');
+      }
       if (kDebugMode) {
         AppConfig.debugPrint('MapScreen: style init failed: $e');
       }
