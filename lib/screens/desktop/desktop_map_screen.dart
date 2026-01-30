@@ -360,6 +360,21 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   void _dismissMapTutorial() {
     if (!mounted) return;
     setState(() => _showMapTutorial = false);
+    // Web MapLibre is a platform view; after removing a full-screen overlay
+    // (tutorial), force a resize on the next frame to keep the WebGL canvas
+    // in sync with its container.
+    if (kIsWeb) {
+      final controller = _mapController;
+      if (controller != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          try {
+            controller.forceResizeWebMap();
+          } catch (_) {
+            // Best-effort.
+          }
+        });
+      }
+    }
     unawaited(_setMapTutorialSeen());
   }
 
@@ -1065,7 +1080,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             ],
           };
 
-    await controller.setGeoJsonSource(_locationSourceId, data);
+    try {
+      await controller.setGeoJsonSource(_locationSourceId, data);
+    } catch (e) {
+      if (kDebugMode) {
+        AppConfig.debugPrint('DesktopMapScreen: setGeoJsonSource(location) failed: $e');
+      }
+    }
   }
 
   Future<void> _syncPendingMarker(
@@ -1095,7 +1116,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             ],
           };
 
-    await controller.setGeoJsonSource(_pendingSourceId, data);
+    try {
+      await controller.setGeoJsonSource(_pendingSourceId, data);
+    } catch (e) {
+      if (kDebugMode) {
+        AppConfig.debugPrint('DesktopMapScreen: setGeoJsonSource(pending) failed: $e');
+      }
+    }
   }
 
   List<_ClusterBucket> _clusterMarkers(List<ArtMarker> markers, double zoom) {
@@ -1175,7 +1202,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       'features': features,
     };
     if (!mounted) return;
-    await controller.setGeoJsonSource(_markerSourceId, collection);
+    try {
+      await controller.setGeoJsonSource(_markerSourceId, collection);
+    } catch (e) {
+      if (kDebugMode) {
+        AppConfig.debugPrint('DesktopMapScreen: setGeoJsonSource(markers) failed: $e');
+      }
+      return;
+    }
 
     if (_is3DMarkerModeActive) {
       await _syncMarkerCubes(themeProvider: themeProvider);
