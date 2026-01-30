@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart' as ll;
 import 'package:maplibre_gl/maplibre_gl.dart' as ml;
 
@@ -210,6 +212,103 @@ class _ArtMapViewState extends State<ArtMapView> {
     });
   }
 
+  bool get _webDebugMapEnabled {
+    if (!kIsWeb) return false;
+    try {
+      return Uri.base.queryParameters['debug_map'] == '1';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _runWebMapDiagnosticsIfEnabled(String styleRef) async {
+    if (!_webDebugMapEnabled) return;
+
+    // Keep this strictly opt-in to avoid shipping noisy logs.
+    // This is a pure connectivity probe to help diagnose blank-map reports on web
+    // (CSP blocks, worker restrictions, blocked tile/glyph domains, etc.).
+    http.Client? client;
+    try {
+      client = http.Client();
+
+      final styleUri = Uri.parse(styleRef);
+      final styleResp = await client.get(styleUri);
+      AppConfig.debugPrint(
+        'ArtMapView(web diag): style GET ${styleUri.toString()} -> ${styleResp.statusCode}',
+      );
+
+      if (styleResp.statusCode < 200 || styleResp.statusCode >= 300) {
+        AppConfig.debugPrint(
+          'ArtMapView(web diag): style fetch failed, body=${styleResp.body.substring(0, math.min(200, styleResp.body.length))}',
+        );
+        return;
+      }
+
+      final dynamic decoded = jsonDecode(styleResp.body);
+      if (decoded is! Map<String, dynamic>) {
+        AppConfig.debugPrint('ArtMapView(web diag): style JSON was not an object');
+        return;
+      }
+
+      final glyphs = decoded['glyphs']?.toString();
+      if (glyphs != null && glyphs.isNotEmpty) {
+        final glyphUrl = glyphs
+            .replaceAll('{fontstack}', 'Open Sans Regular')
+            .replaceAll('{range}', '0-255');
+        try {
+          final glyphUri = Uri.parse(glyphUrl);
+          final glyphResp = await client.get(glyphUri);
+          AppConfig.debugPrint(
+            'ArtMapView(web diag): glyphs GET ${glyphUri.toString()} -> ${glyphResp.statusCode}',
+          );
+        } catch (e) {
+          AppConfig.debugPrint('ArtMapView(web diag): glyphs fetch failed: $e');
+        }
+      }
+
+      final sources = decoded['sources'];
+      if (sources is Map<String, dynamic>) {
+        String? firstTileTemplate;
+        for (final entry in sources.entries) {
+          final src = entry.value;
+          if (src is! Map<String, dynamic>) continue;
+          final type = src['type']?.toString();
+          if (type != 'raster' && type != 'vector') continue;
+          final tiles = src['tiles'];
+          if (tiles is List && tiles.isNotEmpty) {
+            firstTileTemplate = tiles.first?.toString();
+            if (firstTileTemplate != null && firstTileTemplate.isNotEmpty) break;
+          }
+        }
+
+        if (firstTileTemplate != null) {
+          final tileUrl = firstTileTemplate
+              .replaceAll('{z}', '0')
+              .replaceAll('{x}', '0')
+              .replaceAll('{y}', '0');
+          try {
+            final tileUri = Uri.parse(tileUrl);
+            final tileResp = await client.get(tileUri);
+            AppConfig.debugPrint(
+              'ArtMapView(web diag): tile GET ${tileUri.toString()} -> ${tileResp.statusCode}',
+            );
+          } catch (e) {
+            AppConfig.debugPrint('ArtMapView(web diag): tile fetch failed: $e');
+          }
+        } else {
+          AppConfig.debugPrint('ArtMapView(web diag): no tile sources found in style');
+        }
+      }
+    } catch (e, st) {
+      AppConfig.debugPrint('ArtMapView(web diag): failed: $e');
+      if (kDebugMode) {
+        AppConfig.debugPrint('ArtMapView(web diag): stack: $st');
+      }
+    } finally {
+      client?.close();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final bindingName = WidgetsBinding.instance.runtimeType.toString();
@@ -289,6 +388,11 @@ class _ArtMapViewState extends State<ArtMapView> {
                   } else {
                     AppConfig.debugPrint('ArtMapView: style loaded');
                   }
+
+                  // Optional: on web, run a one-shot connectivity probe when
+                  // `?debug_map=1` is present.
+                  unawaited(_runWebMapDiagnosticsIfEnabled(resolved));
+
                   if (_pendingStyleApply) {
                     _pendingStyleApply = false;
                     _resetStyleLoadState();
