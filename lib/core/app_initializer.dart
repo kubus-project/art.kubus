@@ -195,14 +195,28 @@ class _AppInitializerState extends State<AppInitializer> {
     // Check wallet connection status
     final hasWallet = prefs.getBool('has_wallet') ?? false;
     final hasCompletedOnboarding = onboardingState.hasCompletedOnboarding;
-    final hasAuthToken = (BackendApiService().getAuthToken() ?? '').isNotEmpty;
+    final inMemoryToken = BackendApiService().getAuthToken();
+    final sessionStatus = (inMemoryToken != null &&
+        inMemoryToken.trim().isNotEmpty &&
+        AuthGatingService.isAccessTokenValid(inMemoryToken))
+      ? StoredSessionStatus.valid
+      : AuthGatingService.evaluateStoredSession(prefs: prefs);
+    bool hasValidSession = sessionStatus == StoredSessionStatus.valid;
+    if (sessionStatus == StoredSessionStatus.refreshRequired) {
+      try {
+        final refreshed = await BackendApiService().refreshAuthTokenFromStorage();
+        hasValidSession = refreshed;
+      } catch (e) {
+        AppConfig.debugPrint('AppInitializer: refreshAuthTokenFromStorage failed: $e');
+      }
+    }
     final hasLocalAccount = AuthGatingService.hasLocalAccountSync(prefs: prefs);
     final shouldShowFirstRunOnboarding = await AuthGatingService.shouldShowFirstRunOnboarding(
       prefs: prefs,
       onboardingState: onboardingState,
     );
-    final shouldShowSignIn = !hasWallet &&
-      !hasAuthToken &&
+    final shouldShowSignIn = !hasValidSession &&
+      hasLocalAccount &&
       AppConfig.enableMultiAuthEntry &&
       (AppConfig.enableEmailAuth || AppConfig.enableGoogleAuth || AppConfig.enableWalletConnect);
     
@@ -214,6 +228,7 @@ class _AppInitializerState extends State<AppInitializer> {
       debugPrint('  hasWallet: $hasWallet');
       debugPrint('  hasCompletedOnboarding: $hasCompletedOnboarding');
       debugPrint('  hasLocalAccount: $hasLocalAccount');
+      debugPrint('  sessionStatus: $sessionStatus');
       debugPrint('  shouldShowFirstRunOnboarding: $shouldShowFirstRunOnboarding');
       debugPrint('  showWelcomeScreen: ${AppConfig.showWelcomeScreen}');
       debugPrint('  enforceWalletOnboarding: ${AppConfig.enforceWalletOnboarding}');

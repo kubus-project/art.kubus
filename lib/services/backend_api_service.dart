@@ -22,6 +22,7 @@ import 'share/share_types.dart';
 import '../config/config.dart';
 import 'storage_config.dart';
 import 'user_action_logger.dart';
+import 'auth_gating_service.dart';
 import 'auth_session_coordinator.dart';
 import 'http_client_factory.dart';
 import 'telemetry/kubus_client_context.dart';
@@ -160,6 +161,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
   @override
   final String baseUrl = AppConfig.baseApiUrl;
   String? _authToken;
+  String? _refreshToken;
   String? _authWalletCanonical;
   String? _preferredWalletCanonical;
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
@@ -383,9 +385,15 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     // Try to load token from storage
     await loadAuthToken();
     if ((_authToken ?? '').isNotEmpty) return;
+    // Try refresh token before attempting wallet issuance
+    final refreshed = await refreshAuthTokenFromStorage();
+    if (refreshed) return;
     // No token: check for stored wallet and try issuance
     try {
       final prefs = await SharedPreferences.getInstance();
+      if (!AuthGatingService.hasLocalAccountSync(prefs: prefs)) {
+        return;
+      }
       final storedWallet = prefs.getString('wallet_address') ?? prefs.getString('wallet') ?? prefs.getString('walletAddress') ?? prefs.getString('user_id');
       if (storedWallet != null && storedWallet.isNotEmpty) {
         _preferredWalletCanonical = WalletUtils.canonical(storedWallet);
@@ -504,6 +512,79 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     }
   }
 
+  Future<void> setRefreshToken(String token) async {
+    final trimmed = token.trim();
+    if (trimmed.isEmpty) return;
+    _refreshToken = trimmed;
+    try {
+      await _secureStorage
+          .write(key: 'refresh_token', value: trimmed)
+          .timeout(const Duration(milliseconds: 800));
+      AppConfig.debugPrint('BackendApiService: Refresh token written to secure storage');
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService: failed to write refresh token: $e');
+    }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('refresh_token', trimmed);
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService: failed to write refresh token to prefs: $e');
+    }
+  }
+
+  Future<void> _loadRefreshTokenFromStorage() async {
+    String? refreshToken;
+    try {
+      refreshToken = await _secureStorage
+          .read(key: 'refresh_token')
+          .timeout(const Duration(milliseconds: 800));
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService: refresh token secure storage read failed: $e');
+    }
+
+    if (refreshToken == null || refreshToken.isEmpty) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        refreshToken = AuthGatingService.readStoredRefreshToken(prefs);
+      } catch (e) {
+        AppConfig.debugPrint('BackendApiService: refresh token prefs read failed: $e');
+      }
+    }
+
+    if (refreshToken != null && refreshToken.trim().isNotEmpty) {
+      _refreshToken = refreshToken.trim();
+    }
+  }
+
+  Future<bool> refreshAuthTokenFromStorage() async {
+    await _loadRefreshTokenFromStorage();
+    final refreshToken = (_refreshToken ?? '').trim();
+    if (refreshToken.isEmpty) return false;
+
+    try {
+      final response = await _post(
+        Uri.parse('$baseUrl/api/auth/refresh'),
+        includeAuth: false,
+        headers: _getHeaders(includeAuth: false),
+        body: jsonEncode({'refreshToken': refreshToken}),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        await _persistTokenFromResponse(data);
+        return (_authToken ?? '').isNotEmpty;
+      }
+
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        await clearAuth();
+      }
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService: refreshAuthTokenFromStorage failed: $e');
+    }
+
+    return false;
+  }
+
   /// Load auth token from secure storage
   Future<void> loadAuthToken() async {
     try {
@@ -520,8 +601,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       if (token == null || token.isEmpty) {
         try {
           final prefs = await SharedPreferences.getInstance();
-          // Try a few known keys for backward compatibility
-          token = prefs.getString('jwt_token') ?? prefs.getString('token') ?? prefs.getString('auth_token') ?? prefs.getString('authToken');
+          // Try known access token keys for backward compatibility
+          token = AuthGatingService.readStoredAccessToken(prefs);
           if (token != null && token.isNotEmpty) {
             AppConfig.debugPrint('BackendApiService: Auth token loaded from SharedPreferences fallback');
           }
@@ -530,9 +611,15 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         }
       }
       if (token != null && token.isNotEmpty) {
-        _authToken = token;
-        _authWalletCanonical = _tryExtractWalletFromToken(token);
-        AppConfig.debugPrint('BackendApiService: Auth token loaded (in-memory)');
+        if (AuthGatingService.isAccessTokenValid(token)) {
+          _authToken = token;
+          _authWalletCanonical = _tryExtractWalletFromToken(token);
+          AppConfig.debugPrint('BackendApiService: Auth token loaded (in-memory)');
+        } else {
+          _authToken = null;
+          _authWalletCanonical = null;
+          AppConfig.debugPrint('BackendApiService: Stored auth token is expired; ignoring');
+        }
         // Attempt to decode exp field for debug information
         try {
           final parts = token.split('.');
@@ -553,6 +640,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       } else {
         AppConfig.debugPrint('BackendApiService: No stored auth token found');
       }
+
+      await _loadRefreshTokenFromStorage();
     } catch (e) {
       AppConfig.debugPrint('BackendApiService: Error loading auth token: $e');
     }
@@ -561,11 +650,15 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
   /// Clear authentication
   Future<void> clearAuth() async {
     _authToken = null;
+    _refreshToken = null;
     _authWalletCanonical = null;
     _authCoordinator?.reset();
     try {
       await _secureStorage
           .delete(key: 'jwt_token')
+          .timeout(const Duration(milliseconds: 800));
+      await _secureStorage
+          .delete(key: 'refresh_token')
           .timeout(const Duration(milliseconds: 800));
       AppConfig.debugPrint('BackendApiService: Auth cleared from secure storage');
     } catch (e) {
@@ -573,7 +666,12 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     }
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('jwt_token');
+      for (final key in AuthGatingService.accessTokenKeys) {
+        await prefs.remove(key);
+      }
+      for (final key in AuthGatingService.refreshTokenKeys) {
+        await prefs.remove(key);
+      }
       AppConfig.debugPrint('BackendApiService: Auth cleared from SharedPreferences');
     } catch (e) {
       AppConfig.debugPrint('BackendApiService: Error clearing prefs auth token: $e');
@@ -937,14 +1035,24 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
   }
 
   Future<void> _persistTokenFromResponse(Map<String, dynamic> body) async {
-    final token = body['data'] != null && body['data']['token'] != null
-        ? body['data']['token'] as String
-        : body['token'] as String?;
+    final payload = body['data'] is Map<String, dynamic>
+        ? body['data'] as Map<String, dynamic>
+        : body;
+
+    final token = payload['token'] as String? ?? body['token'] as String?;
     if (token != null && token.isNotEmpty) {
       await setAuthToken(token);
       try {
         await _secureStorage.write(key: 'jwt_token', value: token);
       } catch (_) {}
+    }
+
+    final refreshToken = payload['refreshToken'] as String? ??
+        payload['refresh_token'] as String? ??
+        body['refreshToken'] as String? ??
+        body['refresh_token'] as String?;
+    if (refreshToken != null && refreshToken.isNotEmpty) {
+      await setRefreshToken(refreshToken);
     }
   }
 

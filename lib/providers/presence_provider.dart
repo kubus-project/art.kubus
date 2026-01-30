@@ -6,6 +6,7 @@ import '../config/config.dart';
 import '../models/user_presence.dart';
 import '../providers/app_refresh_provider.dart';
 import '../providers/profile_provider.dart';
+import '../services/backend_api_service.dart';
 import '../services/presence_api.dart';
 
 class PresenceProvider extends ChangeNotifier {
@@ -51,6 +52,9 @@ class PresenceProvider extends ChangeNotifier {
   int _lastGlobalVersion = 0;
   int _lastCommunityVersion = 0;
   int _lastChatVersion = 0;
+
+  String? _lastAuthSignature;
+  bool _hasAuthSession = false;
 
   int _debugAutoRefreshTicks = 0;
   int _debugAutoRefreshSkipped = 0;
@@ -118,10 +122,73 @@ class PresenceProvider extends ChangeNotifier {
 
     _profileProvider = profileProvider;
     _profileListener = () {
-      _ensureHeartbeatTimer();
+      _handleAuthChange();
     };
     profileProvider.addListener(_profileListener!);
+    _handleAuthChange();
+  }
+
+  void _handleAuthChange() {
+    final profile = _profileProvider;
+    if (profile == null) return;
+
+    final wallet = (profile.currentUser?.walletAddress ?? '').trim();
+    final signedIn = profile.isSignedIn == true;
+    final allowVisible = profile.preferences.showActivityStatus == true;
+    final tokenPresent = (BackendApiService().getAuthToken() ?? '').trim().isNotEmpty;
+
+    final signature = '${signedIn ? '1' : '0'}:${allowVisible ? '1' : '0'}:${tokenPresent ? '1' : '0'}:${wallet.toLowerCase()}';
+    if (signature == _lastAuthSignature) return;
+
+    final hadAuth = _hasAuthSession;
+    _lastAuthSignature = signature;
+    _hasAuthSession = signedIn && allowVisible && wallet.isNotEmpty && tokenPresent;
+
+    if (!_initialized) {
+      unawaited(initialize());
+    }
+
+    if (!_hasAuthSession) {
+      _heartbeatTimer?.cancel();
+      _heartbeatTimer = null;
+      _heartbeatInFlight = false;
+      _lastHeartbeatAt = null;
+      return;
+    }
+
     _ensureHeartbeatTimer();
+    _ensureAutoRefreshTimer();
+    _refreshWatchedWallets(forceImmediate: true);
+
+    if (!hadAuth || _lastHeartbeatAt == null) {
+      unawaited(_sendHeartbeat(force: true));
+    }
+  }
+
+  void _refreshWatchedWallets({bool forceImmediate = false}) {
+    if (!AppConfig.isFeatureEnabled('presence')) return;
+
+    final now = DateTime.now();
+    if (_watchedWalletsLower.isEmpty) return;
+
+    final keys = _cacheByWalletLower.keys.toList(growable: false);
+    for (final key in keys) {
+      final existing = _cacheByWalletLower[key];
+      if (existing == null) continue;
+      _cacheByWalletLower[key] = existing.copyWith(
+        fetchedAt: DateTime.fromMillisecondsSinceEpoch(0),
+      );
+    }
+
+    for (final key in _watchedWalletsLower) {
+      _pendingWalletsLower.add(key);
+      _watchedWalletLastRequestedAt[key] = now;
+    }
+
+    _scheduleBatchFetch();
+    if (forceImmediate) {
+      unawaited(_flushBatchFetch());
+    }
   }
 
   UserPresenceEntry? presenceForWallet(String wallet) {

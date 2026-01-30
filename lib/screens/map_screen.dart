@@ -2961,25 +2961,27 @@ class _MapScreenState extends State<MapScreen>
         belowLayerId: _markerLayerId,
       );
 
-      await controller.addGeoJsonSource(
-        _locationSourceId,
-        const <String, dynamic>{
-          'type': 'FeatureCollection',
-          'features': <dynamic>[],
-        },
-        promoteId: 'id',
-      );
-      await controller.addCircleLayer(
-        _locationSourceId,
-        _locationLayerId,
-        ml.CircleLayerProperties(
-          circleRadius: 6,
-          circleColor: _hexRgb(scheme.secondary),
-          circleOpacity: 1.0,
-          circleStrokeWidth: 2,
-          circleStrokeColor: _hexRgb(scheme.surface),
-        ),
-      );
+      if (!kIsWeb) {
+        await controller.addGeoJsonSource(
+          _locationSourceId,
+          const <String, dynamic>{
+            'type': 'FeatureCollection',
+            'features': <dynamic>[],
+          },
+          promoteId: 'id',
+        );
+        await controller.addCircleLayer(
+          _locationSourceId,
+          _locationLayerId,
+          ml.CircleLayerProperties(
+            circleRadius: 6,
+            circleColor: _hexRgb(scheme.secondary),
+            circleOpacity: 1.0,
+            circleStrokeWidth: 2,
+            circleStrokeColor: _hexRgb(scheme.surface),
+          ),
+        );
+      }
 
       if (!mounted) return;
       _styleInitialized = true;
@@ -3186,6 +3188,7 @@ class _MapScreenState extends State<MapScreen>
   }
 
   Future<void> _syncUserLocation({required ThemeProvider themeProvider}) async {
+    if (kIsWeb) return;
     final controller = _mapController;
     if (controller == null) return;
     if (!_styleInitialized) return;
@@ -4748,21 +4751,41 @@ class _MapScreenState extends State<MapScreen>
     });
     _searchFocusNode.unfocus();
 
-    if (suggestion.position != null) {
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context);
+    void showInvalidSelection() {
+      messenger.showKubusSnackBar(
+        SnackBar(
+          content: Text(
+            l10n?.activityNavigationUnableToOpenToast ??
+                'Unable to open this item right now.',
+          ),
+        ),
+      );
+    }
+
+    final position = suggestion.position;
+    if (position != null) {
       unawaited(
         _animateMapTo(
-          suggestion.position!,
+          position,
           zoom: math.max(_lastZoom, 16.0),
         ),
       );
     }
 
     if (!mounted) return;
-    if (suggestion.type == 'artwork' && suggestion.id != null) {
+
+    final resolvedId = suggestion.id?.trim();
+    if (suggestion.type == 'artwork') {
+      if (resolvedId == null || resolvedId.isEmpty) {
+        showInvalidSelection();
+        return;
+      }
       // Find an existing marker for this artwork, or create a temporary one
       // so the floating info card can be shown instead of immediately navigating.
       final marker = _findOrCreateMarkerForArtwork(
-        suggestion.id!,
+        resolvedId,
         suggestion.position,
         suggestion.label,
       );
@@ -4771,13 +4794,25 @@ class _MapScreenState extends State<MapScreen>
         return;
       }
       // Fallback: open detail screen directly if no marker found
-      await openArtwork(context, suggestion.id!, source: 'map_search');
-    } else if (suggestion.type == 'profile' && suggestion.id != null) {
+      await openArtwork(context, resolvedId, source: 'map_search');
+      return;
+    }
+
+    if (suggestion.type == 'profile') {
+      if (resolvedId == null || resolvedId.isEmpty) {
+        showInvalidSelection();
+        return;
+      }
       await Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => UserProfileScreen(userId: suggestion.id!),
+          builder: (_) => UserProfileScreen(userId: resolvedId),
         ),
       );
+      return;
+    }
+
+    if (resolvedId == null || resolvedId.isEmpty) {
+      showInvalidSelection();
     }
   }
 
