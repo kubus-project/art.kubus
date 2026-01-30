@@ -266,6 +266,11 @@ class _ArtMapViewState extends State<ArtMapView> {
                 zoomGesturesEnabled: widget.zoomGesturesEnabled && styleReady,
                 tiltGesturesEnabled: widget.tiltGesturesEnabled && styleReady,
                 compassEnabled: widget.compassEnabled,
+                // Explicitly disable location features on web.
+                // Some plugin versions default these on and attempt to send
+                // unsupported location render options to the web implementation.
+                myLocationEnabled: false,
+                myLocationTrackingMode: ml.MyLocationTrackingMode.none,
                 onMapCreated: (controller) {
                   _controller = controller;
                   _resetStyleLoadState();
@@ -274,16 +279,6 @@ class _ArtMapViewState extends State<ArtMapView> {
                     'ArtMapView: map created (style="$resolved", platform=${defaultTargetPlatform.name}, web=$kIsWeb)',
                   );
                   widget.onMapCreated(controller);
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    try {
-                      controller.forceResizeWebMap();
-                    } catch (e, st) {
-                      AppConfig.debugPrint('ArtMapView: forceResizeWebMap failed: $e');
-                      if (kDebugMode) {
-                        AppConfig.debugPrint('ArtMapView: forceResizeWebMap stack: $st');
-                      }
-                    }
-                  });
                 },
                 onStyleLoadedCallback: () {
                   _styleStopwatch?.stop();
@@ -293,14 +288,6 @@ class _ArtMapViewState extends State<ArtMapView> {
                     AppConfig.debugPrint('ArtMapView: style loaded in ${elapsedMs}ms');
                   } else {
                     AppConfig.debugPrint('ArtMapView: style loaded');
-                  }
-                  try {
-                    _controller?.forceResizeWebMap();
-                  } catch (e, st) {
-                    AppConfig.debugPrint('ArtMapView: forceResizeWebMap after style load failed: $e');
-                    if (kDebugMode) {
-                      AppConfig.debugPrint('ArtMapView: resize-after-style stack: $st');
-                    }
                   }
                   if (_pendingStyleApply) {
                     _pendingStyleApply = false;

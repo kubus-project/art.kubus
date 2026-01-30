@@ -578,6 +578,21 @@ class _MapScreenState extends State<MapScreen>
     setState(() {
       _showMapTutorial = false;
     });
+    // Web MapLibre is a platform view; after removing a full-screen overlay
+    // (tutorial), force a resize on the next frame to keep the WebGL canvas
+    // in sync with its container.
+    if (kIsWeb) {
+      final controller = _mapController;
+      if (controller != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          try {
+            controller.forceResizeWebMap();
+          } catch (_) {
+            // Best-effort.
+          }
+        });
+      }
+    }
     unawaited(_setMapTutorialSeen());
   }
 
@@ -3217,7 +3232,13 @@ class _MapScreenState extends State<MapScreen>
             ],
           };
 
-    await controller.setGeoJsonSource(_locationSourceId, data);
+    try {
+      await controller.setGeoJsonSource(_locationSourceId, data);
+    } catch (e) {
+      if (kDebugMode) {
+        AppConfig.debugPrint('MapScreen: setGeoJsonSource(location) failed: $e');
+      }
+    }
   }
 
   Future<void> _syncMapMarkers({required ThemeProvider themeProvider}) async {
@@ -3281,7 +3302,14 @@ class _MapScreenState extends State<MapScreen>
       'features': features,
     };
     if (!mounted) return;
-    await controller.setGeoJsonSource(_markerSourceId, collection);
+    try {
+      await controller.setGeoJsonSource(_markerSourceId, collection);
+    } catch (e) {
+      if (kDebugMode) {
+        AppConfig.debugPrint('MapScreen: setGeoJsonSource(markers) failed: $e');
+      }
+      return;
+    }
 
     if (_is3DMarkerModeActive) {
       await _syncMarkerCubes(themeProvider: themeProvider);
