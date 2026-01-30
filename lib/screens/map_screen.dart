@@ -2802,10 +2802,32 @@ class _MapScreenState extends State<MapScreen>
           circleRadius: hitboxRadius,
           circleColor: _hexRgb(scheme.surface),
           circleOpacity: 0.01,
+          // Shift hitbox up ~8px to align with visual cube center (PNG is 72px tall, cube is 46px centered higher)
+          circleTranslate: const <dynamic>[0, -8],
+          // Maintain constant screen-space hitbox size regardless of pitch (3D mode)
+          circlePitchScale: 'viewport',
+          circlePitchAlignment: 'viewport',
         ),
         belowLayerId: _markerLayerId,
       );
 
+      // Add fill-extrusion layer FIRST (for 3D cubes) so it renders BELOW the icon layer.
+      await controller.addFillExtrusionLayer(
+        _cubeSourceId,
+        _cubeLayerId,
+        ml.FillExtrusionLayerProperties(
+          fillExtrusionColor: <dynamic>['get', 'color'],
+          fillExtrusionHeight: <dynamic>['get', 'height'],
+          fillExtrusionBase: 0.0,
+          fillExtrusionOpacity: 1.0,
+          fillExtrusionVerticalGradient: false,
+          visibility: 'none',
+        ),
+        belowLayerId: _markerLayerId,
+      );
+
+      // Add symbol layer for cube TOP FACE icons AFTER fill-extrusion so they render ABOVE the cubes.
+      // This creates the visual effect of the 2D marker appearing on top of the 3D cube.
       await controller.addSymbolLayer(
         _markerSourceId,
         _cubeIconLayerId,
@@ -2833,20 +2855,6 @@ class _MapScreenState extends State<MapScreen>
           iconAnchor: 'center',
           iconPitchAlignment: 'map',
           iconRotationAlignment: 'map',
-          visibility: 'none',
-        ),
-        belowLayerId: _markerLayerId,
-      );
-
-      await controller.addFillExtrusionLayer(
-        _cubeSourceId,
-        _cubeLayerId,
-        ml.FillExtrusionLayerProperties(
-          fillExtrusionColor: <dynamic>['get', 'color'],
-          fillExtrusionHeight: <dynamic>['get', 'height'],
-          fillExtrusionBase: 0.0,
-          fillExtrusionOpacity: 1.0,
-          fillExtrusionVerticalGradient: false,
           visibility: 'none',
         ),
         belowLayerId: _markerLayerId,
