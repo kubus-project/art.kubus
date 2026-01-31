@@ -2751,6 +2751,27 @@ class _MapScreenState extends State<MapScreen>
         promoteId: 'id',
       );
 
+      // Layer order (bottom to top):
+      // 1. Fill-extrusion (3D cubes)
+      // 2. Marker symbol layer (2D icons)
+      // 3. Cube icon layer (3D mode top-face icons)
+      // 4. Hitbox circle layer (TOPMOST for click detection)
+
+      // 1. Fill-extrusion layer for 3D cubes (bottom)
+      await controller.addFillExtrusionLayer(
+        _cubeSourceId,
+        _cubeLayerId,
+        ml.FillExtrusionLayerProperties(
+          fillExtrusionColor: <dynamic>['get', 'color'],
+          fillExtrusionHeight: <dynamic>['get', 'height'],
+          fillExtrusionBase: 0.0,
+          fillExtrusionOpacity: 1.0,
+          fillExtrusionVerticalGradient: false,
+          visibility: 'none',
+        ),
+      );
+
+      // 2. Main marker symbol layer for 2D icons
       await controller.addSymbolLayer(
         _markerSourceId,
         _markerLayerId,
@@ -2780,54 +2801,8 @@ class _MapScreenState extends State<MapScreen>
           iconRotationAlignment: 'map',
         ),
       );
-      final hitboxScale = kIsWeb ? 1.35 : 1.0;
-      // Increased hitbox radius to better cover the visual marker (56x72 PNG icon).
-      // This compensates for icon anchor offset where the visible cube center
-      // doesn't align perfectly with the GeoJSON coordinate.
-      final hitboxRadius = <dynamic>[
-        'interpolate',
-        ['linear'],
-        ['zoom'],
-        3,
-        14 * hitboxScale,  // Increased from 10
-        14,
-        24 * hitboxScale,  // Increased from 18 to cover ~48px diameter
-        24,
-        32 * hitboxScale,  // Increased from 26
-      ];
-      await controller.addCircleLayer(
-        _markerSourceId,
-        _markerHitboxLayerId,
-        ml.CircleLayerProperties(
-          circleRadius: hitboxRadius,
-          circleColor: _hexRgb(scheme.surface),
-          circleOpacity: 0.01,
-          // Shift hitbox up ~8px to align with visual cube center (PNG is 72px tall, cube is 46px centered higher)
-          circleTranslate: const <dynamic>[0, -8],
-          // Maintain constant screen-space hitbox size regardless of pitch (3D mode)
-          circlePitchScale: 'viewport',
-          circlePitchAlignment: 'viewport',
-        ),
-        belowLayerId: _markerLayerId,
-      );
 
-      // Add fill-extrusion layer FIRST (for 3D cubes) so it renders BELOW the icon layer.
-      await controller.addFillExtrusionLayer(
-        _cubeSourceId,
-        _cubeLayerId,
-        ml.FillExtrusionLayerProperties(
-          fillExtrusionColor: <dynamic>['get', 'color'],
-          fillExtrusionHeight: <dynamic>['get', 'height'],
-          fillExtrusionBase: 0.0,
-          fillExtrusionOpacity: 1.0,
-          fillExtrusionVerticalGradient: false,
-          visibility: 'none',
-        ),
-        belowLayerId: _markerLayerId,
-      );
-
-      // Add symbol layer for cube TOP FACE icons AFTER fill-extrusion so they render ABOVE the cubes.
-      // This creates the visual effect of the 2D marker appearing on top of the 3D cube.
+      // 3. Cube top-face icon layer (above fill-extrusion, same icons as marker layer)
       await controller.addSymbolLayer(
         _markerSourceId,
         _cubeIconLayerId,
@@ -2857,7 +2832,34 @@ class _MapScreenState extends State<MapScreen>
           iconRotationAlignment: 'map',
           visibility: 'none',
         ),
-        belowLayerId: _markerLayerId,
+      );
+
+      // 4. Hitbox layer (TOPMOST) - invisible circles for click detection
+      // Must be on top so clicks register on the hitbox, not blocked by symbol icons.
+      final hitboxScale = kIsWeb ? 1.35 : 1.0;
+      final hitboxRadius = <dynamic>[
+        'interpolate',
+        ['linear'],
+        ['zoom'],
+        3,
+        14 * hitboxScale,
+        14,
+        24 * hitboxScale,
+        24,
+        32 * hitboxScale,
+      ];
+      await controller.addCircleLayer(
+        _markerSourceId,
+        _markerHitboxLayerId,
+        ml.CircleLayerProperties(
+          circleRadius: hitboxRadius,
+          circleColor: _hexRgb(scheme.surface),
+          circleOpacity: 0.01,
+          // Shift hitbox up ~8px to align with visual cube center
+          circleTranslate: const <dynamic>[0, -8],
+          circlePitchScale: 'viewport',
+          circlePitchAlignment: 'viewport',
+        ),
       );
 
       await controller.addGeoJsonSource(
