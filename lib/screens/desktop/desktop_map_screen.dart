@@ -1719,23 +1719,25 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             ),
 
           if (_showMapTutorial)
-            Builder(
-              builder: (context) {
-                final l10n = AppLocalizations.of(context)!;
-                final steps = _buildMapTutorialSteps(l10n);
-                final idx = _mapTutorialIndex.clamp(0, steps.length - 1);
-                return InteractiveTutorialOverlay(
-                  steps: steps,
-                  currentIndex: idx,
-                  onNext: _tutorialNext,
-                  onBack: _tutorialBack,
-                  onSkip: _dismissMapTutorial,
-                  skipLabel: l10n.commonSkip,
-                  backLabel: l10n.commonBack,
-                  nextLabel: l10n.commonNext,
-                  doneLabel: l10n.commonDone,
-                );
-              },
+            Positioned.fill(
+              child: Builder(
+                builder: (context) {
+                  final l10n = AppLocalizations.of(context)!;
+                  final steps = _buildMapTutorialSteps(l10n);
+                  final idx = _mapTutorialIndex.clamp(0, steps.length - 1);
+                  return InteractiveTutorialOverlay(
+                    steps: steps,
+                    currentIndex: idx,
+                    onNext: _tutorialNext,
+                    onBack: _tutorialBack,
+                    onSkip: _dismissMapTutorial,
+                    skipLabel: l10n.commonSkip,
+                    backLabel: l10n.commonBack,
+                    nextLabel: l10n.commonNext,
+                    doneLabel: l10n.commonDone,
+                  );
+                },
+              ),
             ),
         ],
       ),
@@ -4590,7 +4592,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       if (requestId == _markerRequestId) {
         _isLoadingMarkers = false;
       }
-      _flushPendingMarkerRefresh();
+      // Schedule flush for next frame to avoid tight retry loop on repeated errors.
+      if (_pendingMarkerRefresh && mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _flushPendingMarkerRefresh();
+        });
+      }
     }
   }
 
