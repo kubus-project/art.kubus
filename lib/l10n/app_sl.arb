@@ -1089,6 +1089,10 @@
   "@mapIsometricViewDisableTooltip": {
     "description": "Namig (tooltip) za preklop izometričnega pogleda, ko je trenutno VKLOPLJEN."
   },
+  "mapResetBearingTooltip": "Usmeri na sever",
+  "@mapResetBearingTooltip": {
+    "description": "Namig za gumb, ki ponastavi usmerjenost zemljevida na sever (0 stopinj)."
+  },
   "mapExhibitionsUnavailableToast": "Razstave trenutno niso na voljo.",
   "@mapExhibitionsUnavailableToast": {
     "description": "Obvestilo (SnackBar), ko razstav ni mogoče odpreti z zemljevida (funkcija izklopljena ali API ni na voljo)."

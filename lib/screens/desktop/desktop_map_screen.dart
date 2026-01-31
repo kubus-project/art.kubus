@@ -1554,6 +1554,38 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     unawaited(_updateMarkerRenderMode());
   }
 
+  /// Reset map bearing to 0 (north up) while preserving zoom and pitch.
+  Future<void> _resetBearing() async {
+    final controller = _mapController;
+    if (!_mapReady || controller == null) return;
+
+    // Skip if already pointing north
+    if (_lastBearing.abs() < 0.5) return;
+
+    _programmaticCameraMove = true;
+    try {
+      await controller.animateCamera(
+        ml.CameraUpdate.newCameraPosition(
+          ml.CameraPosition(
+            target: ml.LatLng(_cameraCenter.latitude, _cameraCenter.longitude),
+            zoom: _cameraZoom,
+            bearing: 0.0,
+            tilt: _isometricViewEnabled &&
+                    AppConfig.isFeatureEnabled('mapIsometricView')
+                ? 54.736
+                : 0.0,
+          ),
+        ),
+        duration: const Duration(milliseconds: 320),
+      );
+    } catch (e, st) {
+      AppConfig.debugPrint('DesktopMapScreen: _resetBearing failed: $e');
+      if (kDebugMode) {
+        AppConfig.debugPrint('DesktopMapScreen: _resetBearing stack: $st');
+      }
+    }
+  }
+
   Future<void> _moveCamera(LatLng target, double zoom) async {
     _cameraCenter = target;
     _cameraZoom = zoom;
@@ -3561,6 +3593,20 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             tooltip: 'Zoom in',
             icon: const Icon(Icons.add),
           ),
+          // Point north / reset bearing button (visible when map is rotated)
+          if (_lastBearing.abs() > 1.0) ...[
+            Container(
+              width: 1,
+              height: 26,
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              color: scheme.outline.withValues(alpha: 0.22),
+            ),
+            IconButton(
+              onPressed: () => unawaited(_resetBearing()),
+              tooltip: l10n.mapResetBearingTooltip,
+              icon: const Icon(Icons.explore),
+            ),
+          ],
           Container(
             width: 1,
             height: 26,

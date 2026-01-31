@@ -86,6 +86,8 @@ import 'services/share/share_deep_link_parser.dart';
 
 class _UnhandledErrorDedupe {
   static const Duration _dedupeWindow = Duration(seconds: 2);
+  static const bool _logInRelease =
+      bool.fromEnvironment('ERROR_STACK_LOG', defaultValue: false);
   static String? _lastSignature;
   static DateTime? _lastLoggedAt;
   static int _suppressedCount = 0;
@@ -119,7 +121,7 @@ class _UnhandledErrorDedupe {
     _lastSignature = signature;
     _lastLoggedAt = now;
 
-    if (kDebugMode) {
+    if (kDebugMode || _logInRelease) {
       debugPrint(
           'main.dart: Unhandled error ($source) ${error.runtimeType}: $error');
       debugPrint('main.dart: stack: $stack');
@@ -132,7 +134,7 @@ class _UnhandledErrorDedupe {
     firstError = error;
     firstStack = stack;
     firstSource = source;
-    if (kDebugMode) {
+    if (kDebugMode || _logInRelease) {
       debugPrint(
           'main.dart: First unhandled error captured ($source) ${error.runtimeType}: $error');
       debugPrint('main.dart: First error stack: $stack');
@@ -150,6 +152,14 @@ void main() {
   // WidgetsBinding is created in the same zone as the rest of the app and
   // prevents 'Zone mismatch' warnings when the zone-global error handler
   // or other zone-specific configuration is used.
+
+  // Silence debugPrint in release unless explicitly enabled. This avoids
+  // unintended runtime type issues from debug-only logging in production.
+  const bool allowReleasePrint =
+      bool.fromEnvironment('ERROR_STACK_LOG', defaultValue: false);
+  if (!kDebugMode && !allowReleasePrint) {
+    debugPrint = (String? message, {int? wrapWidth}) {};
+  }
 
   // Fallback UI for build-time errors so UI doesn't crash with a null-check exception
   ErrorWidget.builder = (FlutterErrorDetails details) {

@@ -1107,6 +1107,10 @@
   "@mapIsometricViewDisableTooltip": {
     "description": "Tooltip for the Isometric View toggle when it is currently ON (disables isometric view)."
   },
+  "mapResetBearingTooltip": "Point north",
+  "@mapResetBearingTooltip": {
+    "description": "Tooltip for the button that resets the map bearing/rotation to north (0 degrees)."
+  },
   "mapExhibitionsUnavailableToast": "Exhibitions are currently unavailable.",
   "@mapExhibitionsUnavailableToast": {
     "description": "Toast/SnackBar shown when exhibitions can't be opened from the map (feature disabled or API unavailable)."
