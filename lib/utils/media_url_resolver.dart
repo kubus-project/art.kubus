@@ -57,6 +57,8 @@ class MediaUrlResolver {
     'wikipedia.org',
     'upload.wikimedia.org',
     'commons.wikimedia.org',
+    'coeser.de',
+    'slovenia.si',
   };
 
   static bool _needsProxy(String url) {
