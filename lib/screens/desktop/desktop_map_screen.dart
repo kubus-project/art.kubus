@@ -190,6 +190,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   bool _showSearchOverlay = false;
   final SearchService _searchService = SearchService();
 
+  // Filter options - same list as mobile for parity
   final List<String> _filterOptions = [
     'all',
     'nearby',
@@ -199,6 +200,17 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     'favorites'
   ];
   String _selectedSort = 'distance';
+
+  // Marker type layer visibility - same as mobile for parity
+  final Map<ArtMarkerType, bool> _markerLayerVisibility = {
+    ArtMarkerType.artwork: true,
+    ArtMarkerType.institution: true,
+    ArtMarkerType.event: true,
+    ArtMarkerType.residency: true,
+    ArtMarkerType.drop: true,
+    ArtMarkerType.experience: true,
+    ArtMarkerType.other: true,
+  };
 
   @override
   void initState() {
@@ -1092,8 +1104,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final isDark = themeProvider.isDarkMode;
 
     final zoom = _cameraZoom;
-    final visibleMarkers =
-        _artMarkers.where((m) => m.hasValidPosition).toList(growable: false);
+    // Filter markers by position validity AND layer visibility (same as mobile)
+    final visibleMarkers = _artMarkers
+        .where((m) => m.hasValidPosition)
+        .where((m) => _markerLayerVisibility[m.type] ?? true)
+        .toList(growable: false);
     final useClustering = zoom < 12;
 
     final features = <dynamic>[];
@@ -1659,7 +1674,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
         // Capture anchor value to avoid race condition between null check and access.
         final markerAnchor = _selectedMarkerAnchor;
+        // Use StackFit.expand to ensure bounded constraints for Positioned.fill
+        // children (especially the marker overlay layer).
         return Stack(
+          fit: StackFit.expand,
           children: [
             Positioned.fill(child: map),
             if (_markerOverlayMode == _MarkerOverlayMode.anchored &&
@@ -2983,9 +3001,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   ),
                   const SizedBox(height: 24),
 
-                  // Artwork types
+                  // Marker type layers (matches mobile's "Layers" section)
                   Text(
-                    l10n.desktopMapArtworkTypeTitle,
+                    l10n.mapLayersTitle,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -2996,33 +3014,25 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: [
-                      _buildTypeFilterChip(
-                        label: l10n.mapFilterAll,
-                        filterKey: 'all',
+                    children: ArtMarkerType.values.map((type) {
+                      final selected = _markerLayerVisibility[type] ?? true;
+                      final roles = KubusColorRoles.of(context);
+                      final layerAccent = AppColorUtils.markerSubjectColor(
+                        markerType: type.name,
+                        metadata: null,
+                        scheme: scheme,
+                        roles: roles,
+                      );
+                      return _buildLayerChip(
+                        label: _markerTypeLabel(l10n, type),
+                        icon: _resolveArtMarkerIcon(type),
+                        selected: selected,
+                        accent: layerAccent,
                         themeProvider: themeProvider,
-                      ),
-                      _buildTypeFilterChip(
-                        label: l10n.desktopMapArtworkTypeArArt,
-                        filterKey: 'ar',
-                        themeProvider: themeProvider,
-                      ),
-                      _buildTypeFilterChip(
-                        label: l10n.desktopMapArtworkTypeNfts,
-                        filterKey: 'nfts',
-                        themeProvider: themeProvider,
-                      ),
-                      _buildTypeFilterChip(
-                        label: l10n.desktopMapArtworkTypeModels3d,
-                        filterKey: 'models3d',
-                        themeProvider: themeProvider,
-                      ),
-                      _buildTypeFilterChip(
-                        label: l10n.desktopMapArtworkTypeSculptures,
-                        filterKey: 'sculptures',
-                        themeProvider: themeProvider,
-                      ),
-                    ],
+                        onTap: () => setState(
+                            () => _markerLayerVisibility[type] = !selected),
+                      );
+                    }).toList(),
                   ),
                   const SizedBox(height: 24),
 
@@ -3081,6 +3091,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                         _searchRadius = 5.0;
                         _selectedFilter = 'nearby';
                         _selectedSort = 'distance';
+                        // Reset layer visibility to all visible
+                        for (final type in ArtMarkerType.values) {
+                          _markerLayerVisibility[type] = true;
+                        }
                       });
                       _loadMarkersForCurrentView(force: true);
                     },
@@ -3123,23 +3137,79 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     ),
     );
   }
-
-  Widget _buildTypeFilterChip({
+  /// Layer chip with icon and accent color - matches mobile's _glassChip style
+  Widget _buildLayerChip({
     required String label,
-    required String filterKey,
+    required IconData icon,
+    required bool selected,
+    required Color accent,
     required ThemeProvider themeProvider,
+    required VoidCallback onTap,
   }) {
-    final isSelected = _selectedFilter == filterKey;
-    return _buildGlassChip(
-      label: label,
-      isSelected: isSelected,
-      themeProvider: themeProvider,
-      onTap: () {
-        setState(() {
-          _selectedFilter = filterKey;
-        });
-      },
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = selected
+        ? accent.withValues(alpha: isDark ? 0.24 : 0.18)
+        : scheme.surface.withValues(alpha: isDark ? 0.34 : 0.42);
+    final border = selected
+        ? accent.withValues(alpha: 0.35)
+        : scheme.outlineVariant.withValues(alpha: 0.30);
+    final fg = selected ? accent : scheme.onSurfaceVariant;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: border),
+          ),
+          child: LiquidGlassPanel(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            margin: EdgeInsets.zero,
+            borderRadius: BorderRadius.circular(999),
+            showBorder: false,
+            backgroundColor: bg,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 14, color: fg),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: KubusTypography.textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: fg,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
+  }
+
+  /// Returns human-readable label for marker type - same as mobile
+  String _markerTypeLabel(AppLocalizations l10n, ArtMarkerType type) {
+    switch (type) {
+      case ArtMarkerType.artwork:
+        return l10n.mapMarkerTypeArtworks;
+      case ArtMarkerType.institution:
+        return l10n.mapMarkerTypeInstitutions;
+      case ArtMarkerType.event:
+        return l10n.mapMarkerTypeEvents;
+      case ArtMarkerType.residency:
+        return l10n.mapMarkerTypeResidencies;
+      case ArtMarkerType.drop:
+        return l10n.mapMarkerTypeDrops;
+      case ArtMarkerType.experience:
+        return l10n.mapMarkerTypeExperiences;
+      case ArtMarkerType.other:
+        return l10n.mapMarkerTypeMisc;
+    }
   }
 
   Widget _buildSortOption({
@@ -3330,12 +3400,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             color: scheme.outline.withValues(alpha: 0.22),
           ),
 
-          // Create marker
+          // Create marker - use squared corners to match mobile
           _buildGlassIconButton(
             icon: Icons.add_location_alt_outlined,
             themeProvider: themeProvider,
             tooltip: l10n.mapCreateMarkerHereTooltip,
-            borderRadius: BorderRadius.circular(999),
+            // Use default borderRadius (12) for squared look like mobile
             activeTint: accent.withValues(alpha: isDark ? 0.24 : 0.20),
             activeIconColor: AppColorUtils.contrastText(accent),
             isActive: true,

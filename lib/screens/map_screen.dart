@@ -3347,7 +3347,10 @@ class _MapScreenState extends State<MapScreen>
         : ValueKey<String>('marker_overlay:${marker.id}:$selectionKey');
 
     return Positioned.fill(
+      // Use StackFit.expand to ensure the Stack fills the Positioned.fill
+      // and passes bounded constraints to its Positioned.fill children.
       child: Stack(
+        fit: StackFit.expand,
         children: [
           if (marker != null)
             Positioned.fill(
