@@ -16,24 +16,30 @@ subprojects {
 }
 
 subprojects {
-    tasks.withType(JavaCompile).configureEach {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
-    }
-    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
-        kotlinOptions.jvmTarget = '21'
-    }
-}
-
-subprojects {
-    plugins.withId('org.jetbrains.kotlin.android') {
-        extensions.configure(org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension) {
-            jvmToolchain(21)
+    plugins.withId('com.android.application') {
+        def androidExt = project.extensions.findByName('android')
+        if (androidExt != null && androidExt.hasProperty('compileOptions')) {
+            androidExt.compileOptions {
+                sourceCompatibility JavaVersion.VERSION_21
+                targetCompatibility JavaVersion.VERSION_21
+            }
         }
     }
-    plugins.withId('org.jetbrains.kotlin.jvm') {
-        extensions.configure(org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension) {
-            jvmToolchain(21)
+    plugins.withId('com.android.library') {
+        def androidExt = project.extensions.findByName('android')
+        if (androidExt != null && androidExt.hasProperty('compileOptions')) {
+            androidExt.compileOptions {
+                sourceCompatibility JavaVersion.VERSION_21
+                targetCompatibility JavaVersion.VERSION_21
+            }
+        }
+    }
+    plugins.withId('org.jetbrains.kotlin.android') {
+        def androidExt = project.extensions.findByName('android')
+        if (androidExt != null && androidExt.hasProperty('kotlinOptions')) {
+            androidExt.kotlinOptions {
+                jvmTarget = '21'
+            }
         }
     }
 }
