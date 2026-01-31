@@ -45,7 +45,9 @@ class EmailPreferencesProvider extends ChangeNotifier {
       _isUpdating = false;
       _lastError = null;
       _initializeCompleter = null;
-      notifyListeners();
+      // Schedule notifyListeners in microtask to avoid synchronous notification
+      // during ProxyProvider update callback, which would cause infinite recursion.
+      Future.microtask(notifyListeners);
     }
   }
 

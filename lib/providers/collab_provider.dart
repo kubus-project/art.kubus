@@ -170,7 +170,9 @@ class CollabProvider extends ChangeNotifier {
         _invitesInbox.clear();
         _membersByEntityKey.clear();
         _error = null;
-        notifyListeners();
+        // Schedule notifyListeners in microtask to avoid synchronous notification
+        // during ProxyProvider update callback, which could cause infinite recursion.
+        Future.microtask(notifyListeners);
       }
       stopInvitePolling();
       return;
@@ -183,7 +185,8 @@ class CollabProvider extends ChangeNotifier {
       _invitesInbox.clear();
       _membersByEntityKey.clear();
       _error = null;
-      notifyListeners();
+      // Schedule notifyListeners in microtask to avoid synchronous notification.
+      Future.microtask(notifyListeners);
       unawaited(initialize(refresh: true));
       startInvitePolling();
       return;

@@ -64,7 +64,9 @@ class RecentActivityProvider extends ChangeNotifier {
     _notificationProvider = provider;
     _notificationProvider?.addListener(_handleNotificationProviderChange);
     if (_notificationProvider?.hasNew ?? false) {
-      refresh(force: true);
+      // Schedule refresh in microtask to avoid synchronous notifyListeners
+      // during ProxyProvider update callback, which would cause infinite recursion.
+      Future.microtask(() => refresh(force: true));
     }
   }
 
