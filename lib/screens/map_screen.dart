@@ -774,10 +774,25 @@ class _MapScreenState extends State<MapScreen>
       _startWebLocationStream();
     }
 
+    // Socket listeners for real-time marker sync (all platforms).
+    _initializeMarkerSocketListeners();
+
     if (!kIsWeb && AppConfig.isFeatureEnabled('ar')) {
       // Initialize AR integration (mobile-only).
       _initializeARIntegration();
     }
+  }
+
+  /// Sets up socket listeners for real-time marker updates.
+  /// Called unconditionally from _initializeMap() for all users.
+  void _initializeMarkerSocketListeners() {
+    // Avoid duplicate subscriptions if called multiple times.
+    if (_markerSocketSubscription != null) return;
+
+    _markerSocketSubscription =
+        _mapMarkerService.onMarkerCreated.listen(_handleMarkerCreated);
+    _markerDeletedSubscription =
+        _mapMarkerService.onMarkerDeleted.listen(_handleMarkerDeleted);
   }
 
   Future<void> _initializeARIntegration() async {
@@ -787,14 +802,6 @@ class _MapScreenState extends State<MapScreen>
 
       // Set up notification tap handler
       _pushNotificationService.onNotificationTap = _handleNotificationTap;
-
-      // Marker loading is triggered after the map reports ready (and/or when
-      // we get the initial location). This avoids travel-mode starting with a
-      // tiny radius query before the viewport bounds are available.
-      _markerSocketSubscription =
-          _mapMarkerService.onMarkerCreated.listen(_handleMarkerCreated);
-      _markerDeletedSubscription =
-          _mapMarkerService.onMarkerDeleted.listen(_handleMarkerDeleted);
 
       // Start proximity checking timer (every 10 seconds)
       _proximityCheckTimer = Timer.periodic(
@@ -3131,6 +3138,19 @@ class _MapScreenState extends State<MapScreen>
         .where((m) => (_markerLayerVisibility[m.type] ?? true))
         .toList(growable: false);
 
+    // Pre-register all needed icons in parallel to avoid waterfall.
+    // Collect unique icon IDs that need rendering.
+    await _preregisterMarkerIcons(
+      markers: visibleMarkers,
+      themeProvider: themeProvider,
+      scheme: scheme,
+      roles: roles,
+      isDark: isDark,
+      shouldCluster: shouldCluster,
+      zoom: zoom,
+    );
+    if (!mounted) return;
+
     final features = <Map<String, dynamic>>[];
 
     if (shouldCluster) {
@@ -3180,6 +3200,141 @@ class _MapScreenState extends State<MapScreen>
 
     if (_is3DMarkerModeActive) {
       await _syncMarkerCubes(themeProvider: themeProvider);
+    }
+  }
+
+  /// Pre-registers marker icons in batched parallel to avoid waterfall.
+  /// This renders icons concurrently (up to a batch limit) before the main
+  /// feature loop, so _markerFeatureFor() finds them already cached.
+  Future<void> _preregisterMarkerIcons({
+    required List<ArtMarker> markers,
+    required ThemeProvider themeProvider,
+    required ColorScheme scheme,
+    required KubusColorRoles roles,
+    required bool isDark,
+    required bool shouldCluster,
+    required double zoom,
+  }) async {
+    final controller = _mapController;
+    if (controller == null) return;
+
+    // Collect icon IDs that need rendering (not yet in _registeredMapImages).
+    final toRender = <_IconRenderTask>[];
+
+    if (shouldCluster) {
+      final clusters = _clusterMarkers(markers, zoom);
+      for (final cluster in clusters) {
+        if (cluster.markers.length == 1) {
+          final marker = cluster.markers.first;
+          final selected = _selectedMarkerId == marker.id;
+          final typeName = marker.type.name;
+          final tier = marker.signalTier;
+          final iconId =
+              'mk_${typeName}_${tier.name}${selected ? '_sel' : ''}_${isDark ? 'd' : 'l'}';
+          if (!_registeredMapImages.contains(iconId)) {
+            toRender.add(_IconRenderTask(
+              iconId: iconId,
+              marker: marker,
+              cluster: null,
+              isCluster: false,
+              selected: selected,
+            ));
+          }
+        } else {
+          final first = cluster.markers.first;
+          final typeName = first.type.name;
+          final label = cluster.markers.length > 99
+              ? '99+'
+              : '${cluster.markers.length}';
+          final iconId = 'cl_${typeName}_${label}_${isDark ? 'd' : 'l'}';
+          if (!_registeredMapImages.contains(iconId)) {
+            toRender.add(_IconRenderTask(
+              iconId: iconId,
+              marker: null,
+              cluster: cluster,
+              isCluster: true,
+              selected: false,
+            ));
+          }
+        }
+      }
+    } else {
+      for (final marker in markers) {
+        final selected = _selectedMarkerId == marker.id;
+        final typeName = marker.type.name;
+        final tier = marker.signalTier;
+        final iconId =
+            'mk_${typeName}_${tier.name}${selected ? '_sel' : ''}_${isDark ? 'd' : 'l'}';
+        if (!_registeredMapImages.contains(iconId)) {
+          toRender.add(_IconRenderTask(
+            iconId: iconId,
+            marker: marker,
+            cluster: null,
+            isCluster: false,
+            selected: selected,
+          ));
+        }
+      }
+    }
+
+    if (toRender.isEmpty) return;
+
+    // Deduplicate by iconId (multiple markers may share the same icon).
+    final uniqueTasks = <String, _IconRenderTask>{};
+    for (final task in toRender) {
+      uniqueTasks.putIfAbsent(task.iconId, () => task);
+    }
+
+    // Render in parallel batches (limit concurrency to avoid GPU overload).
+    const batchSize = 8;
+    final tasks = uniqueTasks.values.toList();
+    for (var i = 0; i < tasks.length; i += batchSize) {
+      if (!mounted) return;
+      final batch = tasks.skip(i).take(batchSize).toList();
+      await Future.wait(batch.map((task) async {
+        if (_registeredMapImages.contains(task.iconId)) return;
+        try {
+          Uint8List bytes;
+          if (task.isCluster && task.cluster != null) {
+            final first = task.cluster!.markers.first;
+            final baseColor = AppColorUtils.markerSubjectColor(
+              markerType: first.type.name,
+              metadata: first.metadata,
+              scheme: scheme,
+              roles: roles,
+            );
+            bytes = await ArtMarkerCubeIconRenderer.renderClusterPng(
+              count: task.cluster!.markers.length,
+              baseColor: baseColor,
+              scheme: scheme,
+              isDark: isDark,
+              pixelRatio: _markerPixelRatio(),
+            );
+          } else if (task.marker != null) {
+            final baseColor = _resolveArtMarkerColor(task.marker!, themeProvider);
+            bytes = await ArtMarkerCubeIconRenderer.renderMarkerPng(
+              baseColor: baseColor,
+              icon: _resolveArtMarkerIcon(task.marker!.type),
+              tier: task.marker!.signalTier,
+              scheme: scheme,
+              roles: roles,
+              isDark: isDark,
+              forceGlow: task.selected,
+              pixelRatio: _markerPixelRatio(),
+            );
+          } else {
+            return;
+          }
+          if (!mounted) return;
+          await controller.addImage(task.iconId, bytes);
+          _registeredMapImages.add(task.iconId);
+        } catch (e) {
+          if (kDebugMode) {
+            AppConfig.debugPrint(
+                'MapScreen: preregister icon failed (${task.iconId}): $e');
+          }
+        }
+      }));
     }
   }
 
@@ -5897,6 +6052,22 @@ class _ArtworkPreview extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Helper for batched icon pre-registration.
+class _IconRenderTask {
+  const _IconRenderTask({
+    required this.iconId,
+    required this.marker,
+    required this.cluster,
+    required this.isCluster,
+    required this.selected,
+  });
+  final String iconId;
+  final ArtMarker? marker;
+  final _ClusterBucket? cluster;
+  final bool isCluster;
+  final bool selected;
 }
 
 class _ClusterBucket {

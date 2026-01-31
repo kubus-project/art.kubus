@@ -26,16 +26,14 @@ subprojects {
 }
 
 subprojects {
-    afterEvaluate { project ->
-        if (project.plugins.hasPlugin('org.jetbrains.kotlin.android')) {
-            project.extensions.configure(org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension) {
-                jvmToolchain(21)
-            }
+    plugins.withId('org.jetbrains.kotlin.android') {
+        extensions.configure(org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension) {
+            jvmToolchain(21)
         }
-        if (project.plugins.hasPlugin('org.jetbrains.kotlin.jvm')) {
-            project.extensions.configure(org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension) {
-                jvmToolchain(21)
-            }
+    }
+    plugins.withId('org.jetbrains.kotlin.jvm') {
+        extensions.configure(org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension) {
+            jvmToolchain(21)
         }
     }
 }
