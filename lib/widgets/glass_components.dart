@@ -1,6 +1,11 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'dart:ui';
 import '../utils/design_tokens.dart';
+
+/// Global flag to disable BackdropFilter effects on web when WebGL context is unstable.
+/// This is set by the JS interop layer when repeated context losses are detected.
+bool kubusDisableBackdropFilter = false;
 
 Future<T?> showKubusDialog<T>({
   required BuildContext context,
@@ -20,6 +25,9 @@ Future<T?> showKubusDialog<T>({
   final resolvedBarrierLabel =
       barrierLabel ?? MaterialLocalizations.of(context).modalBarrierDismissLabel;
 
+  // On web, BackdropFilter can crash when WebGL context is lost (Firefox).
+  final useBackdropFilter = !kIsWeb || !kubusDisableBackdropFilter;
+
   return showGeneralDialog<T>(
     context: context,
     barrierDismissible: barrierDismissible,
@@ -30,18 +38,28 @@ Future<T?> showKubusDialog<T>({
     transitionDuration: transitionDuration,
     anchorPoint: anchorPoint,
     pageBuilder: (dialogContext, __, ___) {
-      final content = BackdropFilter(
-        filter: ImageFilter.blur(
-          sigmaX: KubusGlassEffects.blurSigmaLight,
-          sigmaY: KubusGlassEffects.blurSigmaLight,
-        ),
-        child: ColoredBox(
+      Widget content;
+      if (useBackdropFilter) {
+        content = BackdropFilter(
+          filter: ImageFilter.blur(
+            sigmaX: KubusGlassEffects.blurSigmaLight,
+            sigmaY: KubusGlassEffects.blurSigmaLight,
+          ),
+          child: ColoredBox(
+            color: Colors.transparent,
+            child: Center(
+              child: Builder(builder: (ctx) => builder(ctx)),
+            ),
+          ),
+        );
+      } else {
+        content = ColoredBox(
           color: Colors.transparent,
           child: Center(
             child: Builder(builder: (ctx) => builder(ctx)),
           ),
-        ),
-      );
+        );
+      }
 
       if (!useSafeArea) return content;
       return SafeArea(child: content);
@@ -375,36 +393,44 @@ class LiquidGlassPanel extends StatelessWidget {
         ? KubusColors.glassBorderDark
         : KubusColors.glassBorderLight;
 
+    // On web, BackdropFilter can crash when WebGL context is lost (Firefox).
+    // Use a solid fallback background instead to prevent UI crashes.
+    final useBackdropFilter = !kIsWeb || !kubusDisableBackdropFilter;
+
+    final innerContainer = Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            bgColor,
+            bgColor.withValues(alpha: (bgColor.a * 0.8)),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: effectiveRadius,
+        border: showBorder
+            ? Border.all(
+                color: borderColor,
+                width: KubusSizes.hairline,
+              )
+            : null,
+      ),
+      child: Padding(
+        padding: padding ?? const EdgeInsets.all(KubusSpacing.md),
+        child: child,
+      ),
+    );
+
     Widget panel = Container(
       margin: margin,
       child: ClipRRect(
         borderRadius: effectiveRadius,
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  bgColor,
-                  bgColor.withValues(alpha: (bgColor.a * 0.8)),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: effectiveRadius,
-              border: showBorder
-                  ? Border.all(
-                      color: borderColor,
-                      width: KubusSizes.hairline,
-                    )
-                  : null,
-            ),
-            child: Padding(
-              padding: padding ?? const EdgeInsets.all(KubusSpacing.md),
-              child: child,
-            ),
-          ),
-        ),
+        child: useBackdropFilter
+            ? BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
+                child: innerContainer,
+              )
+            : innerContainer,
       ),
     );
 
@@ -596,31 +622,40 @@ class FrostedModal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    // On web, BackdropFilter can crash when WebGL context is lost (Firefox).
+    final useBackdropFilter = !kIsWeb || !kubusDisableBackdropFilter;
+
+    Widget content = Center(
+      child: GestureDetector(
+        onTap: () {}, // Absorb taps on content
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: maxWidth ?? double.infinity,
+          ),
+          child: LiquidGlassPanel(
+            padding: padding ?? const EdgeInsets.all(KubusSpacing.lg),
+            blurSigma: KubusGlassEffects.blurSigmaHeavy,
+            child: child,
+          ),
+        ),
+      ),
+    );
+
+    if (useBackdropFilter) {
+      content = BackdropFilter(
+        filter: ImageFilter.blur(
+          sigmaX: KubusGlassEffects.blurSigmaLight,
+          sigmaY: KubusGlassEffects.blurSigmaLight,
+        ),
+        child: content,
+      );
+    }
+
     return GestureDetector(
       onTap: barrierDismissible ? (onBarrierTap ?? () => Navigator.of(context).pop()) : null,
       child: Container(
         color: scheme.scrim.withValues(alpha: KubusGlassEffects.backdropDimming),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(
-            sigmaX: KubusGlassEffects.blurSigmaLight,
-            sigmaY: KubusGlassEffects.blurSigmaLight,
-          ),
-          child: Center(
-            child: GestureDetector(
-              onTap: () {}, // Absorb taps on content
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: maxWidth ?? double.infinity,
-                ),
-                child: LiquidGlassPanel(
-                  padding: padding ?? const EdgeInsets.all(KubusSpacing.lg),
-                  blurSigma: KubusGlassEffects.blurSigmaHeavy,
-                  child: child,
-                ),
-              ),
-            ),
-          ),
-        ),
+        child: content,
       ),
     );
   }

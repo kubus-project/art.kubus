@@ -65,7 +65,7 @@ class PushNotificationService {
     );
 
     await _flutterLocalNotificationsPlugin.initialize(
-      initializationSettings,
+      settings: initializationSettings,
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
 
@@ -218,10 +218,10 @@ class PushNotificationService {
     });
 
     await _flutterLocalNotificationsPlugin.show(
-      marker.id.hashCode,
-      'AR Artwork Nearby! 🎨',
-      '${marker.name} is ${distance.round()}m away',
-      details,
+      id: marker.id.hashCode,
+      title: 'AR Artwork Nearby! 🎨',
+      body: '${marker.name} is ${distance.round()}m away',
+      notificationDetails: details,
       payload: payload,
     );
   }
@@ -280,10 +280,10 @@ class PushNotificationService {
     }
 
     await _flutterLocalNotificationsPlugin.show(
-      postId.hashCode,
-      'New post from $authorName',
-      content.length > 60 ? '${content.substring(0, 60)}...' : content,
-      details,
+      id: postId.hashCode,
+      title: 'New post from $authorName',
+      body: content.length > 60 ? '${content.substring(0, 60)}...' : content,
+      notificationDetails: details,
       payload: payload,
     );
   }
@@ -336,10 +336,10 @@ class PushNotificationService {
     });
 
     await _flutterLocalNotificationsPlugin.show(
-      artworkId.hashCode,
-      'Art Discovered! 🎉',
-      '$title by $artist (+$rewards KUB8)',
-      details,
+      id: artworkId.hashCode,
+      title: 'Art Discovered! 🎉',
+      body: '$title by $artist (+$rewards KUB8)',
+      notificationDetails: details,
       payload: payload,
     );
   }
@@ -391,17 +391,17 @@ class PushNotificationService {
     });
 
     await _flutterLocalNotificationsPlugin.show(
-      DateTime.now().millisecondsSinceEpoch,
-      title,
-      '+$amount KUB8 - $reason',
-      details,
+      id: DateTime.now().millisecondsSinceEpoch,
+      title: title,
+      body: '+$amount KUB8 - $reason',
+      notificationDetails: details,
       payload: payload,
     );
   }
 
   /// Cancel specific notification
   Future<void> cancelNotification(int id) async {
-    await _flutterLocalNotificationsPlugin.cancel(id);
+    await _flutterLocalNotificationsPlugin.cancel(id: id);
   }
 
   /// Cancel all notifications
@@ -498,10 +498,10 @@ class PushNotificationService {
     }
 
     await _flutterLocalNotificationsPlugin.show(
-      artworkId.hashCode + status.hashCode,
-      title,
-      body,
-      details,
+      id: artworkId.hashCode + status.hashCode,
+      title: title,
+      body: body,
+      notificationDetails: details,
       payload: payload,
     );
   }
@@ -592,10 +592,10 @@ class PushNotificationService {
     }
 
     await _flutterLocalNotificationsPlugin.show(
-      tradeId.hashCode,
-      title,
-      body,
-      details,
+      id: tradeId.hashCode,
+      title: title,
+      body: body,
+      notificationDetails: details,
       payload: payload,
     );
   }
@@ -649,10 +649,10 @@ class PushNotificationService {
     });
 
     await _flutterLocalNotificationsPlugin.show(
-      achievementId.hashCode,
-      '🏆 Achievement Unlocked!',
-      '$title - $description (+$rewardTokens KUB8)',
-      details,
+      id: achievementId.hashCode,
+      title: '🏆 Achievement Unlocked!',
+      body: '$title - $description (+$rewardTokens KUB8)',
+      notificationDetails: details,
       payload: payload,
     );
   }
@@ -712,10 +712,10 @@ class PushNotificationService {
     }
 
     await _flutterLocalNotificationsPlugin.show(
-      '$postId-$type-${DateTime.now().millisecondsSinceEpoch}'.hashCode,
-      title,
-      body,
-      details,
+      id: '$postId-$type-${DateTime.now().millisecondsSinceEpoch}'.hashCode,
+      title: title,
+      body: body,
+      notificationDetails: details,
       payload: payload,
     );
   }
@@ -782,10 +782,10 @@ class PushNotificationService {
     });
 
     await _flutterLocalNotificationsPlugin.show(
-      userId.hashCode,
-      '👥 New Follower',
-      '$userName started following you',
-      details,
+      id: userId.hashCode,
+      title: '👥 New Follower',
+      body: '$userName started following you',
+      notificationDetails: details,
       payload: payload,
     );
   }
@@ -862,10 +862,10 @@ class PushNotificationService {
     }
 
     await _flutterLocalNotificationsPlugin.show(
-      DateTime.now().millisecondsSinceEpoch,
-      title,
-      body,
-      details,
+      id: DateTime.now().millisecondsSinceEpoch,
+      title: title,
+      body: body,
+      notificationDetails: details,
       payload: payload,
     );
   }
@@ -916,10 +916,10 @@ class PushNotificationService {
     });
 
     await _flutterLocalNotificationsPlugin.show(
-      DateTime.now().millisecondsSinceEpoch,
-      title,
-      message,
-      details,
+      id: DateTime.now().millisecondsSinceEpoch,
+      title: title,
+      body: message,
+      notificationDetails: details,
       payload: payload,
     );
   }
@@ -1002,10 +1002,10 @@ class PushNotificationService {
     };
 
     await _flutterLocalNotificationsPlugin.show(
-      auctionId.hashCode,
-      titleText,
-      bodyText,
-      details,
+      id: auctionId.hashCode,
+      title: titleText,
+      body: bodyText,
+      notificationDetails: details,
       payload: jsonEncode(payloadData),
     );
 
@@ -1078,10 +1078,10 @@ class PushNotificationService {
     };
 
     await _flutterLocalNotificationsPlugin.show(
-      projectId.hashCode,
-      titleText,
-      bodyText,
-      details,
+      id: projectId.hashCode,
+      title: titleText,
+      body: bodyText,
+      notificationDetails: details,
       payload: jsonEncode(payloadData),
     );
 
@@ -1156,10 +1156,10 @@ class PushNotificationService {
     );
 
     await _flutterLocalNotificationsPlugin.show(
-      inviteId.hashCode,
-      titleText,
-      bodyText,
-      details,
+      id: inviteId.hashCode,
+      title: titleText,
+      body: bodyText,
+      notificationDetails: details,
       payload: jsonEncode(payloadData),
     );
 
@@ -1235,10 +1235,10 @@ class PushNotificationService {
     };
 
     await _flutterLocalNotificationsPlugin.show(
-      eventId.hashCode,
-      titleText,
-      bodyText,
-      details,
+      id: eventId.hashCode,
+      title: titleText,
+      body: bodyText,
+      notificationDetails: details,
       payload: jsonEncode(payloadData),
     );
 
@@ -1313,10 +1313,10 @@ class PushNotificationService {
     };
 
     await _flutterLocalNotificationsPlugin.show(
-      challengeId.hashCode,
-      titleText,
-      bodyText,
-      details,
+      id: challengeId.hashCode,
+      title: titleText,
+      body: bodyText,
+      notificationDetails: details,
       payload: jsonEncode(payloadData),
     );
 
@@ -1387,10 +1387,10 @@ class PushNotificationService {
     };
 
     await _flutterLocalNotificationsPlugin.show(
-      DateTime.now().millisecondsSinceEpoch,
-      titleText,
-      bodyText,
-      details,
+      id: DateTime.now().millisecondsSinceEpoch,
+      title: titleText,
+      body: bodyText,
+      notificationDetails: details,
       payload: jsonEncode(payloadData),
     );
 

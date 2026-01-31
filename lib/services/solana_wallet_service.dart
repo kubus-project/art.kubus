@@ -1103,14 +1103,22 @@ class SolanaWalletService {
         try {
             final offChain =
                 await metadata.getExternalJson().timeout(const Duration(seconds: 6));
-            base['description'] = offChain.description;
-            if (offChain.name.trim().isNotEmpty) base['name'] = offChain.name.trim();
-            if (offChain.symbol.trim().isNotEmpty) base['symbol'] = offChain.symbol.trim();
-            final resolvedImage = _resolveTokenImage(offChain.image);
-            if (resolvedImage != null) {
-              base['logoUrl'] = resolvedImage;
+            if (offChain != null) {
+              base['description'] = offChain.description;
+              final offChainName = offChain.name.trim();
+              if (offChainName.isNotEmpty) {
+                base['name'] = offChainName;
+              }
+              final offChainSymbol = offChain.symbol.trim();
+              if (offChainSymbol.isNotEmpty) {
+                base['symbol'] = offChainSymbol;
+              }
+              final resolvedImage = _resolveTokenImage(offChain.image);
+              if (resolvedImage != null) {
+                base['logoUrl'] = resolvedImage;
+              }
+              base['rawOffChainMetadata'] = offChain.toJson();
             }
-            base['rawOffChainMetadata'] = offChain.toJson();
         } catch (e) {
           debugPrint('SolanaWalletService: Failed to fetch off-chain metadata for $mint -> $e');
         }

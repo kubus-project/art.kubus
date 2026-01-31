@@ -152,11 +152,8 @@ class WalletProvider extends ChangeNotifier {
 
       final didAuthenticate = await _localAuth.authenticate(
         localizedReason: localizedReason ?? 'Authenticate to continue',
-        options: const AuthenticationOptions(
-          biometricOnly: true,
-          stickyAuth: true,
-          useErrorDialogs: false,
-        ),
+        biometricOnly: true,
+        persistAcrossBackgrounding: true,
       );
       return didAuthenticate ? BiometricAuthOutcome.success : BiometricAuthOutcome.failed;
     } on PlatformException catch (e) {

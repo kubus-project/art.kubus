@@ -251,6 +251,10 @@ class _ArtMapViewState extends State<ArtMapView> {
                   ),
                   zoom: widget.initialZoom,
                 ),
+                // Preserve the WebGL drawing buffer to improve context stability
+                // on Firefox, which is prone to context loss under memory pressure.
+                // This trades some performance for crash resilience.
+                webPreserveDrawingBuffer: kIsWeb,
                 // We don't use the plugin's annotation managers (we manage sources/layers
                 // directly). Disabling them avoids plugin-managed sources being added
                 // during style swaps, which can cause platform errors.
