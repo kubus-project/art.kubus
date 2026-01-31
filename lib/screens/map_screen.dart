@@ -2764,8 +2764,8 @@ class _MapScreenState extends State<MapScreen>
         _cubeSourceId,
         _cubeLayerId,
         ml.FillExtrusionLayerProperties(
-          fillExtrusionColor: <dynamic>['get', 'color'],
-          fillExtrusionHeight: <dynamic>['get', 'height'],
+          fillExtrusionColor: <Object>['get', 'color'],
+          fillExtrusionHeight: <Object>['get', 'height'],
           fillExtrusionBase: 0.0,
           fillExtrusionOpacity: 1.0,
           fillExtrusionVerticalGradient: false,
@@ -2778,11 +2778,11 @@ class _MapScreenState extends State<MapScreen>
         _markerSourceId,
         _markerLayerId,
         ml.SymbolLayerProperties(
-          iconImage: <dynamic>['get', 'icon'],
-          iconSize: <dynamic>[
+          iconImage: <Object>['get', 'icon'],
+          iconSize: <Object>[
             'interpolate',
-            ['linear'],
-            ['zoom'],
+            <Object>['linear'],
+            <Object>['zoom'],
             3,
             0.5,
             15,
@@ -2790,9 +2790,9 @@ class _MapScreenState extends State<MapScreen>
             24,
             1.5,
           ],
-          iconOpacity: <dynamic>[
+          iconOpacity: <Object>[
             'case',
-            ['==', ['get', 'kind'], 'cluster'],
+            <Object>['==', <Object>['get', 'kind'], 'cluster'],
             1.0,
             1.0,
           ],
@@ -2809,11 +2809,11 @@ class _MapScreenState extends State<MapScreen>
         _markerSourceId,
         _cubeIconLayerId,
         ml.SymbolLayerProperties(
-          iconImage: <dynamic>['get', 'icon'],
-          iconSize: <dynamic>[
+          iconImage: <Object>['get', 'icon'],
+          iconSize: <Object>[
             'interpolate',
-            ['linear'],
-            ['zoom'],
+            <Object>['linear'],
+            <Object>['zoom'],
             3,
             0.5,
             15,
@@ -2821,9 +2821,9 @@ class _MapScreenState extends State<MapScreen>
             24,
             1.5,
           ],
-          iconOpacity: <dynamic>[
+          iconOpacity: <Object>[
             'case',
-            ['==', ['get', 'kind'], 'cluster'],
+            <Object>['==', <Object>['get', 'kind'], 'cluster'],
             1.0,
             1.0,
           ],
