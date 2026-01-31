@@ -1,5 +1,3 @@
-import 'dart:ui' show PlatformDispatcher;
-
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -17,24 +15,21 @@ class TileProviders with WidgetsBindingObserver {
 
   TileProviders(this.themeProvider) {
     WidgetsBinding.instance.addObserver(this);
-    _updateThemeMode();
-    themeProvider.addListener(_updateThemeMode);
+    // NOTE: We no longer call _updateThemeMode() or set up a listener that
+    // mutates ThemeProvider. This was causing an infinite rebuild loop:
+    //   TileProviders listens → setThemeMode → notifyListeners → rebuild → repeat
+    //
+    // ThemeProvider already handles system brightness changes via its own
+    // didChangePlatformBrightness() override and isDarkMode getter. Consumers
+    // should query themeProvider.isDarkMode directly instead of relying on
+    // TileProviders to force a mode change.
   }
 
   @override
   void didChangePlatformBrightness() {
-    _updateThemeMode();
-  }
-
-  void _updateThemeMode() {
-    final brightness = PlatformDispatcher.instance.platformBrightness;
-    if (themeProvider.themeMode == ThemeMode.system) {
-      Future.microtask(() {
-        themeProvider.setThemeMode(
-          brightness == Brightness.dark ? ThemeMode.dark : ThemeMode.light,
-        );
-      });
-    }
+    // No-op: ThemeProvider.didChangePlatformBrightness already handles this.
+    // We keep the observer registration for potential future use (e.g., tile
+    // cache invalidation on brightness change).
   }
 
   /// MapLibre style asset for the current theme.
@@ -53,6 +48,6 @@ class TileProviders with WidgetsBindingObserver {
 
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    themeProvider.removeListener(_updateThemeMode);
+    // No longer listening to themeProvider (removed to fix circular loop).
   }
 }

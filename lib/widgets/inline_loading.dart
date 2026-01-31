@@ -34,23 +34,42 @@ class InlineLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Use LayoutBuilder to honor parent constraints when width/height not provided.
-    final widget = LayoutBuilder(builder: (context, constraints) {
+    // Single LayoutBuilder to determine constraints and apply clipping.
+    // (Previously had nested LayoutBuilders which is inefficient.)
+    return LayoutBuilder(builder: (context, constraints) {
       double? finalWidth = width;
       double? finalHeight = height;
 
       // If width/height not supplied, try to use the incoming constraints
-      if (finalWidth == null && constraints.hasBoundedWidth) finalWidth = constraints.maxWidth;
-      if (finalHeight == null && constraints.hasBoundedHeight) finalHeight = constraints.maxHeight;
+      if (finalWidth == null && constraints.hasBoundedWidth) {
+        finalWidth = constraints.maxWidth;
+      }
+      if (finalHeight == null && constraints.hasBoundedHeight) {
+        finalHeight = constraints.maxHeight;
+      }
 
       // As a last resort, provide a reasonable default box size so the painter has bounds.
       final fallback = tileSize * 8.0;
       finalWidth = finalWidth ?? fallback;
       finalHeight = finalHeight ?? fallback;
 
+      Widget inner;
       if (expand) {
         // Expand to fill available parent space
-        return SizedBox.expand(
+        inner = SizedBox.expand(
+          child: IsometricPulse(
+            color: color,
+            highlight: highlight,
+            duration: duration,
+            tileSize: tileSize,
+            animate: animate,
+            progress: progress,
+          ),
+        );
+      } else {
+        inner = SizedBox(
+          width: finalWidth,
+          height: finalHeight,
           child: IsometricPulse(
             color: color,
             highlight: highlight,
@@ -62,37 +81,16 @@ class InlineLoading extends StatelessWidget {
         );
       }
 
-      return SizedBox(
-        width: finalWidth,
-        height: finalHeight,
-        child: IsometricPulse(
-          color: color,
-          highlight: highlight,
-          duration: duration,
-          tileSize: tileSize,
-          animate: animate,
-          progress: progress,
-        ),
-      );
-    });
-
-    // If a circular shape is requested, only apply ClipOval when the
-    // final render box will be square — otherwise a circular clip over a
-    // rectangular parent would produce the "just a circle" effect.
-    return LayoutBuilder(builder: (context, constraints) {
-      // Determine the expected paint size (matching the logic above).
-      double expectedW =
-          expand ? constraints.hasBoundedWidth ? constraints.maxWidth : tileSize * 8.0 : (width ?? (constraints.hasBoundedWidth ? constraints.maxWidth : tileSize * 8.0));
-      double expectedH =
-          expand ? constraints.hasBoundedHeight ? constraints.maxHeight : tileSize * 8.0 : (height ?? (constraints.hasBoundedHeight ? constraints.maxHeight : tileSize * 8.0));
-
-      if (shape == BoxShape.circle && (expectedW - expectedH).abs() < 0.5) {
-        return ClipOval(child: widget);
+      // If a circular shape is requested, only apply ClipOval when the
+      // final render box will be square — otherwise a circular clip over a
+      // rectangular parent would produce the "just a circle" effect.
+      if (shape == BoxShape.circle && (finalWidth - finalHeight).abs() < 0.5) {
+        return ClipOval(child: inner);
       }
 
       return ClipRRect(
         borderRadius: borderRadius ?? BorderRadius.circular(6.0),
-        child: widget,
+        child: inner,
       );
     });
   }
