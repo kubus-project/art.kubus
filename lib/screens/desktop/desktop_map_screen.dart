@@ -867,14 +867,21 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     try {
       // Query the symbol layer directly - no separate hitbox layer.
       // This ensures taps only register when clicking on the actual marker icon.
+      // In 3D mode, fill-extrusion layers are NOT reliably queryable via
+      // queryRenderedFeaturesInRect. Instead, query _cubeIconLayerId which uses
+      // the same source (_markerSourceId) and IS visible in 3D mode.
+      // In 2D mode, query _markerLayerId which is the visible symbol layer.
       final layerIds = <String>[
-        _markerLayerId,
-        if (_is3DMarkerModeActive) ...[_cubeLayerId, _cubeIconLayerId],
+        if (_is3DMarkerModeActive) _cubeIconLayerId else _markerLayerId,
       ];
 
-      // Use a small tolerance - just enough to account for finger/cursor precision.
-      // This ensures clicks must be on the actual marker, not around it.
-      const double tapTolerance = 4.0;
+      // Use a tolerance that matches the visible marker icon size.
+      // Marker icons are 46px visible (within 56px PNG) at zoom 15, scaled by iconSize.
+      // At zoom 15, iconSize=1.0, so half the visible size (~23px) is a good tolerance.
+      // This ensures clicks anywhere on the visible marker icon are detected,
+      // matching the hover cursor behavior which uses MapLibre's native symbol bounds.
+      final double iconScale = (_cameraZoom / 15.0).clamp(0.5, 1.5);
+      final double tapTolerance = 24.0 * iconScale;
       final rect = Rect.fromCenter(
         center: Offset(point.x, point.y),
         width: tapTolerance * 2,
@@ -2869,7 +2876,15 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
-    return LiquidGlassPanel(
+    // Wrap filters panel in a Listener to absorb pointer events and prevent them
+    // from passing through to the map underneath (gesture conflict resolution).
+    return Listener(
+      behavior: HitTestBehavior.opaque,
+      onPointerDown: (_) {},
+      onPointerMove: (_) {},
+      onPointerUp: (_) {},
+      onPointerSignal: (_) {}, // Absorb mouse wheel / trackpad scroll
+      child: LiquidGlassPanel(
       margin: const EdgeInsets.only(left: 24),
       padding: EdgeInsets.zero,
       borderRadius: BorderRadius.circular(20),
@@ -3105,6 +3120,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -3544,7 +3560,16 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         return da.compareTo(db);
       });
 
-    return SafeArea(
+    // Wrap sidebar in a Listener to absorb pointer events and prevent them
+    // from passing through to the map underneath (gesture conflict resolution).
+    // This ensures scrolling/interacting with the sidebar doesn't pan the map.
+    return Listener(
+      behavior: HitTestBehavior.opaque,
+      onPointerDown: (_) {},
+      onPointerMove: (_) {},
+      onPointerUp: (_) {},
+      onPointerSignal: (_) {}, // Absorb mouse wheel / trackpad scroll
+      child: SafeArea(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -3778,6 +3803,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -4970,8 +4996,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         },
         child: marker == null
             ? const SizedBox.shrink(key: ValueKey('marker_overlay_hidden'))
+            // Use StackFit.expand to ensure bounded constraints for
+            // Positioned.fill children during AnimatedSwitcher transitions.
+            // Without this, web can throw "RenderBox was not laid out".
             : Stack(
                 key: animationKey,
+                fit: StackFit.expand,
                 children: [
                   Positioned.fill(
                     child: Listener(
@@ -5095,8 +5125,18 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             Positioned(
               left: left,
               top: top,
-              width: cardWidth,
-              child: wrappedCard,
+              // Use UnconstrainedBox to prevent the Positioned widget from
+              // passing unbounded height constraints to the card, which would
+              // cause the card to expand to fill all available space.
+              // constrainedAxis: Axis.horizontal ensures width is respected.
+              child: UnconstrainedBox(
+                alignment: Alignment.topLeft,
+                constrainedAxis: Axis.horizontal,
+                child: SizedBox(
+                  width: cardWidth,
+                  child: wrappedCard,
+                ),
+              ),
             ),
           ],
         );
