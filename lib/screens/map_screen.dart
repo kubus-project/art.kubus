@@ -2951,14 +2951,21 @@ class _MapScreenState extends State<MapScreen>
     try {
       // Query the symbol layer directly - no separate hitbox layer.
       // This ensures taps only register when clicking on the actual marker icon.
+      // In 3D mode, fill-extrusion layers are NOT reliably queryable via
+      // queryRenderedFeaturesInRect. Instead, query _cubeIconLayerId which uses
+      // the same source (_markerSourceId) and IS visible in 3D mode.
+      // In 2D mode, query _markerLayerId which is the visible symbol layer.
       final layerIds = <String>[
-        _markerLayerId,
-        if (_is3DMarkerModeActive) ...[_cubeLayerId, _cubeIconLayerId],
+        if (_is3DMarkerModeActive) _cubeIconLayerId else _markerLayerId,
       ];
 
-      // Use a small tolerance - just enough to account for finger precision.
-      // This ensures taps must be on the actual marker, not around it.
-      const double tapTolerance = 4.0;
+      // Use a tolerance that matches the visible marker icon size.
+      // Marker icons are 46px visible (within 56px PNG) at zoom 15, scaled by iconSize.
+      // At zoom 15, iconSize=1.0, so half the visible size (~23px) is a good tolerance.
+      // This ensures taps anywhere on the visible marker icon are detected,
+      // matching the hover cursor behavior which uses MapLibre's native symbol bounds.
+      final double iconScale = (_lastZoom / 15.0).clamp(0.5, 1.5);
+      final double tapTolerance = 24.0 * iconScale;
       final rect = Rect.fromCenter(
         center: Offset(point.x, point.y),
         width: tapTolerance * 2,
@@ -3388,8 +3395,12 @@ class _MapScreenState extends State<MapScreen>
               child: marker == null
                   ? const SizedBox.shrink(
                       key: ValueKey('marker_overlay_hidden'))
+                  // Use StackFit.expand to ensure bounded constraints for
+                  // Positioned.fill children during AnimatedSwitcher transitions.
+                  // Without this, web can throw "RenderBox was not laid out".
                   : Stack(
                       key: animationKey,
+                      fit: StackFit.expand,
                       children: [
                         _buildAnchoredMarkerOverlay(themeProvider),
                       ],
@@ -5041,9 +5052,13 @@ class _MapScreenState extends State<MapScreen>
     return Align(
       alignment: Alignment.bottomCenter,
       child: Listener(
+        behavior: HitTestBehavior.opaque,
         onPointerDown: (_) => _setSheetInteracting(true),
         onPointerUp: (_) => _setSheetInteracting(false),
         onPointerCancel: (_) => _setSheetInteracting(false),
+        // Absorb mouse wheel / trackpad scroll to prevent map zoom when
+        // scrolling inside the sheet (especially important on web).
+        onPointerSignal: (_) {},
         child: NotificationListener<DraggableScrollableNotification>(
           onNotification: (notification) {
             final blocking = notification.extent > (_nearbySheetMin + 0.01);

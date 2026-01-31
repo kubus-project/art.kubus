@@ -2187,6 +2187,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
       if (ctx == null) continue;
       final renderObject = ctx.findRenderObject();
       if (renderObject is! RenderBox) continue;
+      // Guard against RenderBox not yet laid out (prevents "RenderBox was not
+      // laid out" crash on web during rapid scroll/rebuild race conditions).
+      if (!renderObject.hasSize) continue;
       final position = renderObject.localToGlobal(Offset.zero).dy;
       final height = renderObject.size.height;
       final visible = (position + height) > 0 && position < availableHeight;
