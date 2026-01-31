@@ -1258,8 +1258,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get settingsUseBiometricsOnUnlockTitle => 'Uporabi biometrijo za odklep';
 
   @override
-  String get settingsUseBiometricsOnUnlockSubtitle =>
-      'Pri odklepanju aplikacije daj prednost biometriji';
+  String get settingsUseBiometricsOnUnlockSubtitle => 'Pri odklepanju aplikacije daj prednost biometriji';
 
   @override
   String get settingsRequirePinTileTitle => 'Zahtevaj PIN';
@@ -2477,8 +2476,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get mapTravelModeStatusTravelling => 'Potuješ';
 
   @override
-  String get mapTravelModeStatusTravellingTooltip =>
-      'Način potovanja je vklopljen — prikazujem označevalce v pogledu';
+  String get mapTravelModeStatusTravellingTooltip => 'Način potovanja je vklopljen — prikazujem označevalce v pogledu';
 
   @override
   String get mapArArtworkNearbyTitle => 'AR umetnina v bližini!';
@@ -2725,6 +2723,9 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get mapIsometricViewDisableTooltip => 'Izklopi izometrični pogled';
+
+  @override
+  String get mapResetBearingTooltip => 'Usmeri na sever';
 
   @override
   String get mapExhibitionsUnavailableToast => 'Razstave trenutno niso na voljo.';
@@ -6579,6 +6580,11 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
+  String securityPinAttemptsRemaining(Object remaining, Object max) {
+    return 'Preostali poskusi: $remaining / $max';
+  }
+
+  @override
   String get mnemonicRevealIncorrectPinError => 'Napačen PIN';
 
   @override
@@ -6849,9 +6855,4 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get supportTier50Body => 'Financira eno osredotočeno razvojno sejo (nova funkcija / popravki / posodobitve vsebin).';
-
-  @override
-  String securityPinAttemptsRemaining(Object remaining, Object max) {
-    return 'Preostali poskusi: $remaining/$max';
-  }
 }

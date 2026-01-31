@@ -4895,25 +4895,25 @@ abstract class AppLocalizations {
   /// **'Nearby radius ({radiusKm} km)'**
   String mapNearbyRadiusTooltip(Object radiusKm);
 
-  /// No description provided for @mapNearbyRadiusTooltipWorld.
+  /// Tooltip for nearby radius when travel mode is enabled (worldwide).
   ///
   /// In en, this message translates to:
   /// **'Nearby radius (World)'**
   String get mapNearbyRadiusTooltipWorld;
 
-  /// No description provided for @mapNearbyRadiusWorldShort.
+  /// Short label shown in Nearby Art when travel mode is enabled.
   ///
   /// In en, this message translates to:
   /// **'Radius: World'**
   String get mapNearbyRadiusWorldShort;
 
-  /// No description provided for @mapTravelModeStatusTravelling.
+  /// Short status label shown when Travel mode is enabled (instead of a numeric radius).
   ///
   /// In en, this message translates to:
   /// **'You are travelling'**
   String get mapTravelModeStatusTravelling;
 
-  /// No description provided for @mapTravelModeStatusTravellingTooltip.
+  /// Tooltip shown near the Nearby Art radius control when Travel mode is enabled.
   ///
   /// In en, this message translates to:
   /// **'Travel mode is on — showing markers in view'**
@@ -5387,6 +5387,12 @@ abstract class AppLocalizations {
   /// **'Disable isometric view'**
   String get mapIsometricViewDisableTooltip;
 
+  /// Tooltip for the button that resets the map bearing/rotation to north (0 degrees).
+  ///
+  /// In en, this message translates to:
+  /// **'Point north'**
+  String get mapResetBearingTooltip;
+
   /// Toast/SnackBar shown when exhibitions can't be opened from the map (feature disabled or API unavailable).
   ///
   /// In en, this message translates to:
@@ -5486,7 +5492,7 @@ abstract class AppLocalizations {
   /// Body text for the travel mode step of the interactive map tutorial.
   ///
   /// In en, this message translates to:
-  /// **'Travel mode expands the loading radius so you can browse markers far beyond nearby.'**
+  /// **'Travel mode loads markers for the visible map area so you can explore anywhere.'**
   String get mapTutorialStepTravelBody;
 
   /// Title for the recenter step of the interactive map tutorial (mobile).
@@ -5522,13 +5528,13 @@ abstract class AppLocalizations {
   /// No description provided for @mapTravelModeTutorialBody.
   ///
   /// In en, this message translates to:
-  /// **'Travel mode lets you view markers beyond your nearby radius. Tap the Travel button on the map to toggle it anytime.'**
+  /// **'Travel mode lets you browse markers anywhere. The map loads what’s currently in view.'**
   String get mapTravelModeTutorialBody;
 
   /// No description provided for @mapTravelModeTutorialHint.
   ///
   /// In en, this message translates to:
-  /// **'Tip: When Travel mode is on, the map loads markers from a much larger area.'**
+  /// **'Tip: Pan and zoom — markers refresh to match the viewport.'**
   String get mapTravelModeTutorialHint;
 
   /// No description provided for @mapTravelModeTutorialGotIt.

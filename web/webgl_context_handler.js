@@ -39,6 +39,7 @@
       var params = new URLSearchParams(location.search || '');
       var debugMode = params.get('debug_webgl') === '1' ||
         params.get('debug_map') === '1' ||
+        params.get('debug_stack') === '1' ||
         location.hostname === 'localhost' ||
         location.hostname === '127.0.0.1';
 
@@ -324,20 +325,8 @@
         }
       } catch (_) { }
 
-      // Add Kubus-styled NavigationControl (zoom + compass + pitch)
-      // unless explicitly disabled via options.kubusDisableNavControl
-      try {
-        if (options.kubusDisableNavControl !== true && window.maplibregl.NavigationControl) {
-          map.addControl(new window.maplibregl.NavigationControl({
-            showZoom: true,
-            showCompass: true,
-            visualizePitch: true
-          }), 'top-right');
-          debugLog('info', 'NavigationControl added to map', { mapId: map.__kubusMapId });
-        }
-      } catch (navErr) {
-        debugLog('warn', 'Failed to add NavigationControl', navErr);
-      }
+      // Map controls (zoom, compass/bearing reset) are handled entirely by
+      // Flutter UI widgets. No MapLibre JS NavigationControl is added.
 
       debugLog('info', 'MapLibre map created', {
         mapId: map.__kubusMapId,
@@ -410,6 +399,9 @@
    */
   function installGlobalErrorHandler() {
     var originalOnError = window.onerror;
+    var params = new URLSearchParams(location.search || '');
+    var debugStacks = params.get('debug_stack') === '1' ||
+      params.get('debug_webgl') === '1';
 
     window.onerror = function (message, source, lineno, colno, error) {
       // Check for CanvasKit crash patterns
@@ -451,6 +443,12 @@
         }
       }
 
+      if (debugStacks && error && error.stack) {
+        try {
+          console.error('[kubus webgl] window.onerror stack', error.stack);
+        } catch (_) { }
+      }
+
       // Call original handler for other errors
       if (originalOnError) {
         return originalOnError.call(window, message, source, lineno, colno, error);
@@ -478,6 +476,15 @@
             }
           }));
         }
+      }
+
+      if (debugStacks) {
+        try {
+          var stack = reason && reason.stack ? reason.stack : null;
+          if (stack) {
+            console.error('[kubus webgl] unhandledrejection stack', stack);
+          }
+        } catch (_) { }
       }
     });
 

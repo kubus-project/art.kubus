@@ -2953,6 +2953,28 @@ class _MapScreenState extends State<MapScreen>
     unawaited(_updateMarkerRenderMode());
   }
 
+  /// Reset map bearing to 0 (north up) while preserving zoom and pitch.
+  Future<void> _resetBearing() async {
+    final controller = _mapController;
+    if (controller == null) return;
+
+    // Skip if already pointing north
+    if (_lastBearing.abs() < 0.5) return;
+
+    _programmaticCameraMove = true;
+    await controller.animateCamera(
+      ml.CameraUpdate.newCameraPosition(
+        ml.CameraPosition(
+          target: ml.LatLng(_cameraCenter.latitude, _cameraCenter.longitude),
+          zoom: _lastZoom,
+          bearing: 0.0,
+          tilt: _lastPitch,
+        ),
+      ),
+      duration: const Duration(milliseconds: 320),
+    );
+  }
+
   Future<void> _handleMapTap(
     math.Point<double> point,
     ThemeProvider themeProvider,
@@ -5194,6 +5216,15 @@ class _MapScreenState extends State<MapScreen>
                 active: _isometricViewEnabled,
                 onTap: () =>
                     unawaited(_setIsometricViewEnabled(!_isometricViewEnabled)),
+              ),
+              const SizedBox(height: 12),
+            ],
+            // Point north / reset bearing button (visible when map is rotated)
+            if (_lastBearing.abs() > 1.0) ...[
+              _MapIconButton(
+                icon: Icons.explore,
+                tooltip: l10n.mapResetBearingTooltip,
+                onTap: () => unawaited(_resetBearing()),
               ),
               const SizedBox(height: 12),
             ],

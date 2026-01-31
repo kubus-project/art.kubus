@@ -1258,8 +1258,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsUseBiometricsOnUnlockTitle => 'Use biometrics on unlock';
 
   @override
-  String get settingsUseBiometricsOnUnlockSubtitle =>
-      'Prefer biometrics when unlocking the app';
+  String get settingsUseBiometricsOnUnlockSubtitle => 'Prefer biometrics when unlocking the app';
 
   @override
   String get settingsRequirePinTileTitle => 'Require PIN';
@@ -2477,8 +2476,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapTravelModeStatusTravelling => 'You are travelling';
 
   @override
-  String get mapTravelModeStatusTravellingTooltip =>
-      'Travel mode is on — showing markers in view';
+  String get mapTravelModeStatusTravellingTooltip => 'Travel mode is on — showing markers in view';
 
   @override
   String get mapArArtworkNearbyTitle => 'AR artwork nearby!';
@@ -2727,6 +2725,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapIsometricViewDisableTooltip => 'Disable isometric view';
 
   @override
+  String get mapResetBearingTooltip => 'Point north';
+
+  @override
   String get mapExhibitionsUnavailableToast => 'Exhibitions are currently unavailable.';
 
   @override
@@ -2793,7 +2794,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapTravelModeTutorialTitle => 'Explore beyond nearby';
 
   @override
-  String get mapTravelModeTutorialBody => "Travel mode lets you browse markers anywhere. The map loads what's currently in view.";
+  String get mapTravelModeTutorialBody => 'Travel mode lets you browse markers anywhere. The map loads what’s currently in view.';
 
   @override
   String get mapTravelModeTutorialHint => 'Tip: Pan and zoom — markers refresh to match the viewport.';
