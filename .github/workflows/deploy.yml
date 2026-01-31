@@ -524,7 +524,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
       - name: Set up Flutter
         if: ${{ steps.apk_gate.outputs.build == 'true' }}
