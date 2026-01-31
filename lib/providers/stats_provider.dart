@@ -83,7 +83,8 @@ class StatsProvider extends ChangeNotifier {
     _configListener = () {
       // Analytics preference changes may affect whether we fetch series. Keep existing cache,
       // but notify so screens can hide/show charts immediately.
-      notifyListeners();
+      // Schedule in microtask to avoid synchronous notification during Provider rebuild.
+      Future.microtask(notifyListeners);
     };
     configProvider.addListener(_configListener!);
   }

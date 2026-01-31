@@ -57,7 +57,9 @@ class MarkerManagementProvider extends ChangeNotifier {
     _markers = const <ArtMarker>[];
     _lastFetch = null;
     _inFlightRefresh = null;
-    notifyListeners();
+    // Schedule notifyListeners in microtask to avoid synchronous notification
+    // during ProxyProvider update callback, which could cause infinite recursion.
+    Future.microtask(notifyListeners);
   }
 
   Future<void> initialize({bool force = false}) async {
