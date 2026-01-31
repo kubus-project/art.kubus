@@ -1345,6 +1345,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.32.0"
+  source_maps:
+    dependency: "direct dev"
+    description:
+      name: source_maps
+      sha256: "190222579a448b03896e0ca6eca5998fa810fda630c1d65e2f78b3f638f54812"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.10.13"
   source_span:
     dependency: transitive
     description:

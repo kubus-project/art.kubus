@@ -28,6 +28,8 @@
   // Track active MapLibre maps for recovery
   var activeMaps = new WeakSet();
   var mapCanvases = new WeakMap();
+  var canvasToMap = new WeakMap();
+  var mapIdSeq = 0;
 
   /**
    * Log with prefix for debugging (only in development or with debug flag)
@@ -53,6 +55,57 @@
     } catch (_) { }
   }
 
+  function currentRoute() {
+    try {
+      return location.pathname + location.search + location.hash;
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function snapshotCanvases() {
+    try {
+      var all = document.querySelectorAll('canvas');
+      var mapCanvasesNow = document.querySelectorAll('.maplibregl-canvas');
+      return {
+        total: all.length,
+        maplibre: mapCanvasesNow.length,
+        other: Math.max(0, all.length - mapCanvasesNow.length)
+      };
+    } catch (_) {
+      return { total: 0, maplibre: 0, other: 0 };
+    }
+  }
+
+  function logCanvasSnapshot(label, extra) {
+    var payload = {
+      ts: new Date().toISOString(),
+      route: currentRoute(),
+      canvases: snapshotCanvases()
+    };
+    if (extra) {
+      try {
+        for (var k in extra) payload[k] = extra[k];
+      } catch (_) { }
+    }
+    debugLog('info', label, payload);
+  }
+
+  function mapStateForLog(map) {
+    try {
+      if (!map) return null;
+      var center = map.getCenter && map.getCenter();
+      return {
+        zoom: map.getZoom ? map.getZoom() : null,
+        bearing: map.getBearing ? map.getBearing() : null,
+        pitch: map.getPitch ? map.getPitch() : null,
+        center: center ? { lng: center.lng, lat: center.lat } : null
+      };
+    } catch (_) {
+      return null;
+    }
+  }
+
   /**
    * Handle WebGL context lost event
    */
@@ -66,7 +119,10 @@
     debugLog('warn', 'WebGL context lost', {
       canvas: canvas,
       firefoxDetected: isFirefox,
-      lossCount: contextLostCount + 1
+      lossCount: contextLostCount + 1,
+      ts: new Date(now).toISOString(),
+      route: currentRoute(),
+      mapState: mapStateForLog(canvasToMap.get(canvas))
     });
 
     // Track loss frequency for crash detection
@@ -107,7 +163,12 @@
   function handleContextRestored(event) {
     var canvas = event.target;
 
-    debugLog('info', 'WebGL context restored', { canvas: canvas });
+    debugLog('info', 'WebGL context restored', {
+      canvas: canvas,
+      ts: new Date().toISOString(),
+      route: currentRoute(),
+      mapState: mapStateForLog(canvasToMap.get(canvas))
+    });
 
     // Clear recovering flag
     if (canvas) {
@@ -163,14 +224,22 @@
   /**
    * Add context handlers to a canvas element
    */
-  function addCanvasHandlers(canvas) {
+  function addCanvasHandlers(canvas, source) {
     if (!canvas || canvas.dataset.kubusWebglHandled) return;
 
     canvas.addEventListener('webglcontextlost', handleContextLost, false);
     canvas.addEventListener('webglcontextrestored', handleContextRestored, false);
     canvas.dataset.kubusWebglHandled = 'true';
+    if (source) {
+      canvas.dataset.kubusWebglSource = source;
+    }
 
-    debugLog('info', 'Added WebGL handlers to canvas', { canvas: canvas });
+    debugLog('info', 'Added WebGL handlers to canvas', {
+      canvas: canvas,
+      source: source || 'unknown',
+      ts: new Date().toISOString(),
+      route: currentRoute()
+    });
   }
 
   /**
@@ -178,9 +247,12 @@
    */
   function setupCanvasWatcher() {
     // Handle any existing MapLibre canvases
-    document.querySelectorAll('.maplibregl-canvas').forEach(function (canvas) {
-      addCanvasHandlers(canvas);
+    document.querySelectorAll('canvas').forEach(function (canvas) {
+      var isMapLibre = canvas.classList && canvas.classList.contains('maplibregl-canvas');
+      addCanvasHandlers(canvas, isMapLibre ? 'maplibre' : 'generic');
     });
+
+    logCanvasSnapshot('Canvas watcher initial scan');
 
     // Watch for new canvases being added (e.g., when map is recreated)
     var observer = new MutationObserver(function (mutations) {
@@ -190,14 +262,33 @@
 
           // Direct MapLibre canvas
           if (node.classList && node.classList.contains('maplibregl-canvas')) {
-            addCanvasHandlers(node);
+            addCanvasHandlers(node, 'maplibre');
           }
 
           // Canvas within added subtree
           if (node.querySelectorAll) {
-            node.querySelectorAll('.maplibregl-canvas').forEach(function (canvas) {
-              addCanvasHandlers(canvas);
+            node.querySelectorAll('canvas').forEach(function (canvas) {
+              var isMapLibre = canvas.classList && canvas.classList.contains('maplibregl-canvas');
+              addCanvasHandlers(canvas, isMapLibre ? 'maplibre' : 'generic');
             });
+          }
+        });
+
+        mutation.removedNodes.forEach(function (node) {
+          if (node.nodeType !== Node.ELEMENT_NODE) return;
+          var removedCanvases = [];
+          if (node.tagName && node.tagName.toLowerCase() === 'canvas') {
+            removedCanvases.push(node);
+          }
+          if (node.querySelectorAll) {
+            node.querySelectorAll('canvas').forEach(function (canvas) {
+              removedCanvases.push(canvas);
+            });
+          }
+          if (removedCanvases.length > 0) {
+            setTimeout(function () {
+              logCanvasSnapshot('Canvas removed', { removedCount: removedCanvases.length });
+            }, 0);
           }
         });
       });
@@ -209,6 +300,108 @@
     });
 
     debugLog('info', 'Canvas watcher initialized');
+  }
+
+  function installMapLibreHooks() {
+    if (!window.maplibregl || !window.maplibregl.Map) return false;
+    if (window.maplibregl.__kubusWebglHooks) return true;
+
+    var OriginalMap = window.maplibregl.Map;
+
+    function WrappedMap(options) {
+      var before = snapshotCanvases();
+      var map = new OriginalMap(options);
+      try {
+        map.__kubusMapId = ++mapIdSeq;
+        activeMaps.add(map);
+        if (map.getCanvas) {
+          var canvas = map.getCanvas();
+          if (canvas) {
+            mapCanvases.set(map, canvas);
+            canvasToMap.set(canvas, map);
+            addCanvasHandlers(canvas, 'maplibre');
+          }
+        }
+      } catch (_) { }
+
+      // Add Kubus-styled NavigationControl (zoom + compass + pitch)
+      // unless explicitly disabled via options.kubusDisableNavControl
+      try {
+        if (options.kubusDisableNavControl !== true && window.maplibregl.NavigationControl) {
+          map.addControl(new window.maplibregl.NavigationControl({
+            showZoom: true,
+            showCompass: true,
+            visualizePitch: true
+          }), 'top-right');
+          debugLog('info', 'NavigationControl added to map', { mapId: map.__kubusMapId });
+        }
+      } catch (navErr) {
+        debugLog('warn', 'Failed to add NavigationControl', navErr);
+      }
+
+      debugLog('info', 'MapLibre map created', {
+        mapId: map.__kubusMapId,
+        route: currentRoute(),
+        ts: new Date().toISOString(),
+        canvasesBefore: before,
+        canvasesAfter: snapshotCanvases(),
+        mapState: mapStateForLog(map)
+      });
+
+      return map;
+    }
+
+    WrappedMap.prototype = OriginalMap.prototype;
+    try {
+      Object.setPrototypeOf(WrappedMap, OriginalMap);
+    } catch (_) { }
+
+    try {
+      Object.keys(OriginalMap).forEach(function (key) {
+        try {
+          WrappedMap[key] = OriginalMap[key];
+        } catch (_) { }
+      });
+    } catch (_) { }
+
+    if (OriginalMap.prototype && OriginalMap.prototype.remove) {
+      var originalRemove = OriginalMap.prototype.remove;
+      OriginalMap.prototype.remove = function () {
+        var before = snapshotCanvases();
+        var canvas = null;
+        try {
+          canvas = this.getCanvas ? this.getCanvas() : null;
+        } catch (_) { }
+
+        debugLog('info', 'MapLibre map remove() called', {
+          mapId: this.__kubusMapId,
+          ts: new Date().toISOString(),
+          route: currentRoute(),
+          mapState: mapStateForLog(this),
+          canvasesBefore: before
+        });
+
+        var result = originalRemove.apply(this, arguments);
+
+        setTimeout(function () {
+          var mapRef = canvas ? canvasToMap.get(canvas) : null;
+          debugLog('info', 'MapLibre map remove() completed', {
+            mapId: mapRef ? mapRef.__kubusMapId : null,
+            ts: new Date().toISOString(),
+            route: currentRoute(),
+            canvasesAfter: snapshotCanvases(),
+            canvasConnected: canvas ? !!canvas.isConnected : null
+          });
+        }, 0);
+
+        return result;
+      };
+    }
+
+    window.maplibregl.Map = WrappedMap;
+    window.maplibregl.__kubusWebglHooks = true;
+    debugLog('info', 'MapLibre hooks installed');
+    return true;
   }
 
   /**
@@ -343,10 +536,14 @@
       setupCanvasWatcher();
     }
 
+    // Try to hook MapLibre immediately; retry after Flutter boot
+    installMapLibreHooks();
+
     // Also run after Flutter loads (it may create maps later)
     window.addEventListener('flutter-first-frame', function () {
       debugLog('info', 'Flutter first frame - re-checking for MapLibre canvases');
       setTimeout(setupCanvasWatcher, 500);
+      setTimeout(installMapLibreHooks, 500);
     });
   }
 

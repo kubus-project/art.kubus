@@ -42,11 +42,11 @@ import 'providers/stats_provider.dart';
 import 'providers/analytics_filters_provider.dart';
 import 'providers/desktop_dashboard_state_provider.dart';
 import 'providers/marker_management_provider.dart';
-  import 'providers/security_gate_provider.dart';
+import 'providers/security_gate_provider.dart';
 import 'providers/email_preferences_provider.dart';
 import 'providers/auth_deep_link_provider.dart';
-  import 'providers/deep_link_provider.dart';
-  import 'providers/platform_deep_link_listener_provider.dart';
+import 'providers/deep_link_provider.dart';
+import 'providers/platform_deep_link_listener_provider.dart';
 import 'providers/main_tab_provider.dart';
 import 'providers/map_deep_link_provider.dart';
 import 'providers/deferred_onboarding_provider.dart';
@@ -57,8 +57,8 @@ import 'core/url_strategy.dart';
 import 'core/deep_link_bootstrap_screen.dart';
 import 'core/maplibre_web_registration.dart';
 import 'main_app.dart';
-  import 'screens/auth/sign_in_screen.dart';
-  import 'screens/auth/register_screen.dart';
+import 'screens/auth/sign_in_screen.dart';
+import 'screens/auth/register_screen.dart';
 import 'screens/auth/forgot_password_screen.dart';
 import 'screens/auth/reset_password_screen.dart';
 import 'screens/auth/verify_email_screen.dart';
@@ -84,6 +84,67 @@ import 'widgets/security_gate_overlay.dart';
 import 'screens/collab/invites_inbox_screen.dart';
 import 'services/share/share_deep_link_parser.dart';
 
+class _UnhandledErrorDedupe {
+  static const Duration _dedupeWindow = Duration(seconds: 2);
+  static String? _lastSignature;
+  static DateTime? _lastLoggedAt;
+  static int _suppressedCount = 0;
+  static bool _capturedFirst = false;
+  // Stored for debugging / external stack mapping tools.
+  // ignore: unused_field
+  static Object? firstError;
+  // ignore: unused_field
+  static StackTrace? firstStack;
+  // ignore: unused_field
+  static String? firstSource;
+
+  static void handle(Object error, StackTrace stack, {required String source}) {
+    _captureFirst(error, stack, source);
+    final signature = _signatureFor(error, stack, source);
+    final now = DateTime.now();
+    final lastAt = _lastLoggedAt;
+
+    if (_lastSignature == signature &&
+        lastAt != null &&
+        now.difference(lastAt) < _dedupeWindow) {
+      _suppressedCount += 1;
+      return;
+    }
+
+    if (_suppressedCount > 0 && kDebugMode) {
+      debugPrint('main.dart: suppressed $_suppressedCount duplicate error(s)');
+    }
+
+    _suppressedCount = 0;
+    _lastSignature = signature;
+    _lastLoggedAt = now;
+
+    if (kDebugMode) {
+      debugPrint(
+          'main.dart: Unhandled error ($source) ${error.runtimeType}: $error');
+      debugPrint('main.dart: stack: $stack');
+    }
+  }
+
+  static void _captureFirst(Object error, StackTrace stack, String source) {
+    if (_capturedFirst) return;
+    _capturedFirst = true;
+    firstError = error;
+    firstStack = stack;
+    firstSource = source;
+    if (kDebugMode) {
+      debugPrint(
+          'main.dart: First unhandled error captured ($source) ${error.runtimeType}: $error');
+      debugPrint('main.dart: First error stack: $stack');
+    }
+  }
+
+  static String _signatureFor(Object error, StackTrace stack, String source) {
+    final stackLine = stack.toString().split('\n').first.trim();
+    return '$source|${error.runtimeType}|$error|$stackLine';
+  }
+}
+
 void main() {
   // We'll initialize the bindings inside the runZonedGuarded callback so the
   // WidgetsBinding is created in the same zone as the rest of the app and
@@ -108,7 +169,7 @@ void main() {
       ),
     );
   };
-  
+
   runZonedGuarded<Future<void>>(
     () async {
       var logger = Logger();
@@ -141,7 +202,10 @@ void main() {
             debugPrint('FlutterError.presentError failed: $e');
           }
           try {
-            Zone.current.handleUncaughtError(details.exception, details.stack ?? StackTrace.current);
+            final stack = details.stack ?? StackTrace.current;
+            _UnhandledErrorDedupe.handle(details.exception, stack,
+                source: 'FlutterError');
+            Zone.current.handleUncaughtError(details.exception, stack);
           } catch (e, st) {
             debugPrint('Failed to forward FlutterError to zone: $e\n$st');
           }
@@ -156,7 +220,7 @@ void main() {
     },
     (error, stack) {
       try {
-        debugPrint('Unhandled zone error: $error\n$stack');
+        _UnhandledErrorDedupe.handle(error, stack, source: 'Zone');
         // Optionally report to analytics/logging service here.
       } catch (e) {
         debugPrint('Error while handling zone error: $e');
@@ -209,7 +273,8 @@ class _AppLauncherState extends State<AppLauncher> {
         'AppLauncher: PushNotificationService init timed out after ${initTimeout.inSeconds}s: $e',
       );
     } catch (e, st) {
-      AppConfig.debugPrint('AppLauncher: PushNotificationService init failed: $e\n$st');
+      AppConfig.debugPrint(
+          'AppLauncher: PushNotificationService init failed: $e\n$st');
     }
   }
 
@@ -231,7 +296,8 @@ class _AppLauncherState extends State<AppLauncher> {
               locale: localeProvider.locale,
               supportedLocales: AppLocalizations.supportedLocales,
               localizationsDelegates: AppLocalizations.localizationsDelegates,
-              onGenerateTitle: (context) => AppLocalizations.of(context)?.appTitle ?? 'art.kubus',
+              onGenerateTitle: (context) =>
+                  AppLocalizations.of(context)?.appTitle ?? 'art.kubus',
               theme: themeProvider.lightTheme,
               darkTheme: themeProvider.darkTheme,
               themeMode: themeProvider.themeMode,
@@ -257,34 +323,41 @@ class _AppLauncherState extends State<AppLauncher> {
               // Main mobile shell tab state (also used by deep-link flows).
               ChangeNotifierProvider(create: (context) => MainTabProvider()),
               // Marker deep links open inside the already-mounted MapScreen.
-              ChangeNotifierProvider(create: (context) => MapDeepLinkProvider()),
+              ChangeNotifierProvider(
+                  create: (context) => MapDeepLinkProvider()),
               // Session-scoped onboarding deferral for deep-link cold starts.
-              ChangeNotifierProvider(create: (context) => DeferredOnboardingProvider()),
+              ChangeNotifierProvider(
+                  create: (context) => DeferredOnboardingProvider()),
               ChangeNotifierProvider(create: (context) => AppRefreshProvider()),
               ChangeNotifierProvider(create: (context) => ConfigProvider()),
               ProxyProvider<ConfigProvider, TelemetryService>(
                 create: (_) => TelemetryService(),
                 update: (context, configProvider, telemetry) {
                   final service = telemetry ?? TelemetryService();
-                  service.setAnalyticsPreferenceEnabled(configProvider.enableAnalytics);
+                  service.setAnalyticsPreferenceEnabled(
+                      configProvider.enableAnalytics);
                   return service;
                 },
               ),
               ChangeNotifierProvider(create: (context) => PlatformProvider()),
               ChangeNotifierProvider(create: (context) => ConnectionProvider()),
               ChangeNotifierProvider(create: (context) => ProfileProvider()),
-              ChangeNotifierProxyProvider2<AppRefreshProvider, ConfigProvider, StatsProvider>(
+              ChangeNotifierProxyProvider2<AppRefreshProvider, ConfigProvider,
+                  StatsProvider>(
                 create: (context) => StatsProvider(),
-                update: (context, appRefreshProvider, configProvider, statsProvider) {
+                update: (context, appRefreshProvider, configProvider,
+                    statsProvider) {
                   final provider = statsProvider ?? StatsProvider();
                   provider.bindToRefresh(appRefreshProvider);
                   provider.bindConfigProvider(configProvider);
                   return provider;
                 },
               ),
-              ChangeNotifierProxyProvider2<AppRefreshProvider, ProfileProvider, PresenceProvider>(
+              ChangeNotifierProxyProvider2<AppRefreshProvider, ProfileProvider,
+                  PresenceProvider>(
                 create: (context) => PresenceProvider(),
-                update: (context, appRefreshProvider, profileProvider, presenceProvider) {
+                update: (context, appRefreshProvider, profileProvider,
+                    presenceProvider) {
                   final provider = presenceProvider ?? PresenceProvider();
                   provider.bindToRefresh(appRefreshProvider);
                   provider.bindProfileProvider(profileProvider);
@@ -292,19 +365,25 @@ class _AppLauncherState extends State<AppLauncher> {
                 },
               ),
               ChangeNotifierProvider(create: (context) => SavedItemsProvider()),
-              ChangeNotifierProvider(create: (context) => CommunitySubjectProvider()),
-              ChangeNotifierProxyProvider<AppRefreshProvider, NotificationProvider>(
+              ChangeNotifierProvider(
+                  create: (context) => CommunitySubjectProvider()),
+              ChangeNotifierProxyProvider<AppRefreshProvider,
+                  NotificationProvider>(
                 create: (context) => NotificationProvider(),
                 update: (context, appRefreshProvider, notificationProvider) {
-                  final provider = notificationProvider ?? NotificationProvider();
+                  final provider =
+                      notificationProvider ?? NotificationProvider();
                   provider.bindToRefresh(appRefreshProvider);
                   return provider;
                 },
               ),
-              ChangeNotifierProxyProvider<NotificationProvider, RecentActivityProvider>(
+              ChangeNotifierProxyProvider<NotificationProvider,
+                  RecentActivityProvider>(
                 create: (context) => RecentActivityProvider(),
-                update: (context, notificationProvider, recentActivityProvider) {
-                  final provider = recentActivityProvider ?? RecentActivityProvider();
+                update:
+                    (context, notificationProvider, recentActivityProvider) {
+                  final provider =
+                      recentActivityProvider ?? RecentActivityProvider();
                   provider.bindNotificationProvider(notificationProvider);
                   if (!provider.initialized && !provider.isLoading) {
                     unawaited(provider.initialize());
@@ -317,12 +396,15 @@ class _AppLauncherState extends State<AppLauncher> {
                   solanaWalletService: context.read<SolanaWalletService>(),
                 ),
               ),
-              ChangeNotifierProvider(create: (context) => DesktopDashboardStateProvider()),
-              ChangeNotifierProvider(create: (context) => AnalyticsFiltersProvider()),
+              ChangeNotifierProvider(
+                  create: (context) => DesktopDashboardStateProvider()),
+              ChangeNotifierProvider(
+                  create: (context) => AnalyticsFiltersProvider()),
               ChangeNotifierProvider(create: (context) => NavigationProvider()),
               ChangeNotifierProvider(create: (context) => TaskProvider()),
               ChangeNotifierProvider(create: (context) => CacheProvider()),
-              ChangeNotifierProxyProvider<CommunitySubjectProvider, CommunityHubProvider>(
+              ChangeNotifierProxyProvider<CommunitySubjectProvider,
+                  CommunityHubProvider>(
                 create: (context) => CommunityHubProvider(),
                 update: (context, subjectProvider, hubProvider) {
                   final provider = hubProvider ?? CommunityHubProvider();
@@ -330,13 +412,18 @@ class _AppLauncherState extends State<AppLauncher> {
                   return provider;
                 },
               ),
-              ChangeNotifierProvider(create: (context) => CommunityCommentsProvider()),
+              ChangeNotifierProvider(
+                  create: (context) => CommunityCommentsProvider()),
               ChangeNotifierProvider(create: (context) => DeepLinkProvider()),
-              ChangeNotifierProvider(create: (context) => AuthDeepLinkProvider()),
-              ChangeNotifierProxyProvider2<DeepLinkProvider, AuthDeepLinkProvider, PlatformDeepLinkListenerProvider>(
+              ChangeNotifierProvider(
+                  create: (context) => AuthDeepLinkProvider()),
+              ChangeNotifierProxyProvider2<DeepLinkProvider,
+                  AuthDeepLinkProvider, PlatformDeepLinkListenerProvider>(
                 create: (context) => PlatformDeepLinkListenerProvider(),
-                update: (context, deepLinkProvider, authDeepLinkProvider, listenerProvider) {
-                  final provider = listenerProvider ?? PlatformDeepLinkListenerProvider();
+                update: (context, deepLinkProvider, authDeepLinkProvider,
+                    listenerProvider) {
+                  final provider =
+                      listenerProvider ?? PlatformDeepLinkListenerProvider();
                   provider.bindProviders(
                     deepLinkProvider: deepLinkProvider,
                     authDeepLinkProvider: authDeepLinkProvider,
@@ -345,17 +432,21 @@ class _AppLauncherState extends State<AppLauncher> {
                 },
               ),
               ChangeNotifierProvider(create: (context) => EventsProvider()),
-              ChangeNotifierProvider(create: (context) => ExhibitionsProvider()),
-              ChangeNotifierProxyProvider2<AppRefreshProvider, ProfileProvider, CollabProvider>(
+              ChangeNotifierProvider(
+                  create: (context) => ExhibitionsProvider()),
+              ChangeNotifierProxyProvider2<AppRefreshProvider, ProfileProvider,
+                  CollabProvider>(
                 create: (context) => CollabProvider(),
-                update: (context, appRefreshProvider, profileProvider, collabProvider) {
+                update: (context, appRefreshProvider, profileProvider,
+                    collabProvider) {
                   final provider = collabProvider ?? CollabProvider();
                   provider.bindToRefresh(appRefreshProvider);
                   provider.bindProfileProvider(profileProvider);
                   return provider;
                 },
               ),
-              ChangeNotifierProvider(create: (context) => CollectionsProvider()),
+              ChangeNotifierProvider(
+                  create: (context) => CollectionsProvider()),
               ChangeNotifierProxyProvider<TaskProvider, ArtworkProvider>(
                 create: (context) {
                   final artworkProvider = ArtworkProvider();
@@ -364,7 +455,8 @@ class _AppLauncherState extends State<AppLauncher> {
                 },
                 update: (context, taskProvider, artworkProvider) {
                   artworkProvider?.setTaskProvider(taskProvider);
-                  return artworkProvider ?? ArtworkProvider()..setTaskProvider(taskProvider);
+                  return artworkProvider ?? ArtworkProvider()
+                    ..setTaskProvider(taskProvider);
                 },
               ),
               ChangeNotifierProxyProvider<ArtworkProvider, PortfolioProvider>(
@@ -375,8 +467,10 @@ class _AppLauncherState extends State<AppLauncher> {
                   return provider;
                 },
               ),
-              ChangeNotifierProvider(create: (context) => CollectiblesProvider()),
-              ChangeNotifierProvider(create: (context) => InstitutionProvider()),
+              ChangeNotifierProvider(
+                  create: (context) => CollectiblesProvider()),
+              ChangeNotifierProvider(
+                  create: (context) => InstitutionProvider()),
               ChangeNotifierProvider(
                 create: (context) => DAOProvider(
                   solanaWalletService: context.read<SolanaWalletService>(),
@@ -387,9 +481,11 @@ class _AppLauncherState extends State<AppLauncher> {
                   solanaWalletService: context.read<SolanaWalletService>(),
                 ),
               ),
-              ChangeNotifierProxyProvider3<AppRefreshProvider, ProfileProvider, WalletProvider, ChatProvider>(
+              ChangeNotifierProxyProvider3<AppRefreshProvider, ProfileProvider,
+                  WalletProvider, ChatProvider>(
                 create: (context) => ChatProvider(),
-                update: (context, appRefreshProvider, profileProvider, walletProvider, chatProvider) {
+                update: (context, appRefreshProvider, profileProvider,
+                    walletProvider, chatProvider) {
                   final provider = chatProvider ?? ChatProvider();
                   provider.bindToRefresh(appRefreshProvider);
                   provider.bindAuthContext(
@@ -400,11 +496,14 @@ class _AppLauncherState extends State<AppLauncher> {
                   return provider;
                 },
               ),
-              ChangeNotifierProxyProvider3<ProfileProvider, WalletProvider, NotificationProvider, SecurityGateProvider>(
+              ChangeNotifierProxyProvider3<ProfileProvider, WalletProvider,
+                  NotificationProvider, SecurityGateProvider>(
                 lazy: false,
                 create: (context) => SecurityGateProvider(),
-                update: (context, profileProvider, walletProvider, notificationProvider, securityGateProvider) {
-                  final provider = securityGateProvider ?? SecurityGateProvider();
+                update: (context, profileProvider, walletProvider,
+                    notificationProvider, securityGateProvider) {
+                  final provider =
+                      securityGateProvider ?? SecurityGateProvider();
                   provider.bindDependencies(
                     profileProvider: profileProvider,
                     walletProvider: walletProvider,
@@ -415,20 +514,33 @@ class _AppLauncherState extends State<AppLauncher> {
                   return provider;
                 },
               ),
-              ChangeNotifierProxyProvider<SecurityGateProvider, EmailPreferencesProvider>(
+              ChangeNotifierProxyProvider<SecurityGateProvider,
+                  EmailPreferencesProvider>(
                 create: (context) => EmailPreferencesProvider(),
-                update: (context, securityGateProvider, emailPreferencesProvider) {
-                  final provider = emailPreferencesProvider ?? EmailPreferencesProvider();
-                  final tokenPresent = (BackendApiService().getAuthToken() ?? '').trim().isNotEmpty;
-                  provider.bindSession(hasSession: tokenPresent || securityGateProvider.hasLocalAccount);
+                update:
+                    (context, securityGateProvider, emailPreferencesProvider) {
+                  final provider =
+                      emailPreferencesProvider ?? EmailPreferencesProvider();
+                  final tokenPresent =
+                      (BackendApiService().getAuthToken() ?? '')
+                          .trim()
+                          .isNotEmpty;
+                  provider.bindSession(
+                      hasSession:
+                          tokenPresent || securityGateProvider.hasLocalAccount);
                   return provider;
                 },
               ),
-              ChangeNotifierProxyProvider2<ProfileProvider, WalletProvider, MarkerManagementProvider>(
+              ChangeNotifierProxyProvider2<ProfileProvider, WalletProvider,
+                  MarkerManagementProvider>(
                 create: (context) => MarkerManagementProvider(),
-                update: (context, profileProvider, walletProvider, markerManagementProvider) {
-                  final provider = markerManagementProvider ?? MarkerManagementProvider();
-                  provider.bindWallet(profileProvider.currentUser?.walletAddress ?? walletProvider.currentWalletAddress);
+                update: (context, profileProvider, walletProvider,
+                    markerManagementProvider) {
+                  final provider =
+                      markerManagementProvider ?? MarkerManagementProvider();
+                  provider.bindWallet(
+                      profileProvider.currentUser?.walletAddress ??
+                          walletProvider.currentWalletAddress);
                   if (!provider.initialized && !provider.isLoading) {
                     unawaited(provider.initialize());
                   }
@@ -436,7 +548,8 @@ class _AppLauncherState extends State<AppLauncher> {
                 },
               ),
               Provider<TileProviders>(
-                create: (context) => TileProviders(context.read<ThemeProvider>()),
+                create: (context) =>
+                    TileProviders(context.read<ThemeProvider>()),
                 dispose: (context, value) => value.dispose(),
               ),
             ],
@@ -447,8 +560,6 @@ class _AppLauncherState extends State<AppLauncher> {
     );
   }
 }
- 
- 
 
 class ArtKubus extends StatefulWidget {
   const ArtKubus({super.key});
@@ -482,21 +593,25 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
         final entityId = rawId.trim();
 
         if (entityId.isEmpty) {
-          navigator.push(MaterialPageRoute(builder: (_) => const InvitesInboxScreen()));
+          navigator.push(
+              MaterialPageRoute(builder: (_) => const InvitesInboxScreen()));
           return;
         }
 
         if (entityType == 'events' || entityType == 'event') {
-          navigator.push(MaterialPageRoute(builder: (_) => EventDetailScreen(eventId: entityId)));
+          navigator.push(MaterialPageRoute(
+              builder: (_) => EventDetailScreen(eventId: entityId)));
           return;
         }
 
         if (entityType == 'exhibitions' || entityType == 'exhibition') {
-          navigator.push(MaterialPageRoute(builder: (_) => ExhibitionDetailScreen(exhibitionId: entityId)));
+          navigator.push(MaterialPageRoute(
+              builder: (_) => ExhibitionDetailScreen(exhibitionId: entityId)));
           return;
         }
 
-        navigator.push(MaterialPageRoute(builder: (_) => const InvitesInboxScreen()));
+        navigator.push(
+            MaterialPageRoute(builder: (_) => const InvitesInboxScreen()));
         return;
       }
 
@@ -526,13 +641,15 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     final securityGate = Provider.of<SecurityGateProvider>(ctx, listen: false);
     final refreshProvider = Provider.of<AppRefreshProvider>(ctx, listen: false);
     final presenceProvider = Provider.of<PresenceProvider>(ctx, listen: false);
-    final notificationProvider = Provider.of<NotificationProvider>(ctx, listen: false);
-    final isForeground =
-        state != AppLifecycleState.paused && state != AppLifecycleState.inactive;
+    final notificationProvider =
+        Provider.of<NotificationProvider>(ctx, listen: false);
+    final isForeground = state != AppLifecycleState.paused &&
+        state != AppLifecycleState.inactive;
     refreshProvider.setAppForeground(isForeground);
     notificationProvider.handleAppForegroundChanged(isForeground);
     presenceProvider.handleAppForegroundChanged(isForeground);
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
       securityGate.onAppLifecycleChanged(state);
     } else if (state == AppLifecycleState.resumed) {
       securityGate.onAppLifecycleChanged(state);
@@ -555,69 +672,73 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
           locale: localeProvider.locale,
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
-          onGenerateTitle: (context) => AppLocalizations.of(context)?.appTitle ?? 'art.kubus',
+          onGenerateTitle: (context) =>
+              AppLocalizations.of(context)?.appTitle ?? 'art.kubus',
           theme: themeProvider.lightTheme,
           darkTheme: themeProvider.darkTheme,
           themeMode: themeProvider.themeMode,
-           builder: (context, child) {
-             return AnimatedGradientBackground(
-               animate: false,
-               intensity: 0.22,
-               child: SecurityGateOverlay(child: child ?? const SizedBox.shrink()),
-             );
-           },
-           onGenerateRoute: (settings) {
-             final name = (settings.name ?? '').trim();
-             if (name.isEmpty) {
-               return MaterialPageRoute(builder: (_) => const AppInitializer(), settings: settings);
-             }
- 
-             final uri = Uri.tryParse(name) ?? Uri(path: name);
+          builder: (context, child) {
+            return AnimatedGradientBackground(
+              animate: false,
+              intensity: 0.22,
+              child:
+                  SecurityGateOverlay(child: child ?? const SizedBox.shrink()),
+            );
+          },
+          onGenerateRoute: (settings) {
+            final name = (settings.name ?? '').trim();
+            if (name.isEmpty) {
+              return MaterialPageRoute(
+                  builder: (_) => const AppInitializer(), settings: settings);
+            }
 
-             if (uri.path == '/verify-email') {
-               final token = (uri.queryParameters['token'] ?? '').trim();
-               final email = (uri.queryParameters['email'] ?? '').trim();
-               if (token.isNotEmpty) {
-                 return MaterialPageRoute(
-                   builder: (_) => EmailVerificationSuccessScreen(token: token),
-                   settings: RouteSettings(
-                     name: '/verify-email',
-                     arguments: {
-                       'token': token,
-                       if (email.isNotEmpty) 'email': email,
-                     },
-                   ),
-                 );
-               }
-             }
+            final uri = Uri.tryParse(name) ?? Uri(path: name);
 
-             if (uri.path == '/reset-password') {
-               final token = (uri.queryParameters['token'] ?? '').trim();
-               if (token.isNotEmpty) {
-                 return MaterialPageRoute(
-                   builder: (_) => ResetPasswordScreen(token: token),
-                   settings: RouteSettings(
-                     name: '/reset-password',
-                     arguments: {'token': token},
-                   ),
-                 );
-               }
-             }
+            if (uri.path == '/verify-email') {
+              final token = (uri.queryParameters['token'] ?? '').trim();
+              final email = (uri.queryParameters['email'] ?? '').trim();
+              if (token.isNotEmpty) {
+                return MaterialPageRoute(
+                  builder: (_) => EmailVerificationSuccessScreen(token: token),
+                  settings: RouteSettings(
+                    name: '/verify-email',
+                    arguments: {
+                      'token': token,
+                      if (email.isNotEmpty) 'email': email,
+                    },
+                  ),
+                );
+              }
+            }
 
-             final target = const ShareDeepLinkParser().parse(uri);
-             if (target != null) {
-               return MaterialPageRoute(
-                 builder: (_) => DeepLinkBootstrapScreen(target: target),
+            if (uri.path == '/reset-password') {
+              final token = (uri.queryParameters['token'] ?? '').trim();
+              if (token.isNotEmpty) {
+                return MaterialPageRoute(
+                  builder: (_) => ResetPasswordScreen(token: token),
+                  settings: RouteSettings(
+                    name: '/reset-password',
+                    arguments: {'token': token},
+                  ),
+                );
+              }
+            }
+
+            final target = const ShareDeepLinkParser().parse(uri);
+            if (target != null) {
+              return MaterialPageRoute(
+                builder: (_) => DeepLinkBootstrapScreen(target: target),
                 settings: settings,
               );
             }
 
-             // Fall back to the main initializer for unknown named routes (e.g. browser refresh on /foo).
-             return MaterialPageRoute(builder: (_) => const AppInitializer(), settings: settings);
-           },
-           home: const AppInitializer(),
-           routes: {
-             '/main': (context) => const MainApp(),
+            // Fall back to the main initializer for unknown named routes (e.g. browser refresh on /foo).
+            return MaterialPageRoute(
+                builder: (_) => const AppInitializer(), settings: settings);
+          },
+          home: const AppInitializer(),
+          routes: {
+            '/main': (context) => const MainApp(),
             // Alias for telemetry/URL semantics: marker deep links land here so
             // the browser URL becomes /map (not /main), while still rendering
             // the full shell.
@@ -627,7 +748,8 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
               final args = ModalRoute.of(context)?.settings.arguments;
               String? artworkId;
               if (args is Map) {
-                final raw = args['artworkId'] ?? args['id'] ?? args['artwork_id'];
+                final raw =
+                    args['artworkId'] ?? args['id'] ?? args['artwork_id'];
                 if (raw != null) artworkId = raw.toString();
               } else if (args is String) {
                 artworkId = args;
@@ -641,7 +763,8 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
               }
               final isDesktop = DesktopBreakpoints.isDesktop(context);
               return isDesktop
-                  ? DesktopArtworkDetailScreen(artworkId: artworkId, showAppBar: true)
+                  ? DesktopArtworkDetailScreen(
+                      artworkId: artworkId, showAppBar: true)
                   : ArtDetailScreen(artworkId: artworkId);
             },
             '/wallet_connect': (context) => const ConnectWallet(),
@@ -660,40 +783,40 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
               }
               return const SignInScreen();
             },
-             '/register': (context) => const RegisterScreen(),
-             '/verify-email': (context) {
-               final args = ModalRoute.of(context)?.settings.arguments;
-               String? token;
-               String? email;
-               if (args is Map) {
-                 token = args['token']?.toString();
-                 email = args['email']?.toString();
-               }
-               return VerifyEmailScreen(
-                 email: email?.trim().isNotEmpty == true ? email!.trim() : null,
-                 token: token?.trim().isNotEmpty == true ? token!.trim() : null,
-               );
-             },
-             '/forgot-password': (context) {
-               final args = ModalRoute.of(context)?.settings.arguments;
-               String? email;
-               if (args is Map) {
-                 email = args['email']?.toString();
-               }
-               return ForgotPasswordScreen(initialEmail: email);
-             },
-             '/reset-password': (context) {
-               final args = ModalRoute.of(context)?.settings.arguments;
-               String? token;
-               if (args is Map) {
-                 token = args['token']?.toString();
-               }
-               return ResetPasswordScreen(token: token);
-             },
-             '/web3': (context) {
-               final l10n = AppLocalizations.of(context)!;
-               return Scaffold(
-                 body: Center(child: Text(l10n.web3DashboardComingSoon)),
+            '/register': (context) => const RegisterScreen(),
+            '/verify-email': (context) {
+              final args = ModalRoute.of(context)?.settings.arguments;
+              String? token;
+              String? email;
+              if (args is Map) {
+                token = args['token']?.toString();
+                email = args['email']?.toString();
+              }
+              return VerifyEmailScreen(
+                email: email?.trim().isNotEmpty == true ? email!.trim() : null,
+                token: token?.trim().isNotEmpty == true ? token!.trim() : null,
+              );
+            },
+            '/forgot-password': (context) {
+              final args = ModalRoute.of(context)?.settings.arguments;
+              String? email;
+              if (args is Map) {
+                email = args['email']?.toString();
+              }
+              return ForgotPasswordScreen(initialEmail: email);
+            },
+            '/reset-password': (context) {
+              final args = ModalRoute.of(context)?.settings.arguments;
+              String? token;
+              if (args is Map) {
+                token = args['token']?.toString();
+              }
+              return ResetPasswordScreen(token: token);
+            },
+            '/web3': (context) {
+              final l10n = AppLocalizations.of(context)!;
+              return Scaffold(
+                body: Center(child: Text(l10n.web3DashboardComingSoon)),
               );
             },
           },
