@@ -887,13 +887,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         if (_is3DMarkerModeActive) _cubeIconLayerId else _markerLayerId,
       ];
 
-      // Use a tolerance that matches the visible marker icon size.
+      // Use a tight tolerance for precise marker hit detection.
       // Marker icons are 46px visible (within 56px PNG) at zoom 15, scaled by iconSize.
-      // At zoom 15, iconSize=1.0, so half the visible size (~23px) is a good tolerance.
-      // This ensures clicks anywhere on the visible marker icon are detected,
-      // matching the hover cursor behavior which uses MapLibre's native symbol bounds.
+      // We use 8px tolerance (half of ~16px actual click area) to ensure taps
+      // only register when clicking directly on the marker icon.
       final double iconScale = (_cameraZoom / 15.0).clamp(0.5, 1.5);
-      final double tapTolerance = 24.0 * iconScale;
+      final double tapTolerance = 8.0 * iconScale;
       final rect = Rect.fromCenter(
         center: Offset(point.x, point.y),
         width: tapTolerance * 2,
@@ -1490,11 +1489,20 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             ),
           ),
 
-          // Top bar
-          _buildTopBar(themeProvider, animationTheme),
+          // Top bar - absorb pointer events to prevent map interaction
+          GestureDetector(
+            behavior: HitTestBehavior.deferToChild,
+            onTap: () {}, // no-op but ensures child receives events
+            child: _buildTopBar(themeProvider, animationTheme),
+          ),
 
-          // Search suggestions overlay
-          if (_showSearchOverlay) _buildSearchOverlay(themeProvider),
+          // Search suggestions overlay - absorb pointer events
+          if (_showSearchOverlay)
+            GestureDetector(
+              behavior: HitTestBehavior.deferToChild,
+              onTap: () => setState(() => _showSearchOverlay = false),
+              child: _buildSearchOverlay(themeProvider),
+            ),
 
           // Left side panel (artwork/exhibition details or filters)
           AnimatedPositioned(
@@ -1508,14 +1516,18 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             top: 80,
             bottom: 24,
             width: 380,
-            child: _selectedExhibition != null
-                ? _buildExhibitionDetailPanel(themeProvider, animationTheme)
-                : _selectedArtwork != null
-                    ? _buildArtworkDetailPanel(themeProvider, animationTheme)
-                    : _buildFiltersPanel(themeProvider),
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {}, // absorb taps
+              child: _selectedExhibition != null
+                  ? _buildExhibitionDetailPanel(themeProvider, animationTheme)
+                  : _selectedArtwork != null
+                      ? _buildArtworkDetailPanel(themeProvider, animationTheme)
+                      : _buildFiltersPanel(themeProvider),
+            ),
           ),
 
-          // Map controls (bottom-right)
+          // Map controls (bottom-right) - absorb pointer events
           Positioned(
             left: _selectedArtwork != null || _selectedExhibition != null
                 ? 400
@@ -1524,7 +1536,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             bottom: 24,
             child: Align(
               alignment: Alignment.bottomRight,
-              child: _buildMapControls(themeProvider),
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {}, // absorb taps
+                child: _buildMapControls(themeProvider),
+              ),
             ),
           ),
 
@@ -1541,7 +1557,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               return Positioned(
                 left: leftOffset,
                 bottom: 24,
-                child: _buildDiscoveryCard(themeProvider, taskProvider),
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {}, // absorb taps
+                  child: _buildDiscoveryCard(themeProvider, taskProvider),
+                ),
               );
             },
           ),
@@ -1716,7 +1736,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         return;
       }
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
       );
       final current = LatLng(position.latitude, position.longitude);
       if (!mounted) return;

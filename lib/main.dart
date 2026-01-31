@@ -76,6 +76,7 @@ import 'services/socket_service.dart';
 import 'services/backend_api_service.dart';
 import 'services/telemetry/telemetry_route_observer.dart';
 import 'services/telemetry/telemetry_service.dart';
+import 'services/webgl_context_helper.dart';
 
 import 'widgets/glass_components.dart';
 import 'widgets/security_gate_overlay.dart';
@@ -126,6 +127,10 @@ void main() {
         // Without this, some release deployments can end up using the
         // method-channel implementation and throw "TargetPlatform.windows...".
         ensureMapLibreWebRegistration();
+
+        // Web hardening: listen for WebGL context loss events from JavaScript
+        // and disable BackdropFilter effects to prevent CanvasKit crashes.
+        initWebGLContextHelper();
 
         // Now forward Flutter framework errors to this zone so the runZonedGuarded
         // error handler receives them.

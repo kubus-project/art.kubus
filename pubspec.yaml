@@ -35,13 +35,9 @@ dependencies:
   flutter_localizations:
     sdk: flutter
 
-  # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
-  cupertino_icons: ^1.0.6
   path_provider: ^2.1.5
   # Permissions
-  permission_handler: ^11.4.0 # Restored to latest version
-  flutter_native_splash: ^2.4.6
+  permission_handler: ^12.0.1 # Restored to latest version
   url_launcher: ^6.3.1
   image_picker: ^1.1.1
   provider: ^6.1.5
@@ -51,12 +47,12 @@ dependencies:
   # Explicit web implementation registration hardening (release cache edge-cases).
   maplibre_gl_web: ^0.25.0
   shared_preferences: ^2.5.3
-  flutter_secure_storage: ^8.0.0
-  local_auth: ^2.1.5
-  geolocator: ^10.1.0
+  flutter_secure_storage: ^9.2.4
+  local_auth: ^3.0.0
+  geolocator: ^14.0.2
 
   # UI and Theming
-  google_fonts: ^6.2.1
+  google_fonts: ^8.0.0
   animations: ^2.0.11
 
   # Identity
@@ -69,11 +65,11 @@ dependencies:
   http: ^1.4.0
   http_parser: ^4.0.2
   pointycastle: ^3.9.1 # Compatible with reown_walletkit
-  solana: ^0.31.2+1 # Updated Solana SDK for Dart
+  solana: ^0.32.0 # Updated Solana SDK for Dart
   bip39: ^1.0.6 # BIP39 mnemonic generation
 
   # Notifications
-  flutter_local_notifications: ^17.0.0
+  flutter_local_notifications: ^20.0.0
 
   # Web interop (replaces dart:html on web)
   web: ^1.1.1
@@ -83,7 +79,7 @@ dependencies:
 
   # QR Code functionality
   qr_flutter: ^4.1.0 # QR code generation
-  mobile_scanner: ^5.0.2 # QR code scanning (modern replacement for qr_code_scanner)
+  mobile_scanner: ^7.1.4 # QR code scanning (modern replacement for qr_code_scanner)
 
   # Camera and AR
   camera: ^0.11.1
@@ -105,13 +101,11 @@ dependencies:
 
   # Utilities
   vector_math: ^2.1.4
-  file_picker: ^8.1.2 # Updated to avoid conflicts
+  file_picker: ^10.3.10 # Updated to avoid conflicts
   path: ^1.9.0
-  filesystem_picker: ^4.1.0
   intl: ^0.20.2
-  share_plus: ^11.0.0 # Updated to latest version
-  socket_io_client: ^2.0.0
-  dio: ^5.9.0
+  share_plus: ^12.0.1 # Updated to latest version
+  socket_io_client: ^3.1.4
   equatable: ^2.0.5
 
   # Deep links / App Links (Android), Universal Links (iOS)
@@ -130,6 +124,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   fake_async: ^1.3.1
+  flutter_native_splash: ^2.4.6
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is

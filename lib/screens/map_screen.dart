@@ -1903,7 +1903,9 @@ class _MapScreenState extends State<MapScreen>
 
         if (resolvedPosition == null) {
           final position = await Geolocator.getCurrentPosition(
-            desiredAccuracy: LocationAccuracy.best,
+            locationSettings: const LocationSettings(
+              accuracy: LocationAccuracy.best,
+            ),
           );
           resolvedPosition = LatLng(position.latitude, position.longitude);
         }
@@ -2959,13 +2961,12 @@ class _MapScreenState extends State<MapScreen>
         if (_is3DMarkerModeActive) _cubeIconLayerId else _markerLayerId,
       ];
 
-      // Use a tolerance that matches the visible marker icon size.
+      // Use a tight tolerance for precise marker hit detection.
       // Marker icons are 46px visible (within 56px PNG) at zoom 15, scaled by iconSize.
-      // At zoom 15, iconSize=1.0, so half the visible size (~23px) is a good tolerance.
-      // This ensures taps anywhere on the visible marker icon are detected,
-      // matching the hover cursor behavior which uses MapLibre's native symbol bounds.
+      // We use 8px tolerance (half of ~16px actual click area) to ensure taps
+      // only register when clicking directly on the marker icon.
       final double iconScale = (_lastZoom / 15.0).clamp(0.5, 1.5);
-      final double tapTolerance = 24.0 * iconScale;
+      final double tapTolerance = 8.0 * iconScale;
       final rect = Rect.fromCenter(
         center: Offset(point.x, point.y),
         width: tapTolerance * 2,
@@ -3993,25 +3994,30 @@ class _MapScreenState extends State<MapScreen>
       top: topPadding,
       left: 16,
       right: 16,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildSearchCard(theme),
-                const SizedBox(height: 12),
-                if (_filtersExpanded) ...[
-                  _buildFilterPanel(theme),
+      // Absorb pointer events to prevent map interaction when tapping UI
+      child: GestureDetector(
+        behavior: HitTestBehavior.deferToChild,
+        onTap: () {}, // no-op but ensures child receives events
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildSearchCard(theme),
                   const SizedBox(height: 12),
+                  if (_filtersExpanded) ...[
+                    _buildFilterPanel(theme),
+                    const SizedBox(height: 12),
+                  ],
+                  _buildDiscoveryCard(theme, taskProvider),
                 ],
-                _buildDiscoveryCard(theme, taskProvider),
-              ],
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-        ],
+            const SizedBox(width: 8),
+          ],
+        ),
       ),
     );
   }
@@ -4989,58 +4995,63 @@ class _MapScreenState extends State<MapScreen>
     return Positioned(
       right: 16,
       bottom: bottomOffset,
-      child: Column(
-        children: [
-          if (AppConfig.isFeatureEnabled('mapTravelMode')) ...[
+      // Absorb pointer events to prevent map interaction when tapping controls
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {}, // absorb taps
+        child: Column(
+          children: [
+            if (AppConfig.isFeatureEnabled('mapTravelMode')) ...[
+              _MapIconButton(
+                key: _tutorialTravelButtonKey,
+                icon: Icons.travel_explore,
+                tooltip: _travelModeEnabled
+                    ? l10n.mapTravelModeDisableTooltip
+                    : l10n.mapTravelModeEnableTooltip,
+                active: _travelModeEnabled,
+                onTap: () =>
+                    unawaited(_setTravelModeEnabled(!_travelModeEnabled)),
+              ),
+              const SizedBox(height: 12),
+            ],
+            if (AppConfig.isFeatureEnabled('mapIsometricView')) ...[
+              _MapIconButton(
+                icon: Icons.filter_tilt_shift,
+                tooltip: _isometricViewEnabled
+                    ? l10n.mapIsometricViewDisableTooltip
+                    : l10n.mapIsometricViewEnableTooltip,
+                active: _isometricViewEnabled,
+                onTap: () =>
+                    unawaited(_setIsometricViewEnabled(!_isometricViewEnabled)),
+              ),
+              const SizedBox(height: 12),
+            ],
             _MapIconButton(
-              key: _tutorialTravelButtonKey,
-              icon: Icons.travel_explore,
-              tooltip: _travelModeEnabled
-                  ? l10n.mapTravelModeDisableTooltip
-                  : l10n.mapTravelModeEnableTooltip,
-              active: _travelModeEnabled,
-              onTap: () =>
-                  unawaited(_setTravelModeEnabled(!_travelModeEnabled)),
+              key: _tutorialCenterButtonKey,
+              icon: Icons.my_location,
+              tooltip: l10n.mapCenterOnMeTooltip,
+              active: _autoFollow,
+              onTap: _currentPosition == null
+                  ? null
+                  : () {
+                      setState(() => _autoFollow = true);
+                      unawaited(
+                        _animateMapTo(
+                          _currentPosition!,
+                          zoom: math.max(_lastZoom, 16),
+                        ),
+                      );
+                    },
             ),
             const SizedBox(height: 12),
-          ],
-          if (AppConfig.isFeatureEnabled('mapIsometricView')) ...[
             _MapIconButton(
-              icon: Icons.filter_tilt_shift,
-              tooltip: _isometricViewEnabled
-                  ? l10n.mapIsometricViewDisableTooltip
-                  : l10n.mapIsometricViewEnableTooltip,
-              active: _isometricViewEnabled,
-              onTap: () =>
-                  unawaited(_setIsometricViewEnabled(!_isometricViewEnabled)),
+              key: _tutorialAddMarkerButtonKey,
+              icon: Icons.add_location_alt,
+              tooltip: l10n.mapAddMapMarkerTooltip,
+              onTap: () => unawaited(_handleCurrentLocationTap()),
             ),
-            const SizedBox(height: 12),
           ],
-          _MapIconButton(
-            key: _tutorialCenterButtonKey,
-            icon: Icons.my_location,
-            tooltip: l10n.mapCenterOnMeTooltip,
-            active: _autoFollow,
-            onTap: _currentPosition == null
-                ? null
-                : () {
-                    setState(() => _autoFollow = true);
-                    unawaited(
-                      _animateMapTo(
-                        _currentPosition!,
-                        zoom: math.max(_lastZoom, 16),
-                      ),
-                    );
-                  },
-          ),
-          const SizedBox(height: 12),
-          _MapIconButton(
-            key: _tutorialAddMarkerButtonKey,
-            icon: Icons.add_location_alt,
-            tooltip: l10n.mapAddMapMarkerTooltip,
-            onTap: () => unawaited(_handleCurrentLocationTap()),
-          ),
-        ],
+        ),
       ),
     );
   }

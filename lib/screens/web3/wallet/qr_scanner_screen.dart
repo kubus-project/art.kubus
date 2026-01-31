@@ -193,7 +193,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
                 controller: _controller,
                 fit: BoxFit.cover,
                 onDetect: _onDetect,
-                errorBuilder: (context, error, child) {
+                errorBuilder: (context, error) {
                   return _buildCameraError(theme, error, l10n);
                 },
               ),

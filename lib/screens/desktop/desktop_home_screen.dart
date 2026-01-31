@@ -310,8 +310,10 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       }
 
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.lowest,
-        timeLimit: const Duration(seconds: 4),
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.lowest,
+          timeLimit: Duration(seconds: 4),
+        ),
       );
 
       return CommunityLocation(lat: position.latitude, lng: position.longitude);
