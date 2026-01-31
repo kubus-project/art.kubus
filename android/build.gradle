@@ -25,6 +25,21 @@ subprojects {
     }
 }
 
+subprojects {
+    afterEvaluate { project ->
+        if (project.plugins.hasPlugin('org.jetbrains.kotlin.android')) {
+            project.extensions.configure(org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension) {
+                jvmToolchain(21)
+            }
+        }
+        if (project.plugins.hasPlugin('org.jetbrains.kotlin.jvm')) {
+            project.extensions.configure(org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension) {
+                jvmToolchain(21)
+            }
+        }
+    }
+}
+
 tasks.register("clean", Delete) {
     delete rootProject.buildDir
 }
