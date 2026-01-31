@@ -906,10 +906,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
       if (kDebugMode && features.isNotEmpty) {
         final dynamic first = features.first;
-        final props = (first is Map ? first['properties'] : null) as Map?;
+        final propsRaw = first is Map ? first['properties'] : null;
+        final Map props = propsRaw is Map ? propsRaw : const <String, dynamic>{};
         AppConfig.debugPrint(
           'DesktopMapScreen: queryRenderedFeaturesInRect hits=${features.length} '
-          'first.markerId=${props?['markerId'] ?? props?['id']} kind=${props?['kind']}',
+          'first.markerId=${props['markerId'] ?? props['id']} kind=${props['kind']}',
         );
       }
 
@@ -941,16 +942,17 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       }
 
       final dynamic first = features.first;
-      final props = (first is Map ? first['properties'] : null) as Map?;
-      final kind = props?['kind']?.toString();
+      final propsRaw = first is Map ? first['properties'] : null;
+      final Map props = propsRaw is Map ? propsRaw : const <String, dynamic>{};
+      final kind = props['kind']?.toString();
       if (kDebugMode) {
         AppConfig.debugPrint(
           'DesktopMapScreen: tap query hits=${features.length} kind=${kind ?? 'marker'}',
         );
       }
       if (kind == 'cluster') {
-        final lng = (props?['lng'] as num?)?.toDouble();
-        final lat = (props?['lat'] as num?)?.toDouble();
+        final lng = (props['lng'] as num?)?.toDouble();
+        final lat = (props['lat'] as num?)?.toDouble();
         if (lat == null || lng == null) return;
         final nextZoom = math.min(_cameraZoom + 2.0, 18.0);
         if (kDebugMode) {
@@ -962,7 +964,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         return;
       }
 
-      final markerId = (props?['markerId'] ?? props?['id'])?.toString() ?? '';
+      final markerId = (props['markerId'] ?? props['id'])?.toString() ?? '';
       if (markerId.isEmpty) return;
       if (kDebugMode) {
         AppConfig.debugPrint('DesktopMapScreen: marker tap id=$markerId');
@@ -4022,8 +4024,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     map['rewards'] ??= 0;
     map['model3DCID'] ??= map['modelCID'] ?? map['model_cid'];
     map['model3DURL'] ??= map['modelURL'] ?? map['model_url'];
+    final metaRaw = map['metadata'];
+    final Map<String, dynamic> meta = metaRaw is Map
+        ? Map<String, dynamic>.from(
+            metaRaw.map((key, value) => MapEntry(key.toString(), value)),
+          )
+        : <String, dynamic>{};
     map['metadata'] = {
-      ...?map['metadata'] as Map<String, dynamic>?,
+      ...meta,
       ...?marker.metadata,
       'linkedMarkerId': marker.id,
     };
