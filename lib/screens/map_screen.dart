@@ -1111,7 +1111,11 @@ class _MapScreenState extends State<MapScreen>
 
   void _handleNotificationTap(String payload) {
     try {
-      final data = jsonDecode(payload) as Map<String, dynamic>;
+      final decoded = jsonDecode(payload);
+      if (decoded is! Map) return;
+      final data = Map<String, dynamic>.from(
+        decoded.map((key, value) => MapEntry(key.toString(), value)),
+      );
       final type = data['type'] as String?;
 
       if (type == 'ar_proximity') {
@@ -2980,10 +2984,11 @@ class _MapScreenState extends State<MapScreen>
 
       if (kDebugMode && features.isNotEmpty) {
         final dynamic first = features.first;
-        final props = (first is Map ? first['properties'] : null) as Map?;
+        final propsRaw = first is Map ? first['properties'] : null;
+        final Map props = propsRaw is Map ? propsRaw : const <String, dynamic>{};
         AppConfig.debugPrint(
           'MapScreen: queryRenderedFeaturesInRect hits=${features.length} '
-          'first.markerId=${props?['markerId'] ?? props?['id']} kind=${props?['kind']}',
+          'first.markerId=${props['markerId'] ?? props['id']} kind=${props['kind']}',
         );
       }
 
@@ -2999,16 +3004,17 @@ class _MapScreenState extends State<MapScreen>
       }
 
       final dynamic first = features.first;
-      final props = (first is Map ? first['properties'] : null) as Map?;
-      final kind = props?['kind']?.toString();
+      final propsRaw = first is Map ? first['properties'] : null;
+      final Map props = propsRaw is Map ? propsRaw : const <String, dynamic>{};
+      final kind = props['kind']?.toString();
       if (kDebugMode) {
         AppConfig.debugPrint(
           'MapScreen: tap query hits=${features.length} kind=${kind ?? 'marker'}',
         );
       }
       if (kind == 'cluster') {
-        final lng = (props?['lng'] as num?)?.toDouble();
-        final lat = (props?['lat'] as num?)?.toDouble();
+        final lng = (props['lng'] as num?)?.toDouble();
+        final lat = (props['lat'] as num?)?.toDouble();
         if (lat == null || lng == null) return;
         final nextZoom = math.min(_lastZoom + 2.0, 18.0);
         if (kDebugMode) {
@@ -3024,7 +3030,7 @@ class _MapScreenState extends State<MapScreen>
         return;
       }
 
-      final markerId = (props?['markerId'] ?? props?['id'])?.toString() ?? '';
+      final markerId = (props['markerId'] ?? props['id'])?.toString() ?? '';
       if (markerId.isEmpty) return;
       if (kDebugMode) {
         AppConfig.debugPrint('MapScreen: marker tap id=$markerId');
