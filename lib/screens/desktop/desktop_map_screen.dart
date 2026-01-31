@@ -478,6 +478,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   void _syncNearbySidebarIfNeeded(
       ThemeProvider themeProvider, List<Artwork> filteredArtworks) {
     if (!_isNearbyPanelOpen) return;
+    if (!mounted) return;
     final shellScope = DesktopShellScope.of(context);
     if (shellScope == null) return;
 
@@ -494,12 +495,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (_nearbySidebarSignature == sig) return;
     _nearbySidebarSignature = sig;
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      shellScope.setFunctionsPanelContent(
-        _buildNearbyArtSidebar(themeProvider, filteredArtworks),
-      );
-    });
+    // NOTE: This method is now always called from a post-frame callback,
+    // so we can directly update the shell content without another deferral.
+    shellScope.setFunctionsPanelContent(
+      _buildNearbyArtSidebar(themeProvider, filteredArtworks),
+    );
   }
 
   Future<void> _maybeOpenInitialMarker() async {
@@ -1781,7 +1781,18 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       builder: (context, artworkProvider, _) {
         final filteredArtworks = _getFilteredArtworks(artworkProvider.artworks);
 
-        _syncNearbySidebarIfNeeded(themeProvider, filteredArtworks);
+        // FIX: Move sidebar sync out of the build phase to avoid infinite
+        // recursion. The shell's setFunctionsPanelContent triggers setState,
+        // which rebuilds this Consumer, which was calling _syncNearbySidebarIfNeeded
+        // again, creating a loop when the signature changed.
+        if (_isNearbyPanelOpen) {
+          // Schedule the sync AFTER the current build completes.
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            _syncNearbySidebarIfNeeded(themeProvider, filteredArtworks);
+          });
+        }
+
         final isDark = themeProvider.isDarkMode;
         final tileProviders =
             Provider.of<TileProviders?>(context, listen: false);
