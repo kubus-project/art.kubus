@@ -2834,33 +2834,8 @@ class _MapScreenState extends State<MapScreen>
         ),
       );
 
-      // 4. Hitbox layer (TOPMOST) - invisible circles for click detection
-      // Must be on top so clicks register on the hitbox, not blocked by symbol icons.
-      final hitboxScale = kIsWeb ? 1.35 : 1.0;
-      final hitboxRadius = <dynamic>[
-        'interpolate',
-        ['linear'],
-        ['zoom'],
-        3,
-        14 * hitboxScale,
-        14,
-        24 * hitboxScale,
-        24,
-        32 * hitboxScale,
-      ];
-      await controller.addCircleLayer(
-        _markerSourceId,
-        _markerHitboxLayerId,
-        ml.CircleLayerProperties(
-          circleRadius: hitboxRadius,
-          circleColor: _hexRgb(scheme.surface),
-          circleOpacity: 0.01,
-          // Shift hitbox up ~8px to align with visual cube center
-          circleTranslate: const <dynamic>[0, -8],
-          circlePitchScale: 'viewport',
-          circlePitchAlignment: 'viewport',
-        ),
-      );
+      // Note: No separate hitbox layer needed - symbol layers are directly queryable
+      // via queryRenderedFeaturesInRect with appropriate layer IDs.
 
       await controller.addGeoJsonSource(
         _locationSourceId,
@@ -2974,17 +2949,16 @@ class _MapScreenState extends State<MapScreen>
     }
 
     try {
-      // Query all marker-related layers regardless of 3D mode for reliable hit-testing.
-      // The hitbox layer is always present and provides the most reliable tap detection.
+      // Query the symbol layer directly - no separate hitbox layer.
+      // This ensures taps only register when clicking on the actual marker icon.
       final layerIds = <String>[
-        _markerHitboxLayerId,
         _markerLayerId,
         if (_is3DMarkerModeActive) ...[_cubeLayerId, _cubeIconLayerId],
       ];
 
-      // Use a tolerance rectangle around the tap point for more reliable hit-testing.
-      // This compensates for icon anchor offset and touch inaccuracy.
-      const double tapTolerance = 12.0;
+      // Use a small tolerance - just enough to account for finger precision.
+      // This ensures taps must be on the actual marker, not around it.
+      const double tapTolerance = 4.0;
       final rect = Rect.fromCenter(
         center: Offset(point.x, point.y),
         width: tapTolerance * 2,

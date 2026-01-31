@@ -748,33 +748,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         ),
       );
 
-      // 4. Hitbox layer (TOPMOST) - invisible circles for click detection
-      // Must be on top so clicks register on the hitbox, not blocked by symbol icons.
-      final hitboxScale = kIsWeb ? 1.35 : 1.0;
-      final hitboxRadius = <dynamic>[
-        'interpolate',
-        ['linear'],
-        ['zoom'],
-        3,
-        14 * hitboxScale,
-        14,
-        24 * hitboxScale,
-        24,
-        32 * hitboxScale,
-      ];
-      await controller.addCircleLayer(
-        _markerSourceId,
-        _markerHitboxLayerId,
-        ml.CircleLayerProperties(
-          circleRadius: hitboxRadius,
-          circleColor: _hexRgb(scheme.surface),
-          circleOpacity: 0.01,
-          // Shift hitbox up ~8px to align with visual cube center
-          circleTranslate: const <dynamic>[0, -8],
-          circlePitchScale: 'viewport',
-          circlePitchAlignment: 'viewport',
-        ),
-      );
+      // Note: No separate hitbox layer needed - symbol layers are directly queryable
+      // via queryRenderedFeaturesInRect with appropriate layer IDs.
 
       await controller.addGeoJsonSource(
         _locationSourceId,
@@ -890,17 +865,16 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
 
     try {
-      // Query all marker-related layers regardless of 3D mode for reliable hit-testing.
-      // The hitbox layer is always present and provides the most reliable tap detection.
+      // Query the symbol layer directly - no separate hitbox layer.
+      // This ensures taps only register when clicking on the actual marker icon.
       final layerIds = <String>[
-        _markerHitboxLayerId,
         _markerLayerId,
         if (_is3DMarkerModeActive) ...[_cubeLayerId, _cubeIconLayerId],
       ];
 
-      // Use a tolerance rectangle around the tap point for more reliable hit-testing.
-      // This compensates for icon anchor offset and touch inaccuracy.
-      const double tapTolerance = 12.0;
+      // Use a small tolerance - just enough to account for finger/cursor precision.
+      // This ensures clicks must be on the actual marker, not around it.
+      const double tapTolerance = 4.0;
       final rect = Rect.fromCenter(
         center: Offset(point.x, point.y),
         width: tapTolerance * 2,
@@ -1676,14 +1650,16 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           },
         );
 
+        // Capture anchor value to avoid race condition between null check and access.
+        final markerAnchor = _selectedMarkerAnchor;
         return Stack(
           children: [
             Positioned.fill(child: map),
             if (_markerOverlayMode == _MarkerOverlayMode.anchored &&
-                _selectedMarkerAnchor != null)
+                markerAnchor != null)
               Positioned(
-                left: _selectedMarkerAnchor!.dx,
-                top: _selectedMarkerAnchor!.dy,
+                left: markerAnchor.dx,
+                top: markerAnchor.dy,
                 child: CompositedTransformTarget(
                   link: _markerOverlayLink,
                   child: const SizedBox(width: 1, height: 1),
@@ -2144,9 +2120,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   Widget _buildArtworkDetailPanel(
       ThemeProvider themeProvider, AppAnimationTheme animationTheme) {
     final artworkProvider = context.watch<ArtworkProvider>();
+    // Guard against null to prevent race condition between check and access.
+    final selectedArtwork = _selectedArtwork;
+    if (selectedArtwork == null) {
+      return const SizedBox.shrink();
+    }
     // Get the latest artwork from provider to ensure like/save states are updated
-    final artwork = artworkProvider.getArtworkById(_selectedArtwork!.id) ??
-        _selectedArtwork!;
+    final artwork = artworkProvider.getArtworkById(selectedArtwork.id) ??
+        selectedArtwork;
     final scheme = Theme.of(context).colorScheme;
     final accent = themeProvider.accentColor;
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -2556,7 +2537,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   Widget _buildExhibitionDetailPanel(
       ThemeProvider themeProvider, AppAnimationTheme animationTheme) {
-    final exhibition = _selectedExhibition!;
+    // Guard against null to prevent race condition between check and access.
+    final exhibition = _selectedExhibition;
+    if (exhibition == null) {
+      return const SizedBox.shrink();
+    }
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final exhibitionAccent = AppColorUtils.exhibitionColor;
@@ -5059,7 +5044,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     // instead of CompositedTransformFollower which has no viewport awareness.
     return LayoutBuilder(
       builder: (context, constraints) {
-        final anchor = _selectedMarkerAnchor!;
+        // Guard against null to prevent race condition.
+        final anchor = _selectedMarkerAnchor;
+        if (anchor == null) {
+          return Center(child: UnconstrainedBox(child: wrappedCard));
+        }
         const double cardWidth = 280; // Match maxWidth in _buildMarkerOverlayCard
         const double padding = 16;
         // Estimate card height (actual card uses maxHeight from viewportHeight * 0.6)
