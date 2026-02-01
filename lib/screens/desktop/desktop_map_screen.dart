@@ -50,7 +50,6 @@ import '../../utils/artwork_navigation.dart';
 import '../../utils/media_url_resolver.dart';
 import 'components/desktop_widgets.dart';
 import 'desktop_shell.dart';
-import 'desktop_shell_registry.dart';
 import 'art/desktop_artwork_detail_screen.dart';
 import '../events/exhibition_detail_screen.dart';
 import 'community/desktop_user_profile_screen.dart';
@@ -469,14 +468,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     return steps;
   }
 
-  DesktopShellScope? _resolveShellScope() {
-    final scope = DesktopShellScope.of(context);
-    if (scope != null) return scope;
-    final registryContext = DesktopShellRegistry.instance.context;
-    if (registryContext == null) return null;
-    return DesktopShellScope.of(registryContext);
-  }
-
   void _scheduleInitialNearbyArtPanelOpen() {
     if (!_pendingInitialNearbyPanelOpen) return;
     if (_isNearbyPanelOpen) {
@@ -488,7 +479,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       if (!mounted) return;
       if (!_pendingInitialNearbyPanelOpen) return;
 
-      final shellScope = _resolveShellScope();
+      final shellScope = DesktopShellScope.of(context);
       if (shellScope == null) {
         _nearbyPanelAutoloadAttempts += 1;
         if (_nearbyPanelAutoloadAttempts <= _maxNearbyPanelAutoloadAttempts) {
@@ -503,7 +494,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   void _openNearbyArtPanel() {
-    final shellScope = _resolveShellScope();
+    final shellScope = DesktopShellScope.of(context);
     if (shellScope == null) return;
 
     _safeSetState(() {
@@ -521,7 +512,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   void _closeNearbyArtPanel() {
-    final shellScope = _resolveShellScope();
+    final shellScope = DesktopShellScope.of(context);
     if (shellScope == null) return;
     _safeSetState(() {
       _isNearbyPanelOpen = false;
@@ -580,7 +571,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }) {
     if (!_isNearbyPanelOpen) return;
     if (!mounted) return;
-    final shellScope = _resolveShellScope();
+    final shellScope = DesktopShellScope.of(context);
     if (shellScope == null) return;
 
     // Build a compact signature so we only push sidebar updates when something
@@ -643,10 +634,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       unawaited(_moveCamera(_queuedCameraTarget!, _queuedCameraZoom!));
       _queuedCameraTarget = null;
       _queuedCameraZoom = null;
-    }
-
-    if (_pendingInitialNearbyPanelOpen && !_isNearbyPanelOpen) {
-      _scheduleInitialNearbyArtPanelOpen();
     }
 
     // Travel mode needs a bounds-based fetch once the viewport exists.
@@ -2459,29 +2446,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           onTap: onTap,
           child: tooltip == null
               ? child
-              : (tooltipAlignRightEdge
-                  ? _RightEdgeAlignedTooltip(
-                      message: tooltip,
-                      preferBelow: tooltipPreferBelow,
-                      verticalOffset: tooltipVerticalOffset,
-                      safePadding: tooltipMargin,
-                      child: child,
-                    )
-                  : (kIsWeb
-                      ? _HoverTooltip(
-                          message: tooltip,
-                          preferBelow: tooltipPreferBelow,
-                          verticalOffset: tooltipVerticalOffset,
-                          safePadding: tooltipMargin,
-                          child: child,
-                        )
-                      : Tooltip(
-                          message: tooltip,
-                          margin: tooltipMargin,
-                          preferBelow: tooltipPreferBelow,
-                          verticalOffset: tooltipVerticalOffset ?? 0,
-                          child: child,
-                        ))),
+              : Tooltip(
+                  message: tooltip,
+                  margin: tooltipMargin,
+                  preferBelow: tooltipPreferBelow,
+                  verticalOffset: tooltipVerticalOffset ?? 0,
+                  child: child,
+                ),
         ),
       ),
     );
@@ -5994,39 +5965,38 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final bg = scheme.surface.withValues(alpha: isDark ? 0.46 : 0.52);
     final cursor =
         onTap == null ? SystemMouseCursors.basic : SystemMouseCursors.click;
-    final button = Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(999),
-        onTap: onTap,
-        child: Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
+    return MouseRegion(
+      cursor: cursor,
+      child: Tooltip(
+        message: tooltip,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
             borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: scheme.outlineVariant.withValues(alpha: 0.35),
-            ),
-          ),
-          child: LiquidGlassPanel(
-            padding: EdgeInsets.zero,
-            margin: EdgeInsets.zero,
-            borderRadius: BorderRadius.circular(999),
-            showBorder: false,
-            backgroundColor: bg,
-            child: Center(
-              child: Icon(icon, size: 16, color: scheme.onSurface),
+            onTap: onTap,
+            child: Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(
+                  color: scheme.outlineVariant.withValues(alpha: 0.35),
+                ),
+              ),
+              child: LiquidGlassPanel(
+                padding: EdgeInsets.zero,
+                margin: EdgeInsets.zero,
+                borderRadius: BorderRadius.circular(999),
+                showBorder: false,
+                backgroundColor: bg,
+                child: Center(
+                  child: Icon(icon, size: 16, color: scheme.onSurface),
+                ),
+              ),
             ),
           ),
         ),
       ),
-    );
-
-    return MouseRegion(
-      cursor: cursor,
-      child: kIsWeb
-          ? _HoverTooltip(message: tooltip, child: button)
-          : Tooltip(message: tooltip, child: button),
     );
   }
 
@@ -6652,296 +6622,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       default:
         return filter;
     }
-  }
-}
-
-/// Desktop-only tooltip that anchors the tooltip card's RIGHT edge to the
-/// target widget's right edge.
-///
-/// This prevents tooltips for right-edge controls (like Filters) from rendering
-/// under the Nearby functions sidebar, because the bubble expands leftwards.
-class _RightEdgeAlignedTooltip extends StatefulWidget {
-  const _RightEdgeAlignedTooltip({
-    required this.message,
-    required this.child,
-    this.preferBelow,
-    this.verticalOffset,
-    this.safePadding,
-  });
-
-  final String message;
-  final Widget child;
-  final bool? preferBelow;
-  final double? verticalOffset;
-  final EdgeInsets? safePadding;
-
-  @override
-  State<_RightEdgeAlignedTooltip> createState() =>
-      _RightEdgeAlignedTooltipState();
-}
-
-class _RightEdgeAlignedTooltipState extends State<_RightEdgeAlignedTooltip> {
-  final LayerLink _link = LayerLink();
-  OverlayEntry? _entry;
-  Timer? _hideTimer;
-
-  @override
-  void dispose() {
-    _hideTimer?.cancel();
-    _remove();
-    super.dispose();
-  }
-
-  void _remove() {
-    _entry?.remove();
-    _entry = null;
-  }
-
-  void _show() {
-    if (_entry != null) return;
-    final message = widget.message.trim();
-    if (message.isEmpty) return;
-
-    final overlay = Overlay.of(context, rootOverlay: true);
-
-    final theme = Theme.of(context);
-    final tooltipTheme = TooltipTheme.of(context);
-    final preferBelow = widget.preferBelow ?? tooltipTheme.preferBelow ?? true;
-    final verticalOffset =
-        widget.verticalOffset ?? tooltipTheme.verticalOffset ?? 24.0;
-
-    // Safe padding constrains tooltip width so it stays inside the visible
-    // Explore surface. (Unlike Tooltip, we also anchor to the right edge.)
-    final safe =
-        widget.safePadding ?? const EdgeInsets.symmetric(horizontal: 24);
-    final screenWidth = MediaQuery.of(context).size.width;
-    final maxWidth = math.max(0.0, screenWidth - safe.left - safe.right);
-    // Keep desktop hover-tooltips compact so they don't feel like giant banners,
-    // especially for top-right controls.
-    const double tooltipWidthCap = 240;
-    final cappedMaxWidth = math.min(maxWidth, tooltipWidthCap);
-
-    final textStyle = tooltipTheme.textStyle ??
-        theme.textTheme.bodySmall?.copyWith(
-          color: theme.colorScheme.onInverseSurface,
-        );
-
-    final decoration = tooltipTheme.decoration ??
-        BoxDecoration(
-          color: theme.colorScheme.inverseSurface,
-          borderRadius: BorderRadius.circular(8),
-        );
-
-    final padding = tooltipTheme.padding ??
-        const EdgeInsets.symmetric(horizontal: 12, vertical: 8);
-
-    _entry = OverlayEntry(
-      builder: (context) {
-        return Positioned.fill(
-          child: IgnorePointer(
-            child: CompositedTransformFollower(
-              link: _link,
-              showWhenUnlinked: false,
-              targetAnchor:
-                  preferBelow ? Alignment.bottomRight : Alignment.topRight,
-              followerAnchor:
-                  preferBelow ? Alignment.topRight : Alignment.bottomRight,
-              offset: Offset(
-                0,
-                preferBelow ? verticalOffset : -verticalOffset,
-              ),
-              // NOTE: Positioned.fill gives tight constraints. Without
-              // UnconstrainedBox, the tooltip would expand to full-screen.
-              child: UnconstrainedBox(
-                alignment:
-                    preferBelow ? Alignment.topRight : Alignment.bottomRight,
-                constrainedAxis: Axis.horizontal,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    // Tooltip expands to the LEFT from the target's right edge.
-                    maxWidth: cappedMaxWidth,
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: Container(
-                      padding: padding,
-                      decoration: decoration,
-                      child: Text(
-                        message,
-                        style: textStyle,
-                        softWrap: true,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-
-    overlay.insert(_entry!);
-
-    // Auto-hide to match native tooltip behavior.
-    _hideTimer?.cancel();
-    _hideTimer = Timer(const Duration(seconds: 3), _remove);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return CompositedTransformTarget(
-      link: _link,
-      child: MouseRegion(
-        onEnter: (_) => _show(),
-        onExit: (_) => _remove(),
-        child: GestureDetector(
-          behavior: HitTestBehavior.deferToChild,
-          onLongPress: _show,
-          child: widget.child,
-        ),
-      ),
-    );
-  }
-}
-
-/// Web-safe tooltip used to avoid CanvasKit layout exceptions with the
-/// default Tooltip widget on hover.
-class _HoverTooltip extends StatefulWidget {
-  const _HoverTooltip({
-    required this.message,
-    required this.child,
-    this.preferBelow,
-    this.verticalOffset,
-    this.safePadding,
-  });
-
-  final String message;
-  final Widget child;
-  final bool? preferBelow;
-  final double? verticalOffset;
-  final EdgeInsets? safePadding;
-
-  @override
-  State<_HoverTooltip> createState() => _HoverTooltipState();
-}
-
-class _HoverTooltipState extends State<_HoverTooltip> {
-  final LayerLink _link = LayerLink();
-  OverlayEntry? _entry;
-  Timer? _hideTimer;
-
-  @override
-  void dispose() {
-    _hideTimer?.cancel();
-    _remove();
-    super.dispose();
-  }
-
-  void _remove() {
-    _entry?.remove();
-    _entry = null;
-  }
-
-  void _show() {
-    if (_entry != null) return;
-    final message = widget.message.trim();
-    if (message.isEmpty) return;
-
-    final overlay = Overlay.of(context, rootOverlay: true);
-    final theme = Theme.of(context);
-    final tooltipTheme = TooltipTheme.of(context);
-    final preferBelow = widget.preferBelow ?? tooltipTheme.preferBelow ?? true;
-    final verticalOffset =
-        widget.verticalOffset ?? tooltipTheme.verticalOffset ?? 24.0;
-
-    final safe =
-        widget.safePadding ?? const EdgeInsets.symmetric(horizontal: 24);
-    final screenWidth = MediaQuery.of(context).size.width;
-    final maxWidth = math.max(0.0, screenWidth - safe.left - safe.right);
-    const double tooltipWidthCap = 240;
-    final cappedMaxWidth = math.min(maxWidth, tooltipWidthCap);
-
-    final textStyle = tooltipTheme.textStyle ??
-        theme.textTheme.bodySmall?.copyWith(
-          color: theme.colorScheme.onInverseSurface,
-        );
-
-    final decoration = tooltipTheme.decoration ??
-        BoxDecoration(
-          color: theme.colorScheme.inverseSurface,
-          borderRadius: BorderRadius.circular(8),
-        );
-
-    final padding = tooltipTheme.padding ??
-        const EdgeInsets.symmetric(horizontal: 12, vertical: 8);
-
-    _entry = OverlayEntry(
-      builder: (context) {
-        return Positioned.fill(
-          child: IgnorePointer(
-            child: CompositedTransformFollower(
-              link: _link,
-              showWhenUnlinked: false,
-              targetAnchor: preferBelow
-                  ? Alignment.bottomCenter
-                  : Alignment.topCenter,
-              followerAnchor:
-                  preferBelow ? Alignment.topCenter : Alignment.bottomCenter,
-              offset: Offset(
-                0,
-                preferBelow ? verticalOffset : -verticalOffset,
-              ),
-              child: UnconstrainedBox(
-                alignment:
-                    preferBelow ? Alignment.topCenter : Alignment.bottomCenter,
-                constrainedAxis: Axis.horizontal,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: cappedMaxWidth),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: Container(
-                      padding: padding,
-                      decoration: decoration,
-                      child: Text(
-                        message,
-                        style: textStyle,
-                        softWrap: true,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-
-    overlay.insert(_entry!);
-
-    _hideTimer?.cancel();
-    _hideTimer = Timer(const Duration(seconds: 3), _remove);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return CompositedTransformTarget(
-      link: _link,
-      child: MouseRegion(
-        onEnter: (_) => _show(),
-        onExit: (_) => _remove(),
-        child: GestureDetector(
-          behavior: HitTestBehavior.deferToChild,
-          onLongPress: _show,
-          child: widget.child,
-        ),
-      ),
-    );
   }
 }
 
