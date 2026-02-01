@@ -1023,6 +1023,8 @@ class _MapScreenState extends State<MapScreen>
         next: result.markers,
       );
 
+      final markersChanged = !_markersEquivalent(_artMarkers, merged);
+
       final String? selectedIdBeforeSetState = _selectedMarkerId;
       ArtMarker? resolvedSelected;
       if (selectedIdBeforeSetState != null &&
@@ -1035,24 +1037,35 @@ class _MapScreenState extends State<MapScreen>
         }
       }
 
-      setState(() {
-        _artMarkers = merged;
-        final stillSelectedId = _selectedMarkerId;
-        if (stillSelectedId == null || stillSelectedId.isEmpty) return;
-        if (stillSelectedId != selectedIdBeforeSetState) return;
+      if (markersChanged ||
+          (resolvedSelected != null &&
+              _selectedMarkerId == resolvedSelected.id &&
+              _selectedMarkerData != resolvedSelected)) {
+        setState(() {
+          if (markersChanged) {
+            _artMarkers = merged;
+          }
+          final stillSelectedId = _selectedMarkerId;
+          if (stillSelectedId == null || stillSelectedId.isEmpty) return;
+          if (stillSelectedId != selectedIdBeforeSetState) return;
 
-        if (resolvedSelected != null) {
-          _selectedMarkerData = resolvedSelected;
-          return;
+          if (resolvedSelected != null) {
+            _selectedMarkerData = resolvedSelected;
+            _selectedMarkerAnchor = null;
+            return;
+          }
+
+          _selectedMarkerId = null;
+          _selectedMarkerData = null;
+          _selectedMarkerAt = null;
+          _selectedMarkerViewportSignature = null;
+          _markerOverlayExpanded = false;
+          _selectedMarkerAnchor = null;
+        });
+        if (markersChanged) {
+          unawaited(_syncMapMarkers(themeProvider: themeProvider));
         }
-
-        _selectedMarkerId = null;
-        _selectedMarkerData = null;
-        _selectedMarkerAt = null;
-        _selectedMarkerViewportSignature = null;
-        _markerOverlayExpanded = false;
-      });
-      unawaited(_syncMapMarkers(themeProvider: themeProvider));
+      }
 
       _lastMarkerFetchCenter = result.center;
       _lastMarkerFetchTime = result.fetchedAt;
@@ -5696,6 +5709,24 @@ class _MapScreenState extends State<MapScreen>
     }
 
     return filtered;
+  }
+
+  bool _markersEquivalent(List<ArtMarker> current, List<ArtMarker> next) {
+    if (identical(current, next)) return true;
+    if (current.length != next.length) return false;
+    final byId = <String, ArtMarker>{
+      for (final marker in current) marker.id: marker,
+    };
+    if (byId.length != current.length) return false;
+    for (final marker in next) {
+      final existing = byId[marker.id];
+      if (existing == null) return false;
+      if (existing.type != marker.type) return false;
+      if (existing.artworkId != marker.artworkId) return false;
+      if (existing.position.latitude != marker.position.latitude) return false;
+      if (existing.position.longitude != marker.position.longitude) return false;
+    }
+    return true;
   }
 
   List<Artwork> _sortArtworks(List<Artwork> artworks) {

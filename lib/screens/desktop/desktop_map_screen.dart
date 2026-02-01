@@ -141,6 +141,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   String? _nearbySidebarSignature;
   bool _nearbySidebarSyncScheduled = false;
   LatLng? _nearbySidebarAnchor;
+  DateTime? _nearbySidebarLastSyncAt;
+  static const Duration _nearbySidebarSyncCooldown =
+      Duration(milliseconds: 250);
   final Distance _distance = const Distance();
   StreamSubscription<ArtMarker>? _markerStreamSub;
   StreamSubscription<String>? _markerDeletedSub;
@@ -466,6 +469,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _nearbySidebarSignature = null;
       _nearbySidebarSyncScheduled = false;
       _nearbySidebarAnchor = _userLocation ?? _effectiveCenter;
+      _nearbySidebarLastSyncAt = null;
       _selectedArtwork = null;
       _selectedExhibition = null;
       _showFiltersPanel = false;
@@ -481,6 +485,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _isNearbyPanelOpen = false;
       _nearbySidebarSyncScheduled = false;
       _nearbySidebarAnchor = null;
+      _nearbySidebarLastSyncAt = null;
     });
     _nearbySidebarSignature = null;
     shellScope.closeFunctionsPanel();
@@ -1843,6 +1848,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             basePosition: nearbyBasePosition,
           );
           if (sig != _nearbySidebarSignature && !_nearbySidebarSyncScheduled) {
+            final now = DateTime.now();
+            if (_nearbySidebarLastSyncAt != null &&
+                now.difference(_nearbySidebarLastSyncAt!) <
+                    _nearbySidebarSyncCooldown) {
+              return const SizedBox.shrink();
+            }
+            _nearbySidebarLastSyncAt = now;
             _nearbySidebarSyncScheduled = true;
             // Schedule the sync AFTER the current build completes.
             WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -4544,6 +4556,24 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     return filtered;
   }
 
+  bool _markersEquivalent(List<ArtMarker> current, List<ArtMarker> next) {
+    if (identical(current, next)) return true;
+    if (current.length != next.length) return false;
+    final byId = <String, ArtMarker>{
+      for (final marker in current) marker.id: marker,
+    };
+    if (byId.length != current.length) return false;
+    for (final marker in next) {
+      final existing = byId[marker.id];
+      if (existing == null) return false;
+      if (existing.type != marker.type) return false;
+      if (existing.artworkId != marker.artworkId) return false;
+      if (existing.position.latitude != marker.position.latitude) return false;
+      if (existing.position.longitude != marker.position.longitude) return false;
+    }
+    return true;
+  }
+
   Color _resolveArtMarkerColor(ArtMarker marker, ThemeProvider themeProvider) {
     final scheme = Theme.of(context).colorScheme;
     final roles = KubusColorRoles.of(context);
@@ -4676,6 +4706,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         next: result.markers,
       );
 
+      final markersChanged = !_markersEquivalent(_artMarkers, merged);
+
       final String? selectedIdBeforeSetState = _selectedMarkerId;
       ArtMarker? resolvedSelected;
       if (selectedIdBeforeSetState != null &&
@@ -4688,24 +4720,34 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         }
       }
 
-      setState(() {
-        _artMarkers = merged;
-        final stillSelectedId = _selectedMarkerId;
-        if (stillSelectedId == null || stillSelectedId.isEmpty) return;
-        if (stillSelectedId != selectedIdBeforeSetState) return;
+      if (markersChanged ||
+          (resolvedSelected != null &&
+              _selectedMarkerId == resolvedSelected.id &&
+              _selectedMarkerData != resolvedSelected)) {
+        setState(() {
+          if (markersChanged) {
+            _artMarkers = merged;
+          }
+          final stillSelectedId = _selectedMarkerId;
+          if (stillSelectedId == null || stillSelectedId.isEmpty) return;
+          if (stillSelectedId != selectedIdBeforeSetState) return;
 
-        if (resolvedSelected != null) {
-          _selectedMarkerData = resolvedSelected;
-          return;
+          if (resolvedSelected != null) {
+            _selectedMarkerData = resolvedSelected;
+            _selectedMarkerAnchor = null;
+            return;
+          }
+
+          _selectedMarkerId = null;
+          _selectedMarkerData = null;
+          _selectedMarkerAt = null;
+          _markerOverlayExpanded = false;
+          _selectedMarkerAnchor = null;
+        });
+        if (markersChanged) {
+          unawaited(_syncMapMarkers(themeProvider: themeProvider));
         }
-
-        _selectedMarkerId = null;
-        _selectedMarkerData = null;
-        _selectedMarkerAt = null;
-        _markerOverlayExpanded = false;
-        _selectedMarkerAnchor = null;
-      });
-      unawaited(_syncMapMarkers(themeProvider: themeProvider));
+      }
       _queueOverlayAnchorRefresh();
       _lastMarkerFetchCenter = result.center;
       _lastMarkerFetchTime = result.fetchedAt;
