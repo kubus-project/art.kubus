@@ -278,6 +278,9 @@ class _MapScreenState extends State<MapScreen>
   bool _isDiscoveryExpanded = false;
   bool _filtersExpanded = false;
 
+  bool _isBuilding = false;
+  bool _pendingSafeSetState = false;
+
   // Camera helpers
   LatLng _cameraCenter = const LatLng(46.056946, 14.505751);
   double _lastZoom = 16.0;
@@ -2503,6 +2506,10 @@ class _MapScreenState extends State<MapScreen>
 
   @override
   Widget build(BuildContext context) {
+    _isBuilding = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _isBuilding = false;
+    });
     assert(_assertMarkerModeInvariant());
     assert(_assertMarkerRenderModeInvariant());
     final theme = Theme.of(context);
@@ -2671,7 +2678,7 @@ class _MapScreenState extends State<MapScreen>
             now.difference(_lastCameraUpdateTime) > _cameraUpdateThrottle;
         if (bucketChanged || shouldUpdate) {
           _lastCameraUpdateTime = now;
-          setState(() => _renderZoomBucket = bucket);
+          _safeSetState(() => _renderZoomBucket = bucket);
         }
         if (bucketChanged && _is3DMarkerModeActive) {
           _cubeSyncDebouncer(const Duration(milliseconds: 60), () {
@@ -2680,10 +2687,10 @@ class _MapScreenState extends State<MapScreen>
         }
         final hasGesture = !_programmaticCameraMove;
         if (hasGesture && _autoFollow) {
-          setState(() => _autoFollow = false);
+          _safeSetState(() => _autoFollow = false);
         }
         if (hasGesture && _selectedMarkerId != null) {
-          setState(() {
+          _safeSetState(() {
             _selectedMarkerId = null;
             _selectedMarkerData = null;
             _selectedMarkerAt = null;
@@ -2708,6 +2715,21 @@ class _MapScreenState extends State<MapScreen>
       zoomGesturesEnabled: !_shouldBlockMapGestures,
       tiltGesturesEnabled: !_shouldBlockMapGestures,
     );
+  }
+
+  void _safeSetState(VoidCallback fn) {
+    if (!mounted) return;
+    if (_isBuilding) {
+      if (_pendingSafeSetState) return;
+      _pendingSafeSetState = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _pendingSafeSetState = false;
+        if (!mounted || _isBuilding) return;
+        setState(fn);
+      });
+      return;
+    }
+    setState(fn);
   }
 
   Future<void> _handleMapStyleLoaded(ThemeProvider themeProvider) async {
