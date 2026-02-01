@@ -140,6 +140,8 @@ class _DesktopShellState extends State<DesktopShell>
   BuildContext? _shellScopeContext;
   String? _lastDeepLinkSignature;
   DateTime? _lastDeepLinkHandledAt;
+  bool _pendingRouteCorrection = false;
+  bool _pendingNavCollapse = false;
 
   static const List<DesktopNavItem> _signedInNavItems = [
     DesktopNavItem(
@@ -339,18 +341,34 @@ class _DesktopShellState extends State<DesktopShell>
       return;
     }
 
+    final nextContent = panel == DesktopFunctionsPanel.exploreNearby
+        ? (content ?? _functionsPanelContent)
+        : null;
+    if (_functionsPanel == panel) {
+      if (panel != DesktopFunctionsPanel.exploreNearby || nextContent == null) {
+        return;
+      }
+      final newKey = nextContent.key;
+      final oldKey = _functionsPanelContent?.key;
+      if (newKey != null && oldKey != null && newKey == oldKey) {
+        return;
+      }
+    }
+
     setState(() {
       _functionsPanel = panel;
-      if (panel == DesktopFunctionsPanel.exploreNearby) {
-        _functionsPanelContent = content ?? _functionsPanelContent;
-      } else {
-        _functionsPanelContent = null;
-      }
+      _functionsPanelContent = nextContent;
     });
   }
 
   void _setFunctionsPanelContent(Widget content) {
     if (_functionsPanel != DesktopFunctionsPanel.exploreNearby) return;
+    if (identical(content, _functionsPanelContent)) return;
+    final newKey = content.key;
+    final oldKey = _functionsPanelContent?.key;
+    if (newKey != null && oldKey != null && newKey == oldKey) {
+      return;
+    }
     setState(() {
       _functionsPanelContent = content;
     });
@@ -544,13 +562,17 @@ class _DesktopShellState extends State<DesktopShell>
     if (!hasActiveRoute &&
         !isWalletRoute &&
         _activeRoute != navItems.first.route) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        setState(() {
-          _activeRoute = navItems.first.route;
+      if (!_pendingRouteCorrection) {
+        _pendingRouteCorrection = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _pendingRouteCorrection = false;
+          if (!mounted) return;
+          setState(() {
+            _activeRoute = navItems.first.route;
+          });
+          _syncTelemetry();
         });
-        _syncTelemetry();
-      });
+      }
     }
     final selectedIndex =
         navItems.indexWhere((item) => item.route == effectiveRoute);
@@ -561,11 +583,15 @@ class _DesktopShellState extends State<DesktopShell>
 
     // Auto-collapse navigation on medium screens
     if (!isLarge && _isNavigationExpanded && !isExpanded) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _isNavigationExpanded) {
-          _toggleNavigation();
-        }
-      });
+      if (!_pendingNavCollapse) {
+        _pendingNavCollapse = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _pendingNavCollapse = false;
+          if (mounted && _isNavigationExpanded) {
+            _toggleNavigation();
+          }
+        });
+      }
     }
 
     return UserPersonaOnboardingGate(

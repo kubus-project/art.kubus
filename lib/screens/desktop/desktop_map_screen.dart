@@ -139,6 +139,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   bool _isLocating = false;
   bool _isNearbyPanelOpen = false;
   String? _nearbySidebarSignature;
+  bool _nearbySidebarSyncScheduled = false;
+  LatLng? _nearbySidebarAnchor;
   final Distance _distance = const Distance();
   StreamSubscription<ArtMarker>? _markerStreamSub;
   StreamSubscription<String>? _markerDeletedSub;
@@ -189,6 +191,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   String _searchQuery = '';
   bool _showSearchOverlay = false;
   final SearchService _searchService = SearchService();
+
+  bool _isBuilding = false;
+  bool _pendingSafeSetState = false;
 
   // Filter options - same list as mobile for parity
   final List<String> _filterOptions = [
@@ -459,6 +464,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     setState(() {
       _isNearbyPanelOpen = true;
       _nearbySidebarSignature = null;
+      _nearbySidebarSyncScheduled = false;
+      _nearbySidebarAnchor = _userLocation ?? _effectiveCenter;
       _selectedArtwork = null;
       _selectedExhibition = null;
       _showFiltersPanel = false;
@@ -470,9 +477,39 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   void _closeNearbyArtPanel() {
     final shellScope = DesktopShellScope.of(context);
     if (shellScope == null) return;
-    setState(() => _isNearbyPanelOpen = false);
+    setState(() {
+      _isNearbyPanelOpen = false;
+      _nearbySidebarSyncScheduled = false;
+      _nearbySidebarAnchor = null;
+    });
     _nearbySidebarSignature = null;
     shellScope.closeFunctionsPanel();
+  }
+
+  void _safeSetState(VoidCallback fn) {
+    if (!mounted) return;
+    if (_isBuilding) {
+      if (_pendingSafeSetState) return;
+      _pendingSafeSetState = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _pendingSafeSetState = false;
+        if (!mounted || _isBuilding) return;
+        setState(fn);
+      });
+      return;
+    }
+    setState(fn);
+  }
+
+  String _nearbySidebarSignatureFor(List<Artwork> filteredArtworks) {
+    final base = _nearbySidebarAnchor ?? _userLocation ?? _effectiveCenter;
+    final ids = filteredArtworks.take(30).map((a) => a.id).toList()..sort();
+    final modeSig = _travelModeEnabled
+        ? 'travel'
+        : _effectiveSearchRadiusKm.toStringAsFixed(1);
+    return '$modeSig|'
+        '${base.latitude.toStringAsFixed(4)},${base.longitude.toStringAsFixed(4)}|'
+        '${filteredArtworks.length}|${ids.join(',')}';
   }
 
   void _syncNearbySidebarIfNeeded(
@@ -484,21 +521,17 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     // Build a compact signature so we only push sidebar updates when something
     // meaningful changes (avoids setState->build feedback loops).
-    final base = _userLocation ?? _effectiveCenter;
-    final ids = filteredArtworks.take(30).map((a) => a.id).join(',');
-    final modeSig = _travelModeEnabled
-        ? 'travel'
-        : _effectiveSearchRadiusKm.toStringAsFixed(1);
-    final sig = '$modeSig|'
-        '${base.latitude.toStringAsFixed(4)},${base.longitude.toStringAsFixed(4)}|'
-        '${filteredArtworks.length}|$ids';
+    final sig = _nearbySidebarSignatureFor(filteredArtworks);
     if (_nearbySidebarSignature == sig) return;
     _nearbySidebarSignature = sig;
 
     // NOTE: This method is now always called from a post-frame callback,
     // so we can directly update the shell content without another deferral.
     shellScope.setFunctionsPanelContent(
-      _buildNearbyArtSidebar(themeProvider, filteredArtworks),
+      KeyedSubtree(
+        key: ValueKey<String>('nearby_sidebar_$sig'),
+        child: _buildNearbyArtSidebar(themeProvider, filteredArtworks),
+      ),
     );
   }
 
@@ -1647,6 +1680,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   @override
   Widget build(BuildContext context) {
+    _isBuilding = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _isBuilding = false;
+    });
     assert(_assertMarkerModeInvariant());
     assert(_assertMarkerRenderModeInvariant());
     final themeProvider = Provider.of<ThemeProvider>(context);
@@ -1786,11 +1823,16 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         // which rebuilds this Consumer, which was calling _syncNearbySidebarIfNeeded
         // again, creating a loop when the signature changed.
         if (_isNearbyPanelOpen) {
-          // Schedule the sync AFTER the current build completes.
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted) return;
-            _syncNearbySidebarIfNeeded(themeProvider, filteredArtworks);
-          });
+          final sig = _nearbySidebarSignatureFor(filteredArtworks);
+          if (sig != _nearbySidebarSignature && !_nearbySidebarSyncScheduled) {
+            _nearbySidebarSyncScheduled = true;
+            // Schedule the sync AFTER the current build completes.
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _nearbySidebarSyncScheduled = false;
+              if (!mounted) return;
+              _syncNearbySidebarIfNeeded(themeProvider, filteredArtworks);
+            });
+          }
         }
 
         final isDark = themeProvider.isDarkMode;
@@ -1833,7 +1875,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 now.difference(_lastCameraUpdateTime) > _cameraUpdateThrottle;
             if (bucketChanged || shouldUpdate) {
               _lastCameraUpdateTime = now;
-              setState(() => _renderZoomBucket = bucket);
+              _safeSetState(() => _renderZoomBucket = bucket);
             }
             if (bucketChanged && _is3DMarkerModeActive) {
               _cubeSyncDebouncer(const Duration(milliseconds: 60), () {
@@ -1843,10 +1885,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
             final hasGesture = !_programmaticCameraMove;
             if (hasGesture && _autoFollow) {
-              setState(() => _autoFollow = false);
+              _safeSetState(() => _autoFollow = false);
             }
             if (hasGesture && _selectedMarkerId != null) {
-              setState(() {
+              _safeSetState(() {
                 _selectedMarkerId = null;
                 _selectedMarkerData = null;
                 _selectedMarkerAt = null;

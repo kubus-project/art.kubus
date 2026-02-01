@@ -1,0 +1,14 @@
+TypeError: Instance of 'minified:hn': type 'minified:hn' is not a subtype of type 'minified:kv'
+main.dart.js:64238:78
+main.dart.js:4907:23
+main.dart.js:225181:6
+main.dart.js:230222:8
+main.dart.js:230196:3
+main.dart.js:230238:3
+main.dart.js:229956:17
+main.dart.js:229856:24
+main.dart.js:230095:31
+main.dart.js:230040:10
+main.dart.js:230041:19
+main.dart.js:230089:12
+main.dart.js:230088:6
