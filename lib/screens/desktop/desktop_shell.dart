@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../providers/themeprovider.dart';
@@ -646,50 +647,60 @@ class _DesktopShellState extends State<DesktopShell>
                               child: AnimatedOpacity(
                                 opacity: _functionsPanel == DesktopFunctionsPanel.none ? 0 : 1,
                                 duration: const Duration(milliseconds: 150),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    border: Border(
-                                      left: BorderSide(
-                                        color: theme.brightness == Brightness.dark
-                                            ? Colors.white.withValues(alpha: 0.06)
-                                            : theme.colorScheme.outline.withValues(alpha: 0.10),
-                                        width: 1,
-                                      ),
-                                    ),
-                                  ),
-                                  child: LiquidGlassPanel(
-                                    padding: EdgeInsets.zero,
-                                    margin: EdgeInsets.zero,
-                                    borderRadius: BorderRadius.zero,
-                                    blurSigma: KubusGlassEffects.blurSigmaLight,
-                                    showBorder: false,
-                                    backgroundColor: theme.colorScheme.surface.withValues(
-                                      alpha: theme.brightness == Brightness.dark ? 0.16 : 0.10,
-                                    ),
-                                    child: AnimatedSwitcher(
-                                      duration: const Duration(milliseconds: 220),
-                                      switchInCurve: Curves.easeOutCubic,
-                                      switchOutCurve: Curves.easeInCubic,
-                                      child: switch (_functionsPanel) {
-                                        DesktopFunctionsPanel.notifications => _NotificationsPanel(
-                                            key: const ValueKey<String>('functions_notifications'),
-                                            onClose: _closeFunctionsPanel,
-                                            onActivitySelected: (activity) async {
-                                              final parentContext = context;
-                                              _closeFunctionsPanel();
-                                              await ActivityNavigation.open(parentContext, activity);
-                                            },
+                                child: Builder(
+                                  builder: (context) {
+                                    final panel = Container(
+                                      decoration: BoxDecoration(
+                                        border: Border(
+                                          left: BorderSide(
+                                            color: theme.brightness == Brightness.dark
+                                                ? Colors.white.withValues(alpha: 0.06)
+                                                : theme.colorScheme.outline.withValues(alpha: 0.10),
+                                            width: 1,
                                           ),
-                                        DesktopFunctionsPanel.exploreNearby =>
-                                          _functionsPanelContent ?? const SizedBox.shrink(
-                                            key: ValueKey<String>('functions_explore_nearby_empty'),
-                                          ),
-                                        DesktopFunctionsPanel.none => const SizedBox.shrink(
-                                          key: ValueKey<String>('functions_empty'),
                                         ),
-                                      },
-                                    ),
-                                  ),
+                                      ),
+                                      child: LiquidGlassPanel(
+                                        padding: EdgeInsets.zero,
+                                        margin: EdgeInsets.zero,
+                                        borderRadius: BorderRadius.zero,
+                                        blurSigma: KubusGlassEffects.blurSigmaLight,
+                                        showBorder: false,
+                                        backgroundColor: theme.colorScheme.surface.withValues(
+                                          alpha: theme.brightness == Brightness.dark ? 0.16 : 0.10,
+                                        ),
+                                        child: AnimatedSwitcher(
+                                          duration: const Duration(milliseconds: 220),
+                                          switchInCurve: Curves.easeOutCubic,
+                                          switchOutCurve: Curves.easeInCubic,
+                                          child: switch (_functionsPanel) {
+                                            DesktopFunctionsPanel.notifications => _NotificationsPanel(
+                                                key: const ValueKey<String>('functions_notifications'),
+                                                onClose: _closeFunctionsPanel,
+                                                onActivitySelected: (activity) async {
+                                                  final parentContext = context;
+                                                  _closeFunctionsPanel();
+                                                  await ActivityNavigation.open(parentContext, activity);
+                                                },
+                                              ),
+                                            DesktopFunctionsPanel.exploreNearby =>
+                                              _functionsPanelContent ?? const SizedBox.shrink(
+                                                key: ValueKey<String>('functions_explore_nearby_empty'),
+                                              ),
+                                            DesktopFunctionsPanel.none => const SizedBox.shrink(
+                                              key: ValueKey<String>('functions_empty'),
+                                            ),
+                                          },
+                                        ),
+                                      ),
+                                    );
+
+                                    if (!kIsWeb ||
+                                        _functionsPanel == DesktopFunctionsPanel.none) {
+                                      return panel;
+                                    }
+                                    return PointerInterceptor(child: panel);
+                                  },
                                 ),
                               ),
                             ),
