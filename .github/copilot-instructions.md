@@ -12,6 +12,8 @@ Ship production-ready Flutter features (AR, Solana, OrbitDB, storage) without br
 - desktop/mobile parity
 - IPFS/HTTP/S3 fallbacks
 
+Preflight: always review **all** `AGENTS.md` files in this repo (root, `lib/**`, `backend/**`) before making changes.
+
 ---
 
 ## Non-Negotiables

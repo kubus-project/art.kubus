@@ -3,6 +3,8 @@
 ## Mission
 Keep services reusable and centralized: all backend I/O, storage, auth, and AR live here.
 
+Preflight: review all `AGENTS.md` files (root, `lib/**`, `backend/**`) before making changes.
+
 ## Storage + media rules
 - Storage resolution must go through `StorageConfig.resolveUrl(...)` (`lib/services/storage_config.dart`).
 - UI/media callers should use `MediaUrlResolver.resolve(...)` (`lib/utils/media_url_resolver.dart`).
@@ -30,6 +32,10 @@ Keep services reusable and centralized: all backend I/O, storage, auth, and AR l
 
 ## UI separation
 - Services must not depend on widgets or UI colors. Use the theme system from `lib/utils/design_tokens.dart` at the UI layer instead.
+
+## Audit watchlist (services)
+- Map web style URL normalization must not double-prefix `assets/` and must have a production-safe fallback.
+- Auth gating must not treat wallet-only presence as a logged-in account; app-lock should only activate when PIN/biometric is configured.
 
 ## Evidence (direct quotes with line references)
 - `lib/services/storage_config.dart` (lines 59–60):

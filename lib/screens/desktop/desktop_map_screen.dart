@@ -93,7 +93,7 @@ class DesktopMapScreen extends StatefulWidget {
 }
 
 class _DesktopMapScreenState extends State<DesktopMapScreen>
-  with WidgetsBindingObserver, TickerProviderStateMixin {
+    with WidgetsBindingObserver, TickerProviderStateMixin {
   ml.MapLibreMapController? _mapController;
   late AnimationController _animationController;
   late AnimationController _panelController;
@@ -104,6 +104,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   String? _selectedMarkerId;
   ArtMarker? _selectedMarkerData;
   DateTime? _selectedMarkerAt;
+  String? _selectedMarkerViewportSignature;
   bool _markerOverlayExpanded = false;
   _MarkerOverlayMode _markerOverlayMode = _MarkerOverlayMode.anchored;
   bool _didOpenInitialMarker = false;
@@ -167,6 +168,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       Duration(milliseconds: 16); // ~60fps
   bool _styleInitialized = false;
   bool _styleInitializationInProgress = false;
+  bool _hitboxLayerReady = false;
   final Set<String> _registeredMapImages = <String>{};
   final LayerLink _markerOverlayLink = LayerLink();
   final Debouncer _overlayAnchorDebouncer = Debouncer();
@@ -616,8 +618,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    _isAppForeground =
-        state != AppLifecycleState.paused && state != AppLifecycleState.inactive;
+    _isAppForeground = state != AppLifecycleState.paused &&
+        state != AppLifecycleState.inactive;
     if (_pollingEnabled) {
       _resumePolling();
     } else {
@@ -652,6 +654,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   void _handleMapCreated(ml.MapLibreMapController controller) {
     _mapController = controller;
     _styleInitialized = false;
+    _hitboxLayerReady = false;
     _registeredMapImages.clear();
     AppConfig.debugPrint(
       'DesktopMapScreen: map created (platform=${defaultTargetPlatform.name}, web=$kIsWeb)',
@@ -680,6 +683,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final scheme = Theme.of(context).colorScheme;
     _styleInitializationInProgress = true;
     _styleInitialized = false;
+    _hitboxLayerReady = false;
     _registeredMapImages.clear();
 
     AppConfig.debugPrint('DesktopMapScreen: style init start');
@@ -775,7 +779,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           ],
           iconOpacity: <Object>[
             'case',
-            <Object>['==', <Object>['get', 'kind'], 'cluster'],
+            <Object>[
+              '==',
+              <Object>['get', 'kind'],
+              'cluster'
+            ],
             1.0,
             1.0,
           ],
@@ -806,7 +814,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           ],
           iconOpacity: <Object>[
             'case',
-            <Object>['==', <Object>['get', 'kind'], 'cluster'],
+            <Object>[
+              '==',
+              <Object>['get', 'kind'],
+              'cluster'
+            ],
             1.0,
             1.0,
           ],
@@ -829,32 +841,36 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           circleStrokeOpacity: 0.0,
           circleRadius: <Object>[
             'case',
-            <Object>['==', <Object>['get', 'kind'], 'cluster'],
             <Object>[
-              'interpolate',
-              <Object>['linear'],
-              <Object>['zoom'],
-              3,
-              16,
-              12,
-              22,
-              15,
-              28,
-              24,
-              36,
+              '==',
+              <Object>['get', 'kind'],
+              'cluster'
             ],
             <Object>[
               'interpolate',
               <Object>['linear'],
               <Object>['zoom'],
               3,
-              10,
+              18,
               12,
-              16,
+              26,
               15,
-              23,
+              32,
               24,
-              30,
+              42,
+            ],
+            <Object>[
+              'interpolate',
+              <Object>['linear'],
+              <Object>['zoom'],
+              3,
+              14,
+              12,
+              22,
+              15,
+              28,
+              24,
+              38,
             ],
           ],
         ),
@@ -902,6 +918,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
       if (!mounted) return;
       _styleInitialized = true;
+      _hitboxLayerReady = true;
 
       await _applyIsometricCamera(enabled: _isometricViewEnabled);
       await _syncUserLocation(themeProvider: themeProvider);
@@ -955,6 +972,26 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
   }
 
+  Future<bool> _canQueryMarkerHitbox() async {
+    final controller = _mapController;
+    if (controller == null) return false;
+    if (!_styleInitialized) return false;
+    if (_hitboxLayerReady) return true;
+
+    try {
+      final raw = await controller.getLayerIds();
+      for (final id in raw) {
+        if (id == _markerHitboxLayerId) {
+          _hitboxLayerReady = true;
+          return true;
+        }
+      }
+    } catch (_) {
+      // Ignore lookup failures; we'll fall back to manual picking.
+    }
+    return false;
+  }
+
   Future<void> _handleMapTap(
     math.Point<double> point, {
     required ThemeProvider themeProvider,
@@ -963,9 +1000,21 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (controller == null) return;
     if (!_styleInitialized) return;
 
+    final double? dpr = kDebugMode
+        ? MediaQuery.of(context).devicePixelRatio
+        : null;
+
+    if (!await _canQueryMarkerHitbox()) {
+      final fallbackMarker = await _fallbackPickMarkerAtPoint(point);
+      if (fallbackMarker != null) {
+        _handleMarkerTap(fallbackMarker);
+        _queueOverlayAnchorRefresh();
+      }
+      return;
+    }
+
     // Debug instrumentation (kDebugMode only)
     if (kDebugMode) {
-      final dpr = MediaQuery.of(context).devicePixelRatio;
       AppConfig.debugPrint(
         'DesktopMapScreen: tap at (${point.x.toStringAsFixed(1)}, ${point.y.toStringAsFixed(1)}) '
         'pitch=${_lastPitch.toStringAsFixed(1)} bearing=${_lastBearing.toStringAsFixed(1)} '
@@ -995,7 +1044,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       if (kDebugMode && features.isNotEmpty) {
         final dynamic first = features.first;
         final propsRaw = first is Map ? first['properties'] : null;
-        final Map props = propsRaw is Map ? propsRaw : const <String, dynamic>{};
+        final Map props =
+            propsRaw is Map ? propsRaw : const <String, dynamic>{};
         AppConfig.debugPrint(
           'DesktopMapScreen: queryRenderedFeaturesInRect hits=${features.length} '
           'first.markerId=${props['markerId'] ?? props['id']} kind=${props['kind']}',
@@ -1015,6 +1065,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           _selectedMarkerId = null;
           _selectedMarkerData = null;
           _selectedMarkerAt = null;
+          _selectedMarkerViewportSignature = null;
           _markerOverlayExpanded = false;
         });
         unawaited(_syncMapMarkers(themeProvider: themeProvider));
@@ -1060,6 +1111,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         AppConfig.debugPrint(
             'DesktopMapScreen: queryRenderedFeatures failed: $e');
       }
+      _hitboxLayerReady = false;
       final fallbackMarker = await _fallbackPickMarkerAtPoint(point);
       if (fallbackMarker == null) return;
       _handleMarkerTap(fallbackMarker);
@@ -1299,9 +1351,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         } else {
           final first = cluster.markers.first;
           final typeName = first.type.name;
-          final label = cluster.markers.length > 99
-              ? '99+'
-              : '${cluster.markers.length}';
+          final label =
+              cluster.markers.length > 99 ? '99+' : '${cluster.markers.length}';
           final iconId = 'cl_${typeName}_${label}_${isDark ? 'd' : 'l'}';
           if (!_registeredMapImages.contains(iconId)) {
             toRender.add(_IconRenderTask(
@@ -1365,7 +1416,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               pixelRatio: _markerPixelRatio(),
             );
           } else if (task.marker != null) {
-            final baseColor = _resolveArtMarkerColor(task.marker!, themeProvider);
+            final baseColor =
+                _resolveArtMarkerColor(task.marker!, themeProvider);
             bytes = await ArtMarkerCubeIconRenderer.renderMarkerPng(
               baseColor: baseColor,
               icon: _resolveArtMarkerIcon(task.marker!.type),
@@ -1406,7 +1458,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final typeName = marker.type.name;
     final tier = marker.signalTier;
     final iconId =
-      'mk_${typeName}_${tier.name}${selected ? '_sel' : ''}_${isDark ? 'd' : 'l'}';
+        'mk_${typeName}_${tier.name}${selected ? '_sel' : ''}_${isDark ? 'd' : 'l'}';
 
     if (!_registeredMapImages.contains(iconId)) {
       final baseColor = _resolveArtMarkerColor(marker, themeProvider);
@@ -1707,6 +1759,87 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
   }
 
+  Future<void> _moveCameraWithOffset(
+    LatLng target, {
+    required Offset offset,
+    double? zoom,
+    Duration duration = const Duration(milliseconds: 320),
+  }) async {
+    final controller = _mapController;
+    if (controller == null) return;
+
+    final double targetZoom = zoom ?? _cameraZoom;
+    ml.LatLng resolvedTarget = ml.LatLng(target.latitude, target.longitude);
+    if (offset != Offset.zero) {
+      try {
+        final screen = await controller.toScreenLocation(resolvedTarget);
+        final shifted = math.Point<double>(
+          screen.x.toDouble() + offset.dx,
+          screen.y.toDouble() + offset.dy,
+        );
+        resolvedTarget = await controller.toLatLng(shifted);
+      } catch (_) {
+        // Best-effort: if projection fails, fall back to the original target.
+      }
+    }
+
+    _programmaticCameraMove = true;
+    try {
+      await controller.animateCamera(
+        ml.CameraUpdate.newCameraPosition(
+          ml.CameraPosition(
+            target: resolvedTarget,
+            zoom: targetZoom,
+            bearing: _lastBearing,
+            tilt: _isometricViewEnabled &&
+                    AppConfig.isFeatureEnabled('mapIsometricView')
+                ? 54.736
+                : 0.0,
+          ),
+        ),
+        duration: duration,
+      );
+    } catch (e, st) {
+      AppConfig.debugPrint(
+          'DesktopMapScreen: _moveCameraWithOffset animateCamera failed: $e');
+      if (kDebugMode) {
+        AppConfig.debugPrint(
+            'DesktopMapScreen: _moveCameraWithOffset stack: $st');
+      }
+    }
+  }
+
+  void _scheduleEnsureMarkerOverlayInView({
+    required ArtMarker marker,
+    required double overlayHeight,
+  }) {
+    final screen = MediaQuery.of(context);
+    final topSafe = screen.padding.top + 12;
+    final size = screen.size;
+
+    // Push marker down so the card can sit above it.
+    final double desiredDy = math.min(
+      size.height * 0.22,
+      (overlayHeight / 2) + 24 + topSafe,
+    );
+
+    final signature =
+        '${marker.id}|${overlayHeight.round()}|${_cameraZoom.toStringAsFixed(2)}|${_lastBearing.toStringAsFixed(3)}|${desiredDy.round()}';
+    if (signature == _selectedMarkerViewportSignature) return;
+    _selectedMarkerViewportSignature = signature;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_selectedMarkerId != marker.id) return;
+      final targetZoom = math.max(_cameraZoom, 15.0);
+      unawaited(_moveCameraWithOffset(
+        marker.position,
+        offset: Offset(0, desiredDy),
+        zoom: targetZoom,
+      ));
+    });
+  }
+
   @override
   void dispose() {
     // Avoid leaving Explore-side panels open when navigating away.
@@ -1760,8 +1893,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           _buildTopBar(themeProvider, animationTheme),
 
           // Search suggestions overlay - absorb pointer events
-          if (_showSearchOverlay)
-            _buildSearchOverlay(themeProvider),
+          if (_showSearchOverlay) _buildSearchOverlay(themeProvider),
 
           // Left side panel (artwork/exhibition details or filters)
           AnimatedPositioned(
@@ -1894,7 +2026,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             if (_nearbySidebarLastSyncAt != null &&
                 now.difference(_nearbySidebarLastSyncAt!) <
                     _nearbySidebarSyncCooldown) {
-              return const SizedBox.shrink();
+              // Cooldown active: skip scheduling, but keep map layer built.
+              // Returning an empty widget here can cause platform view
+              // layout churn and map freezes on web.
+              // Intentionally do nothing.
             }
             _nearbySidebarLastSyncAt = now;
             _nearbySidebarSyncScheduled = true;
@@ -1917,86 +2052,89 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         final styleAsset = tileProviders?.mapStyleAsset(isDarkMode: isDark) ??
             MapStyleService.primaryStyleRef(isDarkMode: isDark);
 
-        final map = ArtMapView(
-          initialCenter: _effectiveCenter,
-          initialZoom: _cameraZoom,
-          minZoom: 3.0,
-          maxZoom: 24.0,
-          isDarkMode: isDark,
-          styleAsset: styleAsset,
-          onMapCreated: _handleMapCreated,
-          onStyleLoaded: () {
-            AppConfig.debugPrint(
-              'DesktopMapScreen: onStyleLoadedCallback (dark=$isDark, style="$styleAsset")',
-            );
-            unawaited(_handleMapStyleLoaded(themeProvider)
-                .then((_) => _handleMapReady()));
-          },
-          onCameraMove: (position) {
-            _cameraCenter =
-                LatLng(position.target.latitude, position.target.longitude);
-            _cameraZoom = position.zoom;
-            _lastBearing = position.bearing;
-            _lastPitch = position.tilt;
-            final shouldShowCubes = _is3DMarkerModeActive;
-            if (shouldShowCubes != _cubeLayerVisible) {
+        final map = MouseRegion(
+          cursor: SystemMouseCursors.grab,
+          child: ArtMapView(
+            initialCenter: _effectiveCenter,
+            initialZoom: _cameraZoom,
+            minZoom: 3.0,
+            maxZoom: 24.0,
+            isDarkMode: isDark,
+            styleAsset: styleAsset,
+            onMapCreated: _handleMapCreated,
+            onStyleLoaded: () {
+              AppConfig.debugPrint(
+                'DesktopMapScreen: onStyleLoadedCallback (dark=$isDark, style="$styleAsset")',
+              );
+              unawaited(_handleMapStyleLoaded(themeProvider)
+                  .then((_) => _handleMapReady()));
+            },
+            onCameraMove: (position) {
+              _cameraCenter =
+                  LatLng(position.target.latitude, position.target.longitude);
+              _cameraZoom = position.zoom;
+              _lastBearing = position.bearing;
+              _lastPitch = position.tilt;
+              final shouldShowCubes = _is3DMarkerModeActive;
+              if (shouldShowCubes != _cubeLayerVisible) {
+                unawaited(_updateMarkerRenderMode());
+              }
+
+              final bucket = MapViewportUtils.zoomBucket(position.zoom);
+              final bucketChanged = bucket != _renderZoomBucket;
+              // Throttle setState for 3D overlay repaints to ~60fps max
+              final now = DateTime.now();
+              final shouldUpdate = _isometricViewEnabled &&
+                  now.difference(_lastCameraUpdateTime) > _cameraUpdateThrottle;
+              if (bucketChanged || shouldUpdate) {
+                _lastCameraUpdateTime = now;
+                _safeSetState(() => _renderZoomBucket = bucket);
+              }
+              if (bucketChanged && _is3DMarkerModeActive) {
+                _cubeSyncDebouncer(const Duration(milliseconds: 60), () {
+                  unawaited(_syncMarkerCubes(themeProvider: themeProvider));
+                });
+              }
+
+              final hasGesture = !_programmaticCameraMove;
+              if (hasGesture && _autoFollow) {
+                _safeSetState(() => _autoFollow = false);
+              }
+              if (hasGesture && _selectedMarkerId != null) {
+                _safeSetState(() {
+                  _selectedMarkerId = null;
+                  _selectedMarkerData = null;
+                  _selectedMarkerAt = null;
+                  _markerOverlayExpanded = false;
+                });
+                unawaited(_syncMapMarkers(themeProvider: themeProvider));
+              }
+
+              _queueMarkerRefresh(fromGesture: hasGesture);
+              _queueOverlayAnchorRefresh();
+            },
+            onCameraIdle: () {
+              _programmaticCameraMove = false;
               unawaited(_updateMarkerRenderMode());
-            }
-
-            final bucket = MapViewportUtils.zoomBucket(position.zoom);
-            final bucketChanged = bucket != _renderZoomBucket;
-            // Throttle setState for 3D overlay repaints to ~60fps max
-            final now = DateTime.now();
-            final shouldUpdate = _isometricViewEnabled &&
-                now.difference(_lastCameraUpdateTime) > _cameraUpdateThrottle;
-            if (bucketChanged || shouldUpdate) {
-              _lastCameraUpdateTime = now;
-              _safeSetState(() => _renderZoomBucket = bucket);
-            }
-            if (bucketChanged && _is3DMarkerModeActive) {
-              _cubeSyncDebouncer(const Duration(milliseconds: 60), () {
-                unawaited(_syncMarkerCubes(themeProvider: themeProvider));
-              });
-            }
-
-            final hasGesture = !_programmaticCameraMove;
-            if (hasGesture && _autoFollow) {
-              _safeSetState(() => _autoFollow = false);
-            }
-            if (hasGesture && _selectedMarkerId != null) {
-              _safeSetState(() {
+              _queueMarkerRefresh(fromGesture: false);
+              _queueOverlayAnchorRefresh();
+            },
+            onMapClick: (point, _) {
+              unawaited(_handleMapTap(point, themeProvider: themeProvider));
+            },
+            onMapLongClick: (_, point) {
+              setState(() {
+                _pendingMarkerLocation = point;
                 _selectedMarkerId = null;
                 _selectedMarkerData = null;
                 _selectedMarkerAt = null;
                 _markerOverlayExpanded = false;
+                _selectedMarkerAnchor = null;
               });
-              unawaited(_syncMapMarkers(themeProvider: themeProvider));
-            }
-
-            _queueMarkerRefresh(fromGesture: hasGesture);
-            _queueOverlayAnchorRefresh();
-          },
-          onCameraIdle: () {
-            _programmaticCameraMove = false;
-            unawaited(_updateMarkerRenderMode());
-            _queueMarkerRefresh(fromGesture: false);
-            _queueOverlayAnchorRefresh();
-          },
-          onMapClick: (point, _) {
-            unawaited(_handleMapTap(point, themeProvider: themeProvider));
-          },
-          onMapLongClick: (_, point) {
-            setState(() {
-              _pendingMarkerLocation = point;
-              _selectedMarkerId = null;
-              _selectedMarkerData = null;
-              _selectedMarkerAt = null;
-              _markerOverlayExpanded = false;
-              _selectedMarkerAnchor = null;
-            });
-            unawaited(_syncPendingMarker(themeProvider: themeProvider));
-            _startMarkerCreationFlow(position: point);
-          },
+              unawaited(_syncPendingMarker(themeProvider: themeProvider));
+              _startMarkerCreationFlow(position: point);
+            },
+          ),
         );
 
         // Capture anchor value to avoid race condition between null check and access.
@@ -2082,44 +2220,47 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final idleTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.12);
     final selectedTint = accent.withValues(alpha: isDark ? 0.14 : 0.16);
 
-    return AnimatedContainer(
-      duration: animationTheme.short,
-      curve: animationTheme.defaultCurve,
-      decoration: BoxDecoration(
-        borderRadius: radius,
-        border: Border.all(
-          color: isSelected
-              ? accent.withValues(alpha: 0.85)
-              : scheme.outline.withValues(alpha: 0.18),
-          width: isSelected ? 1.25 : 1,
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: AnimatedContainer(
+        duration: animationTheme.short,
+        curve: animationTheme.defaultCurve,
+        decoration: BoxDecoration(
+          borderRadius: radius,
+          border: Border.all(
+            color: isSelected
+                ? accent.withValues(alpha: 0.85)
+                : scheme.outline.withValues(alpha: 0.18),
+            width: isSelected ? 1.25 : 1,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: accent.withValues(alpha: 0.12),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : null,
         ),
-        boxShadow: isSelected
-            ? [
-                BoxShadow(
-                  color: accent.withValues(alpha: 0.12),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ]
-            : null,
-      ),
-      child: LiquidGlassPanel(
-        padding: const EdgeInsets.symmetric(
-          horizontal: KubusSpacing.sm + KubusSpacing.xs,
-          vertical: KubusSpacing.sm + KubusSpacing.xxs,
-        ),
-        margin: EdgeInsets.zero,
-        borderRadius: radius,
-        blurSigma: KubusGlassEffects.blurSigmaLight,
-        showBorder: false,
-        backgroundColor: isSelected ? selectedTint : idleTint,
-        onTap: onTap,
-        child: Text(
-          label,
-          style: (isSelected
-                  ? theme.textTheme.labelLarge
-                  : theme.textTheme.labelMedium)
-              ?.copyWith(color: isSelected ? accent : scheme.onSurface),
+        child: LiquidGlassPanel(
+          padding: const EdgeInsets.symmetric(
+            horizontal: KubusSpacing.sm + KubusSpacing.xs,
+            vertical: KubusSpacing.sm + KubusSpacing.xxs,
+          ),
+          margin: EdgeInsets.zero,
+          borderRadius: radius,
+          blurSigma: KubusGlassEffects.blurSigmaLight,
+          showBorder: false,
+          backgroundColor: isSelected ? selectedTint : idleTint,
+          onTap: onTap,
+          child: Text(
+            label,
+            style: (isSelected
+                    ? theme.textTheme.labelLarge
+                    : theme.textTheme.labelMedium)
+                ?.copyWith(color: isSelected ? accent : scheme.onSurface),
+          ),
         ),
       ),
     );
@@ -2168,52 +2309,55 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       ),
     );
 
-    return AnimatedContainer(
-      duration: animationTheme.short,
-      curve: animationTheme.defaultCurve,
-      decoration: BoxDecoration(
-        borderRadius: radius,
-        border: Border.all(
-          color: isActive
-              ? accent.withValues(alpha: 0.85)
-              : scheme.outline.withValues(alpha: 0.18),
-          width: isActive ? 1.25 : 1,
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: AnimatedContainer(
+        duration: animationTheme.short,
+        curve: animationTheme.defaultCurve,
+        decoration: BoxDecoration(
+          borderRadius: radius,
+          border: Border.all(
+            color: isActive
+                ? accent.withValues(alpha: 0.85)
+                : scheme.outline.withValues(alpha: 0.18),
+            width: isActive ? 1.25 : 1,
+          ),
+          boxShadow: isActive
+              ? [
+                  BoxShadow(
+                    color: accent.withValues(alpha: 0.12),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : null,
         ),
-        boxShadow: isActive
-            ? [
-                BoxShadow(
-                  color: accent.withValues(alpha: 0.12),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ]
-            : null,
-      ),
-      child: LiquidGlassPanel(
-        padding: EdgeInsets.zero,
-        margin: EdgeInsets.zero,
-        borderRadius: radius,
-        blurSigma: KubusGlassEffects.blurSigmaLight,
-        showBorder: false,
-        backgroundColor: isActive ? selectedTint : idleTint,
-        onTap: onTap,
-        child: tooltip == null
-            ? child
-            : (tooltipAlignRightEdge
-                ? _RightEdgeAlignedTooltip(
-                    message: tooltip,
-                    preferBelow: tooltipPreferBelow,
-                    verticalOffset: tooltipVerticalOffset,
-                    safePadding: tooltipMargin,
-                    child: child,
-                  )
-                : Tooltip(
-                    message: tooltip,
-                    margin: tooltipMargin,
-                    preferBelow: tooltipPreferBelow,
-                    verticalOffset: tooltipVerticalOffset ?? 0,
-                    child: child,
-                  )),
+        child: LiquidGlassPanel(
+          padding: EdgeInsets.zero,
+          margin: EdgeInsets.zero,
+          borderRadius: radius,
+          blurSigma: KubusGlassEffects.blurSigmaLight,
+          showBorder: false,
+          backgroundColor: isActive ? selectedTint : idleTint,
+          onTap: onTap,
+          child: tooltip == null
+              ? child
+              : (tooltipAlignRightEdge
+                  ? _RightEdgeAlignedTooltip(
+                      message: tooltip,
+                      preferBelow: tooltipPreferBelow,
+                      verticalOffset: tooltipVerticalOffset,
+                      safePadding: tooltipMargin,
+                      child: child,
+                    )
+                  : Tooltip(
+                      message: tooltip,
+                      margin: tooltipMargin,
+                      preferBelow: tooltipPreferBelow,
+                      verticalOffset: tooltipVerticalOffset ?? 0,
+                      child: child,
+                    )),
+        ),
       ),
     );
   }
@@ -2229,120 +2373,129 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       left: 0,
       right: 0,
       child: _wrapPointerInterceptor(
-        child: SafeArea(
-          bottom: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              KubusSpacing.lg,
-              KubusSpacing.sm + KubusSpacing.xs,
-              KubusSpacing.lg,
-              KubusSpacing.sm + KubusSpacing.xs,
-            ),
-            child: LiquidGlassPanel(
-              padding: const EdgeInsets.symmetric(
-                horizontal: KubusSpacing.md + KubusSpacing.xs,
-                vertical: KubusSpacing.md,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.basic,
+          child: SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                KubusSpacing.lg,
+                KubusSpacing.sm + KubusSpacing.xs,
+                KubusSpacing.lg,
+                KubusSpacing.sm + KubusSpacing.xs,
               ),
-              margin: EdgeInsets.zero,
-              borderRadius: BorderRadius.circular(KubusRadius.lg),
-              blurSigma: KubusGlassEffects.blurSigmaLight,
-              backgroundColor:
-                  scheme.surface.withValues(alpha: isDark ? 0.20 : 0.14),
-              showBorder: true,
-              child: Row(
-                children: [
-                  // Logo and title
-                  Row(
-                    children: [
-                      const AppLogo(
-                        width: KubusSpacing.xl + KubusSpacing.xs,
-                        height: KubusSpacing.xl + KubusSpacing.xs,
-                      ),
-                      const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
-                      Text(
-                        l10n.desktopMapTitleDiscover,
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          color: scheme.onSurface,
+              child: LiquidGlassPanel(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: KubusSpacing.md + KubusSpacing.xs,
+                  vertical: KubusSpacing.md,
+                ),
+                margin: EdgeInsets.zero,
+                borderRadius: BorderRadius.circular(KubusRadius.lg),
+                blurSigma: KubusGlassEffects.blurSigmaLight,
+                backgroundColor:
+                    scheme.surface.withValues(alpha: isDark ? 0.20 : 0.14),
+                showBorder: true,
+                child: Row(
+                  children: [
+                    // Logo and title
+                    Row(
+                      children: [
+                        const AppLogo(
+                          width: KubusSpacing.xl + KubusSpacing.xs,
+                          height: KubusSpacing.xl + KubusSpacing.xs,
                         ),
-                      ),
-                    ],
-                  ),
+                        const SizedBox(
+                            width: KubusSpacing.sm + KubusSpacing.xs),
+                        Text(
+                          l10n.desktopMapTitleDiscover,
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            color: scheme.onSurface,
+                          ),
+                        ),
+                      ],
+                    ),
 
-                  const SizedBox(width: KubusSpacing.xl + KubusSpacing.sm),
+                    const SizedBox(width: KubusSpacing.xl + KubusSpacing.sm),
 
-                  // Search bar
-                  Expanded(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 480),
-                      child: CompositedTransformTarget(
-                        link: _searchFieldLink,
-                        child: KeyedSubtree(
-                          key: _tutorialSearchKey,
-                          child: DesktopSearchBar(
-                            controller: _searchController,
-                            hintText: l10n.mapSearchHint,
-                            onChanged: _handleSearchChange,
-                            onSubmitted: _handleSearchSubmit,
+                    // Search bar
+                    Expanded(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 480),
+                        child: CompositedTransformTarget(
+                          link: _searchFieldLink,
+                          child: KeyedSubtree(
+                            key: _tutorialSearchKey,
+                            child: MouseRegion(
+                              cursor: SystemMouseCursors.text,
+                              child: DesktopSearchBar(
+                                controller: _searchController,
+                                hintText: l10n.mapSearchHint,
+                                onChanged: _handleSearchChange,
+                                onSubmitted: _handleSearchSubmit,
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
 
-                  const SizedBox(width: KubusSpacing.md + KubusSpacing.xs),
+                    const SizedBox(width: KubusSpacing.md + KubusSpacing.xs),
 
-                  // Filter chips
-                  KeyedSubtree(
-                    key: _tutorialFilterChipsKey,
-                    child: Row(
-                      children: _filterOptions.map((filter) {
-                        final isActive = _selectedFilter == filter;
-                        return Padding(
-                          padding: const EdgeInsets.only(left: KubusSpacing.sm),
-                          child: _buildGlassChip(
-                            label: _getFilterLabel(filter),
-                            isSelected: isActive,
-                            themeProvider: themeProvider,
-                            onTap: () {
-                              setState(() => _selectedFilter = filter);
-                            },
-                          ),
-                        );
-                      }).toList(),
+                    // Filter chips
+                    KeyedSubtree(
+                      key: _tutorialFilterChipsKey,
+                      child: Row(
+                        children: _filterOptions.map((filter) {
+                          final isActive = _selectedFilter == filter;
+                          return Padding(
+                            padding:
+                                const EdgeInsets.only(left: KubusSpacing.sm),
+                            child: _buildGlassChip(
+                              label: _getFilterLabel(filter),
+                              isSelected: isActive,
+                              themeProvider: themeProvider,
+                              onTap: () {
+                                setState(() => _selectedFilter = filter);
+                              },
+                            ),
+                          );
+                        }).toList(),
+                      ),
                     ),
-                  ),
 
-                  const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
+                    const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
 
-                  // Filters button
-                  KeyedSubtree(
-                    key: _tutorialFiltersButtonKey,
-                    child: _buildGlassIconButton(
-                      icon: _showFiltersPanel ? Icons.close : Icons.tune,
-                      themeProvider: themeProvider,
-                      isActive: _showFiltersPanel,
-                      tooltip: _showFiltersPanel
-                          ? l10n.commonClose
-                          : l10n.mapFiltersTitle,
-                      // Filters sits on the top-right edge; prefer below so the
-                      // tooltip never renders off-screen above the window.
-                      tooltipPreferBelow: true,
-                      tooltipVerticalOffset: 18,
-                      // Anchor tooltip to the icon's right edge so the card expands
-                      // leftwards (avoids the Nearby sidebar, and aligns the right edge
-                      // of the tooltip with the icon).
-                      tooltipAlignRightEdge: true,
-                      tooltipMargin: const EdgeInsets.symmetric(horizontal: 24),
-                      onTap: () {
-                        setState(() {
-                          _showFiltersPanel = !_showFiltersPanel;
-                          _selectedArtwork = null;
-                          _selectedExhibition = null;
-                        });
-                      },
+                    // Filters button
+                    KeyedSubtree(
+                      key: _tutorialFiltersButtonKey,
+                      child: _buildGlassIconButton(
+                        icon: _showFiltersPanel ? Icons.close : Icons.tune,
+                        themeProvider: themeProvider,
+                        isActive: _showFiltersPanel,
+                        tooltip: _showFiltersPanel
+                            ? l10n.commonClose
+                            : l10n.mapFiltersTitle,
+                        // Filters sits on the top-right edge; prefer below so the
+                        // tooltip never renders off-screen above the window.
+                        tooltipPreferBelow: true,
+                        tooltipVerticalOffset: 18,
+                        // Anchor tooltip to the icon's right edge so the card expands
+                        // leftwards (avoids the Nearby sidebar, and aligns the right edge
+                        // of the tooltip with the icon).
+                        tooltipAlignRightEdge: true,
+                        tooltipMargin:
+                            const EdgeInsets.symmetric(horizontal: 24),
+                        onTap: () {
+                          setState(() {
+                            _showFiltersPanel = !_showFiltersPanel;
+                            _selectedArtwork = null;
+                            _selectedExhibition = null;
+                          });
+                        },
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -2365,125 +2518,131 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     return Positioned.fill(
       child: _wrapPointerInterceptor(
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => setState(() => _showSearchOverlay = false),
-                child: const SizedBox.expand(),
-              ),
-            ),
-            CompositedTransformFollower(
-              link: _searchFieldLink,
-              showWhenUnlinked: false,
-              offset: const Offset(0, 52),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(
-                  maxWidth: 520,
-                  maxHeight: 360,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.basic,
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => setState(() => _showSearchOverlay = false),
+                  child: const SizedBox.expand(),
                 ),
-                child: LiquidGlassPanel(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  margin: EdgeInsets.zero,
-                  borderRadius: BorderRadius.circular(12),
-                  blurSigma: KubusGlassEffects.blurSigmaLight,
-                  backgroundColor: glassTint,
-                  child: Builder(
-                    builder: (context) {
-                      if (trimmedQuery.length < 2) {
-                        return Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Text(
-                            l10n.mapSearchMinCharsHint,
-                            style:
-                                Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      color: scheme.onSurface
-                                          .withValues(alpha: 0.6),
-                                    ),
-                          ),
-                        );
-                      }
-
-                      if (_isFetchingSearch) {
-                        return const Padding(
-                          padding: EdgeInsets.all(16),
-                          child: Center(child: CircularProgressIndicator()),
-                        );
-                      }
-
-                      if (_searchSuggestions.isEmpty) {
-                        return Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.search_off,
-                                color: scheme.onSurface.withValues(alpha: 0.4),
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                l10n.commonNoResultsFound,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(
-                                      color: scheme.onSurface
-                                          .withValues(alpha: 0.6),
-                                    ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
-
-                      return ListView.separated(
-                        shrinkWrap: true,
-                        itemCount: _searchSuggestions.length,
-                        separatorBuilder: (_, __) => Divider(
-                          height: 1,
-                          color: scheme.outlineVariant,
-                        ),
-                        itemBuilder: (context, index) {
-                          final suggestion = _searchSuggestions[index];
-                          return ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: themeProvider.accentColor
-                                  .withValues(alpha: 0.10),
-                              child: Icon(
-                                suggestion.icon,
-                                color: themeProvider.accentColor,
-                              ),
-                            ),
-                            title: Text(
-                              suggestion.label,
+              ),
+              CompositedTransformFollower(
+                link: _searchFieldLink,
+                showWhenUnlinked: false,
+                offset: const Offset(0, 52),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxWidth: 520,
+                    maxHeight: 360,
+                  ),
+                  child: LiquidGlassPanel(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    margin: EdgeInsets.zero,
+                    borderRadius: BorderRadius.circular(12),
+                    blurSigma: KubusGlassEffects.blurSigmaLight,
+                    backgroundColor: glassTint,
+                    child: Builder(
+                      builder: (context) {
+                        if (trimmedQuery.length < 2) {
+                          return Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Text(
+                              l10n.mapSearchMinCharsHint,
                               style: Theme.of(context)
                                   .textTheme
                                   .bodyMedium
-                                  ?.copyWith(fontWeight: FontWeight.w600),
-                            ),
-                            subtitle: suggestion.subtitle == null
-                                ? null
-                                : Text(
-                                    suggestion.subtitle!,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodyMedium
-                                        ?.copyWith(
-                                          color: scheme.onSurface
-                                              .withValues(alpha: 0.6),
-                                        ),
+                                  ?.copyWith(
+                                    color:
+                                        scheme.onSurface.withValues(alpha: 0.6),
                                   ),
-                            onTap: () => _handleSuggestionTap(suggestion),
+                            ),
                           );
-                        },
-                      );
-                    },
+                        }
+
+                        if (_isFetchingSearch) {
+                          return const Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Center(child: CircularProgressIndicator()),
+                          );
+                        }
+
+                        if (_searchSuggestions.isEmpty) {
+                          return Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.search_off,
+                                  color:
+                                      scheme.onSurface.withValues(alpha: 0.4),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  l10n.commonNoResultsFound,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
+                                        color: scheme.onSurface
+                                            .withValues(alpha: 0.6),
+                                      ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+
+                        return ListView.separated(
+                          shrinkWrap: true,
+                          itemCount: _searchSuggestions.length,
+                          separatorBuilder: (_, __) => Divider(
+                            height: 1,
+                            color: scheme.outlineVariant,
+                          ),
+                          itemBuilder: (context, index) {
+                            final suggestion = _searchSuggestions[index];
+                            return ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: themeProvider.accentColor
+                                    .withValues(alpha: 0.10),
+                                child: Icon(
+                                  suggestion.icon,
+                                  color: themeProvider.accentColor,
+                                ),
+                              ),
+                              title: Text(
+                                suggestion.label,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(fontWeight: FontWeight.w600),
+                              ),
+                              subtitle: suggestion.subtitle == null
+                                  ? null
+                                  : Text(
+                                      suggestion.subtitle!,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                            color: scheme.onSurface
+                                                .withValues(alpha: 0.6),
+                                          ),
+                                    ),
+                              onTap: () => _handleSuggestionTap(suggestion),
+                            );
+                          },
+                        );
+                      },
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -2498,8 +2657,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       return const SizedBox.shrink();
     }
     // Get the latest artwork from provider to ensure like/save states are updated
-    final artwork = artworkProvider.getArtworkById(selectedArtwork.id) ??
-        selectedArtwork;
+    final artwork =
+        artworkProvider.getArtworkById(selectedArtwork.id) ?? selectedArtwork;
     final scheme = Theme.of(context).colorScheme;
     final accent = themeProvider.accentColor;
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -3243,247 +3402,254 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     // Wrap filters panel in a Listener to absorb pointer events and prevent them
     // from passing through to the map underneath (gesture conflict resolution).
-    return Listener(
-      behavior: HitTestBehavior.opaque,
-      onPointerDown: (_) {},
-      onPointerMove: (_) {},
-      onPointerUp: (_) {},
-      onPointerSignal: (_) {}, // Absorb mouse wheel / trackpad scroll
-      child: LiquidGlassPanel(
-      margin: const EdgeInsets.only(left: 24),
-      padding: EdgeInsets.zero,
-      borderRadius: BorderRadius.circular(20),
-      blurSigma: KubusGlassEffects.blurSigmaLight,
-      backgroundColor: scheme.surface.withValues(alpha: isDark ? 0.20 : 0.14),
-      showBorder: true,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 16, 16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    l10n.mapFiltersTitle,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: scheme.onSurface,
-                        ),
-                  ),
-                ),
-                _buildGlassIconButton(
-                  icon: Icons.close,
-                  themeProvider: themeProvider,
-                  tooltip: l10n.commonClose,
-                  onTap: () {
-                    setState(() => _showFiltersPanel = false);
-                  },
-                ),
-              ],
-            ),
-          ),
-
-          Divider(
-            height: 1,
-            color: scheme.outline.withValues(alpha: 0.14),
-          ),
-
-          // Filter options
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Search radius
-                  Text(
-                    l10n.mapNearbyRadiusTitle,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Slider(
-                          value: _searchRadius,
-                          min: 1,
-                          max: 200,
-                          divisions: 199,
-                          onChanged: _travelModeEnabled
-                              ? null
-                              : (value) {
-                                  setState(() => _searchRadius = value);
-                                },
-                          activeColor: themeProvider.accentColor,
-                        ),
+    return MouseRegion(
+      cursor: SystemMouseCursors.basic,
+      child: Listener(
+        behavior: HitTestBehavior.opaque,
+        onPointerDown: (_) {},
+        onPointerMove: (_) {},
+        onPointerUp: (_) {},
+        onPointerSignal: (_) {}, // Absorb mouse wheel / trackpad scroll
+        child: LiquidGlassPanel(
+          margin: const EdgeInsets.only(left: 24),
+          padding: EdgeInsets.zero,
+          borderRadius: BorderRadius.circular(20),
+          blurSigma: KubusGlassEffects.blurSigmaLight,
+          backgroundColor:
+              scheme.surface.withValues(alpha: isDark ? 0.20 : 0.14),
+          showBorder: true,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 16, 16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        l10n.mapFiltersTitle,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: scheme.onSurface,
+                            ),
                       ),
-                      LiquidGlassPanel(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        margin: EdgeInsets.zero,
-                        borderRadius: BorderRadius.circular(10),
-                        blurSigma: KubusGlassEffects.blurSigmaLight,
-                        backgroundColor: scheme.surface
-                            .withValues(alpha: isDark ? 0.16 : 0.12),
-                        showBorder: true,
-                        child: Text(
-                          l10n.commonDistanceKm(
-                              _searchRadius.toInt().toString()),
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    ),
+                    _buildGlassIconButton(
+                      icon: Icons.close,
+                      themeProvider: themeProvider,
+                      tooltip: l10n.commonClose,
+                      onTap: () {
+                        setState(() => _showFiltersPanel = false);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
+              Divider(
+                height: 1,
+                color: scheme.outline.withValues(alpha: 0.14),
+              ),
+
+              // Filter options
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Search radius
+                      Text(
+                        l10n.mapNearbyRadiusTitle,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Slider(
+                              value: _searchRadius,
+                              min: 1,
+                              max: 200,
+                              divisions: 199,
+                              onChanged: _travelModeEnabled
+                                  ? null
+                                  : (value) {
+                                      setState(() => _searchRadius = value);
+                                    },
+                              activeColor: themeProvider.accentColor,
+                            ),
+                          ),
+                          LiquidGlassPanel(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
+                            margin: EdgeInsets.zero,
+                            borderRadius: BorderRadius.circular(10),
+                            blurSigma: KubusGlassEffects.blurSigmaLight,
+                            backgroundColor: scheme.surface
+                                .withValues(alpha: isDark ? 0.16 : 0.12),
+                            showBorder: true,
+                            child: Text(
+                              l10n.commonDistanceKm(
+                                  _searchRadius.toInt().toString()),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
                                     color: scheme.onSurface,
                                   ),
-                        ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Marker type layers (matches mobile's "Layers" section)
+                      Text(
+                        l10n.mapLayersTitle,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: ArtMarkerType.values.map((type) {
+                          final selected = _markerLayerVisibility[type] ?? true;
+                          final roles = KubusColorRoles.of(context);
+                          final layerAccent = AppColorUtils.markerSubjectColor(
+                            markerType: type.name,
+                            metadata: null,
+                            scheme: scheme,
+                            roles: roles,
+                          );
+                          return _buildLayerChip(
+                            label: _markerTypeLabel(l10n, type),
+                            icon: _resolveArtMarkerIcon(type),
+                            selected: selected,
+                            accent: layerAccent,
+                            themeProvider: themeProvider,
+                            onTap: () => setState(
+                                () => _markerLayerVisibility[type] = !selected),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Sort by
+                      Text(
+                        l10n.desktopMapSortByTitle,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildSortOption(
+                        label: l10n.desktopMapSortDistance,
+                        sortKey: 'distance',
+                        icon: Icons.near_me,
+                        themeProvider: themeProvider,
+                      ),
+                      _buildSortOption(
+                        label: l10n.desktopMapSortPopularity,
+                        sortKey: 'popularity',
+                        icon: Icons.trending_up,
+                        themeProvider: themeProvider,
+                      ),
+                      _buildSortOption(
+                        label: l10n.desktopMapSortNewest,
+                        sortKey: 'newest',
+                        icon: Icons.schedule,
+                        themeProvider: themeProvider,
+                      ),
+                      _buildSortOption(
+                        label: l10n.desktopMapSortRating,
+                        sortKey: 'rating',
+                        icon: Icons.star,
+                        themeProvider: themeProvider,
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
-
-                  // Marker type layers (matches mobile's "Layers" section)
-                  Text(
-                    l10n.mapLayersTitle,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: ArtMarkerType.values.map((type) {
-                      final selected = _markerLayerVisibility[type] ?? true;
-                      final roles = KubusColorRoles.of(context);
-                      final layerAccent = AppColorUtils.markerSubjectColor(
-                        markerType: type.name,
-                        metadata: null,
-                        scheme: scheme,
-                        roles: roles,
-                      );
-                      return _buildLayerChip(
-                        label: _markerTypeLabel(l10n, type),
-                        icon: _resolveArtMarkerIcon(type),
-                        selected: selected,
-                        accent: layerAccent,
-                        themeProvider: themeProvider,
-                        onTap: () => setState(
-                            () => _markerLayerVisibility[type] = !selected),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Sort by
-                  Text(
-                    l10n.desktopMapSortByTitle,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildSortOption(
-                    label: l10n.desktopMapSortDistance,
-                    sortKey: 'distance',
-                    icon: Icons.near_me,
-                    themeProvider: themeProvider,
-                  ),
-                  _buildSortOption(
-                    label: l10n.desktopMapSortPopularity,
-                    sortKey: 'popularity',
-                    icon: Icons.trending_up,
-                    themeProvider: themeProvider,
-                  ),
-                  _buildSortOption(
-                    label: l10n.desktopMapSortNewest,
-                    sortKey: 'newest',
-                    icon: Icons.schedule,
-                    themeProvider: themeProvider,
-                  ),
-                  _buildSortOption(
-                    label: l10n.desktopMapSortRating,
-                    sortKey: 'rating',
-                    icon: Icons.star,
-                    themeProvider: themeProvider,
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
 
-          // Apply button
-          Divider(
-            height: 1,
-            color: scheme.outline.withValues(alpha: 0.14),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      setState(() {
-                        _searchRadius = 5.0;
-                        _selectedFilter = 'nearby';
-                        _selectedSort = 'distance';
-                        // Reset layer visibility to all visible
-                        for (final type in ArtMarkerType.values) {
-                          _markerLayerVisibility[type] = true;
-                        }
-                      });
-                      _loadMarkersForCurrentView(force: true);
-                    },
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+              // Apply button
+              Divider(
+                height: 1,
+                color: scheme.outline.withValues(alpha: 0.14),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () {
+                          setState(() {
+                            _searchRadius = 5.0;
+                            _selectedFilter = 'nearby';
+                            _selectedSort = 'distance';
+                            // Reset layer visibility to all visible
+                            for (final type in ArtMarkerType.values) {
+                              _markerLayerVisibility[type] = true;
+                            }
+                          });
+                          _loadMarkersForCurrentView(force: true);
+                        },
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(l10n.commonReset),
                       ),
                     ),
-                    child: Text(l10n.commonReset),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      setState(() => _showFiltersPanel = false);
-                      _loadMarkersForCurrentView(force: true);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: themeProvider.accentColor,
-                      foregroundColor: ThemeData.estimateBrightnessForColor(
-                                  themeProvider.accentColor) ==
-                              Brightness.dark
-                          ? KubusColors.textPrimaryDark
-                          : KubusColors.textPrimaryLight,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          setState(() => _showFiltersPanel = false);
+                          _loadMarkersForCurrentView(force: true);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: themeProvider.accentColor,
+                          foregroundColor: ThemeData.estimateBrightnessForColor(
+                                      themeProvider.accentColor) ==
+                                  Brightness.dark
+                              ? KubusColors.textPrimaryDark
+                              : KubusColors.textPrimaryLight,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(l10n.commonApply),
                       ),
                     ),
-                    child: Text(l10n.commonApply),
-                  ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
-    ),
     );
   }
+
   /// Layer chip with icon and accent color - matches mobile's _glassChip style
   Widget _buildLayerChip({
     required String label,
@@ -3503,35 +3669,38 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         : scheme.outlineVariant.withValues(alpha: 0.30);
     final fg = selected ? accent : scheme.onSurfaceVariant;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(999),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: border),
-          ),
-          child: LiquidGlassPanel(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            margin: EdgeInsets.zero,
-            borderRadius: BorderRadius.circular(999),
-            showBorder: false,
-            backgroundColor: bg,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(icon, size: 14, color: fg),
-                const SizedBox(width: 6),
-                Text(
-                  label,
-                  style: KubusTypography.textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: fg,
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(999),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: border),
+            ),
+            child: LiquidGlassPanel(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              margin: EdgeInsets.zero,
+              borderRadius: BorderRadius.circular(999),
+              showBorder: false,
+              backgroundColor: bg,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 14, color: fg),
+                  const SizedBox(width: 6),
+                  Text(
+                    label,
+                    style: KubusTypography.textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: fg,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -3654,25 +3823,68 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final accent = themeProvider.accentColor;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return LiquidGlassPanel(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      borderRadius: BorderRadius.circular(14),
-      blurSigma: KubusGlassEffects.blurSigmaLight,
-      backgroundColor: scheme.surface.withValues(alpha: isDark ? 0.18 : 0.14),
-      showBorder: true,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (AppConfig.isFeatureEnabled('mapTravelMode')) ...[
-            KeyedSubtree(
-              key: _tutorialTravelButtonKey,
-              child: _buildGlassIconButton(
-                icon: Icons.travel_explore,
+    return MouseRegion(
+      cursor: SystemMouseCursors.basic,
+      child: LiquidGlassPanel(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        borderRadius: BorderRadius.circular(14),
+        blurSigma: KubusGlassEffects.blurSigmaLight,
+        backgroundColor: scheme.surface.withValues(alpha: isDark ? 0.18 : 0.14),
+        showBorder: true,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (AppConfig.isFeatureEnabled('mapTravelMode')) ...[
+              KeyedSubtree(
+                key: _tutorialTravelButtonKey,
+                child: _buildGlassIconButton(
+                  icon: Icons.travel_explore,
+                  themeProvider: themeProvider,
+                  tooltip: l10n.mapTravelModeTooltip,
+                  isActive: _travelModeEnabled,
+                  onTap: () =>
+                      unawaited(_setTravelModeEnabled(!_travelModeEnabled)),
+                ),
+              ),
+              Container(
+                width: 1,
+                height: 26,
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                color: scheme.outline.withValues(alpha: 0.22),
+              ),
+            ],
+            if (AppConfig.isFeatureEnabled('mapIsometricView')) ...[
+              _buildGlassIconButton(
+                icon: Icons.filter_tilt_shift,
                 themeProvider: themeProvider,
-                tooltip: l10n.mapTravelModeTooltip,
-                isActive: _travelModeEnabled,
+                tooltip: _isometricViewEnabled
+                    ? l10n.mapIsometricViewDisableTooltip
+                    : l10n.mapIsometricViewEnableTooltip,
+                isActive: _isometricViewEnabled,
                 onTap: () =>
-                    unawaited(_setTravelModeEnabled(!_travelModeEnabled)),
+                    unawaited(_setIsometricViewEnabled(!_isometricViewEnabled)),
+              ),
+              Container(
+                width: 1,
+                height: 26,
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                color: scheme.outline.withValues(alpha: 0.22),
+              ),
+            ],
+            // Nearby list (functions sidebar)
+            KeyedSubtree(
+              key: _tutorialNearbyButtonKey,
+              child: IconButton(
+                onPressed: _isNearbyPanelOpen
+                    ? _closeNearbyArtPanel
+                    : _openNearbyArtPanel,
+                tooltip: _isNearbyPanelOpen
+                    ? l10n.commonClose
+                    : l10n.arNearbyArtworksTitle,
+                icon: Icon(
+                  Icons.view_list,
+                  color: _isNearbyPanelOpen ? accent : scheme.onSurface,
+                ),
               ),
             ),
             Container(
@@ -3681,120 +3893,80 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               margin: const EdgeInsets.symmetric(horizontal: 4),
               color: scheme.outline.withValues(alpha: 0.22),
             ),
-          ],
-          if (AppConfig.isFeatureEnabled('mapIsometricView')) ...[
+
+            // Zoom - / +
             _buildGlassIconButton(
-              icon: Icons.filter_tilt_shift,
+              icon: Icons.remove,
               themeProvider: themeProvider,
-              tooltip: _isometricViewEnabled
-                  ? l10n.mapIsometricViewDisableTooltip
-                  : l10n.mapIsometricViewEnableTooltip,
-              isActive: _isometricViewEnabled,
-              onTap: () =>
-                  unawaited(_setIsometricViewEnabled(!_isometricViewEnabled)),
+              tooltip: l10n.mapEmptyZoomOutAction,
+              onTap: () {
+                final nextZoom = (_effectiveZoom - 1).clamp(3.0, 18.0);
+                _moveCamera(_effectiveCenter, nextZoom);
+              },
             ),
-            Container(
-              width: 1,
-              height: 26,
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              color: scheme.outline.withValues(alpha: 0.22),
+            _buildGlassIconButton(
+              icon: Icons.add,
+              themeProvider: themeProvider,
+              tooltip: 'Zoom in',
+              onTap: () {
+                final nextZoom = (_effectiveZoom + 1).clamp(3.0, 18.0);
+                _moveCamera(_effectiveCenter, nextZoom);
+              },
             ),
-          ],
-          // Nearby list (functions sidebar)
-          KeyedSubtree(
-            key: _tutorialNearbyButtonKey,
-            child: IconButton(
-              onPressed: _isNearbyPanelOpen
-                  ? _closeNearbyArtPanel
-                  : _openNearbyArtPanel,
-              tooltip: _isNearbyPanelOpen
-                  ? l10n.commonClose
-                  : l10n.arNearbyArtworksTitle,
-              icon: Icon(
-                Icons.view_list,
-                color: _isNearbyPanelOpen ? accent : scheme.onSurface,
+            // Point north / reset bearing button (visible when map is rotated)
+            if (_lastBearing.abs() > 1.0) ...[
+              Container(
+                width: 1,
+                height: 26,
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                color: scheme.outline.withValues(alpha: 0.22),
               ),
-            ),
-          ),
-          Container(
-            width: 1,
-            height: 26,
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            color: scheme.outline.withValues(alpha: 0.22),
-          ),
-
-          // Zoom - / +
-          _buildGlassIconButton(
-            icon: Icons.remove,
-            themeProvider: themeProvider,
-            tooltip: l10n.mapEmptyZoomOutAction,
-            onTap: () {
-              final nextZoom = (_effectiveZoom - 1).clamp(3.0, 18.0);
-              _moveCamera(_effectiveCenter, nextZoom);
-            },
-          ),
-          _buildGlassIconButton(
-            icon: Icons.add,
-            themeProvider: themeProvider,
-            tooltip: 'Zoom in',
-            onTap: () {
-              final nextZoom = (_effectiveZoom + 1).clamp(3.0, 18.0);
-              _moveCamera(_effectiveCenter, nextZoom);
-            },
-          ),
-          // Point north / reset bearing button (visible when map is rotated)
-          if (_lastBearing.abs() > 1.0) ...[
+              IconButton(
+                onPressed: () => unawaited(_resetBearing()),
+                tooltip: l10n.mapResetBearingTooltip,
+                icon: const Icon(Icons.explore),
+              ),
+            ],
             Container(
               width: 1,
               height: 26,
               margin: const EdgeInsets.symmetric(horizontal: 4),
               color: scheme.outline.withValues(alpha: 0.22),
             ),
-            IconButton(
-              onPressed: () => unawaited(_resetBearing()),
-              tooltip: l10n.mapResetBearingTooltip,
-              icon: const Icon(Icons.explore),
+
+            // Create marker - use squared corners to match mobile
+            _buildGlassIconButton(
+              icon: Icons.add_location_alt_outlined,
+              themeProvider: themeProvider,
+              tooltip: l10n.mapCreateMarkerHereTooltip,
+              // Use default borderRadius (12) for squared look like mobile
+              activeTint: accent.withValues(alpha: isDark ? 0.24 : 0.20),
+              activeIconColor: AppColorUtils.contrastText(accent),
+              isActive: true,
+              onTap: () {
+                final target = _pendingMarkerLocation ?? _effectiveCenter;
+                _startMarkerCreationFlow(position: target);
+              },
+            ),
+            const SizedBox(width: 6),
+
+            // My location / follow
+            _buildGlassIconButton(
+              icon: Icons.my_location,
+              themeProvider: themeProvider,
+              tooltip: l10n.mapCenterOnMeTooltip,
+              isActive: _autoFollow,
+              activeIconColor: AppColorUtils.contrastText(accent),
+              onTap: () {
+                setState(() => _autoFollow = true);
+                _refreshUserLocation(animate: true);
+                if (_userLocation == null) {
+                  _moveCamera(const LatLng(46.0569, 14.5058), 15.0);
+                }
+              },
             ),
           ],
-          Container(
-            width: 1,
-            height: 26,
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            color: scheme.outline.withValues(alpha: 0.22),
-          ),
-
-          // Create marker - use squared corners to match mobile
-          _buildGlassIconButton(
-            icon: Icons.add_location_alt_outlined,
-            themeProvider: themeProvider,
-            tooltip: l10n.mapCreateMarkerHereTooltip,
-            // Use default borderRadius (12) for squared look like mobile
-            activeTint: accent.withValues(alpha: isDark ? 0.24 : 0.20),
-            activeIconColor: AppColorUtils.contrastText(accent),
-            isActive: true,
-            onTap: () {
-              final target = _pendingMarkerLocation ?? _effectiveCenter;
-              _startMarkerCreationFlow(position: target);
-            },
-          ),
-          const SizedBox(width: 6),
-
-          // My location / follow
-          _buildGlassIconButton(
-            icon: Icons.my_location,
-            themeProvider: themeProvider,
-            tooltip: l10n.mapCenterOnMeTooltip,
-            isActive: _autoFollow,
-            activeIconColor: AppColorUtils.contrastText(accent),
-            onTap: () {
-              setState(() => _autoFollow = true);
-              _refreshUserLocation(animate: true);
-              if (_userLocation == null) {
-                _moveCamera(const LatLng(46.0569, 14.5058), 15.0);
-              }
-            },
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -3825,94 +3997,98 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final radius = BorderRadius.circular(18);
     final glassTint = scheme.surface.withValues(alpha: isDark ? 0.40 : 0.52);
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 220),
-      constraints: const BoxConstraints(maxWidth: 340),
-      decoration: BoxDecoration(
-        borderRadius: radius,
-        border:
-            Border.all(color: scheme.outlineVariant.withValues(alpha: 0.30)),
-        boxShadow: [
-          BoxShadow(
-            color: scheme.shadow.withValues(alpha: isDark ? 0.16 : 0.10),
-            blurRadius: 18,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: LiquidGlassPanel(
-        padding: const EdgeInsets.all(16),
-        margin: EdgeInsets.zero,
-        borderRadius: radius,
-        showBorder: false,
-        backgroundColor: glassTint,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                ShaderMask(
-                  shaderCallback: (rect) => badgeGradient.createShader(rect),
-                  blendMode: BlendMode.srcIn,
-                  child: InlineProgress(
-                    progress: overall,
-                    rows: 3,
-                    cols: 5,
-                    color: scheme.onSurface,
-                    backgroundColor:
-                        scheme.surfaceContainerHighest.withValues(alpha: 0.35),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.mapDiscoveryPathTitle,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: scheme.onSurface,
-                            ),
-                      ),
-                      Text(
-                        l10n.commonPercentComplete((overall * 100).round()),
-                        style: KubusTypography.textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurface.withValues(alpha: 0.75),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                _buildGlassIconButton(
-                  icon: _isDiscoveryExpanded
-                      ? Icons.keyboard_arrow_up
-                      : Icons.keyboard_arrow_down,
-                  themeProvider: themeProvider,
-                  tooltip: _isDiscoveryExpanded
-                      ? l10n.commonCollapse
-                      : l10n.commonExpand,
-                  onTap: () => setState(
-                      () => _isDiscoveryExpanded = !_isDiscoveryExpanded),
-                ),
-              ],
-            ),
-            AnimatedCrossFade(
-              crossFadeState: showTasks
-                  ? CrossFadeState.showFirst
-                  : CrossFadeState.showSecond,
-              duration: const Duration(milliseconds: 200),
-              firstChild: Column(
-                children: [
-                  const SizedBox(height: 12),
-                  for (final progress in tasksToRender)
-                    _buildTaskProgressRow(progress),
-                ],
-              ),
-              secondChild: const SizedBox.shrink(),
+    return MouseRegion(
+      cursor: SystemMouseCursors.basic,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        constraints: const BoxConstraints(maxWidth: 340),
+        decoration: BoxDecoration(
+          borderRadius: radius,
+          border:
+              Border.all(color: scheme.outlineVariant.withValues(alpha: 0.30)),
+          boxShadow: [
+            BoxShadow(
+              color: scheme.shadow.withValues(alpha: isDark ? 0.16 : 0.10),
+              blurRadius: 18,
+              offset: const Offset(0, 10),
             ),
           ],
+        ),
+        child: LiquidGlassPanel(
+          padding: const EdgeInsets.all(16),
+          margin: EdgeInsets.zero,
+          borderRadius: radius,
+          showBorder: false,
+          backgroundColor: glassTint,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  ShaderMask(
+                    shaderCallback: (rect) => badgeGradient.createShader(rect),
+                    blendMode: BlendMode.srcIn,
+                    child: InlineProgress(
+                      progress: overall,
+                      rows: 3,
+                      cols: 5,
+                      color: scheme.onSurface,
+                      backgroundColor: scheme.surfaceContainerHighest
+                          .withValues(alpha: 0.35),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.mapDiscoveryPathTitle,
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: scheme.onSurface,
+                                  ),
+                        ),
+                        Text(
+                          l10n.commonPercentComplete((overall * 100).round()),
+                          style: KubusTypography.textTheme.bodySmall?.copyWith(
+                            color: scheme.onSurface.withValues(alpha: 0.75),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  _buildGlassIconButton(
+                    icon: _isDiscoveryExpanded
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
+                    themeProvider: themeProvider,
+                    tooltip: _isDiscoveryExpanded
+                        ? l10n.commonCollapse
+                        : l10n.commonExpand,
+                    onTap: () => setState(
+                        () => _isDiscoveryExpanded = !_isDiscoveryExpanded),
+                  ),
+                ],
+              ),
+              AnimatedCrossFade(
+                crossFadeState: showTasks
+                    ? CrossFadeState.showFirst
+                    : CrossFadeState.showSecond,
+                duration: const Duration(milliseconds: 200),
+                firstChild: Column(
+                  children: [
+                    const SizedBox(height: 12),
+                    for (final progress in tasksToRender)
+                      _buildTaskProgressRow(progress),
+                  ],
+                ),
+                secondChild: const SizedBox.shrink(),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -3998,248 +4174,270 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     // from passing through to the map underneath (gesture conflict resolution).
     // This ensures scrolling/interacting with the sidebar doesn't pan the map.
     return _wrapPointerInterceptor(
-      child: Listener(
-        behavior: HitTestBehavior.opaque,
-        onPointerDown: (_) {},
-        onPointerMove: (_) {},
-        onPointerUp: (_) {},
-        onPointerSignal: (_) {}, // Absorb mouse wheel / trackpad scroll
-        child: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
-            child: Row(
+      child: MouseRegion(
+        cursor: SystemMouseCursors.basic,
+        child: Listener(
+          behavior: HitTestBehavior.opaque,
+          onPointerDown: (_) {},
+          onPointerMove: (_) {},
+          onPointerUp: (_) {},
+          onPointerSignal: (_) {}, // Absorb mouse wheel / trackpad scroll
+          child: SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.auto_awesome, color: accent, size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    l10n.arNearbyArtworksTitle,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: scheme.onSurface,
-                        ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                IconButton(
-                  tooltip: l10n.commonClose,
-                  onPressed: _closeNearbyArtPanel,
-                  icon: Icon(Icons.close, color: scheme.onSurfaceVariant),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: Text(
-              _travelModeEnabled
-                  ? l10n.mapTravelModeStatusTravelling
-                  : '${l10n.mapNearbyRadiusTitle}: ${_effectiveSearchRadiusKm.toStringAsFixed(1)} km',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontSize: 12,
-                    color: scheme.onSurfaceVariant,
-                  ),
-            ),
-          ),
-          Expanded(
-            child: sorted.isEmpty
-                ? Center(
-                    child: Text(
-                      l10n.mapEmptyNoArtworksTitle,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontSize: 13,
-                            color: scheme.onSurface.withValues(alpha: 0.65),
-                          ),
-                    ),
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                    itemCount: sorted.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      final artwork = sorted[index];
-                      final cover =
-                          ArtworkMediaResolver.resolveCover(artwork: artwork);
-                        final meters =
-                          _calculateDistance(basePosition, artwork.position);
-                      final distanceText = _formatDistance(meters);
-
-                      // Find marker for this artwork to get subject-based color
-                      ArtMarker? marker;
-                      for (final m in _artMarkers) {
-                        if (m.artworkId == artwork.id) {
-                          marker = m;
-                          break;
-                        }
-                      }
-                      // Use marker color if available, otherwise fallback to artwork type
-                      final cardAccent = marker != null
-                          ? _resolveArtMarkerColor(marker, themeProvider)
-                          : AppColorUtils.markerSubjectColor(
-                              markerType: 'artwork',
-                              metadata: null,
-                              scheme: scheme,
-                              roles: KubusColorRoles.of(context),
-                            );
-
-                      return LiquidGlassPanel(
-                        padding: const EdgeInsets.all(10),
-                        borderRadius: BorderRadius.circular(14),
-                        showBorder: true,
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () {
-                              _moveCamera(artwork.position,
-                                  math.max(_effectiveZoom, 15.0));
-
-                              if (marker != null) {
-                                _handleMarkerTap(
-                                  marker,
-                                  overlayMode: _MarkerOverlayMode.centered,
-                                );
-                              } else {
-                                unawaited(_selectArtwork(
-                                  artwork,
-                                  focusPosition: artwork.position,
-                                ));
-                              }
-                            },
-                            borderRadius: BorderRadius.circular(14),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                SizedBox(
-                                  width: 88,
-                                  child: Stack(
-                                    children: [
-                                      _buildArtworkThumbnail(
-                                        cover,
-                                        width: 88,
-                                        height: 66,
-                                        borderRadius: 10,
-                                        iconSize: 24,
-                                      ),
-                                      if (artwork.arMarkerId != null)
-                                        Positioned(
-                                          top: 6,
-                                          right: 6,
-                                          child: Container(
-                                            padding: const EdgeInsets.all(4),
-                                            decoration: BoxDecoration(
-                                              color: cardAccent,
-                                              borderRadius:
-                                                  BorderRadius.circular(6),
-                                            ),
-                                            child: Icon(
-                                              Icons.view_in_ar,
-                                              size: 12,
-                                              color: ThemeData
-                                                          .estimateBrightnessForColor(
-                                                              cardAccent) ==
-                                                      Brightness.dark
-                                                  ? KubusColors.textPrimaryDark
-                                                  : KubusColors
-                                                      .textPrimaryLight,
-                                            ),
-                                          ),
-                                        ),
-                                    ],
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+                  child: Row(
+                    children: [
+                      Icon(Icons.auto_awesome, color: accent, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          l10n.arNearbyArtworksTitle,
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: scheme.onSurface,
                                   ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: l10n.commonClose,
+                        onPressed: _closeNearbyArtPanel,
+                        icon: Icon(Icons.close, color: scheme.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: Text(
+                    _travelModeEnabled
+                        ? l10n.mapTravelModeStatusTravelling
+                        : '${l10n.mapNearbyRadiusTitle}: ${_effectiveSearchRadiusKm.toStringAsFixed(1)} km',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontSize: 12,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                  ),
+                ),
+                Expanded(
+                  child: sorted.isEmpty
+                      ? Center(
+                          child: Text(
+                            l10n.mapEmptyNoArtworksTitle,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  fontSize: 13,
+                                  color:
+                                      scheme.onSurface.withValues(alpha: 0.65),
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
+                          ),
+                        )
+                      : ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                          itemCount: sorted.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 10),
+                          itemBuilder: (context, index) {
+                            final artwork = sorted[index];
+                            final cover = ArtworkMediaResolver.resolveCover(
+                                artwork: artwork);
+                            final meters = _calculateDistance(
+                                basePosition, artwork.position);
+                            final distanceText = _formatDistance(meters);
+
+                            // Find marker for this artwork to get subject-based color
+                            ArtMarker? marker;
+                            for (final m in _artMarkers) {
+                              if (m.artworkId == artwork.id) {
+                                marker = m;
+                                break;
+                              }
+                            }
+                            // Use marker color if available, otherwise fallback to artwork type
+                            final cardAccent = marker != null
+                                ? _resolveArtMarkerColor(marker, themeProvider)
+                                : AppColorUtils.markerSubjectColor(
+                                    markerType: 'artwork',
+                                    metadata: null,
+                                    scheme: scheme,
+                                    roles: KubusColorRoles.of(context),
+                                  );
+
+                            return LiquidGlassPanel(
+                              padding: const EdgeInsets.all(10),
+                              borderRadius: BorderRadius.circular(14),
+                              showBorder: true,
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () {
+                                    _moveCamera(artwork.position,
+                                        math.max(_effectiveZoom, 15.0));
+
+                                    if (marker != null) {
+                                      _handleMarkerTap(
+                                        marker,
+                                        overlayMode:
+                                            _MarkerOverlayMode.centered,
+                                      );
+                                    } else {
+                                      unawaited(_selectArtwork(
+                                        artwork,
+                                        focusPosition: artwork.position,
+                                      ));
+                                    }
+                                  },
+                                  borderRadius: BorderRadius.circular(14),
+                                  child: Row(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      Text(
-                                        artwork.title,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium
-                                            ?.copyWith(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w700,
-                                              color: scheme.onSurface,
+                                      SizedBox(
+                                        width: 88,
+                                        child: Stack(
+                                          children: [
+                                            _buildArtworkThumbnail(
+                                              cover,
+                                              width: 88,
+                                              height: 66,
+                                              borderRadius: 10,
+                                              iconSize: 24,
                                             ),
+                                            if (artwork.arMarkerId != null)
+                                              Positioned(
+                                                top: 6,
+                                                right: 6,
+                                                child: Container(
+                                                  padding:
+                                                      const EdgeInsets.all(4),
+                                                  decoration: BoxDecoration(
+                                                    color: cardAccent,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            6),
+                                                  ),
+                                                  child: Icon(
+                                                    Icons.view_in_ar,
+                                                    size: 12,
+                                                    color: ThemeData
+                                                                .estimateBrightnessForColor(
+                                                                    cardAccent) ==
+                                                            Brightness.dark
+                                                        ? KubusColors
+                                                            .textPrimaryDark
+                                                        : KubusColors
+                                                            .textPrimaryLight,
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
                                       ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        artwork.artist.isNotEmpty
-                                            ? artwork.artist
-                                            : l10n.commonUnknown,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium
-                                            ?.copyWith(
-                                              fontSize: 12,
-                                              color: scheme.onSurfaceVariant,
-                                            ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Row(
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 8, vertical: 3),
-                                            decoration: BoxDecoration(
-                                              color: cardAccent.withValues(
-                                                  alpha: 0.12),
-                                              borderRadius:
-                                                  BorderRadius.circular(999),
-                                            ),
-                                            child: Text(
-                                              distanceText,
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              artwork.title,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
                                               style: Theme.of(context)
                                                   .textTheme
                                                   .bodyMedium
                                                   ?.copyWith(
-                                                    fontSize: 11,
-                                                    fontWeight: FontWeight.w600,
-                                                    color: cardAccent,
+                                                    fontSize: 13,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: scheme.onSurface,
                                                   ),
                                             ),
-                                          ),
-                                          const Spacer(),
-                                          Text(
-                                            '${artwork.rewards} KUB8',
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .bodyMedium
-                                                ?.copyWith(
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.w600,
-                                                  color:
-                                                      scheme.onSurfaceVariant,
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              artwork.artist.isNotEmpty
+                                                  ? artwork.artist
+                                                  : l10n.commonUnknown,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodyMedium
+                                                  ?.copyWith(
+                                                    fontSize: 12,
+                                                    color:
+                                                        scheme.onSurfaceVariant,
+                                                  ),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Row(
+                                              children: [
+                                                Container(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 3),
+                                                  decoration: BoxDecoration(
+                                                    color:
+                                                        cardAccent.withValues(
+                                                            alpha: 0.12),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            999),
+                                                  ),
+                                                  child: Text(
+                                                    distanceText,
+                                                    style: Theme.of(context)
+                                                        .textTheme
+                                                        .bodyMedium
+                                                        ?.copyWith(
+                                                          fontSize: 11,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          color: cardAccent,
+                                                        ),
+                                                  ),
                                                 ),
-                                          ),
-                                        ],
+                                                const Spacer(),
+                                                Text(
+                                                  '${artwork.rewards} KUB8',
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .bodyMedium
+                                                      ?.copyWith(
+                                                        fontSize: 11,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color: scheme
+                                                            .onSurfaceVariant,
+                                                      ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ],
                                   ),
                                 ),
-                              ],
-                            ),
-                          ),
+                              ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
+                ),
+              ],
+            ),
           ),
-        ],
+        ),
       ),
-    ),
-    ));
+    );
   }
 
   Future<void> _selectArtwork(
@@ -4632,7 +4830,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       if (existing.type != marker.type) return false;
       if (existing.artworkId != marker.artworkId) return false;
       if (existing.position.latitude != marker.position.latitude) return false;
-      if (existing.position.longitude != marker.position.longitude) return false;
+      if (existing.position.longitude != marker.position.longitude) {
+        return false;
+      }
     }
     return true;
   }
@@ -4850,6 +5050,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _selectedMarkerId = marker.id;
       _selectedMarkerData = marker;
       _selectedMarkerAt = DateTime.now();
+      _selectedMarkerViewportSignature = null;
       _markerOverlayMode = overlayMode;
       _markerOverlayExpanded = false; // Reset expand state for new marker
       _selectedMarkerAnchor = null;
@@ -4933,6 +5134,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           _selectedMarkerId = null;
           _selectedMarkerData = null;
           _selectedMarkerAt = null;
+          _selectedMarkerViewportSignature = null;
           _markerOverlayExpanded = false;
           _selectedMarkerAnchor = null;
         }
@@ -4946,6 +5148,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _selectedMarkerId = null;
       _selectedMarkerData = null;
       _selectedMarkerAt = null;
+      _selectedMarkerViewportSignature = null;
       _markerOverlayExpanded = false;
       _selectedMarkerAnchor = null;
     });
@@ -5140,309 +5343,320 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                  // Header row: Title + distance + close button
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Column(
+                        // Header row: Title + distance + close button
+                        Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            if (canPresentExhibition) ...[
-                              Text(
-                                'Exhibition',
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (canPresentExhibition) ...[
+                                    Text(
+                                      'Exhibition',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w700,
+                                            color: baseColor,
+                                            height: 1.0,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                  ],
+                                  Text(
+                                    displayTitle,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 14,
+                                          height: 1.2,
+                                        ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            if (distanceText != null) ...[
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: baseColor.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.near_me,
+                                        size: 12, color: baseColor),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      distanceText,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w700,
+                                            color: baseColor,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                            ],
+                            _markerOverlayIconButton(
+                              icon: Icons.close,
+                              tooltip: l10n.commonClose,
+                              scheme: scheme,
+                              isDark: isDark,
+                              onTap: _dismissSelectedMarkerOverlay,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+
+                        // Image
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: SizedBox(
+                            height: 120,
+                            width: double.infinity,
+                            child: imageUrl != null
+                                ? Image.network(
+                                    imageUrl,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) =>
+                                        _markerImageFallback(
+                                            baseColor, scheme, marker),
+                                    loadingBuilder: (context, child, progress) {
+                                      if (progress == null) return child;
+                                      return Container(
+                                        color:
+                                            baseColor.withValues(alpha: 0.12),
+                                        child: const Center(
+                                          child: CircularProgressIndicator(
+                                              strokeWidth: 2),
+                                        ),
+                                      );
+                                    },
+                                  )
+                                : _markerImageFallback(
+                                    baseColor, scheme, marker),
+                          ),
+                        ),
+
+                        // Description with expand/collapse
+                        if (visibleDescription.isNotEmpty) ...[
+                          const SizedBox(height: 10),
+                          Text(
+                            visibleDescription,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  fontSize: 12,
+                                  color: scheme.onSurfaceVariant,
+                                  height: 1.4,
+                                ),
+                          ),
+                        ],
+
+                        // Expand/Collapse button for long descriptions
+                        if (canExpand) ...[
+                          const SizedBox(height: 6),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: TextButton(
+                              onPressed: () => setState(
+                                () => _markerOverlayExpanded =
+                                    !_markerOverlayExpanded,
+                              ),
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              child: Text(
+                                _markerOverlayExpanded
+                                    ? l10n.commonCollapse
+                                    : l10n.commonExpand,
                                 style: Theme.of(context)
                                     .textTheme
                                     .bodyMedium
                                     ?.copyWith(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w700,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
                                       color: baseColor,
-                                      height: 1.0,
                                     ),
                               ),
-                              const SizedBox(height: 2),
+                            ),
+                          ),
+                        ],
+
+                        // Metadata chips
+                        if (showChips) ...[
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              if (canPresentExhibition)
+                                _attendanceProofChip(scheme, baseColor),
+                              if (artwork != null &&
+                                  artwork.category.isNotEmpty &&
+                                  artwork.category != 'General')
+                                _compactChip(
+                                  scheme,
+                                  Icons.palette,
+                                  artwork.category,
+                                  baseColor,
+                                ),
+                              if (marker.metadata?['subjectCategory'] != null ||
+                                  marker.metadata?['subject_category'] != null)
+                                _compactChip(
+                                  scheme,
+                                  Icons.category_outlined,
+                                  (marker.metadata!['subjectCategory'] ??
+                                          marker.metadata!['subject_category'])
+                                      .toString(),
+                                  baseColor,
+                                ),
+                              if (marker.metadata?['locationName'] != null ||
+                                  marker.metadata?['location'] != null)
+                                _compactChip(
+                                  scheme,
+                                  Icons.place_outlined,
+                                  (marker.metadata!['locationName'] ??
+                                          marker.metadata!['location'])
+                                      .toString(),
+                                  baseColor,
+                                ),
+                              if (artwork != null && artwork.rewards > 0)
+                                _compactChip(
+                                  scheme,
+                                  Icons.card_giftcard,
+                                  '+${artwork.rewards}',
+                                  baseColor,
+                                ),
                             ],
-                            Text(
-                              displayTitle,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+
+                        // Action row: Like, Save, Share buttons (for artworks)
+                        if (artwork != null && !canPresentExhibition) ...[
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              _markerOverlayActionButton(
+                                icon: artwork.isLikedByCurrentUser
+                                    ? Icons.favorite
+                                    : Icons.favorite_border,
+                                label: '${artwork.likesCount}',
+                                isActive: artwork.isLikedByCurrentUser,
+                                activeColor: scheme.error,
+                                scheme: scheme,
+                                isDark: isDark,
+                                onTap: () {
+                                  unawaited(
+                                      artworkProvider.toggleLike(artwork.id));
+                                },
+                              ),
+                              const SizedBox(width: 8),
+                              _markerOverlayActionButton(
+                                icon: artwork.isFavoriteByCurrentUser ||
+                                        artwork.isFavorite
+                                    ? Icons.bookmark
+                                    : Icons.bookmark_border,
+                                label: l10n.commonSave,
+                                isActive: artwork.isFavoriteByCurrentUser ||
+                                    artwork.isFavorite,
+                                activeColor: baseColor,
+                                scheme: scheme,
+                                isDark: isDark,
+                                onTap: () {
+                                  unawaited(artworkProvider
+                                      .toggleFavorite(artwork.id));
+                                },
+                              ),
+                              const SizedBox(width: 8),
+                              _markerOverlayActionButton(
+                                icon: Icons.share_outlined,
+                                label: l10n.commonShare,
+                                isActive: false,
+                                activeColor: baseColor,
+                                scheme: scheme,
+                                isDark: isDark,
+                                onTap: () {
+                                  ShareService().showShareSheet(
+                                    context,
+                                    target: ShareTarget.artwork(
+                                      artworkId: artwork.id,
+                                      title: artwork.title,
+                                    ),
+                                    sourceScreen: 'desktop_map_marker',
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+
+                        const SizedBox(height: 12),
+
+                        // Primary action button
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: baseColor,
+                              foregroundColor:
+                                  AppColorUtils.contrastText(baseColor),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                            ),
+                            onPressed: canPresentExhibition
+                                ? () => _openExhibitionFromMarker(
+                                    marker, primaryExhibition, artwork)
+                                : () => _openMarkerDetail(marker, artwork),
+                            icon: Icon(
+                              canPresentExhibition
+                                  ? Icons.museum_outlined
+                                  : Icons.arrow_forward,
+                              size: 18,
+                            ),
+                            label: Text(
+                              canPresentExhibition
+                                  ? 'Open Exhibition'
+                                  : l10n.commonViewDetails,
                               style: Theme.of(context)
                                   .textTheme
                                   .bodyMedium
                                   ?.copyWith(
                                     fontWeight: FontWeight.w700,
-                                    fontSize: 14,
-                                    height: 1.2,
+                                    fontSize: 13,
                                   ),
                             ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      if (distanceText != null) ...[
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
                           ),
-                          decoration: BoxDecoration(
-                            color: baseColor.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.near_me, size: 12, color: baseColor),
-                              const SizedBox(width: 4),
-                              Text(
-                                distanceText,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w700,
-                                      color: baseColor,
-                                    ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                      ],
-                      _markerOverlayIconButton(
-                        icon: Icons.close,
-                        tooltip: l10n.commonClose,
-                        scheme: scheme,
-                        isDark: isDark,
-                        onTap: _dismissSelectedMarkerOverlay,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-
-                  // Image
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: SizedBox(
-                      height: 120,
-                      width: double.infinity,
-                      child: imageUrl != null
-                          ? Image.network(
-                              imageUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) =>
-                                  _markerImageFallback(
-                                      baseColor, scheme, marker),
-                              loadingBuilder: (context, child, progress) {
-                                if (progress == null) return child;
-                                return Container(
-                                  color: baseColor.withValues(alpha: 0.12),
-                                  child: const Center(
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2),
-                                  ),
-                                );
-                              },
-                            )
-                          : _markerImageFallback(baseColor, scheme, marker),
-                    ),
-                  ),
-
-                  // Description with expand/collapse
-                  if (visibleDescription.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    Text(
-                      visibleDescription,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontSize: 12,
-                            color: scheme.onSurfaceVariant,
-                            height: 1.4,
-                          ),
-                    ),
-                  ],
-
-                  // Expand/Collapse button for long descriptions
-                  if (canExpand) ...[
-                    const SizedBox(height: 6),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: TextButton(
-                        onPressed: () => setState(
-                          () =>
-                              _markerOverlayExpanded = !_markerOverlayExpanded,
-                        ),
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        child: Text(
-                          _markerOverlayExpanded
-                              ? l10n.commonCollapse
-                              : l10n.commonExpand,
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: baseColor,
-                                  ),
-                        ),
-                      ),
-                    ),
-                  ],
-
-                  // Metadata chips
-                  if (showChips) ...[
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        if (canPresentExhibition)
-                          _attendanceProofChip(scheme, baseColor),
-                        if (artwork != null &&
-                            artwork.category.isNotEmpty &&
-                            artwork.category != 'General')
-                          _compactChip(
-                            scheme,
-                            Icons.palette,
-                            artwork.category,
-                            baseColor,
-                          ),
-                        if (marker.metadata?['subjectCategory'] != null ||
-                            marker.metadata?['subject_category'] != null)
-                          _compactChip(
-                            scheme,
-                            Icons.category_outlined,
-                            (marker.metadata!['subjectCategory'] ??
-                                    marker.metadata!['subject_category'])
-                                .toString(),
-                            baseColor,
-                          ),
-                        if (marker.metadata?['locationName'] != null ||
-                            marker.metadata?['location'] != null)
-                          _compactChip(
-                            scheme,
-                            Icons.place_outlined,
-                            (marker.metadata!['locationName'] ??
-                                    marker.metadata!['location'])
-                                .toString(),
-                            baseColor,
-                          ),
-                        if (artwork != null && artwork.rewards > 0)
-                          _compactChip(
-                            scheme,
-                            Icons.card_giftcard,
-                            '+${artwork.rewards}',
-                            baseColor,
-                          ),
-                      ],
-                    ),
-                  ],
-
-                  // Action row: Like, Save, Share buttons (for artworks)
-                  if (artwork != null && !canPresentExhibition) ...[
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        _markerOverlayActionButton(
-                          icon: artwork.isLikedByCurrentUser
-                              ? Icons.favorite
-                              : Icons.favorite_border,
-                          label: '${artwork.likesCount}',
-                          isActive: artwork.isLikedByCurrentUser,
-                          activeColor: scheme.error,
-                          scheme: scheme,
-                          isDark: isDark,
-                          onTap: () {
-                            unawaited(artworkProvider.toggleLike(artwork.id));
-                          },
-                        ),
-                        const SizedBox(width: 8),
-                        _markerOverlayActionButton(
-                          icon: artwork.isFavoriteByCurrentUser ||
-                                  artwork.isFavorite
-                              ? Icons.bookmark
-                              : Icons.bookmark_border,
-                          label: l10n.commonSave,
-                          isActive: artwork.isFavoriteByCurrentUser ||
-                              artwork.isFavorite,
-                          activeColor: baseColor,
-                          scheme: scheme,
-                          isDark: isDark,
-                          onTap: () {
-                            unawaited(
-                                artworkProvider.toggleFavorite(artwork.id));
-                          },
-                        ),
-                        const SizedBox(width: 8),
-                        _markerOverlayActionButton(
-                          icon: Icons.share_outlined,
-                          label: l10n.commonShare,
-                          isActive: false,
-                          activeColor: baseColor,
-                          scheme: scheme,
-                          isDark: isDark,
-                          onTap: () {
-                            ShareService().showShareSheet(
-                              context,
-                              target: ShareTarget.artwork(
-                                artworkId: artwork.id,
-                                title: artwork.title,
-                              ),
-                              sourceScreen: 'desktop_map_marker',
-                            );
-                          },
                         ),
                       ],
                     ),
-                  ],
-
-                      const SizedBox(height: 12),
-
-                  // Primary action button
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton.icon(
-                          style: FilledButton.styleFrom(
-                            backgroundColor: baseColor,
-                            foregroundColor:
-                                AppColorUtils.contrastText(baseColor),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 10,
-                            ),
-                          ),
-                          onPressed: canPresentExhibition
-                              ? () => _openExhibitionFromMarker(
-                                  marker, primaryExhibition, artwork)
-                              : () => _openMarkerDetail(marker, artwork),
-                          icon: Icon(
-                            canPresentExhibition
-                                ? Icons.museum_outlined
-                                : Icons.arrow_forward,
-                            size: 18,
-                          ),
-                          label: Text(
-                            canPresentExhibition
-                                ? 'Open Exhibition'
-                                : l10n.commonViewDetails,
-                            style:
-                                Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 13,
-                                    ),
-                          ),
-                        ),
-                      ),
-                    ],
                   ),
-                ),
-              ],
-            ), // Close CustomScrollView
+                ],
+              ), // Close CustomScrollView
             ), // Close LiquidGlassPanel
           ), // Close Container
         ), // Close Material
@@ -5521,7 +5735,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     return Positioned.fill(
       child: _wrapPointerInterceptor(
-        child: overlay,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.basic,
+          child: overlay,
+        ),
         enabled: shouldIntercept,
       ),
     );
@@ -5576,7 +5793,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         if (anchor == null) {
           return Center(child: UnconstrainedBox(child: wrappedCard));
         }
-        const double cardWidth = 280; // Match maxWidth in _buildMarkerOverlayCard
+        const double cardWidth =
+            280; // Match maxWidth in _buildMarkerOverlayCard
         const double padding = 16;
         // Estimate card height (actual card uses maxHeight from viewportHeight * 0.6)
         final viewportHeight = MediaQuery.of(context).size.height;
@@ -5586,34 +5804,33 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         double left = anchor.dx - (cardWidth / 2);
         left = left.clamp(padding, constraints.maxWidth - cardWidth - padding);
 
-        // Calculate available space above and below marker
+        // Calculate available space above the marker
         final topSafe = MediaQuery.of(context).padding.top + padding;
         final bottomPadding = padding;
         final spaceAbove = anchor.dy - topSafe - verticalOffset;
-        final spaceBelow = constraints.maxHeight - anchor.dy - verticalOffset - bottomPadding;
 
-        // Position above marker by default, fallback below if not enough space
-        double top;
-        if (estimatedCardHeight <= spaceAbove) {
-          // Fits above marker
-          top = anchor.dy - estimatedCardHeight - verticalOffset;
-        } else if (estimatedCardHeight <= spaceBelow) {
-          // Fits below marker
-          top = anchor.dy + verticalOffset;
-        } else {
-          // Neither fits fully - use whichever has more space
-          top = spaceAbove >= spaceBelow
-              ? topSafe
-              : constraints.maxHeight - estimatedCardHeight - bottomPadding;
+        // Position above marker; if not enough space, keep within safe area
+        // and nudge the camera down so the marker remains visible below.
+        double top = anchor.dy - estimatedCardHeight - verticalOffset;
+        if (top < topSafe) {
+          top = topSafe;
+          _scheduleEnsureMarkerOverlayInView(
+            marker: marker,
+            overlayHeight: estimatedCardHeight,
+          );
         }
 
         // Final clamp to ensure card never goes off-screen
-        top = top.clamp(topSafe, math.max(topSafe, constraints.maxHeight - estimatedCardHeight - bottomPadding));
+        top = top.clamp(
+          topSafe,
+          math.max(topSafe,
+              constraints.maxHeight - estimatedCardHeight - bottomPadding),
+        );
 
         if (kDebugMode) {
           AppConfig.debugPrint(
             'DesktopMapScreen: card positioned at ($left, $top) anchor=(${anchor.dx.toStringAsFixed(0)}, ${anchor.dy.toStringAsFixed(0)}) '
-            'spaceAbove=${spaceAbove.toStringAsFixed(0)} spaceBelow=${spaceBelow.toStringAsFixed(0)}',
+            'spaceAbove=${spaceAbove.toStringAsFixed(0)}',
           );
         }
 
@@ -5650,30 +5867,35 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     required VoidCallback? onTap,
   }) {
     final bg = scheme.surface.withValues(alpha: isDark ? 0.46 : 0.52);
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(999),
-          onTap: onTap,
-          child: Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(
-                color: scheme.outlineVariant.withValues(alpha: 0.35),
+    final cursor =
+        onTap == null ? SystemMouseCursors.basic : SystemMouseCursors.click;
+    return MouseRegion(
+      cursor: cursor,
+      child: Tooltip(
+        message: tooltip,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(999),
+            onTap: onTap,
+            child: Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(
+                  color: scheme.outlineVariant.withValues(alpha: 0.35),
+                ),
               ),
-            ),
-            child: LiquidGlassPanel(
-              padding: EdgeInsets.zero,
-              margin: EdgeInsets.zero,
-              borderRadius: BorderRadius.circular(999),
-              showBorder: false,
-              backgroundColor: bg,
-              child: Center(
-                child: Icon(icon, size: 16, color: scheme.onSurface),
+              child: LiquidGlassPanel(
+                padding: EdgeInsets.zero,
+                margin: EdgeInsets.zero,
+                borderRadius: BorderRadius.circular(999),
+                showBorder: false,
+                backgroundColor: bg,
+                child: Center(
+                  child: Icon(icon, size: 16, color: scheme.onSurface),
+                ),
               ),
             ),
           ),
@@ -5700,41 +5922,46 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         : scheme.outlineVariant.withValues(alpha: 0.30);
     final fg = isActive ? activeColor : scheme.onSurfaceVariant;
 
+    final cursor =
+        onTap == null ? SystemMouseCursors.basic : SystemMouseCursors.click;
     return Expanded(
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(10),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: border),
-            ),
-            child: LiquidGlassPanel(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              margin: EdgeInsets.zero,
-              borderRadius: BorderRadius.circular(10),
-              showBorder: false,
-              backgroundColor: bg,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(icon, size: 16, color: fg),
-                  const SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
-                      label,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: fg,
-                          ),
-                      overflow: TextOverflow.ellipsis,
+      child: MouseRegion(
+        cursor: cursor,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: border),
+              ),
+              child: LiquidGlassPanel(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                margin: EdgeInsets.zero,
+                borderRadius: BorderRadius.circular(10),
+                showBorder: false,
+                backgroundColor: bg,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(icon, size: 16, color: fg),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        label,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: fg,
+                            ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -5764,9 +5991,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   color: baseColor,
                 ),
           ),
-          ],
-        ),
-      );
+        ],
+      ),
+    );
   }
 
   /// Check if marker has any metadata chips to display

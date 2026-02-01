@@ -3,6 +3,8 @@
 ## Mission
 Deliver stable, theme-consistent UI with feature flags and safe async handling.
 
+Preflight: review all `AGENTS.md` files (root, `lib/**`, `backend/**`) before making changes.
+
 ## Theme + tokens
 - Use `Theme.of(context).colorScheme` and `ThemeProvider.accentColor`.
 - Use tokens from `lib/utils/design_tokens.dart` (`KubusSpacing`, `KubusRadius`, `KubusLayout`, `KubusTypography`).
@@ -23,6 +25,10 @@ Deliver stable, theme-consistent UI with feature flags and safe async handling.
 
 ## Async safety
 - After any `await`, guard `if (!mounted) return;` (see `MapScreen` and `ARScreen`).
+
+## Audit watchlist (screens)
+- Tutorial overlays must block pointer gestures on web (no touch-through to map).
+- Map web style URL handling must avoid double `assets/` prefix and use production-safe fallback styles.
 
 ## Evidence (direct quotes with line references)
 - `lib/screens/map_screen.dart` (lines 183, 257, 292):
