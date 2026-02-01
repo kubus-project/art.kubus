@@ -43,6 +43,8 @@ class AppConfig {
   static const bool enableWalletConnect = true;
   static const bool enableEmailAuth = true;
   static const bool enableGoogleAuth = true;
+  /// Web: enable Google One Tap prompt (GIS) when available.
+  static const bool enableGoogleOneTapWeb = false;
   static const bool enableMultiAuthEntry = true;
   static const bool enforceWalletOnboarding = false; // Don't force wallet during onboarding - let users set it up when needed
   
@@ -279,6 +281,7 @@ class AppConfig {
       case 'walletConnect': return enableWalletConnect;
       case 'emailAuth': return enableEmailAuth;
       case 'googleAuth': return enableGoogleAuth;
+      case 'googleOneTapWeb': return enableGoogleOneTapWeb;
       case 'multiAuth': return enableMultiAuthEntry;
       case 'marketplace': return enableMarketplace;
       case 'events': return enableEvents;

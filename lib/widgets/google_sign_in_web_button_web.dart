@@ -5,6 +5,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:google_sign_in_platform_interface/google_sign_in_platform_interface.dart';
 import 'package:google_sign_in_web/google_sign_in_web.dart' as gweb;
 
+import '../config/config.dart';
 import '../services/google_auth_service.dart';
 
 class GoogleSignInWebButton extends StatefulWidget {
@@ -66,31 +67,25 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
       },
     );
 
-    // Bring back "automatic" / low-friction sign-in on web:
-    // - attemptLightweightAuthentication() enables silent re-auth when possible
-    //   (returning users, existing session, etc.).
-    // - best-effort One Tap prompt when supported by the underlying web plugin.
-    try {
-      final account = await GoogleSignIn.instance.attemptLightweightAuthentication();
-      if (!mounted) return;
-      if (account != null && !widget.isLoading) {
-        final result = GoogleAuthService().resultFromAccount(account);
-        await widget.onAuthResult(result);
+    if (AppConfig.isFeatureEnabled('googleOneTapWeb')) {
+      // Bring back "automatic" / low-friction sign-in on web:
+      // - attemptLightweightAuthentication() enables silent re-auth when possible
+      //   (returning users, existing session, etc.).
+      // - best-effort One Tap prompt when supported by the underlying web plugin.
+      try {
+        final account =
+            await GoogleSignIn.instance.attemptLightweightAuthentication();
+        if (!mounted) return;
+        if (account != null && !widget.isLoading) {
+          final result = GoogleAuthService().resultFromAccount(account);
+          await widget.onAuthResult(result);
+        }
+      } catch (_) {
+        // Best-effort only; One Tap / silent auth may be blocked by browser policies.
       }
-    } catch (_) {
-      // Best-effort only; One Tap / silent auth may be blocked by browser policies.
-    }
 
-    // Best-effort One Tap prompt (GIS) when available.
-    // The plugin API surface can vary by version; we avoid hard dependency.
-    try {
-      final platform = GoogleSignInPlatform.instance;
-      if (platform is gweb.GoogleSignInPlugin) {
-        // ignore: avoid_dynamic_calls
-        await (platform as dynamic).prompt();
-      }
-    } catch (_) {
-      // Best-effort only.
+      // Avoid GIS One Tap prompt on web until FedCM configuration is wired.
+      // This prevents deprecation warnings about prompt UI status methods.
     }
   }
 

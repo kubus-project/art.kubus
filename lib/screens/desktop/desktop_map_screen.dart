@@ -50,6 +50,7 @@ import '../../utils/artwork_navigation.dart';
 import '../../utils/media_url_resolver.dart';
 import 'components/desktop_widgets.dart';
 import 'desktop_shell.dart';
+import 'desktop_shell_registry.dart';
 import 'art/desktop_artwork_detail_screen.dart';
 import '../events/exhibition_detail_screen.dart';
 import 'community/desktop_user_profile_screen.dart';
@@ -140,6 +141,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   bool _autoFollow = true;
   bool _isLocating = false;
   bool _isNearbyPanelOpen = false;
+  bool _pendingInitialNearbyPanelOpen = true;
+  int _nearbyPanelAutoloadAttempts = 0;
+  static const int _maxNearbyPanelAutoloadAttempts = 8;
   String? _nearbySidebarSignature;
   bool _nearbySidebarSyncScheduled = false;
   LatLng? _nearbySidebarAnchor;
@@ -169,6 +173,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   bool _styleInitialized = false;
   bool _styleInitializationInProgress = false;
   bool _hitboxLayerReady = false;
+  int _styleEpoch = 0;
+  int _hitboxLayerEpoch = -1;
   final Set<String> _registeredMapImages = <String>{};
   final LayerLink _markerOverlayLink = LayerLink();
   final Debouncer _overlayAnchorDebouncer = Debouncer();
@@ -271,7 +277,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
       // Desktop UX: show the nearby list in the functions sidebar (right panel)
       // instead of rendering a "nearby" card overlay on the map.
-      _openNearbyArtPanel();
+      _scheduleInitialNearbyArtPanelOpen();
 
       unawaited(_maybeShowInteractiveMapTutorial());
     });
@@ -463,8 +469,41 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     return steps;
   }
 
+  DesktopShellScope? _resolveShellScope() {
+    final scope = DesktopShellScope.of(context);
+    if (scope != null) return scope;
+    final registryContext = DesktopShellRegistry.instance.context;
+    if (registryContext == null) return null;
+    return DesktopShellScope.of(registryContext);
+  }
+
+  void _scheduleInitialNearbyArtPanelOpen() {
+    if (!_pendingInitialNearbyPanelOpen) return;
+    if (_isNearbyPanelOpen) {
+      _pendingInitialNearbyPanelOpen = false;
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (!_pendingInitialNearbyPanelOpen) return;
+
+      final shellScope = _resolveShellScope();
+      if (shellScope == null) {
+        _nearbyPanelAutoloadAttempts += 1;
+        if (_nearbyPanelAutoloadAttempts <= _maxNearbyPanelAutoloadAttempts) {
+          _scheduleInitialNearbyArtPanelOpen();
+        }
+        return;
+      }
+
+      _pendingInitialNearbyPanelOpen = false;
+      _openNearbyArtPanel();
+    });
+  }
+
   void _openNearbyArtPanel() {
-    final shellScope = DesktopShellScope.of(context);
+    final shellScope = _resolveShellScope();
     if (shellScope == null) return;
 
     _safeSetState(() {
@@ -482,7 +521,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   void _closeNearbyArtPanel() {
-    final shellScope = DesktopShellScope.of(context);
+    final shellScope = _resolveShellScope();
     if (shellScope == null) return;
     _safeSetState(() {
       _isNearbyPanelOpen = false;
@@ -541,7 +580,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }) {
     if (!_isNearbyPanelOpen) return;
     if (!mounted) return;
-    final shellScope = DesktopShellScope.of(context);
+    final shellScope = _resolveShellScope();
     if (shellScope == null) return;
 
     // Build a compact signature so we only push sidebar updates when something
@@ -604,6 +643,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       unawaited(_moveCamera(_queuedCameraTarget!, _queuedCameraZoom!));
       _queuedCameraTarget = null;
       _queuedCameraZoom = null;
+    }
+
+    if (_pendingInitialNearbyPanelOpen && !_isNearbyPanelOpen) {
+      _scheduleInitialNearbyArtPanelOpen();
     }
 
     // Travel mode needs a bounds-based fetch once the viewport exists.
@@ -683,7 +726,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final scheme = Theme.of(context).colorScheme;
     _styleInitializationInProgress = true;
     _styleInitialized = false;
+    _styleEpoch += 1;
     _hitboxLayerReady = false;
+    _hitboxLayerEpoch = -1;
     _registeredMapImages.clear();
 
     AppConfig.debugPrint('DesktopMapScreen: style init start');
@@ -832,48 +877,67 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       );
 
       // 4. Invisible hitbox layer (topmost) for consistent tap detection (2D + 3D)
-      await controller.addCircleLayer(
-        _markerSourceId,
-        _markerHitboxLayerId,
-        ml.CircleLayerProperties(
-          circleColor: '#000000',
-          circleOpacity: 0.0,
-          circleStrokeOpacity: 0.0,
-          circleRadius: <Object>[
-            'interpolate',
-            <Object>['linear'],
-            <Object>['zoom'],
-            3,
-            <Object>[
-              'case',
-              <Object>['==', <Object>['get', 'kind'], 'cluster'],
-              18,
-              14,
-            ],
-            12,
-            <Object>[
-              'case',
-              <Object>['==', <Object>['get', 'kind'], 'cluster'],
-              26,
-              22,
-            ],
-            15,
-            <Object>[
-              'case',
-              <Object>['==', <Object>['get', 'kind'], 'cluster'],
-              32,
-              28,
-            ],
-            24,
-            <Object>[
-              'case',
-              <Object>['==', <Object>['get', 'kind'], 'cluster'],
-              42,
-              38,
-            ],
-          ],
-        ),
-      );
+      final Object hitboxRadius = kIsWeb
+          ? 32.0
+          : <Object>[
+              'interpolate',
+              <Object>['linear'],
+              <Object>['zoom'],
+              3,
+              <Object>[
+                'case',
+                <Object>['==', <Object>['get', 'kind'], 'cluster'],
+                18,
+                14,
+              ],
+              12,
+              <Object>[
+                'case',
+                <Object>['==', <Object>['get', 'kind'], 'cluster'],
+                26,
+                22,
+              ],
+              15,
+              <Object>[
+                'case',
+                <Object>['==', <Object>['get', 'kind'], 'cluster'],
+                32,
+                28,
+              ],
+              24,
+              <Object>[
+                'case',
+                <Object>['==', <Object>['get', 'kind'], 'cluster'],
+                42,
+                38,
+              ],
+            ];
+      try {
+        await controller.addCircleLayer(
+          _markerSourceId,
+          _markerHitboxLayerId,
+          ml.CircleLayerProperties(
+            circleColor: '#000000',
+            circleOpacity: 0.0,
+            circleStrokeOpacity: 0.0,
+            circleRadius: hitboxRadius,
+          ),
+        );
+      } catch (e) {
+        if (kDebugMode) {
+          AppConfig.debugPrint('DesktopMapScreen: hitbox layer add failed: $e');
+        }
+        await controller.addCircleLayer(
+          _markerSourceId,
+          _markerHitboxLayerId,
+          ml.CircleLayerProperties(
+            circleColor: '#000000',
+            circleOpacity: 0.0,
+            circleStrokeOpacity: 0.0,
+            circleRadius: kIsWeb ? 32 : 28,
+          ),
+        );
+      }
 
       await controller.addGeoJsonSource(
         _locationSourceId,
@@ -918,6 +982,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       if (!mounted) return;
       _styleInitialized = true;
       _hitboxLayerReady = true;
+      _hitboxLayerEpoch = _styleEpoch;
 
       await _applyIsometricCamera(enabled: _isometricViewEnabled);
       await _syncUserLocation(themeProvider: themeProvider);
@@ -975,13 +1040,16 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final controller = _mapController;
     if (controller == null) return false;
     if (!_styleInitialized) return false;
-    if (_hitboxLayerReady) return true;
+    if (!kIsWeb && _hitboxLayerReady && _hitboxLayerEpoch == _styleEpoch) {
+      return true;
+    }
 
     try {
       final raw = await controller.getLayerIds();
       for (final id in raw) {
         if (id == _markerHitboxLayerId) {
           _hitboxLayerReady = true;
+          _hitboxLayerEpoch = _styleEpoch;
           return true;
         }
       }
@@ -997,14 +1065,35 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }) async {
     final controller = _mapController;
     if (controller == null) return;
-    if (!_styleInitialized) return;
-
-    final double? dpr = kDebugMode
-        ? MediaQuery.of(context).devicePixelRatio
-        : null;
+    final double devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
+    if (_styleInitializationInProgress || !_styleInitialized) {
+      ArtMarker? fallbackMarker = await _fallbackPickMarkerAtPoint(point);
+      if (fallbackMarker == null && kIsWeb && devicePixelRatio > 1.01) {
+        fallbackMarker = await _fallbackPickMarkerAtPoint(
+          math.Point<double>(
+            point.x * devicePixelRatio,
+            point.y * devicePixelRatio,
+          ),
+        );
+      }
+      if (fallbackMarker != null) {
+        _handleMarkerTap(fallbackMarker);
+        _queueOverlayAnchorRefresh();
+      }
+      return;
+    }
+    final double? dpr = kDebugMode ? devicePixelRatio : null;
 
     if (!await _canQueryMarkerHitbox()) {
-      final fallbackMarker = await _fallbackPickMarkerAtPoint(point);
+      ArtMarker? fallbackMarker = await _fallbackPickMarkerAtPoint(point);
+      if (fallbackMarker == null && kIsWeb && devicePixelRatio > 1.01) {
+        fallbackMarker = await _fallbackPickMarkerAtPoint(
+          math.Point<double>(
+            point.x * devicePixelRatio,
+            point.y * devicePixelRatio,
+          ),
+        );
+      }
       if (fallbackMarker != null) {
         _handleMarkerTap(fallbackMarker);
         _queueOverlayAnchorRefresh();
@@ -1026,17 +1115,35 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       final layerIds = <String>[_markerHitboxLayerId];
 
       // Use a small rect (point-like) so the hitbox layer controls the tap area.
-      const double tapTolerance = 6.0;
-      final rect = Rect.fromCenter(
-        center: Offset(point.x, point.y),
-        width: tapTolerance * 2,
-        height: tapTolerance * 2,
-      );
-      final features = await controller.queryRenderedFeaturesInRect(
-        rect,
-        layerIds,
-        null,
-      );
+      final double tapTolerance = kIsWeb ? 10.0 : 6.0;
+      final List<math.Point<double>> queryPoints = <math.Point<double>>[point];
+      if (kIsWeb && devicePixelRatio > 1.01) {
+        queryPoints.add(
+          math.Point<double>(
+            point.x * devicePixelRatio,
+            point.y * devicePixelRatio,
+          ),
+        );
+      }
+
+      List features = const <dynamic>[];
+      for (final queryPoint in queryPoints) {
+        final scale = identical(queryPoint, point) ? 1.0 : devicePixelRatio;
+        final rect = Rect.fromCenter(
+          center: Offset(queryPoint.x, queryPoint.y),
+          width: tapTolerance * 2 * scale,
+          height: tapTolerance * 2 * scale,
+        );
+        final result = await controller.queryRenderedFeaturesInRect(
+          rect,
+          layerIds,
+          null,
+        );
+        if (result.isNotEmpty) {
+          features = result;
+          break;
+        }
+      }
 
       if (!mounted) return;
 
@@ -1111,7 +1218,16 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             'DesktopMapScreen: queryRenderedFeatures failed: $e');
       }
       _hitboxLayerReady = false;
-      final fallbackMarker = await _fallbackPickMarkerAtPoint(point);
+      _hitboxLayerEpoch = -1;
+      ArtMarker? fallbackMarker = await _fallbackPickMarkerAtPoint(point);
+      if (fallbackMarker == null && kIsWeb && devicePixelRatio > 1.01) {
+        fallbackMarker = await _fallbackPickMarkerAtPoint(
+          math.Point<double>(
+            point.x * devicePixelRatio,
+            point.y * devicePixelRatio,
+          ),
+        );
+      }
       if (fallbackMarker == null) return;
       _handleMarkerTap(fallbackMarker);
       _queueOverlayAnchorRefresh();
@@ -1126,7 +1242,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     // Tight fallback radius to avoid oversized hitboxes.
     final zoomScale = (_cameraZoom / 15.0).clamp(0.7, 1.4);
-    final double base = _is3DMarkerModeActive ? 28.0 : 22.0;
+    final double base = _is3DMarkerModeActive
+      ? (kIsWeb ? 34.0 : 28.0)
+      : (kIsWeb ? 28.0 : 22.0);
     final double maxDistance = base * zoomScale;
     ArtMarker? best;
     double bestDistance = maxDistance;

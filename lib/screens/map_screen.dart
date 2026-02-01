@@ -171,6 +171,8 @@ class _MapScreenState extends State<MapScreen>
   bool _styleInitialized = false;
   bool _styleInitializationInProgress = false;
   bool _hitboxLayerReady = false;
+  int _styleEpoch = 0;
+  int _hitboxLayerEpoch = -1;
   final Set<String> _registeredMapImages = <String>{};
   static const String _markerSourceId = 'kubus_markers';
   static const String _markerLayerId = 'kubus_marker_layer';
@@ -340,7 +342,9 @@ class _MapScreenState extends State<MapScreen>
     final scheme = Theme.of(context).colorScheme;
     _styleInitializationInProgress = true;
     _styleInitialized = false;
+    _styleEpoch += 1;
     _hitboxLayerReady = false;
+    _hitboxLayerEpoch = -1;
     _registeredMapImages.clear();
 
     AppConfig.debugPrint('MapScreen: style init start');
@@ -487,48 +491,67 @@ class _MapScreenState extends State<MapScreen>
       );
 
       // 4. Invisible hitbox layer (topmost) for consistent tap detection (2D + 3D)
-      await controller.addCircleLayer(
-        _markerSourceId,
-        _markerHitboxLayerId,
-        ml.CircleLayerProperties(
-          circleColor: '#000000',
-          circleOpacity: 0.0,
-          circleStrokeOpacity: 0.0,
-          circleRadius: <Object>[
-            'interpolate',
-            <Object>['linear'],
-            <Object>['zoom'],
-            3,
-            <Object>[
-              'case',
-              <Object>['==', <Object>['get', 'kind'], 'cluster'],
-              18,
-              14,
-            ],
-            12,
-            <Object>[
-              'case',
-              <Object>['==', <Object>['get', 'kind'], 'cluster'],
-              26,
-              22,
-            ],
-            15,
-            <Object>[
-              'case',
-              <Object>['==', <Object>['get', 'kind'], 'cluster'],
-              32,
-              28,
-            ],
-            24,
-            <Object>[
-              'case',
-              <Object>['==', <Object>['get', 'kind'], 'cluster'],
-              42,
-              38,
-            ],
-          ],
-        ),
-      );
+      final Object hitboxRadius = kIsWeb
+          ? 32.0
+          : <Object>[
+              'interpolate',
+              <Object>['linear'],
+              <Object>['zoom'],
+              3,
+              <Object>[
+                'case',
+                <Object>['==', <Object>['get', 'kind'], 'cluster'],
+                18,
+                14,
+              ],
+              12,
+              <Object>[
+                'case',
+                <Object>['==', <Object>['get', 'kind'], 'cluster'],
+                26,
+                22,
+              ],
+              15,
+              <Object>[
+                'case',
+                <Object>['==', <Object>['get', 'kind'], 'cluster'],
+                32,
+                28,
+              ],
+              24,
+              <Object>[
+                'case',
+                <Object>['==', <Object>['get', 'kind'], 'cluster'],
+                42,
+                38,
+              ],
+            ];
+      try {
+        await controller.addCircleLayer(
+          _markerSourceId,
+          _markerHitboxLayerId,
+          ml.CircleLayerProperties(
+            circleColor: '#000000',
+            circleOpacity: 0.0,
+            circleStrokeOpacity: 0.0,
+            circleRadius: hitboxRadius,
+          ),
+        );
+      } catch (e) {
+        if (kDebugMode) {
+          AppConfig.debugPrint('MapScreen: hitbox layer add failed: $e');
+        }
+        await controller.addCircleLayer(
+          _markerSourceId,
+          _markerHitboxLayerId,
+          ml.CircleLayerProperties(
+            circleColor: '#000000',
+            circleOpacity: 0.0,
+            circleStrokeOpacity: 0.0,
+            circleRadius: kIsWeb ? 32 : 28,
+          ),
+        );
+      }
 
       await controller.addGeoJsonSource(
         _locationSourceId,
@@ -553,6 +576,7 @@ class _MapScreenState extends State<MapScreen>
       if (!mounted) return;
       _styleInitialized = true;
       _hitboxLayerReady = true;
+      _hitboxLayerEpoch = _styleEpoch;
 
       await _applyIsometricCamera(enabled: _isometricViewEnabled);
       await _syncUserLocation(themeProvider: themeProvider);
@@ -3098,13 +3122,16 @@ class _MapScreenState extends State<MapScreen>
     final controller = _mapController;
     if (controller == null) return false;
     if (!_styleInitialized) return false;
-    if (_hitboxLayerReady) return true;
+    if (!kIsWeb && _hitboxLayerReady && _hitboxLayerEpoch == _styleEpoch) {
+      return true;
+    }
 
     try {
       final raw = await controller.getLayerIds();
       for (final id in raw) {
         if (id == _markerHitboxLayerId) {
           _hitboxLayerReady = true;
+          _hitboxLayerEpoch = _styleEpoch;
           return true;
         }
       }
@@ -3121,14 +3148,34 @@ class _MapScreenState extends State<MapScreen>
   ) async {
     final controller = _mapController;
     if (controller == null) return;
-    if (!_styleInitialized) return;
-
-    final double? dpr = kDebugMode
-        ? MediaQuery.of(context).devicePixelRatio
-        : null;
+    final double devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
+    if (_styleInitializationInProgress || !_styleInitialized) {
+      ArtMarker? fallbackMarker = await _fallbackPickMarkerAtPoint(point);
+      if (fallbackMarker == null && kIsWeb && devicePixelRatio > 1.01) {
+        fallbackMarker = await _fallbackPickMarkerAtPoint(
+          math.Point<double>(
+            point.x * devicePixelRatio,
+            point.y * devicePixelRatio,
+          ),
+        );
+      }
+      if (fallbackMarker != null) {
+        _handleMarkerTap(fallbackMarker);
+      }
+      return;
+    }
+    final double? dpr = kDebugMode ? devicePixelRatio : null;
 
     if (!await _canQueryMarkerHitbox()) {
-      final fallbackMarker = await _fallbackPickMarkerAtPoint(point);
+      ArtMarker? fallbackMarker = await _fallbackPickMarkerAtPoint(point);
+      if (fallbackMarker == null && kIsWeb && devicePixelRatio > 1.01) {
+        fallbackMarker = await _fallbackPickMarkerAtPoint(
+          math.Point<double>(
+            point.x * devicePixelRatio,
+            point.y * devicePixelRatio,
+          ),
+        );
+      }
       if (fallbackMarker != null) {
         _handleMarkerTap(fallbackMarker);
       }
@@ -3149,17 +3196,35 @@ class _MapScreenState extends State<MapScreen>
       final layerIds = <String>[_markerHitboxLayerId];
 
       // Use a small rect (point-like) so the hitbox layer controls the tap area.
-      const double tapTolerance = 6.0;
-      final rect = Rect.fromCenter(
-        center: Offset(point.x, point.y),
-        width: tapTolerance * 2,
-        height: tapTolerance * 2,
-      );
-      final features = await controller.queryRenderedFeaturesInRect(
-        rect,
-        layerIds,
-        null,
-      );
+      final double tapTolerance = kIsWeb ? 10.0 : 6.0;
+      final List<math.Point<double>> queryPoints = <math.Point<double>>[point];
+      if (kIsWeb && devicePixelRatio > 1.01) {
+        queryPoints.add(
+          math.Point<double>(
+            point.x * devicePixelRatio,
+            point.y * devicePixelRatio,
+          ),
+        );
+      }
+
+      List features = const <dynamic>[];
+      for (final queryPoint in queryPoints) {
+        final scale = identical(queryPoint, point) ? 1.0 : devicePixelRatio;
+        final rect = Rect.fromCenter(
+          center: Offset(queryPoint.x, queryPoint.y),
+          width: tapTolerance * 2 * scale,
+          height: tapTolerance * 2 * scale,
+        );
+        final result = await controller.queryRenderedFeaturesInRect(
+          rect,
+          layerIds,
+          null,
+        );
+        if (result.isNotEmpty) {
+          features = result;
+          break;
+        }
+      }
 
       if (!mounted) return;
 
@@ -3223,7 +3288,16 @@ class _MapScreenState extends State<MapScreen>
         AppConfig.debugPrint('MapScreen: queryRenderedFeatures failed: $e');
       }
       _hitboxLayerReady = false;
-      final fallbackMarker = await _fallbackPickMarkerAtPoint(point);
+      _hitboxLayerEpoch = -1;
+      ArtMarker? fallbackMarker = await _fallbackPickMarkerAtPoint(point);
+      if (fallbackMarker == null && kIsWeb && devicePixelRatio > 1.01) {
+        fallbackMarker = await _fallbackPickMarkerAtPoint(
+          math.Point<double>(
+            point.x * devicePixelRatio,
+            point.y * devicePixelRatio,
+          ),
+        );
+      }
       if (fallbackMarker == null) return;
       _handleMarkerTap(fallbackMarker);
     }
@@ -3237,7 +3311,9 @@ class _MapScreenState extends State<MapScreen>
 
     // Tight fallback radius to avoid oversized hitboxes.
     final zoomScale = (_lastZoom / 15.0).clamp(0.7, 1.4);
-    final double base = _is3DMarkerModeActive ? 28.0 : 22.0;
+    final double base = _is3DMarkerModeActive
+      ? (kIsWeb ? 34.0 : 28.0)
+      : (kIsWeb ? 28.0 : 22.0);
     final double maxDistance = base * zoomScale;
     ArtMarker? best;
     double bestDistance = maxDistance;
