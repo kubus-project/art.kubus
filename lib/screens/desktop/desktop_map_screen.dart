@@ -142,6 +142,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   bool _isNearbyPanelOpen = false;
   bool _pendingInitialNearbyPanelOpen = true;
   int _nearbyPanelAutoloadAttempts = 0;
+  bool _nearbyPanelAutoloadScheduled = false;
   static const int _maxNearbyPanelAutoloadAttempts = 8;
   String? _nearbySidebarSignature;
   bool _nearbySidebarSyncScheduled = false;
@@ -205,6 +206,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   bool _isBuilding = false;
   bool _pendingSafeSetState = false;
+
+  ml.MapLibreMapController? _featureTapBoundController;
+  DateTime? _lastFeatureTapAt;
+  math.Point<double>? _lastFeatureTapPoint;
 
   // Filter options - same list as mobile for parity
   final List<String> _filterOptions = [
@@ -469,28 +474,41 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   void _scheduleInitialNearbyArtPanelOpen() {
+    _ensureNearbyPanelAutoloadScheduled();
+  }
+
+  void _ensureNearbyPanelAutoloadScheduled() {
+    if (!_pendingInitialNearbyPanelOpen || _isNearbyPanelOpen) return;
+    if (_nearbyPanelAutoloadScheduled) return;
+    if (_nearbyPanelAutoloadAttempts > _maxNearbyPanelAutoloadAttempts) {
+      _nearbyPanelAutoloadAttempts = 0;
+    }
+    _nearbyPanelAutoloadScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _nearbyPanelAutoloadScheduled = false;
+      if (!mounted) return;
+      _tryOpenInitialNearbyArtPanel();
+    });
+  }
+
+  void _tryOpenInitialNearbyArtPanel() {
     if (!_pendingInitialNearbyPanelOpen) return;
     if (_isNearbyPanelOpen) {
       _pendingInitialNearbyPanelOpen = false;
       return;
     }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (!_pendingInitialNearbyPanelOpen) return;
-
-      final shellScope = DesktopShellScope.of(context);
-      if (shellScope == null) {
-        _nearbyPanelAutoloadAttempts += 1;
-        if (_nearbyPanelAutoloadAttempts <= _maxNearbyPanelAutoloadAttempts) {
-          _scheduleInitialNearbyArtPanelOpen();
-        }
-        return;
+    final shellScope = DesktopShellScope.of(context);
+    if (shellScope == null) {
+      _nearbyPanelAutoloadAttempts += 1;
+      if (_nearbyPanelAutoloadAttempts <= _maxNearbyPanelAutoloadAttempts) {
+        _ensureNearbyPanelAutoloadScheduled();
       }
+      return;
+    }
 
-      _pendingInitialNearbyPanelOpen = false;
-      _openNearbyArtPanel();
-    });
+    _pendingInitialNearbyPanelOpen = false;
+    _openNearbyArtPanel();
   }
 
   void _openNearbyArtPanel() {
@@ -547,6 +565,49 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     // pointer events from leaking through overlays to the map DOM element.
     if (!kIsWeb || !enabled) return child;
     return PointerInterceptor(child: child);
+  }
+
+  void _bindFeatureTapController(ml.MapLibreMapController controller) {
+    if (_featureTapBoundController == controller) return;
+    _featureTapBoundController?.onFeatureTapped
+        .remove(_handleMapFeatureTapped);
+    _featureTapBoundController = controller;
+    controller.onFeatureTapped.add(_handleMapFeatureTapped);
+  }
+
+  void _handleMapFeatureTapped(
+    math.Point<double> point,
+    ml.LatLng coordinates,
+    String id,
+    String layerId,
+    ml.Annotation? annotation,
+  ) {
+    if (!mounted) return;
+
+    _lastFeatureTapAt = DateTime.now();
+    _lastFeatureTapPoint = point;
+
+    if (id.startsWith('cluster:')) {
+      final nextZoom = math.min(_cameraZoom + 2.0, 18.0);
+      unawaited(
+        _moveCamera(
+          LatLng(coordinates.latitude, coordinates.longitude),
+          nextZoom,
+        ),
+      );
+      return;
+    }
+
+    ArtMarker? selected;
+    for (final marker in _artMarkers) {
+      if (marker.id == id) {
+        selected = marker;
+        break;
+      }
+    }
+    if (selected == null) return;
+
+    _handleMarkerTap(selected);
   }
 
   String _nearbySidebarSignatureFor(
@@ -683,6 +744,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   void _handleMapCreated(ml.MapLibreMapController controller) {
     _mapController = controller;
+    _bindFeatureTapController(controller);
     _styleInitialized = false;
     _hitboxLayerReady = false;
     _registeredMapImages.clear();
@@ -1052,44 +1114,60 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }) async {
     final controller = _mapController;
     if (controller == null) return;
-    final double devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
-    if (_styleInitializationInProgress || !_styleInitialized) {
-      ArtMarker? fallbackMarker = await _fallbackPickMarkerAtPoint(point);
-      if (fallbackMarker == null && kIsWeb && devicePixelRatio > 1.01) {
-        fallbackMarker = await _fallbackPickMarkerAtPoint(
-          math.Point<double>(
-            point.x * devicePixelRatio,
-            point.y * devicePixelRatio,
-          ),
-        );
+
+    final lastAt = _lastFeatureTapAt;
+    final lastPoint = _lastFeatureTapPoint;
+    if (lastAt != null && lastPoint != null) {
+      final ageMs = DateTime.now().difference(lastAt).inMilliseconds;
+      if (ageMs >= 0 && ageMs < 60) {
+        final dx = (point.x - lastPoint.x).abs();
+        final dy = (point.y - lastPoint.y).abs();
+        if (dx < 2 && dy < 2) return;
       }
+    }
+
+    // On web, taps that hit interactive style layers are delivered via
+    // `controller.onFeatureTapped`. Treat `onMapClick` as a background tap and
+    // avoid doing feature queries here.
+    if (kIsWeb) {
+      setState(() {
+        _selectedArtwork = null;
+        _selectedExhibition = null;
+        _showFiltersPanel = false;
+        _showSearchOverlay = false;
+        _pendingMarkerLocation = null;
+        _selectedMarkerId = null;
+        _selectedMarkerData = null;
+        _selectedMarkerAt = null;
+        _selectedMarkerViewportSignature = null;
+        _markerOverlayExpanded = false;
+      });
+      unawaited(_syncMapMarkers(themeProvider: themeProvider));
+      unawaited(_syncPendingMarker(themeProvider: themeProvider));
+      return;
+    }
+
+    if (_styleInitializationInProgress || !_styleInitialized) {
+      final fallbackMarker = await _fallbackPickMarkerAtPoint(point);
+      if (!mounted) return;
       if (fallbackMarker != null) {
         _handleMarkerTap(fallbackMarker);
-        _queueOverlayAnchorRefresh();
       }
       return;
     }
-    final double? dpr = kDebugMode ? devicePixelRatio : null;
 
     if (!await _canQueryMarkerHitbox()) {
-      ArtMarker? fallbackMarker = await _fallbackPickMarkerAtPoint(point);
-      if (fallbackMarker == null && kIsWeb && devicePixelRatio > 1.01) {
-        fallbackMarker = await _fallbackPickMarkerAtPoint(
-          math.Point<double>(
-            point.x * devicePixelRatio,
-            point.y * devicePixelRatio,
-          ),
-        );
-      }
+      final fallbackMarker = await _fallbackPickMarkerAtPoint(point);
+      if (!mounted) return;
       if (fallbackMarker != null) {
         _handleMarkerTap(fallbackMarker);
-        _queueOverlayAnchorRefresh();
       }
       return;
     }
 
     // Debug instrumentation (kDebugMode only)
     if (kDebugMode) {
+      final dpr = MediaQuery.of(context).devicePixelRatio;
       AppConfig.debugPrint(
         'DesktopMapScreen: tap at (${point.x.toStringAsFixed(1)}, ${point.y.toStringAsFixed(1)}) '
         'pitch=${_lastPitch.toStringAsFixed(1)} bearing=${_lastBearing.toStringAsFixed(1)} '
@@ -1102,35 +1180,17 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       final layerIds = <String>[_markerHitboxLayerId];
 
       // Use a small rect (point-like) so the hitbox layer controls the tap area.
-      final double tapTolerance = kIsWeb ? 10.0 : 6.0;
-      final List<math.Point<double>> queryPoints = <math.Point<double>>[point];
-      if (kIsWeb && devicePixelRatio > 1.01) {
-        queryPoints.add(
-          math.Point<double>(
-            point.x * devicePixelRatio,
-            point.y * devicePixelRatio,
-          ),
-        );
-      }
-
-      List features = const <dynamic>[];
-      for (final queryPoint in queryPoints) {
-        final scale = identical(queryPoint, point) ? 1.0 : devicePixelRatio;
-        final rect = Rect.fromCenter(
-          center: Offset(queryPoint.x, queryPoint.y),
-          width: tapTolerance * 2 * scale,
-          height: tapTolerance * 2 * scale,
-        );
-        final result = await controller.queryRenderedFeaturesInRect(
-          rect,
-          layerIds,
-          null,
-        );
-        if (result.isNotEmpty) {
-          features = result;
-          break;
-        }
-      }
+      const double tapTolerance = 6.0;
+      final rect = Rect.fromCenter(
+        center: Offset(point.x, point.y),
+        width: tapTolerance * 2,
+        height: tapTolerance * 2,
+      );
+      final features = await controller.queryRenderedFeaturesInRect(
+        rect,
+        layerIds,
+        null,
+      );
 
       if (!mounted) return;
 
@@ -1194,10 +1254,15 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       if (kDebugMode) {
         AppConfig.debugPrint('DesktopMapScreen: marker tap id=$markerId');
       }
-      final marker =
-          _artMarkers.where((m) => m.id == markerId).toList(growable: false);
-      if (marker.isEmpty) return;
-      _handleMarkerTap(marker.first);
+      ArtMarker? selected;
+      for (final marker in _artMarkers) {
+        if (marker.id == markerId) {
+          selected = marker;
+          break;
+        }
+      }
+      if (selected == null) return;
+      _handleMarkerTap(selected);
       _queueOverlayAnchorRefresh();
     } catch (e) {
       if (kDebugMode) {
@@ -1206,18 +1271,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       }
       _hitboxLayerReady = false;
       _hitboxLayerEpoch = -1;
-      ArtMarker? fallbackMarker = await _fallbackPickMarkerAtPoint(point);
-      if (fallbackMarker == null && kIsWeb && devicePixelRatio > 1.01) {
-        fallbackMarker = await _fallbackPickMarkerAtPoint(
-          math.Point<double>(
-            point.x * devicePixelRatio,
-            point.y * devicePixelRatio,
-          ),
-        );
-      }
+      final fallbackMarker = await _fallbackPickMarkerAtPoint(point);
+      if (!mounted) return;
       if (fallbackMarker == null) return;
       _handleMarkerTap(fallbackMarker);
-      _queueOverlayAnchorRefresh();
     }
   }
 
@@ -1953,7 +2010,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     final controller = _mapController;
     _mapController = null;
-    controller?.dispose();
+    controller?.onFeatureTapped.remove(_handleMapFeatureTapped);
+    if (_featureTapBoundController == controller) {
+      _featureTapBoundController = null;
+    }
     _styleInitialized = false;
     _registeredMapImages.clear();
     _animationController.dispose();
@@ -1975,6 +2035,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _isBuilding = false;
     });
+    _ensureNearbyPanelAutoloadScheduled();
     assert(_assertMarkerModeInvariant());
     assert(_assertMarkerRenderModeInvariant());
     final themeProvider = Provider.of<ThemeProvider>(context);

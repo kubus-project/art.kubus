@@ -89,6 +89,8 @@ class _ArtMapViewState extends State<ArtMapView> {
   Future<String>? _resolvedStyleFuture;
   String? _resolvedStyleString;
   ml.MapLibreMapController? _controller;
+  Size? _lastWebLayoutSize;
+  Timer? _webResizeDebounce;
   int _styleRequestId = 0;
   bool _pendingStyleApply = false;
   bool _mapCreated = false;
@@ -134,6 +136,8 @@ class _ArtMapViewState extends State<ArtMapView> {
   void dispose() {
     _styleLoadTimer?.cancel();
     _styleLoadTimer = null;
+    _webResizeDebounce?.cancel();
+    _webResizeDebounce = null;
     final controller = _controller;
     _controller = null;
     if (controller != null) {
@@ -154,6 +158,37 @@ class _ArtMapViewState extends State<ArtMapView> {
       return true;
     }());
     super.dispose();
+  }
+
+  void _handleWebLayoutChanged(Size size) {
+    if (!kIsWeb) return;
+    if (size.width.isNaN ||
+        size.height.isNaN ||
+        !size.width.isFinite ||
+        !size.height.isFinite) {
+      return;
+    }
+    if (size.width <= 1 || size.height <= 1) return;
+    if (_lastWebLayoutSize == size) return;
+    _lastWebLayoutSize = size;
+
+    // Debounce: this can be called repeatedly during animated layout changes
+    // (e.g., opening the desktop sidebar). MapLibre GL JS requires an explicit
+    // resize to correctly re-measure its canvas within the container.
+    _webResizeDebounce?.cancel();
+    _webResizeDebounce = Timer(const Duration(milliseconds: 16), () {
+      if (!mounted) return;
+      final controller = _controller;
+      if (controller == null) return;
+      try {
+        controller.resizeWebMap();
+      } catch (e, st) {
+        AppConfig.debugPrint('ArtMapView: resizeWebMap failed: $e');
+        if (kDebugMode) {
+          AppConfig.debugPrint('ArtMapView: resizeWebMap stack: $st');
+        }
+      }
+    });
   }
 
   void _refreshStyleFuture() {
@@ -290,160 +325,174 @@ class _ArtMapViewState extends State<ArtMapView> {
       return const SizedBox.expand(child: ColoredBox(color: Colors.transparent));
     }
 
-    return SizedBox.expand(
-      child: Stack(
-        children: [
-          ml.MapLibreMap(
-            key: const ValueKey('art_map_view_maplibre'),
-            styleString: resolved,
-            initialCameraPosition: ml.CameraPosition(
-              target: ml.LatLng(
-                widget.initialCenter.latitude,
-                widget.initialCenter.longitude,
-              ),
-              zoom: widget.initialZoom,
-            ),
-            // Preserve the WebGL drawing buffer to improve context stability
-            // on Firefox, which is prone to context loss under memory pressure.
-            // This trades some performance for crash resilience.
-            webPreserveDrawingBuffer: kIsWeb,
-            // We don't use the plugin's annotation managers (we manage sources/layers
-            // directly). Disabling them avoids plugin-managed sources being added
-            // during style swaps, which can cause platform errors.
-            annotationOrder: const <ml.AnnotationType>[],
-            minMaxZoomPreference: ml.MinMaxZoomPreference(
-              widget.minZoom,
-              widget.maxZoom,
-            ),
-            rotateGesturesEnabled: widget.rotateGesturesEnabled,
-            scrollGesturesEnabled: widget.scrollGesturesEnabled,
-            zoomGesturesEnabled: widget.zoomGesturesEnabled,
-            tiltGesturesEnabled: widget.tiltGesturesEnabled,
-            // Use explicit value if provided, otherwise enable compass on
-            // mobile (for native CompassView) and disable on web (JS
-            // NavigationControl handles it via webgl_context_handler.js).
-            compassEnabled: widget.compassEnabled ?? !kIsWeb,
-            myLocationEnabled: false,
-            myLocationTrackingMode: ml.MyLocationTrackingMode.none,
-            onMapCreated: (controller) {
-              assert(() {
-                if (_mapCreated) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        _handleWebLayoutChanged(
+          Size(constraints.maxWidth, constraints.maxHeight),
+        );
+
+        return SizedBox.expand(
+          child: Stack(
+            children: [
+              ml.MapLibreMap(
+                key: const ValueKey('art_map_view_maplibre'),
+                styleString: resolved,
+                initialCameraPosition: ml.CameraPosition(
+                  target: ml.LatLng(
+                    widget.initialCenter.latitude,
+                    widget.initialCenter.longitude,
+                  ),
+                  zoom: widget.initialZoom,
+                ),
+                // Preserve the WebGL drawing buffer to improve context stability
+                // on Firefox, which is prone to context loss under memory pressure.
+                // This trades some performance for crash resilience.
+                webPreserveDrawingBuffer: kIsWeb,
+                // We don't use the plugin's annotation managers (we manage sources/layers
+                // directly). Disabling them avoids plugin-managed sources being added
+                // during style swaps, which can cause platform errors.
+                annotationOrder: const <ml.AnnotationType>[],
+                minMaxZoomPreference: ml.MinMaxZoomPreference(
+                  widget.minZoom,
+                  widget.maxZoom,
+                ),
+                rotateGesturesEnabled: widget.rotateGesturesEnabled,
+                scrollGesturesEnabled: widget.scrollGesturesEnabled,
+                zoomGesturesEnabled: widget.zoomGesturesEnabled,
+                tiltGesturesEnabled: widget.tiltGesturesEnabled,
+                // Use explicit value if provided, otherwise enable compass on
+                // mobile (for native CompassView) and disable on web (JS
+                // NavigationControl handles it via webgl_context_handler.js).
+                compassEnabled: widget.compassEnabled ?? !kIsWeb,
+                myLocationEnabled: false,
+                myLocationTrackingMode: ml.MyLocationTrackingMode.none,
+                onMapCreated: (controller) {
+                  assert(() {
+                    if (_mapCreated) {
+                      AppConfig.debugPrint(
+                        'ArtMapView: map created more than once for same State',
+                      );
+                      return false;
+                    }
+                    _mapCreated = true;
+                    _debugMapId = ++_debugMapCreateSeq;
+                    return true;
+                  }());
+                  _controller = controller;
+                  _resetStyleLoadState();
+                  _startStyleHealthCheck();
                   AppConfig.debugPrint(
-                    'ArtMapView: map created more than once for same State',
+                    'ArtMapView: map created (id=$_debugMapId, style="$resolved", platform=${defaultTargetPlatform.name}, web=$kIsWeb)',
                   );
-                  return false;
-                }
-                _mapCreated = true;
-                _debugMapId = ++_debugMapCreateSeq;
-                return true;
-              }());
-              _controller = controller;
-              _resetStyleLoadState();
-              _startStyleHealthCheck();
-              AppConfig.debugPrint(
-                'ArtMapView: map created (id=$_debugMapId, style="$resolved", platform=${defaultTargetPlatform.name}, web=$kIsWeb)',
-              );
-              widget.onMapCreated(controller);
-              if (kIsWeb) {
-                // MapLibre GL JS sometimes initializes while the element is still
-                // measuring (0x0) during the first frame, especially when the
-                // map is mounted behind onboarding / tab transitions. A forced
-                // resize after layout makes the map reliably paint on web.
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  try {
-                    controller.forceResizeWebMap();
-                  } catch (e, st) {
-                    AppConfig.debugPrint('ArtMapView: forceResizeWebMap failed: $e');
-                    if (kDebugMode) {
-                      AppConfig.debugPrint('ArtMapView: forceResizeWebMap stack: $st');
+                  widget.onMapCreated(controller);
+                  if (kIsWeb) {
+                    // MapLibre GL JS sometimes initializes while the element is still
+                    // measuring (0x0) during the first frame, especially when the
+                    // map is mounted behind onboarding / tab transitions. A forced
+                    // resize after layout makes the map reliably paint on web.
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      try {
+                        controller.forceResizeWebMap();
+                      } catch (e, st) {
+                        AppConfig.debugPrint(
+                            'ArtMapView: forceResizeWebMap failed: $e');
+                        if (kDebugMode) {
+                          AppConfig.debugPrint(
+                              'ArtMapView: forceResizeWebMap stack: $st');
+                        }
+                      }
+                    });
+                  }
+                },
+                onStyleLoadedCallback: () {
+                  _styleStopwatch?.stop();
+                  _styleLoadTimer?.cancel();
+                  final elapsedMs = _styleStopwatch?.elapsedMilliseconds;
+                  if (elapsedMs != null) {
+                    AppConfig.debugPrint(
+                        'ArtMapView: style loaded in ${elapsedMs}ms');
+                  } else {
+                    AppConfig.debugPrint('ArtMapView: style loaded');
+                  }
+                  if (kIsWeb) {
+                    try {
+                      _controller?.forceResizeWebMap();
+                    } catch (e, st) {
+                      AppConfig.debugPrint(
+                          'ArtMapView: forceResizeWebMap after style load failed: $e');
+                      if (kDebugMode) {
+                        AppConfig.debugPrint(
+                            'ArtMapView: resize-after-style stack: $st');
+                      }
                     }
                   }
-                });
-              }
-            },
-            onStyleLoadedCallback: () {
-              _styleStopwatch?.stop();
-              _styleLoadTimer?.cancel();
-              final elapsedMs = _styleStopwatch?.elapsedMilliseconds;
-              if (elapsedMs != null) {
-                AppConfig.debugPrint('ArtMapView: style loaded in ${elapsedMs}ms');
-              } else {
-                AppConfig.debugPrint('ArtMapView: style loaded');
-              }
-              if (kIsWeb) {
-                try {
-                  _controller?.forceResizeWebMap();
-                } catch (e, st) {
-                  AppConfig.debugPrint('ArtMapView: forceResizeWebMap after style load failed: $e');
-                  if (kDebugMode) {
-                    AppConfig.debugPrint('ArtMapView: resize-after-style stack: $st');
+                  if (_pendingStyleApply) {
+                    _pendingStyleApply = false;
+                    _resetStyleLoadState();
+                    _startStyleHealthCheck();
+                    unawaited(_applyStyleToController());
+                    return;
                   }
-                }
-              }
-              if (_pendingStyleApply) {
-                _pendingStyleApply = false;
-                _resetStyleLoadState();
-                _startStyleHealthCheck();
-                unawaited(_applyStyleToController());
-                return;
-              }
-              if (!mounted) return;
-              setState(() {
-                _styleLoaded = true;
-                _styleFailed = false;
-                _styleFailureReason = null;
-              });
-              widget.onStyleLoaded?.call();
-            },
-            onCameraMove: widget.onCameraMove,
-            onCameraIdle: widget.onCameraIdle,
-            onMapClick: widget.onMapClick == null
-                ? null
-                : (math.Point<double> point, ml.LatLng latLng) {
-                    if (!_styleLoaded) return;
-                    widget.onMapClick!(
-                      point,
-                      ll.LatLng(latLng.latitude, latLng.longitude),
-                    );
-                  },
-            onMapLongClick: widget.onMapLongClick == null
-                ? null
-                : (math.Point<double> point, ml.LatLng latLng) {
-                    if (!_styleLoaded) return;
-                    widget.onMapLongClick!(
-                      point,
-                      ll.LatLng(latLng.latitude, latLng.longitude),
-                    );
-                  },
-            trackCameraPosition: true,
-          ),
-          if (_styleFailed && !_styleLoaded)
-            Positioned.fill(
-              child: IgnorePointer(
-                ignoring: false,
-                child: Container(
-                  color: Colors.black.withValues(alpha: 0.15),
-                  alignment: Alignment.center,
-                  padding: const EdgeInsets.all(20),
-                  child: _StyleErrorCard(
-                    reason: _styleFailureReason ?? 'Map style failed to load.',
-                    onRetry: () {
-                      if (!mounted) return;
-                      setState(() {
-                        _styleFailed = false;
-                        _styleFailureReason = null;
-                      });
-                      _resetStyleLoadState();
-                      _refreshStyleFuture();
-                      _startStyleHealthCheck();
-                      unawaited(_applyStyleToController());
-                    },
+                  if (!mounted) return;
+                  setState(() {
+                    _styleLoaded = true;
+                    _styleFailed = false;
+                    _styleFailureReason = null;
+                  });
+                  widget.onStyleLoaded?.call();
+                },
+                onCameraMove: widget.onCameraMove,
+                onCameraIdle: widget.onCameraIdle,
+                onMapClick: widget.onMapClick == null
+                    ? null
+                    : (math.Point<double> point, ml.LatLng latLng) {
+                        if (!_styleLoaded) return;
+                        widget.onMapClick!(
+                          point,
+                          ll.LatLng(latLng.latitude, latLng.longitude),
+                        );
+                      },
+                onMapLongClick: widget.onMapLongClick == null
+                    ? null
+                    : (math.Point<double> point, ml.LatLng latLng) {
+                        if (!_styleLoaded) return;
+                        widget.onMapLongClick!(
+                          point,
+                          ll.LatLng(latLng.latitude, latLng.longitude),
+                        );
+                      },
+                trackCameraPosition: true,
+              ),
+              if (_styleFailed && !_styleLoaded)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    ignoring: false,
+                    child: Container(
+                      color: Colors.black.withValues(alpha: 0.15),
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.all(20),
+                      child: _StyleErrorCard(
+                        reason:
+                            _styleFailureReason ?? 'Map style failed to load.',
+                        onRetry: () {
+                          if (!mounted) return;
+                          setState(() {
+                            _styleFailed = false;
+                            _styleFailureReason = null;
+                          });
+                          _resetStyleLoadState();
+                          _refreshStyleFuture();
+                          _startStyleHealthCheck();
+                          unawaited(_applyStyleToController());
+                        },
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-        ],
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

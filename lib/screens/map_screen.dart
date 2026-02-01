@@ -285,6 +285,10 @@ class _MapScreenState extends State<MapScreen>
   bool _isBuilding = false;
   bool _pendingSafeSetState = false;
 
+  ml.MapLibreMapController? _featureTapBoundController;
+  DateTime? _lastFeatureTapAt;
+  math.Point<double>? _lastFeatureTapPoint;
+
   // Camera helpers
   LatLng _cameraCenter = const LatLng(46.056946, 14.505751);
   double _lastZoom = 16.0;
@@ -330,6 +334,47 @@ class _MapScreenState extends State<MapScreen>
     // pointer events from leaking through overlays to the map DOM element.
     if (!kIsWeb || !enabled) return child;
     return PointerInterceptor(child: child);
+  }
+
+  void _bindFeatureTapController(ml.MapLibreMapController controller) {
+    if (_featureTapBoundController == controller) return;
+    _featureTapBoundController?.onFeatureTapped.remove(_handleMapFeatureTapped);
+    _featureTapBoundController = controller;
+    controller.onFeatureTapped.add(_handleMapFeatureTapped);
+  }
+
+  void _handleMapFeatureTapped(
+    math.Point<double> point,
+    ml.LatLng coordinates,
+    String id,
+    String layerId,
+    ml.Annotation? annotation,
+  ) {
+    if (!mounted) return;
+
+    _lastFeatureTapAt = DateTime.now();
+    _lastFeatureTapPoint = point;
+
+    if (id.startsWith('cluster:')) {
+      final nextZoom = math.min(_lastZoom + 2.0, 18.0);
+      unawaited(
+        _animateMapTo(
+          LatLng(coordinates.latitude, coordinates.longitude),
+          zoom: nextZoom,
+        ),
+      );
+      return;
+    }
+
+    ArtMarker? selected;
+    for (final marker in _artMarkers) {
+      if (marker.id == id) {
+        selected = marker;
+        break;
+      }
+    }
+    if (selected == null) return;
+    _handleMarkerTap(selected);
   }
 
   Future<void> _handleMapStyleLoaded(ThemeProvider themeProvider) async {
@@ -991,7 +1036,10 @@ class _MapScreenState extends State<MapScreen>
     _tabProvider = null;
     final controller = _mapController;
     _mapController = null;
-    controller?.dispose();
+    controller?.onFeatureTapped.remove(_handleMapFeatureTapped);
+    if (_featureTapBoundController == controller) {
+      _featureTapBoundController = null;
+    }
     _styleInitialized = false;
     _registeredMapImages.clear();
     _timer?.cancel();
@@ -2928,6 +2976,8 @@ class _MapScreenState extends State<MapScreen>
     final tileProviders = Provider.of<TileProviders?>(context, listen: false);
     final styleAsset = tileProviders?.mapStyleAsset(isDarkMode: isDark) ??
         MapStyleService.primaryStyleRef(isDarkMode: isDark);
+    final disableGesturesForOverlays =
+        _showMapTutorial || _isSheetBlocking || _isSheetInteracting;
 
     return ArtMapView(
       initialCenter: _currentPosition ?? _cameraCenter,
@@ -2936,6 +2986,10 @@ class _MapScreenState extends State<MapScreen>
       maxZoom: 24.0,
       isDarkMode: isDark,
       styleAsset: styleAsset,
+      rotateGesturesEnabled: !disableGesturesForOverlays,
+      scrollGesturesEnabled: !disableGesturesForOverlays,
+      zoomGesturesEnabled: !disableGesturesForOverlays,
+      tiltGesturesEnabled: !disableGesturesForOverlays,
       onCameraMove: _handleCameraMove,
       onCameraIdle: _handleCameraIdle,
       onMapClick: (point, latLng) {
@@ -2943,6 +2997,7 @@ class _MapScreenState extends State<MapScreen>
       },
       onMapCreated: (controller) {
         _mapController = controller;
+        _bindFeatureTapController(controller);
         _styleInitialized = false;
         _hitboxLayerReady = false;
         _registeredMapImages.clear();
@@ -3148,34 +3203,37 @@ class _MapScreenState extends State<MapScreen>
   ) async {
     final controller = _mapController;
     if (controller == null) return;
-    final double devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
-    if (_styleInitializationInProgress || !_styleInitialized) {
-      ArtMarker? fallbackMarker = await _fallbackPickMarkerAtPoint(point);
-      if (fallbackMarker == null && kIsWeb && devicePixelRatio > 1.01) {
-        fallbackMarker = await _fallbackPickMarkerAtPoint(
-          math.Point<double>(
-            point.x * devicePixelRatio,
-            point.y * devicePixelRatio,
-          ),
-        );
+
+    final lastAt = _lastFeatureTapAt;
+    final lastPoint = _lastFeatureTapPoint;
+    if (lastAt != null && lastPoint != null) {
+      final ageMs = DateTime.now().difference(lastAt).inMilliseconds;
+      if (ageMs >= 0 && ageMs < 60) {
+        final dx = (point.x - lastPoint.x).abs();
+        final dy = (point.y - lastPoint.y).abs();
+        if (dx < 2 && dy < 2) return;
       }
+    }
+
+    // On web, taps that hit interactive style layers are delivered via
+    // `controller.onFeatureTapped`. Treat `onMapClick` as a background tap.
+    if (kIsWeb) {
+      _dismissSelectedMarker();
+      return;
+    }
+
+    if (_styleInitializationInProgress || !_styleInitialized) {
+      final fallbackMarker = await _fallbackPickMarkerAtPoint(point);
+      if (!mounted) return;
       if (fallbackMarker != null) {
         _handleMarkerTap(fallbackMarker);
       }
       return;
     }
-    final double? dpr = kDebugMode ? devicePixelRatio : null;
 
     if (!await _canQueryMarkerHitbox()) {
-      ArtMarker? fallbackMarker = await _fallbackPickMarkerAtPoint(point);
-      if (fallbackMarker == null && kIsWeb && devicePixelRatio > 1.01) {
-        fallbackMarker = await _fallbackPickMarkerAtPoint(
-          math.Point<double>(
-            point.x * devicePixelRatio,
-            point.y * devicePixelRatio,
-          ),
-        );
-      }
+      final fallbackMarker = await _fallbackPickMarkerAtPoint(point);
+      if (!mounted) return;
       if (fallbackMarker != null) {
         _handleMarkerTap(fallbackMarker);
       }
@@ -3184,6 +3242,7 @@ class _MapScreenState extends State<MapScreen>
 
     // Debug instrumentation (kDebugMode only)
     if (kDebugMode) {
+      final dpr = MediaQuery.of(context).devicePixelRatio;
       AppConfig.debugPrint(
         'MapScreen: tap at (${point.x.toStringAsFixed(1)}, ${point.y.toStringAsFixed(1)}) '
         'pitch=${_lastPitch.toStringAsFixed(1)} bearing=${_lastBearing.toStringAsFixed(1)} '
@@ -3196,35 +3255,18 @@ class _MapScreenState extends State<MapScreen>
       final layerIds = <String>[_markerHitboxLayerId];
 
       // Use a small rect (point-like) so the hitbox layer controls the tap area.
-      final double tapTolerance = kIsWeb ? 10.0 : 6.0;
-      final List<math.Point<double>> queryPoints = <math.Point<double>>[point];
-      if (kIsWeb && devicePixelRatio > 1.01) {
-        queryPoints.add(
-          math.Point<double>(
-            point.x * devicePixelRatio,
-            point.y * devicePixelRatio,
-          ),
-        );
-      }
+      const double tapTolerance = 6.0;
+      final rect = Rect.fromCenter(
+        center: Offset(point.x, point.y),
+        width: tapTolerance * 2,
+        height: tapTolerance * 2,
+      );
 
-      List features = const <dynamic>[];
-      for (final queryPoint in queryPoints) {
-        final scale = identical(queryPoint, point) ? 1.0 : devicePixelRatio;
-        final rect = Rect.fromCenter(
-          center: Offset(queryPoint.x, queryPoint.y),
-          width: tapTolerance * 2 * scale,
-          height: tapTolerance * 2 * scale,
-        );
-        final result = await controller.queryRenderedFeaturesInRect(
-          rect,
-          layerIds,
-          null,
-        );
-        if (result.isNotEmpty) {
-          features = result;
-          break;
-        }
-      }
+      final features = await controller.queryRenderedFeaturesInRect(
+        rect,
+        layerIds,
+        null,
+      );
 
       if (!mounted) return;
 
@@ -3279,25 +3321,23 @@ class _MapScreenState extends State<MapScreen>
       if (kDebugMode) {
         AppConfig.debugPrint('MapScreen: marker tap id=$markerId');
       }
-      final marker =
-          _artMarkers.where((m) => m.id == markerId).toList(growable: false);
-      if (marker.isEmpty) return;
-      _handleMarkerTap(marker.first);
+      ArtMarker? selected;
+      for (final marker in _artMarkers) {
+        if (marker.id == markerId) {
+          selected = marker;
+          break;
+        }
+      }
+      if (selected == null) return;
+      _handleMarkerTap(selected);
     } catch (e) {
       if (kDebugMode) {
         AppConfig.debugPrint('MapScreen: queryRenderedFeatures failed: $e');
       }
       _hitboxLayerReady = false;
       _hitboxLayerEpoch = -1;
-      ArtMarker? fallbackMarker = await _fallbackPickMarkerAtPoint(point);
-      if (fallbackMarker == null && kIsWeb && devicePixelRatio > 1.01) {
-        fallbackMarker = await _fallbackPickMarkerAtPoint(
-          math.Point<double>(
-            point.x * devicePixelRatio,
-            point.y * devicePixelRatio,
-          ),
-        );
-      }
+      final fallbackMarker = await _fallbackPickMarkerAtPoint(point);
+      if (!mounted) return;
       if (fallbackMarker == null) return;
       _handleMarkerTap(fallbackMarker);
     }
