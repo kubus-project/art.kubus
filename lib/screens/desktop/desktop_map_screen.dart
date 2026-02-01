@@ -2467,13 +2467,21 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                       safePadding: tooltipMargin,
                       child: child,
                     )
-                  : Tooltip(
-                      message: tooltip,
-                      margin: tooltipMargin,
-                      preferBelow: tooltipPreferBelow,
-                      verticalOffset: tooltipVerticalOffset ?? 0,
-                      child: child,
-                    )),
+                  : (kIsWeb
+                      ? _HoverTooltip(
+                          message: tooltip,
+                          preferBelow: tooltipPreferBelow,
+                          verticalOffset: tooltipVerticalOffset,
+                          safePadding: tooltipMargin,
+                          child: child,
+                        )
+                      : Tooltip(
+                          message: tooltip,
+                          margin: tooltipMargin,
+                          preferBelow: tooltipPreferBelow,
+                          verticalOffset: tooltipVerticalOffset ?? 0,
+                          child: child,
+                        ))),
         ),
       ),
     );
@@ -5986,38 +5994,39 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final bg = scheme.surface.withValues(alpha: isDark ? 0.46 : 0.52);
     final cursor =
         onTap == null ? SystemMouseCursors.basic : SystemMouseCursors.click;
-    return MouseRegion(
-      cursor: cursor,
-      child: Tooltip(
-        message: tooltip,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
+    final button = Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(999),
-            onTap: onTap,
-            child: Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(
-                  color: scheme.outlineVariant.withValues(alpha: 0.35),
-                ),
-              ),
-              child: LiquidGlassPanel(
-                padding: EdgeInsets.zero,
-                margin: EdgeInsets.zero,
-                borderRadius: BorderRadius.circular(999),
-                showBorder: false,
-                backgroundColor: bg,
-                child: Center(
-                  child: Icon(icon, size: 16, color: scheme.onSurface),
-                ),
-              ),
+            border: Border.all(
+              color: scheme.outlineVariant.withValues(alpha: 0.35),
+            ),
+          ),
+          child: LiquidGlassPanel(
+            padding: EdgeInsets.zero,
+            margin: EdgeInsets.zero,
+            borderRadius: BorderRadius.circular(999),
+            showBorder: false,
+            backgroundColor: bg,
+            child: Center(
+              child: Icon(icon, size: 16, color: scheme.onSurface),
             ),
           ),
         ),
       ),
+    );
+
+    return MouseRegion(
+      cursor: cursor,
+      child: kIsWeb
+          ? _HoverTooltip(message: tooltip, child: button)
+          : Tooltip(message: tooltip, child: button),
     );
   }
 
@@ -6690,6 +6699,8 @@ class _RightEdgeAlignedTooltipState extends State<_RightEdgeAlignedTooltip> {
 
   void _show() {
     if (_entry != null) return;
+    final message = widget.message.trim();
+    if (message.isEmpty) return;
 
     final overlay = Overlay.of(context, rootOverlay: true);
 
@@ -6755,7 +6766,13 @@ class _RightEdgeAlignedTooltipState extends State<_RightEdgeAlignedTooltip> {
                     child: Container(
                       padding: padding,
                       decoration: decoration,
-                      child: Text(widget.message, style: textStyle),
+                      child: Text(
+                        message,
+                        style: textStyle,
+                        softWrap: true,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ),
                 ),
@@ -6769,6 +6786,144 @@ class _RightEdgeAlignedTooltipState extends State<_RightEdgeAlignedTooltip> {
     overlay.insert(_entry!);
 
     // Auto-hide to match native tooltip behavior.
+    _hideTimer?.cancel();
+    _hideTimer = Timer(const Duration(seconds: 3), _remove);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CompositedTransformTarget(
+      link: _link,
+      child: MouseRegion(
+        onEnter: (_) => _show(),
+        onExit: (_) => _remove(),
+        child: GestureDetector(
+          behavior: HitTestBehavior.deferToChild,
+          onLongPress: _show,
+          child: widget.child,
+        ),
+      ),
+    );
+  }
+}
+
+/// Web-safe tooltip used to avoid CanvasKit layout exceptions with the
+/// default Tooltip widget on hover.
+class _HoverTooltip extends StatefulWidget {
+  const _HoverTooltip({
+    required this.message,
+    required this.child,
+    this.preferBelow,
+    this.verticalOffset,
+    this.safePadding,
+  });
+
+  final String message;
+  final Widget child;
+  final bool? preferBelow;
+  final double? verticalOffset;
+  final EdgeInsets? safePadding;
+
+  @override
+  State<_HoverTooltip> createState() => _HoverTooltipState();
+}
+
+class _HoverTooltipState extends State<_HoverTooltip> {
+  final LayerLink _link = LayerLink();
+  OverlayEntry? _entry;
+  Timer? _hideTimer;
+
+  @override
+  void dispose() {
+    _hideTimer?.cancel();
+    _remove();
+    super.dispose();
+  }
+
+  void _remove() {
+    _entry?.remove();
+    _entry = null;
+  }
+
+  void _show() {
+    if (_entry != null) return;
+    final message = widget.message.trim();
+    if (message.isEmpty) return;
+
+    final overlay = Overlay.of(context, rootOverlay: true);
+    final theme = Theme.of(context);
+    final tooltipTheme = TooltipTheme.of(context);
+    final preferBelow = widget.preferBelow ?? tooltipTheme.preferBelow ?? true;
+    final verticalOffset =
+        widget.verticalOffset ?? tooltipTheme.verticalOffset ?? 24.0;
+
+    final safe =
+        widget.safePadding ?? const EdgeInsets.symmetric(horizontal: 24);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final maxWidth = math.max(0.0, screenWidth - safe.left - safe.right);
+    const double tooltipWidthCap = 240;
+    final cappedMaxWidth = math.min(maxWidth, tooltipWidthCap);
+
+    final textStyle = tooltipTheme.textStyle ??
+        theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onInverseSurface,
+        );
+
+    final decoration = tooltipTheme.decoration ??
+        BoxDecoration(
+          color: theme.colorScheme.inverseSurface,
+          borderRadius: BorderRadius.circular(8),
+        );
+
+    final padding = tooltipTheme.padding ??
+        const EdgeInsets.symmetric(horizontal: 12, vertical: 8);
+
+    _entry = OverlayEntry(
+      builder: (context) {
+        return Positioned.fill(
+          child: IgnorePointer(
+            child: CompositedTransformFollower(
+              link: _link,
+              showWhenUnlinked: false,
+              targetAnchor: preferBelow
+                  ? Alignment.bottomCenter
+                  : Alignment.topCenter,
+              followerAnchor:
+                  preferBelow ? Alignment.topCenter : Alignment.bottomCenter,
+              offset: Offset(
+                0,
+                preferBelow ? verticalOffset : -verticalOffset,
+              ),
+              child: UnconstrainedBox(
+                alignment:
+                    preferBelow ? Alignment.topCenter : Alignment.bottomCenter,
+                constrainedAxis: Axis.horizontal,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: cappedMaxWidth),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: Container(
+                      padding: padding,
+                      decoration: decoration,
+                      child: Text(
+                        message,
+                        style: textStyle,
+                        softWrap: true,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    overlay.insert(_entry!);
+
     _hideTimer?.cancel();
     _hideTimer = Timer(const Duration(seconds: 3), _remove);
   }
