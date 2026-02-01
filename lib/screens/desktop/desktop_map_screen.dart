@@ -3889,7 +3889,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final scheme = Theme.of(context).colorScheme;
     final accent = themeProvider.accentColor;
 
-    final basePosition = _userLocation ?? _effectiveCenter;
+    final basePosition =
+        _nearbySidebarAnchor ?? _userLocation ?? _effectiveCenter;
     final sorted = List<Artwork>.of(artworks)
       ..sort((a, b) {
         final da = _calculateDistance(basePosition, a.position);
@@ -3967,7 +3968,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                       final artwork = sorted[index];
                       final cover =
                           ArtworkMediaResolver.resolveCover(artwork: artwork);
-                      final meters =
+                        final meters =
                           _calculateDistance(basePosition, artwork.position);
                       final distanceText = _formatDistance(meters);
 
@@ -4423,16 +4424,19 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       }).toList();
     }
 
-    final basePosition = _userLocation ?? _effectiveCenter;
+    final basePosition = _userLocation;
     switch (_selectedFilter) {
       case 'nearby':
-        final radiusMeters = (_effectiveSearchRadiusKm * 1000).clamp(0, 500000);
-        filtered = filtered
-            .where(
-              (artwork) =>
-                  artwork.getDistanceFrom(basePosition) <= radiusMeters,
-            )
-            .toList();
+        if (basePosition != null) {
+          final radiusMeters =
+              (_effectiveSearchRadiusKm * 1000).clamp(0, 500000);
+          filtered = filtered
+              .where(
+                (artwork) =>
+                    artwork.getDistanceFrom(basePosition) <= radiusMeters,
+              )
+              .toList();
+        }
         break;
       case 'discovered':
         filtered = filtered.where((artwork) => artwork.isDiscovered).toList();
@@ -4494,8 +4498,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     switch (_selectedSort) {
       case 'distance':
         final center = basePosition;
-        filtered.sort((a, b) =>
-            a.getDistanceFrom(center).compareTo(b.getDistanceFrom(center)));
+        if (center != null) {
+          filtered.sort((a, b) =>
+              a.getDistanceFrom(center).compareTo(b.getDistanceFrom(center)));
+        }
         break;
       case 'popularity':
         filtered.sort((a, b) => b.viewsCount.compareTo(a.viewsCount));
