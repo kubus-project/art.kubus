@@ -14,6 +14,7 @@ void main() {
   });
 
   test('getProfileByWallet does not auto-issue auth for viewed wallet', () async {
+    const testWallet = '4Nd1mYbF7kYgU7kD3bcd1q2w4gS7y8Z9xKLMNPQRSTU';
     final requests = <http.Request>[];
 
     final api = BackendApiService();
@@ -24,7 +25,7 @@ void main() {
       return http.Response(
         jsonEncode(<String, Object?>{
           'data': <String, Object?>{
-            'walletAddress': 'someone_else_wallet',
+            'walletAddress': testWallet,
             'username': 'someone',
             'displayName': 'Someone Else',
           },
@@ -34,7 +35,7 @@ void main() {
       );
     }));
 
-    await api.getProfileByWallet('someone_else_wallet');
+    await api.getProfileByWallet(testWallet);
 
     // The critical behavior: viewing a profile must not trigger auth issuance
     // (no POSTs to register/issue-token, no extra calls beyond the profile fetch).

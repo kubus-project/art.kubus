@@ -9,6 +9,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/artwork_provider.dart';
@@ -464,7 +465,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final shellScope = DesktopShellScope.of(context);
     if (shellScope == null) return;
 
-    setState(() {
+    _safeSetState(() {
       _isNearbyPanelOpen = true;
       _nearbySidebarSignature = null;
       _nearbySidebarSyncScheduled = false;
@@ -481,7 +482,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   void _closeNearbyArtPanel() {
     final shellScope = DesktopShellScope.of(context);
     if (shellScope == null) return;
-    setState(() {
+    _safeSetState(() {
       _isNearbyPanelOpen = false;
       _nearbySidebarSyncScheduled = false;
       _nearbySidebarAnchor = null;
@@ -504,6 +505,16 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       return;
     }
     setState(fn);
+  }
+
+  Widget _wrapPointerInterceptor({
+    required Widget child,
+    bool enabled = true,
+  }) {
+    // On web, MapLibre is a platform view; PointerInterceptor prevents
+    // pointer events from leaking through overlays to the map DOM element.
+    if (!kIsWeb || !enabled) return child;
+    return PointerInterceptor(child: child);
   }
 
   String _nearbySidebarSignatureFor(
@@ -952,6 +963,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         null,
       );
 
+      if (!mounted) return;
+
       if (kDebugMode && features.isNotEmpty) {
         final dynamic first = features.first;
         final propsRaw = first is Map ? first['properties'] : null;
@@ -967,6 +980,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           AppConfig.debugPrint('DesktopMapScreen: no features in rect, trying fallback picker');
         }
         final fallbackMarker = await _fallbackPickMarkerAtPoint(point);
+        if (!mounted) return;
         if (fallbackMarker != null) {
           _handleMarkerTap(fallbackMarker);
           unawaited(_syncMapMarkers(themeProvider: themeProvider));
@@ -1047,7 +1061,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     ArtMarker? best;
     double bestDistance = maxDistance;
 
-    for (final marker in _artMarkers) {
+    final visibleMarkers = _artMarkers.where(
+      (marker) => _markerLayerVisibility[marker.type] ?? true,
+    );
+
+    for (final marker in visibleMarkers) {
       try {
         final screen = await controller.toScreenLocation(
           ml.LatLng(marker.position.latitude, marker.position.longitude),
@@ -1718,19 +1736,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           ),
 
           // Top bar - absorb pointer events to prevent map interaction
-          GestureDetector(
-            behavior: HitTestBehavior.deferToChild,
-            onTap: () {}, // no-op but ensures child receives events
-            child: _buildTopBar(themeProvider, animationTheme),
-          ),
+          _buildTopBar(themeProvider, animationTheme),
 
           // Search suggestions overlay - absorb pointer events
           if (_showSearchOverlay)
-            GestureDetector(
-              behavior: HitTestBehavior.deferToChild,
-              onTap: () => setState(() => _showSearchOverlay = false),
-              child: _buildSearchOverlay(themeProvider),
-            ),
+            _buildSearchOverlay(themeProvider),
 
           // Left side panel (artwork/exhibition details or filters)
           AnimatedPositioned(
@@ -1744,14 +1754,17 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             top: 80,
             bottom: 24,
             width: 380,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () {}, // absorb taps
-              child: _selectedExhibition != null
-                  ? _buildExhibitionDetailPanel(themeProvider, animationTheme)
-                  : _selectedArtwork != null
-                      ? _buildArtworkDetailPanel(themeProvider, animationTheme)
-                      : _buildFiltersPanel(themeProvider),
+            child: _wrapPointerInterceptor(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {}, // absorb taps
+                child: _selectedExhibition != null
+                    ? _buildExhibitionDetailPanel(themeProvider, animationTheme)
+                    : _selectedArtwork != null
+                        ? _buildArtworkDetailPanel(
+                            themeProvider, animationTheme)
+                        : _buildFiltersPanel(themeProvider),
+              ),
             ),
           ),
 
@@ -1764,10 +1777,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             bottom: 24,
             child: Align(
               alignment: Alignment.bottomRight,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () {}, // absorb taps
-                child: _buildMapControls(themeProvider),
+              child: _wrapPointerInterceptor(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {}, // absorb taps
+                  child: _buildMapControls(themeProvider),
+                ),
               ),
             ),
           ),
@@ -1785,42 +1800,48 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               return Positioned(
                 left: leftOffset,
                 bottom: 24,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () {}, // absorb taps
-                  child: _buildDiscoveryCard(themeProvider, taskProvider),
+                child: _wrapPointerInterceptor(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {}, // absorb taps
+                    child: _buildDiscoveryCard(themeProvider, taskProvider),
+                  ),
                 ),
               );
             },
           ),
 
           if (_showMapTutorial)
-            const Positioned.fill(
-              child: ModalBarrier(
-                dismissible: false,
-                color: Colors.transparent,
+            Positioned.fill(
+              child: _wrapPointerInterceptor(
+                child: const ModalBarrier(
+                  dismissible: false,
+                  color: Colors.transparent,
+                ),
               ),
             ),
 
           if (_showMapTutorial)
             Positioned.fill(
-              child: Builder(
-                builder: (context) {
-                  final l10n = AppLocalizations.of(context)!;
-                  final steps = _buildMapTutorialSteps(l10n);
-                  final idx = _mapTutorialIndex.clamp(0, steps.length - 1);
-                  return InteractiveTutorialOverlay(
-                    steps: steps,
-                    currentIndex: idx,
-                    onNext: _tutorialNext,
-                    onBack: _tutorialBack,
-                    onSkip: _dismissMapTutorial,
-                    skipLabel: l10n.commonSkip,
-                    backLabel: l10n.commonBack,
-                    nextLabel: l10n.commonNext,
-                    doneLabel: l10n.commonDone,
-                  );
-                },
+              child: _wrapPointerInterceptor(
+                child: Builder(
+                  builder: (context) {
+                    final l10n = AppLocalizations.of(context)!;
+                    final steps = _buildMapTutorialSteps(l10n);
+                    final idx = _mapTutorialIndex.clamp(0, steps.length - 1);
+                    return InteractiveTutorialOverlay(
+                      steps: steps,
+                      currentIndex: idx,
+                      onNext: _tutorialNext,
+                      onBack: _tutorialBack,
+                      onSkip: _dismissMapTutorial,
+                      skipLabel: l10n.commonSkip,
+                      backLabel: l10n.commonBack,
+                      nextLabel: l10n.commonNext,
+                      doneLabel: l10n.commonDone,
+                    );
+                  },
+                ),
               ),
             ),
         ],
@@ -2186,120 +2207,122 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       top: 0,
       left: 0,
       right: 0,
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            KubusSpacing.lg,
-            KubusSpacing.sm + KubusSpacing.xs,
-            KubusSpacing.lg,
-            KubusSpacing.sm + KubusSpacing.xs,
-          ),
-          child: LiquidGlassPanel(
-            padding: const EdgeInsets.symmetric(
-              horizontal: KubusSpacing.md + KubusSpacing.xs,
-              vertical: KubusSpacing.md,
+      child: _wrapPointerInterceptor(
+        child: SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              KubusSpacing.lg,
+              KubusSpacing.sm + KubusSpacing.xs,
+              KubusSpacing.lg,
+              KubusSpacing.sm + KubusSpacing.xs,
             ),
-            margin: EdgeInsets.zero,
-            borderRadius: BorderRadius.circular(KubusRadius.lg),
-            blurSigma: KubusGlassEffects.blurSigmaLight,
-            backgroundColor:
-                scheme.surface.withValues(alpha: isDark ? 0.20 : 0.14),
-            showBorder: true,
-            child: Row(
-              children: [
-                // Logo and title
-                Row(
-                  children: [
-                    const AppLogo(
-                      width: KubusSpacing.xl + KubusSpacing.xs,
-                      height: KubusSpacing.xl + KubusSpacing.xs,
-                    ),
-                    const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
-                    Text(
-                      l10n.desktopMapTitleDiscover,
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        color: scheme.onSurface,
+            child: LiquidGlassPanel(
+              padding: const EdgeInsets.symmetric(
+                horizontal: KubusSpacing.md + KubusSpacing.xs,
+                vertical: KubusSpacing.md,
+              ),
+              margin: EdgeInsets.zero,
+              borderRadius: BorderRadius.circular(KubusRadius.lg),
+              blurSigma: KubusGlassEffects.blurSigmaLight,
+              backgroundColor:
+                  scheme.surface.withValues(alpha: isDark ? 0.20 : 0.14),
+              showBorder: true,
+              child: Row(
+                children: [
+                  // Logo and title
+                  Row(
+                    children: [
+                      const AppLogo(
+                        width: KubusSpacing.xl + KubusSpacing.xs,
+                        height: KubusSpacing.xl + KubusSpacing.xs,
                       ),
-                    ),
-                  ],
-                ),
+                      const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
+                      Text(
+                        l10n.desktopMapTitleDiscover,
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          color: scheme.onSurface,
+                        ),
+                      ),
+                    ],
+                  ),
 
-                const SizedBox(width: KubusSpacing.xl + KubusSpacing.sm),
+                  const SizedBox(width: KubusSpacing.xl + KubusSpacing.sm),
 
-                // Search bar
-                Expanded(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 480),
-                    child: CompositedTransformTarget(
-                      link: _searchFieldLink,
-                      child: KeyedSubtree(
-                        key: _tutorialSearchKey,
-                        child: DesktopSearchBar(
-                          controller: _searchController,
-                          hintText: l10n.mapSearchHint,
-                          onChanged: _handleSearchChange,
-                          onSubmitted: _handleSearchSubmit,
+                  // Search bar
+                  Expanded(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 480),
+                      child: CompositedTransformTarget(
+                        link: _searchFieldLink,
+                        child: KeyedSubtree(
+                          key: _tutorialSearchKey,
+                          child: DesktopSearchBar(
+                            controller: _searchController,
+                            hintText: l10n.mapSearchHint,
+                            onChanged: _handleSearchChange,
+                            onSubmitted: _handleSearchSubmit,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
 
-                const SizedBox(width: KubusSpacing.md + KubusSpacing.xs),
+                  const SizedBox(width: KubusSpacing.md + KubusSpacing.xs),
 
-                // Filter chips
-                KeyedSubtree(
-                  key: _tutorialFilterChipsKey,
-                  child: Row(
-                    children: _filterOptions.map((filter) {
-                      final isActive = _selectedFilter == filter;
-                      return Padding(
-                        padding: const EdgeInsets.only(left: KubusSpacing.sm),
-                        child: _buildGlassChip(
-                          label: _getFilterLabel(filter),
-                          isSelected: isActive,
-                          themeProvider: themeProvider,
-                          onTap: () {
-                            setState(() => _selectedFilter = filter);
-                          },
-                        ),
-                      );
-                    }).toList(),
+                  // Filter chips
+                  KeyedSubtree(
+                    key: _tutorialFilterChipsKey,
+                    child: Row(
+                      children: _filterOptions.map((filter) {
+                        final isActive = _selectedFilter == filter;
+                        return Padding(
+                          padding: const EdgeInsets.only(left: KubusSpacing.sm),
+                          child: _buildGlassChip(
+                            label: _getFilterLabel(filter),
+                            isSelected: isActive,
+                            themeProvider: themeProvider,
+                            onTap: () {
+                              setState(() => _selectedFilter = filter);
+                            },
+                          ),
+                        );
+                      }).toList(),
+                    ),
                   ),
-                ),
 
-                const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
+                  const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
 
-                // Filters button
-                KeyedSubtree(
-                  key: _tutorialFiltersButtonKey,
-                  child: _buildGlassIconButton(
-                    icon: _showFiltersPanel ? Icons.close : Icons.tune,
-                    themeProvider: themeProvider,
-                    isActive: _showFiltersPanel,
-                    tooltip: _showFiltersPanel
-                        ? l10n.commonClose
-                        : l10n.mapFiltersTitle,
-                    // Filters sits on the top-right edge; prefer below so the
-                    // tooltip never renders off-screen above the window.
-                    tooltipPreferBelow: true,
-                    tooltipVerticalOffset: 18,
-                    // Anchor tooltip to the icon's right edge so the card expands
-                    // leftwards (avoids the Nearby sidebar, and aligns the right edge
-                    // of the tooltip with the icon).
-                    tooltipAlignRightEdge: true,
-                    tooltipMargin: const EdgeInsets.symmetric(horizontal: 24),
-                    onTap: () {
-                      setState(() {
-                        _showFiltersPanel = !_showFiltersPanel;
-                        _selectedArtwork = null;
-                        _selectedExhibition = null;
-                      });
-                    },
+                  // Filters button
+                  KeyedSubtree(
+                    key: _tutorialFiltersButtonKey,
+                    child: _buildGlassIconButton(
+                      icon: _showFiltersPanel ? Icons.close : Icons.tune,
+                      themeProvider: themeProvider,
+                      isActive: _showFiltersPanel,
+                      tooltip: _showFiltersPanel
+                          ? l10n.commonClose
+                          : l10n.mapFiltersTitle,
+                      // Filters sits on the top-right edge; prefer below so the
+                      // tooltip never renders off-screen above the window.
+                      tooltipPreferBelow: true,
+                      tooltipVerticalOffset: 18,
+                      // Anchor tooltip to the icon's right edge so the card expands
+                      // leftwards (avoids the Nearby sidebar, and aligns the right edge
+                      // of the tooltip with the icon).
+                      tooltipAlignRightEdge: true,
+                      tooltipMargin: const EdgeInsets.symmetric(horizontal: 24),
+                      onTap: () {
+                        setState(() {
+                          _showFiltersPanel = !_showFiltersPanel;
+                          _selectedArtwork = null;
+                          _selectedExhibition = null;
+                        });
+                      },
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -2320,110 +2343,126 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
 
     return Positioned.fill(
-      child: CompositedTransformFollower(
-        link: _searchFieldLink,
-        showWhenUnlinked: false,
-        offset: const Offset(0, 52),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            maxWidth: 520,
-            maxHeight: 360,
-          ),
-          child: LiquidGlassPanel(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            margin: EdgeInsets.zero,
-            borderRadius: BorderRadius.circular(12),
-            blurSigma: KubusGlassEffects.blurSigmaLight,
-            backgroundColor: glassTint,
-            child: Builder(
-              builder: (context) {
-                if (trimmedQuery.length < 2) {
-                  return Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(
-                      l10n.mapSearchMinCharsHint,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: scheme.onSurface.withValues(alpha: 0.6),
+      child: _wrapPointerInterceptor(
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => setState(() => _showSearchOverlay = false),
+                child: const SizedBox.expand(),
+              ),
+            ),
+            CompositedTransformFollower(
+              link: _searchFieldLink,
+              showWhenUnlinked: false,
+              offset: const Offset(0, 52),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: 520,
+                  maxHeight: 360,
+                ),
+                child: LiquidGlassPanel(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  margin: EdgeInsets.zero,
+                  borderRadius: BorderRadius.circular(12),
+                  blurSigma: KubusGlassEffects.blurSigmaLight,
+                  backgroundColor: glassTint,
+                  child: Builder(
+                    builder: (context) {
+                      if (trimmedQuery.length < 2) {
+                        return Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Text(
+                            l10n.mapSearchMinCharsHint,
+                            style:
+                                Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: scheme.onSurface
+                                          .withValues(alpha: 0.6),
+                                    ),
                           ),
-                    ),
-                  );
-                }
+                        );
+                      }
 
-                if (_isFetchingSearch) {
-                  return const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Center(child: CircularProgressIndicator()),
-                  );
-                }
+                      if (_isFetchingSearch) {
+                        return const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      }
 
-                if (_searchSuggestions.isEmpty) {
-                  return Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.search_off,
-                          color: scheme.onSurface.withValues(alpha: 0.4),
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          l10n.commonNoResultsFound,
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
-                              ?.copyWith(
-                                color: scheme.onSurface.withValues(alpha: 0.6),
+                      if (_searchSuggestions.isEmpty) {
+                        return Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.search_off,
+                                color: scheme.onSurface.withValues(alpha: 0.4),
                               ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
+                              const SizedBox(width: 12),
+                              Text(
+                                l10n.commonNoResultsFound,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      color: scheme.onSurface
+                                          .withValues(alpha: 0.6),
+                                    ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
 
-                return ListView.separated(
-                  shrinkWrap: true,
-                  itemCount: _searchSuggestions.length,
-                  separatorBuilder: (_, __) => Divider(
-                    height: 1,
-                    color: scheme.outlineVariant,
-                  ),
-                  itemBuilder: (context, index) {
-                    final suggestion = _searchSuggestions[index];
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor:
-                            themeProvider.accentColor.withValues(alpha: 0.10),
-                        child: Icon(
-                          suggestion.icon,
-                          color: themeProvider.accentColor,
+                      return ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: _searchSuggestions.length,
+                        separatorBuilder: (_, __) => Divider(
+                          height: 1,
+                          color: scheme.outlineVariant,
                         ),
-                      ),
-                      title: Text(
-                        suggestion.label,
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodyMedium
-                            ?.copyWith(fontWeight: FontWeight.w600),
-                      ),
-                      subtitle: suggestion.subtitle == null
-                          ? null
-                          : Text(
-                              suggestion.subtitle!,
+                        itemBuilder: (context, index) {
+                          final suggestion = _searchSuggestions[index];
+                          return ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: themeProvider.accentColor
+                                  .withValues(alpha: 0.10),
+                              child: Icon(
+                                suggestion.icon,
+                                color: themeProvider.accentColor,
+                              ),
+                            ),
+                            title: Text(
+                              suggestion.label,
                               style: Theme.of(context)
                                   .textTheme
                                   .bodyMedium
-                                  ?.copyWith(
-                                    color:
-                                        scheme.onSurface.withValues(alpha: 0.6),
-                                  ),
+                                  ?.copyWith(fontWeight: FontWeight.w600),
                             ),
-                      onTap: () => _handleSuggestionTap(suggestion),
-                    );
-                  },
-                );
-              },
+                            subtitle: suggestion.subtitle == null
+                                ? null
+                                : Text(
+                                    suggestion.subtitle!,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: scheme.onSurface
+                                              .withValues(alpha: 0.6),
+                                        ),
+                                  ),
+                            onTap: () => _handleSuggestionTap(suggestion),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -3935,16 +3974,17 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     // Wrap sidebar in a Listener to absorb pointer events and prevent them
     // from passing through to the map underneath (gesture conflict resolution).
     // This ensures scrolling/interacting with the sidebar doesn't pan the map.
-    return Listener(
-      behavior: HitTestBehavior.opaque,
-      onPointerDown: (_) {},
-      onPointerMove: (_) {},
-      onPointerUp: (_) {},
-      onPointerSignal: (_) {}, // Absorb mouse wheel / trackpad scroll
-      child: SafeArea(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    return _wrapPointerInterceptor(
+      child: Listener(
+        behavior: HitTestBehavior.opaque,
+        onPointerDown: (_) {},
+        onPointerMove: (_) {},
+        onPointerUp: (_) {},
+        onPointerSignal: (_) {}, // Absorb mouse wheel / trackpad scroll
+        child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
             child: Row(
@@ -4176,7 +4216,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         ],
       ),
     ),
-    );
+    ));
   }
 
   Future<void> _selectArtwork(
@@ -5388,65 +5428,70 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final animationKey = marker == null
         ? const ValueKey<String>('marker_overlay_empty')
         : ValueKey<String>('marker_overlay:${marker.id}:$selectionKey');
+    final shouldIntercept = marker != null;
+    final overlay = AnimatedSwitcher(
+      duration: const Duration(milliseconds: 240),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (child, animation) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeInCubic,
+        );
+        final slide = Tween<Offset>(
+          begin: const Offset(0, 0.06),
+          end: Offset.zero,
+        ).animate(curved);
+        return FadeTransition(
+          opacity: curved,
+          child: SlideTransition(
+            position: slide,
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.985, end: 1.0).animate(curved),
+              child: child,
+            ),
+          ),
+        );
+      },
+      child: marker == null
+          ? const SizedBox.shrink(key: ValueKey('marker_overlay_hidden'))
+          // Use StackFit.expand to ensure bounded constraints for
+          // Positioned.fill children during AnimatedSwitcher transitions.
+          // Without this, web can throw "RenderBox was not laid out".
+          : Stack(
+              key: animationKey,
+              fit: StackFit.expand,
+              children: [
+                Positioned.fill(
+                  child: Listener(
+                    behavior: HitTestBehavior.opaque,
+                    onPointerDown: (_) {},
+                    onPointerMove: (_) {},
+                    onPointerUp: (_) {},
+                    onPointerSignal: (_) {},
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: _dismissSelectedMarkerOverlay,
+                      child: const SizedBox.expand(),
+                    ),
+                  ),
+                ),
+                Positioned.fill(
+                  child: _buildMarkerOverlayPositionedCard(
+                    marker: marker,
+                    artworkProvider: artworkProvider,
+                    themeProvider: themeProvider,
+                  ),
+                ),
+              ],
+            ),
+    );
 
     return Positioned.fill(
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 240),
-        switchInCurve: Curves.easeOutCubic,
-        switchOutCurve: Curves.easeInCubic,
-        transitionBuilder: (child, animation) {
-          final curved = CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeOutCubic,
-            reverseCurve: Curves.easeInCubic,
-          );
-          final slide = Tween<Offset>(
-            begin: const Offset(0, 0.06),
-            end: Offset.zero,
-          ).animate(curved);
-          return FadeTransition(
-            opacity: curved,
-            child: SlideTransition(
-              position: slide,
-              child: ScaleTransition(
-                scale: Tween<double>(begin: 0.985, end: 1.0).animate(curved),
-                child: child,
-              ),
-            ),
-          );
-        },
-        child: marker == null
-            ? const SizedBox.shrink(key: ValueKey('marker_overlay_hidden'))
-            // Use StackFit.expand to ensure bounded constraints for
-            // Positioned.fill children during AnimatedSwitcher transitions.
-            // Without this, web can throw "RenderBox was not laid out".
-            : Stack(
-                key: animationKey,
-                fit: StackFit.expand,
-                children: [
-                  Positioned.fill(
-                    child: Listener(
-                      behavior: HitTestBehavior.opaque,
-                      onPointerDown: (_) {},
-                      onPointerMove: (_) {},
-                      onPointerUp: (_) {},
-                      onPointerSignal: (_) {},
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: _dismissSelectedMarkerOverlay,
-                        child: const SizedBox.expand(),
-                      ),
-                    ),
-                  ),
-                  Positioned.fill(
-                    child: _buildMarkerOverlayPositionedCard(
-                      marker: marker,
-                      artworkProvider: artworkProvider,
-                      themeProvider: themeProvider,
-                    ),
-                  ),
-                ],
-              ),
+      child: _wrapPointerInterceptor(
+        child: overlay,
+        enabled: shouldIntercept,
       ),
     );
   }
@@ -5688,9 +5733,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   color: baseColor,
                 ),
           ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
   }
 
   /// Check if marker has any metadata chips to display

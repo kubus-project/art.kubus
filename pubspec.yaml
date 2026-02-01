@@ -74,6 +74,9 @@ dependencies:
   # Web interop (replaces dart:html on web)
   web: ^1.1.1
 
+  # Web pointer interception for platform-view overlays
+  pointer_interceptor: ^0.10.1
+
   # WalletConnect for real wallet connections (using new package)
   reown_walletkit: ^1.1.0 # Using a more stable version
 
