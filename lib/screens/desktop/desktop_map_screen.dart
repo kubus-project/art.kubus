@@ -501,19 +501,26 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     setState(fn);
   }
 
-  String _nearbySidebarSignatureFor(List<Artwork> filteredArtworks) {
-    final base = _nearbySidebarAnchor ?? _userLocation ?? _effectiveCenter;
+  String _nearbySidebarSignatureFor(
+    List<Artwork> filteredArtworks, {
+    LatLng? basePosition,
+  }) {
+    final base = basePosition ?? _nearbySidebarAnchor ?? _userLocation;
     final ids = filteredArtworks.take(30).map((a) => a.id).toList()..sort();
     final modeSig = _travelModeEnabled
         ? 'travel'
         : _effectiveSearchRadiusKm.toStringAsFixed(1);
-    return '$modeSig|'
-        '${base.latitude.toStringAsFixed(4)},${base.longitude.toStringAsFixed(4)}|'
-        '${filteredArtworks.length}|${ids.join(',')}';
+    final baseSig = base == null
+        ? 'none'
+        : '${base.latitude.toStringAsFixed(4)},${base.longitude.toStringAsFixed(4)}';
+    return '$modeSig|$baseSig|${filteredArtworks.length}|${ids.join(',')}';
   }
 
   void _syncNearbySidebarIfNeeded(
-      ThemeProvider themeProvider, List<Artwork> filteredArtworks) {
+    ThemeProvider themeProvider,
+    List<Artwork> filteredArtworks, {
+    LatLng? basePosition,
+  }) {
     if (!_isNearbyPanelOpen) return;
     if (!mounted) return;
     final shellScope = DesktopShellScope.of(context);
@@ -521,7 +528,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     // Build a compact signature so we only push sidebar updates when something
     // meaningful changes (avoids setState->build feedback loops).
-    final sig = _nearbySidebarSignatureFor(filteredArtworks);
+    final sig = _nearbySidebarSignatureFor(
+      filteredArtworks,
+      basePosition: basePosition,
+    );
     if (_nearbySidebarSignature == sig) return;
     _nearbySidebarSignature = sig;
 
@@ -1816,21 +1826,33 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   Widget _buildMapLayer(ThemeProvider themeProvider) {
     return Consumer<ArtworkProvider>(
       builder: (context, artworkProvider, _) {
-        final filteredArtworks = _getFilteredArtworks(artworkProvider.artworks);
+        final nearbyBasePosition =
+            _nearbySidebarAnchor ?? _userLocation ?? _effectiveCenter;
+        final filteredArtworks = _getFilteredArtworks(
+          artworkProvider.artworks,
+          basePositionOverride: nearbyBasePosition,
+        );
 
         // FIX: Move sidebar sync out of the build phase to avoid infinite
         // recursion. The shell's setFunctionsPanelContent triggers setState,
         // which rebuilds this Consumer, which was calling _syncNearbySidebarIfNeeded
         // again, creating a loop when the signature changed.
         if (_isNearbyPanelOpen) {
-          final sig = _nearbySidebarSignatureFor(filteredArtworks);
+          final sig = _nearbySidebarSignatureFor(
+            filteredArtworks,
+            basePosition: nearbyBasePosition,
+          );
           if (sig != _nearbySidebarSignature && !_nearbySidebarSyncScheduled) {
             _nearbySidebarSyncScheduled = true;
             // Schedule the sync AFTER the current build completes.
             WidgetsBinding.instance.addPostFrameCallback((_) {
               _nearbySidebarSyncScheduled = false;
               if (!mounted) return;
-              _syncNearbySidebarIfNeeded(themeProvider, filteredArtworks);
+              _syncNearbySidebarIfNeeded(
+                themeProvider,
+                filteredArtworks,
+                basePosition: nearbyBasePosition,
+              );
             });
           }
         }
@@ -4410,7 +4432,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
   }
 
-  List<Artwork> _getFilteredArtworks(List<Artwork> artworks) {
+  List<Artwork> _getFilteredArtworks(
+    List<Artwork> artworks, {
+    LatLng? basePositionOverride,
+  }) {
     var filtered = artworks.where((a) => a.hasValidLocation).toList();
     final query = _searchQuery.trim().toLowerCase();
     if (query.isNotEmpty) {
@@ -4424,7 +4449,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       }).toList();
     }
 
-    final basePosition = _userLocation;
+    final basePosition = basePositionOverride ?? _userLocation;
     switch (_selectedFilter) {
       case 'nearby':
         if (basePosition != null) {
