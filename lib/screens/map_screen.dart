@@ -14,6 +14,7 @@ import 'package:flutter_compass/flutter_compass.dart';
 import 'package:location/location.dart' hide LocationAccuracy;
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 import '../providers/artwork_provider.dart';
 import '../providers/task_provider.dart';
 import '../providers/wallet_provider.dart';
@@ -302,6 +303,226 @@ class _MapScreenState extends State<MapScreen>
   /// Timer/async callbacks can outlive this State, and reading providers via a
   /// deactivated context triggers "Looking up a deactivated widget's ancestor".
   MarkerSubjectLoader _createSubjectLoader() => MarkerSubjectLoader(context);
+
+  void _safeSetState(VoidCallback fn) {
+    if (!mounted) return;
+    if (_isBuilding) {
+      if (_pendingSafeSetState) return;
+      _pendingSafeSetState = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _pendingSafeSetState = false;
+        if (!mounted || _isBuilding) return;
+        setState(fn);
+      });
+      return;
+    }
+    setState(fn);
+  }
+
+  Widget _wrapPointerInterceptor({
+    required Widget child,
+    bool enabled = true,
+  }) {
+    // On web, MapLibre is a platform view; PointerInterceptor prevents
+    // pointer events from leaking through overlays to the map DOM element.
+    if (!kIsWeb || !enabled) return child;
+    return PointerInterceptor(child: child);
+  }
+
+  Future<void> _handleMapStyleLoaded(ThemeProvider themeProvider) async {
+    final controller = _mapController;
+    if (controller == null) return;
+    if (!mounted) return;
+    if (_styleInitializationInProgress) return;
+
+    final stopwatch = Stopwatch()..start();
+    final scheme = Theme.of(context).colorScheme;
+    _styleInitializationInProgress = true;
+    _styleInitialized = false;
+    _registeredMapImages.clear();
+
+    AppConfig.debugPrint('MapScreen: style init start');
+
+    try {
+      final Set<String> existingLayerIds = <String>{};
+      try {
+        final raw = await controller.getLayerIds();
+        for (final id in raw) {
+          if (id is String) existingLayerIds.add(id);
+        }
+      } catch (_) {}
+
+      Future<void> safeRemoveLayer(String id) async {
+        if (!existingLayerIds.contains(id)) return;
+        try {
+          await controller.removeLayer(id);
+        } catch (_) {}
+        existingLayerIds.remove(id);
+      }
+
+      Future<void> safeRemoveSource(String id) async {
+        try {
+          await controller.removeSource(id);
+        } catch (_) {}
+      }
+
+      await safeRemoveLayer(_markerLayerId);
+      await safeRemoveLayer(_markerHitboxLayerId);
+      await safeRemoveLayer(_cubeLayerId);
+      await safeRemoveLayer(_cubeIconLayerId);
+      await safeRemoveSource(_markerSourceId);
+      await safeRemoveSource(_cubeSourceId);
+      await safeRemoveLayer(_locationLayerId);
+      await safeRemoveSource(_locationSourceId);
+
+      await controller.addGeoJsonSource(
+        _markerSourceId,
+        const <String, dynamic>{
+          'type': 'FeatureCollection',
+          'features': <dynamic>[],
+        },
+        promoteId: 'id',
+      );
+
+      await controller.addGeoJsonSource(
+        _cubeSourceId,
+        const <String, dynamic>{
+          'type': 'FeatureCollection',
+          'features': <dynamic>[],
+        },
+        promoteId: 'id',
+      );
+
+      // Layer order (bottom to top):
+      // 1. Fill-extrusion (3D cubes)
+      // 2. Marker symbol layer (2D icons)
+      // 3. Cube icon layer (3D mode top-face icons)
+      // 4. Hitbox circle layer (TOPMOST for click detection)
+
+      // 1. Fill-extrusion layer for 3D cubes (bottom)
+      await controller.addFillExtrusionLayer(
+        _cubeSourceId,
+        _cubeLayerId,
+        ml.FillExtrusionLayerProperties(
+          fillExtrusionColor: <Object>['get', 'color'],
+          fillExtrusionHeight: <Object>['get', 'height'],
+          fillExtrusionBase: 0.0,
+          fillExtrusionOpacity: 1.0,
+          fillExtrusionVerticalGradient: false,
+          visibility: 'none',
+        ),
+      );
+
+      // 2. Main marker symbol layer for 2D icons
+      await controller.addSymbolLayer(
+        _markerSourceId,
+        _markerLayerId,
+        ml.SymbolLayerProperties(
+          iconImage: <Object>['get', 'icon'],
+          iconSize: <Object>[
+            'interpolate',
+            <Object>['linear'],
+            <Object>['zoom'],
+            3,
+            0.5,
+            15,
+            1.0,
+            24,
+            1.5,
+          ],
+          iconOpacity: <Object>[
+            'case',
+            <Object>['==', <Object>['get', 'kind'], 'cluster'],
+            1.0,
+            1.0,
+          ],
+          iconAllowOverlap: true,
+          iconIgnorePlacement: true,
+          iconAnchor: 'center',
+          iconPitchAlignment: 'map',
+          iconRotationAlignment: 'map',
+        ),
+      );
+
+      // 3. Cube top-face icon layer (above fill-extrusion, same icons as marker layer)
+      await controller.addSymbolLayer(
+        _markerSourceId,
+        _cubeIconLayerId,
+        ml.SymbolLayerProperties(
+          iconImage: <Object>['get', 'icon'],
+          iconSize: <Object>[
+            'interpolate',
+            <Object>['linear'],
+            <Object>['zoom'],
+            3,
+            0.5,
+            15,
+            1.0,
+            24,
+            1.5,
+          ],
+          iconOpacity: <Object>[
+            'case',
+            <Object>['==', <Object>['get', 'kind'], 'cluster'],
+            1.0,
+            1.0,
+          ],
+          iconAllowOverlap: true,
+          iconIgnorePlacement: true,
+          iconAnchor: 'center',
+          iconPitchAlignment: 'map',
+          iconRotationAlignment: 'map',
+          visibility: 'none',
+        ),
+      );
+
+      // Note: No separate hitbox layer needed - symbol layers are directly queryable
+      // via queryRenderedFeaturesInRect with appropriate layer IDs.
+
+      await controller.addGeoJsonSource(
+        _locationSourceId,
+        const <String, dynamic>{
+          'type': 'FeatureCollection',
+          'features': <dynamic>[],
+        },
+        promoteId: 'id',
+      );
+      await controller.addCircleLayer(
+        _locationSourceId,
+        _locationLayerId,
+        ml.CircleLayerProperties(
+          circleRadius: 6,
+          circleColor: _hexRgb(scheme.secondary),
+          circleOpacity: 1.0,
+          circleStrokeWidth: 2,
+          circleStrokeColor: _hexRgb(scheme.surface),
+        ),
+      );
+
+      if (!mounted) return;
+      _styleInitialized = true;
+
+      await _applyIsometricCamera(enabled: _isometricViewEnabled);
+      await _syncUserLocation(themeProvider: themeProvider);
+      await _syncMapMarkers(themeProvider: themeProvider);
+      await _updateMarkerRenderMode();
+
+      stopwatch.stop();
+      AppConfig.debugPrint(
+        'MapScreen: style init done in ${stopwatch.elapsedMilliseconds}ms',
+      );
+    } catch (e, st) {
+      _styleInitialized = false;
+      if (kDebugMode) {
+        AppConfig.debugPrint('MapScreen: style init failed: $e');
+      }
+      if (kDebugMode) {
+        AppConfig.debugPrint('MapScreen: style init stack: $st');
+      }
+    } finally {
+      _styleInitializationInProgress = false;
+    }
+  }
 
   @override
   void initState() {
@@ -1430,12 +1651,12 @@ class _MapScreenState extends State<MapScreen>
 
   void _setSheetInteracting(bool value) {
     if (_isSheetInteracting == value) return;
-    setState(() => _isSheetInteracting = value);
+    _safeSetState(() => _isSheetInteracting = value);
   }
 
   void _setSheetBlocking(bool value, double extent) {
     if (_isSheetBlocking == value && _nearbySheetExtent == extent) return;
-    setState(() {
+    _safeSetState(() {
       _isSheetBlocking = value;
       _nearbySheetExtent = extent;
     });
@@ -2581,31 +2802,35 @@ class _MapScreenState extends State<MapScreen>
               _buildSuggestionSheet(
                   theme), // This will likely be refactored into _buildSearchAndFilters()
             if (_showMapTutorial)
-              const Positioned.fill(
-                child: ModalBarrier(
-                  dismissible: false,
-                  color: Colors.transparent,
+              Positioned.fill(
+                child: _wrapPointerInterceptor(
+                  child: const ModalBarrier(
+                    dismissible: false,
+                    color: Colors.transparent,
+                  ),
                 ),
               ),
             if (_showMapTutorial)
               Positioned.fill(
-                child: Builder(
-                  builder: (context) {
-                    final l10n = AppLocalizations.of(context)!;
-                    final steps = _buildMapTutorialSteps(l10n);
-                    final idx = _mapTutorialIndex.clamp(0, steps.length - 1);
-                    return InteractiveTutorialOverlay(
-                      steps: steps,
-                      currentIndex: idx,
-                      onNext: _tutorialNext,
-                      onBack: _tutorialBack,
-                      onSkip: _dismissMapTutorial,
-                      skipLabel: l10n.commonSkip,
-                      backLabel: l10n.commonBack,
-                      nextLabel: l10n.commonNext,
-                      doneLabel: l10n.commonDone,
-                    );
-                  },
+                child: _wrapPointerInterceptor(
+                  child: Builder(
+                    builder: (context) {
+                      final l10n = AppLocalizations.of(context)!;
+                      final steps = _buildMapTutorialSteps(l10n);
+                      final idx = _mapTutorialIndex.clamp(0, steps.length - 1);
+                      return InteractiveTutorialOverlay(
+                        steps: steps,
+                        currentIndex: idx,
+                        onNext: _tutorialNext,
+                        onBack: _tutorialBack,
+                        onSkip: _dismissMapTutorial,
+                        skipLabel: l10n.commonSkip,
+                        backLabel: l10n.commonBack,
+                        nextLabel: l10n.commonNext,
+                        doneLabel: l10n.commonDone,
+                      );
+                    },
+                  ),
                 ),
               ),
           ],
@@ -2635,6 +2860,11 @@ class _MapScreenState extends State<MapScreen>
       maxZoom: 24.0,
       isDarkMode: isDark,
       styleAsset: styleAsset,
+      onCameraMove: _handleCameraMove,
+      onCameraIdle: _handleCameraIdle,
+      onMapClick: (point, latLng) {
+        unawaited(_handleMapTap(point, themeProvider, latLng));
+      },
       onMapCreated: (controller) {
         _mapController = controller;
         _styleInitialized = false;
@@ -2673,271 +2903,7 @@ class _MapScreenState extends State<MapScreen>
           }));
         }
       },
-      onCameraMove: (position) {
-        _cameraCenter =
-            LatLng(position.target.latitude, position.target.longitude);
-        _lastZoom = position.zoom;
-        _lastBearing = position.bearing;
-        _lastPitch = position.tilt;
-        final shouldShowCubes = _is3DMarkerModeActive;
-        if (shouldShowCubes != _cubeLayerVisible) {
-          unawaited(_updateMarkerRenderMode());
-        }
-        final bucket = MapViewportUtils.zoomBucket(position.zoom);
-        final bucketChanged = bucket != _renderZoomBucket;
-        // Throttle setState for 3D overlay repaints to ~60fps max
-        final now = DateTime.now();
-        final shouldUpdate = _isometricViewEnabled &&
-            now.difference(_lastCameraUpdateTime) > _cameraUpdateThrottle;
-        if (bucketChanged || shouldUpdate) {
-          _lastCameraUpdateTime = now;
-          _safeSetState(() => _renderZoomBucket = bucket);
-        }
-        if (bucketChanged && _is3DMarkerModeActive) {
-          _cubeSyncDebouncer(const Duration(milliseconds: 60), () {
-            unawaited(_syncMarkerCubes(themeProvider: themeProvider));
-          });
-        }
-        final hasGesture = !_programmaticCameraMove;
-        if (hasGesture && _autoFollow) {
-          _safeSetState(() => _autoFollow = false);
-        }
-        if (hasGesture && _selectedMarkerId != null) {
-          _safeSetState(() {
-            _selectedMarkerId = null;
-            _selectedMarkerData = null;
-            _selectedMarkerAt = null;
-            _selectedMarkerAnchor = null;
-            _selectedMarkerViewportSignature = null;
-            _markerOverlayExpanded = false;
-          });
-          unawaited(_syncMapMarkers(themeProvider: themeProvider));
-        }
-        _queueOverlayAnchorRefresh();
-        _queueMarkerRefresh(fromGesture: hasGesture);
-      },
-      onCameraIdle: () {
-        _programmaticCameraMove = false;
-        unawaited(_updateMarkerRenderMode());
-        _queueOverlayAnchorRefresh();
-        _queueMarkerRefresh(fromGesture: false);
-      },
-      onMapClick: (point, _) => unawaited(_handleMapTap(point, themeProvider)),
-      rotateGesturesEnabled: !_shouldBlockMapGestures,
-      scrollGesturesEnabled: !_shouldBlockMapGestures,
-      zoomGesturesEnabled: !_shouldBlockMapGestures,
-      tiltGesturesEnabled: !_shouldBlockMapGestures,
     );
-  }
-
-  void _safeSetState(VoidCallback fn) {
-    if (!mounted) return;
-    if (_isBuilding) {
-      if (_pendingSafeSetState) return;
-      _pendingSafeSetState = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _pendingSafeSetState = false;
-        if (!mounted || _isBuilding) return;
-        setState(fn);
-      });
-      return;
-    }
-    setState(fn);
-  }
-
-  Future<void> _handleMapStyleLoaded(ThemeProvider themeProvider) async {
-    final controller = _mapController;
-    if (controller == null) return;
-    if (!mounted) return;
-    if (_styleInitializationInProgress) return;
-
-    final stopwatch = Stopwatch()..start();
-    final scheme = Theme.of(context).colorScheme;
-    _styleInitializationInProgress = true;
-    _styleInitialized = false;
-    _registeredMapImages.clear();
-
-    AppConfig.debugPrint('MapScreen: style init start');
-
-    try {
-      final Set<String> existingLayerIds = <String>{};
-      try {
-        final raw = await controller.getLayerIds();
-        for (final id in raw) {
-          if (id is String) existingLayerIds.add(id);
-        }
-      } catch (_) {}
-
-      Future<void> safeRemoveLayer(String id) async {
-        if (!existingLayerIds.contains(id)) return;
-        try {
-          await controller.removeLayer(id);
-        } catch (_) {}
-        existingLayerIds.remove(id);
-      }
-
-      Future<void> safeRemoveSource(String id) async {
-        try {
-          await controller.removeSource(id);
-        } catch (_) {}
-      }
-
-      await safeRemoveLayer(_markerLayerId);
-      await safeRemoveLayer(_markerHitboxLayerId);
-      await safeRemoveLayer(_cubeLayerId);
-      await safeRemoveLayer(_cubeIconLayerId);
-      await safeRemoveSource(_markerSourceId);
-      await safeRemoveSource(_cubeSourceId);
-      await safeRemoveLayer(_locationLayerId);
-      await safeRemoveSource(_locationSourceId);
-
-      await controller.addGeoJsonSource(
-        _markerSourceId,
-        const <String, dynamic>{
-          'type': 'FeatureCollection',
-          'features': <dynamic>[],
-        },
-        promoteId: 'id',
-      );
-
-      await controller.addGeoJsonSource(
-        _cubeSourceId,
-        const <String, dynamic>{
-          'type': 'FeatureCollection',
-          'features': <dynamic>[],
-        },
-        promoteId: 'id',
-      );
-
-      // Layer order (bottom to top):
-      // 1. Fill-extrusion (3D cubes)
-      // 2. Marker symbol layer (2D icons)
-      // 3. Cube icon layer (3D mode top-face icons)
-      // 4. Hitbox circle layer (TOPMOST for click detection)
-
-      // 1. Fill-extrusion layer for 3D cubes (bottom)
-      await controller.addFillExtrusionLayer(
-        _cubeSourceId,
-        _cubeLayerId,
-        ml.FillExtrusionLayerProperties(
-          fillExtrusionColor: <Object>['get', 'color'],
-          fillExtrusionHeight: <Object>['get', 'height'],
-          fillExtrusionBase: 0.0,
-          fillExtrusionOpacity: 1.0,
-          fillExtrusionVerticalGradient: false,
-          visibility: 'none',
-        ),
-      );
-
-      // 2. Main marker symbol layer for 2D icons
-      await controller.addSymbolLayer(
-        _markerSourceId,
-        _markerLayerId,
-        ml.SymbolLayerProperties(
-          iconImage: <Object>['get', 'icon'],
-          iconSize: <Object>[
-            'interpolate',
-            <Object>['linear'],
-            <Object>['zoom'],
-            3,
-            0.5,
-            15,
-            1.0,
-            24,
-            1.5,
-          ],
-          iconOpacity: <Object>[
-            'case',
-            <Object>['==', <Object>['get', 'kind'], 'cluster'],
-            1.0,
-            1.0,
-          ],
-          iconAllowOverlap: true,
-          iconIgnorePlacement: true,
-          iconAnchor: 'center',
-          iconPitchAlignment: 'map',
-          iconRotationAlignment: 'map',
-        ),
-      );
-
-      // 3. Cube top-face icon layer (above fill-extrusion, same icons as marker layer)
-      await controller.addSymbolLayer(
-        _markerSourceId,
-        _cubeIconLayerId,
-        ml.SymbolLayerProperties(
-          iconImage: <Object>['get', 'icon'],
-          iconSize: <Object>[
-            'interpolate',
-            <Object>['linear'],
-            <Object>['zoom'],
-            3,
-            0.5,
-            15,
-            1.0,
-            24,
-            1.5,
-          ],
-          iconOpacity: <Object>[
-            'case',
-            <Object>['==', <Object>['get', 'kind'], 'cluster'],
-            1.0,
-            1.0,
-          ],
-          iconAllowOverlap: true,
-          iconIgnorePlacement: true,
-          iconAnchor: 'center',
-          iconPitchAlignment: 'map',
-          iconRotationAlignment: 'map',
-          visibility: 'none',
-        ),
-      );
-
-      // Note: No separate hitbox layer needed - symbol layers are directly queryable
-      // via queryRenderedFeaturesInRect with appropriate layer IDs.
-
-      await controller.addGeoJsonSource(
-        _locationSourceId,
-        const <String, dynamic>{
-          'type': 'FeatureCollection',
-          'features': <dynamic>[],
-        },
-        promoteId: 'id',
-      );
-      await controller.addCircleLayer(
-        _locationSourceId,
-        _locationLayerId,
-        ml.CircleLayerProperties(
-          circleRadius: 6,
-          circleColor: _hexRgb(scheme.secondary),
-          circleOpacity: 1.0,
-          circleStrokeWidth: 2,
-          circleStrokeColor: _hexRgb(scheme.surface),
-        ),
-      );
-
-      if (!mounted) return;
-      _styleInitialized = true;
-
-      await _applyIsometricCamera(enabled: _isometricViewEnabled);
-      await _syncUserLocation(themeProvider: themeProvider);
-      await _syncMapMarkers(themeProvider: themeProvider);
-      await _updateMarkerRenderMode();
-
-      stopwatch.stop();
-      AppConfig.debugPrint(
-        'MapScreen: style init done in ${stopwatch.elapsedMilliseconds}ms',
-      );
-    } catch (e, st) {
-      _styleInitialized = false;
-      if (kDebugMode) {
-        AppConfig.debugPrint('MapScreen: style init failed: $e');
-      }
-      if (kDebugMode) {
-        AppConfig.debugPrint('MapScreen: style init stack: $st');
-      }
-    } finally {
-      _styleInitializationInProgress = false;
-    }
   }
 
   String _hexRgb(Color color) {
@@ -3010,9 +2976,62 @@ class _MapScreenState extends State<MapScreen>
     );
   }
 
+  void _handleCameraMove(ml.CameraPosition position) {
+    final now = DateTime.now();
+    if (now.difference(_lastCameraUpdateTime) < _cameraUpdateThrottle) return;
+    _lastCameraUpdateTime = now;
+
+    final nextCenter = LatLng(
+      position.target.latitude,
+      position.target.longitude,
+    );
+    final nextZoom = position.zoom;
+    final nextBearing = position.bearing;
+    final nextPitch = position.tilt;
+    final nextBucket = MapViewportUtils.zoomBucket(nextZoom);
+
+    final bool centerChanged =
+        (nextCenter.latitude - _cameraCenter.latitude).abs() > 1e-7 ||
+            (nextCenter.longitude - _cameraCenter.longitude).abs() > 1e-7;
+    final bool zoomChanged = (nextZoom - _lastZoom).abs() > 0.001;
+    final bool bearingChanged = (nextBearing - _lastBearing).abs() > 0.1;
+    final bool pitchChanged = (nextPitch - _lastPitch).abs() > 0.1;
+    final bool bucketChanged = nextBucket != _renderZoomBucket;
+
+    if (centerChanged || zoomChanged || bearingChanged || pitchChanged || bucketChanged) {
+      _safeSetState(() {
+        _cameraCenter = nextCenter;
+        _lastZoom = nextZoom;
+        _lastBearing = nextBearing;
+        _lastPitch = nextPitch;
+        _renderZoomBucket = nextBucket;
+      });
+    } else {
+      _cameraCenter = nextCenter;
+      _lastZoom = nextZoom;
+      _lastBearing = nextBearing;
+      _lastPitch = nextPitch;
+      _renderZoomBucket = nextBucket;
+    }
+
+    if (_selectedMarkerData != null) {
+      _queueOverlayAnchorRefresh();
+    }
+  }
+
+  void _handleCameraIdle() {
+    final wasProgrammatic = _programmaticCameraMove;
+    _programmaticCameraMove = false;
+
+    _queueMarkerRefresh(fromGesture: !wasProgrammatic);
+    if (_styleInitialized) {
+      unawaited(_updateMarkerRenderMode());
+    }
+  }
+
   Future<void> _handleMapTap(
     math.Point<double> point,
-    ThemeProvider themeProvider,
+    ThemeProvider themeProvider, LatLng latLng,
   ) async {
     final controller = _mapController;
     if (controller == null) return;
@@ -3056,6 +3075,8 @@ class _MapScreenState extends State<MapScreen>
         null,
       );
 
+      if (!mounted) return;
+
       if (kDebugMode && features.isNotEmpty) {
         final dynamic first = features.first;
         final propsRaw = first is Map ? first['properties'] : null;
@@ -3071,7 +3092,11 @@ class _MapScreenState extends State<MapScreen>
           AppConfig.debugPrint('MapScreen: no features in rect, trying fallback picker');
         }
         final fallbackMarker = await _fallbackPickMarkerAtPoint(point);
-        if (fallbackMarker == null) return;
+        if (!mounted) return;
+        if (fallbackMarker == null) {
+          _dismissSelectedMarker();
+          return;
+        }
         _handleMarkerTap(fallbackMarker);
         unawaited(_syncMapMarkers(themeProvider: themeProvider));
         return;
@@ -3574,72 +3599,77 @@ class _MapScreenState extends State<MapScreen>
     final animationKey = marker == null
         ? const ValueKey<String>('marker_overlay_empty')
         : ValueKey<String>('marker_overlay:${marker.id}:$selectionKey');
+    final shouldIntercept = marker != null;
+    final overlayStack = Stack(
+      fit: StackFit.expand,
+      children: [
+        if (marker != null)
+          Positioned.fill(
+            child: Listener(
+              behavior: HitTestBehavior.opaque,
+              onPointerDown: (_) {},
+              onPointerMove: (_) {},
+              onPointerUp: (_) {},
+              onPointerSignal: (_) {},
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _dismissSelectedMarker,
+                child: const SizedBox.expand(),
+              ),
+            ),
+          ),
+        _buildMarkerTapRipple(),
+        Positioned.fill(
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 240),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            transitionBuilder: (child, animation) {
+              final curved = CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOutCubic,
+                reverseCurve: Curves.easeInCubic,
+              );
+              final slide = Tween<Offset>(
+                begin: const Offset(0, 0.06),
+                end: Offset.zero,
+              ).animate(curved);
+              return FadeTransition(
+                opacity: curved,
+                child: SlideTransition(
+                  position: slide,
+                  child: ScaleTransition(
+                    scale:
+                        Tween<double>(begin: 0.985, end: 1.0).animate(curved),
+                    child: child,
+                  ),
+                ),
+              );
+            },
+            child: marker == null
+                ? const SizedBox.shrink(
+                    key: ValueKey('marker_overlay_hidden'))
+                // Use StackFit.expand to ensure bounded constraints for
+                // Positioned.fill children during AnimatedSwitcher transitions.
+                // Without this, web can throw "RenderBox was not laid out".
+                : Stack(
+                    key: animationKey,
+                    fit: StackFit.expand,
+                    children: [
+                      _buildAnchoredMarkerOverlay(themeProvider),
+                    ],
+                  ),
+          ),
+        ),
+      ],
+    );
 
     return Positioned.fill(
       // Use StackFit.expand to ensure the Stack fills the Positioned.fill
       // and passes bounded constraints to its Positioned.fill children.
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          if (marker != null)
-            Positioned.fill(
-              child: Listener(
-                behavior: HitTestBehavior.opaque,
-                onPointerDown: (_) {},
-                onPointerMove: (_) {},
-                onPointerUp: (_) {},
-                onPointerSignal: (_) {},
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: _dismissSelectedMarker,
-                  child: const SizedBox.expand(),
-                ),
-              ),
-            ),
-          _buildMarkerTapRipple(),
-          Positioned.fill(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 240),
-              switchInCurve: Curves.easeOutCubic,
-              switchOutCurve: Curves.easeInCubic,
-              transitionBuilder: (child, animation) {
-                final curved = CurvedAnimation(
-                  parent: animation,
-                  curve: Curves.easeOutCubic,
-                  reverseCurve: Curves.easeInCubic,
-                );
-                final slide = Tween<Offset>(
-                  begin: const Offset(0, 0.06),
-                  end: Offset.zero,
-                ).animate(curved);
-                return FadeTransition(
-                  opacity: curved,
-                  child: SlideTransition(
-                    position: slide,
-                    child: ScaleTransition(
-                      scale:
-                          Tween<double>(begin: 0.985, end: 1.0).animate(curved),
-                      child: child,
-                    ),
-                  ),
-                );
-              },
-              child: marker == null
-                  ? const SizedBox.shrink(
-                      key: ValueKey('marker_overlay_hidden'))
-                  // Use StackFit.expand to ensure bounded constraints for
-                  // Positioned.fill children during AnimatedSwitcher transitions.
-                  // Without this, web can throw "RenderBox was not laid out".
-                  : Stack(
-                      key: animationKey,
-                      fit: StackFit.expand,
-                      children: [
-                        _buildAnchoredMarkerOverlay(themeProvider),
-                      ],
-                    ),
-            ),
-          ),
-        ],
+      child: _wrapPointerInterceptor(
+        child: overlayStack,
+        enabled: shouldIntercept,
       ),
     );
   }
@@ -4222,10 +4252,7 @@ class _MapScreenState extends State<MapScreen>
       top: topPadding,
       left: 16,
       right: 16,
-      // Absorb pointer events to prevent map interaction when tapping UI
-      child: GestureDetector(
-        behavior: HitTestBehavior.deferToChild,
-        onTap: () {}, // no-op but ensures child receives events
+      child: _wrapPointerInterceptor(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -4729,99 +4756,101 @@ class _MapScreenState extends State<MapScreen>
       top: top,
       left: 16,
       right: 16,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: radius,
-          border: Border.all(
-            color: scheme.outlineVariant.withValues(alpha: 0.30),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: scheme.shadow.withValues(alpha: isDark ? 0.28 : 0.16),
-              blurRadius: 22,
-              offset: const Offset(0, 14),
+      child: _wrapPointerInterceptor(
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            border: Border.all(
+              color: scheme.outlineVariant.withValues(alpha: 0.30),
             ),
-          ],
-        ),
-        child: LiquidGlassPanel(
-          padding: EdgeInsets.zero,
-          margin: EdgeInsets.zero,
-          borderRadius: radius,
-          showBorder: false,
-          backgroundColor: glassTint,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 260),
-            child: Builder(builder: (context) {
-              if (_searchQuery.trim().length < 2) {
-                return Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(
-                    l10n.mapSearchMinCharsHint,
-                    style: KubusTypography.textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                );
-              }
-
-              if (_isFetchingSuggestions) {
-                return const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Center(child: CircularProgressIndicator()),
-                );
-              }
-
-              if (_searchSuggestions.isEmpty) {
-                return Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(
-                    l10n.mapNoSuggestions,
-                    style: KubusTypography.textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                );
-              }
-
-              return ListView.separated(
-                shrinkWrap: true,
-                itemCount: _searchSuggestions.length,
-                separatorBuilder: (_, __) => Divider(
-                  height: 1,
-                  color: scheme.outlineVariant.withValues(alpha: 0.6),
-                ),
-                itemBuilder: (context, index) {
-                  final suggestion = _searchSuggestions[index];
-                  return ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: accent.withValues(alpha: 0.14),
-                      child: Icon(
-                        suggestion.icon,
-                        color: accent,
+            boxShadow: [
+              BoxShadow(
+                color: scheme.shadow.withValues(alpha: isDark ? 0.28 : 0.16),
+                blurRadius: 22,
+                offset: const Offset(0, 14),
+              ),
+            ],
+          ),
+          child: LiquidGlassPanel(
+            padding: EdgeInsets.zero,
+            margin: EdgeInsets.zero,
+            borderRadius: radius,
+            showBorder: false,
+            backgroundColor: glassTint,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 260),
+              child: Builder(builder: (context) {
+                if (_searchQuery.trim().length < 2) {
+                  return Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      l10n.mapSearchMinCharsHint,
+                      style: KubusTypography.textTheme.bodyMedium?.copyWith(
+                        color: scheme.onSurfaceVariant,
                       ),
                     ),
-                    title: Text(
-                      suggestion.label,
-                      style: KubusTypography.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: scheme.onSurface,
-                      ),
-                    ),
-                    subtitle: suggestion.subtitle == null
-                        ? null
-                        : Text(
-                            suggestion.subtitle!,
-                            style:
-                                KubusTypography.textTheme.bodySmall?.copyWith(
-                              color: scheme.onSurfaceVariant,
-                              fontSize: 12,
-                            ),
-                          ),
-                    onTap: () => _handleSuggestionTap(suggestion),
                   );
-                },
-              );
-            }),
+                }
+
+                if (_isFetchingSuggestions) {
+                  return const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+
+                if (_searchSuggestions.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      l10n.mapNoSuggestions,
+                      style: KubusTypography.textTheme.bodyMedium?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  );
+                }
+
+                return ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: _searchSuggestions.length,
+                  separatorBuilder: (_, __) => Divider(
+                    height: 1,
+                    color: scheme.outlineVariant.withValues(alpha: 0.6),
+                  ),
+                  itemBuilder: (context, index) {
+                    final suggestion = _searchSuggestions[index];
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: accent.withValues(alpha: 0.14),
+                        child: Icon(
+                          suggestion.icon,
+                          color: accent,
+                        ),
+                      ),
+                      title: Text(
+                        suggestion.label,
+                        style: KubusTypography.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSurface,
+                        ),
+                      ),
+                      subtitle: suggestion.subtitle == null
+                          ? null
+                          : Text(
+                              suggestion.subtitle!,
+                              style:
+                                  KubusTypography.textTheme.bodySmall?.copyWith(
+                                color: scheme.onSurfaceVariant,
+                                fontSize: 12,
+                              ),
+                            ),
+                      onTap: () => _handleSuggestionTap(suggestion),
+                    );
+                  },
+                );
+              }),
+            ),
           ),
         ),
       ),
@@ -5223,10 +5252,7 @@ class _MapScreenState extends State<MapScreen>
     return Positioned(
       right: 16,
       bottom: bottomOffset,
-      // Absorb pointer events to prevent map interaction when tapping controls
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () {}, // absorb taps
+      child: _wrapPointerInterceptor(
         child: Column(
           children: [
             if (AppConfig.isFeatureEnabled('mapTravelMode')) ...[
