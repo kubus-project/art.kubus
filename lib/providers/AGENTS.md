@@ -3,6 +3,8 @@
 ## Mission
 Own state in `ChangeNotifier` providers, and keep app initialization stable and idempotent.
 
+Preflight: review all `AGENTS.md` files (root, `lib/**`, `backend/**`) before making changes.
+
 ## Initialization order (source of truth)
 - Providers are wired in `lib/main.dart` (MultiProvider + ProxyProviders).
 - Startup sequence is in `lib/core/app_initializer.dart`.
@@ -20,6 +22,10 @@ Own state in `ChangeNotifier` providers, and keep app initialization stable and 
 ## Polling discipline
 - When timers are required, keep them bounded and cancellable.
 - Example: `PresenceProvider` uses `_autoRefreshInterval`/`_heartbeatInterval` and cancels timers when feature flags or session state disable presence.
+
+## Audit watchlist (providers)
+- Avoid overlapping timers across providers; gate refresh loops on visibility/feature flags.
+- Keep refresh bindings idempotent to prevent duplicate listeners or polling.
 
 ## Do not initialize in widgets
 - Providers must not be initialized from widgets; use `AppInitializer` + `AppBootstrapService` only.

@@ -3,6 +3,8 @@
 ## Mission
 Ship Flutter UI without breaking Kubus design tokens, theme roles, feature flags, provider initialization order, or desktop/mobile parity.
 
+Preflight: review all `AGENTS.md` files (root, `lib/**`, `backend/**`) before making changes.
+
 ## Design tokens & Kubus colors (single source of truth)
 - Tokens live in `lib/utils/design_tokens.dart`:
 	- `KubusColors` (brand palette + semantic colors)
@@ -45,6 +47,12 @@ Ship Flutter UI without breaking Kubus design tokens, theme roles, feature flags
 - No widget‑level provider initialization; use `AppInitializer` + `AppBootstrapService`.
 - Keep desktop/mobile parity (`lib/screens/**` ↔ `lib/screens/desktop/**`).
 - Avoid `dart:html`; web-only logic must be in `*_web.dart` with conditional imports.
+
+## Audit watchlist (keep fixed)
+- Web map style URLs must not double-prefix `assets/` and must have a production-safe fallback.
+- Tutorial overlays must block pointer gestures on web (no touch-through).
+- Reauth/app-lock gates must not trigger before login; only enable auto-lock when PIN/biometric is configured.
+- Avoid overlapping polling/timers; gate refresh loops on visibility/feature flags.
 
 ## Evidence (direct quotes with line references)
 - `lib/utils/design_tokens.dart` (lines 4–5):

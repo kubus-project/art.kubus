@@ -4,6 +4,8 @@ Model compatibility: GPT-5.x Codex-compliant agents.
 
 Mission: keep the Flutter + Node.js stack stable while extending AR, Solana, OrbitDB, and storage features without breaking theme, feature flags, or fallbacks.
 
+Preflight: always review **all** `AGENTS.md` files in this repo (root, `lib/**`, `backend/**`) before making changes.
+
 ---
 
 ## 1) Core Guardrails (Must Follow)
@@ -41,6 +43,8 @@ Mission: keep the Flutter + Node.js stack stable while extending AR, Solana, Orb
 10. Naming discipline
    - Avoid creating duplicate domain models (e.g., do not introduce a second `ArtMarker`/`Achievement`).
    - Service-local structs must be suffixed: `*Definition`, `*Dto`, `*Record`, `*Payload`.
+11. Cross-agent consistency
+    - Keep guidance aligned across all `AGENTS.md` files; if you update one, update the related layer docs too.
 
 ---
 
@@ -166,3 +170,21 @@ Any mutation touching public entities must call the relevant `publicSyncService`
 - Providers initialize idempotently; no widget-level init/binding.
 - Desktop/mobile parity maintained.
 - Local-first fallbacks remain functional.
+
+---
+
+## 11) Audit watchlist (keep fixed)
+
+Frontend (Flutter)
+- Map web style URL normalization must not double-prefix `assets/` and must provide a production-safe fallback.
+- Tutorial overlays must block pointer gestures on web (no touch-through to map).
+- Reauth/app-lock gates must not trigger before login; only enable auto-lock when PIN/biometric is configured.
+- Avoid overlapping polling/timers; gate refresh loops on visibility/feature flags.
+
+Backend (Node)
+- Enforce conversation membership on all messaging routes.
+- Validate notification recipients (no cross-user creation without admin).
+- Do not allow unauthenticated access to achievements stats.
+- Require `JWT_SECRET` in non-dev environments; avoid default fallbacks.
+- Normalize marker ownership (`createdBy` vs wallet) consistently.
+- Analytics ingest should accept `text/plain` payloads and return 204 for filtered/ignored events.

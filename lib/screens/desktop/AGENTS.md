@@ -3,6 +3,8 @@
 ## Mission
 Maintain feature parity with mobile screens while adapting layout for desktop.
 
+Preflight: review all `AGENTS.md` files (root, `lib/**`, `backend/**`) before making changes.
+
 ## Parity rules
 - Reuse the same providers/services/models as mobile (`lib/screens/**`).
 - Match feature flags from `AppConfig.isFeatureEnabled(...)` (see `lib/config/config.dart`).
@@ -16,6 +18,9 @@ Maintain feature parity with mobile screens while adapting layout for desktop.
 ## Theme + tokens
 - Use `ThemeProvider` + `Theme.of(context).colorScheme`.
 - Use tokens from `lib/utils/design_tokens.dart` (spacing, glass, layout).
+
+## Audit watchlist (desktop screens)
+- Keep desktop/mobile feature parity for map style fixes and tutorial overlay behavior.
 
 ## Evidence (direct quotes with line references)
 - `lib/screens/desktop/desktop_map_screen.dart` (lines 245–246, 116):
