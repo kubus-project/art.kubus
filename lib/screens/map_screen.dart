@@ -476,8 +476,46 @@ class _MapScreenState extends State<MapScreen>
         ),
       );
 
-      // Note: No separate hitbox layer needed - symbol layers are directly queryable
-      // via queryRenderedFeaturesInRect with appropriate layer IDs.
+      // 4. Invisible hitbox layer (topmost) for consistent tap detection (2D + 3D)
+      await controller.addCircleLayer(
+        _markerSourceId,
+        _markerHitboxLayerId,
+        ml.CircleLayerProperties(
+          circleColor: '#000000',
+          circleOpacity: 0.0,
+          circleStrokeOpacity: 0.0,
+          circleRadius: <Object>[
+            'case',
+            <Object>['==', <Object>['get', 'kind'], 'cluster'],
+            <Object>[
+              'interpolate',
+              <Object>['linear'],
+              <Object>['zoom'],
+              3,
+              16,
+              12,
+              22,
+              15,
+              28,
+              24,
+              36,
+            ],
+            <Object>[
+              'interpolate',
+              <Object>['linear'],
+              <Object>['zoom'],
+              3,
+              10,
+              12,
+              16,
+              15,
+              23,
+              24,
+              30,
+            ],
+          ],
+        ),
+      );
 
       await controller.addGeoJsonSource(
         _locationSourceId,
@@ -913,7 +951,9 @@ class _MapScreenState extends State<MapScreen>
     _mapDeepLinkProvider = null;
     _tabProvider?.removeListener(_handleTabProviderChanged);
     _tabProvider = null;
+    final controller = _mapController;
     _mapController = null;
+    controller?.dispose();
     _styleInitialized = false;
     _registeredMapImages.clear();
     _timer?.cancel();
@@ -3048,22 +3088,11 @@ class _MapScreenState extends State<MapScreen>
     }
 
     try {
-      // Query the symbol layer directly - no separate hitbox layer.
-      // This ensures taps only register when clicking on the actual marker icon.
-      // In 3D mode, fill-extrusion layers are NOT reliably queryable via
-      // queryRenderedFeaturesInRect. Instead, query _cubeIconLayerId which uses
-      // the same source (_markerSourceId) and IS visible in 3D mode.
-      // In 2D mode, query _markerLayerId which is the visible symbol layer.
-      final layerIds = <String>[
-        if (_is3DMarkerModeActive) _cubeIconLayerId else _markerLayerId,
-      ];
+      // Query the hitbox layer for consistent tap detection (2D + 3D).
+      final layerIds = <String>[_markerHitboxLayerId];
 
-      // Use a tight tolerance for precise marker hit detection.
-      // Marker icons are 46px visible (within 56px PNG) at zoom 15, scaled by iconSize.
-      // We use 8px tolerance (half of ~16px actual click area) to ensure taps
-      // only register when clicking directly on the marker icon.
-      final double iconScale = (_lastZoom / 15.0).clamp(0.5, 1.5);
-      final double tapTolerance = 8.0 * iconScale;
+      // Use a small rect (point-like) so the hitbox layer controls the tap area.
+      const double tapTolerance = 6.0;
       final rect = Rect.fromCenter(
         center: Offset(point.x, point.y),
         width: tapTolerance * 2,
@@ -3089,16 +3118,9 @@ class _MapScreenState extends State<MapScreen>
 
       if (features.isEmpty) {
         if (kDebugMode) {
-          AppConfig.debugPrint('MapScreen: no features in rect, trying fallback picker');
+          AppConfig.debugPrint('MapScreen: no features in rect');
         }
-        final fallbackMarker = await _fallbackPickMarkerAtPoint(point);
-        if (!mounted) return;
-        if (fallbackMarker == null) {
-          _dismissSelectedMarker();
-          return;
-        }
-        _handleMarkerTap(fallbackMarker);
-        unawaited(_syncMapMarkers(themeProvider: themeProvider));
+        _dismissSelectedMarker();
         return;
       }
 
@@ -3138,7 +3160,6 @@ class _MapScreenState extends State<MapScreen>
           _artMarkers.where((m) => m.id == markerId).toList(growable: false);
       if (marker.isEmpty) return;
       _handleMarkerTap(marker.first);
-      unawaited(_syncMapMarkers(themeProvider: themeProvider));
     } catch (e) {
       if (kDebugMode) {
         AppConfig.debugPrint('MapScreen: queryRenderedFeatures failed: $e');
@@ -3146,7 +3167,6 @@ class _MapScreenState extends State<MapScreen>
       final fallbackMarker = await _fallbackPickMarkerAtPoint(point);
       if (fallbackMarker == null) return;
       _handleMarkerTap(fallbackMarker);
-      unawaited(_syncMapMarkers(themeProvider: themeProvider));
     }
   }
 
@@ -3156,8 +3176,10 @@ class _MapScreenState extends State<MapScreen>
     final controller = _mapController;
     if (controller == null) return null;
 
-    // Increase tolerance when map is pitched (3D) since projection becomes less accurate
-    final double maxDistance = _is3DMarkerModeActive ? 80.0 : 64.0;
+    // Tight fallback radius to avoid oversized hitboxes.
+    final zoomScale = (_lastZoom / 15.0).clamp(0.7, 1.4);
+    final double base = _is3DMarkerModeActive ? 28.0 : 22.0;
+    final double maxDistance = base * zoomScale;
     ArtMarker? best;
     double bestDistance = maxDistance;
 
@@ -3820,12 +3842,14 @@ class _MapScreenState extends State<MapScreen>
               constraints.maxHeight * 0.55,
               480,
             );
+            final double cardHeight =
+                math.min(estimatedHeight, maxCardHeight);
             final double leftSafe = 16;
             final double rightSafe = constraints.maxWidth - maxWidth - 16;
             final double topSafe = MediaQuery.of(context).padding.top + 12;
             // Use maxCardHeight for bottom safe calculation
             final double bottomSafe =
-                constraints.maxHeight - maxCardHeight - 12;
+                constraints.maxHeight - cardHeight - 12;
 
             // Account for marker height (flat square markers).
             const double markerOffset = 32.0;
@@ -3836,7 +3860,7 @@ class _MapScreenState extends State<MapScreen>
 
             // Position above marker by default, below if not enough space
             double top = (anchor?.dy ?? (constraints.maxHeight / 2)) -
-                estimatedHeight -
+                cardHeight -
                 markerOffset;
             if (top < topSafe) {
               top = (anchor?.dy ?? (constraints.maxHeight / 2)) + markerOffset;
@@ -3848,7 +3872,7 @@ class _MapScreenState extends State<MapScreen>
               AppConfig.debugPrint(
                 'MapScreen: card anchor=(${anchor?.dx.toStringAsFixed(0)}, ${anchor?.dy.toStringAsFixed(0)}) '
                 'pos=(${left.toStringAsFixed(0)}, ${top.toStringAsFixed(0)}) '
-                'maxH=${maxCardHeight.toStringAsFixed(0)} estH=${estimatedHeight.toStringAsFixed(0)}',
+                'maxH=${maxCardHeight.toStringAsFixed(0)} estH=${estimatedHeight.toStringAsFixed(0)} cardH=${cardHeight.toStringAsFixed(0)}',
               );
             }
 
@@ -3866,12 +3890,11 @@ class _MapScreenState extends State<MapScreen>
                     onPointerMove: (_) {},
                     onPointerUp: (_) {},
                     onPointerSignal: (_) {},
-                    // Add maxHeight constraint to prevent card growing beyond viewport
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(maxHeight: maxCardHeight),
-                      child: AnimatedSize(
-                        duration: const Duration(milliseconds: 220),
-                        curve: Curves.easeOutCubic,
+                    child: AnimatedSize(
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOutCubic,
+                      child: SizedBox(
+                        height: cardHeight,
                         child: Material(
                           color: Colors.transparent,
                           child: Container(
@@ -3879,28 +3902,33 @@ class _MapScreenState extends State<MapScreen>
                               borderRadius: BorderRadius.circular(KubusRadius.lg),
                               border: Border.all(
                                 color: baseColor.withValues(alpha: 0.35),
-                              width: KubusSizes.hairline,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: baseColor.withValues(alpha: 0.22),
-                                blurRadius: 20,
-                                offset: const Offset(0, 12),
+                                width: KubusSizes.hairline,
                               ),
-                            ],
-                          ),
-                          child: LiquidGlassPanel(
-                            padding: const EdgeInsets.all(KubusSpacing.md),
-                            borderRadius: BorderRadius.circular(KubusRadius.lg),
-                            showBorder: false,
-                            backgroundColor:
-                                scheme.surface.withValues(alpha: 0.45),
-                            // Wrap in SingleChildScrollView to handle overflow when content exceeds maxHeight
-                            child: SingleChildScrollView(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
+                              boxShadow: [
+                                BoxShadow(
+                                  color: baseColor.withValues(alpha: 0.22),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 12),
+                                ),
+                              ],
+                            ),
+                            child: LiquidGlassPanel(
+                              padding: const EdgeInsets.all(KubusSpacing.md),
+                              borderRadius: BorderRadius.circular(KubusRadius.lg),
+                              showBorder: false,
+                              backgroundColor:
+                                  scheme.surface.withValues(alpha: 0.45),
+                              // Use shrink-wrapped scroll view so the card
+                              // only grows when content requires it.
+                              child: CustomScrollView(
+                                shrinkWrap: true,
+                                physics: const ClampingScrollPhysics(),
+                                slivers: [
+                                  SliverToBoxAdapter(
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
                                 Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
@@ -4128,14 +4156,16 @@ class _MapScreenState extends State<MapScreen>
                                     ),
                                   ),
                                 ),
-                              ],
-                              ), // Close Column
-                            ), // Close SingleChildScrollView
-                          ), // Close LiquidGlassPanel
-                        ), // Close Container
-                      ), // Close Material
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ), // Close CustomScrollView
+                            ), // Close LiquidGlassPanel
+                          ), // Close Container
+                        ), // Close Material
+                      ), // Close SizedBox
                     ), // Close AnimatedSize
-                  ), // Close ConstrainedBox
                 ), // Close Listener
               ), // Close Positioned
               ],
@@ -5326,7 +5356,7 @@ class _MapScreenState extends State<MapScreen>
     bool isLoading,
   ) {
     final scheme = theme.colorScheme;
-    return Align(
+    final sheet = Align(
       alignment: Alignment.bottomCenter,
       child: Listener(
         behavior: HitTestBehavior.opaque,
@@ -5612,6 +5642,7 @@ class _MapScreenState extends State<MapScreen>
         ),
       ),
     );
+    return _wrapPointerInterceptor(child: sheet);
   }
 
   Widget _buildEmptyState(ThemeData theme) {

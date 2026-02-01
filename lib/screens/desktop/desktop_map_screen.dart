@@ -819,8 +819,46 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         ),
       );
 
-      // Note: No separate hitbox layer needed - symbol layers are directly queryable
-      // via queryRenderedFeaturesInRect with appropriate layer IDs.
+      // 4. Invisible hitbox layer (topmost) for consistent tap detection (2D + 3D)
+      await controller.addCircleLayer(
+        _markerSourceId,
+        _markerHitboxLayerId,
+        ml.CircleLayerProperties(
+          circleColor: '#000000',
+          circleOpacity: 0.0,
+          circleStrokeOpacity: 0.0,
+          circleRadius: <Object>[
+            'case',
+            <Object>['==', <Object>['get', 'kind'], 'cluster'],
+            <Object>[
+              'interpolate',
+              <Object>['linear'],
+              <Object>['zoom'],
+              3,
+              16,
+              12,
+              22,
+              15,
+              28,
+              24,
+              36,
+            ],
+            <Object>[
+              'interpolate',
+              <Object>['linear'],
+              <Object>['zoom'],
+              3,
+              10,
+              12,
+              16,
+              15,
+              23,
+              24,
+              30,
+            ],
+          ],
+        ),
+      );
 
       await controller.addGeoJsonSource(
         _locationSourceId,
@@ -936,22 +974,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
 
     try {
-      // Query the symbol layer directly - no separate hitbox layer.
-      // This ensures taps only register when clicking on the actual marker icon.
-      // In 3D mode, fill-extrusion layers are NOT reliably queryable via
-      // queryRenderedFeaturesInRect. Instead, query _cubeIconLayerId which uses
-      // the same source (_markerSourceId) and IS visible in 3D mode.
-      // In 2D mode, query _markerLayerId which is the visible symbol layer.
-      final layerIds = <String>[
-        if (_is3DMarkerModeActive) _cubeIconLayerId else _markerLayerId,
-      ];
+      // Query the hitbox layer for consistent tap detection (2D + 3D).
+      final layerIds = <String>[_markerHitboxLayerId];
 
-      // Use a tight tolerance for precise marker hit detection.
-      // Marker icons are 46px visible (within 56px PNG) at zoom 15, scaled by iconSize.
-      // We use 8px tolerance (half of ~16px actual click area) to ensure taps
-      // only register when clicking directly on the marker icon.
-      final double iconScale = (_cameraZoom / 15.0).clamp(0.5, 1.5);
-      final double tapTolerance = 8.0 * iconScale;
+      // Use a small rect (point-like) so the hitbox layer controls the tap area.
+      const double tapTolerance = 6.0;
       final rect = Rect.fromCenter(
         center: Offset(point.x, point.y),
         width: tapTolerance * 2,
@@ -977,15 +1004,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
       if (features.isEmpty) {
         if (kDebugMode) {
-          AppConfig.debugPrint('DesktopMapScreen: no features in rect, trying fallback picker');
-        }
-        final fallbackMarker = await _fallbackPickMarkerAtPoint(point);
-        if (!mounted) return;
-        if (fallbackMarker != null) {
-          _handleMarkerTap(fallbackMarker);
-          unawaited(_syncMapMarkers(themeProvider: themeProvider));
-          _queueOverlayAnchorRefresh();
-          return;
+          AppConfig.debugPrint('DesktopMapScreen: no features in rect');
         }
         setState(() {
           _selectedArtwork = null;
@@ -1035,7 +1054,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           _artMarkers.where((m) => m.id == markerId).toList(growable: false);
       if (marker.isEmpty) return;
       _handleMarkerTap(marker.first);
-      unawaited(_syncMapMarkers(themeProvider: themeProvider));
       _queueOverlayAnchorRefresh();
     } catch (e) {
       if (kDebugMode) {
@@ -1045,7 +1063,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       final fallbackMarker = await _fallbackPickMarkerAtPoint(point);
       if (fallbackMarker == null) return;
       _handleMarkerTap(fallbackMarker);
-      unawaited(_syncMapMarkers(themeProvider: themeProvider));
       _queueOverlayAnchorRefresh();
     }
   }
@@ -1056,8 +1073,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final controller = _mapController;
     if (controller == null) return null;
 
-    // Increase tolerance when map is pitched (3D) since projection becomes less accurate
-    final double maxDistance = _is3DMarkerModeActive ? 80.0 : 64.0;
+    // Tight fallback radius to avoid oversized hitboxes.
+    final zoomScale = (_cameraZoom / 15.0).clamp(0.7, 1.4);
+    final double base = _is3DMarkerModeActive ? 28.0 : 22.0;
+    final double maxDistance = base * zoomScale;
     ArtMarker? best;
     double bestDistance = maxDistance;
 
@@ -1695,7 +1714,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       DesktopShellScope.of(context)?.closeFunctionsPanel();
     } catch (_) {}
 
+    final controller = _mapController;
     _mapController = null;
+    controller?.dispose();
     _styleInitialized = false;
     _registeredMapImages.clear();
     _animationController.dispose();
@@ -3703,21 +3724,23 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           ),
 
           // Zoom - / +
-          IconButton(
-            onPressed: () {
+          _buildGlassIconButton(
+            icon: Icons.remove,
+            themeProvider: themeProvider,
+            tooltip: l10n.mapEmptyZoomOutAction,
+            onTap: () {
               final nextZoom = (_effectiveZoom - 1).clamp(3.0, 18.0);
               _moveCamera(_effectiveCenter, nextZoom);
             },
-            tooltip: l10n.mapEmptyZoomOutAction,
-            icon: const Icon(Icons.remove),
           ),
-          IconButton(
-            onPressed: () {
+          _buildGlassIconButton(
+            icon: Icons.add,
+            themeProvider: themeProvider,
+            tooltip: 'Zoom in',
+            onTap: () {
               final nextZoom = (_effectiveZoom + 1).clamp(3.0, 18.0);
               _moveCamera(_effectiveCenter, nextZoom);
             },
-            tooltip: 'Zoom in',
-            icon: const Icon(Icons.add),
           ),
           // Point north / reset bearing button (visible when map is rotated)
           if (_lastBearing.abs() > 1.0) ...[
@@ -5107,12 +5130,16 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               borderRadius: BorderRadius.circular(18),
               showBorder: false,
               backgroundColor: scheme.surface.withValues(alpha: 0.45),
-              // Wrap in SingleChildScrollView to handle overflow when content exceeds maxHeight
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+              // Use shrink-wrapped scroll view so the card only grows when needed.
+              child: CustomScrollView(
+                shrinkWrap: true,
+                physics: const ClampingScrollPhysics(),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                   // Header row: Title + distance + close button
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -5374,44 +5401,48 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     ),
                   ],
 
-                  const SizedBox(height: 12),
+                      const SizedBox(height: 12),
 
                   // Primary action button
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: baseColor,
-                        foregroundColor: AppColorUtils.contrastText(baseColor),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: baseColor,
+                            foregroundColor:
+                                AppColorUtils.contrastText(baseColor),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                          ),
+                          onPressed: canPresentExhibition
+                              ? () => _openExhibitionFromMarker(
+                                  marker, primaryExhibition, artwork)
+                              : () => _openMarkerDetail(marker, artwork),
+                          icon: Icon(
+                            canPresentExhibition
+                                ? Icons.museum_outlined
+                                : Icons.arrow_forward,
+                            size: 18,
+                          ),
+                          label: Text(
+                            canPresentExhibition
+                                ? 'Open Exhibition'
+                                : l10n.commonViewDetails,
+                            style:
+                                Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 13,
+                                    ),
+                          ),
                         ),
                       ),
-                      onPressed: canPresentExhibition
-                          ? () => _openExhibitionFromMarker(
-                              marker, primaryExhibition, artwork)
-                          : () => _openMarkerDetail(marker, artwork),
-                      icon: Icon(
-                        canPresentExhibition
-                            ? Icons.museum_outlined
-                            : Icons.arrow_forward,
-                        size: 18,
-                      ),
-                      label: Text(
-                        canPresentExhibition
-                            ? 'Open Exhibition'
-                            : l10n.commonViewDetails,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13,
-                            ),
-                      ),
-                    ),
+                    ],
                   ),
-                ],
-              ), // Close Column
-            ), // Close SingleChildScrollView
+                ),
+              ],
+            ), // Close CustomScrollView
             ), // Close LiquidGlassPanel
           ), // Close Container
         ), // Close Material
@@ -5549,7 +5580,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         const double padding = 16;
         // Estimate card height (actual card uses maxHeight from viewportHeight * 0.6)
         final viewportHeight = MediaQuery.of(context).size.height;
-        final estimatedCardHeight = math.min(viewportHeight * 0.5, 400.0);
+        final estimatedCardHeight = math.min(viewportHeight * 0.6, 520.0);
 
         // Center horizontally around anchor, clamped to viewport
         double left = anchor.dx - (cardWidth / 2);
