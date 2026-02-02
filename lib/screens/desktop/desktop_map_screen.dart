@@ -42,6 +42,7 @@ import '../../widgets/map_marker_style_config.dart';
 import '../../widgets/artwork_creator_byline.dart';
 import '../../widgets/art_map_view.dart';
 import '../../widgets/map_marker_dialog.dart';
+import '../../widgets/map_overlay_blocker.dart';
 import '../../utils/grid_utils.dart';
 import '../../widgets/app_logo.dart';
 import '../../utils/app_animations.dart';
@@ -2137,7 +2138,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             top: 80,
             bottom: 24,
             width: 380,
-            child: _wrapPointerInterceptor(
+            child: MapOverlayBlocker(
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: () {}, // absorb taps
@@ -2160,7 +2161,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             bottom: 24,
             child: Align(
               alignment: Alignment.bottomRight,
-              child: _wrapPointerInterceptor(
+              child: MapOverlayBlocker(
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: () {}, // absorb taps
@@ -2183,7 +2184,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               return Positioned(
                 left: leftOffset,
                 bottom: 24,
-                child: _wrapPointerInterceptor(
+                child: MapOverlayBlocker(
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: () {}, // absorb taps
@@ -2594,31 +2595,30 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       top: 0,
       left: 0,
       right: 0,
-      child: _wrapPointerInterceptor(
-        child: MouseRegion(
-          cursor: SystemMouseCursors.basic,
-          child: SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                KubusSpacing.lg,
-                KubusSpacing.sm + KubusSpacing.xs,
-                KubusSpacing.lg,
-                KubusSpacing.sm + KubusSpacing.xs,
+      child: MapOverlayBlocker(
+        cursor: SystemMouseCursors.basic,
+        child: SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              KubusSpacing.lg,
+              KubusSpacing.sm + KubusSpacing.xs,
+              KubusSpacing.lg,
+              KubusSpacing.sm + KubusSpacing.xs,
+            ),
+            child: LiquidGlassPanel(
+              padding: const EdgeInsets.symmetric(
+                horizontal: KubusSpacing.md + KubusSpacing.xs,
+                vertical: KubusSpacing.md,
               ),
-              child: LiquidGlassPanel(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: KubusSpacing.md + KubusSpacing.xs,
-                  vertical: KubusSpacing.md,
-                ),
-                margin: EdgeInsets.zero,
-                borderRadius: BorderRadius.circular(KubusRadius.lg),
-                blurSigma: KubusGlassEffects.blurSigmaLight,
-                backgroundColor:
-                    scheme.surface.withValues(alpha: isDark ? 0.20 : 0.14),
-                showBorder: true,
-                child: Row(
-                  children: [
+              margin: EdgeInsets.zero,
+              borderRadius: BorderRadius.circular(KubusRadius.lg),
+              blurSigma: KubusGlassEffects.blurSigmaLight,
+              backgroundColor:
+                  scheme.surface.withValues(alpha: isDark ? 0.20 : 0.14),
+              showBorder: true,
+              child: Row(
+                children: [
                     // Logo and title
                     Row(
                       children: [
@@ -2717,13 +2717,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                       ),
                     ),
                   ],
+                  ),
                 ),
               ),
-            ),
-          ),
-        ),
-      ),
-    );
+            )
+          ), 
+      );
   }
 
   Widget _buildSearchOverlay(ThemeProvider themeProvider) {
@@ -2739,11 +2738,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
 
     return Positioned.fill(
-      child: _wrapPointerInterceptor(
-        child: MouseRegion(
-          cursor: SystemMouseCursors.basic,
-          child: Stack(
-            children: [
+      child: MapOverlayBlocker(
+        cursor: SystemMouseCursors.basic,
+        child: Stack(
+          children: [
               Positioned.fill(
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
@@ -2866,7 +2864,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             ],
           ),
         ),
-      ),
     );
   }
 
@@ -3923,11 +3920,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   ),
                 ],
               ),
-            ),
           ),
         ),
       ),
-    );
+    )
+  );
   }
 
   /// Returns human-readable label for marker type - same as mobile
