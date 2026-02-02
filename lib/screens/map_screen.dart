@@ -540,8 +540,8 @@ class _MapScreenState extends State<MapScreen>
           fillExtrusionColor: <Object>['get', 'color'],
           fillExtrusionHeight: <Object>['get', 'height'],
           fillExtrusionBase: 0.0,
-          fillExtrusionOpacity: 1.0,
-          fillExtrusionVerticalGradient: false,
+          fillExtrusionOpacity: 0.88,
+          fillExtrusionVerticalGradient: true,
           visibility: 'none',
         ),
       );
@@ -554,8 +554,8 @@ class _MapScreenState extends State<MapScreen>
           fillExtrusionColor: <Object>['get', 'color'],
           fillExtrusionHeight: <Object>['get', 'height'],
           fillExtrusionBase: 0.0,
-          fillExtrusionOpacity: 1.0,
-          fillExtrusionVerticalGradient: false,
+          fillExtrusionOpacity: 0.96,
+          fillExtrusionVerticalGradient: true,
           visibility: 'none',
         ),
       );
@@ -591,7 +591,11 @@ class _MapScreenState extends State<MapScreen>
         _cubeIconLayerId,
         ml.SymbolLayerProperties(
           iconImage: <Object>['get', 'icon'],
-          iconSize: MapMarkerStyleConfig.iconSizeExpression(),
+          iconSize: <Object>[
+            '*',
+            MapMarkerStyleConfig.iconSizeExpression(),
+            0.92,
+          ],
           iconOpacity: <Object>[
             'case',
             <Object>[
@@ -1971,6 +1975,7 @@ class _MapScreenState extends State<MapScreen>
   Future<void> _applyMarkerLayerStyle(ml.MapLibreMapController controller) async {
     final base = MapMarkerStyleConfig.iconSizeExpression();
     final iconSize = _interactiveIconSizeExpression(base);
+    final cubeIconSize = <Object>['*', iconSize, 0.92];
     final iconOpacity = <Object>[
       'case',
       <Object>['==', <Object>['get', 'kind'], 'cluster'],
@@ -2000,7 +2005,7 @@ class _MapScreenState extends State<MapScreen>
         _cubeIconLayerId,
         ml.SymbolLayerProperties(
           iconImage: <Object>['get', 'icon'],
-          iconSize: iconSize,
+          iconSize: cubeIconSize,
           iconOpacity: iconOpacity,
           iconAllowOverlap: true,
           iconIgnorePlacement: true,
@@ -2030,27 +2035,29 @@ class _MapScreenState extends State<MapScreen>
             (MapMarkerStyleConfig.selectedPopScaleFactor - 1.0) *
                 math.sin(_animationController.value * math.pi));
 
-    final expr = <Object>['case'];
+    // MapLibre expressions allow only a single zoom-based "step"/"interpolate"
+    // subexpression. `base` is zoom-based, so it must appear exactly once.
+    final multiplier = <Object>['case'];
     if (pressedId != null) {
-      expr.addAll(<Object>[
+      multiplier.addAll(<Object>[
         <Object>['==', <Object>['id'], pressedId],
-        <Object>['*', base, MapMarkerStyleConfig.pressedScaleFactor],
+        MapMarkerStyleConfig.pressedScaleFactor,
       ]);
     }
     if (selectedId != null) {
-      expr.addAll(<Object>[
+      multiplier.addAll(<Object>[
         <Object>['==', <Object>['id'], selectedId],
-        <Object>['*', base, pop],
+        pop,
       ]);
     }
     if (hoveredId != null) {
-      expr.addAll(<Object>[
+      multiplier.addAll(<Object>[
         <Object>['==', <Object>['id'], hoveredId],
-        <Object>['*', base, MapMarkerStyleConfig.hoverScaleFactor],
+        MapMarkerStyleConfig.hoverScaleFactor,
       ]);
     }
-    expr.add(base);
-    return expr;
+    multiplier.add(1.0);
+    return <Object>['*', base, multiplier];
   }
 
   bool _assertMarkerModeInvariant() {
@@ -3140,6 +3147,8 @@ class _MapScreenState extends State<MapScreen>
     final stack = LayoutBuilder(
       builder: (context, constraints) {
         final sheetHeight = constraints.maxHeight * _nearbySheetExtent;
+        final double attributionBottomMargin =
+            ((sheetHeight + 8.0) / 12.0).ceilToDouble() * 12.0;
         return Stack(
           children: [
             KeyedSubtree(
@@ -3148,7 +3157,10 @@ class _MapScreenState extends State<MapScreen>
                 // In tutorial mode, prevent map gestures so the overlay can
                 // guide the user without accidental pans/zooms.
                 ignoring: _showMapTutorial,
-                child: _buildMap(themeProvider),
+                child: _buildMap(
+                  themeProvider,
+                  attributionBottomMargin: attributionBottomMargin,
+                ),
               ),
             ),
             if (_isSheetBlocking || _isSheetInteracting)
@@ -3223,7 +3235,10 @@ class _MapScreenState extends State<MapScreen>
     );
   }
 
-  Widget _buildMap(ThemeProvider themeProvider) {
+  Widget _buildMap(
+    ThemeProvider themeProvider, {
+    required double attributionBottomMargin,
+  }) {
     final isDark = themeProvider.isDarkMode;
     final tileProviders = Provider.of<TileProviders?>(context, listen: false);
     final styleAsset = tileProviders?.mapStyleAsset(isDarkMode: isDark) ??
@@ -3240,6 +3255,11 @@ class _MapScreenState extends State<MapScreen>
       maxZoom: 24.0,
       isDarkMode: isDark,
       styleAsset: styleAsset,
+      attributionButtonPosition: ml.AttributionButtonPosition.bottomLeft,
+      attributionButtonMargins: math.Point<double>(
+        12.0,
+        math.max(12.0, attributionBottomMargin),
+      ),
       rotateGesturesEnabled: !disableGesturesForOverlays,
       scrollGesturesEnabled: !disableGesturesForOverlays,
       zoomGesturesEnabled: !disableGesturesForOverlays,
@@ -3914,11 +3934,13 @@ class _MapScreenState extends State<MapScreen>
         zoom: zoom,
         latitude: marker.position.latitude,
       );
-      final topSizeMeters = fullSizeMeters * 0.82;
-      final bevelHeightMeters = fullSizeMeters * 0.82;
+      final topSizeMeters = fullSizeMeters * 0.92;
+      final topHeightMeters = fullSizeMeters * 0.90;
+      final bevelHeightMeters = fullSizeMeters * 0.72;
 
-      final topColorHex = MarkerCubeGeometry.toHex(baseColor);
-      final bevelColor = AppColorUtils.shiftLightness(baseColor, -0.08);
+      final topColor = AppColorUtils.shiftLightness(baseColor, 0.04);
+      final topColorHex = MarkerCubeGeometry.toHex(topColor);
+      final bevelColor = AppColorUtils.shiftLightness(baseColor, -0.10);
       final bevelColorHex = MarkerCubeGeometry.toHex(bevelColor);
 
       topFeatures.add(
@@ -3926,7 +3948,7 @@ class _MapScreenState extends State<MapScreen>
           marker: marker,
           colorHex: topColorHex,
           sizeMeters: topSizeMeters,
-          heightMeters: fullSizeMeters,
+          heightMeters: topHeightMeters,
           kind: 'cubeTop',
         ),
       );
@@ -4244,7 +4266,7 @@ class _MapScreenState extends State<MapScreen>
     const int maxPreviewChars = 300;
     final String visibleDescription = rawDescription.length <= maxPreviewChars
         ? rawDescription
-        : '${rawDescription.substring(0, maxPreviewChars)}…';
+        : '${rawDescription.substring(0, maxPreviewChars)}...';
 
     final distanceText = () {
       if (_currentPosition == null) return null;

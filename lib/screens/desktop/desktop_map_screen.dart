@@ -932,8 +932,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           fillExtrusionColor: <Object>['get', 'color'],
           fillExtrusionHeight: <Object>['get', 'height'],
           fillExtrusionBase: 0.0,
-          fillExtrusionOpacity: 1.0,
-          fillExtrusionVerticalGradient: false,
+          fillExtrusionOpacity: 0.88,
+          fillExtrusionVerticalGradient: true,
           visibility: 'none',
         ),
       );
@@ -946,8 +946,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           fillExtrusionColor: <Object>['get', 'color'],
           fillExtrusionHeight: <Object>['get', 'height'],
           fillExtrusionBase: 0.0,
-          fillExtrusionOpacity: 1.0,
-          fillExtrusionVerticalGradient: false,
+          fillExtrusionOpacity: 0.96,
+          fillExtrusionVerticalGradient: true,
           visibility: 'none',
         ),
       );
@@ -983,7 +983,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         _cubeIconLayerId,
         ml.SymbolLayerProperties(
           iconImage: <Object>['get', 'icon'],
-          iconSize: MapMarkerStyleConfig.iconSizeExpression(),
+          iconSize: <Object>[
+            '*',
+            MapMarkerStyleConfig.iconSizeExpression(),
+            0.92,
+          ],
           iconOpacity: <Object>[
             'case',
             <Object>[
@@ -5494,6 +5498,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   Future<void> _applyMarkerLayerStyle(ml.MapLibreMapController controller) async {
     final base = MapMarkerStyleConfig.iconSizeExpression();
     final iconSize = _interactiveIconSizeExpression(base);
+    final cubeIconSize = <Object>['*', iconSize, 0.92];
     final iconOpacity = <Object>[
       'case',
       <Object>['==', <Object>['get', 'kind'], 'cluster'],
@@ -5523,7 +5528,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         _cubeIconLayerId,
         ml.SymbolLayerProperties(
           iconImage: <Object>['get', 'icon'],
-          iconSize: iconSize,
+          iconSize: cubeIconSize,
           iconOpacity: iconOpacity,
           iconAllowOverlap: true,
           iconIgnorePlacement: true,
@@ -5553,27 +5558,29 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             (MapMarkerStyleConfig.selectedPopScaleFactor - 1.0) *
                 math.sin(_animationController.value * math.pi));
 
-    final expr = <Object>['case'];
+    // MapLibre expressions allow only a single zoom-based "step"/"interpolate"
+    // subexpression. `base` is zoom-based, so it must appear exactly once.
+    final multiplier = <Object>['case'];
     if (pressedId != null) {
-      expr.addAll(<Object>[
+      multiplier.addAll(<Object>[
         <Object>['==', <Object>['id'], pressedId],
-        <Object>['*', base, MapMarkerStyleConfig.pressedScaleFactor],
+        MapMarkerStyleConfig.pressedScaleFactor,
       ]);
     }
     if (selectedId != null) {
-      expr.addAll(<Object>[
+      multiplier.addAll(<Object>[
         <Object>['==', <Object>['id'], selectedId],
-        <Object>['*', base, pop],
+        pop,
       ]);
     }
     if (hoveredId != null) {
-      expr.addAll(<Object>[
+      multiplier.addAll(<Object>[
         <Object>['==', <Object>['id'], hoveredId],
-        <Object>['*', base, MapMarkerStyleConfig.hoverScaleFactor],
+        MapMarkerStyleConfig.hoverScaleFactor,
       ]);
     }
-    expr.add(base);
-    return expr;
+    multiplier.add(1.0);
+    return <Object>['*', base, multiplier];
   }
 
   bool _assertMarkerModeInvariant() {
@@ -5668,11 +5675,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         zoom: zoom,
         latitude: marker.position.latitude,
       );
-      final topSizeMeters = fullSizeMeters * 0.82;
-      final bevelHeightMeters = fullSizeMeters * 0.82;
+      final topSizeMeters = fullSizeMeters * 0.92;
+      final topHeightMeters = fullSizeMeters * 0.90;
+      final bevelHeightMeters = fullSizeMeters * 0.72;
 
-      final topColorHex = MarkerCubeGeometry.toHex(baseColor);
-      final bevelColor = AppColorUtils.shiftLightness(baseColor, -0.08);
+      final topColor = AppColorUtils.shiftLightness(baseColor, 0.04);
+      final topColorHex = MarkerCubeGeometry.toHex(topColor);
+      final bevelColor = AppColorUtils.shiftLightness(baseColor, -0.10);
       final bevelColorHex = MarkerCubeGeometry.toHex(bevelColor);
 
       topFeatures.add(
@@ -5680,7 +5689,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           marker: marker,
           colorHex: topColorHex,
           sizeMeters: topSizeMeters,
-          heightMeters: fullSizeMeters,
+          heightMeters: topHeightMeters,
           kind: 'cubeTop',
         ),
       );
@@ -5745,7 +5754,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     const int maxPreviewChars = 300;
     final String visibleDescription = rawDescription.length <= maxPreviewChars
         ? rawDescription
-        : '${rawDescription.substring(0, maxPreviewChars)}?';
+        : '${rawDescription.substring(0, maxPreviewChars)}...';
 
     final showChips =
         _hasMetadataChips(marker, artwork) || canPresentExhibition;
