@@ -29,6 +29,8 @@ class ArtMapView extends StatefulWidget {
     required this.isDarkMode,
     required this.styleAsset,
     required this.onMapCreated,
+    this.attributionButtonPosition,
+    this.attributionButtonMargins,
     this.onStyleLoaded,
     this.onCameraMove,
     this.onCameraIdle,
@@ -49,6 +51,8 @@ class ArtMapView extends StatefulWidget {
   final String styleAsset;
 
   final void Function(ml.MapLibreMapController controller) onMapCreated;
+  final ml.AttributionButtonPosition? attributionButtonPosition;
+  final math.Point<double>? attributionButtonMargins;
   final VoidCallback? onStyleLoaded;
   final void Function(ml.CameraPosition position)? onCameraMove;
   final VoidCallback? onCameraIdle;
@@ -372,6 +376,8 @@ class _ArtMapViewState extends State<ArtMapView> {
                 // mobile (for native CompassView) and disable on web (JS
                 // NavigationControl handles it via webgl_context_handler.js).
                 compassEnabled: widget.compassEnabled ?? !kIsWeb,
+                attributionButtonPosition: widget.attributionButtonPosition,
+                attributionButtonMargins: widget.attributionButtonMargins,
                 myLocationEnabled: false,
                 myLocationTrackingMode: ml.MyLocationTrackingMode.none,
                 onMapCreated: (controller) {
