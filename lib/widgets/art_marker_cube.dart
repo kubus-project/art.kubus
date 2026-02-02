@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -7,6 +8,7 @@ import '../models/art_marker.dart';
 import '../utils/app_color_utils.dart';
 import '../utils/design_tokens.dart';
 import '../utils/kubus_color_roles.dart';
+import 'map_marker_style_config.dart';
 import 'rotatable_cube_painter.dart';
 
 // Re-export rotatable cube components for convenience.
@@ -44,6 +46,104 @@ class CubeMarkerTokens {
   /// Computes rotatable cube size for a given zoom level.
   static double sizeForZoom(double zoom) =>
       RotatableCubeTokens.sizeForZoom(zoom);
+}
+
+@immutable
+class _MarkerPngCacheKey {
+  const _MarkerPngCacheKey({
+    required this.baseColorValue,
+    required this.iconCodePoint,
+    required this.iconFamily,
+    required this.iconPackage,
+    required this.tierIndex,
+    required this.isDark,
+    required this.forceGlow,
+    required this.shadowColorValue,
+    required this.highlightColorValue,
+    required this.legendaryRingValue,
+    required this.pixelRatioKey,
+  });
+
+  final int baseColorValue;
+  final int iconCodePoint;
+  final String iconFamily;
+  final String iconPackage;
+  final int tierIndex;
+  final bool isDark;
+  final bool forceGlow;
+  final int shadowColorValue;
+  final int highlightColorValue;
+  final int legendaryRingValue;
+  final int pixelRatioKey;
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other is _MarkerPngCacheKey &&
+            other.baseColorValue == baseColorValue &&
+            other.iconCodePoint == iconCodePoint &&
+            other.iconFamily == iconFamily &&
+            other.iconPackage == iconPackage &&
+            other.tierIndex == tierIndex &&
+            other.isDark == isDark &&
+            other.forceGlow == forceGlow &&
+            other.shadowColorValue == shadowColorValue &&
+            other.highlightColorValue == highlightColorValue &&
+            other.legendaryRingValue == legendaryRingValue &&
+            other.pixelRatioKey == pixelRatioKey);
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        baseColorValue,
+        iconCodePoint,
+        iconFamily,
+        iconPackage,
+        tierIndex,
+        isDark,
+        forceGlow,
+        shadowColorValue,
+        highlightColorValue,
+        legendaryRingValue,
+        pixelRatioKey,
+      );
+}
+
+@immutable
+class _ClusterPngCacheKey {
+  const _ClusterPngCacheKey({
+    required this.baseColorValue,
+    required this.label,
+    required this.isDark,
+    required this.shadowColorValue,
+    required this.pixelRatioKey,
+  });
+
+  final int baseColorValue;
+  final String label;
+  final bool isDark;
+  final int shadowColorValue;
+  final int pixelRatioKey;
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other is _ClusterPngCacheKey &&
+            other.baseColorValue == baseColorValue &&
+            other.label == label &&
+            other.isDark == isDark &&
+            other.shadowColorValue == shadowColorValue &&
+            other.pixelRatioKey == pixelRatioKey);
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        baseColorValue,
+        label,
+        isDark,
+        shadowColorValue,
+        pixelRatioKey,
+      );
 }
 
 @immutable
@@ -245,6 +345,17 @@ class ArtMarkerCubeIconRenderer {
   /// @deprecated Use [CubeMarkerTokens.pngHeight] instead.
   static const double markerHeightAtZoom15 = CubeMarkerTokens.pngHeight;
 
+  static final Map<_MarkerPngCacheKey, Future<Uint8List>> _markerPngCache =
+      <_MarkerPngCacheKey, Future<Uint8List>>{};
+  static final Map<_ClusterPngCacheKey, Future<Uint8List>> _clusterPngCache =
+      <_ClusterPngCacheKey, Future<Uint8List>>{};
+
+  static int _pixelRatioKey(double pixelRatio) {
+    final pr =
+        pixelRatio.isFinite ? pixelRatio.clamp(1.0, 4.0).toDouble() : 2.0;
+    return (pr * 100).round();
+  }
+
   /// Renders a marker as a flat top-down square (top face + shadow).
   static Future<Uint8List> renderMarkerPng({
     required Color baseColor,
@@ -262,21 +373,37 @@ class ArtMarkerCubeIconRenderer {
       baseColor: baseColor,
     );
 
-    final showGlow = forceGlow ||
-        tier == ArtMarkerSignal.featured ||
-        tier == ArtMarkerSignal.legendary;
-
-    return _renderFlatMarkerPng(
-      baseColor: baseColor,
-      icon: icon,
-      tier: tier,
-      style: style,
-      roles: roles,
-      showGlow: showGlow,
-      forceGlow: forceGlow,
+    final key = _MarkerPngCacheKey(
+      baseColorValue: baseColor.value,
+      iconCodePoint: icon.codePoint,
+      iconFamily: icon.fontFamily ?? 'MaterialIcons',
+      iconPackage: icon.fontPackage ?? '',
+      tierIndex: tier.index,
       isDark: isDark,
-      pixelRatio: pixelRatio,
+      forceGlow: forceGlow,
+      shadowColorValue: scheme.shadow.value,
+      highlightColorValue: style.highlightColor.value,
+      legendaryRingValue: roles.achievementGold.value,
+      pixelRatioKey: _pixelRatioKey(pixelRatio),
     );
+
+    return _markerPngCache.putIfAbsent(key, () async {
+      final showGlow = forceGlow ||
+          tier == ArtMarkerSignal.featured ||
+          tier == ArtMarkerSignal.legendary;
+
+      return _renderFlatMarkerPng(
+        baseColor: baseColor,
+        icon: icon,
+        tier: tier,
+        style: style,
+        roles: roles,
+        showGlow: showGlow,
+        forceGlow: forceGlow,
+        isDark: isDark,
+        pixelRatio: pixelRatio,
+      );
+    });
   }
 
   /// Renders a flat (top-down) marker showing only the top face with shadow.
@@ -295,8 +422,10 @@ class ArtMarkerCubeIconRenderer {
     // Flat marker is a square matching the previous isometric footprint.
     const double size = CubeMarkerTokens.pngWidth;
     const double height = CubeMarkerTokens.pngWidth;
-    final palette =
-        _CubePalette.fromBase(baseColor, edgeColor: style.edgeColor);
+    final iconForeground = MapMarkerStyleConfig.bestForegroundOn(
+      baseColor,
+      isDark ? Brightness.dark : Brightness.light,
+    );
 
     return _renderPng(
       width: size,
@@ -305,77 +434,79 @@ class ArtMarkerCubeIconRenderer {
       paint: (canvas, logicalSize) {
         final center = Offset(logicalSize.width / 2, logicalSize.height / 2);
         final squareSize = CubeMarkerTokens.staticSizeAtZoom15;
-        final halfSize = squareSize / 2;
+        final cornerRadius = math.min(KubusRadius.md, squareSize * 0.28);
 
-        // Draw shadow beneath the square
-        canvas.drawRect(
-          Rect.fromCenter(
-            center: center + const Offset(0, 2),
-            width: squareSize + 4,
-            height: squareSize * 0.15,
+        // Soft shadow beneath the rounded marker body (avoid boxy shadow).
+        final shadowRect = Rect.fromCenter(
+          center: center + const Offset(0, 3),
+          width: squareSize + 6,
+          height: squareSize + 6,
+        );
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            shadowRect,
+            Radius.circular(cornerRadius + 2),
           ),
           Paint()
-            ..color = style.shadowColor.withValues(alpha: 0.25)
-            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+            ..color = style.shadowColor.withValues(alpha: 0.20)
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 9),
         );
 
         // Draw colored glow if needed
         if (showGlow) {
-          canvas.drawRect(
-            Rect.fromCenter(
-              center: center,
-              width: squareSize + 12,
-              height: squareSize + 12,
+          final glowRect = Rect.fromCenter(
+            center: center,
+            width: squareSize + 14,
+            height: squareSize + 14,
+          );
+          canvas.drawRRect(
+            RRect.fromRectAndRadius(
+              glowRect,
+              Radius.circular(cornerRadius + 4),
             ),
             Paint()
-              ..color = baseColor.withValues(alpha: forceGlow ? 0.45 : 0.35)
-              ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
+              ..color = baseColor.withValues(alpha: forceGlow ? 0.42 : 0.30)
+              ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10),
           );
         }
 
-        // Draw main square (top face color)
-        final squareRect = Rect.fromCenter(
+        // Draw main rounded marker body (solid subject color).
+        final bodyRect = Rect.fromCenter(
           center: center,
           width: squareSize,
           height: squareSize,
         );
-        final gradient = ui.Gradient.linear(
-          Offset(center.dx - halfSize, center.dy - halfSize),
-          Offset(center.dx + halfSize, center.dy + halfSize),
-          [palette.topAccent, palette.top],
+        final bodyRRect = RRect.fromRectAndRadius(
+          bodyRect,
+          Radius.circular(cornerRadius),
         );
-        canvas.drawRect(
-          squareRect,
-          Paint()..shader = gradient,
-        );
+        canvas.drawRRect(bodyRRect, Paint()..color = baseColor);
 
-        // Draw border around square
-        canvas.drawRect(
-          squareRect,
+        // Subtle outline for crispness (still rounded; no rectangle box).
+        canvas.drawRRect(
+          bodyRRect,
           Paint()
             ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.5
-            ..color = palette.edge,
+            ..strokeWidth = 1.25
+            ..color = iconForeground.withValues(alpha: isDark ? 0.18 : 0.12),
         );
 
         // Draw icon directly on the subject-colored marker body.
         // No background box - just the icon glyph.
-        // Icon color is theme-based: white in dark mode, black in light mode.
         if (icon.codePoint != 0) {
           final fontFamily = icon.fontFamily ?? 'MaterialIcons';
-          final iconColor = isDark ? const Color(0xFFFFFFFF) : const Color(0xFF000000);
           final glyphPainter = TextPainter(
             text: TextSpan(
               text: String.fromCharCode(icon.codePoint),
               style: TextStyle(
-                fontSize: squareSize * 0.5,
+                fontSize: squareSize * 0.54,
                 fontFamily: fontFamily,
                 fontFamilyFallback: const <String>[
                   'MaterialIcons',
                   'Material Symbols Outlined',
                 ],
                 package: icon.fontPackage,
-                color: iconColor,
+                color: iconForeground,
               ),
             ),
             textDirection: TextDirection.ltr,
@@ -445,16 +576,21 @@ class ArtMarkerCubeIconRenderer {
       width: squareSize,
       height: squareSize,
     );
-
-    canvas.drawRect(
+    final cornerRadius = math.min(KubusRadius.md, squareSize * 0.28);
+    final rrect = RRect.fromRectAndRadius(
       rect,
+      Radius.circular(cornerRadius),
+    );
+
+    canvas.drawRRect(
+      rrect,
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = strokeWidth
         ..color = glowColor.withValues(alpha: opacity),
     );
-    canvas.drawRect(
-      rect,
+    canvas.drawRRect(
+      rrect,
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = strokeWidth
@@ -478,23 +614,36 @@ class ArtMarkerCubeIconRenderer {
     );
     final showGlow = count >= 10;
     final label = count > 99 ? '99+' : '$count';
-    final palette =
-        _CubePalette.fromBase(baseColor, edgeColor: style.edgeColor);
-    // Cluster label color is theme-based: white in dark mode, black in light mode.
-    final labelColor = isDark ? const Color(0xFFFFFFFF) : const Color(0xFF000000);
-    final labelStyle = KubusTextStyles.badgeCount.copyWith(
-      color: labelColor,
+    final iconForeground = MapMarkerStyleConfig.bestForegroundOn(
+      baseColor,
+      isDark ? Brightness.dark : Brightness.light,
     );
 
-    return _renderFlatClusterPng(
+    final key = _ClusterPngCacheKey(
+      baseColorValue: baseColor.value,
       label: label,
-      labelStyle: labelStyle,
-      baseColor: baseColor,
-      palette: palette,
-      style: style,
-      showGlow: showGlow,
-      pixelRatio: pixelRatio,
+      isDark: isDark,
+      shadowColorValue: scheme.shadow.value,
+      pixelRatioKey: _pixelRatioKey(pixelRatio),
     );
+
+    return _clusterPngCache.putIfAbsent(key, () async {
+      final palette =
+          _CubePalette.fromBase(baseColor, edgeColor: style.edgeColor);
+      final labelStyle = KubusTextStyles.badgeCount.copyWith(
+        color: iconForeground,
+      );
+
+      return _renderFlatClusterPng(
+        label: label,
+        labelStyle: labelStyle,
+        baseColor: baseColor,
+        palette: palette,
+        style: style,
+        showGlow: showGlow,
+        pixelRatio: pixelRatio,
+      );
+    });
   }
 
   static Future<Uint8List> _renderFlatClusterPng({
@@ -516,51 +665,61 @@ class ArtMarkerCubeIconRenderer {
       paint: (canvas, logicalSize) {
         final center = Offset(logicalSize.width / 2, logicalSize.height / 2);
         final squareSize = CubeMarkerTokens.staticSizeAtZoom15;
-        final halfSize = squareSize / 2;
+        final cornerRadius = math.min(KubusRadius.md, squareSize * 0.28);
+        final iconForeground = MapMarkerStyleConfig.bestForegroundOn(
+          baseColor,
+          ThemeData.estimateBrightnessForColor(baseColor),
+        );
 
-        // Draw shadow beneath the square
-        canvas.drawRect(
-          Rect.fromCenter(
-            center: center + const Offset(0, 2),
-            width: squareSize + 4,
-            height: squareSize * 0.15,
+        final shadowRect = Rect.fromCenter(
+          center: center + const Offset(0, 3),
+          width: squareSize + 6,
+          height: squareSize + 6,
+        );
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            shadowRect,
+            Radius.circular(cornerRadius + 2),
           ),
           Paint()
-            ..color = style.shadowColor.withValues(alpha: 0.22)
-            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+            ..color = style.shadowColor.withValues(alpha: 0.20)
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 9),
         );
 
         if (showGlow) {
-          canvas.drawRect(
-            Rect.fromCenter(
-              center: center,
-              width: squareSize + 12,
-              height: squareSize + 12,
+          final glowRect = Rect.fromCenter(
+            center: center,
+            width: squareSize + 14,
+            height: squareSize + 14,
+          );
+          canvas.drawRRect(
+            RRect.fromRectAndRadius(
+              glowRect,
+              Radius.circular(cornerRadius + 4),
             ),
             Paint()
-              ..color = baseColor.withValues(alpha: 0.32)
-              ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
+              ..color = baseColor.withValues(alpha: 0.28)
+              ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10),
           );
         }
 
-        final squareRect = Rect.fromCenter(
+        final bodyRect = Rect.fromCenter(
           center: center,
           width: squareSize,
           height: squareSize,
         );
-        final gradient = ui.Gradient.linear(
-          Offset(center.dx - halfSize, center.dy - halfSize),
-          Offset(center.dx + halfSize, center.dy + halfSize),
-          [palette.topAccent, palette.top],
+        final bodyRRect = RRect.fromRectAndRadius(
+          bodyRect,
+          Radius.circular(cornerRadius),
         );
-        canvas.drawRect(squareRect, Paint()..shader = gradient);
+        canvas.drawRRect(bodyRRect, Paint()..color = baseColor);
 
-        canvas.drawRect(
-          squareRect,
+        canvas.drawRRect(
+          bodyRRect,
           Paint()
             ..style = PaintingStyle.stroke
             ..strokeWidth = 1.5
-            ..color = palette.edge,
+            ..color = iconForeground.withValues(alpha: 0.16),
         );
 
         // Draw cluster count label directly on the subject-colored marker body.

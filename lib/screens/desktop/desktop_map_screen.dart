@@ -38,6 +38,7 @@ import '../../utils/presence_marker_visit.dart';
 import '../../utils/map_viewport_utils.dart';
 import '../../utils/geo_bounds.dart';
 import '../../widgets/art_marker_cube.dart';
+import '../../widgets/map_marker_style_config.dart';
 import '../../widgets/artwork_creator_byline.dart';
 import '../../widgets/art_map_view.dart';
 import '../../widgets/map_marker_dialog.dart';
@@ -184,7 +185,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   static const String _markerLayerId = 'kubus_marker_layer';
   static const String _markerHitboxLayerId = 'kubus_marker_hitbox_layer';
   static const String _cubeSourceId = 'kubus_marker_cubes';
+  static const String _cubeBevelSourceId = 'kubus_marker_cubes_bevel';
   static const String _cubeLayerId = 'kubus_marker_cubes_layer';
+  static const String _cubeBevelLayerId = 'kubus_marker_cubes_bevel_layer';
   static const String _cubeIconLayerId = 'kubus_marker_cubes_icon_layer';
   static const String _locationSourceId = 'kubus_user_location';
   static const String _locationLayerId = 'kubus_user_location_layer';
@@ -208,8 +211,18 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   bool _pendingSafeSetState = false;
 
   ml.MapLibreMapController? _featureTapBoundController;
+  ml.MapLibreMapController? _featureHoverBoundController;
   DateTime? _lastFeatureTapAt;
   math.Point<double>? _lastFeatureTapPoint;
+  String? _hoveredMarkerId;
+  String? _pressedMarkerId;
+  Timer? _pressedClearTimer;
+
+  late AnimationController _cubeIconSpinController;
+  double _cubeIconSpinDegrees = 0.0;
+  int _lastMarkerLayerStyleUpdateMs = 0;
+  bool _markerLayerStyleUpdateInFlight = false;
+  bool _markerLayerStyleUpdateQueued = false;
 
   // Filter options - same list as mobile for parity
   final List<String> _filterOptions = [
@@ -238,14 +251,18 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 600),
+      duration: MapMarkerStyleConfig.selectionPopDuration,
       vsync: this,
     );
+    _animationController.addListener(_handleMarkerLayerAnimationTick);
     _panelController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
-    _animationController.forward();
+    _cubeIconSpinController = AnimationController(
+      duration: MapMarkerStyleConfig.cubeIconSpinPeriod,
+      vsync: this,
+    )..addListener(_handleMarkerLayerAnimationTick);
 
     _autoFollow = widget.autoFollow;
     _cameraCenter = widget.initialCenter ?? const LatLng(46.0569, 14.5058);
@@ -257,6 +274,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (isWidgetTest) {
       return;
     }
+
+    _cubeIconSpinController.repeat();
 
     _markerStreamSub =
         _mapMarkerService.onMarkerCreated.listen(_handleMarkerCreated);
@@ -573,6 +592,15 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         .remove(_handleMapFeatureTapped);
     _featureTapBoundController = controller;
     controller.onFeatureTapped.add(_handleMapFeatureTapped);
+    _bindFeatureHoverController(controller);
+  }
+
+  void _bindFeatureHoverController(ml.MapLibreMapController controller) {
+    if (!kIsWeb) return;
+    if (_featureHoverBoundController == controller) return;
+    _featureHoverBoundController?.onFeatureHover.remove(_handleMapFeatureHover);
+    _featureHoverBoundController = controller;
+    controller.onFeatureHover.add(_handleMapFeatureHover);
   }
 
   void _handleMapFeatureTapped(
@@ -608,6 +636,29 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (selected == null) return;
 
     _handleMarkerTap(selected);
+  }
+
+  void _handleMapFeatureHover(
+    math.Point<double> point,
+    ml.LatLng coordinates,
+    String id,
+    ml.Annotation? annotation,
+    ml.HoverEventType eventType,
+  ) {
+    if (!mounted) return;
+    if (!kIsWeb) return;
+    if (id.startsWith('cluster:')) {
+      if (_hoveredMarkerId != null) {
+        _safeSetState(() => _hoveredMarkerId = null);
+        _requestMarkerLayerStyleUpdate();
+      }
+      return;
+    }
+
+    final next = eventType == ml.HoverEventType.leave ? null : id;
+    if (next == _hoveredMarkerId) return;
+    _safeSetState(() => _hoveredMarkerId = next);
+    _requestMarkerLayerStyleUpdate();
   }
 
   String _nearbySidebarSignatureFor(
@@ -792,26 +843,28 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       } catch (_) {}
 
       // Clear any previous layer/source ids (e.g. style swap).
-      for (final id in <String>[
-        _markerLayerId,
-        _markerHitboxLayerId,
-        _cubeLayerId,
-        _cubeIconLayerId,
-        _locationLayerId,
-        _pendingLayerId
-      ]) {
+       for (final id in <String>[
+         _markerLayerId,
+         _markerHitboxLayerId,
+         _cubeLayerId,
+         _cubeBevelLayerId,
+         _cubeIconLayerId,
+         _locationLayerId,
+         _pendingLayerId
+       ]) {
         if (!existingLayerIds.contains(id)) continue;
         try {
           await controller.removeLayer(id);
         } catch (_) {}
         existingLayerIds.remove(id);
       }
-      for (final id in <String>[
-        _markerSourceId,
-        _cubeSourceId,
-        _locationSourceId,
-        _pendingSourceId
-      ]) {
+       for (final id in <String>[
+         _markerSourceId,
+         _cubeSourceId,
+         _cubeBevelSourceId,
+         _locationSourceId,
+         _pendingSourceId
+       ]) {
         try {
           await controller.removeSource(id);
         } catch (_) {}
@@ -833,14 +886,37 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         },
         promoteId: 'id',
       );
+      await controller.addGeoJsonSource(
+        _cubeBevelSourceId,
+        const <String, dynamic>{
+          'type': 'FeatureCollection',
+          'features': <dynamic>[]
+        },
+        promoteId: 'id',
+      );
 
       // Layer order (bottom to top):
-      // 1. Fill-extrusion (3D cubes)
-      // 2. Marker symbol layer (2D icons)
-      // 3. Cube icon layer (3D mode top-face icons)
-      // 4. Hitbox circle layer (TOPMOST for click detection)
+      // 1. Fill-extrusion (3D bevel base)
+      // 2. Fill-extrusion (3D cube top)
+      // 3. Marker symbol layer (2D icons)
+      // 4. Cube icon layer (3D mode floating icons)
+      // 5. Hitbox circle layer (TOPMOST for click detection)
 
-      // 1. Fill-extrusion layer for 3D cubes (bottom)
+      // 1. Fill-extrusion layer for 3D bevel base (bottom)
+      await controller.addFillExtrusionLayer(
+        _cubeBevelSourceId,
+        _cubeBevelLayerId,
+        ml.FillExtrusionLayerProperties(
+          fillExtrusionColor: <Object>['get', 'color'],
+          fillExtrusionHeight: <Object>['get', 'height'],
+          fillExtrusionBase: 0.0,
+          fillExtrusionOpacity: 1.0,
+          fillExtrusionVerticalGradient: false,
+          visibility: 'none',
+        ),
+      );
+
+      // 2. Fill-extrusion layer for 3D cube top (above bevel)
       await controller.addFillExtrusionLayer(
         _cubeSourceId,
         _cubeLayerId,
@@ -854,23 +930,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         ),
       );
 
-      // 2. Main marker symbol layer for 2D icons
+      // 3. Main marker symbol layer for 2D icons
       await controller.addSymbolLayer(
         _markerSourceId,
         _markerLayerId,
         ml.SymbolLayerProperties(
           iconImage: <Object>['get', 'icon'],
-          iconSize: <Object>[
-            'interpolate',
-            <Object>['linear'],
-            <Object>['zoom'],
-            3,
-            0.5,
-            15,
-            1.0,
-            24,
-            1.5,
-          ],
+          iconSize: MapMarkerStyleConfig.iconSizeExpression(),
           iconOpacity: <Object>[
             'case',
             <Object>[
@@ -889,23 +955,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         ),
       );
 
-      // 3. Cube top-face icon layer (above fill-extrusion, same icons as marker layer)
+      // 4. Cube floating icon layer (above fill-extrusion, same icons as marker layer)
       await controller.addSymbolLayer(
         _markerSourceId,
         _cubeIconLayerId,
         ml.SymbolLayerProperties(
           iconImage: <Object>['get', 'icon'],
-          iconSize: <Object>[
-            'interpolate',
-            <Object>['linear'],
-            <Object>['zoom'],
-            3,
-            0.5,
-            15,
-            1.0,
-            24,
-            1.5,
-          ],
+          iconSize: MapMarkerStyleConfig.iconSizeExpression(),
           iconOpacity: <Object>[
             'case',
             <Object>[
@@ -919,13 +975,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           iconAllowOverlap: true,
           iconIgnorePlacement: true,
           iconAnchor: 'center',
-          iconPitchAlignment: 'map',
-          iconRotationAlignment: 'map',
+          iconPitchAlignment: 'viewport',
+          iconRotationAlignment: 'viewport',
+          iconOffset: MapMarkerStyleConfig.cubeFloatingIconOffsetEm,
           visibility: 'none',
         ),
       );
 
-      // 4. Invisible hitbox layer (topmost) for consistent tap detection (2D + 3D)
+      // 5. Invisible hitbox layer (topmost) for consistent tap detection (2D + 3D)
       final Object hitboxRadius = kIsWeb
           ? 32.0
           : <Object>[
@@ -2012,12 +2069,19 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final controller = _mapController;
     _mapController = null;
     controller?.onFeatureTapped.remove(_handleMapFeatureTapped);
+    controller?.onFeatureHover.remove(_handleMapFeatureHover);
     if (_featureTapBoundController == controller) {
       _featureTapBoundController = null;
     }
+    if (_featureHoverBoundController == controller) {
+      _featureHoverBoundController = null;
+    }
     _styleInitialized = false;
     _registeredMapImages.clear();
+    _pressedClearTimer?.cancel();
+    _pressedClearTimer = null;
     _animationController.dispose();
+    _cubeIconSpinController.dispose();
     _panelController.dispose();
     _searchDebounce?.cancel();
     _markerRefreshDebouncer.dispose();
@@ -5214,6 +5278,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _selectedMarkerAnchor = null;
       _pendingMarkerLocation = null;
     });
+    _startPressedMarkerFeedback(marker.id);
+    _startSelectionPopAnimation();
     _maybeRecordPresenceVisitForMarker(marker);
     unawaited(_syncMapMarkers(themeProvider: context.read<ThemeProvider>()));
     _queueOverlayAnchorRefresh();
@@ -5310,7 +5376,153 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _markerOverlayExpanded = false;
       _selectedMarkerAnchor = null;
     });
+    _pressedClearTimer?.cancel();
+    _pressedClearTimer = null;
+    _pressedMarkerId = null;
+    _requestMarkerLayerStyleUpdate();
     unawaited(_syncMapMarkers(themeProvider: context.read<ThemeProvider>()));
+  }
+
+  void _startPressedMarkerFeedback(String markerId) {
+    _pressedClearTimer?.cancel();
+    _pressedClearTimer = null;
+    _pressedMarkerId = markerId;
+    _requestMarkerLayerStyleUpdate();
+
+    _pressedClearTimer = Timer(const Duration(milliseconds: 120), () {
+      if (!mounted) return;
+      if (_pressedMarkerId != markerId) return;
+      _safeSetState(() => _pressedMarkerId = null);
+      _requestMarkerLayerStyleUpdate();
+    });
+  }
+
+  void _startSelectionPopAnimation() {
+    if (!_styleInitialized) return;
+    _animationController.forward(from: 0.0);
+    _requestMarkerLayerStyleUpdate();
+  }
+
+  void _handleMarkerLayerAnimationTick() {
+    if (!mounted) return;
+    if (!_styleInitialized) return;
+
+    final shouldSpin = _cubeLayerVisible && _is3DMarkerModeActive;
+    final shouldPop = _animationController.isAnimating;
+    if (!shouldSpin && !shouldPop) return;
+
+    if (shouldSpin) {
+      _cubeIconSpinDegrees = _cubeIconSpinController.value * 360.0;
+    }
+    _requestMarkerLayerStyleUpdate();
+  }
+
+  void _requestMarkerLayerStyleUpdate({bool force = false}) {
+    final controller = _mapController;
+    if (controller == null) return;
+    if (!_styleInitialized) return;
+
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    if (!force && nowMs - _lastMarkerLayerStyleUpdateMs < 66) return;
+    _lastMarkerLayerStyleUpdateMs = nowMs;
+
+    if (_markerLayerStyleUpdateInFlight) {
+      _markerLayerStyleUpdateQueued = true;
+      return;
+    }
+    _markerLayerStyleUpdateInFlight = true;
+    unawaited(_applyMarkerLayerStyle(controller).whenComplete(() {
+      _markerLayerStyleUpdateInFlight = false;
+      if (_markerLayerStyleUpdateQueued) {
+        _markerLayerStyleUpdateQueued = false;
+        _requestMarkerLayerStyleUpdate(force: true);
+      }
+    }));
+  }
+
+  Future<void> _applyMarkerLayerStyle(ml.MapLibreMapController controller) async {
+    final base = MapMarkerStyleConfig.iconSizeExpression();
+    final iconSize = _interactiveIconSizeExpression(base);
+    final iconOpacity = <Object>[
+      'case',
+      <Object>['==', <Object>['get', 'kind'], 'cluster'],
+      1.0,
+      1.0,
+    ];
+
+    final markerVisible = !_cubeLayerVisible;
+    final cubeIconVisible = _cubeLayerVisible;
+
+    try {
+      await controller.setLayerProperties(
+        _markerLayerId,
+        ml.SymbolLayerProperties(
+          iconImage: <Object>['get', 'icon'],
+          iconSize: iconSize,
+          iconOpacity: iconOpacity,
+          iconAllowOverlap: true,
+          iconIgnorePlacement: true,
+          iconAnchor: 'center',
+          iconPitchAlignment: 'map',
+          iconRotationAlignment: 'map',
+          visibility: markerVisible ? 'visible' : 'none',
+        ),
+      );
+      await controller.setLayerProperties(
+        _cubeIconLayerId,
+        ml.SymbolLayerProperties(
+          iconImage: <Object>['get', 'icon'],
+          iconSize: iconSize,
+          iconOpacity: iconOpacity,
+          iconAllowOverlap: true,
+          iconIgnorePlacement: true,
+          iconAnchor: 'center',
+          iconPitchAlignment: 'viewport',
+          iconRotationAlignment: 'viewport',
+          iconOffset: MapMarkerStyleConfig.cubeFloatingIconOffsetEm,
+          iconRotate: _cubeIconSpinDegrees,
+          visibility: cubeIconVisible ? 'visible' : 'none',
+        ),
+      );
+    } catch (_) {
+      // Best-effort: style swaps or platform limitations can reject updates.
+    }
+  }
+
+  Object _interactiveIconSizeExpression(Object base) {
+    final pressedId = _pressedMarkerId;
+    final hoveredId = _hoveredMarkerId;
+    final selectedId = _selectedMarkerId;
+    final any = pressedId != null || hoveredId != null || selectedId != null;
+    if (!any) return base;
+
+    final double pop = selectedId == null
+        ? 1.0
+        : (1.0 +
+            (MapMarkerStyleConfig.selectedPopScaleFactor - 1.0) *
+                math.sin(_animationController.value * math.pi));
+
+    final expr = <Object>['case'];
+    if (pressedId != null) {
+      expr.addAll(<Object>[
+        <Object>['==', <Object>['id'], pressedId],
+        <Object>['*', base, MapMarkerStyleConfig.pressedScaleFactor],
+      ]);
+    }
+    if (selectedId != null) {
+      expr.addAll(<Object>[
+        <Object>['==', <Object>['id'], selectedId],
+        <Object>['*', base, pop],
+      ]);
+    }
+    if (hoveredId != null) {
+      expr.addAll(<Object>[
+        <Object>['==', <Object>['id'], hoveredId],
+        <Object>['*', base, MapMarkerStyleConfig.hoverScaleFactor],
+      ]);
+    }
+    expr.add(base);
+    return expr;
   }
 
   bool _assertMarkerModeInvariant() {
@@ -5344,6 +5556,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _cubeLayerVisible = shouldShowCubes;
 
     try {
+      await controller.setLayerVisibility(_cubeBevelLayerId, shouldShowCubes);
       await controller.setLayerVisibility(_cubeLayerId, shouldShowCubes);
       await controller.setLayerVisibility(_cubeIconLayerId, shouldShowCubes);
       await controller.setLayerVisibility(_markerLayerId, !shouldShowCubes);
@@ -5352,6 +5565,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
 
     if (!mounted) return;
+    _requestMarkerLayerStyleUpdate(force: true);
     if (shouldShowCubes) {
       final themeProvider = context.read<ThemeProvider>();
       await _syncMarkerCubes(themeProvider: themeProvider);
@@ -5359,6 +5573,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       try {
         await controller.setGeoJsonSource(
           _cubeSourceId,
+          const <String, dynamic>{
+            'type': 'FeatureCollection',
+            'features': <dynamic>[],
+          },
+        );
+        await controller.setGeoJsonSource(
+          _cubeBevelSourceId,
           const <String, dynamic>{
             'type': 'FeatureCollection',
             'features': <dynamic>[],
@@ -5383,7 +5604,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final visibleMarkers =
         _artMarkers.where((m) => m.hasValidPosition).toList(growable: false);
 
-    final features = <Map<String, dynamic>>[];
+    final topFeatures = <Map<String, dynamic>>[];
+    final bevelFeatures = <Map<String, dynamic>>[];
     for (final marker in visibleMarkers) {
       final baseColor = AppColorUtils.markerSubjectColor(
         markerType: marker.type.name,
@@ -5391,23 +5613,49 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         scheme: scheme,
         roles: roles,
       );
-      final colorHex = MarkerCubeGeometry.toHex(baseColor);
-      features.add(
-        MarkerCubeGeometry.cubeFeatureForMarker(
+      final fullSizeMeters = MarkerCubeGeometry.cubeBaseSizeMeters(
+        zoom: zoom,
+        latitude: marker.position.latitude,
+      );
+      final topSizeMeters = fullSizeMeters * 0.82;
+      final bevelHeightMeters = fullSizeMeters * 0.82;
+
+      final topColorHex = MarkerCubeGeometry.toHex(baseColor);
+      final bevelColor = AppColorUtils.shiftLightness(baseColor, -0.08);
+      final bevelColorHex = MarkerCubeGeometry.toHex(bevelColor);
+
+      topFeatures.add(
+        MarkerCubeGeometry.cubeFeatureForMarkerWithMeters(
           marker: marker,
-          colorHex: colorHex,
-          zoom: zoom,
+          colorHex: topColorHex,
+          sizeMeters: topSizeMeters,
+          heightMeters: fullSizeMeters,
+          kind: 'cubeTop',
+        ),
+      );
+      bevelFeatures.add(
+        MarkerCubeGeometry.cubeFeatureForMarkerWithMeters(
+          marker: marker,
+          colorHex: bevelColorHex,
+          sizeMeters: fullSizeMeters,
+          heightMeters: bevelHeightMeters,
+          kind: 'cubeBevel',
         ),
       );
     }
 
-    final collection = <String, dynamic>{
+    final topCollection = <String, dynamic>{
       'type': 'FeatureCollection',
-      'features': features,
+      'features': topFeatures,
+    };
+    final bevelCollection = <String, dynamic>{
+      'type': 'FeatureCollection',
+      'features': bevelFeatures,
     };
 
     if (!mounted) return;
-    await controller.setGeoJsonSource(_cubeSourceId, collection);
+    await controller.setGeoJsonSource(_cubeBevelSourceId, bevelCollection);
+    await controller.setGeoJsonSource(_cubeSourceId, topCollection);
   }
 
   Widget _buildMarkerOverlayCard(

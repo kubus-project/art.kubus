@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart' as ll;
 import 'package:maplibre_gl/maplibre_gl.dart' as ml;
@@ -337,6 +338,13 @@ class _ArtMapViewState extends State<ArtMapView> {
               ml.MapLibreMap(
                 key: const ValueKey('art_map_view_maplibre'),
                 styleString: resolved,
+                // On iOS, leaving this null causes the platform view to eagerly
+                // claim all gestures, making Flutter overlays (search, buttons,
+                // etc.) appear but not receive taps. Use an explicit empty set
+                // so the map only receives gestures not claimed by overlays.
+                gestureRecognizers: kIsWeb
+                    ? null
+                    : const <Factory<OneSequenceGestureRecognizer>>{},
                 initialCameraPosition: ml.CameraPosition(
                   target: ml.LatLng(
                     widget.initialCenter.latitude,

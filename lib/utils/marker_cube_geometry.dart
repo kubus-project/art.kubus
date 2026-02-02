@@ -5,32 +5,19 @@ import 'package:latlong2/latlong.dart';
 
 import '../models/art_marker.dart';
 import 'maplibre_style_utils.dart';
-import '../widgets/art_marker_cube.dart';
+import '../widgets/map_marker_style_config.dart';
 
 class MarkerCubeGeometry {
   MarkerCubeGeometry._();
 
-  static const double _minZoom = 3.0;
-  static const double _midZoom = 15.0;
-  static const double _maxZoom = 24.0;
-  static const double _minScale = 0.5;
-  static const double _midScale = 1.0;
-  static const double _maxScale = 1.5;
   static const double _metersPerDegreeLat = 111320.0;
 
   static double markerScaleForZoom(double zoom) {
-    if (zoom <= _minZoom) return _minScale;
-    if (zoom <= _midZoom) {
-      return _lerp(_minScale, _midScale, (zoom - _minZoom) / (_midZoom - _minZoom));
-    }
-    if (zoom <= _maxZoom) {
-      return _lerp(_midScale, _maxScale, (zoom - _midZoom) / (_maxZoom - _midZoom));
-    }
-    return _maxScale;
+    return MapMarkerStyleConfig.scaleForZoom(zoom);
   }
 
   static double markerPixelSize(double zoom) {
-    return CubeMarkerTokens.staticSizeAtZoom15 * markerScaleForZoom(zoom);
+    return MapMarkerStyleConfig.markerBodySizeAtZoom15 * markerScaleForZoom(zoom);
   }
 
   static double metersPerPixel(double zoom, double latitude) {
@@ -42,14 +29,40 @@ class MarkerCubeGeometry {
         (tileSize * scale);
   }
 
+  static double cubeBaseSizeMeters({
+    required double zoom,
+    required double latitude,
+  }) {
+    final sizePixels = markerPixelSize(zoom);
+    final mpp = metersPerPixel(zoom, latitude);
+    return sizePixels * mpp;
+  }
+
   static Map<String, dynamic> cubeFeatureForMarker({
     required ArtMarker marker,
     required String colorHex,
     required double zoom,
   }) {
-    final sizePixels = markerPixelSize(zoom);
-    final mpp = metersPerPixel(zoom, marker.position.latitude);
-    final sizeMeters = sizePixels * mpp;
+    final sizeMeters = cubeBaseSizeMeters(
+      zoom: zoom,
+      latitude: marker.position.latitude,
+    );
+    return cubeFeatureForMarkerWithMeters(
+      marker: marker,
+      colorHex: colorHex,
+      sizeMeters: sizeMeters,
+      heightMeters: sizeMeters,
+      kind: 'cube',
+    );
+  }
+
+  static Map<String, dynamic> cubeFeatureForMarkerWithMeters({
+    required ArtMarker marker,
+    required String colorHex,
+    required double sizeMeters,
+    required double heightMeters,
+    required String kind,
+  }) {
     final coords = _squarePolygon(marker.position, sizeMeters);
 
     return <String, dynamic>{
@@ -58,8 +71,8 @@ class MarkerCubeGeometry {
       'properties': <String, dynamic>{
         'id': marker.id,
         'markerId': marker.id,
-        'kind': 'cube',
-        'height': sizeMeters,
+        'kind': kind,
+        'height': heightMeters,
         'color': colorHex,
       },
       'geometry': <String, dynamic>{
@@ -98,8 +111,4 @@ class MarkerCubeGeometry {
     ];
   }
 
-  static double _lerp(double a, double b, double t) {
-    final clamped = t.clamp(0.0, 1.0);
-    return a + (b - a) * clamped;
-  }
 }
