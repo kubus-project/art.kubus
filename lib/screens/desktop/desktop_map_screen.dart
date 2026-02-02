@@ -107,7 +107,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   ArtMarker? _selectedMarkerData;
   DateTime? _selectedMarkerAt;
   String? _selectedMarkerViewportSignature;
-  bool _markerOverlayExpanded = false;
   _MarkerOverlayMode _markerOverlayMode = _MarkerOverlayMode.anchored;
   bool _didOpenInitialMarker = false;
   bool _showFiltersPanel = false;
@@ -218,6 +217,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   String? _hoveredMarkerId;
   String? _pressedMarkerId;
   Timer? _pressedClearTimer;
+  int _debugFeatureTapListenerCount = 0;
+  int _debugFeatureHoverListenerCount = 0;
+  int _debugMarkerTapCount = 0;
 
   late AnimationController _cubeIconSpinController;
   double _cubeIconSpinDegrees = 0.0;
@@ -589,19 +591,38 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   void _bindFeatureTapController(ml.MapLibreMapController controller) {
     if (_featureTapBoundController == controller) return;
-    _featureTapBoundController?.onFeatureTapped
-        .remove(_handleMapFeatureTapped);
+    if (_featureTapBoundController != null) {
+      _featureTapBoundController?.onFeatureTapped
+          .remove(_handleMapFeatureTapped);
+      if (kDebugMode) {
+        _debugFeatureTapListenerCount =
+            math.max(0, _debugFeatureTapListenerCount - 1);
+      }
+    }
     _featureTapBoundController = controller;
     controller.onFeatureTapped.add(_handleMapFeatureTapped);
+    if (kDebugMode) {
+      _debugFeatureTapListenerCount += 1;
+    }
     _bindFeatureHoverController(controller);
   }
 
   void _bindFeatureHoverController(ml.MapLibreMapController controller) {
     if (!kIsWeb) return;
     if (_featureHoverBoundController == controller) return;
-    _featureHoverBoundController?.onFeatureHover.remove(_handleMapFeatureHover);
+    if (_featureHoverBoundController != null) {
+      _featureHoverBoundController?.onFeatureHover
+          .remove(_handleMapFeatureHover);
+      if (kDebugMode) {
+        _debugFeatureHoverListenerCount =
+            math.max(0, _debugFeatureHoverListenerCount - 1);
+      }
+    }
     _featureHoverBoundController = controller;
     controller.onFeatureHover.add(_handleMapFeatureHover);
+    if (kDebugMode) {
+      _debugFeatureHoverListenerCount += 1;
+    }
   }
 
   void _handleMapFeatureTapped(
@@ -1143,11 +1164,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
   }
 
-  Future<bool> _canQueryMarkerHitbox() async {
+  Future<bool> _canQueryMarkerHitbox({bool forceRefresh = false}) async {
     final controller = _mapController;
     if (controller == null) return false;
     if (!_styleInitialized) return false;
-    if (!kIsWeb && _hitboxLayerReady && _hitboxLayerEpoch == _styleEpoch) {
+    if (!forceRefresh &&
+        _hitboxLayerReady &&
+        _hitboxLayerEpoch == _styleEpoch) {
       return true;
     }
 
@@ -1163,6 +1186,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     } catch (_) {
       // Ignore lookup failures; we'll fall back to manual picking.
     }
+    _hitboxLayerReady = false;
+    _hitboxLayerEpoch = -1;
     return false;
   }
 
@@ -1200,7 +1225,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         _selectedMarkerData = null;
         _selectedMarkerAt = null;
         _selectedMarkerViewportSignature = null;
-        _markerOverlayExpanded = false;
       });
       unawaited(_syncMapMarkers(themeProvider: themeProvider));
       unawaited(_syncPendingMarker(themeProvider: themeProvider));
@@ -1216,7 +1240,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       return;
     }
 
-    if (!await _canQueryMarkerHitbox()) {
+    if (!await _canQueryMarkerHitbox(forceRefresh: true)) {
       final fallbackMarker = await _fallbackPickMarkerAtPoint(point);
       if (!mounted) return;
       if (fallbackMarker != null) {
@@ -1278,7 +1302,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           _selectedMarkerData = null;
           _selectedMarkerAt = null;
           _selectedMarkerViewportSignature = null;
-          _markerOverlayExpanded = false;
         });
         unawaited(_syncMapMarkers(themeProvider: themeProvider));
         unawaited(_syncPendingMarker(themeProvider: themeProvider));
@@ -2072,9 +2095,17 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     controller?.onFeatureTapped.remove(_handleMapFeatureTapped);
     controller?.onFeatureHover.remove(_handleMapFeatureHover);
     if (_featureTapBoundController == controller) {
+      if (kDebugMode) {
+        _debugFeatureTapListenerCount =
+            math.max(0, _debugFeatureTapListenerCount - 1);
+      }
       _featureTapBoundController = null;
     }
     if (_featureHoverBoundController == controller) {
+      if (kDebugMode) {
+        _debugFeatureHoverListenerCount =
+            math.max(0, _debugFeatureHoverListenerCount - 1);
+      }
       _featureHoverBoundController = null;
     }
     _styleInitialized = false;
@@ -2143,10 +2174,23 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 behavior: HitTestBehavior.opaque,
                 onTap: () {}, // absorb taps
                 child: _selectedExhibition != null
-                    ? _buildExhibitionDetailPanel(themeProvider, animationTheme)
+                    ? Semantics(
+                        label: 'left_info_panel',
+                        container: true,
+                        child: _buildExhibitionDetailPanel(
+                          themeProvider,
+                          animationTheme,
+                        ),
+                      )
                     : _selectedArtwork != null
-                        ? _buildArtworkDetailPanel(
-                            themeProvider, animationTheme)
+                        ? Semantics(
+                            label: 'left_info_panel',
+                            container: true,
+                            child: _buildArtworkDetailPanel(
+                              themeProvider,
+                              animationTheme,
+                            ),
+                          )
                         : _buildFiltersPanel(themeProvider),
               ),
             ),
@@ -2336,7 +2380,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   _selectedMarkerId = null;
                   _selectedMarkerData = null;
                   _selectedMarkerAt = null;
-                  _markerOverlayExpanded = false;
                 });
                 unawaited(_syncMapMarkers(themeProvider: themeProvider));
               }
@@ -2359,7 +2402,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 _selectedMarkerId = null;
                 _selectedMarkerData = null;
                 _selectedMarkerAt = null;
-                _markerOverlayExpanded = false;
                 _selectedMarkerAnchor = null;
               });
               unawaited(_syncPendingMarker(themeProvider: themeProvider));
@@ -2647,13 +2689,17 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                           link: _searchFieldLink,
                           child: KeyedSubtree(
                             key: _tutorialSearchKey,
-                            child: MouseRegion(
-                              cursor: SystemMouseCursors.text,
-                              child: DesktopSearchBar(
-                                controller: _searchController,
-                                hintText: l10n.mapSearchHint,
-                                onChanged: _handleSearchChange,
-                                onSubmitted: _handleSearchSubmit,
+                            child: Semantics(
+                              label: 'map_search_input',
+                              textField: true,
+                              child: MouseRegion(
+                                cursor: SystemMouseCursors.text,
+                                child: DesktopSearchBar(
+                                  controller: _searchController,
+                                  hintText: l10n.mapSearchHint,
+                                  onChanged: _handleSearchChange,
+                                  onSubmitted: _handleSearchSubmit,
+                                ),
                               ),
                             ),
                           ),
@@ -4114,23 +4160,31 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             ),
 
             // Zoom - / +
-            _buildGlassIconButton(
-              icon: Icons.remove,
-              themeProvider: themeProvider,
-              tooltip: l10n.mapEmptyZoomOutAction,
-              onTap: () {
-                final nextZoom = (_effectiveZoom - 1).clamp(3.0, 18.0);
-                _moveCamera(_effectiveCenter, nextZoom);
-              },
+            Semantics(
+              label: 'map_zoom_out',
+              button: true,
+              child: _buildGlassIconButton(
+                icon: Icons.remove,
+                themeProvider: themeProvider,
+                tooltip: l10n.mapEmptyZoomOutAction,
+                onTap: () {
+                  final nextZoom = (_effectiveZoom - 1).clamp(3.0, 18.0);
+                  _moveCamera(_effectiveCenter, nextZoom);
+                },
+              ),
             ),
-            _buildGlassIconButton(
-              icon: Icons.add,
-              themeProvider: themeProvider,
-              tooltip: 'Zoom in',
-              onTap: () {
-                final nextZoom = (_effectiveZoom + 1).clamp(3.0, 18.0);
-                _moveCamera(_effectiveCenter, nextZoom);
-              },
+            Semantics(
+              label: 'map_zoom_in',
+              button: true,
+              child: _buildGlassIconButton(
+                icon: Icons.add,
+                themeProvider: themeProvider,
+                tooltip: 'Zoom in',
+                onTap: () {
+                  final nextZoom = (_effectiveZoom + 1).clamp(3.0, 18.0);
+                  _moveCamera(_effectiveCenter, nextZoom);
+                },
+              ),
             ),
             // Point north / reset bearing button (visible when map is rotated)
             if (_lastBearing.abs() > 1.0) ...[
@@ -4154,18 +4208,22 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             ),
 
             // Create marker - use squared corners to match mobile
-            _buildGlassIconButton(
-              icon: Icons.add_location_alt_outlined,
-              themeProvider: themeProvider,
-              tooltip: l10n.mapCreateMarkerHereTooltip,
-              // Use default borderRadius (12) for squared look like mobile
-              activeTint: accent.withValues(alpha: isDark ? 0.24 : 0.20),
-              activeIconColor: AppColorUtils.contrastText(accent),
-              isActive: true,
-              onTap: () {
-                final target = _pendingMarkerLocation ?? _effectiveCenter;
-                _startMarkerCreationFlow(position: target);
-              },
+            Semantics(
+              label: 'map_create_marker',
+              button: true,
+              child: _buildGlassIconButton(
+                icon: Icons.add_location_alt_outlined,
+                themeProvider: themeProvider,
+                tooltip: l10n.mapCreateMarkerHereTooltip,
+                // Use default borderRadius (12) for squared look like mobile
+                activeTint: accent.withValues(alpha: isDark ? 0.24 : 0.20),
+                activeIconColor: AppColorUtils.contrastText(accent),
+                isActive: true,
+                onTap: () {
+                  final target = _pendingMarkerLocation ?? _effectiveCenter;
+                  _startMarkerCreationFlow(position: target);
+                },
+              ),
             ),
             const SizedBox(width: 6),
 
@@ -4216,33 +4274,36 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final radius = BorderRadius.circular(18);
     final glassTint = scheme.surface.withValues(alpha: isDark ? 0.40 : 0.52);
 
-    return MouseRegion(
-      cursor: SystemMouseCursors.basic,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
-        constraints: const BoxConstraints(maxWidth: 340),
-        decoration: BoxDecoration(
-          borderRadius: radius,
-          border:
-              Border.all(color: scheme.outlineVariant.withValues(alpha: 0.30)),
-          boxShadow: [
-            BoxShadow(
-              color: scheme.shadow.withValues(alpha: isDark ? 0.16 : 0.10),
-              blurRadius: 18,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: LiquidGlassPanel(
-          padding: const EdgeInsets.all(16),
-          margin: EdgeInsets.zero,
-          borderRadius: radius,
-          showBorder: false,
-          backgroundColor: glassTint,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+    return Semantics(
+      label: 'discovery_path',
+      container: true,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.basic,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          constraints: const BoxConstraints(maxWidth: 340),
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            border:
+                Border.all(color: scheme.outlineVariant.withValues(alpha: 0.30)),
+            boxShadow: [
+              BoxShadow(
+                color: scheme.shadow.withValues(alpha: isDark ? 0.16 : 0.10),
+                blurRadius: 18,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: LiquidGlassPanel(
+            padding: const EdgeInsets.all(16),
+            margin: EdgeInsets.zero,
+            borderRadius: radius,
+            showBorder: false,
+            backgroundColor: glassTint,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               Row(
                 children: [
                   ShaderMask(
@@ -4306,7 +4367,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 ),
                 secondChild: const SizedBox.shrink(),
               ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -5223,7 +5285,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           _selectedMarkerId = null;
           _selectedMarkerData = null;
           _selectedMarkerAt = null;
-          _markerOverlayExpanded = false;
           _selectedMarkerAnchor = null;
         });
         if (markersChanged) {
@@ -5264,6 +5325,16 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       final elapsed = DateTime.now().difference(_selectedMarkerAt!);
       if (elapsed.inMilliseconds < 300) return;
     }
+    if (kDebugMode) {
+      _debugMarkerTapCount += 1;
+      if (_debugMarkerTapCount % 30 == 0) {
+        AppConfig.debugPrint(
+          'DesktopMapScreen: marker taps=$_debugMarkerTapCount '
+          'featureTapListeners=$_debugFeatureTapListenerCount '
+          'featureHoverListeners=$_debugFeatureHoverListenerCount',
+        );
+      }
+    }
     // Desktop UX: do not re-center the map when a marker is clicked.
     setState(() {
       _selectedMarkerId = marker.id;
@@ -5271,32 +5342,17 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _selectedMarkerAt = DateTime.now();
       _selectedMarkerViewportSignature = null;
       _markerOverlayMode = overlayMode;
-      _markerOverlayExpanded = false; // Reset expand state for new marker
       _selectedMarkerAnchor = null;
       _pendingMarkerLocation = null;
+      _selectedArtwork = null;
+      _selectedExhibition = null;
     });
     _startPressedMarkerFeedback(marker.id);
     _startSelectionPopAnimation();
     _maybeRecordPresenceVisitForMarker(marker);
     unawaited(_syncMapMarkers(themeProvider: context.read<ThemeProvider>()));
     _queueOverlayAnchorRefresh();
-
-    final primaryExhibition = marker.resolvedExhibitionSummary;
-    final isExhibitionMarker = marker.isExhibitionMarker;
-
-    if (isExhibitionMarker) {
-      final exhibitionId = primaryExhibition?.id;
-      final hasSelection =
-          _selectedArtwork != null || _selectedExhibition != null;
-      final alreadySelected =
-          exhibitionId != null && _selectedExhibition?.id == exhibitionId;
-      if (!hasSelection || alreadySelected) {
-        unawaited(_openExhibitionFromMarker(marker, primaryExhibition, null));
-      }
-      return;
-    }
-
-    unawaited(_ensureLinkedArtworkLoaded(marker));
+    unawaited(_ensureLinkedArtworkLoaded(marker, allowAutoSelect: false));
   }
 
   void _maybeRecordPresenceVisitForMarker(ArtMarker marker) {
@@ -5356,7 +5412,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           _selectedMarkerData = null;
           _selectedMarkerAt = null;
           _selectedMarkerViewportSignature = null;
-          _markerOverlayExpanded = false;
           _selectedMarkerAnchor = null;
         }
       });
@@ -5370,7 +5425,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _selectedMarkerData = null;
       _selectedMarkerAt = null;
       _selectedMarkerViewportSignature = null;
-      _markerOverlayExpanded = false;
       _selectedMarkerAnchor = null;
     });
     _pressedClearTimer?.cancel();
@@ -5680,7 +5734,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       metadata: marker.metadata,
     );
 
-    // Use exhibition title if available, then artwork title, then marker name
     final displayTitle = canPresentExhibition && exhibitionTitle.isNotEmpty
         ? exhibitionTitle
         : (artwork?.title.isNotEmpty == true ? artwork!.title : marker.name);
@@ -5689,382 +5742,341 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             : (artwork?.description ?? ''))
         .trim();
 
-    // Expand/collapse logic for long descriptions (same as mobile)
-    const int maxPreviewChars = 180;
-    final bool canExpand = rawDescription.length > maxPreviewChars;
-    final String visibleDescription = !canExpand
+    const int maxPreviewChars = 300;
+    final String visibleDescription = rawDescription.length <= maxPreviewChars
         ? rawDescription
-        : (_markerOverlayExpanded
-            ? rawDescription
-            : '${rawDescription.substring(0, maxPreviewChars)}…');
+        : '${rawDescription.substring(0, maxPreviewChars)}?';
 
     final showChips =
         _hasMetadataChips(marker, artwork) || canPresentExhibition;
-
     final artworkProvider = context.read<ArtworkProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Clamp maxHeight to 60% of viewport to prevent oversized cards on desktop
     final viewportHeight = MediaQuery.of(context).size.height;
-    final maxCardHeight = math.min(viewportHeight * 0.6, 520.0);
+    final safeVerticalPadding = MediaQuery.of(context).padding.vertical;
+    final double maxCardHeight = math
+        .max(240.0, viewportHeight - safeVerticalPadding - 24)
+        .toDouble();
 
-    return ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: 280, maxHeight: maxCardHeight),
-      child: AnimatedSize(
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
-        alignment: Alignment.topCenter,
-        child: Material(
-          color: Colors.transparent,
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: baseColor.withValues(alpha: 0.35),
-                width: 1.1,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: baseColor.withValues(alpha: 0.22),
-                  blurRadius: 20,
-                  offset: const Offset(0, 4),
+    return Semantics(
+      label: 'marker_floating_card',
+      container: true,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: 280, maxHeight: maxCardHeight),
+        child: AnimatedSize(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.topCenter,
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: baseColor.withValues(alpha: 0.35),
+                  width: 1.1,
                 ),
-              ],
-            ),
-            child: LiquidGlassPanel(
-              padding: const EdgeInsets.all(14),
-              borderRadius: BorderRadius.circular(18),
-              showBorder: false,
-              backgroundColor: scheme.surface.withValues(alpha: 0.45),
-              // Use shrink-wrapped scroll view so the card only grows when needed.
-              child: CustomScrollView(
-                shrinkWrap: true,
-                physics: const ClampingScrollPhysics(),
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Header row: Title + distance + close button
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (canPresentExhibition) ...[
-                                    Text(
-                                      'Exhibition',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium
-                                          ?.copyWith(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w700,
-                                            color: baseColor,
-                                            height: 1.0,
-                                          ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                  ],
-                                  Text(
-                                    displayTitle,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodyMedium
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 14,
-                                          height: 1.2,
-                                        ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            if (distanceText != null) ...[
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: baseColor.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(999),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.near_me,
-                                        size: 12, color: baseColor),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      distanceText,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium
-                                          ?.copyWith(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w700,
-                                            color: baseColor,
-                                          ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                            ],
-                            _markerOverlayIconButton(
-                              icon: Icons.close,
-                              tooltip: l10n.commonClose,
-                              scheme: scheme,
-                              isDark: isDark,
-                              onTap: _dismissSelectedMarkerOverlay,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-
-                        // Image
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: SizedBox(
-                            height: 120,
-                            width: double.infinity,
-                            child: imageUrl != null
-                                ? Image.network(
-                                    imageUrl,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) =>
-                                        _markerImageFallback(
-                                            baseColor, scheme, marker),
-                                    loadingBuilder: (context, child, progress) {
-                                      if (progress == null) return child;
-                                      return Container(
-                                        color:
-                                            baseColor.withValues(alpha: 0.12),
-                                        child: const Center(
-                                          child: CircularProgressIndicator(
-                                              strokeWidth: 2),
-                                        ),
-                                      );
-                                    },
-                                  )
-                                : _markerImageFallback(
-                                    baseColor, scheme, marker),
-                          ),
-                        ),
-
-                        // Description with expand/collapse
-                        if (visibleDescription.isNotEmpty) ...[
-                          const SizedBox(height: 10),
-                          Text(
-                            visibleDescription,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(
-                                  fontSize: 12,
-                                  color: scheme.onSurfaceVariant,
-                                  height: 1.4,
-                                ),
-                          ),
-                        ],
-
-                        // Expand/Collapse button for long descriptions
-                        if (canExpand) ...[
-                          const SizedBox(height: 6),
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: TextButton(
-                              onPressed: () => setState(
-                                () => _markerOverlayExpanded =
-                                    !_markerOverlayExpanded,
-                              ),
-                              style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 4),
-                                minimumSize: Size.zero,
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
-                              child: Text(
-                                _markerOverlayExpanded
-                                    ? l10n.commonCollapse
-                                    : l10n.commonExpand,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: baseColor,
-                                    ),
-                              ),
-                            ),
-                          ),
-                        ],
-
-                        // Metadata chips
-                        if (showChips) ...[
-                          const SizedBox(height: 10),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              if (canPresentExhibition)
-                                _attendanceProofChip(scheme, baseColor),
-                              if (artwork != null &&
-                                  artwork.category.isNotEmpty &&
-                                  artwork.category != 'General')
-                                _compactChip(
-                                  scheme,
-                                  Icons.palette,
-                                  artwork.category,
-                                  baseColor,
-                                ),
-                              if (marker.metadata?['subjectCategory'] != null ||
-                                  marker.metadata?['subject_category'] != null)
-                                _compactChip(
-                                  scheme,
-                                  Icons.category_outlined,
-                                  (marker.metadata!['subjectCategory'] ??
-                                          marker.metadata!['subject_category'])
-                                      .toString(),
-                                  baseColor,
-                                ),
-                              if (marker.metadata?['locationName'] != null ||
-                                  marker.metadata?['location'] != null)
-                                _compactChip(
-                                  scheme,
-                                  Icons.place_outlined,
-                                  (marker.metadata!['locationName'] ??
-                                          marker.metadata!['location'])
-                                      .toString(),
-                                  baseColor,
-                                ),
-                              if (artwork != null && artwork.rewards > 0)
-                                _compactChip(
-                                  scheme,
-                                  Icons.card_giftcard,
-                                  '+${artwork.rewards}',
-                                  baseColor,
-                                ),
-                            ],
-                          ),
-                        ],
-
-                        // Action row: Like, Save, Share buttons (for artworks)
-                        if (artwork != null && !canPresentExhibition) ...[
-                          const SizedBox(height: 12),
+                boxShadow: [
+                  BoxShadow(
+                    color: baseColor.withValues(alpha: 0.22),
+                    blurRadius: 20,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: LiquidGlassPanel(
+                padding: const EdgeInsets.all(14),
+                borderRadius: BorderRadius.circular(18),
+                showBorder: false,
+                backgroundColor: scheme.surface.withValues(alpha: 0.45),
+                child: CustomScrollView(
+                  shrinkWrap: true,
+                  physics: const ClampingScrollPhysics(),
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _markerOverlayActionButton(
-                                icon: artwork.isLikedByCurrentUser
-                                    ? Icons.favorite
-                                    : Icons.favorite_border,
-                                label: '${artwork.likesCount}',
-                                isActive: artwork.isLikedByCurrentUser,
-                                activeColor: scheme.error,
-                                scheme: scheme,
-                                isDark: isDark,
-                                onTap: () {
-                                  unawaited(
-                                      artworkProvider.toggleLike(artwork.id));
-                                },
-                              ),
-                              const SizedBox(width: 8),
-                              _markerOverlayActionButton(
-                                icon: artwork.isFavoriteByCurrentUser ||
-                                        artwork.isFavorite
-                                    ? Icons.bookmark
-                                    : Icons.bookmark_border,
-                                label: l10n.commonSave,
-                                isActive: artwork.isFavoriteByCurrentUser ||
-                                    artwork.isFavorite,
-                                activeColor: baseColor,
-                                scheme: scheme,
-                                isDark: isDark,
-                                onTap: () {
-                                  unawaited(artworkProvider
-                                      .toggleFavorite(artwork.id));
-                                },
-                              ),
-                              const SizedBox(width: 8),
-                              _markerOverlayActionButton(
-                                icon: Icons.share_outlined,
-                                label: l10n.commonShare,
-                                isActive: false,
-                                activeColor: baseColor,
-                                scheme: scheme,
-                                isDark: isDark,
-                                onTap: () {
-                                  ShareService().showShareSheet(
-                                    context,
-                                    target: ShareTarget.artwork(
-                                      artworkId: artwork.id,
-                                      title: artwork.title,
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (canPresentExhibition) ...[
+                                      Text(
+                                        'Exhibition',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.copyWith(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w700,
+                                              color: baseColor,
+                                              height: 1.0,
+                                            ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                    ],
+                                    Text(
+                                      displayTitle,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 14,
+                                            height: 1.2,
+                                          ),
                                     ),
-                                    sourceScreen: 'desktop_map_marker',
-                                  );
-                                },
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              if (distanceText != null) ...[
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: baseColor.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.near_me,
+                                          size: 12, color: baseColor),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        distanceText,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.copyWith(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w700,
+                                              color: baseColor,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                              ],
+                              _markerOverlayIconButton(
+                                icon: Icons.close,
+                                tooltip: l10n.commonClose,
+                                scheme: scheme,
+                                isDark: isDark,
+                                onTap: _dismissSelectedMarkerOverlay,
                               ),
                             ],
                           ),
-                        ],
-
-                        const SizedBox(height: 12),
-
-                        // Primary action button
-                        SizedBox(
-                          width: double.infinity,
-                          child: FilledButton.icon(
-                            style: FilledButton.styleFrom(
-                              backgroundColor: baseColor,
-                              foregroundColor:
-                                  AppColorUtils.contrastText(baseColor),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 10,
-                              ),
+                          const SizedBox(height: 10),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: SizedBox(
+                              height: 120,
+                              width: double.infinity,
+                              child: imageUrl != null
+                                  ? Image.network(
+                                      imageUrl,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) =>
+                                          _markerImageFallback(
+                                              baseColor, scheme, marker),
+                                      loadingBuilder:
+                                          (context, child, progress) {
+                                        if (progress == null) return child;
+                                        return Container(
+                                          color: baseColor.withValues(alpha: 0.12),
+                                          child: const Center(
+                                            child: CircularProgressIndicator(
+                                                strokeWidth: 2),
+                                          ),
+                                        );
+                                      },
+                                    )
+                                  : _markerImageFallback(
+                                      baseColor, scheme, marker),
                             ),
-                            onPressed: canPresentExhibition
-                                ? () => _openExhibitionFromMarker(
-                                    marker, primaryExhibition, artwork)
-                                : () => _openMarkerDetail(marker, artwork),
-                            icon: Icon(
-                              canPresentExhibition
-                                  ? Icons.museum_outlined
-                                  : Icons.arrow_forward,
-                              size: 18,
-                            ),
-                            label: Text(
-                              canPresentExhibition
-                                  ? 'Open Exhibition'
-                                  : l10n.commonViewDetails,
+                          ),
+                          if (visibleDescription.isNotEmpty) ...[
+                            const SizedBox(height: 10),
+                            Text(
+                              visibleDescription,
                               style: Theme.of(context)
                                   .textTheme
                                   .bodyMedium
                                   ?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 13,
+                                    fontSize: 12,
+                                    color: scheme.onSurfaceVariant,
+                                    height: 1.4,
                                   ),
                             ),
+                          ],
+                          if (showChips) ...[
+                            const SizedBox(height: 10),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                if (canPresentExhibition)
+                                  _attendanceProofChip(scheme, baseColor),
+                                if (artwork != null &&
+                                    artwork.category.isNotEmpty &&
+                                    artwork.category != 'General')
+                                  _compactChip(
+                                    scheme,
+                                    Icons.palette,
+                                    artwork.category,
+                                    baseColor,
+                                  ),
+                                if (marker.metadata?['subjectCategory'] != null ||
+                                    marker.metadata?['subject_category'] != null)
+                                  _compactChip(
+                                    scheme,
+                                    Icons.category_outlined,
+                                    (marker.metadata!['subjectCategory'] ??
+                                            marker.metadata!['subject_category'])
+                                        .toString(),
+                                    baseColor,
+                                  ),
+                                if (marker.metadata?['locationName'] != null ||
+                                    marker.metadata?['location'] != null)
+                                  _compactChip(
+                                    scheme,
+                                    Icons.place_outlined,
+                                    (marker.metadata!['locationName'] ??
+                                            marker.metadata!['location'])
+                                        .toString(),
+                                    baseColor,
+                                  ),
+                                if (artwork != null && artwork.rewards > 0)
+                                  _compactChip(
+                                    scheme,
+                                    Icons.card_giftcard,
+                                    '+${artwork.rewards}',
+                                    baseColor,
+                                  ),
+                              ],
+                            ),
+                          ],
+                          if (artwork != null && !canPresentExhibition) ...[
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                _markerOverlayActionButton(
+                                  icon: artwork.isLikedByCurrentUser
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
+                                  label: '${artwork.likesCount}',
+                                  isActive: artwork.isLikedByCurrentUser,
+                                  activeColor: scheme.error,
+                                  scheme: scheme,
+                                  isDark: isDark,
+                                  onTap: () {
+                                    unawaited(
+                                        artworkProvider.toggleLike(artwork.id));
+                                  },
+                                ),
+                                const SizedBox(width: 8),
+                                _markerOverlayActionButton(
+                                  icon: artwork.isFavoriteByCurrentUser ||
+                                          artwork.isFavorite
+                                      ? Icons.bookmark
+                                      : Icons.bookmark_border,
+                                  label: l10n.commonSave,
+                                  isActive: artwork.isFavoriteByCurrentUser ||
+                                      artwork.isFavorite,
+                                  activeColor: baseColor,
+                                  scheme: scheme,
+                                  isDark: isDark,
+                                  onTap: () {
+                                    unawaited(artworkProvider
+                                        .toggleFavorite(artwork.id));
+                                  },
+                                ),
+                                const SizedBox(width: 8),
+                                _markerOverlayActionButton(
+                                  icon: Icons.share_outlined,
+                                  label: l10n.commonShare,
+                                  isActive: false,
+                                  activeColor: baseColor,
+                                  scheme: scheme,
+                                  isDark: isDark,
+                                  onTap: () {
+                                    ShareService().showShareSheet(
+                                      context,
+                                      target: ShareTarget.artwork(
+                                        artworkId: artwork.id,
+                                        title: artwork.title,
+                                      ),
+                                      sourceScreen: 'desktop_map_marker',
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ],
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: Semantics(
+                              label: 'marker_more_info',
+                              button: true,
+                              child: FilledButton.icon(
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: baseColor,
+                                  foregroundColor:
+                                      AppColorUtils.contrastText(baseColor),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 10,
+                                  ),
+                                ),
+                                onPressed: canPresentExhibition
+                                    ? () => _openExhibitionFromMarker(
+                                        marker, primaryExhibition, artwork)
+                                    : () => _openMarkerDetail(marker, artwork),
+                                icon: Icon(
+                                  canPresentExhibition
+                                      ? Icons.museum_outlined
+                                      : Icons.arrow_forward,
+                                  size: 18,
+                                ),
+                                label: Text(
+                                  canPresentExhibition
+                                      ? 'Open Exhibition'
+                                      : l10n.commonViewDetails,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 13,
+                                      ),
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ), // Close CustomScrollView
-            ), // Close LiquidGlassPanel
-          ), // Close Container
-        ), // Close Material
-      ), // Close AnimatedSize
-    ); // Close ConstrainedBox
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildMarkerOverlayLayer({
@@ -6199,9 +6211,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         const double cardWidth =
             280; // Match maxWidth in _buildMarkerOverlayCard
         const double padding = 16;
-        // Estimate card height (actual card uses maxHeight from viewportHeight * 0.6)
+        // Estimate card height (match maxHeight used in the card itself)
         final viewportHeight = MediaQuery.of(context).size.height;
-        final estimatedCardHeight = math.min(viewportHeight * 0.6, 520.0);
+        final safeVerticalPadding = MediaQuery.of(context).padding.vertical;
+        final double estimatedCardHeight = math
+            .max(240.0, viewportHeight - safeVerticalPadding - 24)
+            .toDouble();
 
         // Center horizontally around anchor, clamped to viewport
         double left = anchor.dx - (cardWidth / 2);
@@ -6594,8 +6609,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     });
   }
 
-  Future<Artwork?> _ensureLinkedArtworkLoaded(ArtMarker marker,
-      {Artwork? initial}) async {
+  Future<Artwork?> _ensureLinkedArtworkLoaded(
+    ArtMarker marker, {
+    Artwork? initial,
+    bool allowAutoSelect = true,
+  }) async {
     if (marker.isExhibitionMarker) return initial;
     Artwork? resolvedArtwork = initial;
     final artworkProvider = context.read<ArtworkProvider>();
@@ -6624,12 +6642,18 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         artworkProvider.addOrUpdateArtwork(resolvedArtwork);
       }
       if (mounted && _selectedMarkerId == marker.id) {
-        setState(() {
-          if (_selectedArtwork == null ||
-              _selectedArtwork?.id == resolvedArtwork!.id) {
-            _selectedArtwork = resolvedArtwork;
-          }
-        });
+        if (allowAutoSelect) {
+          setState(() {
+            if (_selectedArtwork == null ||
+                _selectedArtwork?.id == resolvedArtwork!.id) {
+              _selectedArtwork = resolvedArtwork;
+            }
+            _selectedExhibition = null;
+            _showFiltersPanel = false;
+          });
+        } else {
+          setState(() {});
+        }
       }
     }
 
@@ -6715,7 +6739,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _selectedMarkerId = null;
       _selectedMarkerData = null;
       _selectedMarkerAt = null;
-      _markerOverlayExpanded = false;
       _selectedMarkerAnchor = null;
     });
     final subjectData = await _refreshMarkerSubjectData(force: true) ??
@@ -6768,7 +6791,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           _selectedMarkerId = null;
           _selectedMarkerData = null;
           _selectedMarkerAt = null;
-          _markerOverlayExpanded = false;
           _selectedMarkerAnchor = null;
         });
       },

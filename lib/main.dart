@@ -4,6 +4,7 @@ import 'package:art_kubus/screens/events/exhibition_detail_screen.dart';
 import 'package:art_kubus/widgets/app_loading.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:logger/logger.dart';
@@ -147,6 +148,8 @@ class _UnhandledErrorDedupe {
   }
 }
 
+SemanticsHandle? _webSemanticsHandle;
+
 void main() {
   // We'll initialize the bindings inside the runZonedGuarded callback so the
   // WidgetsBinding is created in the same zone as the rest of the app and
@@ -187,6 +190,11 @@ void main() {
       try {
         // Initialize Flutter bindings in the guarded zone.
         WidgetsFlutterBinding.ensureInitialized();
+        if (kIsWeb) {
+          // Keep web semantics enabled so Playwright can target UI elements
+          // via Semantics labels in release builds.
+          _webSemanticsHandle ??= WidgetsBinding.instance.ensureSemantics();
+        }
 
         // Canonical share URLs (e.g. https://app.kubus.site/marker/<id>) rely on
         // path-based routing on Flutter web. Without this, Flutter defaults to a
