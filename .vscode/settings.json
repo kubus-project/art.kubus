@@ -1,4 +1,6 @@
 {
     "chatgpt.openOnStartup": true,
-    "cmake.sourceDirectory": "G:/WorkingDATA/art.kubus/art.kubus/windows"
+    "cmake.sourceDirectory": "G:/WorkingDATA/art.kubus/art.kubus/windows",
+    "dart.flutterSdkPath": "C:\\Users\\Rok\\.puro\\envs\\artkubus\\flutter",
+    "dart.sdkPath": "C:\\Users\\Rok\\.puro\\envs\\artkubus\\flutter\\bin\\cache\\dart-sdk"
 }

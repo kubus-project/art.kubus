@@ -374,16 +374,16 @@ class ArtMarkerCubeIconRenderer {
     );
 
     final key = _MarkerPngCacheKey(
-      baseColorValue: baseColor.value,
+      baseColorValue: baseColor.toARGB32(),
       iconCodePoint: icon.codePoint,
       iconFamily: icon.fontFamily ?? 'MaterialIcons',
       iconPackage: icon.fontPackage ?? '',
       tierIndex: tier.index,
       isDark: isDark,
       forceGlow: forceGlow,
-      shadowColorValue: scheme.shadow.value,
-      highlightColorValue: style.highlightColor.value,
-      legendaryRingValue: roles.achievementGold.value,
+      shadowColorValue: scheme.shadow.toARGB32(),
+      highlightColorValue: style.highlightColor.toARGB32(),
+      legendaryRingValue: roles.achievementGold.toARGB32(),
       pixelRatioKey: _pixelRatioKey(pixelRatio),
     );
 
@@ -620,10 +620,10 @@ class ArtMarkerCubeIconRenderer {
     );
 
     final key = _ClusterPngCacheKey(
-      baseColorValue: baseColor.value,
+      baseColorValue: baseColor.toARGB32(),
       label: label,
       isDark: isDark,
-      shadowColorValue: scheme.shadow.value,
+      shadowColorValue: scheme.shadow.toARGB32(),
       pixelRatioKey: _pixelRatioKey(pixelRatio),
     );
 

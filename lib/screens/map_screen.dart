@@ -213,7 +213,6 @@ class _MapScreenState extends State<MapScreen>
   Offset? _markerTapRippleOffset;
   DateTime? _markerTapRippleAt;
   Color? _markerTapRippleColor;
-  bool _markerOverlayExpanded = false;
   Offset? _selectedMarkerAnchor;
   final Debouncer _overlayAnchorDebouncer = Debouncer();
   final Debouncer _cubeSyncDebouncer = Debouncer();
@@ -298,6 +297,9 @@ class _MapScreenState extends State<MapScreen>
   String? _hoveredMarkerId;
   String? _pressedMarkerId;
   Timer? _pressedClearTimer;
+  int _debugFeatureTapListenerCount = 0;
+  int _debugFeatureHoverListenerCount = 0;
+  int _debugMarkerTapCount = 0;
 
   late AnimationController _cubeIconSpinController;
   double _cubeIconSpinDegrees = 0.0;
@@ -354,18 +356,38 @@ class _MapScreenState extends State<MapScreen>
 
   void _bindFeatureTapController(ml.MapLibreMapController controller) {
     if (_featureTapBoundController == controller) return;
-    _featureTapBoundController?.onFeatureTapped.remove(_handleMapFeatureTapped);
+    if (_featureTapBoundController != null) {
+      _featureTapBoundController?.onFeatureTapped
+          .remove(_handleMapFeatureTapped);
+      if (kDebugMode) {
+        _debugFeatureTapListenerCount =
+            math.max(0, _debugFeatureTapListenerCount - 1);
+      }
+    }
     _featureTapBoundController = controller;
     controller.onFeatureTapped.add(_handleMapFeatureTapped);
+    if (kDebugMode) {
+      _debugFeatureTapListenerCount += 1;
+    }
     _bindFeatureHoverController(controller);
   }
 
   void _bindFeatureHoverController(ml.MapLibreMapController controller) {
     if (!kIsWeb) return;
     if (_featureHoverBoundController == controller) return;
-    _featureHoverBoundController?.onFeatureHover.remove(_handleMapFeatureHover);
+    if (_featureHoverBoundController != null) {
+      _featureHoverBoundController?.onFeatureHover
+          .remove(_handleMapFeatureHover);
+      if (kDebugMode) {
+        _debugFeatureHoverListenerCount =
+            math.max(0, _debugFeatureHoverListenerCount - 1);
+      }
+    }
     _featureHoverBoundController = controller;
     controller.onFeatureHover.add(_handleMapFeatureHover);
+    if (kDebugMode) {
+      _debugFeatureHoverListenerCount += 1;
+    }
   }
 
   void _handleMapFeatureTapped(
@@ -1101,9 +1123,17 @@ class _MapScreenState extends State<MapScreen>
     controller?.onFeatureTapped.remove(_handleMapFeatureTapped);
     controller?.onFeatureHover.remove(_handleMapFeatureHover);
     if (_featureTapBoundController == controller) {
+      if (kDebugMode) {
+        _debugFeatureTapListenerCount =
+            math.max(0, _debugFeatureTapListenerCount - 1);
+      }
       _featureTapBoundController = null;
     }
     if (_featureHoverBoundController == controller) {
+      if (kDebugMode) {
+        _debugFeatureHoverListenerCount =
+            math.max(0, _debugFeatureHoverListenerCount - 1);
+      }
       _featureHoverBoundController = null;
     }
     _styleInitialized = false;
@@ -1474,7 +1504,6 @@ class _MapScreenState extends State<MapScreen>
           _selectedMarkerData = null;
           _selectedMarkerAt = null;
           _selectedMarkerViewportSignature = null;
-          _markerOverlayExpanded = false;
           _selectedMarkerAnchor = null;
         });
         if (markersChanged) {
@@ -1548,7 +1577,6 @@ class _MapScreenState extends State<MapScreen>
           _selectedMarkerAt = null;
           _selectedMarkerAnchor = null;
           _selectedMarkerViewportSignature = null;
-          _markerOverlayExpanded = false;
         }
       });
       unawaited(_syncMapMarkers(themeProvider: context.read<ThemeProvider>()));
@@ -1825,6 +1853,16 @@ class _MapScreenState extends State<MapScreen>
       final elapsed = DateTime.now().difference(_selectedMarkerAt!);
       if (elapsed.inMilliseconds < 300) return;
     }
+    if (kDebugMode) {
+      _debugMarkerTapCount += 1;
+      if (_debugMarkerTapCount % 30 == 0) {
+        AppConfig.debugPrint(
+          'MapScreen: marker taps=$_debugMarkerTapCount '
+          'featureTapListeners=$_debugFeatureTapListenerCount '
+          'featureHoverListeners=$_debugFeatureHoverListenerCount',
+        );
+      }
+    }
     _maybeRecordPresenceVisitForMarker(marker);
     setState(() {
       _selectedMarkerId = marker.id;
@@ -1834,7 +1872,6 @@ class _MapScreenState extends State<MapScreen>
       // Selecting an item implies exploration; stop snapping back to user.
       _autoFollow = false;
       _selectedMarkerViewportSignature = null;
-      _markerOverlayExpanded = false;
     });
     _startPressedMarkerFeedback(marker.id);
     _startSelectionPopAnimation();
@@ -1866,7 +1903,6 @@ class _MapScreenState extends State<MapScreen>
       _selectedMarkerAt = null;
       _selectedMarkerAnchor = null;
       _selectedMarkerViewportSignature = null;
-      _markerOverlayExpanded = false;
     });
     _pressedClearTimer?.cancel();
     _pressedClearTimer = null;
@@ -3391,11 +3427,13 @@ class _MapScreenState extends State<MapScreen>
     }
   }
 
-  Future<bool> _canQueryMarkerHitbox() async {
+  Future<bool> _canQueryMarkerHitbox({bool forceRefresh = false}) async {
     final controller = _mapController;
     if (controller == null) return false;
     if (!_styleInitialized) return false;
-    if (!kIsWeb && _hitboxLayerReady && _hitboxLayerEpoch == _styleEpoch) {
+    if (!forceRefresh &&
+        _hitboxLayerReady &&
+        _hitboxLayerEpoch == _styleEpoch) {
       return true;
     }
 
@@ -3411,6 +3449,8 @@ class _MapScreenState extends State<MapScreen>
     } catch (_) {
       // Ignore lookup failures; we'll fall back to manual picking.
     }
+    _hitboxLayerReady = false;
+    _hitboxLayerEpoch = -1;
     return false;
   }
 
@@ -3451,7 +3491,7 @@ class _MapScreenState extends State<MapScreen>
       return;
     }
 
-    if (!await _canQueryMarkerHitbox()) {
+    if (!await _canQueryMarkerHitbox(forceRefresh: true)) {
       final fallbackMarker = await _fallbackPickMarkerAtPoint(point);
       if (!mounted) return;
       if (fallbackMarker != null) {
@@ -4202,12 +4242,9 @@ class _MapScreenState extends State<MapScreen>
         .trim();
 
     const int maxPreviewChars = 300;
-    final bool canExpand = rawDescription.length > maxPreviewChars;
-    final String visibleDescription = !canExpand
+    final String visibleDescription = rawDescription.length <= maxPreviewChars
         ? rawDescription
-        : (_markerOverlayExpanded
-            ? rawDescription
-            : '${rawDescription.substring(0, maxPreviewChars)}…');
+        : '${rawDescription.substring(0, maxPreviewChars)}…';
 
     final distanceText = () {
       if (_currentPosition == null) return null;
@@ -4258,13 +4295,16 @@ class _MapScreenState extends State<MapScreen>
             final double maxWidth =
                 math.min(cardWidth, constraints.maxWidth - 32);
             // Clamp maxHeight to 55% of viewport to prevent oversized cards
-            final double maxCardHeight = math.min(
-              constraints.maxHeight * 0.55,
-              480,
-            );
+            final double safeVerticalPadding =
+                MediaQuery.of(context).padding.vertical;
+            final double maxCardHeight = math
+                .max(
+                  200.0,
+                  constraints.maxHeight - safeVerticalPadding - 24,
+                )
+                .toDouble();
             final double cardHeight = math.min(estimatedHeight, maxCardHeight);
             final double topSafe = MediaQuery.of(context).padding.top + 12;
-            // Use maxCardHeight for bottom safe calculation
             final double bottomSafe = constraints.maxHeight - cardHeight - 12;
 
             // Account for marker height (flat square markers).
@@ -4272,20 +4312,27 @@ class _MapScreenState extends State<MapScreen>
 
             double left = (constraints.maxWidth - maxWidth) / 2;
 
-            // Position above marker by default; if it would go off-screen,
-            // keep it within the safe area and nudge the camera instead.
-            double top = (anchor?.dy ?? (constraints.maxHeight / 2)) -
-                cardHeight -
-                markerOffset;
-            if (top < topSafe) {
-              top = topSafe;
-              _scheduleEnsureActiveMarkerOverlayInView(
-                marker: marker,
-                overlayHeight: estimatedHeight,
-              );
+            final bool isCompact = constraints.maxWidth < 600;
+            double top;
+            if (isCompact) {
+              final desiredTop = (constraints.maxHeight - cardHeight) * 0.18;
+              top = desiredTop.clamp(topSafe, math.max(topSafe, bottomSafe));
+            } else {
+              // Position above marker by default; if it would go off-screen,
+              // keep it within the safe area and nudge the camera instead.
+              top = (anchor?.dy ?? (constraints.maxHeight / 2)) -
+                  cardHeight -
+                  markerOffset;
+              if (top < topSafe) {
+                top = topSafe;
+                _scheduleEnsureActiveMarkerOverlayInView(
+                  marker: marker,
+                  overlayHeight: estimatedHeight,
+                );
+              }
+              // Ensure card stays within viewport bounds
+              top = top.clamp(topSafe, math.max(topSafe, bottomSafe));
             }
-            // Ensure card stays within viewport bounds
-            top = top.clamp(topSafe, math.max(topSafe, bottomSafe));
 
             if (kDebugMode) {
               AppConfig.debugPrint(
@@ -4314,43 +4361,46 @@ class _MapScreenState extends State<MapScreen>
                       curve: Curves.easeOutCubic,
                       child: SizedBox(
                         height: cardHeight,
-                        child: Material(
-                          color: Colors.transparent,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius:
-                                  BorderRadius.circular(KubusRadius.lg),
-                              border: Border.all(
-                                color: baseColor.withValues(alpha: 0.35),
-                                width: KubusSizes.hairline,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: baseColor.withValues(alpha: 0.22),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 12),
+                        child: Semantics(
+                          label: 'marker_floating_card',
+                          container: true,
+                          child: Material(
+                            color: Colors.transparent,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius:
+                                    BorderRadius.circular(KubusRadius.lg),
+                                border: Border.all(
+                                  color: baseColor.withValues(alpha: 0.35),
+                                  width: KubusSizes.hairline,
                                 ),
-                              ],
-                            ),
-                            child: LiquidGlassPanel(
-                              padding: const EdgeInsets.all(KubusSpacing.md),
-                              borderRadius:
-                                  BorderRadius.circular(KubusRadius.lg),
-                              showBorder: false,
-                              backgroundColor:
-                                  scheme.surface.withValues(alpha: 0.45),
-                              // Use shrink-wrapped scroll view so the card
-                              // only grows when content requires it.
-                              child: CustomScrollView(
-                                shrinkWrap: true,
-                                physics: const ClampingScrollPhysics(),
-                                slivers: [
-                                  SliverToBoxAdapter(
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: baseColor.withValues(alpha: 0.22),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 12),
+                                  ),
+                                ],
+                              ),
+                              child: LiquidGlassPanel(
+                                padding: const EdgeInsets.all(KubusSpacing.md),
+                                borderRadius:
+                                    BorderRadius.circular(KubusRadius.lg),
+                                showBorder: false,
+                                backgroundColor:
+                                    scheme.surface.withValues(alpha: 0.45),
+                                // Use shrink-wrapped scroll view so the card
+                                // only grows when content requires it.
+                                child: CustomScrollView(
+                                  shrinkWrap: true,
+                                  physics: const ClampingScrollPhysics(),
+                                  slivers: [
+                                    SliverToBoxAdapter(
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
                                         Row(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
@@ -4487,27 +4537,6 @@ class _MapScreenState extends State<MapScreen>
                                             ),
                                           ),
                                         ],
-                                        if (canExpand) ...[
-                                          const SizedBox(height: 6),
-                                          Align(
-                                            alignment: Alignment.centerLeft,
-                                            child: TextButton(
-                                              onPressed: () => setState(
-                                                () => _markerOverlayExpanded =
-                                                    !_markerOverlayExpanded,
-                                              ),
-                                              child: Text(
-                                                _markerOverlayExpanded
-                                                    ? l10n.commonCollapse
-                                                    : l10n.commonExpand,
-                                                style: KubusTypography
-                                                    .textTheme.labelMedium
-                                                    ?.copyWith(
-                                                        color: baseColor),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
                                         if (showChips) ...[
                                           const SizedBox(height: 10),
                                           Wrap(
@@ -4564,39 +4593,43 @@ class _MapScreenState extends State<MapScreen>
                                         const SizedBox(height: 12),
                                         SizedBox(
                                           width: double.infinity,
-                                          child: FilledButton.icon(
-                                            style: FilledButton.styleFrom(
-                                              backgroundColor: baseColor,
-                                              foregroundColor: actionFg,
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                horizontal: 12,
-                                                vertical: 10,
+                                          child: Semantics(
+                                            label: 'marker_more_info',
+                                            button: true,
+                                            child: FilledButton.icon(
+                                              style: FilledButton.styleFrom(
+                                                backgroundColor: baseColor,
+                                                foregroundColor: actionFg,
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                  horizontal: 12,
+                                                  vertical: 10,
+                                                ),
                                               ),
-                                            ),
-                                            onPressed: canPresentExhibition
-                                                ? () =>
-                                                    _openExhibitionFromMarker(
-                                                        marker,
-                                                        primaryExhibition,
-                                                        artwork)
-                                                : () => _openMarkerDetail(
-                                                    marker, artwork),
-                                            icon: Icon(
-                                              canPresentExhibition
-                                                  ? Icons.museum_outlined
-                                                  : Icons.arrow_forward,
-                                              size: 18,
-                                            ),
-                                            label: Text(
-                                              canPresentExhibition
-                                                  ? 'Odpri razstavo'
-                                                  : l10n.commonViewDetails,
-                                              style: KubusTypography
-                                                  .textTheme.labelLarge
-                                                  ?.copyWith(
-                                                      fontWeight:
-                                                          FontWeight.w700),
+                                              onPressed: canPresentExhibition
+                                                  ? () =>
+                                                      _openExhibitionFromMarker(
+                                                          marker,
+                                                          primaryExhibition,
+                                                          artwork)
+                                                  : () => _openMarkerDetail(
+                                                      marker, artwork),
+                                              icon: Icon(
+                                                canPresentExhibition
+                                                    ? Icons.museum_outlined
+                                                    : Icons.arrow_forward,
+                                                size: 18,
+                                              ),
+                                              label: Text(
+                                                canPresentExhibition
+                                                    ? 'Odpri razstavo'
+                                                    : l10n.commonViewDetails,
+                                                style: KubusTypography
+                                                    .textTheme.labelLarge
+                                                    ?.copyWith(
+                                                        fontWeight:
+                                                            FontWeight.w700),
+                                              ),
                                             ),
                                           ),
                                         ),
@@ -4607,7 +4640,8 @@ class _MapScreenState extends State<MapScreen>
                               ), // Close CustomScrollView
                             ), // Close LiquidGlassPanel
                           ), // Close Container
-                        ), // Close Material
+                          ), // Close Material
+                        ), // Close Semantics
                       ), // Close SizedBox
                     ), // Close AnimatedSize
                   ), // Close Listener
@@ -5114,70 +5148,74 @@ class _MapScreenState extends State<MapScreen>
         backgroundColor: glassTint,
         child: SizedBox(
           height: 52,
-          child: MouseRegion(
-            cursor: SystemMouseCursors.text,
-            child: TextField(
-              controller: _searchController,
-              focusNode: _searchFocusNode,
-              style: KubusTypography.textTheme.bodyMedium?.copyWith(
-                color: scheme.onSurface,
-              ),
-              decoration: InputDecoration(
-                isDense: true,
-                hintText: l10n.mapSearchHint,
-                hintStyle: KubusTypography.textTheme.bodyMedium?.copyWith(
-                  color: hintColor,
+          child: Semantics(
+            label: 'map_search_input',
+            textField: true,
+            child: MouseRegion(
+              cursor: SystemMouseCursors.text,
+              child: TextField(
+                controller: _searchController,
+                focusNode: _searchFocusNode,
+                style: KubusTypography.textTheme.bodyMedium?.copyWith(
+                  color: scheme.onSurface,
                 ),
-                prefixIcon: Icon(Icons.search, color: hintColor),
-                prefixIconConstraints:
-                    const BoxConstraints(minWidth: 44, minHeight: 44),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        tooltip: l10n.mapClearSearchTooltip,
-                        icon: Icon(Icons.close, color: hintColor),
-                        onPressed: () {
-                          setState(() {
-                            _searchQuery = '';
-                            _isSearching = false;
-                            _searchSuggestions = [];
-                            _isFetchingSuggestions = false;
-                            _searchController.clear();
-                            _searchFocusNode.unfocus();
-                          });
-                        },
-                      )
-                    : Tooltip(
-                        message: _filtersExpanded
-                            ? l10n.mapHideFiltersTooltip
-                            : l10n.mapShowFiltersTooltip,
-                        preferBelow: false,
-                        verticalOffset: 18,
-                        margin: const EdgeInsets.symmetric(horizontal: 24),
-                        child: IconButton(
-                          key: _tutorialFilterButtonKey,
-                          icon: Icon(
-                            _filtersExpanded
-                                ? Icons.filter_alt_off
-                                : Icons.filter_alt,
-                            color: hintColor,
-                          ),
+                decoration: InputDecoration(
+                  isDense: true,
+                  hintText: l10n.mapSearchHint,
+                  hintStyle: KubusTypography.textTheme.bodyMedium?.copyWith(
+                    color: hintColor,
+                  ),
+                  prefixIcon: Icon(Icons.search, color: hintColor),
+                  prefixIconConstraints:
+                      const BoxConstraints(minWidth: 44, minHeight: 44),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          tooltip: l10n.mapClearSearchTooltip,
+                          icon: Icon(Icons.close, color: hintColor),
                           onPressed: () {
                             setState(() {
-                              _filtersExpanded = !_filtersExpanded;
+                              _searchQuery = '';
+                              _isSearching = false;
+                              _searchSuggestions = [];
+                              _isFetchingSuggestions = false;
+                              _searchController.clear();
+                              _searchFocusNode.unfocus();
                             });
                           },
+                        )
+                      : Tooltip(
+                          message: _filtersExpanded
+                              ? l10n.mapHideFiltersTooltip
+                              : l10n.mapShowFiltersTooltip,
+                          preferBelow: false,
+                          verticalOffset: 18,
+                          margin: const EdgeInsets.symmetric(horizontal: 24),
+                          child: IconButton(
+                            key: _tutorialFilterButtonKey,
+                            icon: Icon(
+                              _filtersExpanded
+                                  ? Icons.filter_alt_off
+                                  : Icons.filter_alt,
+                              color: hintColor,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _filtersExpanded = !_filtersExpanded;
+                              });
+                            },
+                          ),
                         ),
-                      ),
-                suffixIconConstraints:
-                    const BoxConstraints(minWidth: 44, minHeight: 44),
-                border: InputBorder.none,
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                  suffixIconConstraints:
+                      const BoxConstraints(minWidth: 44, minHeight: 44),
+                  border: InputBorder.none,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                ),
+                onTap: () {
+                  setState(() => _isSearching = true);
+                },
+                onChanged: _handleSearchChange,
               ),
-              onTap: () {
-                setState(() => _isSearching = true);
-              },
-              onChanged: _handleSearchChange,
             ),
           ),
         ),
@@ -5577,91 +5615,95 @@ class _MapScreenState extends State<MapScreen>
     final radius = BorderRadius.circular(18);
     final glassTint = scheme.surface.withValues(alpha: isDark ? 0.40 : 0.52);
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 220),
-      decoration: BoxDecoration(
-        borderRadius: radius,
-        border:
-            Border.all(color: scheme.outlineVariant.withValues(alpha: 0.30)),
-        boxShadow: [
-          BoxShadow(
-            color: scheme.shadow.withValues(alpha: isDark ? 0.16 : 0.10),
-            blurRadius: 18,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: LiquidGlassPanel(
-        padding: const EdgeInsets.all(16),
-        margin: EdgeInsets.zero,
-        borderRadius: radius,
-        showBorder: false,
-        backgroundColor: glassTint,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                ShaderMask(
-                  shaderCallback: (rect) => badgeGradient.createShader(rect),
-                  blendMode: BlendMode.srcIn,
-                  child: InlineProgress(
-                    progress: overall,
-                    rows: 3,
-                    cols: 5,
-                    color: scheme.onSurface,
-                    backgroundColor:
-                        scheme.surfaceContainerHighest.withValues(alpha: 0.35),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.mapDiscoveryPathTitle,
-                        style: KubusTypography.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: scheme.onSurface,
-                        ),
-                      ),
-                      Text(
-                        l10n.commonPercentComplete((overall * 100).round()),
-                        style: KubusTypography.textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                _glassIconButton(
-                  icon: _isDiscoveryExpanded
-                      ? Icons.keyboard_arrow_up
-                      : Icons.keyboard_arrow_down,
-                  tooltip: _isDiscoveryExpanded
-                      ? l10n.commonCollapse
-                      : l10n.commonExpand,
-                  onTap: () => setState(
-                      () => _isDiscoveryExpanded = !_isDiscoveryExpanded),
-                ),
-              ],
-            ),
-            AnimatedCrossFade(
-              crossFadeState: showTasks
-                  ? CrossFadeState.showFirst
-                  : CrossFadeState.showSecond,
-              duration: const Duration(milliseconds: 200),
-              firstChild: Column(
-                children: [
-                  const SizedBox(height: 12),
-                  for (final progress in tasksToRender)
-                    _buildTaskProgressRow(progress),
-                ],
-              ),
-              secondChild: const SizedBox.shrink(),
+    return Semantics(
+      label: 'discovery_path',
+      container: true,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        decoration: BoxDecoration(
+          borderRadius: radius,
+          border:
+              Border.all(color: scheme.outlineVariant.withValues(alpha: 0.30)),
+          boxShadow: [
+            BoxShadow(
+              color: scheme.shadow.withValues(alpha: isDark ? 0.16 : 0.10),
+              blurRadius: 18,
+              offset: const Offset(0, 10),
             ),
           ],
+        ),
+        child: LiquidGlassPanel(
+          padding: const EdgeInsets.all(16),
+          margin: EdgeInsets.zero,
+          borderRadius: radius,
+          showBorder: false,
+          backgroundColor: glassTint,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  ShaderMask(
+                    shaderCallback: (rect) => badgeGradient.createShader(rect),
+                    blendMode: BlendMode.srcIn,
+                    child: InlineProgress(
+                      progress: overall,
+                      rows: 3,
+                      cols: 5,
+                      color: scheme.onSurface,
+                      backgroundColor: scheme.surfaceContainerHighest
+                          .withValues(alpha: 0.35),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.mapDiscoveryPathTitle,
+                          style: KubusTypography.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: scheme.onSurface,
+                          ),
+                        ),
+                        Text(
+                          l10n.commonPercentComplete((overall * 100).round()),
+                          style: KubusTypography.textTheme.bodySmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  _glassIconButton(
+                    icon: _isDiscoveryExpanded
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
+                    tooltip: _isDiscoveryExpanded
+                        ? l10n.commonCollapse
+                        : l10n.commonExpand,
+                    onTap: () => setState(
+                        () => _isDiscoveryExpanded = !_isDiscoveryExpanded),
+                  ),
+                ],
+              ),
+              AnimatedCrossFade(
+                crossFadeState: showTasks
+                    ? CrossFadeState.showFirst
+                    : CrossFadeState.showSecond,
+                duration: const Duration(milliseconds: 200),
+                firstChild: Column(
+                  children: [
+                    const SizedBox(height: 12),
+                    for (final progress in tasksToRender)
+                      _buildTaskProgressRow(progress),
+                  ],
+                ),
+                secondChild: const SizedBox.shrink(),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -5771,6 +5813,32 @@ class _MapScreenState extends State<MapScreen>
               ),
               const SizedBox(height: 12),
             ],
+            Semantics(
+              label: 'map_zoom_out',
+              button: true,
+              child: _MapIconButton(
+                icon: Icons.remove,
+                tooltip: l10n.mapEmptyZoomOutAction,
+                onTap: () {
+                  final nextZoom = (_lastZoom - 1).clamp(3.0, 18.0);
+                  unawaited(_animateMapTo(_cameraCenter, zoom: nextZoom));
+                },
+              ),
+            ),
+            const SizedBox(height: 12),
+            Semantics(
+              label: 'map_zoom_in',
+              button: true,
+              child: _MapIconButton(
+                icon: Icons.add,
+                tooltip: 'Zoom in',
+                onTap: () {
+                  final nextZoom = (_lastZoom + 1).clamp(3.0, 18.0);
+                  unawaited(_animateMapTo(_cameraCenter, zoom: nextZoom));
+                },
+              ),
+            ),
+            const SizedBox(height: 12),
             _MapIconButton(
               key: _tutorialCenterButtonKey,
               icon: Icons.my_location,
@@ -5789,11 +5857,15 @@ class _MapScreenState extends State<MapScreen>
                     },
             ),
             const SizedBox(height: 12),
-            _MapIconButton(
-              key: _tutorialAddMarkerButtonKey,
-              icon: Icons.add_location_alt,
-              tooltip: l10n.mapAddMapMarkerTooltip,
-              onTap: () => unawaited(_handleCurrentLocationTap()),
+            Semantics(
+              label: 'map_create_marker',
+              button: true,
+              child: _MapIconButton(
+                key: _tutorialAddMarkerButtonKey,
+                icon: Icons.add_location_alt,
+                tooltip: l10n.mapAddMapMarkerTooltip,
+                onTap: () => unawaited(_handleCurrentLocationTap()),
+              ),
             ),
           ],
         ),
@@ -5810,39 +5882,39 @@ class _MapScreenState extends State<MapScreen>
     final scheme = theme.colorScheme;
     final sheet = Align(
       alignment: Alignment.bottomCenter,
-      child: MapOverlayBlocker(
-        child: Listener(
-          behavior: HitTestBehavior.opaque,
-          onPointerDown: (_) => _setSheetInteracting(true),
-          onPointerUp: (_) => _setSheetInteracting(false),
-          onPointerCancel: (_) => _setSheetInteracting(false),
-          // Absorb mouse wheel / trackpad scroll to prevent map zoom when
-          // scrolling inside the sheet (especially important on web).
-          onPointerSignal: (_) {},
-          child: NotificationListener<DraggableScrollableNotification>(
-            onNotification: (notification) {
-              final blocking = notification.extent > (_nearbySheetMin + 0.01);
-              _setSheetBlocking(blocking, notification.extent);
-              return false;
-            },
-            child: DraggableScrollableSheet(
-              controller: _sheetController,
-              // Keep the collapsed state slightly more visible while still letting it sit
-              // behind the glass navbar.
-              initialChildSize: _nearbySheetMin,
-              minChildSize: _nearbySheetMin,
-              maxChildSize: _nearbySheetMax,
-              snap: true,
-              snapSizes: const [_nearbySheetMin, 0.24, 0.50, _nearbySheetMax],
-              builder: (context, scrollController) {
-                final l10n = AppLocalizations.of(context)!;
-                final isDark = theme.brightness == Brightness.dark;
-                final radius = const BorderRadius.vertical(
-                  top: Radius.circular(KubusRadius.xl),
-                );
-                final glassTint =
-                    scheme.surface.withValues(alpha: isDark ? 0.46 : 0.56);
-                return GestureDetector(
+      child: NotificationListener<DraggableScrollableNotification>(
+        onNotification: (notification) {
+          final blocking = notification.extent > (_nearbySheetMin + 0.01);
+          _setSheetBlocking(blocking, notification.extent);
+          return false;
+        },
+        child: DraggableScrollableSheet(
+          controller: _sheetController,
+          // Keep the collapsed state slightly more visible while still letting it sit
+          // behind the glass navbar.
+          initialChildSize: _nearbySheetMin,
+          minChildSize: _nearbySheetMin,
+          maxChildSize: _nearbySheetMax,
+          snap: true,
+          snapSizes: const [_nearbySheetMin, 0.24, 0.50, _nearbySheetMax],
+          builder: (context, scrollController) {
+            final l10n = AppLocalizations.of(context)!;
+            final isDark = theme.brightness == Brightness.dark;
+            final radius = const BorderRadius.vertical(
+              top: Radius.circular(KubusRadius.xl),
+            );
+            final glassTint =
+                scheme.surface.withValues(alpha: isDark ? 0.46 : 0.56);
+            return MapOverlayBlocker(
+              child: Listener(
+                behavior: HitTestBehavior.opaque,
+                onPointerDown: (_) => _setSheetInteracting(true),
+                onPointerUp: (_) => _setSheetInteracting(false),
+                onPointerCancel: (_) => _setSheetInteracting(false),
+                // Absorb mouse wheel / trackpad scroll to prevent map zoom when
+                // scrolling inside the sheet (especially important on web).
+                onPointerSignal: (_) {},
+                child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onHorizontalDragStart: (_) {},
                   onHorizontalDragUpdate: (_) {},
@@ -5861,17 +5933,17 @@ class _MapScreenState extends State<MapScreen>
                         ),
                       ],
                     ),
-                  child: ClipRRect(
-                    borderRadius: radius,
-                    child: LiquidGlassPanel(
-                      padding: EdgeInsets.zero,
-                      margin: EdgeInsets.zero,
-                      borderRadius: BorderRadius.zero,
-                      showBorder: false,
-                      backgroundColor: glassTint,
-                      child: CustomScrollView(
-                        controller: scrollController,
-                        slivers: [
+                    child: ClipRRect(
+                      borderRadius: radius,
+                      child: LiquidGlassPanel(
+                        padding: EdgeInsets.zero,
+                        margin: EdgeInsets.zero,
+                        borderRadius: BorderRadius.zero,
+                        showBorder: false,
+                        backgroundColor: glassTint,
+                        child: CustomScrollView(
+                          controller: scrollController,
+                          slivers: [
                           SliverToBoxAdapter(
                             child: Padding(
                               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -5879,13 +5951,17 @@ class _MapScreenState extends State<MapScreen>
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Center(
-                                    child: Container(
-                                      width: 48,
-                                      height: 4,
-                                      decoration: BoxDecoration(
-                                        color: scheme.outlineVariant
-                                            .withValues(alpha: 0.85),
-                                        borderRadius: BorderRadius.circular(2),
+                                    child: Semantics(
+                                      label: 'nearby_art_handle',
+                                      child: Container(
+                                        width: 48,
+                                        height: 4,
+                                        decoration: BoxDecoration(
+                                          color: scheme.outlineVariant
+                                              .withValues(alpha: 0.85),
+                                          borderRadius:
+                                              BorderRadius.circular(2),
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -6089,13 +6165,13 @@ class _MapScreenState extends State<MapScreen>
                     ),
                   ),
                 ),
-              );
-            },
-          ),
-        ),
-        ),
+              ),
+            ),
+          );
+        },
       ),
-    );
+    ),
+  );
     return sheet;
   }
 
