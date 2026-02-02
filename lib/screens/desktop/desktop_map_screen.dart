@@ -1114,6 +1114,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }) async {
     final controller = _mapController;
     if (controller == null) return;
+    final double? debugDpr =
+        kDebugMode ? MediaQuery.of(context).devicePixelRatio : null;
 
     final lastAt = _lastFeatureTapAt;
     final lastPoint = _lastFeatureTapPoint;
@@ -1167,11 +1169,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     // Debug instrumentation (kDebugMode only)
     if (kDebugMode) {
-      final dpr = MediaQuery.of(context).devicePixelRatio;
       AppConfig.debugPrint(
         'DesktopMapScreen: tap at (${point.x.toStringAsFixed(1)}, ${point.y.toStringAsFixed(1)}) '
         'pitch=${_lastPitch.toStringAsFixed(1)} bearing=${_lastBearing.toStringAsFixed(1)} '
-        'zoom=${_cameraZoom.toStringAsFixed(2)} dpr=$dpr 3D=$_is3DMarkerModeActive',
+        'zoom=${_cameraZoom.toStringAsFixed(2)} dpr=$debugDpr 3D=$_is3DMarkerModeActive',
       );
     }
 

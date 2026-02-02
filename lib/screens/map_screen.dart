@@ -1789,14 +1789,6 @@ class _MapScreenState extends State<MapScreen>
     });
   }
 
-  bool get _shouldBlockMapGestures {
-    if (kIsWeb) return false;
-    // Only block while actively interacting with the sheet (drag/scroll).
-    // When the sheet is simply expanded, we block gestures only in its area via
-    // the bottom AbsorbPointer overlay.
-    return _isSheetInteracting;
-  }
-
   void _dismissSelectedMarker() {
     if (_selectedMarkerId == null && _selectedMarkerData == null) return;
     setState(() {
@@ -2893,18 +2885,13 @@ class _MapScreenState extends State<MapScreen>
             KeyedSubtree(
               key: _tutorialMapKey,
               child: IgnorePointer(
-                ignoring: _shouldBlockMapGestures || _showMapTutorial,
+                // In tutorial mode, prevent map gestures so the overlay can
+                // guide the user without accidental pans/zooms.
+                ignoring: _showMapTutorial,
                 child: _buildMap(themeProvider),
               ),
             ),
-            if (_shouldBlockMapGestures)
-              const Positioned.fill(
-                child: ModalBarrier(
-                  dismissible: false,
-                  color: Colors.transparent,
-                ),
-              ),
-            if (_isSheetBlocking)
+            if (_isSheetBlocking || _isSheetInteracting)
               Positioned(
                 left: 0,
                 right: 0,
@@ -2981,7 +2968,10 @@ class _MapScreenState extends State<MapScreen>
     final tileProviders = Provider.of<TileProviders?>(context, listen: false);
     final styleAsset = tileProviders?.mapStyleAsset(isDarkMode: isDark) ??
         MapStyleService.primaryStyleRef(isDarkMode: isDark);
-    final disableGesturesForOverlays = _showMapTutorial || _isSheetInteracting;
+    // Keep map gestures enabled during normal operation. We block drag-through
+    // from the Nearby Art sheet using an AbsorbPointer overlay over the sheet
+    // area, rather than disabling map gestures globally.
+    final disableGesturesForOverlays = _showMapTutorial;
 
     return ArtMapView(
       initialCenter: _currentPosition ?? _cameraCenter,
@@ -3207,6 +3197,8 @@ class _MapScreenState extends State<MapScreen>
   ) async {
     final controller = _mapController;
     if (controller == null) return;
+    final double? debugDpr =
+        kDebugMode ? MediaQuery.of(context).devicePixelRatio : null;
 
     final lastAt = _lastFeatureTapAt;
     final lastPoint = _lastFeatureTapPoint;
@@ -3246,11 +3238,10 @@ class _MapScreenState extends State<MapScreen>
 
     // Debug instrumentation (kDebugMode only)
     if (kDebugMode) {
-      final dpr = MediaQuery.of(context).devicePixelRatio;
       AppConfig.debugPrint(
         'MapScreen: tap at (${point.x.toStringAsFixed(1)}, ${point.y.toStringAsFixed(1)}) '
         'pitch=${_lastPitch.toStringAsFixed(1)} bearing=${_lastBearing.toStringAsFixed(1)} '
-        'zoom=${_lastZoom.toStringAsFixed(2)} dpr=$dpr 3D=$_is3DMarkerModeActive',
+        'zoom=${_lastZoom.toStringAsFixed(2)} dpr=$debugDpr 3D=$_is3DMarkerModeActive',
       );
     }
 
