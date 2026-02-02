@@ -68,6 +68,7 @@ import '../utils/marker_cube_geometry.dart';
 import 'events/exhibition_detail_screen.dart';
 import '../widgets/glass_components.dart';
 import '../widgets/kubus_snackbar.dart';
+import '../widgets/map_overlay_blocker.dart';
 import '../widgets/tutorial/interactive_tutorial_overlay.dart';
 
 /// Custom painter for the direction cone indicator
@@ -4632,6 +4633,8 @@ class _MapScreenState extends State<MapScreen>
       child: Material(
         color: Colors.transparent,
         child: InkWell(
+          mouseCursor:
+              onTap == null ? SystemMouseCursors.basic : SystemMouseCursors.click,
           borderRadius: BorderRadius.circular(999),
           onTap: onTap,
           child: Container(
@@ -4686,6 +4689,8 @@ class _MapScreenState extends State<MapScreen>
     return Material(
       color: Colors.transparent,
       child: InkWell(
+        mouseCursor:
+            onTap == null ? SystemMouseCursors.basic : SystemMouseCursors.click,
         onTap: onTap,
         borderRadius: BorderRadius.circular(999),
         child: Container(
@@ -4725,7 +4730,7 @@ class _MapScreenState extends State<MapScreen>
       top: topPadding,
       left: 16,
       right: 16,
-      child: _wrapPointerInterceptor(
+      child: MapOverlayBlocker(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -5109,68 +5114,71 @@ class _MapScreenState extends State<MapScreen>
         backgroundColor: glassTint,
         child: SizedBox(
           height: 52,
-          child: TextField(
-            controller: _searchController,
-            focusNode: _searchFocusNode,
-            style: KubusTypography.textTheme.bodyMedium?.copyWith(
-              color: scheme.onSurface,
-            ),
-            decoration: InputDecoration(
-              isDense: true,
-              hintText: l10n.mapSearchHint,
-              hintStyle: KubusTypography.textTheme.bodyMedium?.copyWith(
-                color: hintColor,
+          child: MouseRegion(
+            cursor: SystemMouseCursors.text,
+            child: TextField(
+              controller: _searchController,
+              focusNode: _searchFocusNode,
+              style: KubusTypography.textTheme.bodyMedium?.copyWith(
+                color: scheme.onSurface,
               ),
-              prefixIcon: Icon(Icons.search, color: hintColor),
-              prefixIconConstraints:
-                  const BoxConstraints(minWidth: 44, minHeight: 44),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      tooltip: l10n.mapClearSearchTooltip,
-                      icon: Icon(Icons.close, color: hintColor),
-                      onPressed: () {
-                        setState(() {
-                          _searchQuery = '';
-                          _isSearching = false;
-                          _searchSuggestions = [];
-                          _isFetchingSuggestions = false;
-                          _searchController.clear();
-                          _searchFocusNode.unfocus();
-                        });
-                      },
-                    )
-                  : Tooltip(
-                      message: _filtersExpanded
-                          ? l10n.mapHideFiltersTooltip
-                          : l10n.mapShowFiltersTooltip,
-                      preferBelow: false,
-                      verticalOffset: 18,
-                      margin: const EdgeInsets.symmetric(horizontal: 24),
-                      child: IconButton(
-                        key: _tutorialFilterButtonKey,
-                        icon: Icon(
-                          _filtersExpanded
-                              ? Icons.filter_alt_off
-                              : Icons.filter_alt,
-                          color: hintColor,
-                        ),
+              decoration: InputDecoration(
+                isDense: true,
+                hintText: l10n.mapSearchHint,
+                hintStyle: KubusTypography.textTheme.bodyMedium?.copyWith(
+                  color: hintColor,
+                ),
+                prefixIcon: Icon(Icons.search, color: hintColor),
+                prefixIconConstraints:
+                    const BoxConstraints(minWidth: 44, minHeight: 44),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        tooltip: l10n.mapClearSearchTooltip,
+                        icon: Icon(Icons.close, color: hintColor),
                         onPressed: () {
                           setState(() {
-                            _filtersExpanded = !_filtersExpanded;
+                            _searchQuery = '';
+                            _isSearching = false;
+                            _searchSuggestions = [];
+                            _isFetchingSuggestions = false;
+                            _searchController.clear();
+                            _searchFocusNode.unfocus();
                           });
                         },
+                      )
+                    : Tooltip(
+                        message: _filtersExpanded
+                            ? l10n.mapHideFiltersTooltip
+                            : l10n.mapShowFiltersTooltip,
+                        preferBelow: false,
+                        verticalOffset: 18,
+                        margin: const EdgeInsets.symmetric(horizontal: 24),
+                        child: IconButton(
+                          key: _tutorialFilterButtonKey,
+                          icon: Icon(
+                            _filtersExpanded
+                                ? Icons.filter_alt_off
+                                : Icons.filter_alt,
+                            color: hintColor,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _filtersExpanded = !_filtersExpanded;
+                            });
+                          },
+                        ),
                       ),
-                    ),
-              suffixIconConstraints:
-                  const BoxConstraints(minWidth: 44, minHeight: 44),
-              border: InputBorder.none,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                suffixIconConstraints:
+                    const BoxConstraints(minWidth: 44, minHeight: 44),
+                border: InputBorder.none,
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+              ),
+              onTap: () {
+                setState(() => _isSearching = true);
+              },
+              onChanged: _handleSearchChange,
             ),
-            onTap: () {
-              setState(() => _isSearching = true);
-            },
-            onChanged: _handleSearchChange,
           ),
         ),
       ),
@@ -5229,7 +5237,7 @@ class _MapScreenState extends State<MapScreen>
       top: top,
       left: 16,
       right: 16,
-      child: _wrapPointerInterceptor(
+      child: MapOverlayBlocker(
         child: Container(
           decoration: BoxDecoration(
             borderRadius: radius,
@@ -5726,7 +5734,7 @@ class _MapScreenState extends State<MapScreen>
     return Positioned(
       right: 16,
       bottom: bottomOffset,
-      child: _wrapPointerInterceptor(
+      child: MapOverlayBlocker(
         child: Column(
           children: [
             if (AppConfig.isFeatureEnabled('mapTravelMode')) ...[
@@ -5802,56 +5810,57 @@ class _MapScreenState extends State<MapScreen>
     final scheme = theme.colorScheme;
     final sheet = Align(
       alignment: Alignment.bottomCenter,
-      child: Listener(
-        behavior: HitTestBehavior.opaque,
-        onPointerDown: (_) => _setSheetInteracting(true),
-        onPointerUp: (_) => _setSheetInteracting(false),
-        onPointerCancel: (_) => _setSheetInteracting(false),
-        // Absorb mouse wheel / trackpad scroll to prevent map zoom when
-        // scrolling inside the sheet (especially important on web).
-        onPointerSignal: (_) {},
-        child: NotificationListener<DraggableScrollableNotification>(
-          onNotification: (notification) {
-            final blocking = notification.extent > (_nearbySheetMin + 0.01);
-            _setSheetBlocking(blocking, notification.extent);
-            return false;
-          },
-          child: DraggableScrollableSheet(
-            controller: _sheetController,
-            // Keep the collapsed state slightly more visible while still letting it sit
-            // behind the glass navbar.
-            initialChildSize: _nearbySheetMin,
-            minChildSize: _nearbySheetMin,
-            maxChildSize: _nearbySheetMax,
-            snap: true,
-            snapSizes: const [_nearbySheetMin, 0.24, 0.50, _nearbySheetMax],
-            builder: (context, scrollController) {
-              final l10n = AppLocalizations.of(context)!;
-              final isDark = theme.brightness == Brightness.dark;
-              final radius = const BorderRadius.vertical(
-                top: Radius.circular(KubusRadius.xl),
-              );
-              final glassTint =
-                  scheme.surface.withValues(alpha: isDark ? 0.46 : 0.56);
-              return GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onHorizontalDragStart: (_) {},
-                onHorizontalDragUpdate: (_) {},
-                onHorizontalDragEnd: (_) {},
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: radius,
-                    border: Border.all(
-                      color: scheme.outlineVariant.withValues(alpha: 0.25),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: scheme.shadow.withValues(alpha: 0.18),
-                        blurRadius: 24,
-                        offset: const Offset(0, -6),
+      child: MapOverlayBlocker(
+        child: Listener(
+          behavior: HitTestBehavior.opaque,
+          onPointerDown: (_) => _setSheetInteracting(true),
+          onPointerUp: (_) => _setSheetInteracting(false),
+          onPointerCancel: (_) => _setSheetInteracting(false),
+          // Absorb mouse wheel / trackpad scroll to prevent map zoom when
+          // scrolling inside the sheet (especially important on web).
+          onPointerSignal: (_) {},
+          child: NotificationListener<DraggableScrollableNotification>(
+            onNotification: (notification) {
+              final blocking = notification.extent > (_nearbySheetMin + 0.01);
+              _setSheetBlocking(blocking, notification.extent);
+              return false;
+            },
+            child: DraggableScrollableSheet(
+              controller: _sheetController,
+              // Keep the collapsed state slightly more visible while still letting it sit
+              // behind the glass navbar.
+              initialChildSize: _nearbySheetMin,
+              minChildSize: _nearbySheetMin,
+              maxChildSize: _nearbySheetMax,
+              snap: true,
+              snapSizes: const [_nearbySheetMin, 0.24, 0.50, _nearbySheetMax],
+              builder: (context, scrollController) {
+                final l10n = AppLocalizations.of(context)!;
+                final isDark = theme.brightness == Brightness.dark;
+                final radius = const BorderRadius.vertical(
+                  top: Radius.circular(KubusRadius.xl),
+                );
+                final glassTint =
+                    scheme.surface.withValues(alpha: isDark ? 0.46 : 0.56);
+                return GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onHorizontalDragStart: (_) {},
+                  onHorizontalDragUpdate: (_) {},
+                  onHorizontalDragEnd: (_) {},
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: radius,
+                      border: Border.all(
+                        color: scheme.outlineVariant.withValues(alpha: 0.25),
                       ),
-                    ],
-                  ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: scheme.shadow.withValues(alpha: 0.18),
+                          blurRadius: 24,
+                          offset: const Offset(0, -6),
+                        ),
+                      ],
+                    ),
                   child: ClipRRect(
                     borderRadius: radius,
                     child: LiquidGlassPanel(
@@ -6084,9 +6093,10 @@ class _MapScreenState extends State<MapScreen>
             },
           ),
         ),
+        ),
       ),
     );
-    return _wrapPointerInterceptor(child: sheet);
+    return sheet;
   }
 
   Widget _buildEmptyState(ThemeData theme) {
@@ -6332,6 +6342,8 @@ class _MapIconButton extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
+          mouseCursor:
+              onTap == null ? SystemMouseCursors.basic : SystemMouseCursors.click,
           borderRadius: radius,
           onTap: onTap,
           child: Container(
