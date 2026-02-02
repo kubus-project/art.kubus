@@ -255,7 +255,9 @@ class _MapScreenState extends State<MapScreen>
   final DraggableScrollableController _sheetController =
       DraggableScrollableController();
   bool _isSheetInteracting = false;
-  bool _isSheetBlocking = true;
+  // Only block map gestures in the sheet area when the sheet is expanded.
+  // The default collapsed extent should not disable map interactions.
+  bool _isSheetBlocking = false;
   double _nearbySheetExtent = _nearbySheetMin;
   double _markerRadiusKm = 5.0;
   bool _travelModeEnabled = false;
@@ -1789,7 +1791,10 @@ class _MapScreenState extends State<MapScreen>
 
   bool get _shouldBlockMapGestures {
     if (kIsWeb) return false;
-    return _isSheetBlocking || _isSheetInteracting;
+    // Only block while actively interacting with the sheet (drag/scroll).
+    // When the sheet is simply expanded, we block gestures only in its area via
+    // the bottom AbsorbPointer overlay.
+    return _isSheetInteracting;
   }
 
   void _dismissSelectedMarker() {
@@ -2976,8 +2981,7 @@ class _MapScreenState extends State<MapScreen>
     final tileProviders = Provider.of<TileProviders?>(context, listen: false);
     final styleAsset = tileProviders?.mapStyleAsset(isDarkMode: isDark) ??
         MapStyleService.primaryStyleRef(isDarkMode: isDark);
-    final disableGesturesForOverlays =
-        _showMapTutorial || _isSheetBlocking || _isSheetInteracting;
+    final disableGesturesForOverlays = _showMapTutorial || _isSheetInteracting;
 
     return ArtMapView(
       initialCenter: _currentPosition ?? _cameraCenter,
