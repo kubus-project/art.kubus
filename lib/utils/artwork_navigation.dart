@@ -11,6 +11,7 @@ Future<void> openArtwork(
   BuildContext context,
   String artworkId, {
   String? source,
+  String? attendanceMarkerId,
 }) async {
   final id = artworkId.trim();
   if (id.isEmpty) return;
@@ -27,18 +28,30 @@ Future<void> openArtwork(
       shellScope.pushScreen(
         DesktopSubScreen(
           title: title,
-          child: DesktopArtworkDetailScreen(artworkId: id),
+          child: DesktopArtworkDetailScreen(
+            artworkId: id,
+            attendanceMarkerId: attendanceMarkerId,
+          ),
         ),
       );
       return;
     }
 
-    final screen = DesktopArtworkDetailScreen(artworkId: id, showAppBar: true);
+    final screen = DesktopArtworkDetailScreen(
+      artworkId: id,
+      showAppBar: true,
+      attendanceMarkerId: attendanceMarkerId,
+    );
     await Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
     return;
   }
 
   await Navigator.of(context).push(
-    MaterialPageRoute(builder: (_) => ArtDetailScreen(artworkId: id)),
+    MaterialPageRoute(
+      builder: (_) => ArtDetailScreen(
+        artworkId: id,
+        attendanceMarkerId: attendanceMarkerId,
+      ),
+    ),
   );
 }

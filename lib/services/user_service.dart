@@ -1,10 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import '../config/config.dart';
+import '../models/achievement_progress.dart';
 import '../models/user.dart';
-import '../models/achievements.dart';
 import 'backend_api_service.dart';
 import 'stats_api_service.dart';
+import 'achievement_service.dart' as achievement_svc;
 import '../utils/wallet_utils.dart';
 import 'user_action_logger.dart';
 
@@ -43,9 +45,9 @@ class UserService {
       isArtist: true,
       joinedDate: 'Joined March 2024',
       achievementProgress: [
-        AchievementProgress(achievementId: 'first_ar_visit', currentProgress: 1, isCompleted: true),
-        AchievementProgress(achievementId: 'ar_collector', currentProgress: 10, isCompleted: true),
-        AchievementProgress(achievementId: 'community_member', currentProgress: 1, isCompleted: true),
+        AchievementProgress(achievementId: 'first_ar_view', currentProgress: 1, isCompleted: true),
+        AchievementProgress(achievementId: 'ar_enthusiast', currentProgress: 10, isCompleted: false),
+        AchievementProgress(achievementId: 'community_builder', currentProgress: 12, isCompleted: false),
         AchievementProgress(achievementId: 'early_adopter', currentProgress: 1, isCompleted: true),
       ],
     ),
@@ -62,9 +64,9 @@ class UserService {
       isArtist: true,
       joinedDate: 'Joined January 2024',
       achievementProgress: [
-        AchievementProgress(achievementId: 'first_ar_visit', currentProgress: 1, isCompleted: true),
-        AchievementProgress(achievementId: 'supporter', currentProgress: 1, isCompleted: true),
-        AchievementProgress(achievementId: 'first_favorite', currentProgress: 1, isCompleted: true),
+        AchievementProgress(achievementId: 'first_nft_mint', currentProgress: 1, isCompleted: true),
+        AchievementProgress(achievementId: 'nft_collector', currentProgress: 3, isCompleted: false),
+        AchievementProgress(achievementId: 'art_supporter', currentProgress: 1, isCompleted: false),
       ],
     ),
     const User(
@@ -80,10 +82,10 @@ class UserService {
       isArtist: true,
       joinedDate: 'Joined February 2024',
       achievementProgress: [
-        AchievementProgress(achievementId: 'first_ar_visit', currentProgress: 1, isCompleted: true),
-        AchievementProgress(achievementId: 'ar_collector', currentProgress: 8, isCompleted: false),
-        AchievementProgress(achievementId: 'social_butterfly', currentProgress: 20, isCompleted: true),
-        AchievementProgress(achievementId: 'patron', currentProgress: 5, isCompleted: false),
+        AchievementProgress(achievementId: 'first_ar_view', currentProgress: 1, isCompleted: true),
+        AchievementProgress(achievementId: 'ar_enthusiast', currentProgress: 8, isCompleted: false),
+        AchievementProgress(achievementId: 'first_post', currentProgress: 1, isCompleted: true),
+        AchievementProgress(achievementId: 'art_supporter', currentProgress: 5, isCompleted: false),
       ],
     ),
     const User(
@@ -99,9 +101,9 @@ class UserService {
       isArtist: false,
       joinedDate: 'Joined April 2024',
       achievementProgress: [
-        AchievementProgress(achievementId: 'first_ar_visit', currentProgress: 1, isCompleted: true),
-        AchievementProgress(achievementId: 'art_critic', currentProgress: 7, isCompleted: false),
-        AchievementProgress(achievementId: 'gallery_explorer', currentProgress: 3, isCompleted: false),
+        AchievementProgress(achievementId: 'first_comment', currentProgress: 1, isCompleted: true),
+        AchievementProgress(achievementId: 'commentator', currentProgress: 7, isCompleted: false),
+        AchievementProgress(achievementId: 'gallery_visitor', currentProgress: 1, isCompleted: true),
       ],
     ),
   ];
@@ -810,6 +812,10 @@ class UserService {
     if (walletAddress.isEmpty) return const [];
     try {
       final resp = await BackendApiService().getUserAchievements(walletAddress);
+      final definitionsById = <String, achievement_svc.AchievementDefinition>{
+        for (final def in achievement_svc.AchievementService.achievementDefinitions.values)
+          def.id: def,
+      };
       final progressEntries = <String, AchievementProgress>{};
 
       void addOrUpdate(Map<String, dynamic>? item, {bool forceCompleted = false}) {
@@ -819,10 +825,11 @@ class UserService {
         final id = idRaw.toString();
         if (id.isEmpty) return;
 
-        final achievement = getAchievementById(id);
-        final requiredProgress = achievement?.requiredProgress ?? 1;
-        final progressValue = _parseInt(item['currentProgress'] ?? item['current_progress'] ?? item['progress'])
-            .clamp(0, requiredProgress);
+        final def = definitionsById[id];
+        final requiredProgress = (def?.requiredCount ?? 1).clamp(1, 1 << 30);
+        final progressValue = _parseInt(
+          item['currentProgress'] ?? item['current_progress'] ?? item['progress'],
+        ).clamp(0, requiredProgress);
         final completedFlag = forceCompleted || item['isCompleted'] == true || item['is_completed'] == true ||
             (item['status']?.toString().toLowerCase() == 'completed');
         final currentProgress = completedFlag ? requiredProgress : (progressValue == 0 ? 0 : progressValue);
@@ -865,9 +872,7 @@ class UserService {
 
       return progressEntries.values.toList();
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('UserService.loadAchievementProgress: $e');
-      }
+      AppConfig.debugPrint('UserService.loadAchievementProgress: $e');
       return const [];
     }
   }
@@ -1186,51 +1191,5 @@ class UserService {
       }
     }
     return results;
-  }
-
-  /// Update achievement progress for a user
-  static Future<void> updateAchievementProgress(String userId, String achievementId, int newProgress) async {
-    // In a real app, this would make an API call to update the server
-    // For now, this is just an example of how you might handle achievement updates
-    if (kDebugMode) {
-      debugPrint('UserService.updateAchievementProgress: Updating achievement $achievementId for user $userId to progress $newProgress');
-    }
-  }
-
-  /// Increment achievement progress for a user
-  static Future<void> incrementAchievementProgress(String userId, String achievementId, {int increment = 1}) async {
-    // In a real app, this would make an API call to increment the server-side progress
-    if (kDebugMode) {
-      debugPrint('UserService.incrementAchievementProgress: Incrementing achievement $achievementId for user $userId by $increment');
-    }
-  }
-
-  /// Trigger achievement events (call when user performs actions)
-  static Future<void> triggerAchievementEvent(String userId, String event, {Map<String, dynamic>? data}) async {
-    // Example achievement event triggers
-    switch (event) {
-      case 'ar_view':
-        await incrementAchievementProgress(userId, 'first_ar_visit');
-        await incrementAchievementProgress(userId, 'ar_collector');
-        break;
-      case 'gallery_visit':
-        await incrementAchievementProgress(userId, 'gallery_explorer');
-        break;
-      case 'artwork_like':
-        await incrementAchievementProgress(userId, 'social_butterfly');
-        break;
-      case 'review_posted':
-        await incrementAchievementProgress(userId, 'art_critic');
-        break;
-      case 'dao_vote':
-        await incrementAchievementProgress(userId, 'community_member');
-        break;
-      case 'artwork_shared':
-        await incrementAchievementProgress(userId, 'social_butterfly');
-        break;
-      case 'nft_purchase':
-        await incrementAchievementProgress(userId, 'supporter');
-        break;
-    }
   }
 }

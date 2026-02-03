@@ -59,6 +59,7 @@ class AppConfig {
   static const bool enableMessaging = true; // Future feature
   static const bool enablePresence = true;
   static const bool enablePresenceLastVisitedLocation = true;
+  static const bool enableAttendance = true;
 
   /// Web: proxy external images via backend to avoid CORS failures in CanvasKit.
   ///
@@ -248,6 +249,7 @@ class AppConfig {
   static const int dailyLoginReward = 10;
   static const int artworkUploadReward = 50;
   static const int artworkDiscoveryReward = 5;
+  static const double kub8PerAttendanceReward = 0.5;
   
   // ===========================================
   // UI/UX CONFIGURATION
@@ -303,6 +305,7 @@ class AppConfig {
       case 'labs': return enableLabs;
       case 'presence': return enablePresence;
       case 'presenceLastVisitedLocation': return enablePresenceLastVisitedLocation;
+      case 'attendance': return enableAttendance;
       case 'externalImageProxy': return enableExternalImageProxy;
       case 'rePromptLoginOnExpiry': return enableRePromptLoginOnExpiry;
       case 'mapTravelMode': return enableMapTravelMode;
@@ -347,9 +350,9 @@ class AppConfig {
 /// App version and build information
 class AppInfo {
   static const String appName = 'art.kubus';
-  static const String version = '0.3.0';
-  static const int buildNumber = 15;
-  static const String buildDate = '2026-01-29';
+  static const String version = '0.3.1';
+  static const int buildNumber = 16;
+  static const String buildDate = '2026-02-03';
   
   /// Get full version string
   static String get fullVersion => '$version+$buildNumber';

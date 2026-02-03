@@ -1,4 +1,4 @@
-import 'achievements.dart';
+import 'achievement_progress.dart';
 
 class User {
   final String id;
@@ -42,30 +42,6 @@ class User {
     required this.joinedDate,
     this.achievementProgress = const [],
   });
-
-  /// Get total achievement points for this user
-  int get totalAchievementPoints {
-    int total = 0;
-    for (final progress in achievementProgress) {
-      if (progress.isCompleted) {
-        final achievement = getAchievementById(progress.achievementId);
-        if (achievement != null) {
-          total += achievement.points;
-        }
-      }
-    }
-    return total;
-  }
-
-  /// Get achievement completion percentage
-  double get achievementCompletionPercentage {
-    if (allAchievements.isEmpty) return 0.0;
-    final completedCount = achievementProgress.where((p) => p.isCompleted).length;
-    return (completedCount / allAchievements.length * 100).clamp(0.0, 100.0);
-  }
-
-  /// Get completed achievements count
-  int get completedAchievementsCount => achievementProgress.where((p) => p.isCompleted).length;
 
   User copyWith({
     String? id,

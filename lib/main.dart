@@ -43,6 +43,7 @@ import 'providers/stats_provider.dart';
 import 'providers/analytics_filters_provider.dart';
 import 'providers/desktop_dashboard_state_provider.dart';
 import 'providers/marker_management_provider.dart';
+import 'providers/attendance_provider.dart';
 import 'providers/security_gate_provider.dart';
 import 'providers/email_preferences_provider.dart';
 import 'providers/auth_deep_link_provider.dart';
@@ -465,18 +466,7 @@ class _AppLauncherState extends State<AppLauncher> {
               ),
               ChangeNotifierProvider(
                   create: (context) => CollectionsProvider()),
-              ChangeNotifierProxyProvider<TaskProvider, ArtworkProvider>(
-                create: (context) {
-                  final artworkProvider = ArtworkProvider();
-                  artworkProvider.setTaskProvider(context.read<TaskProvider>());
-                  return artworkProvider;
-                },
-                update: (context, taskProvider, artworkProvider) {
-                  artworkProvider?.setTaskProvider(taskProvider);
-                  return artworkProvider ?? ArtworkProvider()
-                    ..setTaskProvider(taskProvider);
-                },
-              ),
+              ChangeNotifierProvider(create: (context) => ArtworkProvider()),
               ChangeNotifierProxyProvider<ArtworkProvider, PortfolioProvider>(
                 create: (context) => PortfolioProvider(),
                 update: (context, artworkProvider, portfolioProvider) {
@@ -498,6 +488,19 @@ class _AppLauncherState extends State<AppLauncher> {
                 create: (context) => WalletProvider(
                   solanaWalletService: context.read<SolanaWalletService>(),
                 ),
+              ),
+              ChangeNotifierProxyProvider2<ProfileProvider, WalletProvider,
+                  AttendanceProvider>(
+                create: (context) => AttendanceProvider(),
+                update: (context, profileProvider, walletProvider,
+                    attendanceProvider) {
+                  final provider = attendanceProvider ?? AttendanceProvider();
+                  provider.bindAuthContext(
+                    isSignedIn: profileProvider.isSignedIn,
+                    walletAddress: walletProvider.currentWalletAddress,
+                  );
+                  return provider;
+                },
               ),
               ChangeNotifierProxyProvider3<AppRefreshProvider, ProfileProvider,
                   WalletProvider, ChatProvider>(
@@ -765,14 +768,20 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
             '/artwork': (context) {
               final args = ModalRoute.of(context)?.settings.arguments;
               String? artworkId;
+              String? attendanceMarkerId;
               if (args is Map) {
                 final raw =
                     args['artworkId'] ?? args['id'] ?? args['artwork_id'];
                 if (raw != null) artworkId = raw.toString();
+                final rawMarker = args['attendanceMarkerId'] ??
+                    args['markerId'] ??
+                    args['marker_id'];
+                if (rawMarker != null) attendanceMarkerId = rawMarker.toString();
               } else if (args is String) {
                 artworkId = args;
               }
               artworkId = artworkId?.trim();
+              attendanceMarkerId = attendanceMarkerId?.trim();
               if (artworkId == null || artworkId.isEmpty) {
                 final l10n = AppLocalizations.of(context)!;
                 return Scaffold(
@@ -782,8 +791,14 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
               final isDesktop = DesktopBreakpoints.isDesktop(context);
               return isDesktop
                   ? DesktopArtworkDetailScreen(
-                      artworkId: artworkId, showAppBar: true)
-                  : ArtDetailScreen(artworkId: artworkId);
+                      artworkId: artworkId,
+                      showAppBar: true,
+                      attendanceMarkerId: attendanceMarkerId,
+                    )
+                  : ArtDetailScreen(
+                      artworkId: artworkId,
+                      attendanceMarkerId: attendanceMarkerId,
+                    );
             },
             '/wallet_connect': (context) => const ConnectWallet(),
             '/connect_wallet': (context) => const ConnectWallet(),

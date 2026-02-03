@@ -9,7 +9,6 @@ import '../services/ar_content_service.dart';
 import '../services/art_content_service.dart';
 import '../services/backend_api_service.dart';
 import '../services/user_action_logger.dart';
-import 'task_provider.dart';
 import 'saved_items_provider.dart';
 
 class ArtworkProvider extends ChangeNotifier {
@@ -20,7 +19,6 @@ class ArtworkProvider extends ChangeNotifier {
   final Map<String, bool> _loadingStates = {};
   final Set<String> _walletsWithPrivateArtworks = <String>{};
   String? _error;
-  TaskProvider? _taskProvider;
   SavedItemsProvider? _savedItemsProvider;
   bool _useMockData = false;
   final ArtworkBackendApi _backendApi;
@@ -54,11 +52,6 @@ class ArtworkProvider extends ChangeNotifier {
         notifyListeners();
       }
     }
-  }
-
-  /// Set the task provider for tracking user actions
-  void setTaskProvider(TaskProvider taskProvider) {
-    _taskProvider = taskProvider;
   }
 
   /// Get artwork by ID
@@ -96,6 +89,29 @@ class ArtworkProvider extends ChangeNotifier {
       rethrow;
     } finally {
       _inFlightArtworkFetches.remove(key);
+    }
+  }
+
+  /// Force-refresh a single artwork from the backend and update local cache.
+  Future<Artwork?> refreshArtwork(String artworkId) async {
+    final key = artworkId.trim();
+    if (key.isEmpty) return null;
+
+    final operation = 'refresh_artwork_$key';
+    if (isLoading(operation)) return getArtworkById(key);
+
+    _setLoading(operation, true);
+    try {
+      final fetched = await _backendApi.getArtwork(key);
+      addOrUpdateArtwork(fetched);
+      return fetched;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('ArtworkProvider: refreshArtwork failed: $e');
+      }
+      rethrow;
+    } finally {
+      _setLoading(operation, false);
     }
   }
 
@@ -299,11 +315,6 @@ class ArtworkProvider extends ChangeNotifier {
               : artwork.likesCount + 1,
         );
         addOrUpdateArtwork(updatedArtwork);
-        
-        // Track like action for tasks
-        if (!wasLiked && _taskProvider != null) {
-          _taskProvider!.trackArtworkLike(artworkId);
-        }
 
         if (!wasLiked) {
           UserActionLogger.logArtworkLike(
@@ -359,11 +370,6 @@ class ArtworkProvider extends ChangeNotifier {
         if (_savedItemsProvider != null) {
           await _savedItemsProvider!.toggleArtworkSaved(artworkId);
         }
-        
-        // Track favorite action for tasks
-        if (_taskProvider != null && isAddingToFavorites) {
-          _taskProvider!.trackArtworkFavorite(artworkId);
-        }
 
         if (isAddingToFavorites) {
           UserActionLogger.logArtworkSave(
@@ -381,7 +387,7 @@ class ArtworkProvider extends ChangeNotifier {
   }
 
   /// Mark artwork as discovered
-  Future<void> discoverArtwork(String artworkId, String userId) async {
+  Future<void> discoverArtwork(String artworkId) async {
     _setLoading('discover_$artworkId', true);
     try {
       final artwork = getArtworkById(artworkId);
@@ -389,7 +395,6 @@ class ArtworkProvider extends ChangeNotifier {
         final updatedArtwork = artwork.copyWith(
           status: ArtworkStatus.discovered,
           discoveredAt: DateTime.now(),
-          discoveryUserId: userId,
           discoveryCount: artwork.discoveryCount + 1,
         );
         addOrUpdateArtwork(updatedArtwork);
@@ -397,11 +402,6 @@ class ArtworkProvider extends ChangeNotifier {
         // Auto-save discovered artwork
         if (_savedItemsProvider != null && !_savedItemsProvider!.isArtworkSaved(artworkId)) {
           await _savedItemsProvider!.toggleArtworkSaved(artworkId);
-        }
-        
-        // Track artwork visit for tasks
-        if (_taskProvider != null) {
-          _taskProvider!.trackArtworkVisit(artworkId);
         }
         
         // Sync with backend and reconcile server discovery count.
@@ -436,11 +436,6 @@ class ArtworkProvider extends ChangeNotifier {
         );
         addOrUpdateArtwork(updatedArtwork);
         await _recordViewHistory(updatedArtwork);
-        
-        // Track artwork visit for tasks (first time only per session)
-        if (_taskProvider != null) {
-          _taskProvider!.trackArtworkVisit(artworkId);
-        }
         
         // Sync with backend and reconcile server count (deduplicates per day for authed users).
         final serverViews = await _backendApi.recordArtworkView(artworkId);
@@ -514,11 +509,6 @@ class ArtworkProvider extends ChangeNotifier {
       );
 
       await loadComments(artworkId, force: true);
-
-      // Track comment interaction for achievements/tasks.
-      if (_taskProvider != null) {
-        _taskProvider!.trackArtworkComment(artworkId);
-      }
     } catch (e) {
       _commentSubmitErrors[artworkId] = 'Failed to add comment: $e';
       _setError(_commentSubmitErrors[artworkId]!);

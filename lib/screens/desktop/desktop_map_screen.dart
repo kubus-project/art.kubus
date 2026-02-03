@@ -19,6 +19,7 @@ import '../../providers/marker_management_provider.dart';
 import '../../providers/presence_provider.dart';
 import '../../providers/tile_providers.dart';
 import '../../providers/wallet_provider.dart';
+import '../../providers/attendance_provider.dart';
 import '../../models/artwork.dart';
 import '../../models/art_marker.dart';
 import '../../models/exhibition.dart';
@@ -139,6 +140,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   int _markerRequestId = 0;
   MarkerSubjectLoader get _subjectLoader => MarkerSubjectLoader(context);
   LatLng? _userLocation;
+  double? _userLocationAccuracyMeters;
+  int? _userLocationTimestampMs;
   bool _autoFollow = true;
   bool _isLocating = false;
   bool _isNearbyPanelOpen = false;
@@ -2643,11 +2646,27 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       if (!mounted) return;
       setState(() {
         _userLocation = current;
+        _userLocationAccuracyMeters = position.accuracy;
+        _userLocationTimestampMs = position.timestamp.millisecondsSinceEpoch;
         if (_autoFollow) {
           _cameraCenter = current;
         }
       });
       unawaited(_syncUserLocation(themeProvider: themeProvider));
+
+      final selectedMarker = _selectedMarkerData;
+      if (selectedMarker != null) {
+        context.read<AttendanceProvider>().updateProximity(
+          markerId: selectedMarker.id,
+          lat: current.latitude,
+          lng: current.longitude,
+          distanceMeters: _calculateDistance(current, selectedMarker.position),
+          activationRadiusMeters: selectedMarker.activationRadius,
+          requiresProximity: selectedMarker.requiresProximity,
+          accuracyMeters: _userLocationAccuracyMeters,
+          timestampMs: _userLocationTimestampMs,
+        );
+      }
       if (animate || _autoFollow) {
         _moveCamera(current, math.max(_effectiveZoom, 15));
       }
@@ -3359,10 +3378,16 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                         ),
                       SizedBox(
                         width: 170,
-                        child: OutlinedButton.icon(
+                          child: OutlinedButton.icon(
                           onPressed: () {
-                            unawaited(openArtwork(context, artwork.id,
-                                source: 'desktop_map'));
+                            unawaited(
+                              openArtwork(
+                                context,
+                                artwork.id,
+                                source: 'desktop_map',
+                                attendanceMarkerId: artwork.arMarkerId,
+                              ),
+                            );
                           },
                           icon: const Icon(Icons.info_outline, size: 18),
                           label: Text(
@@ -3733,20 +3758,25 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                       Expanded(
                         child: ElevatedButton.icon(
                           onPressed: () {
+                            final attendanceMarkerId = _selectedMarkerData?.id;
                             final shellScope = DesktopShellScope.of(context);
                             if (shellScope != null) {
                               shellScope.pushScreen(
                                 DesktopSubScreen(
                                   title: exhibition.title,
                                   child: ExhibitionDetailScreen(
-                                      exhibitionId: exhibition.id),
+                                    exhibitionId: exhibition.id,
+                                    attendanceMarkerId: attendanceMarkerId,
+                                  ),
                                 ),
                               );
                             } else {
                               unawaited(Navigator.of(context).push(
                                 MaterialPageRoute(
                                   builder: (_) => ExhibitionDetailScreen(
-                                      exhibitionId: exhibition.id),
+                                    exhibitionId: exhibition.id,
+                                    attendanceMarkerId: attendanceMarkerId,
+                                  ),
                                 ),
                               ));
                             }
@@ -5528,6 +5558,20 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _selectedArtwork = null;
       _selectedExhibition = null;
     });
+
+    final userLocation = _userLocation;
+    if (userLocation != null) {
+      context.read<AttendanceProvider>().updateProximity(
+        markerId: marker.id,
+        lat: userLocation.latitude,
+        lng: userLocation.longitude,
+        distanceMeters: _calculateDistance(userLocation, marker.position),
+        activationRadiusMeters: marker.activationRadius,
+        requiresProximity: marker.requiresProximity,
+        accuracyMeters: _userLocationAccuracyMeters,
+        timestampMs: _userLocationTimestampMs,
+      );
+    }
     _startPressedMarkerFeedback(marker.id);
     _startSelectionPopAnimation();
     _maybeRecordPresenceVisitForMarker(marker);
