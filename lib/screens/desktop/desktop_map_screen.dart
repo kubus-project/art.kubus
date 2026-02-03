@@ -1,4 +1,5 @@
-﻿import 'dart:async';
+import 'dart:async';
+import 'dart:developer' as dev;
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -24,13 +25,19 @@ import '../../models/art_marker.dart';
 import '../../models/exhibition.dart';
 import '../../models/map_marker_subject.dart';
 import '../../config/config.dart';
+import '../../core/app_route_observer.dart';
 import '../../services/map_style_service.dart';
 import '../../services/backend_api_service.dart';
+import '../../services/map_data_controller.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../services/map_marker_service.dart';
 import '../../services/ar_service.dart';
 import '../../utils/map_marker_subject_loader.dart';
+import '../../utils/map_perf_tracker.dart';
+import '../../utils/map_performance_debug.dart';
+import '../../utils/map_marker_icon_ids.dart';
+import '../../utils/map_tap_gating.dart';
 import '../../utils/map_marker_helper.dart';
 import '../../utils/art_marker_list_diff.dart';
 import '../../utils/debouncer.dart';
@@ -96,7 +103,9 @@ class DesktopMapScreen extends StatefulWidget {
 }
 
 class _DesktopMapScreenState extends State<DesktopMapScreen>
-    with WidgetsBindingObserver, TickerProviderStateMixin {
+    with WidgetsBindingObserver, TickerProviderStateMixin, RouteAware {
+  final MapPerfTracker _perf = MapPerfTracker('DesktopMapScreen');
+
   ml.MapLibreMapController? _mapController;
   late AnimationController _animationController;
   late AnimationController _panelController;
@@ -158,6 +167,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   StreamSubscription<String>? _markerDeletedSub;
   final Debouncer _markerRefreshDebouncer = Debouncer();
   bool _isAppForeground = true;
+  bool _isRouteVisible = true;
+  PageRoute<dynamic>? _subscribedRoute;
   bool _pendingMarkerRefresh = false;
   bool _pendingMarkerRefreshForce = false;
   LatLng _cameraCenter = const LatLng(46.0569, 14.5058);
@@ -170,6 +181,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   bool _programmaticCameraMove = false;
   double _lastBearing = 0.0;
   double _lastPitch = 0.0;
+  final ValueNotifier<double> _bearingDegrees = ValueNotifier<double>(0.0);
   DateTime _lastCameraUpdateTime = DateTime.now();
   static const Duration _cameraUpdateThrottle =
       Duration(milliseconds: 16); // ~60fps
@@ -184,7 +196,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   final LayerLink _markerOverlayLink = LayerLink();
   final Debouncer _overlayAnchorDebouncer = Debouncer();
   final Debouncer _cubeSyncDebouncer = Debouncer();
-  Offset? _selectedMarkerAnchor;
+  final ValueNotifier<Offset?> _selectedMarkerAnchorNotifier =
+      ValueNotifier<Offset?>(null);
   static const String _markerSourceId = 'kubus_markers';
   static const String _markerLayerId = 'kubus_marker_layer';
   static const String _markerHitboxLayerId = 'kubus_marker_hitbox_layer';
@@ -281,6 +294,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       duration: MapMarkerStyleConfig.cubeIconSpinPeriod,
       vsync: this,
     )..addListener(_handleMarkerLayerAnimationTick);
+    _perf.controllerCreated('selection_pop');
+    _perf.controllerCreated('panel');
+    _perf.controllerCreated('cube_spin');
+    _perf.logEvent('initState');
 
     _autoFollow = widget.autoFollow;
     _cameraCenter = widget.initialCenter ?? const LatLng(46.0569, 14.5058);
@@ -293,12 +310,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       return;
     }
 
-    _cubeIconSpinController.repeat();
-
     _markerStreamSub =
         _mapMarkerService.onMarkerCreated.listen(_handleMarkerCreated);
     _markerDeletedSub =
         _mapMarkerService.onMarkerDeleted.listen(_handleMarkerDeleted);
+    _perf.subscriptionStarted('marker_socket_created');
+    _perf.subscriptionStarted('marker_socket_deleted');
 
     unawaited(_loadMapTravelPrefs());
     unawaited(_loadMapIsometricPrefs());
@@ -322,6 +339,23 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
       unawaited(_maybeShowInteractiveMapTutorial());
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    final route = ModalRoute.of(context);
+    if (route is PageRoute<dynamic>) {
+      if (_subscribedRoute != route) {
+        if (_subscribedRoute != null) {
+          appRouteObserver.unsubscribe(this);
+        }
+        _subscribedRoute = route;
+        appRouteObserver.subscribe(this, route);
+      }
+      _setRouteVisible(route.isCurrent);
+    }
   }
 
   Future<void> _loadMapTravelPrefs() async {
@@ -594,12 +628,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     setState(fn);
   }
 
-
   int _clusterGridLevelForZoom(double zoom) {
     final double targetSpacingPx =
         zoom < 6.5 ? 56.0 : (zoom < 9.5 ? 64.0 : 72.0);
-    final level =
-        GridUtils.resolvePrimaryGridLevel(zoom, targetScreenSpacing: targetSpacingPx);
+    final level = GridUtils.resolvePrimaryGridLevel(zoom,
+        targetScreenSpacing: targetSpacingPx);
     return level.clamp(3, 14);
   }
 
@@ -633,7 +666,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _markerVisualSyncInFlight = true;
 
     final themeProvider = context.read<ThemeProvider>();
-    unawaited(_syncMapMarkersSafe(themeProvider: themeProvider).whenComplete(() {
+    unawaited(
+        _syncMapMarkersSafe(themeProvider: themeProvider).whenComplete(() {
       _markerVisualSyncInFlight = false;
       if (_markerVisualSyncQueued) {
         _markerVisualSyncQueued = false;
@@ -642,7 +676,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }));
   }
 
-  Future<void> _syncMapMarkersSafe({required ThemeProvider themeProvider}) async {
+  Future<void> _syncMapMarkersSafe(
+      {required ThemeProvider themeProvider}) async {
     try {
       await _syncMapMarkers(themeProvider: themeProvider);
     } catch (e) {
@@ -652,7 +687,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
   }
 
-  Future<void> _applyThemeToMapStyle({required ThemeProvider themeProvider}) async {
+  Future<void> _applyThemeToMapStyle(
+      {required ThemeProvider themeProvider}) async {
     final controller = _mapController;
     if (controller == null) return;
     if (!_styleInitialized) return;
@@ -859,7 +895,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
 
     try {
-      final marker = await BackendApiService().getArtMarker(markerId);
+      _perf.recordFetch('marker:get');
+      final marker = await MapDataController().getArtMarkerById(markerId);
       if (!mounted) return;
       if (marker == null || !marker.hasValidPosition) return;
 
@@ -893,26 +930,85 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
   }
 
-  bool get _pollingEnabled => _isAppForeground;
+  bool get _pollingEnabled => _isAppForeground && _isRouteVisible;
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _isAppForeground = state != AppLifecycleState.paused &&
         state != AppLifecycleState.inactive;
+    _handleActiveStateChanged();
+    super.didChangeAppLifecycleState(state);
+  }
+
+  void _setRouteVisible(bool isVisible) {
+    if (_isRouteVisible == isVisible) return;
+    _isRouteVisible = isVisible;
+    _handleActiveStateChanged();
+  }
+
+  void _handleActiveStateChanged() {
     if (_pollingEnabled) {
       _resumePolling();
     } else {
       _pausePolling();
     }
-    super.didChangeAppLifecycleState(state);
+    _updateCubeSpinTicker();
   }
 
   void _pausePolling() {
     _markerRefreshDebouncer.cancel();
+    _overlayAnchorDebouncer.cancel();
+    _cubeSyncDebouncer.cancel();
+    _pressedClearTimer?.cancel();
+    _perf.timerStopped('pressed_clear');
+    _pressedClearTimer = null;
+    _pressedMarkerId = null;
+    _searchDebounce?.cancel();
+    _perf.timerStopped('search_debounce');
+    _searchDebounce = null;
+
+    final createdSub = _markerStreamSub;
+    if (createdSub != null) {
+      try {
+        createdSub.pause();
+      } catch (_) {}
+      _perf.subscriptionStopped('marker_socket_created');
+    }
+    final deletedSub = _markerDeletedSub;
+    if (deletedSub != null) {
+      try {
+        deletedSub.pause();
+      } catch (_) {}
+      _perf.subscriptionStopped('marker_socket_deleted');
+    }
   }
 
   void _resumePolling() {
+    final createdSub = _markerStreamSub;
+    if (createdSub != null) {
+      try {
+        createdSub.resume();
+      } catch (_) {}
+      _perf.subscriptionStarted('marker_socket_created');
+    }
+    final deletedSub = _markerDeletedSub;
+    if (deletedSub != null) {
+      try {
+        deletedSub.resume();
+      } catch (_) {}
+      _perf.subscriptionStarted('marker_socket_deleted');
+    }
     _flushPendingMarkerRefresh();
+  }
+
+  @override
+  void didPushNext() {
+    _setRouteVisible(false);
+  }
+
+  @override
+  void didPopNext() {
+    _setRouteVisible(true);
   }
 
   void _queuePendingMarkerRefresh({bool force = false}) {
@@ -941,6 +1037,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     AppConfig.debugPrint(
       'DesktopMapScreen: map created (platform=${defaultTargetPlatform.name}, web=$kIsWeb)',
     );
+    _perf.logEvent('mapCreated');
   }
 
   String _hexRgb(Color color) {
@@ -984,26 +1081,26 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       } catch (_) {}
 
       // Clear any previous layer/source ids (e.g. style swap).
-       for (final id in <String>[
-         _markerLayerId,
-         _markerHitboxLayerId,
-         _cubeLayerId,
-         _cubeIconLayerId,
-         _locationLayerId,
-         _pendingLayerId
-       ]) {
+      for (final id in <String>[
+        _markerLayerId,
+        _markerHitboxLayerId,
+        _cubeLayerId,
+        _cubeIconLayerId,
+        _locationLayerId,
+        _pendingLayerId
+      ]) {
         if (!existingLayerIds.contains(id)) continue;
         try {
           await controller.removeLayer(id);
         } catch (_) {}
         existingLayerIds.remove(id);
       }
-       for (final id in <String>[
-         _markerSourceId,
-         _cubeSourceId,
-         _locationSourceId,
-         _pendingSourceId
-       ]) {
+      for (final id in <String>[
+        _markerSourceId,
+        _cubeSourceId,
+        _locationSourceId,
+        _pendingSourceId
+      ]) {
         try {
           await controller.removeSource(id);
         } catch (_) {}
@@ -1081,7 +1178,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         _cubeIconLayerId,
         ml.SymbolLayerProperties(
           iconImage: <Object>['get', 'icon'],
-          iconSize: MapMarkerStyleConfig.iconSizeExpression(constantScale: 0.92),
+          iconSize:
+              MapMarkerStyleConfig.iconSizeExpression(constantScale: 0.92),
           iconOpacity: <Object>[
             'case',
             <Object>[
@@ -1113,28 +1211,44 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               3,
               <Object>[
                 'case',
-                <Object>['==', <Object>['get', 'kind'], 'cluster'],
+                <Object>[
+                  '==',
+                  <Object>['get', 'kind'],
+                  'cluster'
+                ],
                 18,
                 14,
               ],
               12,
               <Object>[
                 'case',
-                <Object>['==', <Object>['get', 'kind'], 'cluster'],
+                <Object>[
+                  '==',
+                  <Object>['get', 'kind'],
+                  'cluster'
+                ],
                 26,
                 22,
               ],
               15,
               <Object>[
                 'case',
-                <Object>['==', <Object>['get', 'kind'], 'cluster'],
+                <Object>[
+                  '==',
+                  <Object>['get', 'kind'],
+                  'cluster'
+                ],
                 32,
                 28,
               ],
               24,
               <Object>[
                 'case',
-                <Object>['==', <Object>['get', 'kind'], 'cluster'],
+                <Object>[
+                  '==',
+                  <Object>['get', 'kind'],
+                  'cluster'
+                ],
                 42,
                 38,
               ],
@@ -1244,7 +1358,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (_markerOverlayMode != _MarkerOverlayMode.anchored) return;
     if (_selectedMarkerData == null) return;
     if (!_styleInitialized) return;
-    _overlayAnchorDebouncer(const Duration(milliseconds: 16), () {
+    _overlayAnchorDebouncer(const Duration(milliseconds: 66), () {
       unawaited(_refreshActiveMarkerAnchor());
     });
   }
@@ -1261,10 +1375,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         ml.LatLng(marker.position.latitude, marker.position.longitude),
       );
       if (!mounted) return;
-      setState(() {
-        _selectedMarkerAnchor =
-            Offset(screen.x.toDouble(), screen.y.toDouble());
-      });
+      final next = Offset(screen.x.toDouble(), screen.y.toDouble());
+      if (_selectedMarkerAnchorNotifier.value == next) return;
+      _selectedMarkerAnchorNotifier.value = next;
     } catch (_) {
       // Ignore anchor updates during style transitions.
     }
@@ -1308,19 +1421,19 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     final lastAt = _lastFeatureTapAt;
     final lastPoint = _lastFeatureTapPoint;
-    if (lastAt != null && lastPoint != null) {
-      final ageMs = DateTime.now().difference(lastAt).inMilliseconds;
-      if (ageMs >= 0 && ageMs < 60) {
-        final dx = (point.x - lastPoint.x).abs();
-        final dy = (point.y - lastPoint.y).abs();
-        if (dx < 2 && dy < 2) return;
-      }
+    if (MapTapGating.shouldIgnoreMapClickAfterFeatureTap(
+      lastFeatureTapAt: lastAt,
+      lastFeatureTapPoint: lastPoint,
+      clickPoint: point,
+    )) {
+      return;
     }
 
     // On web, taps that hit interactive style layers are delivered via
     // `controller.onFeatureTapped`. Treat `onMapClick` as a background tap and
     // avoid doing feature queries here.
     if (kIsWeb) {
+      _perf.recordSetState('backgroundTap');
       setState(() {
         _selectedArtwork = null;
         _selectedExhibition = null;
@@ -1331,7 +1444,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         _selectedMarkerData = null;
         _selectedMarkerAt = null;
       });
-      unawaited(_syncMapMarkers(themeProvider: themeProvider));
+      _requestMarkerLayerStyleUpdate(force: true);
       unawaited(_syncPendingMarker(themeProvider: themeProvider));
       return;
     }
@@ -1407,7 +1520,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           _selectedMarkerData = null;
           _selectedMarkerAt = null;
         });
-        unawaited(_syncMapMarkers(themeProvider: themeProvider));
+        _requestMarkerLayerStyleUpdate(force: true);
         unawaited(_syncPendingMarker(themeProvider: themeProvider));
         return;
       }
@@ -1472,9 +1585,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     // Tight fallback radius to avoid oversized hitboxes.
     final zoomScale = (_cameraZoom / 15.0).clamp(0.7, 1.4);
-    final double base = _is3DMarkerModeActive
-      ? (kIsWeb ? 34.0 : 28.0)
-      : (kIsWeb ? 28.0 : 22.0);
+    final double base =
+        _is3DMarkerModeActive ? (kIsWeb ? 34.0 : 28.0) : (kIsWeb ? 28.0 : 22.0);
     final double maxDistance = base * zoomScale;
     ArtMarker? best;
     double bestDistance = maxDistance;
@@ -1699,18 +1811,34 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       for (final cluster in clusters) {
         if (cluster.markers.length == 1) {
           final marker = cluster.markers.first;
-          final selected = _selectedMarkerId == marker.id;
           final typeName = marker.type.name;
           final tier = marker.signalTier;
-          final iconId =
-              'mk_${typeName}_${tier.name}${selected ? '_sel' : ''}_${isDark ? 'd' : 'l'}';
-          if (!_registeredMapImages.contains(iconId)) {
+          final baseIconId = MapMarkerIconIds.markerBase(
+            typeName: typeName,
+            tierName: tier.name,
+            isDark: isDark,
+          );
+          final selectedIconId = MapMarkerIconIds.markerSelected(
+            typeName: typeName,
+            tierName: tier.name,
+            isDark: isDark,
+          );
+          if (!_registeredMapImages.contains(baseIconId)) {
             toRender.add(_IconRenderTask(
-              iconId: iconId,
+              iconId: baseIconId,
               marker: marker,
               cluster: null,
               isCluster: false,
-              selected: selected,
+              selected: false,
+            ));
+          }
+          if (!_registeredMapImages.contains(selectedIconId)) {
+            toRender.add(_IconRenderTask(
+              iconId: selectedIconId,
+              marker: marker,
+              cluster: null,
+              isCluster: false,
+              selected: true,
             ));
           }
         } else {
@@ -1718,7 +1846,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           final typeName = first.type.name;
           final label =
               cluster.markers.length > 99 ? '99+' : '${cluster.markers.length}';
-          final iconId = 'cl_${typeName}_${label}_${isDark ? 'd' : 'l'}';
+          final iconId = MapMarkerIconIds.cluster(
+            typeName: typeName,
+            label: label,
+            isDark: isDark,
+          );
           if (!_registeredMapImages.contains(iconId)) {
             toRender.add(_IconRenderTask(
               iconId: iconId,
@@ -1732,18 +1864,34 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       }
     } else {
       for (final marker in markers) {
-        final selected = _selectedMarkerId == marker.id;
         final typeName = marker.type.name;
         final tier = marker.signalTier;
-        final iconId =
-            'mk_${typeName}_${tier.name}${selected ? '_sel' : ''}_${isDark ? 'd' : 'l'}';
-        if (!_registeredMapImages.contains(iconId)) {
+        final baseIconId = MapMarkerIconIds.markerBase(
+          typeName: typeName,
+          tierName: tier.name,
+          isDark: isDark,
+        );
+        final selectedIconId = MapMarkerIconIds.markerSelected(
+          typeName: typeName,
+          tierName: tier.name,
+          isDark: isDark,
+        );
+        if (!_registeredMapImages.contains(baseIconId)) {
           toRender.add(_IconRenderTask(
-            iconId: iconId,
+            iconId: baseIconId,
             marker: marker,
             cluster: null,
             isCluster: false,
-            selected: selected,
+            selected: false,
+          ));
+        }
+        if (!_registeredMapImages.contains(selectedIconId)) {
+          toRender.add(_IconRenderTask(
+            iconId: selectedIconId,
+            marker: marker,
+            cluster: null,
+            isCluster: false,
+            selected: true,
           ));
         }
       }
@@ -1819,11 +1967,18 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final controller = _mapController;
     if (controller == null) return const <String, dynamic>{};
 
-    final selected = _selectedMarkerId == marker.id;
     final typeName = marker.type.name;
     final tier = marker.signalTier;
-    final iconId =
-        'mk_${typeName}_${tier.name}${selected ? '_sel' : ''}_${isDark ? 'd' : 'l'}';
+    final iconId = MapMarkerIconIds.markerBase(
+      typeName: typeName,
+      tierName: tier.name,
+      isDark: isDark,
+    );
+    final selectedIconId = MapMarkerIconIds.markerSelected(
+      typeName: typeName,
+      tierName: tier.name,
+      isDark: isDark,
+    );
 
     if (!_registeredMapImages.contains(iconId)) {
       final baseColor = _resolveArtMarkerColor(marker, themeProvider);
@@ -1834,7 +1989,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         scheme: scheme,
         roles: roles,
         isDark: isDark,
-        forceGlow: selected,
+        forceGlow: false,
         pixelRatio: _markerPixelRatio(),
       );
       if (!mounted) return const <String, dynamic>{};
@@ -1858,6 +2013,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         'markerId': marker.id,
         'kind': 'marker',
         'icon': iconId,
+        'iconSelected': selectedIconId,
         'markerType': typeName,
       },
       'geometry': <String, dynamic>{
@@ -1883,7 +2039,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final typeName = first.type.name;
     final label =
         cluster.markers.length > 99 ? '99+' : '${cluster.markers.length}';
-    final iconId = 'cl_${typeName}_${label}_${isDark ? 'd' : 'l'}';
+    final iconId = MapMarkerIconIds.cluster(
+      typeName: typeName,
+      label: label,
+      isDark: isDark,
+    );
 
     if (!_registeredMapImages.contains(iconId)) {
       final baseColor = AppColorUtils.markerSubjectColor(
@@ -2126,6 +2286,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   @override
   void dispose() {
+    if (_subscribedRoute != null) {
+      appRouteObserver.unsubscribe(this);
+      _subscribedRoute = null;
+    }
     // Avoid leaving Explore-side panels open when navigating away.
     try {
       DesktopShellScope.of(context)?.closeFunctionsPanel();
@@ -2154,23 +2318,42 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _managedLayerIds.clear();
     _managedSourceIds.clear();
     _pressedClearTimer?.cancel();
+    _perf.timerStopped('pressed_clear');
     _pressedClearTimer = null;
     _animationController.dispose();
+    _perf.controllerDisposed('selection_pop');
     _cubeIconSpinController.dispose();
+    _perf.controllerDisposed('cube_spin');
     _panelController.dispose();
+    _perf.controllerDisposed('panel');
     _searchDebounce?.cancel();
+    _perf.timerStopped('search_debounce');
     _markerRefreshDebouncer.dispose();
     _overlayAnchorDebouncer.dispose();
     _cubeSyncDebouncer.dispose();
     _markerStreamSub?.cancel();
+    _perf.subscriptionStopped('marker_socket_created');
     _markerDeletedSub?.cancel();
+    _perf.subscriptionStopped('marker_socket_deleted');
     _searchController.dispose();
+    _selectedMarkerAnchorNotifier.dispose();
+    _bearingDegrees.dispose();
     WidgetsBinding.instance.removeObserver(this);
+    _perf.logSummary(
+      'dispose',
+      extra: <String, Object?>{
+        'featureTapListeners': _debugFeatureTapListenerCount,
+        'featureHoverListeners': _debugFeatureHoverListenerCount,
+        'markerTaps': _debugMarkerTapCount,
+        'styleEpoch': _styleEpoch,
+      },
+    );
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    _perf.recordBuild();
     _isBuilding = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _isBuilding = false;
@@ -2392,15 +2575,21 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               },
               onCameraMove: (position) {
                 final previousZoom = _cameraZoom;
+                final nextBearing = position.bearing;
+                final bearingChanged = (nextBearing - _lastBearing).abs() > 0.1;
                 _cameraCenter = LatLng(
                   position.target.latitude,
                   position.target.longitude,
                 );
                 _cameraZoom = position.zoom;
-                _lastBearing = position.bearing;
+                _lastBearing = nextBearing;
                 _lastPitch = position.tilt;
+                if (bearingChanged) {
+                  _bearingDegrees.value = nextBearing;
+                }
 
-                final zoomChanged = (position.zoom - previousZoom).abs() > 0.001;
+                final zoomChanged =
+                    (position.zoom - previousZoom).abs() > 0.001;
                 if (_styleInitialized && zoomChanged) {
                   _queueMarkerVisualRefreshForZoom(position.zoom);
                 }
@@ -2437,7 +2626,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     _selectedMarkerData = null;
                     _selectedMarkerAt = null;
                   });
-                  unawaited(_syncMapMarkers(themeProvider: themeProvider));
+                  _requestMarkerLayerStyleUpdate(force: true);
                 }
 
                 _queueMarkerRefresh(fromGesture: hasGesture);
@@ -2461,7 +2650,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   _selectedMarkerId = null;
                   _selectedMarkerData = null;
                   _selectedMarkerAt = null;
-                  _selectedMarkerAnchor = null;
+                  _selectedMarkerAnchorNotifier.value = null;
                 });
                 unawaited(_syncPendingMarker(themeProvider: themeProvider));
                 _startMarkerCreationFlow(position: point);
@@ -2470,24 +2659,29 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           ),
         );
 
-        // Capture anchor value to avoid race condition between null check and access.
-        final markerAnchor = _selectedMarkerAnchor;
         // Use StackFit.expand to ensure bounded constraints for Positioned.fill
         // children (especially the marker overlay layer).
         return Stack(
           fit: StackFit.expand,
           children: [
             Positioned.fill(child: map),
-            if (_markerOverlayMode == _MarkerOverlayMode.anchored &&
-                markerAnchor != null)
-              Positioned(
-                left: markerAnchor.dx,
-                top: markerAnchor.dy,
-                child: CompositedTransformTarget(
-                  link: _markerOverlayLink,
-                  child: const SizedBox(width: 1, height: 1),
-                ),
-              ),
+            ValueListenableBuilder<Offset?>(
+              valueListenable: _selectedMarkerAnchorNotifier,
+              builder: (context, markerAnchor, _) {
+                if (_markerOverlayMode != _MarkerOverlayMode.anchored ||
+                    markerAnchor == null) {
+                  return const SizedBox.shrink();
+                }
+                return Positioned(
+                  left: markerAnchor.dx,
+                  top: markerAnchor.dy,
+                  child: CompositedTransformTarget(
+                    link: _markerOverlayLink,
+                    child: const SizedBox(width: 1, height: 1),
+                  ),
+                );
+              },
+            ),
             _buildMarkerOverlayLayer(
               themeProvider: themeProvider,
               artworkProvider: artworkProvider,
@@ -2533,15 +2727,16 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       final selectedMarker = _selectedMarkerData;
       if (selectedMarker != null) {
         context.read<AttendanceProvider>().updateProximity(
-          markerId: selectedMarker.id,
-          lat: current.latitude,
-          lng: current.longitude,
-          distanceMeters: _calculateDistance(current, selectedMarker.position),
-          activationRadiusMeters: selectedMarker.activationRadius,
-          requiresProximity: selectedMarker.requiresProximity,
-          accuracyMeters: _userLocationAccuracyMeters,
-          timestampMs: _userLocationTimestampMs,
-        );
+              markerId: selectedMarker.id,
+              lat: current.latitude,
+              lng: current.longitude,
+              distanceMeters:
+                  _calculateDistance(current, selectedMarker.position),
+              activationRadiusMeters: selectedMarker.activationRadius,
+              requiresProximity: selectedMarker.requiresProximity,
+              accuracyMeters: _userLocationAccuracyMeters,
+              timestampMs: _userLocationTimestampMs,
+            );
       }
       if (animate || _autoFollow) {
         _moveCamera(current, math.max(_effectiveZoom, 15));
@@ -2714,29 +2909,29 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       left: 0,
       right: 0,
       child: MapOverlayBlocker(
-        cursor: SystemMouseCursors.basic,
-        child: SafeArea(
-          bottom: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              KubusSpacing.lg,
-              KubusSpacing.sm + KubusSpacing.xs,
-              KubusSpacing.lg,
-              KubusSpacing.sm + KubusSpacing.xs,
-            ),
-            child: LiquidGlassPanel(
-              padding: const EdgeInsets.symmetric(
-                horizontal: KubusSpacing.md + KubusSpacing.xs,
-                vertical: KubusSpacing.md,
+          cursor: SystemMouseCursors.basic,
+          child: SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                KubusSpacing.lg,
+                KubusSpacing.sm + KubusSpacing.xs,
+                KubusSpacing.lg,
+                KubusSpacing.sm + KubusSpacing.xs,
               ),
-              margin: EdgeInsets.zero,
-              borderRadius: BorderRadius.circular(KubusRadius.lg),
-              blurSigma: KubusGlassEffects.blurSigmaLight,
-              backgroundColor:
-                  scheme.surface.withValues(alpha: isDark ? 0.20 : 0.14),
-              showBorder: true,
-              child: Row(
-                children: [
+              child: LiquidGlassPanel(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: KubusSpacing.md + KubusSpacing.xs,
+                  vertical: KubusSpacing.md,
+                ),
+                margin: EdgeInsets.zero,
+                borderRadius: BorderRadius.circular(KubusRadius.lg),
+                blurSigma: KubusGlassEffects.blurSigmaLight,
+                backgroundColor:
+                    scheme.surface.withValues(alpha: isDark ? 0.20 : 0.14),
+                showBorder: true,
+                child: Row(
+                  children: [
                     // Logo and title
                     Row(
                       children: [
@@ -2839,12 +3034,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                       ),
                     ),
                   ],
-                  ),
                 ),
               ),
-            )
-          ), 
-      );
+            ),
+          )),
+    );
   }
 
   Widget _buildSearchOverlay(ThemeProvider themeProvider) {
@@ -2864,128 +3058,127 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         cursor: SystemMouseCursors.basic,
         child: Stack(
           children: [
-              Positioned.fill(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => setState(() => _showSearchOverlay = false),
-                  child: const SizedBox.expand(),
-                ),
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => setState(() => _showSearchOverlay = false),
+                child: const SizedBox.expand(),
               ),
-              CompositedTransformFollower(
-                link: _searchFieldLink,
-                showWhenUnlinked: false,
-                offset: const Offset(0, 52),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    maxWidth: 520,
-                    maxHeight: 360,
-                  ),
-                  child: LiquidGlassPanel(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    margin: EdgeInsets.zero,
-                    borderRadius: BorderRadius.circular(12),
-                    blurSigma: KubusGlassEffects.blurSigmaLight,
-                    backgroundColor: glassTint,
-                    child: Builder(
-                      builder: (context) {
-                        if (trimmedQuery.length < 2) {
-                          return Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Text(
-                              l10n.mapSearchMinCharsHint,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(
-                                    color:
-                                        scheme.onSurface.withValues(alpha: 0.6),
-                                  ),
-                            ),
-                          );
-                        }
-
-                        if (_isFetchingSearch) {
-                          return const Padding(
-                            padding: EdgeInsets.all(16),
-                            child: Center(child: CircularProgressIndicator()),
-                          );
-                        }
-
-                        if (_searchSuggestions.isEmpty) {
-                          return Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.search_off,
+            ),
+            CompositedTransformFollower(
+              link: _searchFieldLink,
+              showWhenUnlinked: false,
+              offset: const Offset(0, 52),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: 520,
+                  maxHeight: 360,
+                ),
+                child: LiquidGlassPanel(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  margin: EdgeInsets.zero,
+                  borderRadius: BorderRadius.circular(12),
+                  blurSigma: KubusGlassEffects.blurSigmaLight,
+                  backgroundColor: glassTint,
+                  child: Builder(
+                    builder: (context) {
+                      if (trimmedQuery.length < 2) {
+                        return Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Text(
+                            l10n.mapSearchMinCharsHint,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
                                   color:
-                                      scheme.onSurface.withValues(alpha: 0.4),
+                                      scheme.onSurface.withValues(alpha: 0.6),
                                 ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  l10n.commonNoResultsFound,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium
-                                      ?.copyWith(
-                                        color: scheme.onSurface
-                                            .withValues(alpha: 0.6),
-                                      ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }
-
-                        return ListView.separated(
-                          shrinkWrap: true,
-                          itemCount: _searchSuggestions.length,
-                          separatorBuilder: (_, __) => Divider(
-                            height: 1,
-                            color: scheme.outlineVariant,
                           ),
-                          itemBuilder: (context, index) {
-                            final suggestion = _searchSuggestions[index];
-                            return ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: themeProvider.accentColor
-                                    .withValues(alpha: 0.10),
-                                child: Icon(
-                                  suggestion.icon,
-                                  color: themeProvider.accentColor,
-                                ),
+                        );
+                      }
+
+                      if (_isFetchingSearch) {
+                        return const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      }
+
+                      if (_searchSuggestions.isEmpty) {
+                        return Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.search_off,
+                                color: scheme.onSurface.withValues(alpha: 0.4),
                               ),
-                              title: Text(
-                                suggestion.label,
+                              const SizedBox(width: 12),
+                              Text(
+                                l10n.commonNoResultsFound,
                                 style: Theme.of(context)
                                     .textTheme
                                     .bodyMedium
-                                    ?.copyWith(fontWeight: FontWeight.w600),
-                              ),
-                              subtitle: suggestion.subtitle == null
-                                  ? null
-                                  : Text(
-                                      suggestion.subtitle!,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium
-                                          ?.copyWith(
-                                            color: scheme.onSurface
-                                                .withValues(alpha: 0.6),
-                                          ),
+                                    ?.copyWith(
+                                      color: scheme.onSurface
+                                          .withValues(alpha: 0.6),
                                     ),
-                              onTap: () => _handleSuggestionTap(suggestion),
-                            );
-                          },
+                              ),
+                            ],
+                          ),
                         );
-                      },
-                    ),
+                      }
+
+                      return ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: _searchSuggestions.length,
+                        separatorBuilder: (_, __) => Divider(
+                          height: 1,
+                          color: scheme.outlineVariant,
+                        ),
+                        itemBuilder: (context, index) {
+                          final suggestion = _searchSuggestions[index];
+                          return ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: themeProvider.accentColor
+                                  .withValues(alpha: 0.10),
+                              child: Icon(
+                                suggestion.icon,
+                                color: themeProvider.accentColor,
+                              ),
+                            ),
+                            title: Text(
+                              suggestion.label,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(fontWeight: FontWeight.w600),
+                            ),
+                            subtitle: suggestion.subtitle == null
+                                ? null
+                                : Text(
+                                    suggestion.subtitle!,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: scheme.onSurface
+                                              .withValues(alpha: 0.6),
+                                        ),
+                                  ),
+                            onTap: () => _handleSuggestionTap(suggestion),
+                          );
+                        },
+                      );
+                    },
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
+      ),
     );
   }
 
@@ -3254,7 +3447,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                         ),
                       SizedBox(
                         width: 170,
-                          child: OutlinedButton.icon(
+                        child: OutlinedButton.icon(
                           onPressed: () {
                             unawaited(
                               openArtwork(
@@ -4022,42 +4215,42 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final fg = selected ? accent : scheme.onSurfaceVariant;
 
     return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(999),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: border),
-            ),
-            child: LiquidGlassPanel(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              margin: EdgeInsets.zero,
-              borderRadius: BorderRadius.circular(999),
-              showBorder: false,
-              backgroundColor: bg,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(icon, size: 14, color: fg),
-                  const SizedBox(width: 6),
-                  Text(
-                    label,
-                    style: KubusTypography.textTheme.labelSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: fg,
-                    ),
-                  ),
-                ],
+        cursor: SystemMouseCursors.click,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(999),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: border),
               ),
+              child: LiquidGlassPanel(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                margin: EdgeInsets.zero,
+                borderRadius: BorderRadius.circular(999),
+                showBorder: false,
+                backgroundColor: bg,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(icon, size: 14, color: fg),
+                    const SizedBox(width: 6),
+                    Text(
+                      label,
+                      style: KubusTypography.textTheme.labelSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: fg,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
-        ),
-      ),
-    )
-  );
+        ));
   }
 
   /// Returns human-readable label for marker type - same as mobile
@@ -4274,19 +4467,28 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               ),
             ),
             // Point north / reset bearing button (visible when map is rotated)
-            if (_lastBearing.abs() > 1.0) ...[
-              Container(
-                width: 1,
-                height: 26,
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                color: scheme.outline.withValues(alpha: 0.22),
-              ),
-              IconButton(
-                onPressed: () => unawaited(_resetBearing()),
-                tooltip: l10n.mapResetBearingTooltip,
-                icon: const Icon(Icons.explore),
-              ),
-            ],
+            ValueListenableBuilder<double>(
+              valueListenable: _bearingDegrees,
+              builder: (context, bearing, _) {
+                if (bearing.abs() <= 1.0) return const SizedBox.shrink();
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 1,
+                      height: 26,
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      color: scheme.outline.withValues(alpha: 0.22),
+                    ),
+                    IconButton(
+                      onPressed: () => unawaited(_resetBearing()),
+                      tooltip: l10n.mapResetBearingTooltip,
+                      icon: const Icon(Icons.explore),
+                    ),
+                  ],
+                );
+              },
+            ),
             Container(
               width: 1,
               height: 26,
@@ -4371,8 +4573,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           constraints: const BoxConstraints(maxWidth: 340),
           decoration: BoxDecoration(
             borderRadius: radius,
-            border:
-                Border.all(color: scheme.outlineVariant.withValues(alpha: 0.30)),
+            border: Border.all(
+                color: scheme.outlineVariant.withValues(alpha: 0.30)),
             boxShadow: [
               BoxShadow(
                 color: scheme.shadow.withValues(alpha: isDark ? 0.16 : 0.10),
@@ -4391,69 +4593,73 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-              Row(
-                children: [
-                  ShaderMask(
-                    shaderCallback: (rect) => badgeGradient.createShader(rect),
-                    blendMode: BlendMode.srcIn,
-                    child: InlineProgress(
-                      progress: overall,
-                      rows: 3,
-                      cols: 5,
-                      color: scheme.onSurface,
-                      backgroundColor: scheme.surfaceContainerHighest
-                          .withValues(alpha: 0.35),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n.mapDiscoveryPathTitle,
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    color: scheme.onSurface,
-                                  ),
-                        ),
-                        Text(
-                          l10n.commonPercentComplete((overall * 100).round()),
-                          style: KubusTypography.textTheme.bodySmall?.copyWith(
-                            color: scheme.onSurface.withValues(alpha: 0.75),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  _buildGlassIconButton(
-                    icon: _isDiscoveryExpanded
-                        ? Icons.keyboard_arrow_up
-                        : Icons.keyboard_arrow_down,
-                    themeProvider: themeProvider,
-                    tooltip: _isDiscoveryExpanded
-                        ? l10n.commonCollapse
-                        : l10n.commonExpand,
-                    onTap: () => setState(
-                        () => _isDiscoveryExpanded = !_isDiscoveryExpanded),
-                  ),
-                ],
-              ),
-              AnimatedCrossFade(
-                crossFadeState: showTasks
-                    ? CrossFadeState.showFirst
-                    : CrossFadeState.showSecond,
-                duration: const Duration(milliseconds: 200),
-                firstChild: Column(
+                Row(
                   children: [
-                    const SizedBox(height: 12),
-                    for (final progress in tasksToRender)
-                      _buildTaskProgressRow(progress),
+                    ShaderMask(
+                      shaderCallback: (rect) =>
+                          badgeGradient.createShader(rect),
+                      blendMode: BlendMode.srcIn,
+                      child: InlineProgress(
+                        progress: overall,
+                        rows: 3,
+                        cols: 5,
+                        color: scheme.onSurface,
+                        backgroundColor: scheme.surfaceContainerHighest
+                            .withValues(alpha: 0.35),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.mapDiscoveryPathTitle,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: scheme.onSurface,
+                                ),
+                          ),
+                          Text(
+                            l10n.commonPercentComplete((overall * 100).round()),
+                            style:
+                                KubusTypography.textTheme.bodySmall?.copyWith(
+                              color: scheme.onSurface.withValues(alpha: 0.75),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    _buildGlassIconButton(
+                      icon: _isDiscoveryExpanded
+                          ? Icons.keyboard_arrow_up
+                          : Icons.keyboard_arrow_down,
+                      themeProvider: themeProvider,
+                      tooltip: _isDiscoveryExpanded
+                          ? l10n.commonCollapse
+                          : l10n.commonExpand,
+                      onTap: () => setState(
+                          () => _isDiscoveryExpanded = !_isDiscoveryExpanded),
+                    ),
                   ],
                 ),
-                secondChild: const SizedBox.shrink(),
-              ),
+                AnimatedCrossFade(
+                  crossFadeState: showTasks
+                      ? CrossFadeState.showFirst
+                      : CrossFadeState.showSecond,
+                  duration: const Duration(milliseconds: 200),
+                  firstChild: Column(
+                    children: [
+                      const SizedBox(height: 12),
+                      for (final progress in tasksToRender)
+                        _buildTaskProgressRow(progress),
+                    ],
+                  ),
+                  secondChild: const SizedBox.shrink(),
+                ),
               ],
             ),
           ),
@@ -4955,6 +5161,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     });
 
     _searchDebounce?.cancel();
+    _perf.timerStopped('search_debounce');
     final trimmed = value.trim();
     if (trimmed.length < 2) {
       setState(() {
@@ -4965,8 +5172,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
 
     _searchDebounce = Timer(const Duration(milliseconds: 275), () async {
+      _perf.timerStopped('search_debounce');
       setState(() => _isFetchingSearch = true);
       try {
+        _perf.recordFetch('search:suggestions');
         final suggestions = await _searchService.fetchSuggestions(
           context: context,
           query: trimmed,
@@ -4989,6 +5198,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         });
       }
     });
+    _perf.timerStarted('search_debounce');
   }
 
   List<MapSearchSuggestion> _buildLocalSearchSuggestions(String query) {
@@ -5302,12 +5512,20 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     final requestId = ++_markerRequestId;
     _isLoadingMarkers = true;
+    final dev.TimelineTask? timeline = MapPerformanceDebug.isEnabled
+        ? (dev.TimelineTask()..start('DesktopMapScreen.loadMarkers'))
+        : null;
 
     try {
       final int? travelLimit = bucket == null
           ? null
           : MapViewportUtils.markerLimitForZoomBucket(bucket);
 
+      _perf.recordFetch(
+        (_travelModeEnabled && queryBounds != null)
+            ? 'markers:bounds'
+            : 'markers:radius',
+      );
       final result = (_travelModeEnabled && queryBounds != null)
           ? await MapMarkerHelper.loadAndHydrateMarkersInBounds(
               artworkProvider: artworkProvider,
@@ -5363,14 +5581,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
           if (resolvedSelected != null) {
             _selectedMarkerData = resolvedSelected;
-            _selectedMarkerAnchor = null;
+            _selectedMarkerAnchorNotifier.value = null;
             return;
           }
 
           _selectedMarkerId = null;
           _selectedMarkerData = null;
           _selectedMarkerAt = null;
-          _selectedMarkerAnchor = null;
+          _selectedMarkerAnchorNotifier.value = null;
         });
         if (markersChanged) {
           unawaited(_syncMapMarkers(themeProvider: themeProvider));
@@ -5389,6 +5607,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     } catch (e) {
       AppConfig.debugPrint('DesktopMapScreen: error loading markers: $e');
     } finally {
+      timeline?.finish();
       if (requestId == _markerRequestId) {
         _isLoadingMarkers = false;
       }
@@ -5421,12 +5640,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       }
     }
     // Desktop UX: open the marker overlay anchored above the marker.
+    _perf.recordSetState('markerTap');
     setState(() {
       _selectedMarkerId = marker.id;
       _selectedMarkerData = marker;
       _selectedMarkerAt = DateTime.now();
       _markerOverlayMode = overlayMode;
-      _selectedMarkerAnchor = null;
+      _selectedMarkerAnchorNotifier.value = null;
       _pendingMarkerLocation = null;
       _selectedArtwork = null;
       _selectedExhibition = null;
@@ -5435,20 +5655,20 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final userLocation = _userLocation;
     if (userLocation != null) {
       context.read<AttendanceProvider>().updateProximity(
-        markerId: marker.id,
-        lat: userLocation.latitude,
-        lng: userLocation.longitude,
-        distanceMeters: _calculateDistance(userLocation, marker.position),
-        activationRadiusMeters: marker.activationRadius,
-        requiresProximity: marker.requiresProximity,
-        accuracyMeters: _userLocationAccuracyMeters,
-        timestampMs: _userLocationTimestampMs,
-      );
+            markerId: marker.id,
+            lat: userLocation.latitude,
+            lng: userLocation.longitude,
+            distanceMeters: _calculateDistance(userLocation, marker.position),
+            activationRadiusMeters: marker.activationRadius,
+            requiresProximity: marker.requiresProximity,
+            accuracyMeters: _userLocationAccuracyMeters,
+            timestampMs: _userLocationTimestampMs,
+          );
     }
     _startPressedMarkerFeedback(marker.id);
     _startSelectionPopAnimation();
     _maybeRecordPresenceVisitForMarker(marker);
-    unawaited(_syncMapMarkers(themeProvider: context.read<ThemeProvider>()));
+    _requestMarkerLayerStyleUpdate(force: true);
     _queueOverlayAnchorRefresh();
     unawaited(_ensureLinkedArtworkLoaded(marker, allowAutoSelect: false));
   }
@@ -5509,7 +5729,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           _selectedMarkerId = null;
           _selectedMarkerData = null;
           _selectedMarkerAt = null;
-          _selectedMarkerAnchor = null;
+          _selectedMarkerAnchorNotifier.value = null;
         }
       });
     } catch (_) {}
@@ -5517,37 +5737,59 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   void _dismissSelectedMarkerOverlay() {
+    _perf.recordSetState('markerDismiss');
     setState(() {
       _selectedMarkerId = null;
       _selectedMarkerData = null;
       _selectedMarkerAt = null;
-      _selectedMarkerAnchor = null;
+      _selectedMarkerAnchorNotifier.value = null;
     });
     _pressedClearTimer?.cancel();
+    _perf.timerStopped('pressed_clear');
     _pressedClearTimer = null;
     _pressedMarkerId = null;
-    _requestMarkerLayerStyleUpdate();
-    unawaited(_syncMapMarkers(themeProvider: context.read<ThemeProvider>()));
+    _requestMarkerLayerStyleUpdate(force: true);
   }
 
   void _startPressedMarkerFeedback(String markerId) {
     _pressedClearTimer?.cancel();
+    _perf.timerStopped('pressed_clear');
     _pressedClearTimer = null;
     _pressedMarkerId = markerId;
     _requestMarkerLayerStyleUpdate();
 
     _pressedClearTimer = Timer(const Duration(milliseconds: 120), () {
+      _perf.timerStopped('pressed_clear');
       if (!mounted) return;
       if (_pressedMarkerId != markerId) return;
       _safeSetState(() => _pressedMarkerId = null);
       _requestMarkerLayerStyleUpdate();
     });
+    _perf.timerStarted('pressed_clear');
   }
 
   void _startSelectionPopAnimation() {
     if (!_styleInitialized) return;
     _animationController.forward(from: 0.0);
     _requestMarkerLayerStyleUpdate();
+  }
+
+  void _updateCubeSpinTicker() {
+    final shouldSpin = _pollingEnabled &&
+        _styleInitialized &&
+        _mapController != null &&
+        _cubeLayerVisible &&
+        _is3DMarkerModeActive;
+    if (shouldSpin) {
+      if (!_cubeIconSpinController.isAnimating) {
+        _cubeIconSpinController.repeat();
+      }
+      return;
+    }
+
+    if (_cubeIconSpinController.isAnimating) {
+      _cubeIconSpinController.stop();
+    }
   }
 
   void _handleMarkerLayerAnimationTick() {
@@ -5562,8 +5804,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _cubeIconSpinDegrees = _cubeIconSpinController.value * 360.0;
       final bobMs = MapMarkerStyleConfig.cubeIconBobPeriod.inMilliseconds;
       final t = (DateTime.now().millisecondsSinceEpoch % bobMs) / bobMs;
-      _cubeIconBobOffsetEm =
-          math.sin(t * 2 * math.pi) * MapMarkerStyleConfig.cubeIconBobAmplitudeEm;
+      _cubeIconBobOffsetEm = math.sin(t * 2 * math.pi) *
+          MapMarkerStyleConfig.cubeIconBobAmplitudeEm;
     }
     _requestMarkerLayerStyleUpdate();
   }
@@ -5602,11 +5844,16 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final canStyleCubeIconLayer = _managedLayerIds.contains(_cubeIconLayerId);
     if (!canStyleMarkerLayer && !canStyleCubeIconLayer) return;
 
+    final iconImage = _interactiveIconImageExpression();
     final iconSize = _interactiveIconSizeExpression();
     final cubeIconSize = _interactiveIconSizeExpression(constantScale: 0.92);
     final iconOpacity = <Object>[
       'case',
-      <Object>['==', <Object>['get', 'kind'], 'cluster'],
+      <Object>[
+        '==',
+        <Object>['get', 'kind'],
+        'cluster'
+      ],
       1.0,
       1.0,
     ];
@@ -5620,7 +5867,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         await controller.setLayerProperties(
           _markerLayerId,
           ml.SymbolLayerProperties(
-            iconImage: <Object>['get', 'icon'],
+            iconImage: iconImage,
             iconSize: iconSize,
             iconOpacity: iconOpacity,
             iconAllowOverlap: true,
@@ -5637,7 +5884,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         await controller.setLayerProperties(
           _cubeIconLayerId,
           ml.SymbolLayerProperties(
-            iconImage: <Object>['get', 'icon'],
+            iconImage: iconImage,
             iconSize: cubeIconSize,
             iconOpacity: iconOpacity,
             iconAllowOverlap: true,
@@ -5664,7 +5911,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final selectedId = _selectedMarkerId;
     final any = pressedId != null || hoveredId != null || selectedId != null;
     if (!any) {
-      return MapMarkerStyleConfig.iconSizeExpression(constantScale: constantScale);
+      return MapMarkerStyleConfig.iconSizeExpression(
+          constantScale: constantScale);
     }
 
     final double pop = selectedId == null
@@ -5679,19 +5927,31 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final multiplier = <Object>['case'];
     if (pressedId != null) {
       multiplier.addAll(<Object>[
-        <Object>['==', <Object>['id'], pressedId],
+        <Object>[
+          '==',
+          <Object>['id'],
+          pressedId
+        ],
         MapMarkerStyleConfig.pressedScaleFactor,
       ]);
     }
     if (selectedId != null) {
       multiplier.addAll(<Object>[
-        <Object>['==', <Object>['id'], selectedId],
+        <Object>[
+          '==',
+          <Object>['id'],
+          selectedId
+        ],
         pop,
       ]);
     }
     if (hoveredId != null) {
       multiplier.addAll(<Object>[
-        <Object>['==', <Object>['id'], hoveredId],
+        <Object>[
+          '==',
+          <Object>['id'],
+          hoveredId
+        ],
         MapMarkerStyleConfig.hoverScaleFactor,
       ]);
     }
@@ -5700,6 +5960,23 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       constantScale: constantScale,
       multiplier: multiplier,
     );
+  }
+
+  Object _interactiveIconImageExpression() {
+    final selectedId = _selectedMarkerId;
+    if (selectedId == null || selectedId.isEmpty) {
+      return const <Object>['get', 'icon'];
+    }
+    return <Object>[
+      'case',
+      <Object>[
+        '==',
+        <Object>['id'],
+        selectedId
+      ],
+      const <Object>['get', 'iconSelected'],
+      const <Object>['get', 'icon'],
+    ];
   }
 
   bool _assertMarkerModeInvariant() {
@@ -5774,6 +6051,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       } catch (_) {
         // Ignore source update failures during transitions.
       }
+
+      _updateCubeSpinTicker();
     }
   }
 
@@ -5871,9 +6150,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     final viewportHeight = MediaQuery.of(context).size.height;
     final safeVerticalPadding = MediaQuery.of(context).padding.vertical;
-    final double maxCardHeight = math
-        .max(240.0, viewportHeight - safeVerticalPadding - 24)
-        .toDouble();
+    final double maxCardHeight =
+        math.max(240.0, viewportHeight - safeVerticalPadding - 24).toDouble();
 
     return Semantics(
       label: 'marker_floating_card',
@@ -6012,7 +6290,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                                           (context, child, progress) {
                                         if (progress == null) return child;
                                         return Container(
-                                          color: baseColor.withValues(alpha: 0.12),
+                                          color:
+                                              baseColor.withValues(alpha: 0.12),
                                           child: const Center(
                                             child: CircularProgressIndicator(
                                                 strokeWidth: 2),
@@ -6055,13 +6334,16 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                                     artwork.category,
                                     baseColor,
                                   ),
-                                if (marker.metadata?['subjectCategory'] != null ||
-                                    marker.metadata?['subject_category'] != null)
+                                if (marker.metadata?['subjectCategory'] !=
+                                        null ||
+                                    marker.metadata?['subject_category'] !=
+                                        null)
                                   _compactChip(
                                     scheme,
                                     Icons.category_outlined,
                                     (marker.metadata!['subjectCategory'] ??
-                                            marker.metadata!['subject_category'])
+                                            marker
+                                                .metadata!['subject_category'])
                                         .toString(),
                                     baseColor,
                                   ),
@@ -6298,95 +6580,98 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       child: card,
     );
 
-    if (_markerOverlayMode == _MarkerOverlayMode.centered ||
-        _selectedMarkerAnchor == null) {
-      // Use UnconstrainedBox to prevent Positioned.fill from passing
-      // full-screen constraints to the card, which caused the 1-frame
-      // "correct then huge" snap issue on desktop.
-      return Center(
-        child: UnconstrainedBox(
-          child: wrappedCard,
-        ),
-      );
-    }
-
-    // Offset the card above the marker (flat square markers).
-    // Account for icon scaling at different zoom levels.
-    const double baseOffset = 32.0;
-    final zoomFactor = (_cameraZoom / 15.0).clamp(0.5, 1.5);
-    final verticalOffset = baseOffset * zoomFactor;
-
-    // Use LayoutBuilder + Positioned for proper viewport clamping
-    // instead of CompositedTransformFollower which has no viewport awareness.
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // Guard against null to prevent race condition.
-        final anchor = _selectedMarkerAnchor;
-        if (anchor == null) {
-          return Center(child: UnconstrainedBox(child: wrappedCard));
-        }
-        const double cardWidth =
-            280; // Match maxWidth in _buildMarkerOverlayCard
-        const double padding = 16;
-        // Estimate the *rendered* card height (do not use the maxHeight
-        // constraint, which can be near full-viewport and will over-offset the
-        // camera).
-        final viewportHeight = constraints.maxHeight;
-        final safeVerticalPadding = MediaQuery.of(context).padding.vertical;
-        final double maxCardHeight = math
-            .max(240.0, viewportHeight - safeVerticalPadding - 24)
-            .toDouble();
-        final double estimatedCardHeight = math.min(360.0, maxCardHeight);
-
-        // Center horizontally around anchor, clamped to viewport
-        double left = anchor.dx - (cardWidth / 2);
-        left = left.clamp(padding, constraints.maxWidth - cardWidth - padding);
-
-        // Calculate available space above the marker
-        final topSafe = MediaQuery.of(context).padding.top + padding;
-        final bottomPadding = padding;
-        final spaceAbove = anchor.dy - topSafe - verticalOffset;
-
-        // Position above marker; if not enough space, keep within safe area
-        // and keep within safe area.
-        double top = anchor.dy - estimatedCardHeight - verticalOffset;
-        if (top < topSafe) {
-          top = topSafe;
-        }
-
-        // Final clamp to ensure card never goes off-screen
-        top = top.clamp(
-          topSafe,
-          math.max(topSafe,
-              constraints.maxHeight - estimatedCardHeight - bottomPadding),
-        );
-
-        if (kDebugMode) {
-          AppConfig.debugPrint(
-            'DesktopMapScreen: card positioned at ($left, $top) anchor=(${anchor.dx.toStringAsFixed(0)}, ${anchor.dy.toStringAsFixed(0)}) '
-            'spaceAbove=${spaceAbove.toStringAsFixed(0)}',
+    return ValueListenableBuilder<Offset?>(
+      valueListenable: _selectedMarkerAnchorNotifier,
+      builder: (context, anchor, _) {
+        if (_markerOverlayMode == _MarkerOverlayMode.centered ||
+            anchor == null) {
+          // Use UnconstrainedBox to prevent Positioned.fill from passing
+          // full-screen constraints to the card, which caused the 1-frame
+          // "correct then huge" snap issue on desktop.
+          return Center(
+            child: UnconstrainedBox(
+              child: wrappedCard,
+            ),
           );
         }
 
-        return Stack(
-          children: [
-            Positioned(
-              left: left,
-              top: top,
-              // Use UnconstrainedBox to prevent the Positioned widget from
-              // passing unbounded height constraints to the card, which would
-              // cause the card to expand to fill all available space.
-              // constrainedAxis: Axis.horizontal ensures width is respected.
-              child: UnconstrainedBox(
-                alignment: Alignment.topLeft,
-                constrainedAxis: Axis.horizontal,
-                child: SizedBox(
-                  width: cardWidth,
-                  child: wrappedCard,
-                ),
+        // Offset the card above the marker (flat square markers).
+        // Account for icon scaling at different zoom levels.
+        const double baseOffset = 32.0;
+        final zoomFactor = (_cameraZoom / 15.0).clamp(0.5, 1.5);
+        final verticalOffset = baseOffset * zoomFactor;
+
+        // Use LayoutBuilder + Positioned for proper viewport clamping
+        // instead of CompositedTransformFollower which has no viewport awareness.
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            const double cardWidth =
+                280; // Match maxWidth in _buildMarkerOverlayCard
+            const double padding = 16;
+            // Estimate the *rendered* card height (do not use the maxHeight
+            // constraint, which can be near full-viewport and will over-offset the
+            // camera).
+            final viewportHeight = constraints.maxHeight;
+            final safeVerticalPadding = MediaQuery.of(context).padding.vertical;
+            final double maxCardHeight = math
+                .max(240.0, viewportHeight - safeVerticalPadding - 24)
+                .toDouble();
+            final double estimatedCardHeight = math.min(360.0, maxCardHeight);
+
+            // Center horizontally around anchor, clamped to viewport
+            double left = anchor.dx - (cardWidth / 2);
+            final maxLeft =
+                math.max(padding, constraints.maxWidth - cardWidth - padding);
+            left = left.clamp(padding, maxLeft);
+
+            // Calculate available space above the marker
+            final topSafe = MediaQuery.of(context).padding.top + padding;
+            final bottomPadding = padding;
+            final spaceAbove = anchor.dy - topSafe - verticalOffset;
+
+            // Position above marker; if not enough space, keep within safe area.
+            double top = anchor.dy - estimatedCardHeight - verticalOffset;
+            if (top < topSafe) {
+              top = topSafe;
+            }
+
+            // Final clamp to ensure card never goes off-screen
+            top = top.clamp(
+              topSafe,
+              math.max(
+                topSafe,
+                constraints.maxHeight - estimatedCardHeight - bottomPadding,
               ),
-            ),
-          ],
+            );
+
+            if (kDebugMode) {
+              AppConfig.debugPrint(
+                'DesktopMapScreen: card positioned at ($left, $top) anchor=(${anchor.dx.toStringAsFixed(0)}, ${anchor.dy.toStringAsFixed(0)}) '
+                'spaceAbove=${spaceAbove.toStringAsFixed(0)}',
+              );
+            }
+
+            return Stack(
+              children: [
+                Positioned(
+                  left: left,
+                  top: top,
+                  // Use UnconstrainedBox to prevent the Positioned widget from
+                  // passing unbounded height constraints to the card, which would
+                  // cause the card to expand to fill all available space.
+                  // constrainedAxis: Axis.horizontal ensures width is respected.
+                  child: UnconstrainedBox(
+                    alignment: Alignment.topLeft,
+                    constrainedAxis: Axis.horizontal,
+                    child: SizedBox(
+                      width: cardWidth,
+                      child: wrappedCard,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -6855,7 +7140,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _selectedMarkerId = null;
       _selectedMarkerData = null;
       _selectedMarkerAt = null;
-      _selectedMarkerAnchor = null;
+      _selectedMarkerAnchorNotifier.value = null;
     });
     final subjectData = await _refreshMarkerSubjectData(force: true) ??
         _snapshotMarkerSubjectData();
@@ -6907,7 +7192,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           _selectedMarkerId = null;
           _selectedMarkerData = null;
           _selectedMarkerAt = null;
-          _selectedMarkerAnchor = null;
+          _selectedMarkerAnchorNotifier.value = null;
         });
       },
       initialSubjectType: initialSubjectType,
