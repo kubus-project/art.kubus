@@ -39,6 +39,15 @@
   <!-- Use the CSP build + explicit worker URL to support strict CSP (no blob: workers). -->
   <script src="vendor/maplibre-gl/maplibre-gl-csp.js"></script>
   <link href="vendor/maplibre-gl/maplibre-gl.css" rel="stylesheet" />
+  <style id="kubus-maplibre-attribution-style">
+    :root {
+      --kubus-mobile-map-attrib-bottom: 0px;
+    }
+
+    body.kubus-mobile-map .maplibregl-ctrl-bottom-left {
+      bottom: var(--kubus-mobile-map-attrib-bottom) !important;
+    }
+  </style>
   <script>
     (function () {
       try {

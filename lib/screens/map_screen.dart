@@ -33,6 +33,7 @@ import '../services/ar_integration_service.dart';
 import '../services/map_marker_service.dart';
 import '../services/push_notification_service.dart';
 import '../services/achievement_service.dart';
+import '../services/map_attribution_helper.dart';
 import '../models/art_marker.dart';
 import '../widgets/art_marker_cube.dart';
 import '../widgets/map_marker_style_config.dart';
@@ -176,6 +177,9 @@ class _MapScreenState extends State<MapScreen>
   int _styleEpoch = 0;
   int _hitboxLayerEpoch = -1;
   final Set<String> _registeredMapImages = <String>{};
+  final Set<String> _managedLayerIds = <String>{};
+  final Set<String> _managedSourceIds = <String>{};
+  double _lastWebAttributionBottomPx = -1;
   static const String _markerSourceId = 'kubus_markers';
   static const String _markerLayerId = 'kubus_marker_layer';
   static const String _markerHitboxLayerId = 'kubus_marker_hitbox_layer';
@@ -461,6 +465,8 @@ class _MapScreenState extends State<MapScreen>
     _hitboxLayerReady = false;
     _hitboxLayerEpoch = -1;
     _registeredMapImages.clear();
+    _managedLayerIds.clear();
+    _managedSourceIds.clear();
 
     AppConfig.debugPrint('MapScreen: style init start');
 
@@ -506,6 +512,7 @@ class _MapScreenState extends State<MapScreen>
         },
         promoteId: 'id',
       );
+      _managedSourceIds.add(_markerSourceId);
 
       await controller.addGeoJsonSource(
         _cubeSourceId,
@@ -515,6 +522,7 @@ class _MapScreenState extends State<MapScreen>
         },
         promoteId: 'id',
       );
+      _managedSourceIds.add(_cubeSourceId);
 
       await controller.addGeoJsonSource(
         _cubeBevelSourceId,
@@ -524,6 +532,7 @@ class _MapScreenState extends State<MapScreen>
         },
         promoteId: 'id',
       );
+      _managedSourceIds.add(_cubeBevelSourceId);
 
       // Layer order (bottom to top):
       // 1. Fill-extrusion (3D bevel base)
@@ -545,6 +554,7 @@ class _MapScreenState extends State<MapScreen>
           visibility: 'none',
         ),
       );
+      _managedLayerIds.add(_cubeBevelLayerId);
 
       // 2. Fill-extrusion layer for 3D cube top (above bevel)
       await controller.addFillExtrusionLayer(
@@ -559,6 +569,7 @@ class _MapScreenState extends State<MapScreen>
           visibility: 'none',
         ),
       );
+      _managedLayerIds.add(_cubeLayerId);
 
       // 3. Main marker symbol layer for 2D icons
       await controller.addSymbolLayer(
@@ -584,6 +595,7 @@ class _MapScreenState extends State<MapScreen>
           iconRotationAlignment: 'map',
         ),
       );
+      _managedLayerIds.add(_markerLayerId);
 
       // 4. Cube floating icon layer (above fill-extrusion, same icons as marker layer)
       await controller.addSymbolLayer(
@@ -591,11 +603,7 @@ class _MapScreenState extends State<MapScreen>
         _cubeIconLayerId,
         ml.SymbolLayerProperties(
           iconImage: <Object>['get', 'icon'],
-          iconSize: <Object>[
-            '*',
-            MapMarkerStyleConfig.iconSizeExpression(),
-            0.92,
-          ],
+          iconSize: MapMarkerStyleConfig.iconSizeExpression(constantScale: 0.92),
           iconOpacity: <Object>[
             'case',
             <Object>[
@@ -615,6 +623,7 @@ class _MapScreenState extends State<MapScreen>
           visibility: 'none',
         ),
       );
+      _managedLayerIds.add(_cubeIconLayerId);
 
       // 5. Invisible hitbox layer (topmost) for consistent tap detection (2D + 3D)
       final Object hitboxRadius = kIsWeb
@@ -678,6 +687,7 @@ class _MapScreenState extends State<MapScreen>
           ),
         );
       }
+      _managedLayerIds.add(_markerHitboxLayerId);
 
       await controller.addGeoJsonSource(
         _locationSourceId,
@@ -687,6 +697,7 @@ class _MapScreenState extends State<MapScreen>
         },
         promoteId: 'id',
       );
+      _managedSourceIds.add(_locationSourceId);
       await controller.addCircleLayer(
         _locationSourceId,
         _locationLayerId,
@@ -698,6 +709,7 @@ class _MapScreenState extends State<MapScreen>
           circleStrokeColor: _hexRgb(scheme.surface),
         ),
       );
+      _managedLayerIds.add(_locationLayerId);
 
       if (!mounted) return;
       _styleInitialized = true;
@@ -729,6 +741,7 @@ class _MapScreenState extends State<MapScreen>
   @override
   void initState() {
     super.initState();
+    MapAttributionHelper.setMobileMapEnabled(true);
     _autoFollow = widget.autoFollow;
 
     _animationController = AnimationController(
@@ -1118,6 +1131,7 @@ class _MapScreenState extends State<MapScreen>
 
   @override
   void dispose() {
+    MapAttributionHelper.setMobileMapEnabled(false);
     _mapDeepLinkProvider?.removeListener(_handleMapDeepLinkProviderChanged);
     _mapDeepLinkProvider = null;
     _tabProvider?.removeListener(_handleTabProviderChanged);
@@ -1142,6 +1156,8 @@ class _MapScreenState extends State<MapScreen>
     }
     _styleInitialized = false;
     _registeredMapImages.clear();
+    _managedLayerIds.clear();
+    _managedSourceIds.clear();
     _timer?.cancel();
     _pressedClearTimer?.cancel();
     _pressedClearTimer = null;
@@ -1963,7 +1979,8 @@ class _MapScreenState extends State<MapScreen>
       return;
     }
     _markerLayerStyleUpdateInFlight = true;
-    unawaited(_applyMarkerLayerStyle(controller).whenComplete(() {
+    final epoch = _styleEpoch;
+    unawaited(_applyMarkerLayerStyle(controller, epoch).whenComplete(() {
       _markerLayerStyleUpdateInFlight = false;
       if (_markerLayerStyleUpdateQueued) {
         _markerLayerStyleUpdateQueued = false;
@@ -1972,10 +1989,18 @@ class _MapScreenState extends State<MapScreen>
     }));
   }
 
-  Future<void> _applyMarkerLayerStyle(ml.MapLibreMapController controller) async {
-    final base = MapMarkerStyleConfig.iconSizeExpression();
-    final iconSize = _interactiveIconSizeExpression(base);
-    final cubeIconSize = <Object>['*', iconSize, 0.92];
+  Future<void> _applyMarkerLayerStyle(
+    ml.MapLibreMapController controller,
+    int styleEpoch,
+  ) async {
+    if (!_styleInitialized) return;
+    if (styleEpoch != _styleEpoch) return;
+    final canStyleMarkerLayer = _managedLayerIds.contains(_markerLayerId);
+    final canStyleCubeIconLayer = _managedLayerIds.contains(_cubeIconLayerId);
+    if (!canStyleMarkerLayer && !canStyleCubeIconLayer) return;
+
+    final iconSize = _interactiveIconSizeExpression();
+    final cubeIconSize = _interactiveIconSizeExpression(constantScale: 0.92);
     final iconOpacity = <Object>[
       'case',
       <Object>['==', <Object>['get', 'kind'], 'cluster'],
@@ -1987,47 +2012,55 @@ class _MapScreenState extends State<MapScreen>
     final cubeIconVisible = _cubeLayerVisible;
 
     try {
-      await controller.setLayerProperties(
-        _markerLayerId,
-        ml.SymbolLayerProperties(
-          iconImage: <Object>['get', 'icon'],
-          iconSize: iconSize,
-          iconOpacity: iconOpacity,
-          iconAllowOverlap: true,
-          iconIgnorePlacement: true,
-          iconAnchor: 'center',
-          iconPitchAlignment: 'map',
-          iconRotationAlignment: 'map',
-          visibility: markerVisible ? 'visible' : 'none',
-        ),
-      );
-      await controller.setLayerProperties(
-        _cubeIconLayerId,
-        ml.SymbolLayerProperties(
-          iconImage: <Object>['get', 'icon'],
-          iconSize: cubeIconSize,
-          iconOpacity: iconOpacity,
-          iconAllowOverlap: true,
-          iconIgnorePlacement: true,
-          iconAnchor: 'center',
-          iconPitchAlignment: 'viewport',
-          iconRotationAlignment: 'viewport',
-          iconOffset: MapMarkerStyleConfig.cubeFloatingIconOffsetEm,
-          iconRotate: _cubeIconSpinDegrees,
-          visibility: cubeIconVisible ? 'visible' : 'none',
-        ),
-      );
+      if (canStyleMarkerLayer) {
+        if (!_styleInitialized || styleEpoch != _styleEpoch) return;
+        await controller.setLayerProperties(
+          _markerLayerId,
+          ml.SymbolLayerProperties(
+            iconImage: <Object>['get', 'icon'],
+            iconSize: iconSize,
+            iconOpacity: iconOpacity,
+            iconAllowOverlap: true,
+            iconIgnorePlacement: true,
+            iconAnchor: 'center',
+            iconPitchAlignment: 'map',
+            iconRotationAlignment: 'map',
+            visibility: markerVisible ? 'visible' : 'none',
+          ),
+        );
+      }
+      if (canStyleCubeIconLayer) {
+        if (!_styleInitialized || styleEpoch != _styleEpoch) return;
+        await controller.setLayerProperties(
+          _cubeIconLayerId,
+          ml.SymbolLayerProperties(
+            iconImage: <Object>['get', 'icon'],
+            iconSize: cubeIconSize,
+            iconOpacity: iconOpacity,
+            iconAllowOverlap: true,
+            iconIgnorePlacement: true,
+            iconAnchor: 'center',
+            iconPitchAlignment: 'viewport',
+            iconRotationAlignment: 'viewport',
+            iconOffset: MapMarkerStyleConfig.cubeFloatingIconOffsetEm,
+            iconRotate: _cubeIconSpinDegrees,
+            visibility: cubeIconVisible ? 'visible' : 'none',
+          ),
+        );
+      }
     } catch (_) {
       // Best-effort: style swaps or platform limitations can reject updates.
     }
   }
 
-  Object _interactiveIconSizeExpression(Object base) {
+  Object _interactiveIconSizeExpression({double constantScale = 1.0}) {
     final pressedId = _pressedMarkerId;
     final hoveredId = _hoveredMarkerId;
     final selectedId = _selectedMarkerId;
     final any = pressedId != null || hoveredId != null || selectedId != null;
-    if (!any) return base;
+    if (!any) {
+      return MapMarkerStyleConfig.iconSizeExpression(constantScale: constantScale);
+    }
 
     final double pop = selectedId == null
         ? 1.0
@@ -2035,8 +2068,9 @@ class _MapScreenState extends State<MapScreen>
             (MapMarkerStyleConfig.selectedPopScaleFactor - 1.0) *
                 math.sin(_animationController.value * math.pi));
 
-    // MapLibre expressions allow only a single zoom-based "step"/"interpolate"
-    // subexpression. `base` is zoom-based, so it must appear exactly once.
+    // On MapLibre GL JS, `['zoom']` must be the input to a top-level
+    // "step"/"interpolate". Encode interaction multipliers inside the stop
+    // outputs so we never wrap the zoom expression.
     final multiplier = <Object>['case'];
     if (pressedId != null) {
       multiplier.addAll(<Object>[
@@ -2057,7 +2091,10 @@ class _MapScreenState extends State<MapScreen>
       ]);
     }
     multiplier.add(1.0);
-    return <Object>['*', base, multiplier];
+    return MapMarkerStyleConfig.iconSizeExpression(
+      constantScale: constantScale,
+      multiplier: multiplier,
+    );
   }
 
   bool _assertMarkerModeInvariant() {
@@ -2088,11 +2125,29 @@ class _MapScreenState extends State<MapScreen>
 
     _cubeLayerVisible = shouldShowCubes;
 
+    if (kDebugMode) {
+      AppConfig.debugPrint(
+        'MapScreen: marker render mode -> cubes=$shouldShowCubes '
+        'layers(marker=${_managedLayerIds.contains(_markerLayerId)} '
+        'cubeIcon=${_managedLayerIds.contains(_cubeIconLayerId)} '
+        'cube=${_managedLayerIds.contains(_cubeLayerId)} '
+        'bevel=${_managedLayerIds.contains(_cubeBevelLayerId)})',
+      );
+    }
+
     try {
-      await controller.setLayerVisibility(_cubeBevelLayerId, shouldShowCubes);
-      await controller.setLayerVisibility(_cubeLayerId, shouldShowCubes);
-      await controller.setLayerVisibility(_cubeIconLayerId, shouldShowCubes);
-      await controller.setLayerVisibility(_markerLayerId, !shouldShowCubes);
+      if (_managedLayerIds.contains(_cubeBevelLayerId)) {
+        await controller.setLayerVisibility(_cubeBevelLayerId, shouldShowCubes);
+      }
+      if (_managedLayerIds.contains(_cubeLayerId)) {
+        await controller.setLayerVisibility(_cubeLayerId, shouldShowCubes);
+      }
+      if (_managedLayerIds.contains(_cubeIconLayerId)) {
+        await controller.setLayerVisibility(_cubeIconLayerId, shouldShowCubes);
+      }
+      if (_managedLayerIds.contains(_markerLayerId)) {
+        await controller.setLayerVisibility(_markerLayerId, !shouldShowCubes);
+      }
     } catch (_) {
       // Best-effort: layer visibility may fail during style swaps.
     }
@@ -2104,20 +2159,24 @@ class _MapScreenState extends State<MapScreen>
       await _syncMarkerCubes(themeProvider: themeProvider);
     } else {
       try {
-        await controller.setGeoJsonSource(
-          _cubeSourceId,
-          const <String, dynamic>{
-            'type': 'FeatureCollection',
-            'features': <dynamic>[],
-          },
-        );
-        await controller.setGeoJsonSource(
-          _cubeBevelSourceId,
-          const <String, dynamic>{
-            'type': 'FeatureCollection',
-            'features': <dynamic>[],
-          },
-        );
+        if (_managedSourceIds.contains(_cubeSourceId)) {
+          await controller.setGeoJsonSource(
+            _cubeSourceId,
+            const <String, dynamic>{
+              'type': 'FeatureCollection',
+              'features': <dynamic>[],
+            },
+          );
+        }
+        if (_managedSourceIds.contains(_cubeBevelSourceId)) {
+          await controller.setGeoJsonSource(
+            _cubeBevelSourceId,
+            const <String, dynamic>{
+              'type': 'FeatureCollection',
+              'features': <dynamic>[],
+            },
+          );
+        }
       } catch (_) {
         // Ignore source update failures during transitions.
       }
@@ -3149,6 +3208,13 @@ class _MapScreenState extends State<MapScreen>
         final sheetHeight = constraints.maxHeight * _nearbySheetExtent;
         final double attributionBottomMargin =
             ((sheetHeight + 8.0) / 12.0).ceilToDouble() * 12.0;
+        if (kIsWeb &&
+            (_lastWebAttributionBottomPx - attributionBottomMargin).abs() > 0.5) {
+          _lastWebAttributionBottomPx = attributionBottomMargin;
+          MapAttributionHelper.setMobileMapAttributionBottomPx(
+            attributionBottomMargin,
+          );
+        }
         return Stack(
           children: [
             KeyedSubtree(
@@ -3156,7 +3222,7 @@ class _MapScreenState extends State<MapScreen>
               child: IgnorePointer(
                 // In tutorial mode, prevent map gestures so the overlay can
                 // guide the user without accidental pans/zooms.
-                ignoring: _showMapTutorial,
+                ignoring: _showMapTutorial || _isSheetInteracting,
                 child: _buildMap(
                   themeProvider,
                   attributionBottomMargin: attributionBottomMargin,
@@ -3246,7 +3312,7 @@ class _MapScreenState extends State<MapScreen>
     // Keep map gestures enabled during normal operation. We block drag-through
     // from the Nearby Art sheet using an AbsorbPointer overlay over the sheet
     // area, rather than disabling map gestures globally.
-    final disableGesturesForOverlays = _showMapTutorial;
+    final disableGesturesForOverlays = _showMapTutorial || _isSheetInteracting;
 
     return ArtMapView(
       initialCenter: _currentPosition ?? _cameraCenter,
@@ -3256,10 +3322,12 @@ class _MapScreenState extends State<MapScreen>
       isDarkMode: isDark,
       styleAsset: styleAsset,
       attributionButtonPosition: ml.AttributionButtonPosition.bottomLeft,
-      attributionButtonMargins: math.Point<double>(
-        12.0,
-        math.max(12.0, attributionBottomMargin),
-      ),
+      attributionButtonMargins: kIsWeb
+          ? null
+          : math.Point<double>(
+              12.0,
+              math.max(12.0, attributionBottomMargin),
+            ),
       rotateGesturesEnabled: !disableGesturesForOverlays,
       scrollGesturesEnabled: !disableGesturesForOverlays,
       zoomGesturesEnabled: !disableGesturesForOverlays,
@@ -3275,6 +3343,8 @@ class _MapScreenState extends State<MapScreen>
         _styleInitialized = false;
         _hitboxLayerReady = false;
         _registeredMapImages.clear();
+        _managedLayerIds.clear();
+        _managedSourceIds.clear();
         AppConfig.debugPrint(
           'MapScreen: map created (dark=$isDark, style="$styleAsset")',
         );
@@ -3665,6 +3735,7 @@ class _MapScreenState extends State<MapScreen>
     final controller = _mapController;
     if (controller == null) return;
     if (!_styleInitialized) return;
+    if (!_managedSourceIds.contains(_locationSourceId)) return;
 
     final pos = _currentPosition;
     final data = (pos == null)
@@ -3694,6 +3765,7 @@ class _MapScreenState extends State<MapScreen>
     final controller = _mapController;
     if (controller == null) return;
     if (!_styleInitialized) return;
+    if (!_managedSourceIds.contains(_markerSourceId)) return;
     if (!mounted) return;
 
     final scheme = Theme.of(context).colorScheme;
@@ -3910,6 +3982,10 @@ class _MapScreenState extends State<MapScreen>
     final controller = _mapController;
     if (controller == null) return;
     if (!_styleInitialized) return;
+    if (!_managedSourceIds.contains(_cubeSourceId) ||
+        !_managedSourceIds.contains(_cubeBevelSourceId)) {
+      return;
+    }
     if (!mounted) return;
     if (!_is3DMarkerModeActive) return;
 
@@ -5927,6 +6003,36 @@ class _MapScreenState extends State<MapScreen>
             );
             final glassTint =
                 scheme.surface.withValues(alpha: isDark ? 0.46 : 0.56);
+            final themeProvider = context.read<ThemeProvider>();
+            final roles = KubusColorRoles.of(context);
+            final Map<String, ArtMarker> markersById = <String, ArtMarker>{
+              for (final marker in _artMarkers) marker.id: marker,
+            };
+            final Map<String, ArtMarker> markersByArtworkId = <String, ArtMarker>{
+              for (final marker in _artMarkers)
+                if (marker.artworkId != null && marker.artworkId!.isNotEmpty)
+                  marker.artworkId!: marker,
+            };
+
+            Color subjectColorForArtwork(Artwork artwork) {
+              final marker = (artwork.arMarkerId != null &&
+                      artwork.arMarkerId!.isNotEmpty)
+                  ? markersById[artwork.arMarkerId!]
+                  : markersByArtworkId[artwork.id];
+              if (marker != null) {
+                return _resolveArtMarkerColor(marker, themeProvider);
+              }
+
+              return AppColorUtils.markerSubjectColor(
+                markerType: ArtMarkerType.artwork.name,
+                metadata: <String, dynamic>{
+                  if (artwork.metadata != null) ...artwork.metadata!,
+                  'subjectCategory': artwork.category,
+                },
+                scheme: scheme,
+                roles: roles,
+              );
+            }
             return MapOverlayBlocker(
               child: Listener(
                 behavior: HitTestBehavior.opaque,
@@ -6107,17 +6213,8 @@ class _MapScreenState extends State<MapScreen>
                                 delegate: SliverChildBuilderDelegate(
                                   (context, index) {
                                     final artwork = artworks[index];
-                                    // Find marker for subject color
-                                    final marker = _artMarkers
-                                        .cast<ArtMarker?>()
-                                        .firstWhere(
-                                          (m) => m?.artworkId == artwork.id,
-                                          orElse: () => null,
-                                        );
-                                    final subjectColor = marker != null
-                                        ? _resolveArtMarkerColor(marker,
-                                            context.read<ThemeProvider>())
-                                        : null;
+                                    final subjectColor =
+                                        subjectColorForArtwork(artwork);
                                     return _ArtworkListTile(
                                       artwork: artwork,
                                       currentPosition: _currentPosition,
@@ -6147,17 +6244,8 @@ class _MapScreenState extends State<MapScreen>
                                 delegate: SliverChildBuilderDelegate(
                                   (context, index) {
                                     final artwork = artworks[index];
-                                    // Find marker for subject color
-                                    final marker = _artMarkers
-                                        .cast<ArtMarker?>()
-                                        .firstWhere(
-                                          (m) => m?.artworkId == artwork.id,
-                                          orElse: () => null,
-                                        );
-                                    final subjectColor = marker != null
-                                        ? _resolveArtMarkerColor(marker,
-                                            context.read<ThemeProvider>())
-                                        : null;
+                                    final subjectColor =
+                                        subjectColorForArtwork(artwork);
                                     return Padding(
                                       padding:
                                           const EdgeInsets.only(bottom: 12),
@@ -6485,7 +6573,8 @@ class _ArtworkListTile extends StatelessWidget {
   final VoidCallback onMarkDiscovered;
   final bool dense;
 
-  /// Optional subject-based accent color. If null, falls back to hash-based color.
+  /// Optional subject-based accent color. If null, falls back to the shared
+  /// marker subject color mapping (still deterministic and consistent).
   final Color? subjectColor;
 
   const _ArtworkListTile({
@@ -6507,7 +6596,7 @@ class _ArtworkListTile extends StatelessWidget {
     final isDiscovered = artwork.isDiscovered;
     final previewUrl = ArtworkMediaResolver.resolveCover(artwork: artwork);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = _accentForArtwork(scheme);
+    final accent = _accentForArtwork(context, scheme);
     final glassTint = scheme.surface.withValues(alpha: isDark ? 0.42 : 0.54);
     final accentBorder = accent.withValues(alpha: 0.22);
 
@@ -6653,14 +6742,19 @@ class _ArtworkListTile extends StatelessWidget {
     );
   }
 
-  Color _accentForArtwork(ColorScheme scheme) {
-    // Use subject color if provided (from marker), otherwise fall back to hash-based
+  Color _accentForArtwork(BuildContext context, ColorScheme scheme) {
     if (subjectColor != null) return subjectColor!;
 
-    // Deterministic but varied: distribute artworks across the app's semantic palette.
-    final key = artwork.id.isNotEmpty ? artwork.id : artwork.title;
-    final hash = key.hashCode.abs();
-    return AppColorUtils.statColor(hash, scheme);
+    final roles = KubusColorRoles.of(context);
+    return AppColorUtils.markerSubjectColor(
+      markerType: ArtMarkerType.artwork.name,
+      metadata: <String, dynamic>{
+        if (artwork.metadata != null) ...artwork.metadata!,
+        'subjectCategory': artwork.category,
+      },
+      scheme: scheme,
+      roles: roles,
+    );
   }
 
   String? _distanceLabel(AppLocalizations l10n) {
