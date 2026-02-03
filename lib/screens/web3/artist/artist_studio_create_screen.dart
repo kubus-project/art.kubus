@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:provider/provider.dart';
 
 import '../../../utils/kubus_color_roles.dart';
+import '../../../providers/artwork_drafts_provider.dart';
 import '../../art/collection_detail_screen.dart';
 import '../../events/exhibition_creator_screen.dart';
 import '../../map_markers/manage_markers_screen.dart';
@@ -54,9 +56,11 @@ class ArtistStudioCreateScreen extends StatelessWidget {
               return;
             }
             final navigator = Navigator.of(context);
+            final draftId = context.read<ArtworkDraftsProvider>().createDraft();
             await navigator.push(
               MaterialPageRoute(
                 builder: (_) => ArtworkCreator(
+                  draftId: draftId,
                   onCreated: () {
                     try {
                       navigator.pop();

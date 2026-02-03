@@ -4,6 +4,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'dart:async';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/profile_provider.dart';
+import '../../../providers/artwork_drafts_provider.dart';
 import '../../../providers/dao_provider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../providers/collab_provider.dart';
@@ -168,10 +169,11 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
     void openArtworkCreator() {
       final shellScope = DesktopShellScope.of(context);
       if (shellScope == null) return;
+      final draftId = context.read<ArtworkDraftsProvider>().createDraft();
       shellScope.pushScreen(
         DesktopSubScreen(
           title: l10n.artistStudioCreateOptionArtworkTitle,
-          child: const ArtworkCreator(),
+          child: ArtworkCreator(draftId: draftId),
         ),
       );
     }
@@ -386,7 +388,9 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                 DesktopShellScope.of(context)?.pushScreen(
                   DesktopSubScreen(
                     title: l10n.desktopArtistStudioQuickActionCreateArtworkTitle,
-                    child: const ArtworkCreator(),
+                    child: ArtworkCreator(
+                      draftId: context.read<ArtworkDraftsProvider>().createDraft(),
+                    ),
                   ),
                 );
               },

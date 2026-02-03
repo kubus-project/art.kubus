@@ -17,6 +17,8 @@ import 'providers/themeprovider.dart';
 import 'providers/tile_providers.dart';
 import 'providers/navigation_provider.dart';
 import 'providers/artwork_provider.dart';
+import 'providers/artwork_drafts_provider.dart';
+import 'providers/artwork_ar_config_provider.dart';
 import 'providers/institution_provider.dart';
 import 'providers/dao_provider.dart';
 import 'providers/wallet_provider.dart';
@@ -467,6 +469,8 @@ class _AppLauncherState extends State<AppLauncher> {
               ChangeNotifierProvider(
                   create: (context) => CollectionsProvider()),
               ChangeNotifierProvider(create: (context) => ArtworkProvider()),
+              ChangeNotifierProvider(create: (context) => ArtworkDraftsProvider()),
+              ChangeNotifierProvider(create: (context) => ArtworkArConfigProvider()),
               ChangeNotifierProxyProvider<ArtworkProvider, PortfolioProvider>(
                 create: (context) => PortfolioProvider(),
                 update: (context, artworkProvider, portfolioProvider) {

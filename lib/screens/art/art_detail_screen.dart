@@ -7,7 +7,9 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/artwork_creator_byline.dart';
+import '../../widgets/artwork_gallery_view.dart';
 import '../../widgets/detail/detail_shell_components.dart';
+import '../web3/artist/artwork_ar_manager_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
@@ -256,6 +258,9 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                             delegate: SliverChildListDelegate([
                               _buildArtInfo(artwork),
                               const SizedBox(height: DetailSpacing.xl),
+                              _buildGallerySection(artwork),
+                              if (artwork.galleryUrls.isNotEmpty)
+                                const SizedBox(height: DetailSpacing.xl),
                               _buildDescription(artwork),
                               const SizedBox(height: DetailSpacing.xl),
                               _buildSocialStats(artwork),
@@ -468,6 +473,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
           runSpacing: DetailSpacing.sm,
           children: [
             _buildInfoChip(Icons.category_outlined, artwork.category),
+            if (artwork.arEnabled)
+              _buildInfoChip(Icons.view_in_ar_rounded, _arStatusLabel(artwork.arStatus)),
             if (artwork.averageRating != null)
               _buildInfoChip(Icons.star_rounded,
                   '${artwork.averageRating?.toStringAsFixed(1)} (${artwork.ratingsCount})'),
@@ -485,6 +492,38 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         _buildPoapInfoCard(artwork),
       ],
     );
+  }
+
+  String _arStatusLabel(ArtworkArStatus status) {
+    switch (status) {
+      case ArtworkArStatus.ready:
+        return 'AR: Ready';
+      case ArtworkArStatus.draft:
+        return 'AR: Draft';
+      case ArtworkArStatus.error:
+        return 'AR: Needs attention';
+      case ArtworkArStatus.none:
+      default:
+        return 'AR: Not set';
+    }
+  }
+
+  Widget _buildGallerySection(Artwork artwork) {
+    if (artwork.galleryUrls.isEmpty) return const SizedBox.shrink();
+
+    final coverUrl = ArtworkMediaResolver.resolveCover(artwork: artwork);
+    final urls = <String>[
+      if (coverUrl != null && coverUrl.trim().isNotEmpty) coverUrl.trim(),
+      ...artwork.galleryUrls.map((u) => u.trim()).where((u) => u.isNotEmpty),
+    ];
+
+    final seen = <String>{};
+    final unique = <String>[];
+    for (final url in urls) {
+      if (seen.add(url)) unique.add(url);
+    }
+
+    return ArtworkGalleryView(imageUrls: unique);
   }
 
   Widget _buildInfoChip(IconData icon, String label) {
@@ -774,17 +813,35 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         _buildAttendanceConfirmSection(artwork),
         Row(
           children: [
-            if (artwork.arEnabled)
+            if (artwork.arEnabled && artwork.arStatus == ArtworkArStatus.ready)
               Expanded(
                 child: DetailActionButton(
-                  icon: Icons.view_in_ar_rounded,
-                  label: l10n.commonViewInAr,
+                  icon: Icons.qr_code_scanner_rounded,
+                  label: 'Scan AR',
                   backgroundColor: scheme.primary,
-                  foregroundColor: Colors.white,
+                  foregroundColor: scheme.onPrimary,
                   onPressed: () => Navigator.pushNamed(context, '/ar'),
                 ),
+              )
+            else if (artwork.arEnabled && isOwner)
+              Expanded(
+                child: DetailActionButton(
+                  icon: Icons.qr_code_2,
+                  label: 'Finish AR setup',
+                  backgroundColor: scheme.primaryContainer.withValues(alpha: 0.35),
+                  foregroundColor: scheme.primary,
+                  onPressed: () async {
+                    final navigator = Navigator.of(context);
+                    await navigator.push(
+                      MaterialPageRoute(
+                        builder: (_) => ArtworkArManagerScreen(artworkId: artwork.id),
+                      ),
+                    );
+                  },
+                ),
               ),
-            if (artwork.arEnabled) const SizedBox(width: DetailSpacing.md),
+            if (artwork.arEnabled && (artwork.arStatus == ArtworkArStatus.ready || isOwner))
+              const SizedBox(width: DetailSpacing.md),
             Expanded(
               child: DetailActionButton(
                 icon: Icons.navigation_rounded,

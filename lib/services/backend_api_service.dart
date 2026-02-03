@@ -2961,6 +2961,171 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     }
   }
 
+  /// Approximate network fee estimate for UX surfaces.
+  /// GET /api/fees/estimate?network=...&action=...
+  Future<Map<String, dynamic>?> estimateFees({
+    required String network,
+    required String action,
+  }) async {
+    final normalizedNetwork = network.trim();
+    final normalizedAction = action.trim();
+    if (normalizedNetwork.isEmpty || normalizedAction.isEmpty) return null;
+
+    try {
+      final uri = Uri.parse('$baseUrl/api/fees/estimate')
+          .replace(queryParameters: {
+        'network': normalizedNetwork,
+        'action': normalizedAction,
+      });
+      final response = await _get(uri, headers: _getHeaders());
+      if (response.statusCode != 200) return null;
+      final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+      if (decoded is Map<String, dynamic> && decoded['success'] == true) {
+        final data = decoded['data'];
+        if (data is Map<String, dynamic>) {
+          return data;
+        }
+      }
+      return null;
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.estimateFees failed: $e');
+      return null;
+    }
+  }
+
+  /// Fetch AR config + linked artwork content (public when artwork is public).
+  /// GET /api/ar/:arConfigId/content
+  Future<Map<String, dynamic>?> getArContent({required String arConfigId}) async {
+    final id = arConfigId.trim();
+    if (id.isEmpty) return null;
+
+    try {
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
+      final uri = Uri.parse('$baseUrl/api/ar/$id/content');
+      final response = await _get(uri, headers: _getHeaders());
+      if (response.statusCode != 200) return null;
+      final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+      if (decoded is Map<String, dynamic> && decoded['success'] == true) {
+        final data = decoded['data'];
+        if (data is Map<String, dynamic>) return data;
+      }
+      return null;
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.getArContent failed: $e');
+      return null;
+    }
+  }
+
+  /// Auto-generate a printable AR marker for an artwork.
+  /// POST /api/ar/:artworkId/marker/autogenerate
+  Future<Map<String, dynamic>?> autogenerateArMarker({
+    required String artworkId,
+    required String walletAddress,
+    String? subjectColor,
+    int? markerSizePx,
+    bool regenerate = false,
+  }) async {
+    final id = artworkId.trim();
+    if (id.isEmpty) return null;
+
+    try {
+      await _ensureAuthBeforeRequest(walletAddress: walletAddress);
+      final uri = Uri.parse('$baseUrl/api/ar/$id/marker/autogenerate');
+      final body = <String, dynamic>{
+        if (subjectColor != null && subjectColor.trim().isNotEmpty) 'subjectColor': subjectColor.trim(),
+        if (markerSizePx != null) 'markerSizePx': markerSizePx,
+        if (regenerate) 'regenerate': true,
+      };
+
+      final response = await _post(uri, headers: _getHeaders(), body: jsonEncode(body), isIdempotent: !regenerate);
+      if (response.statusCode != 200) return null;
+      final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+      if (decoded is Map<String, dynamic> && decoded['success'] == true) {
+        final data = decoded['data'];
+        if (data is Map<String, dynamic>) return data;
+      }
+      return null;
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.autogenerateArMarker failed: $e');
+      return null;
+    }
+  }
+
+  /// Upload a user-provided printable AR marker for an artwork.
+  /// POST /api/ar/:artworkId/marker/upload (multipart: file)
+  Future<Map<String, dynamic>?> uploadArMarker({
+    required String artworkId,
+    required String walletAddress,
+    required List<int> fileBytes,
+    required String fileName,
+  }) async {
+    final id = artworkId.trim();
+    final safeName = fileName.trim().isEmpty ? 'marker.png' : fileName.trim();
+    if (id.isEmpty) return null;
+    if (fileBytes.isEmpty) return null;
+
+    try {
+      await _ensureAuthBeforeRequest(walletAddress: walletAddress);
+      final uri = Uri.parse('$baseUrl/api/ar/$id/marker/upload');
+      final request = http.MultipartRequest('POST', uri);
+      request.headers.addAll(_getHeaders());
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'file',
+          fileBytes,
+          filename: safeName,
+          contentType: MediaType('image', 'png'),
+        ),
+      );
+      final streamed = await request.send();
+      final response = await http.Response.fromStream(streamed);
+      if (response.statusCode != 200) return null;
+      final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+      if (decoded is Map<String, dynamic> && decoded['success'] == true) {
+        final data = decoded['data'];
+        if (data is Map<String, dynamic>) return data;
+      }
+      return null;
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.uploadArMarker failed: $e');
+      return null;
+    }
+  }
+
+  /// Update an existing AR config record.
+  /// PUT /api/ar/:arConfigId
+  Future<Map<String, dynamic>?> updateArConfig({
+    required String arConfigId,
+    required String walletAddress,
+    String? status,
+    Map<String, dynamic>? markerMeta,
+  }) async {
+    final id = arConfigId.trim();
+    if (id.isEmpty) return null;
+
+    try {
+      await _ensureAuthBeforeRequest(walletAddress: walletAddress);
+      final uri = Uri.parse('$baseUrl/api/ar/$id');
+      final body = <String, dynamic>{
+        if (status != null && status.trim().isNotEmpty) 'status': status.trim(),
+        if (markerMeta != null) 'markerMeta': markerMeta,
+      };
+      final response = await _put(uri, headers: _getHeaders(), body: jsonEncode(body), isIdempotent: true);
+      if (response.statusCode != 200) return null;
+      final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+      if (decoded is Map<String, dynamic> && decoded['success'] == true) {
+        final data = decoded['data'];
+        if (data is Map<String, dynamic>) return data;
+      }
+      return null;
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.updateArConfig failed: $e');
+      return null;
+    }
+  }
+
   /// Create a new artwork record (cover/model should be uploaded separately)
   /// POST /api/artworks
   Future<Artwork?> createArtworkRecord({
@@ -2971,6 +3136,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     String? artistName,
     String category = 'General',
     List<String> tags = const [],
+    List<String> galleryUrls = const [],
+    List<Map<String, dynamic>>? galleryMeta,
     bool isPublic = true,
     bool enableAR = false,
     String? modelUrl,
@@ -2979,6 +3146,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     bool mintAsNFT = false,
     double? price,
     double? royaltyPercent,
+    ArtworkPoapMode poapMode = ArtworkPoapMode.none,
     bool poapEnabled = false,
     String? poapEventId,
     String? poapClaimUrl,
@@ -3001,6 +3169,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         if (artistName != null && artistName.isNotEmpty) 'artistName': artistName,
         'category': category,
         'tags': tags,
+        if (galleryUrls.isNotEmpty) 'galleryUrls': galleryUrls,
+        if (galleryMeta != null) 'galleryMeta': galleryMeta,
         'isPublic': isPublic,
         'isAREnabled': enableAR,
         if (modelUrl != null) 'model3DURL': modelUrl,
@@ -3010,14 +3180,15 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         if (royaltyPercent != null) 'royaltyPercent': royaltyPercent,
         if (price != null) 'price': price,
         'currency': 'KUB8',
-        if (poapEnabled) 'poapEnabled': true,
-        if (poapEnabled && poapEventId != null && poapEventId.trim().isNotEmpty)
+        if (poapMode != ArtworkPoapMode.none) 'poapMode': poapMode.apiValue,
+        if (poapMode != ArtworkPoapMode.none || poapEnabled) 'poapEnabled': (poapMode != ArtworkPoapMode.none) || poapEnabled,
+        if ((poapMode != ArtworkPoapMode.none || poapEnabled) && poapEventId != null && poapEventId.trim().isNotEmpty)
           'poapEventId': poapEventId.trim(),
-        if (poapEnabled && poapClaimUrl != null && poapClaimUrl.trim().isNotEmpty)
+        if ((poapMode != ArtworkPoapMode.none || poapEnabled) && poapClaimUrl != null && poapClaimUrl.trim().isNotEmpty)
           'poapClaimUrl': poapClaimUrl.trim(),
-        if (poapEnabled && poapRewardAmount > 0) 'poapRewardAmount': poapRewardAmount,
-        if (poapEnabled && poapValidFrom != null) 'poapValidFrom': poapValidFrom.toUtc().toIso8601String(),
-        if (poapEnabled && poapValidTo != null) 'poapValidTo': poapValidTo.toUtc().toIso8601String(),
+        if ((poapMode != ArtworkPoapMode.none || poapEnabled) && poapRewardAmount > 0) 'poapRewardAmount': poapRewardAmount,
+        if ((poapMode != ArtworkPoapMode.none || poapEnabled) && poapValidFrom != null) 'poapValidFrom': poapValidFrom.toUtc().toIso8601String(),
+        if ((poapMode != ArtworkPoapMode.none || poapEnabled) && poapValidTo != null) 'poapValidTo': poapValidTo.toUtc().toIso8601String(),
         if (locationName != null && locationName.isNotEmpty) 'locationName': locationName,
         if (latitude != null) 'latitude': latitude,
         if (longitude != null) 'longitude': longitude,
@@ -7334,6 +7505,94 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
     json['arMarkerId'] ?? json['markerId'] ?? json['marker_id'],
   );
 
+  final arConfigId = nullableString(
+    json['arConfigId'] ??
+        json['ar_config_id'] ??
+        (json['arConfig'] is Map<String, dynamic> ? (json['arConfig'] as Map<String, dynamic>)['id'] : null) ??
+        (json['ar_config'] is Map<String, dynamic> ? (json['ar_config'] as Map<String, dynamic>)['id'] : null),
+  );
+
+  final arStatusRaw = nullableString(json['arStatus'] ?? json['ar_status']);
+  final arStatus = ArtworkArStatusApi.fromApiValue(arStatusRaw);
+
+  List<String> parseStringList(dynamic raw) {
+    if (raw is List) {
+      return raw.map((e) => e.toString().trim()).where((e) => e.isNotEmpty).toList();
+    }
+    if (raw is String) {
+      final trimmed = raw.trim();
+      if (trimmed.isEmpty) return <String>[];
+      if (trimmed.startsWith('[')) {
+        try {
+          final parsed = jsonDecode(trimmed);
+          if (parsed is List) {
+            return parsed.map((e) => e.toString().trim()).where((e) => e.isNotEmpty).toList();
+          }
+        } catch (_) {}
+      }
+      return trimmed.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    }
+    return <String>[];
+  }
+
+  final galleryUrls = parseStringList(
+    json['galleryUrls'] ?? json['gallery_urls'] ?? json['gallery'] ?? json['mediaGallery'],
+  ).map((u) => MediaUrlResolver.resolve(u) ?? u).toList();
+
+  List<Map<String, dynamic>> parseGalleryMeta(dynamic raw) {
+    if (raw is List) {
+      return raw
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList(growable: false);
+    }
+    if (raw is String) {
+      final trimmed = raw.trim();
+      if (trimmed.isEmpty) return const <Map<String, dynamic>>[];
+      try {
+        final decoded = jsonDecode(trimmed);
+        if (decoded is List) {
+          return decoded
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList(growable: false);
+        }
+      } catch (_) {
+        return const <Map<String, dynamic>>[];
+      }
+    }
+    return const <Map<String, dynamic>>[];
+  }
+
+  final galleryMeta = parseGalleryMeta(json['galleryMeta'] ?? json['gallery_meta']);
+
+  final poapJson = json['poap'] is Map<String, dynamic>
+      ? (json['poap'] as Map<String, dynamic>)
+      : (json['poap'] is Map ? Map<String, dynamic>.from(json['poap'] as Map) : null);
+  final poapModeRaw = pickString([
+    json['poapMode'],
+    json['poap_mode'],
+    poapJson?['mode'],
+    poapJson?['poapMode'],
+  ]);
+  final poapMode = ArtworkPoapModeApi.fromApiValue(poapModeRaw);
+  final poapEnabled = boolVal(poapJson?['enabled'] ?? json['poapEnabled'] ?? json['poap_enabled']) ?? (poapMode != ArtworkPoapMode.none);
+  final poapEventId = pickString([
+    poapJson?['eventId'],
+    poapJson?['event_id'],
+    json['poapEventId'],
+    json['poap_event_id'],
+  ]);
+  final poapClaimUrl = pickString([
+    poapJson?['claimUrl'],
+    poapJson?['claim_url'],
+    json['poapClaimUrl'],
+    json['poap_claim_url'],
+  ]);
+  final poapValidFrom = parseDate(poapJson?['validFrom'] ?? poapJson?['valid_from'] ?? json['poapValidFrom'] ?? json['poap_valid_from']);
+  final poapValidTo = parseDate(poapJson?['validTo'] ?? poapJson?['valid_to'] ?? json['poapValidTo'] ?? json['poap_valid_to']);
+  final poapRewardAmount = intVal(poapJson?['rewardAmount'] ?? poapJson?['reward_amount'] ?? json['poapRewardAmount'] ?? json['poap_reward_amount']);
+
   final walletAddress = nullableString(json['walletAddress'] ?? json['wallet_address']);
   final isPublic = boolVal(json['isPublic'] ?? json['is_public']) ?? true;
   final isActive = boolVal(json['isActive'] ?? json['is_active']) ?? true;
@@ -7389,6 +7648,8 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
     artist: artist,
     description: stringVal(json['description'] ?? json['summary'] ?? '', ''),
     imageUrl: normalizedImageUrl,
+    galleryUrls: galleryUrls,
+    galleryMeta: galleryMeta,
     position: LatLng(lat, lng),
     status: status,
     rewards: json['rewards'] as int? ?? intVal(json['reward']) ?? 10,
@@ -7401,6 +7662,8 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
         boolVal(json['is_ar_enabled']) ??
         (arAsset != null),
     arMarkerId: markerIdCandidate,
+    arConfigId: arConfigId,
+    arStatus: arStatus,
     arScale: arScale,
     arRotation: arRotation,
     arEnableAnimation: boolVal(
@@ -7430,6 +7693,13 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
     discoveryCount: discoveryCount,
     isLikedByCurrentUser: boolVal(json['isLikedByCurrentUser'] ?? json['isLiked']) ?? false,
     isFavoriteByCurrentUser: isFavoriteByCurrentUser,
+    poapMode: poapMode,
+    poapEnabled: poapEnabled,
+    poapEventId: poapEventId,
+    poapClaimUrl: poapClaimUrl,
+    poapValidFrom: poapValidFrom,
+    poapValidTo: poapValidTo,
+    poapRewardAmount: poapRewardAmount,
     metadata: metadata.isEmpty ? null : metadata,
   );
 }
