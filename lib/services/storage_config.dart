@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' as foundation;
+
 import '../config/api_keys.dart';
 import '../config/config.dart';
 
@@ -83,10 +85,32 @@ class StorageConfig {
     }
 
     // Already absolute HTTP(S)
-    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      final uri = Uri.tryParse(url);
+      if (uri != null) {
+        final path = uri.path;
+
+        // If the URL points to a backend-managed upload path, canonicalize it
+        // to the configured storage backend. This avoids stale or unreachable
+        // absolute URLs being persisted (e.g. http://localhost/...).
+        if (path.startsWith('/uploads/') || path.startsWith('/profiles/') || path.startsWith('/avatars/')) {
+          final relative = StringBuffer(path);
+          if (uri.hasQuery) relative.write('?${uri.query}');
+          if (uri.hasFragment) relative.write('#${uri.fragment}');
+          return resolveUrl(relative.toString());
+        }
+
+        // On Flutter Web, mixed-content HTTP URLs are blocked on HTTPS sites.
+        // Best-effort upgrade to HTTPS in secure contexts.
+        if (_isWebSecureContext && uri.scheme == 'http') {
+          return uri.replace(scheme: 'https').toString();
+        }
+      }
+      return url;
+    }
 
     // Relative path: prefix with configured backend when available
-    final backend = httpBackend;
+    final backend = _effectiveHttpBackendForResolution;
     if (backend.isEmpty) return url;
     return url.startsWith('/') ? '$backend$url' : '$backend/$url';
   }
@@ -94,6 +118,18 @@ class StorageConfig {
   /// Get active HTTP backend URL
   static String get httpBackend =>
       _normalizeBaseUrl(customHttpBackend ?? defaultHttpBackend);
+
+  static bool get _isWebSecureContext =>
+      foundation.kIsWeb && Uri.base.scheme.toLowerCase() == 'https';
+
+  static String get _effectiveHttpBackendForResolution {
+    final backend = httpBackend;
+    if (!_isWebSecureContext) return backend;
+    if (backend.startsWith('http://')) {
+      return 'https://${backend.substring('http://'.length)}';
+    }
+    return backend;
+  }
 
   /// Override HTTP backend (useful for QA environments)
   static void setHttpBackend(String url) {

@@ -59,6 +59,9 @@ class MediaUrlResolver {
     'commons.wikimedia.org',
     'coeser.de',
     'slovenia.si',
+    'ljubljana.si',
+    'streetartnews.net'
+    'hikuk.com',
   };
 
   static bool _needsProxy(String url) {
