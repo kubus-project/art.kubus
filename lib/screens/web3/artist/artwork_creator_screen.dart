@@ -131,13 +131,19 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
   }
 
   void _applyDraftToControllers(ArtworkDraftState draft) {
-    _locationNameController.text = (draft.locationName ?? '').trim();
-    final lat = draft.latitude;
-    final lng = draft.longitude;
-    if (lat != null && lng != null) {
-      _latController.text = lat.toStringAsFixed(6);
-      _lngController.text = lng.toStringAsFixed(6);
-      _location = LatLng(lat, lng);
+    if (!draft.locationEnabled) {
+      _locationNameController.text = '';
+      _latController.text = '';
+      _lngController.text = '';
+    } else {
+      _locationNameController.text = (draft.locationName ?? '').trim();
+      final lat = draft.latitude;
+      final lng = draft.longitude;
+      if (lat != null && lng != null) {
+        _latController.text = lat.toStringAsFixed(6);
+        _lngController.text = lng.toStringAsFixed(6);
+        _location = LatLng(lat, lng);
+      }
     }
     _poapRewardAmountController.text = draft.poapRewardAmount.toString();
     _poapTitleController.text = draft.poapTitle;
@@ -174,9 +180,23 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
 
     final scheme = Theme.of(context).colorScheme;
     try {
+      final Set<String> existingLayerIds = <String>{};
       try {
-        await controller.removeLayer(_locationLayerId);
+        final raw = await controller.getLayerIds();
+        for (final id in raw) {
+          if (id is String) existingLayerIds.add(id);
+        }
       } catch (_) {}
+
+      Future<void> safeRemoveLayer(String id) async {
+        if (!existingLayerIds.contains(id)) return;
+        try {
+          await controller.removeLayer(id);
+        } catch (_) {}
+        existingLayerIds.remove(id);
+      }
+
+      await safeRemoveLayer(_locationLayerId);
       try {
         await controller.removeSource(_locationSourceId);
       } catch (_) {}
@@ -383,21 +403,32 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     return draft.title.trim().isNotEmpty && draft.description.trim().isNotEmpty;
   }
 
-  bool _validateAndSaveLocation(ArtworkDraftsProvider drafts) {
+  bool _isLocationEnabled(ArtworkDraftState draft) {
+    if (draft.locationEnabled) return true;
+    if (draft.latitude != null || draft.longitude != null) return true;
+    if ((draft.locationName ?? '').trim().isNotEmpty) return true;
+    return false;
+  }
+
+  bool _validateAndSaveLocation({
+    required ArtworkDraftsProvider drafts,
+    required ArtworkDraftState draft,
+  }) {
+    final enabled = _isLocationEnabled(draft);
+    if (!enabled) {
+      drafts.updateLocation(draftId: widget.draftId, enabled: false);
+      return true;
+    }
+
     final ok = _locationFormKey.currentState?.validate() == true;
     if (!ok) return false;
     final latText = _latController.text.trim();
     final lngText = _lngController.text.trim();
     final nameText = _locationNameController.text.trim();
 
-    // Location is optional: allow skipping by leaving everything empty.
+    // If the user enabled location but left everything empty, treat as disabled.
     if (latText.isEmpty && lngText.isEmpty && nameText.isEmpty) {
-      drafts.updateLocation(
-        draftId: widget.draftId,
-        locationName: null,
-        latitude: null,
-        longitude: null,
-      );
+      drafts.updateLocation(draftId: widget.draftId, enabled: false);
       return true;
     }
 
@@ -406,6 +437,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     if (lat == null || lng == null || !_validateLatLng(lat, lng)) return false;
     drafts.updateLocation(
       draftId: widget.draftId,
+      enabled: true,
       locationName: nameText.isEmpty ? null : nameText,
       latitude: lat,
       longitude: lng,
@@ -729,6 +761,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     required ArtworkDraftState draft,
     required int currentStep,
   }) {
+    final locationEnabled = _isLocationEnabled(draft);
     return Step(
       title: Text('Location', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
       isActive: currentStep >= 1,
@@ -740,109 +773,140 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
           children: [
             _stepHeader(
               'Pin it on the map',
-              subtitle: 'Tap the map to set the location. This is how people discover your artwork.',
+              subtitle: 'Location is optional. You can publish now and add a location later from the map.',
             ),
             const SizedBox(height: 12),
-            SizedBox(
-              height: 240,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: Builder(
-                  builder: (context) {
-                    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-                    final tileProviders = context.read<TileProviders>();
-                    return ArtMapView(
-                      initialCenter: _location,
-                      initialZoom: 14,
-                      minZoom: 3,
-                      maxZoom: 24,
-                      isDarkMode: isDarkMode,
-                      styleAsset: tileProviders.mapStyleAsset(isDarkMode: isDarkMode),
-                      onMapCreated: (controller) {
-                        _mapController = controller;
-                        _styleReady = false;
-                      },
-                      onStyleLoaded: () {
-                        unawaited(_handleMapStyleLoaded(context).then((_) => _syncLocationOnMap()));
-                      },
-                      onMapClick: (_, point) {
-                        setState(() {
-                          _location = point;
-                          _latController.text = point.latitude.toStringAsFixed(6);
-                          _lngController.text = point.longitude.toStringAsFixed(6);
-                        });
-                        drafts.updateLocation(
-                          draftId: widget.draftId,
-                          locationName: _locationNameController.text.trim().isEmpty ? null : _locationNameController.text.trim(),
-                          latitude: point.latitude,
-                          longitude: point.longitude,
-                        );
-                        unawaited(_syncLocationOnMap());
-                      },
-                      rotateGesturesEnabled: false,
-                      compassEnabled: false,
-                    );
-                  },
-                ),
-              ),
+            SwitchListTile.adaptive(
+              value: locationEnabled,
+              onChanged: (v) {
+                drafts.updateLocation(draftId: widget.draftId, enabled: v);
+                if (!v) {
+                  setState(() {
+                    _latController.text = '';
+                    _lngController.text = '';
+                    _locationNameController.text = '';
+                  });
+                }
+              },
+              title: const Text('Add location now'),
+              subtitle: const Text('You can turn this on later and pin it to the map.'),
+              activeThumbColor: Theme.of(context).colorScheme.primary,
+              activeTrackColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.35),
+              contentPadding: EdgeInsets.zero,
             ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _locationNameController,
-              decoration: const InputDecoration(
-                labelText: 'Place name (optional)',
-                hintText: 'e.g. River Walk, Downtown',
-              ),
-              textInputAction: TextInputAction.next,
-              onChanged: (v) => drafts.updateLocation(
-                draftId: widget.draftId,
-                locationName: v,
-                latitude: double.tryParse(_latController.text.trim()),
-                longitude: double.tryParse(_lngController.text.trim()),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _latController,
-                    decoration: const InputDecoration(labelText: 'Latitude'),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                    textInputAction: TextInputAction.next,
-                    validator: (value) {
-                      final lat = double.tryParse((value ?? '').trim());
-                      final lng = double.tryParse(_lngController.text.trim());
-                      if (lat == null || lng == null || !_validateLatLng(lat, lng)) return 'Invalid';
-                      return null;
-                    },
-                    onChanged: (_) {
-                      if (!_validateAndSaveLocation(drafts)) return;
-                      unawaited(_moveCameraTo(_location));
+            if (locationEnabled) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 240,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Builder(
+                    builder: (context) {
+                      final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+                      final tileProviders = context.read<TileProviders>();
+                      return ArtMapView(
+                        initialCenter: _location,
+                        initialZoom: 14,
+                        minZoom: 3,
+                        maxZoom: 24,
+                        isDarkMode: isDarkMode,
+                        styleAsset: tileProviders.mapStyleAsset(isDarkMode: isDarkMode),
+                        onMapCreated: (controller) {
+                          _mapController = controller;
+                          _styleReady = false;
+                        },
+                        onStyleLoaded: () {
+                          unawaited(_handleMapStyleLoaded(context).then((_) => _syncLocationOnMap()));
+                        },
+                        onMapClick: (_, point) {
+                          setState(() {
+                            _location = point;
+                            _latController.text = point.latitude.toStringAsFixed(6);
+                            _lngController.text = point.longitude.toStringAsFixed(6);
+                          });
+                          drafts.updateLocation(
+                            draftId: widget.draftId,
+                            enabled: true,
+                            locationName: _locationNameController.text.trim().isEmpty ? null : _locationNameController.text.trim(),
+                            latitude: point.latitude,
+                            longitude: point.longitude,
+                          );
+                          unawaited(_syncLocationOnMap());
+                        },
+                        rotateGesturesEnabled: false,
+                        compassEnabled: false,
+                      );
                     },
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    controller: _lngController,
-                    decoration: const InputDecoration(labelText: 'Longitude'),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                    textInputAction: TextInputAction.done,
-                    validator: (value) {
-                      final lng = double.tryParse((value ?? '').trim());
-                      final lat = double.tryParse(_latController.text.trim());
-                      if (lat == null || lng == null || !_validateLatLng(lat, lng)) return 'Invalid';
-                      return null;
-                    },
-                    onChanged: (_) {
-                      if (!_validateAndSaveLocation(drafts)) return;
-                      unawaited(_moveCameraTo(_location));
-                    },
-                  ),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _locationNameController,
+                decoration: const InputDecoration(
+                  labelText: 'Place name (optional)',
+                  hintText: 'e.g. River Walk, Downtown',
                 ),
-              ],
-            ),
+                textInputAction: TextInputAction.next,
+                onChanged: (v) => drafts.updateLocation(
+                  draftId: widget.draftId,
+                  enabled: true,
+                  locationName: v.trim().isEmpty ? null : v.trim(),
+                  latitude: double.tryParse(_latController.text.trim()),
+                  longitude: double.tryParse(_lngController.text.trim()),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _latController,
+                      decoration: const InputDecoration(labelText: 'Latitude'),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                      textInputAction: TextInputAction.next,
+                      validator: (value) {
+                        if (!locationEnabled) return null;
+                        final latText = (value ?? '').trim();
+                        final lngText = _lngController.text.trim();
+                        if (latText.isEmpty || lngText.isEmpty) return 'Required';
+                        final lat = double.tryParse(latText);
+                        final lng = double.tryParse(lngText);
+                        if (lat == null || lng == null || !_validateLatLng(lat, lng)) return 'Invalid';
+                        return null;
+                      },
+                      onChanged: (_) {
+                        if (!_validateAndSaveLocation(drafts: drafts, draft: draft)) return;
+                        unawaited(_moveCameraTo(_location));
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _lngController,
+                      decoration: const InputDecoration(labelText: 'Longitude'),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                      textInputAction: TextInputAction.done,
+                      validator: (value) {
+                        if (!locationEnabled) return null;
+                        final lngText = (value ?? '').trim();
+                        final latText = _latController.text.trim();
+                        if (latText.isEmpty || lngText.isEmpty) return 'Required';
+                        final lng = double.tryParse(lngText);
+                        final lat = double.tryParse(latText);
+                        if (lat == null || lng == null || !_validateLatLng(lat, lng)) return 'Invalid';
+                        return null;
+                      },
+                      onChanged: (_) {
+                        if (!_validateAndSaveLocation(drafts: drafts, draft: draft)) return;
+                        unawaited(_moveCameraTo(_location));
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -1401,7 +1465,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               ? null
               : () async {
                   final validBasics = _validateAndSaveBasics(draft);
-                  final validLocation = _validateAndSaveLocation(drafts);
+                  final validLocation = _validateAndSaveLocation(drafts: drafts, draft: draft);
                   final hasCover = draft.coverBytes != null;
                   if (!validBasics || !validLocation || !hasCover) {
                     ScaffoldMessenger.of(context).showKubusSnackBar(
@@ -1668,7 +1732,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                           if (!_validateAndSaveBasics(draft)) return;
                           break;
                         case 1:
-                          if (!_validateAndSaveLocation(drafts)) return;
+                          if (!_validateAndSaveLocation(drafts: drafts, draft: draft)) return;
                           break;
                         case 2:
                           if (draft.coverBytes == null) {

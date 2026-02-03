@@ -3173,7 +3173,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         'category': category,
         'tags': tags,
         if (galleryUrls.isNotEmpty) 'galleryUrls': galleryUrls,
-        if (galleryMeta != null) 'galleryMeta': galleryMeta,
+        if (galleryMeta != null && galleryMeta.isNotEmpty) 'galleryMeta': galleryMeta,
         'isPublic': isPublic,
         'isAREnabled': enableAR,
         if (modelUrl != null) 'model3DURL': modelUrl,
