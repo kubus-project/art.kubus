@@ -3150,6 +3150,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     bool poapEnabled = false,
     String? poapEventId,
     String? poapClaimUrl,
+    String? poapTitle,
+    String? poapDescription,
+    String? poapImageUrl,
     DateTime? poapValidFrom,
     DateTime? poapValidTo,
     int poapRewardAmount = 1,
@@ -3186,6 +3189,12 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
           'poapEventId': poapEventId.trim(),
         if ((poapMode != ArtworkPoapMode.none || poapEnabled) && poapClaimUrl != null && poapClaimUrl.trim().isNotEmpty)
           'poapClaimUrl': poapClaimUrl.trim(),
+        if ((poapMode != ArtworkPoapMode.none || poapEnabled) && poapTitle != null && poapTitle.trim().isNotEmpty)
+          'poapTitle': poapTitle.trim(),
+        if ((poapMode != ArtworkPoapMode.none || poapEnabled) && poapDescription != null && poapDescription.trim().isNotEmpty)
+          'poapDescription': poapDescription.trim(),
+        if ((poapMode != ArtworkPoapMode.none || poapEnabled) && poapImageUrl != null && poapImageUrl.trim().isNotEmpty)
+          'poapImageUrl': poapImageUrl.trim(),
         if ((poapMode != ArtworkPoapMode.none || poapEnabled) && poapRewardAmount > 0) 'poapRewardAmount': poapRewardAmount,
         if ((poapMode != ArtworkPoapMode.none || poapEnabled) && poapValidFrom != null) 'poapValidFrom': poapValidFrom.toUtc().toIso8601String(),
         if ((poapMode != ArtworkPoapMode.none || poapEnabled) && poapValidTo != null) 'poapValidTo': poapValidTo.toUtc().toIso8601String(),
@@ -7592,6 +7601,26 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
   final poapValidFrom = parseDate(poapJson?['validFrom'] ?? poapJson?['valid_from'] ?? json['poapValidFrom'] ?? json['poap_valid_from']);
   final poapValidTo = parseDate(poapJson?['validTo'] ?? poapJson?['valid_to'] ?? json['poapValidTo'] ?? json['poap_valid_to']);
   final poapRewardAmount = intVal(poapJson?['rewardAmount'] ?? poapJson?['reward_amount'] ?? json['poapRewardAmount'] ?? json['poap_reward_amount']);
+  final poapTitle = pickString([
+    poapJson?['title'],
+    poapJson?['poapTitle'],
+    json['poapTitle'],
+    json['poap_title'],
+  ]);
+  final poapDescription = pickString([
+    poapJson?['description'],
+    poapJson?['poapDescription'],
+    json['poapDescription'],
+    json['poap_description'],
+  ]);
+  final poapImageRaw = pickString([
+    poapJson?['imageUrl'],
+    poapJson?['image_url'],
+    poapJson?['poapImageUrl'],
+    json['poapImageUrl'],
+    json['poap_image_url'],
+  ]);
+  final poapImageUrl = poapImageRaw != null ? (MediaUrlResolver.resolve(poapImageRaw) ?? poapImageRaw) : null;
 
   final walletAddress = nullableString(json['walletAddress'] ?? json['wallet_address']);
   final isPublic = boolVal(json['isPublic'] ?? json['is_public']) ?? true;
@@ -7700,6 +7729,9 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
     poapValidFrom: poapValidFrom,
     poapValidTo: poapValidTo,
     poapRewardAmount: poapRewardAmount,
+    poapTitle: poapTitle,
+    poapDescription: poapDescription,
+    poapImageUrl: poapImageUrl,
     metadata: metadata.isEmpty ? null : metadata,
   );
 }

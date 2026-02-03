@@ -46,11 +46,25 @@ class ArtworkDraftState {
   ArtworkPoapMode poapMode = ArtworkPoapMode.none;
   String poapEventId = '';
   String poapClaimUrl = '';
+  String poapTitle = '';
+  String poapDescription = '';
+  int poapClaimDurationDays = 7;
+  Uint8List? poapImageBytes;
+  String? poapImageFileName;
+  int? poapImageWidth;
+  int? poapImageHeight;
   int poapRewardAmount = 1;
   DateTime? poapValidFrom;
   DateTime? poapValidTo;
 
   bool arEnabled = false;
+
+  bool mintNftAfterPublish = false;
+  String nftSeriesName = '';
+  String nftSeriesDescription = '';
+  int nftTotalSupply = 100;
+  double nftMintPrice = 50.0;
+  double nftRoyaltyPercent = 10.0;
 
   int currentStep = 0;
   bool isSubmitting = false;
@@ -186,20 +200,68 @@ class ArtworkDraftsProvider extends ChangeNotifier {
     ArtworkPoapMode? poapMode,
     String? poapEventId,
     String? poapClaimUrl,
+    String? poapTitle,
+    String? poapDescription,
+    int? poapClaimDurationDays,
     int? poapRewardAmount,
     DateTime? poapValidFrom,
     DateTime? poapValidTo,
     bool? arEnabled,
+    bool? mintNftAfterPublish,
+    String? nftSeriesName,
+    String? nftSeriesDescription,
+    int? nftTotalSupply,
+    double? nftMintPrice,
+    double? nftRoyaltyPercent,
   }) {
     final draft = _drafts[draftId];
     if (draft == null) return;
     if (poapMode != null) draft.poapMode = poapMode;
     if (poapEventId != null) draft.poapEventId = poapEventId;
     if (poapClaimUrl != null) draft.poapClaimUrl = poapClaimUrl;
+    if (poapTitle != null) draft.poapTitle = poapTitle;
+    if (poapDescription != null) draft.poapDescription = poapDescription;
+    if (poapClaimDurationDays != null) {
+      draft.poapClaimDurationDays = poapClaimDurationDays < 1 ? 1 : poapClaimDurationDays;
+    }
     if (poapRewardAmount != null) draft.poapRewardAmount = poapRewardAmount;
     draft.poapValidFrom = poapValidFrom ?? draft.poapValidFrom;
     draft.poapValidTo = poapValidTo ?? draft.poapValidTo;
     if (arEnabled != null) draft.arEnabled = arEnabled;
+    if (mintNftAfterPublish != null) draft.mintNftAfterPublish = mintNftAfterPublish;
+    if (nftSeriesName != null) draft.nftSeriesName = nftSeriesName;
+    if (nftSeriesDescription != null) draft.nftSeriesDescription = nftSeriesDescription;
+    if (nftTotalSupply != null && nftTotalSupply >= 1) draft.nftTotalSupply = nftTotalSupply;
+    if (nftMintPrice != null && nftMintPrice >= 0) draft.nftMintPrice = nftMintPrice;
+    if (nftRoyaltyPercent != null) {
+      draft.nftRoyaltyPercent = nftRoyaltyPercent.clamp(0, 100).toDouble();
+    }
+    notifyListeners();
+  }
+
+  void setPoapImage({
+    required String draftId,
+    required Uint8List bytes,
+    required String fileName,
+    int? width,
+    int? height,
+  }) {
+    final draft = _drafts[draftId];
+    if (draft == null) return;
+    draft.poapImageBytes = bytes;
+    draft.poapImageFileName = fileName;
+    draft.poapImageWidth = width;
+    draft.poapImageHeight = height;
+    notifyListeners();
+  }
+
+  void clearPoapImage(String draftId) {
+    final draft = _drafts[draftId];
+    if (draft == null) return;
+    draft.poapImageBytes = null;
+    draft.poapImageFileName = null;
+    draft.poapImageWidth = null;
+    draft.poapImageHeight = null;
     notifyListeners();
   }
 
@@ -349,14 +411,55 @@ class ArtworkDraftsProvider extends ChangeNotifier {
 
       final lat = draft.latitude;
       final lng = draft.longitude;
-      if (lat == null || lng == null) {
-        draft.submitError = 'Location is required.';
-        return null;
+      if (lat != null || lng != null) {
+        if (lat == null || lng == null) {
+          draft.submitError = 'Please provide both latitude and longitude (or leave both empty).';
+          return null;
+        }
+        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+          draft.submitError = 'Location coordinates are invalid.';
+          return null;
+        }
       }
-      if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-        draft.submitError = 'Location coordinates are invalid.';
-        return null;
+
+      String? poapImageUrl;
+      final wantsPoap = poapMode != ArtworkPoapMode.none;
+      if (wantsPoap) {
+        final poapBytes = draft.poapImageBytes;
+        if (poapBytes != null && poapBytes.isNotEmpty) {
+          draft.uploadProgress = 0.80;
+          notifyListeners();
+          final uploaded = await _api.uploadFile(
+            fileBytes: poapBytes,
+            fileName: draft.poapImageFileName ?? 'poap_badge.png',
+            fileType: 'image',
+            metadata: {
+              'source': 'artwork_creator',
+              'folder': 'poap/images',
+            },
+            walletAddress: wallet,
+          );
+          poapImageUrl = uploaded['uploadedUrl'] as String?
+              ?? uploaded['data']?['url'] as String?;
+          if (poapImageUrl == null || poapImageUrl.trim().isEmpty) {
+            draft.submitError = 'Failed to upload POAP image. Please try again.';
+            return null;
+          }
+        } else {
+          poapImageUrl = coverUrl;
+        }
       }
+
+      DateTime? poapValidFrom = draft.poapValidFrom;
+      DateTime? poapValidTo = draft.poapValidTo;
+      if (poapMode == ArtworkPoapMode.kubusPoap) {
+        final claimDays = max(1, draft.poapClaimDurationDays);
+        poapValidFrom ??= DateTime.now().toUtc();
+        poapValidTo ??= poapValidFrom.add(Duration(days: claimDays));
+      }
+
+      final poapTitle = draft.poapTitle.trim().isNotEmpty ? draft.poapTitle.trim() : title;
+      final poapDescription = draft.poapDescription.trim().isNotEmpty ? draft.poapDescription.trim() : description;
 
       final artwork = await _api.createArtworkRecord(
         title: title,
@@ -374,8 +477,11 @@ class ArtworkDraftsProvider extends ChangeNotifier {
         poapEnabled: poapMode != ArtworkPoapMode.none,
         poapEventId: poapMode == ArtworkPoapMode.existingPoap ? poapEventId : null,
         poapClaimUrl: poapMode == ArtworkPoapMode.existingPoap ? poapClaimUrl : null,
-        poapValidFrom: draft.poapValidFrom,
-        poapValidTo: draft.poapValidTo,
+        poapTitle: wantsPoap ? poapTitle : null,
+        poapDescription: wantsPoap ? poapDescription : null,
+        poapImageUrl: poapImageUrl,
+        poapValidFrom: poapValidFrom,
+        poapValidTo: poapValidTo,
         poapRewardAmount: poapRewardAmount,
         locationName: draft.locationName?.trim().isNotEmpty == true ? draft.locationName!.trim() : null,
         latitude: lat,

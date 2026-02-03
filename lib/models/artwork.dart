@@ -119,6 +119,9 @@ class Artwork {
   final DateTime? poapValidFrom;
   final DateTime? poapValidTo;
   final int? poapRewardAmount;
+  final String? poapTitle;
+  final String? poapDescription;
+  final String? poapImageUrl;
   
   // Social metrics
   final int likesCount;
@@ -173,6 +176,9 @@ class Artwork {
     this.poapValidFrom,
     this.poapValidTo,
     this.poapRewardAmount,
+    this.poapTitle,
+    this.poapDescription,
+    this.poapImageUrl,
     this.likesCount = 0,
     this.commentsCount = 0,
     this.viewsCount = 0,
@@ -256,6 +262,9 @@ class Artwork {
       'poapValidFrom': poapValidFrom?.toIso8601String(),
       'poapValidTo': poapValidTo?.toIso8601String(),
       'poapRewardAmount': poapRewardAmount,
+      'poapTitle': poapTitle,
+      'poapDescription': poapDescription,
+      'poapImageUrl': poapImageUrl,
       'likesCount': likesCount,
       'commentsCount': commentsCount,
       'viewsCount': viewsCount,
@@ -327,6 +336,9 @@ class Artwork {
       poapRewardAmount: map['poapRewardAmount'] is num
           ? (map['poapRewardAmount'] as num).toInt()
           : int.tryParse(map['poapRewardAmount']?.toString() ?? ''),
+      poapTitle: map['poapTitle']?.toString(),
+      poapDescription: map['poapDescription']?.toString(),
+      poapImageUrl: map['poapImageUrl']?.toString(),
       likesCount: map['likesCount']?.toInt() ?? 0,
       commentsCount: map['commentsCount']?.toInt() ?? 0,
       viewsCount: map['viewsCount']?.toInt() ?? 0,
@@ -380,6 +392,9 @@ class Artwork {
     DateTime? poapValidFrom,
     DateTime? poapValidTo,
     int? poapRewardAmount,
+    String? poapTitle,
+    String? poapDescription,
+    String? poapImageUrl,
     int? likesCount,
     int? commentsCount,
     int? viewsCount,
@@ -430,6 +445,9 @@ class Artwork {
       poapValidFrom: poapValidFrom ?? this.poapValidFrom,
       poapValidTo: poapValidTo ?? this.poapValidTo,
       poapRewardAmount: poapRewardAmount ?? this.poapRewardAmount,
+      poapTitle: poapTitle ?? this.poapTitle,
+      poapDescription: poapDescription ?? this.poapDescription,
+      poapImageUrl: poapImageUrl ?? this.poapImageUrl,
       likesCount: likesCount ?? this.likesCount,
       commentsCount: commentsCount ?? this.commentsCount,
       viewsCount: viewsCount ?? this.viewsCount,
