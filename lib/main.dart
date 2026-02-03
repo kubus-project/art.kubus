@@ -60,6 +60,7 @@ import 'core/shell_entry_screen.dart';
 import 'core/url_strategy.dart';
 import 'core/deep_link_bootstrap_screen.dart';
 import 'core/maplibre_web_registration.dart';
+import 'core/app_route_observer.dart';
 import 'main_app.dart';
 import 'screens/auth/sign_in_screen.dart';
 import 'screens/auth/register_screen.dart';
@@ -469,8 +470,10 @@ class _AppLauncherState extends State<AppLauncher> {
               ChangeNotifierProvider(
                   create: (context) => CollectionsProvider()),
               ChangeNotifierProvider(create: (context) => ArtworkProvider()),
-              ChangeNotifierProvider(create: (context) => ArtworkDraftsProvider()),
-              ChangeNotifierProvider(create: (context) => ArtworkArConfigProvider()),
+              ChangeNotifierProvider(
+                  create: (context) => ArtworkDraftsProvider()),
+              ChangeNotifierProvider(
+                  create: (context) => ArtworkArConfigProvider()),
               ChangeNotifierProxyProvider<ArtworkProvider, PortfolioProvider>(
                 create: (context) => PortfolioProvider(),
                 update: (context, artworkProvider, portfolioProvider) {
@@ -693,7 +696,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
           title: 'art.kubus',
           debugShowCheckedModeBanner: false,
           navigatorKey: appNavigatorKey,
-          navigatorObservers: [_telemetryObserver],
+          navigatorObservers: [_telemetryObserver, appRouteObserver],
           locale: localeProvider.locale,
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -776,11 +779,15 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
               if (args is Map) {
                 final raw =
                     args['artworkId'] ?? args['id'] ?? args['artwork_id'];
-                if (raw != null) artworkId = raw.toString();
+                if (raw != null) {
+                  artworkId = raw.toString();
+                }
                 final rawMarker = args['attendanceMarkerId'] ??
                     args['markerId'] ??
                     args['marker_id'];
-                if (rawMarker != null) attendanceMarkerId = rawMarker.toString();
+                if (rawMarker != null) {
+                  attendanceMarkerId = rawMarker.toString();
+                }
               } else if (args is String) {
                 artworkId = args;
               }

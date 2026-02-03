@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -33,6 +33,7 @@ import '../widgets/support/support_ticket_dialog.dart';
 import 'web3/wallet/mnemonic_reveal_screen.dart';
 import '../utils/app_animations.dart';
 import '../../config/config.dart';
+import '../utils/map_performance_debug.dart';
 import '../providers/locale_provider.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
@@ -50,7 +51,8 @@ class _SettingsScreenState extends State<SettingsScreen>
   late Animation<Offset> _slideAnimation;
   bool _didAnimateEntrance = false;
 
-  List<_ProfileVisibilityOption> _profileVisibilityOptions(AppLocalizations l10n) {
+  List<_ProfileVisibilityOption> _profileVisibilityOptions(
+      AppLocalizations l10n) {
     return [
       _ProfileVisibilityOption(
         value: 'Public',
@@ -72,13 +74,13 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   // Profile settings state
   String _profileVisibility = 'Public';
-  
+
   // Privacy settings state
   bool _dataCollection = true;
   bool _personalizedAds = true;
   bool _locationTracking = true;
   String _dataRetention = '1 Year';
-  
+
   // Security settings state
   bool _twoFactorAuth = false;
   bool _sessionTimeout = true;
@@ -91,23 +93,23 @@ class _SettingsScreenState extends State<SettingsScreen>
   bool _privacyMode = false;
   bool _hasPin = false;
   bool _biometricsSupported = false;
-  
+
   // Account settings state
   bool _emailNotifications = true;
   bool _pushNotifications = true;
   bool _marketingEmails = false;
   String _accountType = 'Standard';
   bool _publicProfile = true;
-  
+
   // App settings state
   bool _analytics = true;
   bool _crashReporting = true;
   bool _skipOnboardingForReturningUsers = true;
-  
+
   // Wallet settings state
   String _networkSelection = 'Mainnet';
   bool _autoBackup = true;
-  
+
   // Profile interaction settings
   bool _showAchievements = true;
   bool _showFriends = true;
@@ -244,7 +246,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     final profileProvider = Provider.of<ProfileProvider>(context);
     final scheme = Theme.of(context).colorScheme;
     final headerColor = scheme.secondary;
-    
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -290,7 +292,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      profileProvider.currentUser?.displayName ?? l10n.settingsGuestUserName,
+                      profileProvider.currentUser?.displayName ??
+                          l10n.settingsGuestUserName,
                       style: GoogleFonts.inter(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -337,30 +340,34 @@ class _SettingsScreenState extends State<SettingsScreen>
               builder: (context, walletProvider, child) {
                 // Get KUB8 balance
                 final kub8Balance = walletProvider.tokens
-                    .where((token) => token.symbol.toUpperCase() == 'KUB8')
-                    .isNotEmpty 
+                        .where((token) => token.symbol.toUpperCase() == 'KUB8')
+                        .isNotEmpty
                     ? walletProvider.tokens
                         .where((token) => token.symbol.toUpperCase() == 'KUB8')
-                        .first.balance 
+                        .first
+                        .balance
                     : 0.0;
-                
-                // Get SOL balance  
+
+                // Get SOL balance
                 final solBalance = walletProvider.tokens
-                    .where((token) => token.symbol.toUpperCase() == 'SOL')
-                    .isNotEmpty 
+                        .where((token) => token.symbol.toUpperCase() == 'SOL')
+                        .isNotEmpty
                     ? walletProvider.tokens
                         .where((token) => token.symbol.toUpperCase() == 'SOL')
-                        .first.balance 
+                        .first
+                        .balance
                     : 0.0;
 
                 return Row(
                   children: [
                     Expanded(
-                      child: _buildBalanceCard('KUB8', kub8Balance.toStringAsFixed(2)),
+                      child: _buildBalanceCard(
+                          'KUB8', kub8Balance.toStringAsFixed(2)),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: _buildBalanceCard('SOL', solBalance.toStringAsFixed(3)),
+                      child: _buildBalanceCard(
+                          'SOL', solBalance.toStringAsFixed(3)),
                     ),
                   ],
                 );
@@ -377,7 +384,8 @@ class _SettingsScreenState extends State<SettingsScreen>
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const web3_wallet.WalletHome()),
+          MaterialPageRoute(
+              builder: (context) => const web3_wallet.WalletHome()),
         );
       },
       child: Container(
@@ -412,7 +420,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   Widget _buildThemeSection(AppLocalizations l10n) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final scheme = Theme.of(context).colorScheme;
-    
+
     return _buildSection(
       l10n.settingsAppearanceSectionTitle,
       Icons.palette,
@@ -460,7 +468,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                       l10n.settingsLanguageDescription,
                       style: GoogleFonts.inter(
                         fontSize: 14,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6),
                       ),
                     ),
                   ],
@@ -493,7 +504,8 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  Widget _buildThemeModeTile(AppLocalizations l10n, ThemeProvider themeProvider) {
+  Widget _buildThemeModeTile(
+      AppLocalizations l10n, ThemeProvider themeProvider) {
     final scheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(16),
@@ -529,7 +541,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           LayoutBuilder(
             builder: (context, constraints) {
               final isSmallScreen = constraints.maxWidth < 375;
-              
+
               if (isSmallScreen) {
                 // Stack vertically on small screens
                 return Column(
@@ -599,83 +611,86 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  Widget _buildThemeOption(String label, IconData icon, ThemeMode mode, ThemeProvider themeProvider, {bool isSmallScreen = false}) {
+  Widget _buildThemeOption(
+      String label, IconData icon, ThemeMode mode, ThemeProvider themeProvider,
+      {bool isSmallScreen = false}) {
     final isSelected = themeProvider.themeMode == mode;
     final scheme = Theme.of(context).colorScheme;
     final themeColor = scheme.tertiary;
-    
+
     return GestureDetector(
       onTap: () => themeProvider.setThemeMode(mode),
       child: Container(
         width: isSmallScreen ? double.infinity : null,
         padding: EdgeInsets.symmetric(
-          vertical: isSmallScreen ? 16 : 12, 
+          vertical: isSmallScreen ? 16 : 12,
           horizontal: isSmallScreen ? 16 : 8,
         ),
         decoration: BoxDecoration(
-          color: isSelected 
+          color: isSelected
               ? themeColor.withValues(alpha: 0.1)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected 
-                ? themeColor
-                : scheme.outline,
+            color: isSelected ? themeColor : scheme.outline,
           ),
         ),
-        child: isSmallScreen 
-          ? Row(
-              children: [
-                Icon(
-                  icon,
-                  color: isSelected 
-                      ? themeColor
-                      : scheme.onSurface.withValues(alpha: 0.6),
-                  size: 20,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  label,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                    color: isSelected 
+        child: isSmallScreen
+            ? Row(
+                children: [
+                  Icon(
+                    icon,
+                    color: isSelected
                         ? themeColor
                         : scheme.onSurface.withValues(alpha: 0.6),
+                    size: 20,
                   ),
-                ),
-              ],
-            )
-          : Column(
-              children: [
-                Icon(
-                  icon,
-                  color: isSelected 
-                      ? themeColor
-                      : scheme.onSurface.withValues(alpha: 0.6),
-                  size: 20,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  label,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                    color: isSelected 
+                  const SizedBox(width: 12),
+                  Text(
+                    label,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.normal,
+                      color: isSelected
+                          ? themeColor
+                          : scheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ],
+              )
+            : Column(
+                children: [
+                  Icon(
+                    icon,
+                    color: isSelected
                         ? themeColor
                         : scheme.onSurface.withValues(alpha: 0.6),
+                    size: 20,
                   ),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
+                  const SizedBox(height: 4),
+                  Text(
+                    label,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.normal,
+                      color: isSelected
+                          ? themeColor
+                          : scheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
       ),
     );
   }
 
-  Widget _buildAccentColorTile(AppLocalizations l10n, ThemeProvider themeProvider) {
+  Widget _buildAccentColorTile(
+      AppLocalizations l10n, ThemeProvider themeProvider) {
     final scheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(16),
@@ -721,19 +736,25 @@ class _SettingsScreenState extends State<SettingsScreen>
                   decoration: BoxDecoration(
                     color: color,
                     borderRadius: BorderRadius.circular(20),
-                    border: isSelected 
-                        ? Border.all(color: Theme.of(context).colorScheme.onPrimary, width: 3)
+                    border: isSelected
+                        ? Border.all(
+                            color: Theme.of(context).colorScheme.onPrimary,
+                            width: 3)
                         : null,
-                    boxShadow: isSelected ? [
-                      BoxShadow(
-                        color: color.withValues(alpha: 0.4),
-                        blurRadius: 8,
-                        spreadRadius: 2,
-                      ),
-                    ] : null,
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: color.withValues(alpha: 0.4),
+                              blurRadius: 8,
+                              spreadRadius: 2,
+                            ),
+                          ]
+                        : null,
                   ),
-                  child: isSelected 
-                      ? Icon(Icons.check, color: Theme.of(context).colorScheme.onPrimary, size: 20)
+                  child: isSelected
+                      ? Icon(Icons.check,
+                          color: Theme.of(context).colorScheme.onPrimary,
+                          size: 20)
                       : null,
                 ),
               );
@@ -756,7 +777,8 @@ class _SettingsScreenState extends State<SettingsScreen>
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.primaryContainer,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Theme.of(context).colorScheme.outline),
+                border:
+                    Border.all(color: Theme.of(context).colorScheme.outline),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -764,16 +786,21 @@ class _SettingsScreenState extends State<SettingsScreen>
                   Row(
                     children: [
                       Icon(
-                        platformProvider.isMobile ? Icons.phone_android :
-                        platformProvider.isDesktop ? Icons.computer :
-                        Icons.web,
+                        platformProvider.isMobile
+                            ? Icons.phone_android
+                            : platformProvider.isDesktop
+                                ? Icons.computer
+                                : Icons.web,
                         color: Theme.of(context).colorScheme.secondary,
                         size: 20,
                       ),
                       const SizedBox(width: 12),
                       Text(
                         l10n.settingsRunningOnPlatform(
-                          platformProvider.currentPlatform.toString().split('.').last,
+                          platformProvider.currentPlatform
+                              .toString()
+                              .split('.')
+                              .last,
                         ),
                         style: GoogleFonts.inter(
                           fontSize: 16,
@@ -800,7 +827,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                         children: [
                           Icon(
                             entry.value ? Icons.check_circle : Icons.cancel,
-                            color: entry.value ? Theme.of(context).colorScheme.secondary : Theme.of(context).colorScheme.error,
+                            color: entry.value
+                                ? Theme.of(context).colorScheme.secondary
+                                : Theme.of(context).colorScheme.error,
                             size: 16,
                           ),
                           const SizedBox(width: 12),
@@ -809,7 +838,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                               _getCapabilityDisplayName(l10n, entry.key),
                               style: GoogleFonts.inter(
                                 fontSize: 14,
-                                color: entry.value ? Colors.white : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                                color: entry.value
+                                    ? Colors.white
+                                    : Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.5),
                               ),
                             ),
                           ),
@@ -828,6 +862,21 @@ class _SettingsScreenState extends State<SettingsScreen>
                 Icons.developer_mode,
                 [
                   _buildSettingsTile(
+                    'Map performance debug',
+                    'Log map timers/subscriptions/fetches (debug-only)',
+                    Icons.speed,
+                    trailing: ValueListenableBuilder<bool>(
+                      valueListenable: MapPerformanceDebug.enabled,
+                      builder: (context, enabled, _) => Switch(
+                        value: enabled,
+                        onChanged: (value) =>
+                            MapPerformanceDebug.setEnabled(value),
+                      ),
+                    ),
+                    onTap: () => MapPerformanceDebug.toggle(),
+                    tileKey: const Key('settings_map_perf_debug_toggle'),
+                  ),
+                  _buildSettingsTile(
                     l10n.settingsDeveloperResetOnboardingTitle,
                     l10n.settingsDeveloperResetOnboardingSubtitle,
                     Icons.refresh,
@@ -845,11 +894,15 @@ class _SettingsScreenState extends State<SettingsScreen>
                     l10n.settingsDeveloperClearQuickActionsSubtitle,
                     Icons.clear_all,
                     onTap: () async {
-                      final navigationProvider = Provider.of<NavigationProvider>(context, listen: false);
+                      final navigationProvider =
+                          Provider.of<NavigationProvider>(context,
+                              listen: false);
                       await navigationProvider.clearVisitData();
                       if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showKubusSnackBar(
-                        SnackBar(content: Text(l10n.settingsDeveloperQuickActionsClearedToast)),
+                        SnackBar(
+                            content: Text(l10n
+                                .settingsDeveloperQuickActionsClearedToast)),
                       );
                     },
                   ),
@@ -862,7 +915,8 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  String _getCapabilityDisplayName(AppLocalizations l10n, PlatformCapability capability) {
+  String _getCapabilityDisplayName(
+      AppLocalizations l10n, PlatformCapability capability) {
     switch (capability) {
       case PlatformCapability.camera:
         return l10n.settingsCapabilityCamera;
@@ -905,7 +959,9 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
 
     final emailNotificationsState = emailPreferencesProvider.canManage
-        ? (emailPreferencesProvider.preferences.productUpdates ? l10n.commonOn : l10n.commonOff)
+        ? (emailPreferencesProvider.preferences.productUpdates
+            ? l10n.commonOn
+            : l10n.commonOff)
         : (_emailNotifications ? l10n.commonOn : l10n.commonOff);
     return _buildSection(
       l10n.settingsProfileSectionTitle,
@@ -955,9 +1011,12 @@ class _SettingsScreenState extends State<SettingsScreen>
             );
             // Reload profile if changes were saved
             if (result == true && mounted) {
-              final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
-              final web3Provider = Provider.of<Web3Provider>(context, listen: false);
-              if (web3Provider.isConnected && web3Provider.walletAddress.isNotEmpty) {
+              final profileProvider =
+                  Provider.of<ProfileProvider>(context, listen: false);
+              final web3Provider =
+                  Provider.of<Web3Provider>(context, listen: false);
+              if (web3Provider.isConnected &&
+                  web3Provider.walletAddress.isNotEmpty) {
                 await profileProvider.loadProfile(web3Provider.walletAddress);
               }
             }
@@ -986,9 +1045,11 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   void _showRoleSimulationSheet() {
     final l10n = AppLocalizations.of(context)!;
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
     final initialArtist = profileProvider.currentUser?.isArtist ?? false;
-    final initialInstitution = profileProvider.currentUser?.isInstitution ?? false;
+    final initialInstitution =
+        profileProvider.currentUser?.isInstitution ?? false;
 
     showModalBottomSheet(
       context: context,
@@ -1007,7 +1068,8 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(20)),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1035,28 +1097,39 @@ class _SettingsScreenState extends State<SettingsScreen>
                   l10n.settingsRoleSimulationSheetSubtitle,
                   style: GoogleFonts.inter(
                     fontSize: 14,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.7),
                   ),
                 ),
                 const SizedBox(height: 16),
                 SwitchListTile(
-                  title: Text(l10n.settingsRoleArtistTitle, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600)),
-                  subtitle: Text(l10n.settingsRoleArtistSubtitle, style: GoogleFonts.inter(fontSize: 13)),
+                  title: Text(l10n.settingsRoleArtistTitle,
+                      style: GoogleFonts.inter(
+                          fontSize: 16, fontWeight: FontWeight.w600)),
+                  subtitle: Text(l10n.settingsRoleArtistSubtitle,
+                      style: GoogleFonts.inter(fontSize: 13)),
                   value: artist,
                   activeThumbColor: Theme.of(context).colorScheme.secondary,
                   onChanged: (val) {
                     setState(() => artist = val);
-                    profileProvider.setRoleFlags(isArtist: val, isInstitution: institution);
+                    profileProvider.setRoleFlags(
+                        isArtist: val, isInstitution: institution);
                   },
                 ),
                 SwitchListTile(
-                  title: Text(l10n.settingsRoleInstitutionTitle, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600)),
-                  subtitle: Text(l10n.settingsRoleInstitutionSubtitle, style: GoogleFonts.inter(fontSize: 13)),
+                  title: Text(l10n.settingsRoleInstitutionTitle,
+                      style: GoogleFonts.inter(
+                          fontSize: 16, fontWeight: FontWeight.w600)),
+                  subtitle: Text(l10n.settingsRoleInstitutionSubtitle,
+                      style: GoogleFonts.inter(fontSize: 13)),
                   value: institution,
                   activeThumbColor: Theme.of(context).colorScheme.secondary,
                   onChanged: (val) {
                     setState(() => institution = val);
-                    profileProvider.setRoleFlags(isArtist: artist, isInstitution: val);
+                    profileProvider.setRoleFlags(
+                        isArtist: artist, isInstitution: val);
                   },
                 ),
                 const SizedBox(height: 12),
@@ -1065,7 +1138,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                   children: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: Text(l10n.commonClose, style: GoogleFonts.inter(color: Theme.of(context).colorScheme.outline)),
+                      child: Text(l10n.commonClose,
+                          style: GoogleFonts.inter(
+                              color: Theme.of(context).colorScheme.outline)),
                     ),
                   ],
                 ),
@@ -1086,7 +1161,9 @@ class _SettingsScreenState extends State<SettingsScreen>
       [
         _buildSettingsTile(
           l10n.settingsWalletConnectionTileTitle,
-          web3Provider.isConnected ? l10n.settingsWalletConnectionConnected : l10n.settingsWalletConnectionNotConnected,
+          web3Provider.isConnected
+              ? l10n.settingsWalletConnectionConnected
+              : l10n.settingsWalletConnectionNotConnected,
           Icons.link,
           onTap: () {
             if (web3Provider.isConnected) {
@@ -1096,7 +1173,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               Navigator.of(context).pushNamed('/connect-wallet');
             }
           },
-          trailing: web3Provider.isConnected 
+          trailing: web3Provider.isConnected
               ? Icon(Icons.check_circle, color: AppColorUtils.amberAccent)
               : Icon(Icons.error_outline, color: scheme.error),
         ),
@@ -1114,7 +1191,8 @@ class _SettingsScreenState extends State<SettingsScreen>
         ),
         _buildSettingsTile(
           l10n.settingsBackupSettingsTileTitle,
-          l10n.settingsAutoBackupSummary(_autoBackup ? l10n.commonEnabled : l10n.commonDisabled),
+          l10n.settingsAutoBackupSummary(
+              _autoBackup ? l10n.commonEnabled : l10n.commonDisabled),
           Icons.backup,
           onTap: () => _showBackupDialog(),
         ),
@@ -1185,7 +1263,8 @@ class _SettingsScreenState extends State<SettingsScreen>
               onChanged: (value) {
                 final gate = context.read<SecurityGateProvider>();
                 setState(() => _useBiometricsOnUnlock = value);
-                unawaited(_saveAllSettings().then((_) => gate.reloadSettings()));
+                unawaited(
+                    _saveAllSettings().then((_) => gate.reloadSettings()));
               },
               activeThumbColor: AppColorUtils.indigoAccent,
             ),
@@ -1365,7 +1444,8 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  Widget _buildSection(String title, IconData icon, List<Widget> children, {Color? sectionColor}) {
+  Widget _buildSection(String title, IconData icon, List<Widget> children,
+      {Color? sectionColor}) {
     final scheme = Theme.of(context).colorScheme;
     final color = sectionColor ?? scheme.secondary;
     return Column(
@@ -1413,14 +1493,14 @@ class _SettingsScreenState extends State<SettingsScreen>
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
           side: BorderSide(
-            color: isDestructive 
+            color: isDestructive
                 ? Colors.red.withValues(alpha: 0.3)
                 : Theme.of(context).colorScheme.outline,
           ),
         ),
         leading: Icon(
           icon,
-          color: isDestructive 
+          color: isDestructive
               ? Colors.red
               : Provider.of<ThemeProvider>(context).accentColor,
           size: 24,
@@ -1430,7 +1510,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           style: GoogleFonts.inter(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: isDestructive 
+            color: isDestructive
                 ? Colors.red
                 : Theme.of(context).colorScheme.onSurface,
           ),
@@ -1439,16 +1519,21 @@ class _SettingsScreenState extends State<SettingsScreen>
           subtitle,
           style: GoogleFonts.inter(
             fontSize: 14,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
-        trailing: trailing ?? (onTap != null 
-            ? Icon(
-                Icons.arrow_forward_ios,
-                size: 16,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-              )
-            : null),
+        trailing: trailing ??
+            (onTap != null
+                ? Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.4),
+                  )
+                : null),
         onTap: onTap,
       ),
     );
@@ -1460,7 +1545,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     final web3Provider = Provider.of<Web3Provider>(context, listen: false);
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final currentNetwork = web3Provider.currentNetwork.toLowerCase();
-    
+
     showKubusDialog(
       context: context,
       builder: (context) => KubusAlertDialog(
@@ -1492,7 +1577,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                 await _saveAllSettings();
                 if (!mounted) return;
                 messenger.showKubusSnackBar(
-                  SnackBar(content: Text(l10n.settingsSwitchedToNetworkToast('Mainnet'))),
+                  SnackBar(
+                      content:
+                          Text(l10n.settingsSwitchedToNetworkToast('Mainnet'))),
                 );
               },
             ),
@@ -1513,7 +1600,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                 await _saveAllSettings();
                 if (!mounted) return;
                 messenger.showKubusSnackBar(
-                  SnackBar(content: Text(l10n.settingsSwitchedToNetworkToast('Devnet'))),
+                  SnackBar(
+                      content:
+                          Text(l10n.settingsSwitchedToNetworkToast('Devnet'))),
                 );
               },
             ),
@@ -1534,7 +1623,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                 await _saveAllSettings();
                 if (!mounted) return;
                 messenger.showKubusSnackBar(
-                  SnackBar(content: Text(l10n.settingsSwitchedToNetworkToast('Testnet'))),
+                  SnackBar(
+                      content:
+                          Text(l10n.settingsSwitchedToNetworkToast('Testnet'))),
                 );
               },
             ),
@@ -1555,7 +1646,8 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  Widget _buildNetworkOption(String name, String description, bool isSelected, VoidCallback onTap) {
+  Widget _buildNetworkOption(
+      String name, String description, bool isSelected, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
@@ -1563,23 +1655,25 @@ class _SettingsScreenState extends State<SettingsScreen>
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           border: Border.all(
-            color: isSelected 
-              ? Provider.of<ThemeProvider>(context).accentColor 
-              : Theme.of(context).colorScheme.outline,
+            color: isSelected
+                ? Provider.of<ThemeProvider>(context).accentColor
+                : Theme.of(context).colorScheme.outline,
             width: isSelected ? 2 : 1,
           ),
           borderRadius: BorderRadius.circular(8),
-          color: isSelected 
-            ? Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.1)
-            : Theme.of(context).colorScheme.primaryContainer,
+          color: isSelected
+              ? Provider.of<ThemeProvider>(context)
+                  .accentColor
+                  .withValues(alpha: 0.1)
+              : Theme.of(context).colorScheme.primaryContainer,
         ),
         child: Row(
           children: [
             Icon(
               isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
-              color: isSelected 
-                ? Provider.of<ThemeProvider>(context).accentColor 
-                : Theme.of(context).colorScheme.outline,
+              color: isSelected
+                  ? Provider.of<ThemeProvider>(context).accentColor
+                  : Theme.of(context).colorScheme.outline,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -1598,7 +1692,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                     description,
                     style: GoogleFonts.inter(
                       fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.7),
                     ),
                   ),
                 ],
@@ -1659,9 +1756,11 @@ class _SettingsScreenState extends State<SettingsScreen>
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.error.withValues(alpha: 0.1),
+                color:
+                    Theme.of(context).colorScheme.error.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Theme.of(context).colorScheme.error, width: 1),
+                border: Border.all(
+                    color: Theme.of(context).colorScheme.error, width: 1),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1730,30 +1829,81 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   void _navigateToRecoveryReveal(WalletProvider walletProvider) {
     final l10n = AppLocalizations.of(context)!;
-    final hasWallet = walletProvider.wallet != null || (walletProvider.currentWalletAddress ?? '').isNotEmpty;
+    final hasWallet = walletProvider.wallet != null ||
+        (walletProvider.currentWalletAddress ?? '').isNotEmpty;
     if (!hasWallet) {
-      ScaffoldMessenger.of(context).showKubusSnackBar(SnackBar(content: Text(l10n.settingsConnectOrCreateWalletFirstToast)));
+      ScaffoldMessenger.of(context).showKubusSnackBar(SnackBar(
+          content: Text(l10n.settingsConnectOrCreateWalletFirstToast)));
       return;
     }
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MnemonicRevealScreen()));
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const MnemonicRevealScreen()));
   }
 
   void _showAutoLockDialog() {
     final l10n = AppLocalizations.of(context)!;
 
     final options = <Map<String, dynamic>>[
-      {'label': 'Immediately', 'seconds': -1, 'display': l10n.settingsAutoLockImmediately},
-      {'label': '10 seconds', 'seconds': 10, 'display': l10n.settingsAutoLock10Seconds},
-      {'label': '30 seconds', 'seconds': 30, 'display': l10n.settingsAutoLock30Seconds},
-      {'label': '1 minute', 'seconds': 60, 'display': l10n.settingsAutoLock1Minute},
-      {'label': '5 minutes', 'seconds': 5 * 60, 'display': l10n.settingsAutoLock5Minutes},
-      {'label': '15 minutes', 'seconds': 15 * 60, 'display': l10n.settingsAutoLock15Minutes},
-      {'label': '30 minutes', 'seconds': 30 * 60, 'display': l10n.settingsAutoLock30Minutes},
-      {'label': '1 hour', 'seconds': 60 * 60, 'display': l10n.settingsAutoLock1Hour},
-      {'label': '3 hours', 'seconds': 3 * 60 * 60, 'display': l10n.settingsAutoLock3Hours},
-      {'label': '6 hours', 'seconds': 6 * 60 * 60, 'display': l10n.settingsAutoLock6Hours},
-      {'label': '12 hours', 'seconds': 12 * 60 * 60, 'display': l10n.settingsAutoLock12Hours},
-      {'label': '1 day', 'seconds': 24 * 60 * 60, 'display': l10n.settingsAutoLock1Day},
+      {
+        'label': 'Immediately',
+        'seconds': -1,
+        'display': l10n.settingsAutoLockImmediately
+      },
+      {
+        'label': '10 seconds',
+        'seconds': 10,
+        'display': l10n.settingsAutoLock10Seconds
+      },
+      {
+        'label': '30 seconds',
+        'seconds': 30,
+        'display': l10n.settingsAutoLock30Seconds
+      },
+      {
+        'label': '1 minute',
+        'seconds': 60,
+        'display': l10n.settingsAutoLock1Minute
+      },
+      {
+        'label': '5 minutes',
+        'seconds': 5 * 60,
+        'display': l10n.settingsAutoLock5Minutes
+      },
+      {
+        'label': '15 minutes',
+        'seconds': 15 * 60,
+        'display': l10n.settingsAutoLock15Minutes
+      },
+      {
+        'label': '30 minutes',
+        'seconds': 30 * 60,
+        'display': l10n.settingsAutoLock30Minutes
+      },
+      {
+        'label': '1 hour',
+        'seconds': 60 * 60,
+        'display': l10n.settingsAutoLock1Hour
+      },
+      {
+        'label': '3 hours',
+        'seconds': 3 * 60 * 60,
+        'display': l10n.settingsAutoLock3Hours
+      },
+      {
+        'label': '6 hours',
+        'seconds': 6 * 60 * 60,
+        'display': l10n.settingsAutoLock6Hours
+      },
+      {
+        'label': '12 hours',
+        'seconds': 12 * 60 * 60,
+        'display': l10n.settingsAutoLock12Hours
+      },
+      {
+        'label': '1 day',
+        'seconds': 24 * 60 * 60,
+        'display': l10n.settingsAutoLock1Day
+      },
       {'label': 'Never', 'seconds': 0, 'display': l10n.settingsAutoLockNever},
     ];
 
@@ -1781,7 +1931,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
-              trailing: isSelected ? Icon(Icons.check, color: Provider.of<ThemeProvider>(context, listen: false).accentColor) : null,
+              trailing: isSelected
+                  ? Icon(Icons.check,
+                      color: Provider.of<ThemeProvider>(context, listen: false)
+                          .accentColor)
+                  : null,
               onTap: () async {
                 final navigator = Navigator.of(context);
                 final messenger = ScaffoldMessenger.of(context);
@@ -1794,7 +1948,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                 if (!mounted) return;
                 navigator.pop();
                 messenger.showKubusSnackBar(
-                  SnackBar(content: Text(l10n.settingsAutoLockSetToToast(displayLabel))),
+                  SnackBar(
+                      content:
+                          Text(l10n.settingsAutoLockSetToToast(displayLabel))),
                 );
               },
             );
@@ -1813,7 +1969,8 @@ class _SettingsScreenState extends State<SettingsScreen>
       if (!hasPin) {
         if (mounted) {
           ScaffoldMessenger.of(context).showKubusSnackBar(
-            SnackBar(content: Text(l10n.settingsConnectOrCreateWalletFirstToast)),
+            SnackBar(
+                content: Text(l10n.settingsConnectOrCreateWalletFirstToast)),
           );
         }
         setState(() => _biometricAuth = false);
@@ -1910,9 +2067,11 @@ class _SettingsScreenState extends State<SettingsScreen>
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Row(
           children: [
-            Icon(Icons.shield_outlined, color: Theme.of(context).colorScheme.error),
+            Icon(Icons.shield_outlined,
+                color: Theme.of(context).colorScheme.error),
             const SizedBox(width: 8),
-            Text(l10n.settingsExportRecoveryPhraseDialogTitle, style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+            Text(l10n.settingsExportRecoveryPhraseDialogTitle,
+                style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
           ],
         ),
         content: Column(
@@ -1921,17 +2080,26 @@ class _SettingsScreenState extends State<SettingsScreen>
           children: [
             Text(
               l10n.settingsExportRecoveryPhraseDialogBody,
-              style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8)),
+              style: GoogleFonts.inter(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.8)),
             ),
             const SizedBox(height: 12),
             Row(
               children: [
-                Icon(Icons.lock_outline, color: Theme.of(context).colorScheme.primary),
+                Icon(Icons.lock_outline,
+                    color: Theme.of(context).colorScheme.primary),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     l10n.settingsExportRecoveryPhraseDialogConfirm,
-                    style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
+                    style: GoogleFonts.inter(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.7)),
                   ),
                 ),
               ],
@@ -1939,11 +2107,14 @@ class _SettingsScreenState extends State<SettingsScreen>
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(l10n.commonCancel)),
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(l10n.commonCancel)),
           ElevatedButton(
             onPressed: () {
               Navigator.of(context).pop();
-              Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MnemonicRevealScreen()));
+              Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => const MnemonicRevealScreen()));
             },
             child: Text(l10n.settingsShowPhraseButton),
           ),
@@ -1960,9 +2131,11 @@ class _SettingsScreenState extends State<SettingsScreen>
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Row(
           children: [
-            Icon(Icons.report_gmailerrorred, color: Theme.of(context).colorScheme.error),
+            Icon(Icons.report_gmailerrorred,
+                color: Theme.of(context).colorScheme.error),
             const SizedBox(width: 8),
-            Text(l10n.settingsImportWalletDialogTitle, style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+            Text(l10n.settingsImportWalletDialogTitle,
+                style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
           ],
         ),
         content: Column(
@@ -1971,17 +2144,26 @@ class _SettingsScreenState extends State<SettingsScreen>
           children: [
             Text(
               l10n.settingsImportWalletDialogBody,
-              style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8)),
+              style: GoogleFonts.inter(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.8)),
             ),
             const SizedBox(height: 12),
             Row(
               children: [
-                Icon(Icons.privacy_tip_outlined, color: Theme.of(context).colorScheme.primary),
+                Icon(Icons.privacy_tip_outlined,
+                    color: Theme.of(context).colorScheme.primary),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     l10n.settingsImportWalletDialogConfirm,
-                    style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
+                    style: GoogleFonts.inter(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.7)),
                   ),
                 ),
               ],
@@ -1989,11 +2171,14 @@ class _SettingsScreenState extends State<SettingsScreen>
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(l10n.commonCancel)),
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(l10n.commonCancel)),
           ElevatedButton(
             onPressed: () {
               Navigator.of(context).pop();
-              Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ConnectWallet(initialStep: 1)));
+              Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => const ConnectWallet(initialStep: 1)));
             },
             child: Text(l10n.commonProceed),
           ),
@@ -2045,7 +2230,9 @@ class _SettingsScreenState extends State<SettingsScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(l10n.commonCancel, style: GoogleFonts.inter(color: Theme.of(context).colorScheme.outline)),
+            child: Text(l10n.commonCancel,
+                style: GoogleFonts.inter(
+                    color: Theme.of(context).colorScheme.outline)),
           ),
           TextButton(
             onPressed: () async {
@@ -2070,30 +2257,39 @@ class _SettingsScreenState extends State<SettingsScreen>
               await _saveAllSettings();
               await gate.reloadSettings();
               navigator.pop();
-              messenger.showKubusSnackBar(SnackBar(content: Text(l10n.settingsPinClearedToast)));
+              messenger.showKubusSnackBar(
+                  SnackBar(content: Text(l10n.settingsPinClearedToast)));
             },
-            child: Text(l10n.settingsClearPinButton, style: GoogleFonts.inter(color: Theme.of(context).colorScheme.error)),
+            child: Text(l10n.settingsClearPinButton,
+                style: GoogleFonts.inter(
+                    color: Theme.of(context).colorScheme.error)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Provider.of<ThemeProvider>(context, listen: false).accentColor),
+            style: ElevatedButton.styleFrom(
+                backgroundColor:
+                    Provider.of<ThemeProvider>(context, listen: false)
+                        .accentColor),
             onPressed: () async {
               final navigator = Navigator.of(context);
               final messenger = ScaffoldMessenger.of(context);
               final pin = pinController.text.trim();
               final confirm = confirmController.text.trim();
               if (pin.length < 4 || confirm.length < 4) {
-                messenger.showKubusSnackBar(SnackBar(content: Text(l10n.settingsPinMinLengthError)));
+                messenger.showKubusSnackBar(
+                    SnackBar(content: Text(l10n.settingsPinMinLengthError)));
                 return;
               }
               if (pin != confirm) {
-                messenger.showKubusSnackBar(SnackBar(content: Text(l10n.settingsPinMismatchError)));
+                messenger.showKubusSnackBar(
+                    SnackBar(content: Text(l10n.settingsPinMismatchError)));
                 return;
               }
               try {
                 await walletProvider.setPin(pin);
                 if (!mounted) return;
                 final hasPin = await walletProvider.hasPin();
-                final biometricsSupported = await walletProvider.canUseBiometrics();
+                final biometricsSupported =
+                    await walletProvider.canUseBiometrics();
                 if (!mounted) return;
                 setState(() {
                   _hasPin = hasPin;
@@ -2101,13 +2297,17 @@ class _SettingsScreenState extends State<SettingsScreen>
                 });
                 await gate.reloadSettings();
                 navigator.pop();
-                messenger.showKubusSnackBar(SnackBar(content: Text(l10n.settingsPinSetSuccessToast)));
+                messenger.showKubusSnackBar(
+                    SnackBar(content: Text(l10n.settingsPinSetSuccessToast)));
               } catch (e) {
                 if (!mounted) return;
-                messenger.showKubusSnackBar(SnackBar(content: Text(l10n.settingsPinSetFailedToast)));
+                messenger.showKubusSnackBar(
+                    SnackBar(content: Text(l10n.settingsPinSetFailedToast)));
               }
             },
-            child: Text(l10n.commonSave, style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onPrimary)),
+            child: Text(l10n.commonSave,
+                style: GoogleFonts.inter(
+                    color: Theme.of(context).colorScheme.onPrimary)),
           ),
         ],
       ),
@@ -2145,7 +2345,9 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+              backgroundColor:
+                  Provider.of<ThemeProvider>(context, listen: false)
+                      .accentColor,
               foregroundColor: Colors.white,
             ),
             onPressed: () async {
@@ -2189,11 +2391,15 @@ class _SettingsScreenState extends State<SettingsScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: Text(l10n.commonCancel, style: GoogleFonts.inter(color: Theme.of(dialogContext).colorScheme.outline)),
+            child: Text(l10n.commonCancel,
+                style: GoogleFonts.inter(
+                    color: Theme.of(dialogContext).colorScheme.outline)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+              backgroundColor:
+                  Provider.of<ThemeProvider>(context, listen: false)
+                      .accentColor,
             ),
             onPressed: () async {
               Navigator.of(dialogContext).pop();
@@ -2203,7 +2409,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                 SnackBar(content: Text(l10n.settingsPermissionFlagsResetToast)),
               );
             },
-            child: Text(l10n.settingsResetButton, style: GoogleFonts.inter(color: Theme.of(dialogContext).colorScheme.onPrimary)),
+            child: Text(l10n.settingsResetButton,
+                style: GoogleFonts.inter(
+                    color: Theme.of(dialogContext).colorScheme.onPrimary)),
           ),
         ],
       ),
@@ -2249,33 +2457,40 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+              backgroundColor:
+                  Provider.of<ThemeProvider>(context, listen: false)
+                      .accentColor,
               foregroundColor: Colors.white,
             ),
             onPressed: () async {
               final navigator = Navigator.of(context);
               final messenger = ScaffoldMessenger.of(context);
-              
+
               // Prepare export data
               final prefs = await SharedPreferences.getInstance();
               final exportData = {
                 'profile': {
-                  'profileVisibility': prefs.getString('profile_visibility') ?? 'Public',
+                  'profileVisibility':
+                      prefs.getString('profile_visibility') ?? 'Public',
                   'showAchievements': prefs.getBool('showAchievements') ?? true,
                   'showFriends': prefs.getBool('showFriends') ?? true,
                 },
                 'settings': {
                   'enableAnalytics': prefs.getBool('enableAnalytics') ?? true,
-                  'enableCrashReporting': prefs.getBool('enableCrashReporting') ?? true,
-                  'skipOnboarding': prefs.getBool('skipOnboardingForReturningUsers') ?? true,
+                  'enableCrashReporting':
+                      prefs.getBool('enableCrashReporting') ?? true,
+                  'skipOnboarding':
+                      prefs.getBool('skipOnboardingForReturningUsers') ?? true,
                 },
                 'exportDate': DateTime.now().toIso8601String(),
               };
-              
+
               if (!mounted) return;
               navigator.pop();
               messenger.showKubusSnackBar(
-                SnackBar(content: Text(l10n.settingsDataExportedToast(exportData.length))),
+                SnackBar(
+                    content: Text(
+                        l10n.settingsDataExportedToast(exportData.length))),
               );
             },
             child: Text(l10n.settingsExportButton),
@@ -2322,10 +2537,12 @@ class _SettingsScreenState extends State<SettingsScreen>
             onPressed: () async {
               final navigator = Navigator.of(context);
               final messenger = ScaffoldMessenger.of(context);
-              final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+              final walletProvider =
+                  Provider.of<WalletProvider>(context, listen: false);
               final notificationProvider =
                   Provider.of<NotificationProvider>(context, listen: false);
-              final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+              final profileProvider =
+                  Provider.of<ProfileProvider>(context, listen: false);
               await SettingsService.resetApp(
                 walletProvider: walletProvider,
                 backendApi: BackendApiService(),
@@ -2409,35 +2626,42 @@ class _SettingsScreenState extends State<SettingsScreen>
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(confirmContext, false),
-                      child: Text(l10n.commonCancel, style: GoogleFonts.inter()),
+                      child:
+                          Text(l10n.commonCancel, style: GoogleFonts.inter()),
                     ),
                     TextButton(
                       onPressed: () => Navigator.pop(confirmContext, true),
                       child: Text(
                         l10n.settingsConfirmButton,
-                        style: GoogleFonts.inter(color: Theme.of(confirmContext).colorScheme.error),
+                        style: GoogleFonts.inter(
+                            color: Theme.of(confirmContext).colorScheme.error),
                       ),
                     ),
                   ],
                 ),
               );
-              
+
               if (!mounted) return;
               if (confirmed == true) {
-                final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+                final walletProvider =
+                    Provider.of<WalletProvider>(context, listen: false);
                 final notificationProvider =
                     Provider.of<NotificationProvider>(context, listen: false);
-                final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+                final profileProvider =
+                    Provider.of<ProfileProvider>(context, listen: false);
 
                 // Delete server-side profile/community data (wallet remains functional)
                 try {
                   final wallet = walletProvider.currentWalletAddress ??
                       profileProvider.currentUser?.walletAddress;
-                  await BackendApiService().deleteMyAccountData(walletAddress: wallet);
+                  await BackendApiService()
+                      .deleteMyAccountData(walletAddress: wallet);
                 } catch (e) {
                   debugPrint('SettingsScreen: backend deletion failed: $e');
                   messenger.showKubusSnackBar(
-                    SnackBar(content: Text(l10n.settingsDeleteAccountBackendFailedToast)),
+                    SnackBar(
+                        content:
+                            Text(l10n.settingsDeleteAccountBackendFailedToast)),
                   );
                 }
 
@@ -2542,14 +2766,16 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   Future<void> _togglePushNotifications(bool value) async {
     final l10n = AppLocalizations.of(context)!;
-    final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
+    final notificationProvider =
+        Provider.of<NotificationProvider>(context, listen: false);
     if (value) {
       final granted = await PushNotificationService().requestPermission();
       if (!granted) {
         if (mounted) {
           setState(() => _pushNotifications = false);
           ScaffoldMessenger.of(context).showKubusSnackBar(
-            SnackBar(content: Text(l10n.settingsEnableNotificationsInSystemToast)),
+            SnackBar(
+                content: Text(l10n.settingsEnableNotificationsInSystemToast)),
           );
         }
         await _saveAllSettings();
@@ -2609,8 +2835,10 @@ class _SettingsScreenState extends State<SettingsScreen>
     if (confirmed != true || !mounted) return;
 
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final notificationProvider =
+        Provider.of<NotificationProvider>(context, listen: false);
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
     await SettingsService.logout(
       walletProvider: walletProvider,
       backendApi: BackendApiService(),
@@ -2634,8 +2862,9 @@ class _SettingsScreenState extends State<SettingsScreen>
     final web3Provider = Provider.of<Web3Provider>(context, listen: false);
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final settings = await SettingsService.loadSettings(
-      fallbackNetwork:
-          web3Provider.currentNetwork.isNotEmpty ? web3Provider.currentNetwork : null,
+      fallbackNetwork: web3Provider.currentNetwork.isNotEmpty
+          ? web3Provider.currentNetwork
+          : null,
     );
     final hasPin = await walletProvider.hasPin();
     final biometricsSupported = await walletProvider.canUseBiometrics();
@@ -2687,7 +2916,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   void _showTransactionHistoryDialog() {
     final l10n = AppLocalizations.of(context)!;
     final web3Provider = Provider.of<Web3Provider>(context, listen: false);
-    
+
     showKubusDialog(
       context: context,
       builder: (context) => KubusAlertDialog(
@@ -2704,34 +2933,37 @@ class _SettingsScreenState extends State<SettingsScreen>
           width: MediaQuery.of(context).size.width * 0.8,
           height: MediaQuery.of(context).size.height * 0.5,
           child: web3Provider.transactions.isNotEmpty
-            ? Column(
-                children: [
-                  Text(
-                    l10n.settingsRecentTransactionsTitle,
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              ? Column(
+                  children: [
+                    Text(
+                      l10n.settingsRecentTransactionsTitle,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.7),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: web3Provider.transactions.length,
-                      itemBuilder: (context, index) {
-                        final tx = web3Provider.transactions[index];
-                        return _buildWalletTransactionItem(tx);
-                      },
+                    const SizedBox(height: 16),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: web3Provider.transactions.length,
+                        itemBuilder: (context, index) {
+                          final tx = web3Provider.transactions[index];
+                          return _buildWalletTransactionItem(tx);
+                        },
+                      ),
                     ),
+                  ],
+                )
+              : Center(
+                  child: EmptyStateCard(
+                    icon: Icons.receipt_long,
+                    title: l10n.settingsNoTransactionsTitle,
+                    description: l10n.settingsNoTransactionsDescription,
                   ),
-                ],
-              )
-            : Center(
-                child: EmptyStateCard(
-                  icon: Icons.receipt_long,
-                  title: l10n.settingsNoTransactionsTitle,
-                  description: l10n.settingsNoTransactionsDescription,
                 ),
-              ),
         ),
         actions: [
           TextButton(
@@ -2773,14 +3005,16 @@ class _SettingsScreenState extends State<SettingsScreen>
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              color: isIncoming 
-                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1) 
-                : Theme.of(context).colorScheme.error.withValues(alpha: 0.1),
+              color: isIncoming
+                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
+                  : Theme.of(context).colorScheme.error.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Icon(
               isIncoming ? Icons.call_received : Icons.call_made,
-              color: isIncoming ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.error,
+              color: isIncoming
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.error,
               size: 16,
             ),
           ),
@@ -2790,7 +3024,9 @@ class _SettingsScreenState extends State<SettingsScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isIncoming ? l10n.settingsTxReceivedLabel : l10n.settingsTxSentLabel,
+                  isIncoming
+                      ? l10n.settingsTxReceivedLabel
+                      : l10n.settingsTxSentLabel,
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -2799,19 +3035,27 @@ class _SettingsScreenState extends State<SettingsScreen>
                 ),
                 Text(
                   l10n.settingsTxFromToLabel(
-                    isIncoming ? l10n.settingsTxFromLabel : l10n.settingsTxToLabel,
+                    isIncoming
+                        ? l10n.settingsTxFromLabel
+                        : l10n.settingsTxToLabel,
                     (isIncoming ? from : to).substring(0, 8),
                   ),
                   style: GoogleFonts.inter(
                     fontSize: 10,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
                   ),
                 ),
                 Text(
                   timestamp,
                   style: GoogleFonts.inter(
                     fontSize: 9,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.5),
                   ),
                 ),
               ],
@@ -2822,14 +3066,15 @@ class _SettingsScreenState extends State<SettingsScreen>
             style: GoogleFonts.inter(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: isIncoming ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.error,
+              color: isIncoming
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.error,
             ),
           ),
         ],
       ),
     );
   }
-
 
   // About dialog methods
   void _showVersionDialog() {
@@ -2873,13 +3118,19 @@ class _SettingsScreenState extends State<SettingsScreen>
             Text(
               'Â© 2025 kubus',
               style: GoogleFonts.inter(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.7),
               ),
             ),
             Text(
               l10n.settingsAllRightsReserved,
               style: GoogleFonts.inter(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.7),
               ),
             ),
           ],
@@ -2999,7 +3250,9 @@ class _SettingsScreenState extends State<SettingsScreen>
             const SizedBox(height: 16),
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Provider.of<ThemeProvider>(dialogContext, listen: false).accentColor,
+                backgroundColor:
+                    Provider.of<ThemeProvider>(dialogContext, listen: false)
+                        .accentColor,
                 foregroundColor: Colors.white,
               ),
               onPressed: () {
@@ -3014,7 +3267,9 @@ class _SettingsScreenState extends State<SettingsScreen>
             const SizedBox(height: 8),
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Provider.of<ThemeProvider>(dialogContext, listen: false).accentColor,
+                backgroundColor:
+                    Provider.of<ThemeProvider>(dialogContext, listen: false)
+                        .accentColor,
                 foregroundColor: Colors.white,
               ),
               onPressed: () async {
@@ -3023,7 +3278,8 @@ class _SettingsScreenState extends State<SettingsScreen>
 
                 if (!AppConfig.isFeatureEnabled('supportTickets')) {
                   messenger.showKubusSnackBar(
-                    SnackBar(content: Text(l10n.settingsOpeningEmailClientToast)),
+                    SnackBar(
+                        content: Text(l10n.settingsOpeningEmailClientToast)),
                   );
                   return;
                 }
@@ -3123,11 +3379,21 @@ class _SettingsScreenState extends State<SettingsScreen>
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.star, color: Provider.of<ThemeProvider>(context).accentColor, size: 30),
-                Icon(Icons.star, color: Provider.of<ThemeProvider>(context).accentColor, size: 30),
-                Icon(Icons.star, color: Provider.of<ThemeProvider>(context).accentColor, size: 30),
-                Icon(Icons.star, color: Provider.of<ThemeProvider>(context).accentColor, size: 30),
-                Icon(Icons.star, color: Provider.of<ThemeProvider>(context).accentColor, size: 30),
+                Icon(Icons.star,
+                    color: Provider.of<ThemeProvider>(context).accentColor,
+                    size: 30),
+                Icon(Icons.star,
+                    color: Provider.of<ThemeProvider>(context).accentColor,
+                    size: 30),
+                Icon(Icons.star,
+                    color: Provider.of<ThemeProvider>(context).accentColor,
+                    size: 30),
+                Icon(Icons.star,
+                    color: Provider.of<ThemeProvider>(context).accentColor,
+                    size: 30),
+                Icon(Icons.star,
+                    color: Provider.of<ThemeProvider>(context).accentColor,
+                    size: 30),
               ],
             ),
           ],
@@ -3144,7 +3410,9 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+              backgroundColor:
+                  Provider.of<ThemeProvider>(context, listen: false)
+                      .accentColor,
               foregroundColor: Colors.white,
             ),
             onPressed: () {
@@ -3185,13 +3453,15 @@ class _SettingsScreenState extends State<SettingsScreen>
           subtitle,
           style: GoogleFonts.inter(
             fontSize: 12,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
           ),
         ),
         value: value,
         onChanged: enabled ? onChanged : null,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        activeThumbColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+        activeThumbColor:
+            Provider.of<ThemeProvider>(context, listen: false).accentColor,
       ),
     );
   }
@@ -3219,7 +3489,8 @@ class _SettingsScreenState extends State<SettingsScreen>
           subtitle,
           style: GoogleFonts.inter(
             fontSize: 12,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
           ),
         ),
         trailing: DropdownButton<String>(
@@ -3242,7 +3513,8 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  Widget _buildActionTile(String title, String subtitle, IconData icon, VoidCallback onTap) {
+  Widget _buildActionTile(
+      String title, String subtitle, IconData icon, VoidCallback onTap) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
       color: Theme.of(context).colorScheme.primaryContainer,
@@ -3258,7 +3530,8 @@ class _SettingsScreenState extends State<SettingsScreen>
           subtitle,
           style: GoogleFonts.inter(
             fontSize: 12,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
           ),
         ),
         leading: Icon(
@@ -3366,7 +3639,8 @@ class _SettingsScreenState extends State<SettingsScreen>
   void _showProfileVisibilityDialog() {
     final l10n = AppLocalizations.of(context)!;
     String selectedVisibility = _profileVisibility;
-    final accentColor = Provider.of<ThemeProvider>(context, listen: false).accentColor;
+    final accentColor =
+        Provider.of<ThemeProvider>(context, listen: false).accentColor;
     final visibilityOptions = _profileVisibilityOptions(l10n);
 
     showKubusDialog(
@@ -3392,7 +3666,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                       option: option,
                       accentColor: accentColor,
                       isSelected: option.value == selectedVisibility,
-                      onTap: () => setDialogState(() => selectedVisibility = option.value),
+                      onTap: () => setDialogState(
+                          () => selectedVisibility = option.value),
                     ),
                   ),
                 )
@@ -3432,7 +3707,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                 if (!mounted) return;
                 navigator.pop();
                 ScaffoldMessenger.of(context).showKubusSnackBar(
-                  SnackBar(content: Text(l10n.settingsProfileVisibilitySetToast(displayVisibility))),
+                  SnackBar(
+                      content: Text(l10n.settingsProfileVisibilitySetToast(
+                          displayVisibility))),
                 );
               },
               child: Text(l10n.commonSave),
@@ -3445,7 +3722,8 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   void _showPrivacySettingsDialog() {
     final l10n = AppLocalizations.of(context)!;
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
     final initialPrefs = profileProvider.preferences;
 
     bool privateProfile = initialPrefs.privacy.toLowerCase() == 'private';
@@ -3547,9 +3825,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                     l10n.settingsShareLastVisitedLocationTitle,
                     l10n.settingsShareLastVisitedLocationSubtitle,
                     shareLastVisitedLocation,
-                    (value) => setDialogState(() => shareLastVisitedLocation = value),
+                    (value) =>
+                        setDialogState(() => shareLastVisitedLocation = value),
                     enabled: showActivityStatus,
-                    tileKey: const Key('settings_privacy_share_last_visited_location'),
+                    tileKey: const Key(
+                        'settings_privacy_share_last_visited_location'),
                   ),
                   _buildSwitchTile(
                     l10n.settingsShowCollectionTitle,
@@ -3581,7 +3861,9 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+                backgroundColor:
+                    Provider.of<ThemeProvider>(context, listen: false)
+                        .accentColor,
                 foregroundColor: Colors.white,
               ),
               onPressed: () async {
@@ -3601,7 +3883,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                 if (!mounted) return;
                 navigator.pop();
                 ScaffoldMessenger.of(context).showKubusSnackBar(
-                  SnackBar(content: Text(l10n.settingsPrivacySettingsUpdatedToast)),
+                  SnackBar(
+                      content: Text(l10n.settingsPrivacySettingsUpdatedToast)),
                 );
               },
               child: Text(l10n.commonSave),
@@ -3657,7 +3940,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                     l10n.settingsAutoLockTimeTitle,
                     l10n.settingsAutoLockTimeSubtitle,
                     _autoLockTime,
-                    ['1 minute', '5 minutes', '15 minutes', '30 minutes', 'Never'],
+                    [
+                      '1 minute',
+                      '5 minutes',
+                      '15 minutes',
+                      '30 minutes',
+                      'Never'
+                    ],
                     (value) => setDialogState(() => _autoLockTime = value!),
                     optionLabelBuilder: (option) {
                       switch (option) {
@@ -3680,7 +3969,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                     l10n.settingsLoginNotificationsTitle,
                     l10n.settingsLoginNotificationsSubtitle,
                     _loginNotifications,
-                    (value) => setDialogState(() => _loginNotifications = value),
+                    (value) =>
+                        setDialogState(() => _loginNotifications = value),
                   ),
                 ],
               ),
@@ -3698,7 +3988,9 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+                backgroundColor:
+                    Provider.of<ThemeProvider>(context, listen: false)
+                        .accentColor,
                 foregroundColor: Colors.white,
               ),
               onPressed: () async {
@@ -3708,7 +4000,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                 if (!mounted) return;
                 navigator.pop();
                 ScaffoldMessenger.of(context).showKubusSnackBar(
-                  SnackBar(content: Text(l10n.settingsSecuritySettingsUpdatedToast)),
+                  SnackBar(
+                      content: Text(l10n.settingsSecuritySettingsUpdatedToast)),
                 );
               },
               child: Text(l10n.commonSave),
@@ -3730,7 +4023,8 @@ class _SettingsScreenState extends State<SettingsScreen>
     showKubusDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => Consumer<EmailPreferencesProvider>(
+        builder: (context, setDialogState) =>
+            Consumer<EmailPreferencesProvider>(
           builder: (context, emailPreferences, _) => KubusAlertDialog(
             backgroundColor: Theme.of(context).colorScheme.surface,
             title: Text(
@@ -3760,16 +4054,23 @@ class _SettingsScreenState extends State<SettingsScreen>
                       l10n.settingsEmailPreferencesTransactionalNote,
                       style: GoogleFonts.inter(
                         fontSize: 12,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.7),
                       ),
                     ),
                     if (emailPreferences.isLoading) ...[
                       const SizedBox(height: 12),
                       LinearProgressIndicator(
                         minHeight: 2,
-                        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                        backgroundColor: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest
+                            .withValues(alpha: 0.5),
                         valueColor: AlwaysStoppedAnimation<Color>(
-                          Provider.of<ThemeProvider>(context, listen: false).accentColor,
+                          Provider.of<ThemeProvider>(context, listen: false)
+                              .accentColor,
                         ),
                       ),
                     ],
@@ -3779,72 +4080,92 @@ class _SettingsScreenState extends State<SettingsScreen>
                       l10n.settingsEmailPreferencesProductUpdatesSubtitle,
                       emailPreferences.preferences.productUpdates,
                       (value) {
-                        final next = emailPreferences.preferences.copyWith(productUpdates: value);
+                        final next = emailPreferences.preferences
+                            .copyWith(productUpdates: value);
                         final messenger = ScaffoldMessenger.of(this.context);
                         unawaited(() async {
-                          final ok = await emailPreferences.updatePreferences(next);
+                          final ok =
+                              await emailPreferences.updatePreferences(next);
                           if (!ok && mounted) {
                             messenger.showKubusSnackBar(
-                              SnackBar(content: Text(l10n.settingsEmailPreferencesUpdateFailedToast)),
+                              SnackBar(
+                                  content: Text(l10n
+                                      .settingsEmailPreferencesUpdateFailedToast)),
                             );
                           }
                         }());
                       },
-                      enabled: emailPreferences.canManage && !emailPreferences.isUpdating,
+                      enabled: emailPreferences.canManage &&
+                          !emailPreferences.isUpdating,
                     ),
                     _buildSwitchTile(
                       l10n.settingsEmailPreferencesNewsletterTitle,
                       l10n.settingsEmailPreferencesNewsletterSubtitle,
                       emailPreferences.preferences.newsletter,
                       (value) {
-                        final next = emailPreferences.preferences.copyWith(newsletter: value);
+                        final next = emailPreferences.preferences
+                            .copyWith(newsletter: value);
                         final messenger = ScaffoldMessenger.of(this.context);
                         unawaited(() async {
-                          final ok = await emailPreferences.updatePreferences(next);
+                          final ok =
+                              await emailPreferences.updatePreferences(next);
                           if (!ok && mounted) {
                             messenger.showKubusSnackBar(
-                              SnackBar(content: Text(l10n.settingsEmailPreferencesUpdateFailedToast)),
+                              SnackBar(
+                                  content: Text(l10n
+                                      .settingsEmailPreferencesUpdateFailedToast)),
                             );
                           }
                         }());
                       },
-                      enabled: emailPreferences.canManage && !emailPreferences.isUpdating,
+                      enabled: emailPreferences.canManage &&
+                          !emailPreferences.isUpdating,
                     ),
                     _buildSwitchTile(
                       l10n.settingsEmailPreferencesCommunityDigestTitle,
                       l10n.settingsEmailPreferencesCommunityDigestSubtitle,
                       emailPreferences.preferences.communityDigest,
                       (value) {
-                        final next = emailPreferences.preferences.copyWith(communityDigest: value);
+                        final next = emailPreferences.preferences
+                            .copyWith(communityDigest: value);
                         final messenger = ScaffoldMessenger.of(this.context);
                         unawaited(() async {
-                          final ok = await emailPreferences.updatePreferences(next);
+                          final ok =
+                              await emailPreferences.updatePreferences(next);
                           if (!ok && mounted) {
                             messenger.showKubusSnackBar(
-                              SnackBar(content: Text(l10n.settingsEmailPreferencesUpdateFailedToast)),
+                              SnackBar(
+                                  content: Text(l10n
+                                      .settingsEmailPreferencesUpdateFailedToast)),
                             );
                           }
                         }());
                       },
-                      enabled: emailPreferences.canManage && !emailPreferences.isUpdating,
+                      enabled: emailPreferences.canManage &&
+                          !emailPreferences.isUpdating,
                     ),
                     _buildSwitchTile(
                       l10n.settingsEmailPreferencesSecurityAlertsTitle,
                       l10n.settingsEmailPreferencesSecurityAlertsSubtitle,
                       emailPreferences.preferences.securityAlerts,
                       (value) {
-                        final next = emailPreferences.preferences.copyWith(securityAlerts: value);
+                        final next = emailPreferences.preferences
+                            .copyWith(securityAlerts: value);
                         final messenger = ScaffoldMessenger.of(this.context);
                         unawaited(() async {
-                          final ok = await emailPreferences.updatePreferences(next);
+                          final ok =
+                              await emailPreferences.updatePreferences(next);
                           if (!ok && mounted) {
                             messenger.showKubusSnackBar(
-                              SnackBar(content: Text(l10n.settingsEmailPreferencesUpdateFailedToast)),
+                              SnackBar(
+                                  content: Text(l10n
+                                      .settingsEmailPreferencesUpdateFailedToast)),
                             );
                           }
                         }());
                       },
-                      enabled: emailPreferences.canManage && !emailPreferences.isUpdating,
+                      enabled: emailPreferences.canManage &&
+                          !emailPreferences.isUpdating,
                     ),
                     _buildSwitchTile(
                       l10n.settingsEmailPreferencesTransactionalTitle,
@@ -3927,7 +4248,9 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+                  backgroundColor:
+                      Provider.of<ThemeProvider>(context, listen: false)
+                          .accentColor,
                   foregroundColor: Colors.white,
                 ),
                 onPressed: () async {
@@ -3939,7 +4262,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                   if (!mounted) return;
                   navigator.pop();
                   messenger.showKubusSnackBar(
-                    SnackBar(content: Text(l10n.settingsAccountSettingsUpdatedToast)),
+                    SnackBar(
+                        content:
+                            Text(l10n.settingsAccountSettingsUpdatedToast)),
                   );
                 },
                 child: Text(l10n.commonSave),
@@ -4005,7 +4330,9 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+              backgroundColor:
+                  Provider.of<ThemeProvider>(context, listen: false)
+                      .accentColor,
               foregroundColor: Colors.white,
             ),
             onPressed: () {
@@ -4037,7 +4364,8 @@ class _SettingsScreenState extends State<SettingsScreen>
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.warning_amber, size: 48, color: Theme.of(context).colorScheme.error),
+            Icon(Icons.warning_amber,
+                size: 48, color: Theme.of(context).colorScheme.error),
             const SizedBox(height: 16),
             Text(
               l10n.settingsDeactivateAccountDialogBodyTitle,
@@ -4051,8 +4379,11 @@ class _SettingsScreenState extends State<SettingsScreen>
             Text(
               l10n.settingsDeactivateAccountDialogBodySubtitle,
               style: GoogleFonts.inter(
-                fontSize: 14, 
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                fontSize: 14,
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.5),
               ),
               textAlign: TextAlign.center,
             ),
