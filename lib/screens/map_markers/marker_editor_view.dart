@@ -608,8 +608,9 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
       if (modelCid.isNotEmpty) {
         final cid = modelCid.toLowerCase();
         final isCidV0 = cid.startsWith('qm') && modelCid.length >= 46;
-        final isCidV1 = cid.startsWith('b') && modelCid.length >= 20;
-        if (isCidV0 || isCidV1) payload['modelCID'] = modelCid;
+        // Keep client-side payload compatible with older server validators.
+        // CIDv1 is supported in some environments, but CIDv0 is the safest baseline.
+        if (isCidV0) payload['modelCID'] = modelCid;
       }
       if (modelUrl.isNotEmpty) {
         payload['modelURL'] = StorageConfig.resolveUrl(modelUrl) ?? modelUrl;
