@@ -150,10 +150,17 @@ class MapMarkerStyleConfig {
     final black = const Color(0xFF000000);
     final whiteScore = _contrastRatio(background, white);
     final blackScore = _contrastRatio(background, black);
-    if (whiteScore == blackScore) {
-      return brightness == Brightness.dark ? white : black;
+
+    // Prefer the theme-appropriate foreground when it has acceptable contrast.
+    // This keeps marker icons feeling consistent when the app toggles between
+    // light/dark themes (e.g. dark mode favors white glyphs).
+    const minPreferredContrast = 2.4;
+    if (brightness == Brightness.dark) {
+      if (whiteScore >= minPreferredContrast) return white;
+      return black;
     }
-    return whiteScore > blackScore ? white : black;
+    if (blackScore >= minPreferredContrast) return black;
+    return white;
   }
 
   static double _lerp(double a, double b, double t) {

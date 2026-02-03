@@ -1,4 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+
+import 'disk_cached_artwork_image.dart';
 
 class ArtworkGalleryView extends StatefulWidget {
   final List<String> imageUrls;
@@ -22,12 +26,32 @@ class _ArtworkGalleryViewState extends State<ArtworkGalleryView> {
   void initState() {
     super.initState();
     _pageController = PageController();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _prefetchAround(_index);
+    });
   }
 
   @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
+  }
+
+  void _prefetchAround(int index) {
+    final urls = widget.imageUrls
+        .map((u) => u.trim())
+        .where((u) => u.isNotEmpty)
+        .toList(growable: false);
+    if (urls.isEmpty) return;
+
+    final candidates = <int>{
+      index.clamp(0, urls.length - 1),
+      (index - 1).clamp(0, urls.length - 1),
+      (index + 1).clamp(0, urls.length - 1),
+    };
+    for (final i in candidates) {
+      unawaited(prefetchDiskCachedArtworkImage(urls[i]));
+    }
   }
 
   void _openLightbox(int initialIndex) {
@@ -60,21 +84,11 @@ class _ArtworkGalleryViewState extends State<ArtworkGalleryView> {
           child: SizedBox(
             height: height,
             width: double.infinity,
-            child: Image.network(
-              url,
+            child: _DiskCachedArtworkImage(
+              url: url,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Center(
-                child: Icon(Icons.image_not_supported, color: scheme.outline.withValues(alpha: 0.8)),
-              ),
-              loadingBuilder: (context, child, progress) {
-                if (progress == null) return child;
-                return Center(
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(scheme.primary),
-                  ),
-                );
-              },
+              showProgress: true,
+              errorIconColor: scheme.outline.withValues(alpha: 0.8),
             ),
           ),
         ),
@@ -99,7 +113,10 @@ class _ArtworkGalleryViewState extends State<ArtworkGalleryView> {
             child: PageView.builder(
               controller: _pageController,
               itemCount: urls.length,
-              onPageChanged: (idx) => setState(() => _index = idx),
+              onPageChanged: (idx) {
+                setState(() => _index = idx);
+                _prefetchAround(idx);
+              },
               itemBuilder: (context, idx) => _imageFrame(
                 url: urls[idx],
                 height: height,
@@ -165,7 +182,13 @@ class _ArtworkGalleryViewState extends State<ArtworkGalleryView> {
                           width: selected ? 2 : 1,
                         ),
                       ),
-                      child: Image.network(url, fit: BoxFit.cover),
+                      child: _DiskCachedArtworkImage(
+                        url: url,
+                        fit: BoxFit.cover,
+                        showProgress: false,
+                        errorIconColor:
+                            Theme.of(context).colorScheme.outline.withValues(alpha: 0.6),
+                      ),
                     ),
                   ),
                 );
@@ -200,12 +223,29 @@ class _ArtworkLightboxDialogState extends State<_ArtworkLightboxDialog> {
     _controller = PageController(
       initialPage: widget.initialIndex.clamp(0, widget.urls.length - 1),
     );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _prefetchAround(widget.initialIndex);
+    });
   }
 
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  void _prefetchAround(int index) {
+    final urls =
+        widget.urls.map((u) => u.trim()).where((u) => u.isNotEmpty).toList();
+    if (urls.isEmpty) return;
+    final candidates = <int>{
+      index.clamp(0, urls.length - 1),
+      (index - 1).clamp(0, urls.length - 1),
+      (index + 1).clamp(0, urls.length - 1),
+    };
+    for (final i in candidates) {
+      unawaited(prefetchDiskCachedArtworkImage(urls[i]));
+    }
   }
 
   @override
@@ -221,16 +261,18 @@ class _ArtworkLightboxDialogState extends State<_ArtworkLightboxDialog> {
           PageView.builder(
             controller: _controller,
             itemCount: urls.length,
+            onPageChanged: _prefetchAround,
             itemBuilder: (context, idx) {
               final url = urls[idx];
               return InteractiveViewer(
                 minScale: 0.8,
                 maxScale: 4,
                 child: Center(
-                  child: Image.network(
-                    url,
+                  child: _DiskCachedArtworkImage(
+                    url: url,
                     fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    showProgress: true,
+                    errorIconColor: scheme.outline.withValues(alpha: 0.8),
                   ),
                 ),
               );
@@ -254,6 +296,30 @@ class _ArtworkLightboxDialogState extends State<_ArtworkLightboxDialog> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _DiskCachedArtworkImage extends StatelessWidget {
+  const _DiskCachedArtworkImage({
+    required this.url,
+    required this.fit,
+    required this.showProgress,
+    required this.errorIconColor,
+  });
+
+  final String url;
+  final BoxFit fit;
+  final bool showProgress;
+  final Color errorIconColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return DiskCachedArtworkImage(
+      url: url,
+      fit: fit,
+      showProgress: showProgress,
+      errorIconColor: errorIconColor,
     );
   }
 }
