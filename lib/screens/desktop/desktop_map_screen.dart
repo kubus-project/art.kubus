@@ -3,7 +3,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' as ml;
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
@@ -108,7 +107,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   String? _selectedMarkerId;
   ArtMarker? _selectedMarkerData;
   DateTime? _selectedMarkerAt;
-  String? _selectedMarkerViewportSignature;
   _MarkerOverlayMode _markerOverlayMode = _MarkerOverlayMode.anchored;
   bool _didOpenInitialMarker = false;
   bool _showFiltersPanel = false;
@@ -596,14 +594,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     setState(fn);
   }
 
-  Size? _mapViewportSize() {
-    final context = _mapViewKey.currentContext;
-    final renderObject = context?.findRenderObject();
-    if (renderObject is RenderBox && renderObject.hasSize) {
-      return renderObject.size;
-    }
-    return null;
-  }
 
   int _clusterGridLevelForZoom(double zoom) {
     final double targetSpacingPx =
@@ -864,8 +854,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         _artMarkers.where((m) => m.id == markerId).toList(growable: false);
     if (existing.isNotEmpty) {
       _moveCamera(existing.first.position, math.max(_effectiveZoom, 15));
-      _handleMarkerTap(existing.first,
-          overlayMode: _MarkerOverlayMode.centered);
+      _handleMarkerTap(existing.first);
       return;
     }
 
@@ -879,7 +868,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         _artMarkers.add(marker);
       });
       _moveCamera(marker.position, math.max(_effectiveZoom, 15));
-      _handleMarkerTap(marker, overlayMode: _MarkerOverlayMode.centered);
+      _handleMarkerTap(marker);
     } catch (_) {
       // Best-effort: keep user on map if marker fetch fails.
     }
@@ -1341,7 +1330,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         _selectedMarkerId = null;
         _selectedMarkerData = null;
         _selectedMarkerAt = null;
-        _selectedMarkerViewportSignature = null;
       });
       unawaited(_syncMapMarkers(themeProvider: themeProvider));
       unawaited(_syncPendingMarker(themeProvider: themeProvider));
@@ -1418,7 +1406,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           _selectedMarkerId = null;
           _selectedMarkerData = null;
           _selectedMarkerAt = null;
-          _selectedMarkerViewportSignature = null;
         });
         unawaited(_syncMapMarkers(themeProvider: themeProvider));
         unawaited(_syncPendingMarker(themeProvider: themeProvider));
@@ -2135,89 +2122,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             'DesktopMapScreen: _moveCamera animateCamera stack: $st');
       }
     }
-  }
-
-  Future<void> _focusMarkerWithCardOffset(
-    LatLng markerPosition, {
-    required double targetZoom,
-    double desiredMarkerYFraction = 2 / 3,
-    required double minMarkerY,
-  }) async {
-    final controller = _mapController;
-    if (!_mapReady || controller == null) return;
-    final fallbackSize = MediaQuery.of(context).size;
-
-    // Step 1: fly directly to the marker coordinate at the desired zoom.
-    await _moveCamera(markerPosition, targetZoom);
-    if (!mounted) return;
-    if (!_styleInitialized) return;
-
-    // Step 2: after the camera settles, offset the camera center so the marker
-    // ends up around 2/3 down the viewport (below the floating card).
-    await SchedulerBinding.instance.endOfFrame;
-    final size = _mapViewportSize() ?? fallbackSize;
-
-    final desiredY = math
-        .max(size.height * desiredMarkerYFraction, minMarkerY)
-        .clamp(0.0, size.height)
-        .toDouble();
-    final dy = desiredY - (size.height / 2);
-    if (dy.abs() < 1.0) return;
-
-    try {
-      final screenTarget = math.Point<double>(
-        size.width / 2,
-        (size.height / 2) - dy,
-      );
-      final center = await controller.toLatLng(screenTarget);
-      if (!mounted) return;
-      _programmaticCameraMove = true;
-      await controller.animateCamera(
-        ml.CameraUpdate.newCameraPosition(
-          ml.CameraPosition(
-            target: center,
-            zoom: targetZoom,
-            bearing: _lastBearing,
-            tilt: _isometricViewEnabled &&
-                    AppConfig.isFeatureEnabled('mapIsometricView')
-                ? 54.736
-                : 0.0,
-          ),
-        ),
-        duration: const Duration(milliseconds: 260),
-      );
-    } catch (_) {
-      // Best-effort: projection may fail during style swaps.
-    }
-  }
-
-  void _scheduleEnsureMarkerOverlayInView({
-    required ArtMarker marker,
-    required double overlayHeight,
-  }) {
-    final screen = MediaQuery.of(context);
-    final topSafe = screen.padding.top + 12;
-    final size = _mapViewportSize() ?? screen.size;
-
-    final double minMarkerY = (topSafe + overlayHeight + 24)
-        .clamp(0.0, size.height)
-        .toDouble();
-
-    final signature =
-        '${marker.id}|${overlayHeight.round()}|${_cameraZoom.toStringAsFixed(2)}|${_lastBearing.toStringAsFixed(3)}|${minMarkerY.round()}';
-    if (signature == _selectedMarkerViewportSignature) return;
-    _selectedMarkerViewportSignature = signature;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (_selectedMarkerId != marker.id) return;
-      final targetZoom = math.max(_cameraZoom, 15.0);
-      unawaited(_focusMarkerWithCardOffset(
-        marker.position,
-        targetZoom: targetZoom,
-        minMarkerY: minMarkerY,
-      ));
-    });
   }
 
   @override
@@ -4749,8 +4653,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                                     if (marker != null) {
                                       _handleMarkerTap(
                                         marker,
-                                        overlayMode:
-                                            _MarkerOverlayMode.centered,
                                       );
                                     } else {
                                       unawaited(_selectArtwork(
@@ -5518,13 +5420,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         );
       }
     }
-    // Desktop UX: focus the marker so the floating overlay composition stays
-    // in view (marker visible below the card).
+    // Desktop UX: open the marker overlay anchored above the marker.
     setState(() {
       _selectedMarkerId = marker.id;
       _selectedMarkerData = marker;
       _selectedMarkerAt = DateTime.now();
-      _selectedMarkerViewportSignature = null;
       _markerOverlayMode = overlayMode;
       _selectedMarkerAnchor = null;
       _pendingMarkerLocation = null;
@@ -5609,7 +5509,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           _selectedMarkerId = null;
           _selectedMarkerData = null;
           _selectedMarkerAt = null;
-          _selectedMarkerViewportSignature = null;
           _selectedMarkerAnchor = null;
         }
       });
@@ -5622,7 +5521,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _selectedMarkerId = null;
       _selectedMarkerData = null;
       _selectedMarkerAt = null;
-      _selectedMarkerViewportSignature = null;
       _selectedMarkerAnchor = null;
     });
     _pressedClearTimer?.cancel();
@@ -6440,13 +6338,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             .toDouble();
         final double estimatedCardHeight = math.min(360.0, maxCardHeight);
 
-        if (_selectedMarkerViewportSignature == null) {
-          _scheduleEnsureMarkerOverlayInView(
-            marker: marker,
-            overlayHeight: estimatedCardHeight,
-          );
-        }
-
         // Center horizontally around anchor, clamped to viewport
         double left = anchor.dx - (cardWidth / 2);
         left = left.clamp(padding, constraints.maxWidth - cardWidth - padding);
@@ -6457,14 +6348,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         final spaceAbove = anchor.dy - topSafe - verticalOffset;
 
         // Position above marker; if not enough space, keep within safe area
-        // and nudge the camera down so the marker remains visible below.
+        // and keep within safe area.
         double top = anchor.dy - estimatedCardHeight - verticalOffset;
         if (top < topSafe) {
           top = topSafe;
-          _scheduleEnsureMarkerOverlayInView(
-            marker: marker,
-            overlayHeight: estimatedCardHeight,
-          );
         }
 
         // Final clamp to ensure card never goes off-screen

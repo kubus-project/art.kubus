@@ -17,6 +17,8 @@ import '../../../providers/artwork_drafts_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/tile_providers.dart';
 import '../../../providers/web3provider.dart';
+import '../../../models/collectible.dart';
+import '../../../services/nft_minting_service.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/maplibre_style_utils.dart';
 import '../../../utils/wallet_utils.dart';
@@ -27,11 +29,13 @@ import 'artwork_ar_manager_screen.dart';
 class ArtworkCreatorScreen extends StatefulWidget {
   final String draftId;
   final VoidCallback? onCreated;
+  final bool showAppBar;
 
   const ArtworkCreatorScreen({
     super.key,
     required this.draftId,
     this.onCreated,
+    this.showAppBar = true,
   });
 
   @override
@@ -49,6 +53,14 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
   late final TextEditingController _lngController;
   late final TextEditingController _locationNameController;
   late final TextEditingController _poapRewardAmountController;
+  late final TextEditingController _poapTitleController;
+  late final TextEditingController _poapDescriptionController;
+  late final TextEditingController _poapClaimDaysController;
+  late final TextEditingController _nftSeriesNameController;
+  late final TextEditingController _nftSeriesDescriptionController;
+  late final TextEditingController _nftSupplyController;
+  late final TextEditingController _nftMintPriceController;
+  late final TextEditingController _nftRoyaltyController;
 
   ml.MapLibreMapController? _mapController;
   bool _styleReady = false;
@@ -69,6 +81,14 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     _lngController = TextEditingController();
     _locationNameController = TextEditingController();
     _poapRewardAmountController = TextEditingController(text: '1');
+    _poapTitleController = TextEditingController();
+    _poapDescriptionController = TextEditingController();
+    _poapClaimDaysController = TextEditingController(text: '7');
+    _nftSeriesNameController = TextEditingController();
+    _nftSeriesDescriptionController = TextEditingController();
+    _nftSupplyController = TextEditingController(text: '100');
+    _nftMintPriceController = TextEditingController(text: '50');
+    _nftRoyaltyController = TextEditingController(text: '10');
   }
 
   @override
@@ -77,6 +97,14 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     _lngController.dispose();
     _locationNameController.dispose();
     _poapRewardAmountController.dispose();
+    _poapTitleController.dispose();
+    _poapDescriptionController.dispose();
+    _poapClaimDaysController.dispose();
+    _nftSeriesNameController.dispose();
+    _nftSeriesDescriptionController.dispose();
+    _nftSupplyController.dispose();
+    _nftMintPriceController.dispose();
+    _nftRoyaltyController.dispose();
     super.dispose();
   }
 
@@ -112,6 +140,14 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
       _location = LatLng(lat, lng);
     }
     _poapRewardAmountController.text = draft.poapRewardAmount.toString();
+    _poapTitleController.text = draft.poapTitle;
+    _poapDescriptionController.text = draft.poapDescription;
+    _poapClaimDaysController.text = draft.poapClaimDurationDays.toString();
+    _nftSeriesNameController.text = draft.nftSeriesName;
+    _nftSeriesDescriptionController.text = draft.nftSeriesDescription;
+    _nftSupplyController.text = draft.nftTotalSupply.toString();
+    _nftMintPriceController.text = draft.nftMintPrice.toStringAsFixed(0);
+    _nftRoyaltyController.text = draft.nftRoyaltyPercent.toStringAsFixed(0);
   }
 
   void _updateFeeEstimateIfNeeded(
@@ -261,6 +297,48 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     );
   }
 
+  Future<void> _pickPoapImage(ArtworkDraftsProvider drafts) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
+
+    final picked = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      withData: true,
+    );
+    final file = picked?.files.single;
+    final bytes = file?.bytes;
+    if (!mounted) return;
+    if (bytes == null || bytes.isEmpty) {
+      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commonActionFailedToast)));
+      return;
+    }
+
+    final decoded = await _decodeImage(bytes);
+    if (!mounted) return;
+    if (decoded == null) {
+      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commonActionFailedToast)));
+      return;
+    }
+
+    final width = decoded.width;
+    final height = decoded.height;
+    const minSide = 256;
+    if (width < minSide || height < minSide) {
+      messenger.showKubusSnackBar(
+        const SnackBar(content: Text('Badge image is too small. Minimum is 256px on the shortest side.')),
+      );
+      return;
+    }
+
+    drafts.setPoapImage(
+      draftId: widget.draftId,
+      bytes: bytes,
+      fileName: (file?.name ?? '').trim().isEmpty ? 'badge.png' : file!.name,
+      width: width,
+      height: height,
+    );
+  }
+
   Future<void> _pickGallery(ArtworkDraftsProvider drafts) async {
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context)!;
@@ -308,12 +386,27 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
   bool _validateAndSaveLocation(ArtworkDraftsProvider drafts) {
     final ok = _locationFormKey.currentState?.validate() == true;
     if (!ok) return false;
-    final lat = double.tryParse(_latController.text.trim());
-    final lng = double.tryParse(_lngController.text.trim());
+    final latText = _latController.text.trim();
+    final lngText = _lngController.text.trim();
+    final nameText = _locationNameController.text.trim();
+
+    // Location is optional: allow skipping by leaving everything empty.
+    if (latText.isEmpty && lngText.isEmpty && nameText.isEmpty) {
+      drafts.updateLocation(
+        draftId: widget.draftId,
+        locationName: null,
+        latitude: null,
+        longitude: null,
+      );
+      return true;
+    }
+
+    final lat = double.tryParse(latText);
+    final lng = double.tryParse(lngText);
     if (lat == null || lng == null || !_validateLatLng(lat, lng)) return false;
     drafts.updateLocation(
       draftId: widget.draftId,
-      locationName: _locationNameController.text.trim().isEmpty ? null : _locationNameController.text.trim(),
+      locationName: nameText.isEmpty ? null : nameText,
       latitude: lat,
       longitude: lng,
     );
@@ -341,6 +434,92 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
       return;
     }
     setState(() => _createdArtwork = created);
+  }
+
+  Future<void> _mintNftForCreated({
+    required ArtworkDraftState draft,
+  }) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    final wallet = _resolveWalletAddress(context);
+    final artwork = _createdArtwork;
+    if (artwork == null) return;
+
+    if (wallet.isEmpty) {
+      messenger.showKubusSnackBar(
+        const SnackBar(content: Text('Please connect your wallet first.')),
+      );
+      return;
+    }
+
+    final seriesName = draft.nftSeriesName.trim().isNotEmpty
+        ? draft.nftSeriesName.trim()
+        : (draft.title.trim().isNotEmpty ? draft.title.trim() : artwork.title);
+    final seriesDescription = draft.nftSeriesDescription.trim().isNotEmpty
+        ? draft.nftSeriesDescription.trim()
+        : (draft.description.trim().isNotEmpty ? draft.description.trim() : artwork.description);
+
+    final supply = draft.nftTotalSupply < 1 ? 1 : draft.nftTotalSupply;
+    final double mintPrice = draft.nftMintPrice < 0 ? 0.0 : draft.nftMintPrice;
+    final royalty = draft.nftRoyaltyPercent.clamp(0, 100).toDouble();
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: scheme.surface,
+        title: Text(
+          'Minting NFT…',
+          style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+        ),
+        content: Row(
+          children: const [
+            SizedBox(width: 18, height: 18, child: InlineLoading(shape: BoxShape.circle, tileSize: 3.5)),
+            SizedBox(width: 12),
+            Expanded(child: Text('This may take a few moments.')),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final result = await NFTMintingService().mintNFT(
+        artworkId: artwork.id,
+        artworkTitle: artwork.title,
+        artistName: artwork.artist,
+        ownerAddress: wallet,
+        imageUrl: artwork.imageUrl,
+        model3DURL: artwork.model3DURL,
+        metadata: artwork.metadata,
+        seriesName: seriesName,
+        seriesDescription: seriesDescription,
+        totalSupply: supply,
+        rarity: CollectibleRarity.rare,
+        type: CollectibleType.nft,
+        mintPrice: mintPrice,
+        royaltyPercentage: royalty,
+        requiresARInteraction: artwork.arEnabled,
+      );
+
+      if (!mounted) return;
+      Navigator.of(context).pop(); // progress dialog
+
+      if (result.success) {
+        messenger.showKubusSnackBar(
+          const SnackBar(content: Text('NFT minted successfully.')),
+        );
+      } else {
+        messenger.showKubusSnackBar(
+          SnackBar(content: Text(result.error ?? 'Failed to mint NFT.')),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      Navigator.of(context).pop(); // progress dialog
+      messenger.showKubusSnackBar(
+        const SnackBar(content: Text('Failed to mint NFT. Please try again.')),
+      );
+    }
   }
 
   Widget _stepHeader(String title, {String? subtitle}) {
@@ -505,7 +684,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: draft.category,
+              initialValue: draft.category,
               decoration: const InputDecoration(labelText: 'Category'),
               items: const [
                 DropdownMenuItem(value: 'Digital Art', child: Text('Digital Art')),
@@ -819,6 +998,126 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               ],
             ),
             children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: SwitchListTile.adaptive(
+                  value: draft.mintNftAfterPublish,
+                  onChanged: (AppConfig.isFeatureEnabled('web3') &&
+                          AppConfig.isFeatureEnabled('nftMinting') &&
+                          !draft.isSubmitting)
+                      ? (v) => drafts.updateOptionalFeatures(
+                            draftId: widget.draftId,
+                            mintNftAfterPublish: v,
+                          )
+                      : null,
+                  title: Row(
+                    children: [
+                      const Expanded(child: Text('Mint as NFT')),
+                      _infoIcon('Optional. Create an NFT series for collectors after publishing.'),
+                    ],
+                  ),
+                  subtitle: Text(
+                    (AppConfig.isFeatureEnabled('web3') && AppConfig.isFeatureEnabled('nftMinting'))
+                        ? 'You can mint after publishing (wallet required).'
+                        : 'NFT minting is currently unavailable.',
+                  ),
+                  contentPadding: EdgeInsets.zero,
+                  activeThumbColor: accent,
+                  activeTrackColor: accent.withValues(alpha: 0.35),
+                ),
+              ),
+              if (draft.mintNftAfterPublish)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: Column(
+                    children: [
+                      TextFormField(
+                        controller: _nftSeriesNameController,
+                        decoration: InputDecoration(
+                          labelText: 'Series name',
+                          hintText: draft.title.trim().isEmpty ? 'Defaults to artwork title' : draft.title.trim(),
+                        ),
+                        onChanged: (v) => drafts.updateOptionalFeatures(draftId: widget.draftId, nftSeriesName: v),
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _nftSeriesDescriptionController,
+                        decoration: const InputDecoration(
+                          labelText: 'Series description',
+                          hintText: 'Defaults to artwork description',
+                        ),
+                        maxLines: 3,
+                        onChanged: (v) => drafts.updateOptionalFeatures(draftId: widget.draftId, nftSeriesDescription: v),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _nftSupplyController,
+                              decoration: InputDecoration(
+                                labelText: 'Supply',
+                                suffixIcon: Padding(
+                                  padding: const EdgeInsets.only(right: 12),
+                                  child: _infoIcon('Total number of collectibles in the series.'),
+                                ),
+                                suffixIconConstraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                              ),
+                              keyboardType: TextInputType.number,
+                              onChanged: (v) {
+                                final parsed = int.tryParse(v.trim());
+                                if (parsed != null) {
+                                  drafts.updateOptionalFeatures(draftId: widget.draftId, nftTotalSupply: parsed);
+                                }
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextFormField(
+                              controller: _nftMintPriceController,
+                              decoration: InputDecoration(
+                                labelText: 'Mint price (KUB8)',
+                                suffixIcon: Padding(
+                                  padding: const EdgeInsets.only(right: 12),
+                                  child: _infoIcon('Price to mint one collectible from the series.'),
+                                ),
+                                suffixIconConstraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                              ),
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              onChanged: (v) {
+                                final parsed = double.tryParse(v.trim());
+                                if (parsed != null) {
+                                  drafts.updateOptionalFeatures(draftId: widget.draftId, nftMintPrice: parsed);
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _nftRoyaltyController,
+                        decoration: InputDecoration(
+                          labelText: 'Artist fee (royalty %)',
+                          suffixIcon: Padding(
+                            padding: const EdgeInsets.only(right: 12),
+                            child: _infoIcon('Royalty on secondary sales (0–100%).'),
+                          ),
+                          suffixIconConstraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                        ),
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        onChanged: (v) {
+                          final parsed = double.tryParse(v.trim());
+                          if (parsed != null) {
+                            drafts.updateOptionalFeatures(draftId: widget.draftId, nftRoyaltyPercent: parsed);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              const Divider(height: 1),
               if (!AppConfig.isFeatureEnabled('attendance'))
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -828,19 +1127,32 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                   ),
                 )
               else ...[
-                RadioListTile<ArtworkPoapMode>(
-                  value: ArtworkPoapMode.none,
+                RadioGroup<ArtworkPoapMode>(
                   groupValue: draft.poapMode,
-                  onChanged: draft.isSubmitting ? null : (v) => drafts.updateOptionalFeatures(draftId: widget.draftId, poapMode: v),
-                  title: const Text('No badge'),
-                  subtitle: const Text('Publish without attendance rewards.'),
-                ),
-                RadioListTile<ArtworkPoapMode>(
-                  value: ArtworkPoapMode.existingPoap,
-                  groupValue: draft.poapMode,
-                  onChanged: draft.isSubmitting ? null : (v) => drafts.updateOptionalFeatures(draftId: widget.draftId, poapMode: v),
-                  title: const Text('Use existing POAP'),
-                  subtitle: const Text('Paste an Event ID or claim link from an existing POAP drop.'),
+                  onChanged: (value) {
+                    if (draft.isSubmitting) return;
+                    if (value == null) return;
+                    drafts.updateOptionalFeatures(draftId: widget.draftId, poapMode: value);
+                  },
+                  child: const Column(
+                    children: [
+                      RadioListTile<ArtworkPoapMode>(
+                        value: ArtworkPoapMode.none,
+                        title: Text('No badge'),
+                        subtitle: Text('Publish without attendance rewards.'),
+                      ),
+                      RadioListTile<ArtworkPoapMode>(
+                        value: ArtworkPoapMode.existingPoap,
+                        title: Text('Use existing POAP'),
+                        subtitle: Text('Paste an Event ID or claim link from an existing POAP drop.'),
+                      ),
+                      RadioListTile<ArtworkPoapMode>(
+                        value: ArtworkPoapMode.kubusPoap,
+                        title: Text('Create with Kubus'),
+                        subtitle: Text('Kubus generates a simple claim link automatically (no POAP setup required).'),
+                      ),
+                    ],
+                  ),
                 ),
                 if (draft.poapMode == ArtworkPoapMode.existingPoap) ...[
                   Padding(
@@ -876,13 +1188,6 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                     ),
                   ),
                 ],
-                RadioListTile<ArtworkPoapMode>(
-                  value: ArtworkPoapMode.kubusPoap,
-                  groupValue: draft.poapMode,
-                  onChanged: draft.isSubmitting ? null : (v) => drafts.updateOptionalFeatures(draftId: widget.draftId, poapMode: v),
-                  title: const Text('Create with Kubus'),
-                  subtitle: const Text('Kubus generates a simple claim link automatically (no POAP setup required).'),
-                ),
                 if (draft.poapMode == ArtworkPoapMode.kubusPoap) ...[
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -906,6 +1211,111 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                               drafts.updateOptionalFeatures(draftId: widget.draftId, poapRewardAmount: parsed);
                             }
                           },
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _poapClaimDaysController,
+                          decoration: InputDecoration(
+                            labelText: 'Claim window (days)',
+                            suffixIcon: Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                              child: _infoIcon('How long the claim link stays active after publishing.'),
+                            ),
+                            suffixIconConstraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                          ),
+                          keyboardType: TextInputType.number,
+                          onChanged: (v) {
+                            final parsed = int.tryParse(v.trim());
+                            if (parsed != null) {
+                              drafts.updateOptionalFeatures(
+                                draftId: widget.draftId,
+                                poapClaimDurationDays: parsed,
+                              );
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _poapTitleController,
+                          decoration: InputDecoration(
+                            labelText: 'Badge title',
+                            hintText: draft.title.trim().isEmpty ? 'Defaults to your artwork title' : 'Defaults to: ${draft.title.trim()}',
+                            suffixIcon: Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                              child: _infoIcon('Shown on the badge and claim page. Leave empty to use your artwork title.'),
+                            ),
+                            suffixIconConstraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                          ),
+                          onChanged: (v) => drafts.updateOptionalFeatures(draftId: widget.draftId, poapTitle: v),
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _poapDescriptionController,
+                          decoration: InputDecoration(
+                            labelText: 'Badge description',
+                            hintText: 'Defaults to your artwork description',
+                            suffixIcon: Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                              child: _infoIcon('A short explanation for visitors. Leave empty to use your artwork description.'),
+                            ),
+                            suffixIconConstraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                          ),
+                          maxLines: 3,
+                          onChanged: (v) => drafts.updateOptionalFeatures(draftId: widget.draftId, poapDescription: v),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 64,
+                              height: 64,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: scheme.outline.withValues(alpha: 0.25)),
+                                color: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: (draft.poapImageBytes != null && draft.poapImageBytes!.isNotEmpty)
+                                    ? Image.memory(draft.poapImageBytes!, fit: BoxFit.cover)
+                                    : Icon(Icons.badge_outlined, color: scheme.onSurfaceVariant),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Badge image', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    draft.poapImageBytes == null
+                                        ? 'Uses your artwork cover by default.'
+                                        : (draft.poapImageFileName ?? 'Custom image'),
+                                    style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.75)),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: [
+                                      OutlinedButton.icon(
+                                        onPressed: draft.isSubmitting ? null : () => unawaited(_pickPoapImage(drafts)),
+                                        icon: const Icon(Icons.upload_file_outlined, size: 18),
+                                        label: const Text('Upload'),
+                                      ),
+                                      if (draft.poapImageBytes != null)
+                                        TextButton(
+                                          onPressed: draft.isSubmitting ? null : () => drafts.clearPoapImage(widget.draftId),
+                                          child: const Text('Use cover instead'),
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 8),
                         Text(
@@ -1057,6 +1467,16 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                 icon: const Icon(Icons.qr_code_2),
                 label: const Text('Create / Manage AR'),
               ),
+            if (draft.mintNftAfterPublish &&
+                AppConfig.isFeatureEnabled('web3') &&
+                AppConfig.isFeatureEnabled('nftMinting')) ...[
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: () => unawaited(_mintNftForCreated(draft: draft)),
+                icon: const Icon(Icons.auto_awesome_outlined),
+                label: const Text('Mint NFT series'),
+              ),
+            ],
             const SizedBox(height: 10),
             SizedBox(
               width: double.infinity,
@@ -1115,7 +1535,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                   style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.7)),
                 ),
                 Text(
-                  'Location: ${_latController.text.trim()}, ${_lngController.text.trim()}',
+                  'Location: ${(_latController.text.trim().isEmpty || _lngController.text.trim().isEmpty) ? 'Not set' : '${_latController.text.trim()}, ${_lngController.text.trim()}'}',
                   style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.7)),
                 ),
                 Text(
@@ -1181,7 +1601,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
         final draft = drafts.getDraft(widget.draftId);
         if (draft == null) {
           return Scaffold(
-            appBar: AppBar(title: Text(l10n.artistStudioCreateOptionArtworkTitle)),
+            appBar: widget.showAppBar ? AppBar(title: Text(l10n.artistStudioCreateOptionArtworkTitle)) : null,
             body: Center(child: Text(l10n.commonSomethingWentWrong)),
           );
         }
@@ -1226,14 +1646,14 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
 
         return PopScope(
           canPop: !draft.isSubmitting,
-          onPopInvokedWithResult: (didPop, _result) {
+          onPopInvokedWithResult: (didPop, result) {
             if (!didPop) return;
             try {
               drafts.disposeDraft(widget.draftId);
             } catch (_) {}
           },
           child: Scaffold(
-            appBar: AppBar(title: Text(l10n.artistStudioCreateOptionArtworkTitle)),
+            appBar: widget.showAppBar ? AppBar(title: Text(l10n.artistStudioCreateOptionArtworkTitle)) : null,
             body: Stepper(
               currentStep: currentStep,
               steps: steps,

@@ -286,6 +286,7 @@ class AppConfig {
       case 'googleOneTapWeb': return enableGoogleOneTapWeb;
       case 'multiAuth': return enableMultiAuthEntry;
       case 'marketplace': return enableMarketplace;
+      case 'nftMinting': return enableNFTMinting;
       case 'events': return enableEvents;
       case 'exhibitions': return enableExhibitions;
       case 'collections': return enableCollections;

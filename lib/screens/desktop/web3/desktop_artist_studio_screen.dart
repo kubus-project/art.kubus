@@ -173,7 +173,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
       shellScope.pushScreen(
         DesktopSubScreen(
           title: l10n.artistStudioCreateOptionArtworkTitle,
-          child: ArtworkCreator(draftId: draftId),
+          child: ArtworkCreator(draftId: draftId, showAppBar: false),
         ),
       );
     }
@@ -390,6 +390,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                     title: l10n.desktopArtistStudioQuickActionCreateArtworkTitle,
                     child: ArtworkCreator(
                       draftId: context.read<ArtworkDraftsProvider>().createDraft(),
+                      showAppBar: false,
                     ),
                   ),
                 );
