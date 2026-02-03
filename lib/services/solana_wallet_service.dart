@@ -54,7 +54,7 @@ class SolanaWalletService {
     },
     WalletUtils.canonical(ApiKeys.kub8MintAddress): {
       'symbol': 'KUB8',
-      'name': 'Kubus Governance Token',
+      'name': 'kubus Governance Token',
       // Intentionally omit a static logo URL so we always resolve imagery from
       // on-chain/off-chain metadata (Metaplex) rather than hitting backend assets.
       'decimals': ApiKeys.kub8Decimals,
@@ -733,7 +733,7 @@ class SolanaWalletService {
     }
 
     final name = _truncateMetadataField(
-      metadata['name']?.toString().trim() ?? 'Kubus Collectible',
+      metadata['name']?.toString().trim() ?? 'kubus Collectible',
       32,
     );
     final symbol = _truncateMetadataField(

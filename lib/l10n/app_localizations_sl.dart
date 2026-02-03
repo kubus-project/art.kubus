@@ -4344,7 +4344,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String sendTokenSummaryFeesLabel(Object percent) {
-    return 'Kubus provizije (~$percent%)';
+    return 'kubus provizije (~$percent%)';
   }
 
   @override

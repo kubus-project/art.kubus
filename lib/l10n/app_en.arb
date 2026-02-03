@@ -2041,7 +2041,7 @@
   },
   "sendTokenTransactionSummaryTitle": "Transaction summary",
   "sendTokenSummaryAmountLabel": "Amount",
-  "sendTokenSummaryFeesLabel": "Kubus fees (~{percent}%)",
+  "sendTokenSummaryFeesLabel": "kubus fees (~{percent}%)",
   "@sendTokenSummaryFeesLabel": {
     "placeholders": {
       "percent": {}
