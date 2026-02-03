@@ -130,7 +130,17 @@ class MapMarkerStyleConfig {
   /// Vertical offset (in "ems") for the floating icon symbol in 3D mode.
   ///
   /// This is multiplied by the icon size, so it scales with zoom automatically.
-  static const List<Object> cubeFloatingIconOffsetEm = <Object>[0.0, -1.25];
+  static const Duration cubeIconBobPeriod = Duration(milliseconds: 2400);
+  static const double cubeIconBobAmplitudeEm = 0.12;
+  static const double cubeFloatingIconBaseOffsetYEm = -1.85;
+
+  static const List<Object> cubeFloatingIconOffsetEm = <Object>[
+    0.0,
+    cubeFloatingIconBaseOffsetYEm,
+  ];
+
+  static List<Object> cubeFloatingIconOffsetEmWithBob(double bobOffsetEm) =>
+      <Object>[0.0, cubeFloatingIconBaseOffsetYEm + bobOffsetEm];
 
   static double cubeSpinDegreesPerSecond() =>
       360.0 / (cubeIconSpinPeriod.inMilliseconds / 1000.0);
