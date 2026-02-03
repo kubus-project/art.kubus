@@ -1,6 +1,5 @@
-import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/config.dart';
 import 'backend_api_service.dart';
 import 'push_notification_service.dart';
 import '../models/collectible.dart';
@@ -347,7 +346,9 @@ class AchievementService {
     Map<String, dynamic>? data,
   }) async {
     try {
-      debugPrint('AchievementService: Checking achievements for action: $action');
+      AppConfig.debugPrint(
+        'AchievementService: checking achievements for action: $action',
+      );
 
       // Map actions to achievement checks
       switch (action) {
@@ -386,7 +387,7 @@ class AchievementService {
           break;
       }
     } catch (e) {
-      debugPrint('AchievementService: Error checking achievements: $e');
+      AppConfig.debugPrint('AchievementService: checkAchievements failed: $e');
     }
   }
 
@@ -536,29 +537,12 @@ class AchievementService {
   }) async {
     try {
       final achievement = achievementDefinitions[type]!;
-      
-      // Check if already unlocked
-      if (await _isAchievementUnlocked(userId, achievement.id)) {
-        debugPrint('Achievement ${achievement.id} already unlocked');
-        return;
-      }
 
       // Unlock achievement in backend
       await _backendApi.unlockAchievement(
         achievementType: achievement.id,
         data: eventData ?? {},
       );
-
-      // Award tokens (local balance; on-chain wiring can be layered later)
-      await _awardTokens(userId, achievement.tokenReward);
-
-      // If it's a POAP, mint POAP NFT
-      if (achievement.isPOAP) {
-        await _mintPOAP(userId, achievement, eventData);
-      }
-
-      // Save achievement locally
-      await _saveAchievementLocally(userId, achievement.id);
 
       // Show notification
       await _notificationService.showAchievementNotification(
@@ -568,113 +552,36 @@ class AchievementService {
         rewardTokens: achievement.tokenReward,
       );
 
-      debugPrint('Achievement unlocked: ${achievement.title} (+${achievement.tokenReward} KUB8)');
+      AppConfig.debugPrint(
+        'AchievementService: unlocked ${achievement.id} (+${achievement.tokenReward} KUB8)',
+      );
     } catch (e) {
-      debugPrint('Error unlocking achievement: $e');
-    }
-  }
-
-  /// Award KUB8 tokens to user.
-  Future<void> _awardTokens(String userId, int amount) async {
-    try {
-      if (amount <= 0) return;
-      final prefs = await SharedPreferences.getInstance();
-      final currentBalance = prefs.getInt('kub8_balance') ?? 0;
-      final newBalance = currentBalance + amount;
-      await prefs.setInt('kub8_balance', newBalance);
-      
-      debugPrint('AchievementService: local KUB8 balance $currentBalance -> $newBalance');
-    } catch (e) {
-      debugPrint('AchievementService: failed to update local KUB8 balance: $e');
-    }
-  }
-
-  /// Mint POAP (Proof of Attendance Protocol) NFT
-  Future<void> _mintPOAP(
-    String userId,
-    AchievementDefinition achievement,
-    Map<String, dynamic>? eventData,
-  ) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final walletAddress = prefs.getString('wallet_address') ?? '';
-
-      final poapKey = 'poap_collectibles_$userId';
-      final existingRaw = prefs.getStringList(poapKey) ?? <String>[];
-
-      bool alreadyMinted = false;
-      for (final item in existingRaw) {
-        try {
-          final decoded = jsonDecode(item) as Map<String, dynamic>;
-          if (decoded['achievementId'] == achievement.id) {
-            alreadyMinted = true;
-            break;
-          }
-        } catch (_) {}
-      }
-      if (alreadyMinted) return;
-
-      final entry = <String, dynamic>{
-        'achievementId': achievement.id,
-        'title': achievement.title,
-        'description': achievement.description,
-        'walletAddress': walletAddress,
-        'event': eventData?['eventName'] ?? eventData?['event'] ?? 'Event',
-        'date': eventData?['eventDate'] ?? DateTime.now().toIso8601String(),
-        'location': eventData?['location'] ?? 'Virtual',
-        'soulbound': true,
-        'mintedAt': DateTime.now().toIso8601String(),
-      };
-
-      existingRaw.insert(0, jsonEncode(entry));
-      if (existingRaw.length > 50) {
-        existingRaw.removeRange(50, existingRaw.length);
-      }
-
-      await prefs.setStringList(poapKey, existingRaw);
-    } catch (e) {
-      debugPrint('Error minting POAP: $e');
-    }
-  }
-
-  /// Check if achievement is already unlocked
-  Future<bool> _isAchievementUnlocked(String userId, String achievementId) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final unlockedAchievements = prefs.getStringList('unlocked_achievements_$userId') ?? [];
-      return unlockedAchievements.contains(achievementId);
-    } catch (e) {
-      debugPrint('Error checking achievement status: $e');
-      return false;
-    }
-  }
-
-  /// Save achievement locally
-  Future<void> _saveAchievementLocally(String userId, String achievementId) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final unlockedAchievements = prefs.getStringList('unlocked_achievements_$userId') ?? [];
-      
-      if (!unlockedAchievements.contains(achievementId)) {
-        unlockedAchievements.add(achievementId);
-        await prefs.setStringList('unlocked_achievements_$userId', unlockedAchievements);
-      }
-    } catch (e) {
-      debugPrint('Error saving achievement: $e');
+      AppConfig.debugPrint('AchievementService: unlock failed: $e');
     }
   }
 
   /// Get user's unlocked achievements
   Future<List<AchievementDefinition>> getUnlockedAchievements(String userId) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final unlockedIds = prefs.getStringList('unlocked_achievements_$userId') ?? [];
-      
+      final data = await _backendApi.getUserAchievements(userId);
+      final unlockedRaw = data['unlocked'] as List<dynamic>? ?? const <dynamic>[];
+      final unlockedIds = <String>{};
+      for (final item in unlockedRaw) {
+        if (item is String) {
+          unlockedIds.add(item);
+        } else if (item is Map) {
+          final id = (item['achievementId'] ?? item['achievement_id'] ?? item['id'])
+              ?.toString()
+              .trim();
+          if (id != null && id.isNotEmpty) unlockedIds.add(id);
+        }
+      }
+
       return achievementDefinitions.values
           .where((achievement) => unlockedIds.contains(achievement.id))
           .toList();
     } catch (e) {
-      debugPrint('Error getting unlocked achievements: $e');
+      AppConfig.debugPrint('AchievementService: getUnlockedAchievements failed: $e');
       return [];
     }
   }
@@ -683,9 +590,20 @@ class AchievementService {
   Future<int> getTotalEarnedTokens() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      return prefs.getInt('kub8_balance') ?? 0;
+      final wallet = (prefs.getString('wallet_address') ??
+              prefs.getString('wallet') ??
+              prefs.getString('walletAddress') ??
+              prefs.getString('user_id'))
+          ?.trim();
+      if (wallet == null || wallet.isEmpty) return 0;
+
+      final data = await _backendApi.getUserAchievements(wallet);
+      final raw = data['totalTokens'] ?? data['total_tokens'] ?? 0;
+      if (raw is int) return raw;
+      if (raw is num) return raw.toInt();
+      return int.tryParse(raw.toString()) ?? 0;
     } catch (e) {
-      debugPrint('Error getting token balance: $e');
+      AppConfig.debugPrint('AchievementService: getTotalEarnedTokens failed: $e');
       return 0;
     }
   }
@@ -707,7 +625,7 @@ class AchievementService {
       
       return progressMap;
     } catch (e) {
-      debugPrint('Error fetching achievement progress: $e');
+      AppConfig.debugPrint('AchievementService: getAchievementProgress failed: $e');
       return {};
     }
   }
@@ -717,10 +635,12 @@ class AchievementService {
     try {
       final achievementsData = await _backendApi.getAchievements();
       // Map backend data to Achievement objects if needed
-      debugPrint('Fetched ${achievementsData.length} achievements from backend');
+      AppConfig.debugPrint(
+        'AchievementService: fetched ${achievementsData.length} achievements from backend',
+      );
       return achievementDefinitions.values.toList();
     } catch (e) {
-      debugPrint('Error fetching achievements: $e');
+      AppConfig.debugPrint('AchievementService: getAllAchievements failed: $e');
       return achievementDefinitions.values.toList();
     }
   }

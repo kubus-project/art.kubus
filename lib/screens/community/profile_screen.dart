@@ -27,7 +27,8 @@ import '../activity/saved_items_screen.dart';
 import 'profile_screen_methods.dart';
 import '../activity/view_history_screen.dart';
 import '../collab/invites_inbox_screen.dart';
-import '../../models/achievements.dart';
+import '../../models/achievement_progress.dart';
+import '../../services/achievement_service.dart' as achievement_svc;
 import 'profile_edit_screen.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/user_activity_status_line.dart';
@@ -1901,156 +1902,138 @@ class _ProfileScreenState extends State<ProfileScreen>
   Widget _buildAchievementsSection() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Consumer2<TaskProvider, ConfigProvider>(
-        builder: (context, taskProvider, configProvider, child) {
+      child: Consumer<TaskProvider>(
+        builder: (context, taskProvider, child) {
           final themeProvider =
               Provider.of<ThemeProvider>(context, listen: false);
           final accent = themeProvider.accentColor;
-          if (!configProvider.useMockData) {
-            // Show real achievement data when mock data is disabled
-            final achievements = taskProvider.achievementProgress;
 
-            // Get the first 6 achievements to display
-            final displayAchievements = allAchievements.take(6).toList();
+          IconData iconFor(achievement_svc.AchievementDefinition def) {
+            if (def.isPOAP) return Icons.verified;
+            switch (def.type) {
+              case achievement_svc.AchievementType.firstDiscovery:
+              case achievement_svc.AchievementType.artExplorer:
+              case achievement_svc.AchievementType.artMaster:
+              case achievement_svc.AchievementType.artLegend:
+                return Icons.explore_outlined;
+              case achievement_svc.AchievementType.firstARView:
+              case achievement_svc.AchievementType.arEnthusiast:
+              case achievement_svc.AchievementType.arPro:
+                return Icons.view_in_ar;
+              case achievement_svc.AchievementType.firstNFTMint:
+              case achievement_svc.AchievementType.nftCollector:
+              case achievement_svc.AchievementType.nftTrader:
+                return Icons.token;
+              case achievement_svc.AchievementType.firstPost:
+              case achievement_svc.AchievementType.influencer:
+              case achievement_svc.AchievementType.communityBuilder:
+                return Icons.forum_outlined;
+              case achievement_svc.AchievementType.firstLike:
+              case achievement_svc.AchievementType.popularCreator:
+                return Icons.favorite_border;
+              case achievement_svc.AchievementType.firstComment:
+              case achievement_svc.AchievementType.commentator:
+                return Icons.chat_bubble_outline;
+              case achievement_svc.AchievementType.firstTrade:
+              case achievement_svc.AchievementType.smartTrader:
+              case achievement_svc.AchievementType.marketMaster:
+                return Icons.swap_horiz;
+              case achievement_svc.AchievementType.earlyAdopter:
+              case achievement_svc.AchievementType.betaTester:
+              case achievement_svc.AchievementType.artSupporter:
+                return Icons.auto_awesome;
+              case achievement_svc.AchievementType.eventAttendee:
+              case achievement_svc.AchievementType.galleryVisitor:
+              case achievement_svc.AchievementType.workshopParticipant:
+                return Icons.event_available;
+            }
+          }
 
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Achievements',
-                      style: GoogleFonts.inter(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onSurface,
+          final achievements = taskProvider.achievementProgress;
+          final progressById = <String, AchievementProgress>{
+            for (final progress in achievements) progress.achievementId: progress,
+          };
+          final displayAchievements = achievement_svc
+              .AchievementService.achievementDefinitions.values
+              .take(6)
+              .toList();
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Achievements',
+                    style: GoogleFonts.inter(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AchievementsPage(),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: accent.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: accent, width: 1),
+                      ),
+                      child: Text(
+                        AppLocalizations.of(context)!.commonViewAll,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: accent,
+                        ),
                       ),
                     ),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const AchievementsPage(),
-                          ),
-                        );
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: accent.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: accent, width: 1),
-                        ),
-                        child: Text(
-                          AppLocalizations.of(context)!.commonViewAll,
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: accent,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                achievements.isEmpty
-                    ? _buildEmptyStateCard(
-                        title: 'No Achievements Yet',
-                        description: 'Start exploring to unlock achievements',
-                        icon: Icons.emoji_events,
-                      )
-                    : Wrap(
-                        spacing: 12,
-                        runSpacing: 12,
-                        children: displayAchievements.map((achievement) {
-                          final progress = achievements.firstWhere(
-                            (p) => p.achievementId == achievement.id,
-                            orElse: () => AchievementProgress(
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              achievements.isEmpty
+                  ? _buildEmptyStateCard(
+                      title: 'No Achievements Yet',
+                      description: 'Start exploring to unlock achievements',
+                      icon: Icons.emoji_events,
+                    )
+                  : Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: displayAchievements.map((achievement) {
+                        final progress = progressById[achievement.id] ??
+                            AchievementProgress(
                               achievementId: achievement.id,
                               currentProgress: 0,
                               isCompleted: false,
-                            ),
-                          );
-                          return _buildAchievementBadge(
-                            achievement.title,
-                            achievement.icon,
-                            progress.isCompleted,
-                          );
-                        }).toList(),
-                      ),
-              ],
-            );
-          } else {
-            // Show mock data when mock data is enabled
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Achievements',
-                      style: GoogleFonts.inter(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const AchievementsPage(),
-                          ),
+                            );
+                        final required = achievement.requiredCount > 0
+                            ? achievement.requiredCount
+                            : 1;
+                        final unlocked = progress.isCompleted ||
+                            progress.currentProgress >= required;
+                        return _buildAchievementBadge(
+                          achievement.title,
+                          iconFor(achievement),
+                          unlocked,
                         );
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: accent.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: accent, width: 1),
-                        ),
-                        child: Text(
-                          AppLocalizations.of(context)!.commonViewAll,
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: accent,
-                          ),
-                        ),
-                      ),
+                      }).toList(),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: [
-                    _buildAchievementBadge(
-                        'First AR Explorer', Icons.visibility, true),
-                    _buildAchievementBadge(
-                        'Gallery Explorer', Icons.explore, true),
-                    _buildAchievementBadge(
-                        'Art Curator', Icons.folder_special, true),
-                    _buildAchievementBadge(
-                        'Social Butterfly', Icons.share, false),
-                    _buildAchievementBadge(
-                        'AR Master', Icons.auto_awesome, false),
-                    _buildAchievementBadge(
-                        'Art Influencer', Icons.trending_up, false),
-                  ],
-                ),
-              ],
-            );
-          }
+            ],
+          );
         },
       ),
     );

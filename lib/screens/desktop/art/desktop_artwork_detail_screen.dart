@@ -1,17 +1,22 @@
 ﻿import 'dart:convert';
+import 'dart:async';
 import 'package:art_kubus/widgets/glass_components.dart';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
 
 import '../../../models/artwork.dart';
 import '../../../models/artwork_comment.dart';
 import '../../../providers/artwork_provider.dart';
+import '../../../providers/attendance_provider.dart';
 import '../../../providers/profile_provider.dart';
+import '../../../providers/task_provider.dart';
 import '../../../providers/wallet_provider.dart';
+import '../../../config/config.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
@@ -26,11 +31,13 @@ import 'package:art_kubus/widgets/kubus_snackbar.dart';
 class DesktopArtworkDetailScreen extends StatefulWidget {
   final String artworkId;
   final bool showAppBar;
+  final String? attendanceMarkerId;
 
   const DesktopArtworkDetailScreen({
     super.key,
     required this.artworkId,
     this.showAppBar = false,
+    this.attendanceMarkerId,
   });
 
   @override
@@ -45,6 +52,7 @@ class _DesktopArtworkDetailScreenState
   late final ScrollController _commentsScrollController;
   String? _replyToCommentId;
   String? _replyToAuthorName;
+  String? _prefetchedAttendanceMarkerId;
   bool _artworkLoading = true;
   String? _artworkError;
 
@@ -260,8 +268,10 @@ class _DesktopArtworkDetailScreenState
         _buildHeader(artwork),
         const SizedBox(height: DetailSpacing.md),
         _buildActionsRow(artwork, artworkProvider, isSignedIn),
+        _buildAttendanceConfirmSection(artwork: artwork, isSignedIn: isSignedIn),
         const SizedBox(height: DetailSpacing.lg),
         _buildDescription(artwork),
+        _buildPoapInfoCard(artwork),
       ],
     );
   }
@@ -325,6 +335,76 @@ class _DesktopArtworkDetailScreenState
     final text = (artwork.description).trim();
     if (text.isEmpty) return const SizedBox.shrink();
     return Text(text, style: DetailTypography.body(context));
+  }
+
+  Widget _buildPoapInfoCard(Artwork artwork) {
+    final metadata = artwork.metadata;
+    if (metadata == null) return const SizedBox.shrink();
+    final raw = metadata['poap'];
+    if (raw is! Map) return const SizedBox.shrink();
+
+    final poap = Map<String, dynamic>.from(raw);
+    final enabled = poap['enabled'] == true ||
+        poap['poapEnabled'] == true ||
+        poap['poap_enabled'] == true;
+    final eventId = (poap['eventId'] ?? poap['poapEventId'] ?? poap['event_id'])
+        ?.toString()
+        .trim();
+    final claimUrl =
+        (poap['claimUrl'] ?? poap['poapClaimUrl'] ?? poap['claim_url'])
+            ?.toString()
+            .trim();
+    final rewardAmount = poap['rewardAmount'] ?? poap['poapRewardAmount'];
+    final validFromRaw = (poap['validFrom'] ?? poap['poapValidFrom'])?.toString();
+    final validToRaw = (poap['validTo'] ?? poap['poapValidTo'])?.toString();
+    final validFrom = validFromRaw != null ? DateTime.tryParse(validFromRaw) : null;
+    final validTo = validToRaw != null ? DateTime.tryParse(validToRaw) : null;
+
+    final hasReference =
+        (eventId != null && eventId.isNotEmpty) || (claimUrl != null && claimUrl.isNotEmpty);
+    if (!enabled && !hasReference) return const SizedBox.shrink();
+
+    final scheme = Theme.of(context).colorScheme;
+    final infoLines = <String>[
+      'Claimable after attendance confirmation.',
+      if (rewardAmount != null) 'Reward: $rewardAmount',
+      if (validFrom != null || validTo != null)
+        'Valid: ${(validFrom != null) ? validFrom.toLocal().toIso8601String().split('T').first : '…'} → ${(validTo != null) ? validTo.toLocal().toIso8601String().split('T').first : '…'}',
+      if (eventId != null && eventId.isNotEmpty) 'Event ID: $eventId',
+    ];
+
+    final uri = (claimUrl != null && claimUrl.isNotEmpty) ? Uri.tryParse(claimUrl) : null;
+    final canOpenClaim =
+        uri != null && (uri.scheme == 'https' || uri.scheme == 'http');
+
+    return Padding(
+      padding: const EdgeInsets.only(top: DetailSpacing.lg),
+      child: DetailCard(
+        padding: const EdgeInsets.all(DetailSpacing.md),
+        backgroundColor: scheme.surfaceContainerHighest.withValues(alpha: 0.25),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('POAP', style: DetailTypography.sectionTitle(context)),
+            const SizedBox(height: DetailSpacing.sm),
+            Text(infoLines.join('\n'), style: DetailTypography.body(context)),
+            if (canOpenClaim) ...[
+              const SizedBox(height: DetailSpacing.sm),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => unawaited(
+                    launchUrl(uri, mode: LaunchMode.externalApplication),
+                  ),
+                  icon: const Icon(Icons.open_in_new, size: 18),
+                  label: const Text('Open claim link'),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildActionsRow(
@@ -406,6 +486,221 @@ class _DesktopArtworkDetailScreenState
         ),
       ],
     );
+  }
+
+  Widget _buildAttendanceConfirmSection({
+    required Artwork artwork,
+    required bool isSignedIn,
+  }) {
+    if (!AppConfig.isFeatureEnabled('attendance')) {
+      return const SizedBox.shrink();
+    }
+
+    if (!isSignedIn) {
+      return const SizedBox.shrink();
+    }
+
+    final markerIdCandidate = (widget.attendanceMarkerId ?? artwork.arMarkerId)
+        ?.toString()
+        .trim();
+    if (markerIdCandidate == null || markerIdCandidate.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Consumer<AttendanceProvider>(
+      builder: (context, attendanceProvider, _) {
+        final state = attendanceProvider.stateFor(markerIdCandidate);
+        final proximity = state.proximity;
+        if (proximity == null || !state.canAttemptConfirm) {
+          return const SizedBox.shrink();
+        }
+
+        if (state.challenge == null &&
+            !state.isFetchingChallenge &&
+            _prefetchedAttendanceMarkerId != markerIdCandidate) {
+          _prefetchedAttendanceMarkerId = markerIdCandidate;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            unawaited(
+              attendanceProvider
+                  .ensureChallenge(markerIdCandidate)
+                  .catchError((_) => null),
+            );
+          });
+        }
+
+        final scheme = Theme.of(context).colorScheme;
+        final alreadyAttended = state.challenge?.alreadyAttended == true;
+        final isConfirming = state.isConfirming;
+
+        final label = isConfirming
+            ? 'Confirming…'
+            : (alreadyAttended ? 'Already checked in' : 'Confirm attendance');
+        final icon = isConfirming
+            ? Icons.hourglass_top
+            : (alreadyAttended ? Icons.check_circle : Icons.verified_user);
+
+        return Padding(
+          padding: const EdgeInsets.only(top: DetailSpacing.md),
+          child: DetailActionButton(
+            icon: icon,
+            label: label,
+            backgroundColor: alreadyAttended
+                ? scheme.surfaceContainerHighest.withValues(alpha: 0.35)
+                : scheme.primary,
+            foregroundColor:
+                alreadyAttended ? scheme.onSurfaceVariant : scheme.onPrimary,
+            onPressed: (alreadyAttended || isConfirming)
+                ? null
+                : () => unawaited(
+                      _confirmAttendance(
+                        markerId: markerIdCandidate,
+                        artwork: artwork,
+                      ),
+                    ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _confirmAttendance({
+    required String markerId,
+    required Artwork artwork,
+  }) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final l10n = AppLocalizations.of(context)!;
+
+    final attendanceProvider = context.read<AttendanceProvider>();
+    final state = attendanceProvider.stateFor(markerId);
+    final proximity = state.proximity;
+
+    if (proximity == null || !state.hasFreshProximity || !proximity.withinRadius) {
+      messenger.showKubusSnackBar(
+        const SnackBar(content: Text('Move closer to confirm attendance.')),
+        tone: KubusSnackBarTone.warning,
+      );
+      return;
+    }
+
+    try {
+      final result = await attendanceProvider.confirmAttendance(markerId);
+      if (!mounted) return;
+
+      if (result == null) {
+        messenger.showKubusSnackBar(
+          const SnackBar(content: Text('Unable to confirm attendance.')),
+          tone: KubusSnackBarTone.warning,
+        );
+        return;
+      }
+
+      final kub8 = result.kub8;
+      final rawAmount = kub8?['awardedAmount'] ?? kub8?['awarded_amount'];
+      final awarded = rawAmount is num ? rawAmount.toDouble() : double.tryParse('${rawAmount ?? ''}');
+
+      final poap = result.poap;
+      final poapStatus = (poap?['status'] ?? '').toString().trim();
+      final claimUrl = (poap?['claimUrl'] ?? poap?['claim_url'])?.toString().trim();
+
+      final wasIdempotent = result.attendanceRecorded != true && result.viewedAdded != true;
+      final parts = <String>[wasIdempotent ? 'Already checked in.' : 'Attendance confirmed.'];
+      if (awarded != null && awarded > 0) {
+        parts.add('+${awarded.toStringAsFixed(awarded % 1 == 0 ? 0 : 1)} KUB8 (pending)');
+      }
+      if (poapStatus.isNotEmpty && poapStatus != 'none' && poapStatus != 'not_configured') {
+        parts.add('POAP: $poapStatus');
+      }
+
+      SnackBarAction? action;
+      if (claimUrl != null && claimUrl.isNotEmpty) {
+        final uri = Uri.tryParse(claimUrl);
+        if (uri != null && (uri.scheme == 'https' || uri.scheme == 'http')) {
+          action = SnackBarAction(
+            label: 'Claim POAP',
+            onPressed: () => unawaited(
+              launchUrl(uri, mode: LaunchMode.externalApplication),
+            ),
+          );
+        }
+      }
+
+      messenger.showKubusSnackBar(
+        SnackBar(
+          content: Text(parts.join(' · '), style: GoogleFonts.inter()),
+          action: action,
+          duration: const Duration(seconds: 4),
+        ),
+        tone: KubusSnackBarTone.success,
+      );
+
+      unawaited(
+        context.read<ArtworkProvider>().refreshArtwork(artwork.id).catchError((e) {
+          AppConfig.debugPrint(
+            'DesktopArtworkDetailScreen: refreshArtwork failed: $e',
+          );
+          return null;
+        }),
+      );
+      final wallet = context.read<WalletProvider>().currentWalletAddress;
+      if (wallet != null && wallet.trim().isNotEmpty) {
+        unawaited(context.read<TaskProvider>().loadProgressFromBackend(wallet));
+      }
+    } on BackendApiRequestException catch (e) {
+      if (!mounted) return;
+      final authRequired = e.statusCode == 401 || e.statusCode == 403;
+      String? backendMessage;
+      if (!authRequired) {
+        try {
+          final raw = (e.body ?? '').trim();
+          if (raw.isNotEmpty) {
+            final decoded = jsonDecode(raw);
+            if (decoded is Map<String, dynamic>) {
+              final msg = (decoded['error'] ?? decoded['message'] ?? '').toString().trim();
+              if (msg.isNotEmpty) backendMessage = msg;
+            }
+          }
+        } catch (_) {
+          // ignore
+        }
+      }
+
+      messenger.showKubusSnackBar(
+        SnackBar(
+          content: Text(
+            authRequired
+                ? l10n.communityCommentAuthRequiredToast
+                : (backendMessage ?? '${l10n.commonSomethingWentWrong} (${e.statusCode})'),
+            style: GoogleFonts.inter(),
+          ),
+          action: authRequired
+              ? SnackBarAction(
+                  label: l10n.commonSignIn,
+                  onPressed: () {
+                    navigator.pushNamed(
+                      '/sign-in',
+                      arguments: {
+                        'redirectRoute': '/artwork',
+                        'redirectArguments': {
+                          'artworkId': artwork.id,
+                          'attendanceMarkerId': markerId,
+                        },
+                      },
+                    );
+                  },
+                )
+              : null,
+        ),
+        tone: authRequired ? KubusSnackBarTone.warning : KubusSnackBarTone.error,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.commonSomethingWentWrong, style: GoogleFonts.inter())),
+        tone: KubusSnackBarTone.error,
+      );
+    }
   }
 
   Widget _actionButton({

@@ -39,7 +39,14 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
   final TextEditingController _locationNameController = TextEditingController();
   final TextEditingController _latitudeController = TextEditingController();
   final TextEditingController _longitudeController = TextEditingController();
-  
+  final TextEditingController _poapEventIdController = TextEditingController();
+  final TextEditingController _poapClaimUrlController = TextEditingController();
+  final TextEditingController _poapRewardAmountController =
+      TextEditingController(text: '1');
+
+  DateTime? _poapValidFrom;
+  DateTime? _poapValidTo;
+
   Uint8List? _selectedImageBytes;
   String? _selectedImageName;
   Uint8List? _selectedModelBytes;
@@ -49,6 +56,7 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
   bool _isPublic = true;
   bool _enableAR = AppConfig.enableARViewer;
   bool _enableNFT = AppConfig.enableNFTMinting;
+  bool _poapEnabled = false;
   double _royaltyPercentage = 10.0;
   int _currentStep = 0;
   bool _isSubmitting = false;
@@ -92,6 +100,9 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
     _locationNameController.dispose();
     _latitudeController.dispose();
     _longitudeController.dispose();
+    _poapEventIdController.dispose();
+    _poapClaimUrlController.dispose();
+    _poapRewardAmountController.dispose();
     super.dispose();
   }
 
@@ -367,8 +378,53 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
             (value) => setState(() => _enableNFT = value),
           ),
           if (_enableNFT) ...[
-            const SizedBox(height: 16),
-            _buildRoyaltySlider(),
+             const SizedBox(height: 16),
+             _buildRoyaltySlider(),
+          ],
+          if (AppConfig.isFeatureEnabled('attendance')) ...[
+            const SizedBox(height: 24),
+            _buildSectionTitle('POAP (Proof of Attendance)'),
+            const SizedBox(height: 12),
+            _buildSwitchTile(
+              'Enable POAP reward',
+              'Allow explorers to claim a POAP when they confirm attendance at this marker.',
+              _poapEnabled,
+              (value) {
+                setState(() {
+                  _poapEnabled = value;
+                  if (!value) {
+                    _poapEventIdController.clear();
+                    _poapClaimUrlController.clear();
+                    _poapRewardAmountController.text = '1';
+                    _poapValidFrom = null;
+                    _poapValidTo = null;
+                  }
+                });
+              },
+            ),
+            if (_poapEnabled) ...[
+              const SizedBox(height: 16),
+              _buildTextField(
+                'POAP Event ID (optional)',
+                _poapEventIdController,
+                hint: 'e.g., 12345',
+              ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                'POAP Claim URL (optional)',
+                _poapClaimUrlController,
+                hint: 'https://poap.xyz/claim/…',
+              ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                'POAP Reward Amount',
+                _poapRewardAmountController,
+                keyboardType: TextInputType.number,
+                hint: '1',
+              ),
+              const SizedBox(height: 16),
+              _buildPoapValidityRow(),
+            ],
           ],
         ],
       ),
@@ -629,6 +685,8 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
           _buildReviewItem('Public', _isPublic ? 'Yes' : 'No'),
           _buildReviewItem('AR Enabled', _enableAR ? 'Yes' : 'No'),
           _buildReviewItem('NFT', _enableNFT ? 'Yes (${_royaltyPercentage.toInt()}% royalty)' : 'No'),
+          if (AppConfig.isFeatureEnabled('attendance'))
+            _buildReviewItem('POAP', _poapSummary()),
         ],
       ),
     );
@@ -683,6 +741,126 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
 
     final coords = '$latText, $lngText';
     return name.isNotEmpty ? '$coords ($name)' : coords;
+  }
+
+  String _poapSummary() {
+    if (!_poapEnabled) return 'No';
+
+    final rewardAmount =
+        int.tryParse(_poapRewardAmountController.text.trim()) ?? 1;
+    final eventId = _poapEventIdController.text.trim();
+    final claimUrl = _poapClaimUrlController.text.trim();
+
+    final parts = <String>[
+      'Enabled',
+      'x$rewardAmount',
+      if (eventId.isNotEmpty) 'eventId=$eventId',
+      if (claimUrl.isNotEmpty) 'claimUrl',
+    ];
+
+    if (_poapValidFrom != null || _poapValidTo != null) {
+      final from = _poapValidFrom != null ? _formatPoapDate(_poapValidFrom!) : '…';
+      final to = _poapValidTo != null ? _formatPoapDate(_poapValidTo!) : '…';
+      parts.add('$from → $to');
+    }
+
+    return parts.join(' · ');
+  }
+
+  String _formatPoapDate(DateTime date) {
+    final local = date.toLocal();
+    final month = local.month.toString().padLeft(2, '0');
+    final day = local.day.toString().padLeft(2, '0');
+    return '${local.year}-$month-$day';
+  }
+
+  Future<void> _pickPoapDate({required bool isStart}) async {
+    final initial = (isStart ? _poapValidFrom : _poapValidTo) ??
+        _poapValidFrom ??
+        DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime.now().subtract(const Duration(days: 365 * 5)),
+      lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
+    );
+    if (picked == null) return;
+
+    setState(() {
+      if (isStart) {
+        _poapValidFrom = DateTime(picked.year, picked.month, picked.day);
+        if (_poapValidTo != null && _poapValidTo!.isBefore(_poapValidFrom!)) {
+          _poapValidTo = DateTime(
+            picked.year,
+            picked.month,
+            picked.day,
+            23,
+            59,
+            59,
+          );
+        }
+      } else {
+        _poapValidTo = DateTime(picked.year, picked.month, picked.day, 23, 59, 59);
+        if (_poapValidFrom != null && _poapValidTo!.isBefore(_poapValidFrom!)) {
+          _poapValidFrom = DateTime(picked.year, picked.month, picked.day);
+        }
+      }
+    });
+  }
+
+  Widget _buildPoapValidityRow() {
+    final scheme = Theme.of(context).colorScheme;
+    final fromLabel = _poapValidFrom != null ? _formatPoapDate(_poapValidFrom!) : 'Start date (optional)';
+    final toLabel = _poapValidTo != null ? _formatPoapDate(_poapValidTo!) : 'End date (optional)';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Validity window (optional)',
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: scheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => _pickPoapDate(isStart: true),
+                icon: const Icon(Icons.calendar_month_outlined, size: 18),
+                label: Text(fromLabel),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => _pickPoapDate(isStart: false),
+                icon: const Icon(Icons.event_outlined, size: 18),
+                label: Text(toLabel),
+              ),
+            ),
+          ],
+        ),
+        if (_poapValidFrom != null || _poapValidTo != null) ...[
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: () {
+                setState(() {
+                  _poapValidFrom = null;
+                  _poapValidTo = null;
+                });
+              },
+              child: const Text('Clear validity window'),
+            ),
+          ),
+        ],
+      ],
+    );
   }
 
   Widget _buildSectionTitle(String title) {
@@ -1131,6 +1309,38 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
       return;
     }
 
+    final poapEnabled = AppConfig.isFeatureEnabled('attendance') && _poapEnabled;
+    final poapEventId = _poapEventIdController.text.trim();
+    final poapClaimUrl = _poapClaimUrlController.text.trim();
+    final poapRewardAmount =
+        int.tryParse(_poapRewardAmountController.text.trim()) ?? 1;
+
+    if (poapEnabled) {
+      if (poapEventId.isEmpty && poapClaimUrl.isEmpty) {
+        messenger.showKubusSnackBar(
+          const SnackBar(content: Text('POAP requires an Event ID or Claim URL.')),
+          tone: KubusSnackBarTone.warning,
+        );
+        return;
+      }
+      if (poapRewardAmount <= 0) {
+        messenger.showKubusSnackBar(
+          const SnackBar(content: Text('POAP reward amount must be at least 1.')),
+          tone: KubusSnackBarTone.warning,
+        );
+        return;
+      }
+      if (_poapValidFrom != null &&
+          _poapValidTo != null &&
+          _poapValidTo!.isBefore(_poapValidFrom!)) {
+        messenger.showKubusSnackBar(
+          const SnackBar(content: Text('POAP validity window is invalid.')),
+          tone: KubusSnackBarTone.warning,
+        );
+        return;
+      }
+    }
+
     double? latitude;
     double? longitude;
     String? locationName;
@@ -1281,6 +1491,12 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
         arScale: 1,
         mintAsNFT: _enableNFT,
         price: price,
+        poapEnabled: poapEnabled,
+        poapEventId: poapEventId,
+        poapClaimUrl: poapClaimUrl,
+        poapValidFrom: _poapValidFrom,
+        poapValidTo: _poapValidTo,
+        poapRewardAmount: poapRewardAmount,
         locationName: locationName,
         latitude: latitude,
         longitude: longitude,
@@ -1367,6 +1583,12 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
       _locationNameController.clear();
       _latitudeController.clear();
       _longitudeController.clear();
+      _poapEnabled = false;
+      _poapEventIdController.clear();
+      _poapClaimUrlController.clear();
+      _poapRewardAmountController.text = '1';
+      _poapValidFrom = null;
+      _poapValidTo = null;
       _isPublic = true;
       _enableAR = AppConfig.enableARViewer;
       _enableNFT = AppConfig.enableNFTMinting;

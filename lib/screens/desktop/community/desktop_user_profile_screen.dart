@@ -8,7 +8,8 @@ import '../../../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
 import '../../../models/user.dart';
 import '../../../services/user_service.dart';
-import '../../../models/achievements.dart';
+import '../../../models/achievement_progress.dart';
+import '../../../services/achievement_service.dart' as achievement_svc;
 import '../../../services/backend_api_service.dart';
 import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
@@ -1107,17 +1108,33 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
   Widget _buildAchievementsSection(ThemeProvider themeProvider, AppLocalizations l10n) {
     final progress = user?.achievementProgress ?? [];
-    final achievementsToShow = allAchievements.take(6).toList();
+    final achievementsToShow = achievement_svc
+        .AchievementService.achievementDefinitions.values
+        .take(6)
+        .toList();
     if (achievementsToShow.isEmpty) return const SizedBox.shrink();
 
-    final completedCount = progress.where((p) => p.isCompleted).length;
+    final progressById = <String, AchievementProgress>{
+      for (final entry in progress) entry.achievementId: entry,
+    };
+    final completedCount = achievement_svc
+        .AchievementService.achievementDefinitions.values
+        .where((achievement) {
+      final current = progressById[achievement.id];
+      final required =
+          achievement.requiredCount > 0 ? achievement.requiredCount : 1;
+      return (current?.isCompleted ?? false) ||
+          (current != null && current.currentProgress >= required);
+    }).length;
+    final totalAchievements =
+        achievement_svc.AchievementService.achievementDefinitions.length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         DesktopSectionHeader(
           title: l10n.userProfileAchievementsTitle,
-          subtitle: l10n.userProfileAchievementsProgressLabel(completedCount, allAchievements.length),
+          subtitle: l10n.userProfileAchievementsProgressLabel(completedCount, totalAchievements),
           icon: Icons.emoji_events_outlined,
         ),
         const SizedBox(height: 16),
@@ -1135,14 +1152,12 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             maxCrossAxisCount: 3,
             childAspectRatio: 1.2,
             children: achievementsToShow.map((achievement) {
-              final achievementProgress = progress.firstWhere(
-                (p) => p.achievementId == achievement.id,
-                orElse: () => AchievementProgress(
-                  achievementId: achievement.id,
-                  currentProgress: 0,
-                  isCompleted: false,
-                ),
-              );
+              final achievementProgress = progressById[achievement.id] ??
+                  AchievementProgress(
+                    achievementId: achievement.id,
+                    currentProgress: 0,
+                    isCompleted: false,
+                  );
               return _buildAchievementCard(achievement, achievementProgress);
             }).toList(),
           ),
@@ -1150,13 +1165,100 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     );
   }
 
-  Widget _buildAchievementCard(Achievement achievement, AchievementProgress progress) {
+  String _categoryForAchievement(achievement_svc.AchievementDefinition def) {
+    if (def.isPOAP) return 'Events';
+    switch (def.type) {
+      case achievement_svc.AchievementType.firstDiscovery:
+      case achievement_svc.AchievementType.artExplorer:
+      case achievement_svc.AchievementType.artMaster:
+      case achievement_svc.AchievementType.artLegend:
+        return 'Discovery';
+      case achievement_svc.AchievementType.firstARView:
+      case achievement_svc.AchievementType.arEnthusiast:
+      case achievement_svc.AchievementType.arPro:
+        return 'AR';
+      case achievement_svc.AchievementType.firstNFTMint:
+      case achievement_svc.AchievementType.nftCollector:
+      case achievement_svc.AchievementType.nftTrader:
+        return 'NFT';
+      case achievement_svc.AchievementType.firstPost:
+      case achievement_svc.AchievementType.influencer:
+      case achievement_svc.AchievementType.communityBuilder:
+        return 'Community';
+      case achievement_svc.AchievementType.firstLike:
+      case achievement_svc.AchievementType.popularCreator:
+      case achievement_svc.AchievementType.firstComment:
+      case achievement_svc.AchievementType.commentator:
+        return 'Social';
+      case achievement_svc.AchievementType.firstTrade:
+      case achievement_svc.AchievementType.smartTrader:
+      case achievement_svc.AchievementType.marketMaster:
+        return 'Trading';
+      case achievement_svc.AchievementType.earlyAdopter:
+      case achievement_svc.AchievementType.betaTester:
+      case achievement_svc.AchievementType.artSupporter:
+        return 'Special';
+      case achievement_svc.AchievementType.eventAttendee:
+      case achievement_svc.AchievementType.galleryVisitor:
+      case achievement_svc.AchievementType.workshopParticipant:
+        return 'Events';
+    }
+  }
+
+  IconData _iconForAchievement(achievement_svc.AchievementDefinition def) {
+    if (def.isPOAP) return Icons.verified;
+    switch (def.type) {
+      case achievement_svc.AchievementType.firstDiscovery:
+      case achievement_svc.AchievementType.artExplorer:
+      case achievement_svc.AchievementType.artMaster:
+      case achievement_svc.AchievementType.artLegend:
+        return Icons.explore_outlined;
+      case achievement_svc.AchievementType.firstARView:
+      case achievement_svc.AchievementType.arEnthusiast:
+      case achievement_svc.AchievementType.arPro:
+        return Icons.view_in_ar;
+      case achievement_svc.AchievementType.firstNFTMint:
+      case achievement_svc.AchievementType.nftCollector:
+      case achievement_svc.AchievementType.nftTrader:
+        return Icons.token;
+      case achievement_svc.AchievementType.firstPost:
+      case achievement_svc.AchievementType.influencer:
+      case achievement_svc.AchievementType.communityBuilder:
+        return Icons.forum_outlined;
+      case achievement_svc.AchievementType.firstLike:
+      case achievement_svc.AchievementType.popularCreator:
+        return Icons.favorite_border;
+      case achievement_svc.AchievementType.firstComment:
+      case achievement_svc.AchievementType.commentator:
+        return Icons.chat_bubble_outline;
+      case achievement_svc.AchievementType.firstTrade:
+      case achievement_svc.AchievementType.smartTrader:
+      case achievement_svc.AchievementType.marketMaster:
+        return Icons.swap_horiz;
+      case achievement_svc.AchievementType.earlyAdopter:
+      case achievement_svc.AchievementType.betaTester:
+      case achievement_svc.AchievementType.artSupporter:
+        return Icons.auto_awesome;
+      case achievement_svc.AchievementType.eventAttendee:
+      case achievement_svc.AchievementType.galleryVisitor:
+      case achievement_svc.AchievementType.workshopParticipant:
+        return Icons.event_available;
+    }
+  }
+
+  Widget _buildAchievementCard(
+    achievement_svc.AchievementDefinition achievement,
+    AchievementProgress progress,
+  ) {
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final l10n = AppLocalizations.of(context)!;
-    final requiredProgress = achievement.requiredProgress > 0 ? achievement.requiredProgress : 1;
-    final ratio = (progress.currentProgress / requiredProgress).clamp(0.0, 1.0);
+    final required = achievement.requiredCount > 0 ? achievement.requiredCount : 1;
+    final ratio = (progress.currentProgress / required).clamp(0.0, 1.0);
     final isCompleted = progress.isCompleted || ratio >= 1.0;
-    final accent = CategoryAccentColor.resolve(context, achievement.category);
+    final accent = CategoryAccentColor.resolve(
+      context,
+      _categoryForAchievement(achievement),
+    );
 
     return DesktopCard(
       child: Column(
@@ -1170,7 +1272,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                   color: accent.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(achievement.icon, color: accent, size: 24),
+                child: Icon(_iconForAchievement(achievement), color: accent, size: 24),
               ),
               const Spacer(),
               Container(
@@ -1180,7 +1282,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  '+${achievement.points}',
+                  '+${achievement.tokenReward}',
                   style: GoogleFonts.inter(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
@@ -1203,7 +1305,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           ),
           const SizedBox(height: 8),
           Text(
-            isCompleted ? l10n.userProfileAchievementCompletedLabel : '${progress.currentProgress}/$requiredProgress',
+            isCompleted ? l10n.userProfileAchievementCompletedLabel : '${progress.currentProgress}/$required',
             style: GoogleFonts.inter(
               fontSize: 13,
               fontWeight: FontWeight.w600,

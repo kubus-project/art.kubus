@@ -1,4 +1,5 @@
 ﻿import 'dart:async';
+import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -8,9 +9,12 @@ import 'package:art_kubus/widgets/glass_components.dart';
 import '../../models/exhibition.dart';
 import '../../models/artwork.dart';
 import '../../providers/artwork_provider.dart';
+import '../../providers/attendance_provider.dart';
 import '../../providers/collab_provider.dart';
 import '../../providers/exhibitions_provider.dart';
+import '../../providers/profile_provider.dart';
 import '../../screens/collab/invites_inbox_screen.dart';
+import '../../services/backend_api_service.dart' show BackendApiRequestException;
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../l10n/app_localizations.dart';
@@ -19,16 +23,19 @@ import '../../utils/media_url_resolver.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../widgets/detail/detail_shell_components.dart';
 import '../../utils/artwork_navigation.dart';
+import '../../config/config.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class ExhibitionDetailScreen extends StatefulWidget {
   final String exhibitionId;
   final Exhibition? initialExhibition;
+  final String? attendanceMarkerId;
 
   const ExhibitionDetailScreen({
     super.key,
     required this.exhibitionId,
     this.initialExhibition,
+    this.attendanceMarkerId,
   });
 
   @override
@@ -36,6 +43,8 @@ class ExhibitionDetailScreen extends StatefulWidget {
 }
 
 class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
+  String? _prefetchedAttendanceMarkerId;
+
   @override
   void initState() {
     super.initState();
@@ -341,6 +350,168 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
     }
   }
 
+  Widget _buildAttendanceConfirmSection() {
+    if (!AppConfig.isFeatureEnabled('attendance')) {
+      return const SizedBox.shrink();
+    }
+
+    final markerIdCandidate = (widget.attendanceMarkerId ?? '').trim();
+    if (markerIdCandidate.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final isSignedIn = context.watch<ProfileProvider>().isSignedIn;
+    if (!isSignedIn) {
+      return const SizedBox.shrink();
+    }
+
+    return Consumer<AttendanceProvider>(
+      builder: (context, attendanceProvider, _) {
+        final state = attendanceProvider.stateFor(markerIdCandidate);
+        final proximity = state.proximity;
+        if (proximity == null || !state.canAttemptConfirm) {
+          return const SizedBox.shrink();
+        }
+
+        if (state.challenge == null &&
+            !state.isFetchingChallenge &&
+            _prefetchedAttendanceMarkerId != markerIdCandidate) {
+          _prefetchedAttendanceMarkerId = markerIdCandidate;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            unawaited(
+              attendanceProvider
+                  .ensureChallenge(markerIdCandidate)
+                  .catchError((_) => null),
+            );
+          });
+        }
+
+        final scheme = Theme.of(context).colorScheme;
+        final alreadyAttended = state.challenge?.alreadyAttended == true;
+        final isConfirming = state.isConfirming;
+
+        final label = isConfirming
+            ? 'Confirming…'
+            : (alreadyAttended ? 'Already checked in' : 'Confirm attendance');
+        final icon = isConfirming
+            ? Icons.hourglass_top
+            : (alreadyAttended ? Icons.check_circle : Icons.verified_user);
+
+        return Column(
+          children: [
+            const SizedBox(height: DetailSpacing.lg),
+            Row(
+              children: [
+                Expanded(
+                  child: DetailActionButton(
+                    icon: icon,
+                    label: label,
+                    backgroundColor: alreadyAttended
+                        ? scheme.surfaceContainerHighest.withValues(alpha: 0.35)
+                        : scheme.primary,
+                    foregroundColor: alreadyAttended
+                        ? scheme.onSurfaceVariant
+                        : scheme.onPrimary,
+                    onPressed: (alreadyAttended || isConfirming)
+                        ? null
+                        : () => unawaited(
+                              _confirmAttendance(markerIdCandidate),
+                            ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _confirmAttendance(String markerId) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final attendanceProvider = context.read<AttendanceProvider>();
+    final state = attendanceProvider.stateFor(markerId);
+    final proximity = state.proximity;
+
+    if (proximity == null ||
+        !state.hasFreshProximity ||
+        !proximity.withinRadius) {
+      messenger.showKubusSnackBar(
+        const SnackBar(content: Text('Move closer to confirm attendance.')),
+        tone: KubusSnackBarTone.warning,
+      );
+      return;
+    }
+
+    try {
+      final result = await attendanceProvider.confirmAttendance(markerId);
+      if (!mounted) return;
+
+      if (result == null) {
+        messenger.showKubusSnackBar(
+          const SnackBar(content: Text('Unable to confirm attendance.')),
+          tone: KubusSnackBarTone.warning,
+        );
+        return;
+      }
+
+      final kub8 = result.kub8;
+      final rawAmount = kub8?['awardedAmount'] ?? kub8?['awarded_amount'];
+      final awarded = rawAmount is num
+          ? rawAmount.toDouble()
+          : double.tryParse('${rawAmount ?? ''}');
+
+      final wasIdempotent =
+          result.attendanceRecorded != true && result.viewedAdded != true;
+      final parts = <String>[
+        wasIdempotent ? 'Already checked in.' : 'Attendance confirmed.'
+      ];
+      if (awarded != null && awarded > 0) {
+        parts.add(
+          '+${awarded.toStringAsFixed(awarded % 1 == 0 ? 0 : 1)} KUB8 (pending)',
+        );
+      }
+
+      messenger.showKubusSnackBar(
+        SnackBar(
+          content: Text(parts.join(' · ')),
+          duration: const Duration(seconds: 4),
+        ),
+        tone: KubusSnackBarTone.success,
+      );
+    } on BackendApiRequestException catch (e) {
+      if (!mounted) return;
+      String? backendMessage;
+      try {
+        final raw = (e.body ?? '').trim();
+        if (raw.isNotEmpty) {
+          final decoded = jsonDecode(raw);
+          if (decoded is Map<String, dynamic>) {
+            final msg =
+                (decoded['error'] ?? decoded['message'] ?? '').toString().trim();
+            if (msg.isNotEmpty) backendMessage = msg;
+          }
+        }
+      } catch (_) {
+        // ignore
+      }
+
+      messenger.showKubusSnackBar(
+        SnackBar(
+          content: Text(backendMessage ?? 'Unable to confirm attendance.'),
+        ),
+        tone: KubusSnackBarTone.error,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        const SnackBar(content: Text('Something went wrong.')),
+        tone: KubusSnackBarTone.error,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -400,13 +571,19 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
               builder: (context, constraints) {
                 final isWide = constraints.maxWidth >= 900;
 
-                final details = _ExhibitionDetailsCard(
-                  exhibition: ex,
-                  poap: poap,
-                  canManage: canManage,
-                  canPublish: canPublish,
-                  onPublishChanged: (v) => _togglePublish(ex, v),
-                  onChangeCover: canManage ? () => _changeCover(ex) : null,
+                final details = Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _ExhibitionDetailsCard(
+                      exhibition: ex,
+                      poap: poap,
+                      canManage: canManage,
+                      canPublish: canPublish,
+                      onPublishChanged: (v) => _togglePublish(ex, v),
+                      onChangeCover: canManage ? () => _changeCover(ex) : null,
+                    ),
+                    _buildAttendanceConfirmSection(),
+                  ],
                 );
 
                 final artworksCard = DetailCard(

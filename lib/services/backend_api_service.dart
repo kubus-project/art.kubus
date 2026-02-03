@@ -2728,6 +2728,69 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     }
   }
 
+  /// Create a short-lived attendance challenge token for a marker.
+  /// GET /api/attendance/challenge?markerId=...
+  Future<Map<String, dynamic>> getAttendanceChallenge({
+    required String markerId,
+    String? walletAddress,
+  }) async {
+    try {
+      await _ensureAuthBeforeRequest(walletAddress: walletAddress);
+
+      final uri = Uri.parse('$baseUrl/api/attendance/challenge').replace(
+        queryParameters: <String, String>{'markerId': markerId.trim()},
+      );
+      final response = await _get(uri, headers: _getHeaders());
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: uri.path,
+        body: response.body,
+      );
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.getAttendanceChallenge failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Confirm marker attendance (idempotent).
+  /// POST /api/attendance/confirm
+  Future<Map<String, dynamic>> confirmAttendance({
+    required String markerId,
+    required String challengeToken,
+    required Map<String, dynamic> clientLocation,
+    String? walletAddress,
+  }) async {
+    try {
+      await _ensureAuthBeforeRequest(walletAddress: walletAddress);
+      final uri = Uri.parse('$baseUrl/api/attendance/confirm');
+      final response = await _post(
+        uri,
+        headers: _getHeaders(),
+        body: jsonEncode({
+          'markerId': markerId.trim(),
+          'challengeToken': challengeToken,
+          'clientLocation': clientLocation,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: uri.path,
+        body: response.body,
+      );
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.confirmAttendance failed: $e');
+      rethrow;
+    }
+  }
+
   /// Increment marker interactions
   /// POST /api/art-markers/:id/interact
   Future<void> incrementMarkerInteractions(String markerId) async {
@@ -2916,6 +2979,12 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     bool mintAsNFT = false,
     double? price,
     double? royaltyPercent,
+    bool poapEnabled = false,
+    String? poapEventId,
+    String? poapClaimUrl,
+    DateTime? poapValidFrom,
+    DateTime? poapValidTo,
+    int poapRewardAmount = 1,
     Map<String, dynamic>? metadata,
     String? locationName,
     double? latitude,
@@ -2941,6 +3010,14 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         if (royaltyPercent != null) 'royaltyPercent': royaltyPercent,
         if (price != null) 'price': price,
         'currency': 'KUB8',
+        if (poapEnabled) 'poapEnabled': true,
+        if (poapEnabled && poapEventId != null && poapEventId.trim().isNotEmpty)
+          'poapEventId': poapEventId.trim(),
+        if (poapEnabled && poapClaimUrl != null && poapClaimUrl.trim().isNotEmpty)
+          'poapClaimUrl': poapClaimUrl.trim(),
+        if (poapEnabled && poapRewardAmount > 0) 'poapRewardAmount': poapRewardAmount,
+        if (poapEnabled && poapValidFrom != null) 'poapValidFrom': poapValidFrom.toUtc().toIso8601String(),
+        if (poapEnabled && poapValidTo != null) 'poapValidTo': poapValidTo.toUtc().toIso8601String(),
         if (locationName != null && locationName.isNotEmpty) 'locationName': locationName,
         if (latitude != null) 'latitude': latitude,
         if (longitude != null) 'longitude': longitude,
@@ -7118,6 +7195,7 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
     addMeta('currency', json['currency']);
     addMeta('isForSale', json['isForSale']);
     addMeta('imageCID', json['imageCID'] ?? json['image_cid']);
+    addMeta('poap', json['poap']);
 
     return metadata;
   }
@@ -7265,6 +7343,44 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
   final createdAt =
       parseDate(json['createdAt'] ?? json['created_at']) ?? DateTime.now();
   final updatedAt = parseDate(json['updatedAt'] ?? json['updated_at']);
+  final discoveredAt = parseDate(json['discoveredAt'] ?? json['discovered_at']);
+  final discoveryUserId = nullableString(json['discoveryUserId'] ?? json['discovery_user_id']);
+  final isFavoriteByCurrentUser =
+      boolVal(json['isFavoriteByCurrentUser'] ?? json['isFavorited']) ?? false;
+  final discoveredFlag = boolVal(
+        json['isDiscovered'] ?? json['discovered'] ?? json['is_discovered'],
+      ) ??
+      false;
+
+  ArtworkStatus status = ArtworkStatus.undiscovered;
+  final statusRaw = nullableString(
+    json['status'] ?? json['artworkStatus'] ?? json['artwork_status'],
+  );
+  if (statusRaw != null) {
+    final normalized = statusRaw
+        .toLowerCase()
+        .trim()
+        .replaceAll(RegExp(r'[^a-z]'), '');
+
+    if (normalized == 'favorite' || normalized == 'favourite') {
+      status = ArtworkStatus.favorite;
+    } else if (normalized == 'undiscovered' || normalized == 'notdiscovered') {
+      status = ArtworkStatus.undiscovered;
+    } else if (normalized == 'discovered' || normalized == 'discover') {
+      status = ArtworkStatus.discovered;
+    } else if (normalized.contains('favorite')) {
+      status = ArtworkStatus.favorite;
+    } else if (normalized.contains('undiscover') || normalized.contains('notdiscover')) {
+      status = ArtworkStatus.undiscovered;
+    } else if (normalized.contains('discover')) {
+      status = ArtworkStatus.discovered;
+    }
+  }
+  if (isFavoriteByCurrentUser) {
+    status = ArtworkStatus.favorite;
+  } else if (status != ArtworkStatus.favorite && (discoveredFlag || discoveredAt != null)) {
+    status = ArtworkStatus.discovered;
+  }
 
   return Artwork(
     id: id,
@@ -7274,6 +7390,7 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
     description: stringVal(json['description'] ?? json['summary'] ?? '', ''),
     imageUrl: normalizedImageUrl,
     position: LatLng(lat, lng),
+    status: status,
     rewards: json['rewards'] as int? ?? intVal(json['reward']) ?? 10,
     category: stringVal(json['category'] ?? json['collection'], 'General'),
     model3DURL: modelUrl,
@@ -7304,16 +7421,15 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
     currency: currency,
     createdAt: createdAt,
     updatedAt: updatedAt,
-    discoveredAt: parseDate(json['discoveredAt']),
-    discoveryUserId: nullableString(json['discoveryUserId']),
+    discoveredAt: discoveredAt,
+    discoveryUserId: discoveryUserId,
     tags: resolvedTags,
     likesCount: likesCount,
     commentsCount: commentsCount,
     viewsCount: viewsCount,
     discoveryCount: discoveryCount,
     isLikedByCurrentUser: boolVal(json['isLikedByCurrentUser'] ?? json['isLiked']) ?? false,
-    isFavoriteByCurrentUser:
-        boolVal(json['isFavoriteByCurrentUser'] ?? json['isFavorited']) ?? false,
+    isFavoriteByCurrentUser: isFavoriteByCurrentUser,
     metadata: metadata.isEmpty ? null : metadata,
   );
 }

@@ -25,6 +25,7 @@ import '../providers/navigation_provider.dart';
 import '../providers/main_tab_provider.dart';
 import '../providers/exhibitions_provider.dart';
 import '../providers/marker_management_provider.dart';
+import '../providers/attendance_provider.dart';
 import '../providers/presence_provider.dart';
 import '../models/artwork.dart';
 import '../models/task.dart';
@@ -40,7 +41,6 @@ import '../widgets/art_marker_cube.dart';
 import '../widgets/map_marker_style_config.dart';
 import '../widgets/artwork_creator_byline.dart';
 import '../utils/artwork_navigation.dart';
-import 'art/ar_screen.dart';
 import 'community/user_profile_screen.dart';
 import '../utils/grid_utils.dart';
 import '../utils/artwork_media_resolver.dart';
@@ -156,6 +156,8 @@ class _MapScreenState extends State<MapScreen>
       'map_location_service_requested';
   // Location and Map State
   LatLng? _currentPosition;
+  double? _currentPositionAccuracyMeters;
+  int? _currentPositionTimestampMs;
   Location? _mobileLocation;
   Timer? _timer;
   ml.MapLibreMapController? _mapController;
@@ -830,7 +832,6 @@ class _MapScreenState extends State<MapScreen>
       }
 
       if (!mounted) return;
-      _calculateProgress(); // Calculate progress after providers are ready
 
       unawaited(_maybeShowInteractiveMapTutorial());
     });
@@ -1218,16 +1219,10 @@ class _MapScreenState extends State<MapScreen>
     super.didChangeAppLifecycleState(state);
   }
 
-  void _calculateProgress() {
-    // Update task provider with current discovery progress
-    final taskProvider = context.read<TaskProvider>();
-    final artworkProvider = context.read<ArtworkProvider>();
-    final discoveredCount = artworkProvider.artworks
-        .where((artwork) => artwork.status != ArtworkStatus.undiscovered)
-        .length;
-
-    // Update local guide achievement with current discovered count
-    taskProvider.updateAchievementProgress('local_guide', discoveredCount);
+  void _refreshDiscoveryProgress() {
+    final wallet = context.read<WalletProvider>().currentWalletAddress?.trim();
+    if (wallet == null || wallet.isEmpty) return;
+    unawaited(context.read<TaskProvider>().loadProgressFromBackend(wallet));
   }
 
   void _initializeMap() {
@@ -1628,14 +1623,28 @@ class _MapScreenState extends State<MapScreen>
       final type = data['type'] as String?;
 
       if (type == 'ar_proximity') {
-        final markerId = data['markerId'] as String?;
-        if (markerId != null) {
-          final marker = _artMarkers.firstWhere(
-            (m) => m.id == markerId,
-            orElse: () => _artMarkers.first,
-          );
-          _showArtMarkerDialog(marker);
+        final markerId = data['markerId']?.toString().trim();
+        if (markerId == null || markerId.isEmpty) return;
+        final index = _artMarkers.indexWhere((m) => m.id == markerId);
+        if (index < 0) return;
+        final marker = _artMarkers[index];
+        if (marker.isExhibitionMarker) {
+          unawaited(_openExhibitionFromMarker(marker, null, null));
+          return;
         }
+        final artworkId = marker.artworkId;
+        if (artworkId != null && artworkId.trim().isNotEmpty) {
+          unawaited(
+            openArtwork(
+              context,
+              artworkId,
+              source: 'map_proximity_push',
+              attendanceMarkerId: marker.id,
+            ),
+          );
+          return;
+        }
+        unawaited(_showMarkerInfoFallback(marker));
       }
     } catch (e) {
       AppConfig.debugPrint('MapScreen: failed to handle notification tap: $e');
@@ -1667,6 +1676,7 @@ class _MapScreenState extends State<MapScreen>
     if (_currentPosition == null) return;
 
     final currentLatLng = _currentPosition!;
+    final attendanceProvider = context.read<AttendanceProvider>();
 
     for (final marker in _artMarkers) {
       // Check if already notified
@@ -1679,19 +1689,30 @@ class _MapScreenState extends State<MapScreen>
         marker.position,
       );
 
-      // Notify if within 50 meters
-      if (distance <= 50) {
+      attendanceProvider.updateProximity(
+        markerId: marker.id,
+        lat: currentLatLng.latitude,
+        lng: currentLatLng.longitude,
+        distanceMeters: distance,
+        activationRadiusMeters: marker.activationRadius,
+        requiresProximity: marker.requiresProximity,
+        accuracyMeters: _currentPositionAccuracyMeters,
+        timestampMs: _currentPositionTimestampMs,
+      );
+
+      // Notify if within activation radius (proximity-gated markers only).
+      final radius = marker.activationRadius > 0 ? marker.activationRadius : 50.0;
+      if (marker.requiresProximity && distance <= radius) {
         _showProximityNotification(marker, distance);
         _notifiedMarkers.add(marker.id);
       }
     }
 
-    // Clean up notifications for markers we've moved away from (>100m)
+    // Clean up notifications for markers we've moved away from (>2x radius).
     _notifiedMarkers.removeWhere((markerId) {
-      final marker = _artMarkers.firstWhere(
-        (m) => m.id == markerId,
-        orElse: () => _artMarkers.first,
-      );
+      final index = _artMarkers.indexWhere((m) => m.id == markerId);
+      if (index < 0) return true;
+      final marker = _artMarkers[index];
 
       final distance = _distanceCalculator.as(
         LengthUnit.Meter,
@@ -1699,7 +1720,9 @@ class _MapScreenState extends State<MapScreen>
         marker.position,
       );
 
-      return distance > 100; // Reset notification if moved far away
+      final radius = marker.activationRadius > 0 ? marker.activationRadius : 50.0;
+      final resetDistance = math.max(100.0, radius * 2);
+      return distance > resetDistance; // Reset notification if moved far away
     });
   }
 
@@ -1875,7 +1898,26 @@ class _MapScreenState extends State<MapScreen>
         duration: const Duration(seconds: 4),
         action: SnackBarAction(
           label: l10n.commonView,
-          onPressed: () => _launchARExperience(marker),
+          onPressed: () {
+            messenger.hideCurrentSnackBar();
+            if (marker.isExhibitionMarker) {
+              unawaited(_openExhibitionFromMarker(marker, null, null));
+              return;
+            }
+            final artworkId = marker.artworkId;
+            if (artworkId != null && artworkId.trim().isNotEmpty) {
+              unawaited(
+                openArtwork(
+                  context,
+                  artworkId,
+                  source: 'map_proximity_snackbar',
+                  attendanceMarkerId: marker.id,
+                ),
+              );
+              return;
+            }
+            unawaited(_showMarkerInfoFallback(marker));
+          },
         ),
       ),
       tone: KubusSnackBarTone.neutral,
@@ -2276,42 +2318,6 @@ class _MapScreenState extends State<MapScreen>
     unawaited(_animateMapTo(marker.position, zoom: math.max(_lastZoom, 15)));
   }
 
-  Future<void> _launchARExperience(ArtMarker marker) async {
-    if (kIsWeb ||
-        !(defaultTargetPlatform == TargetPlatform.android ||
-            defaultTargetPlatform == TargetPlatform.iOS) ||
-        !AppConfig.isFeatureEnabled('ar')) {
-      if (!mounted) return;
-      final l10n = AppLocalizations.of(context)!;
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.showKubusSnackBar(
-        SnackBar(content: Text(l10n.arNotSupportedMessage)),
-        tone: KubusSnackBarTone.warning,
-      );
-      return;
-    }
-
-    try {
-      // Navigate to AR screen
-      await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const ARScreen(),
-        ),
-      );
-    } catch (e) {
-      AppConfig.debugPrint('MapScreen: Error launching AR experience: $e');
-      if (mounted) {
-        final l10n = AppLocalizations.of(context)!;
-        final messenger = ScaffoldMessenger.of(context);
-        messenger.showKubusSnackBar(
-          SnackBar(content: Text(l10n.mapFailedToLaunchAr)),
-          tone: KubusSnackBarTone.error,
-        );
-      }
-    }
-  }
-
   Color _resolveArtMarkerColor(ArtMarker marker, ThemeProvider themeProvider) {
     final scheme = Theme.of(context).colorScheme;
     final roles = KubusColorRoles.of(context);
@@ -2589,6 +2595,8 @@ class _MapScreenState extends State<MapScreen>
       {bool fromTimer = false, bool promptForPermission = true}) async {
     try {
       LatLng? resolvedPosition;
+      double? resolvedAccuracyMeters;
+      int? resolvedTimestampMs;
       final prefs = await SharedPreferences.getInstance();
 
       if (kIsWeb) {
@@ -2626,6 +2634,8 @@ class _MapScreenState extends State<MapScreen>
               accuracy: LocationAccuracy.best,
             ),
           );
+          resolvedAccuracyMeters = position.accuracy;
+          resolvedTimestampMs = position.timestamp.millisecondsSinceEpoch;
           resolvedPosition = LatLng(position.latitude, position.longitude);
         }
       } else {
@@ -2730,6 +2740,11 @@ class _MapScreenState extends State<MapScreen>
         if (locationData.latitude != null && locationData.longitude != null) {
           resolvedPosition =
               LatLng(locationData.latitude!, locationData.longitude!);
+          resolvedAccuracyMeters = locationData.accuracy;
+          final rawTime = locationData.time;
+          if (rawTime != null) {
+            resolvedTimestampMs = rawTime.round();
+          }
         }
 
         // Start the continuous stream only once we have a working service +
@@ -2755,7 +2770,12 @@ class _MapScreenState extends State<MapScreen>
           await prefs.setDouble('last_known_lng', resolvedPosition.longitude);
         } catch (_) {}
         final shouldCenter = !fromTimer;
-        _updateCurrentPosition(resolvedPosition, shouldCenter: shouldCenter);
+        _updateCurrentPosition(
+          resolvedPosition,
+          shouldCenter: shouldCenter,
+          accuracyMeters: resolvedAccuracyMeters,
+          timestampMs: resolvedTimestampMs ?? DateTime.now().millisecondsSinceEpoch,
+        );
         // Only force refresh on initial load (when no markers exist)
         // Timer-based calls should respect the cache/throttling logic
         if (!fromTimer || _artMarkers.isEmpty) {
@@ -2808,6 +2828,8 @@ class _MapScreenState extends State<MapScreen>
           if (event.latitude != null && event.longitude != null) {
             _updateCurrentPosition(
               LatLng(event.latitude!, event.longitude!),
+              accuracyMeters: event.accuracy,
+              timestampMs: (event.time is num) ? (event.time as num).round() : null,
             );
           }
         },
@@ -2852,6 +2874,8 @@ class _MapScreenState extends State<MapScreen>
       _webPositionSubscription = stream.listen((position) {
         _updateCurrentPosition(
           LatLng(position.latitude, position.longitude),
+          accuracyMeters: position.accuracy,
+          timestampMs: position.timestamp.millisecondsSinceEpoch,
         );
       });
       _timer?.cancel();
@@ -3041,13 +3065,20 @@ class _MapScreenState extends State<MapScreen>
     }
   }
 
-  void _updateCurrentPosition(LatLng position, {bool shouldCenter = false}) {
+  void _updateCurrentPosition(
+    LatLng position, {
+    bool shouldCenter = false,
+    double? accuracyMeters,
+    int? timestampMs,
+  }) {
     if (!mounted) return;
     final bool isInitial = _currentPosition == null;
     final bool allowCenter = shouldCenter || _autoFollow || isInitial;
 
     setState(() {
       _currentPosition = position;
+      _currentPositionAccuracyMeters = accuracyMeters;
+      _currentPositionTimestampMs = timestampMs;
     });
     unawaited(_syncUserLocation(themeProvider: context.read<ThemeProvider>()));
 
@@ -3107,48 +3138,10 @@ class _MapScreenState extends State<MapScreen>
   }
 
   Future<void> _markAsDiscovered(Artwork artwork) async {
-    context
-        .read<ArtworkProvider>()
-        .discoverArtwork(artwork.id, 'current_user_id');
+    context.read<ArtworkProvider>().discoverArtwork(artwork.id);
 
-    // Get user ID
-    final prefs = await SharedPreferences.getInstance();
-    final userId = prefs.getString('user_id') ?? 'demo_user';
     if (!mounted) return;
-
-    // Get discovered artwork count
-    final artworkProvider = context.read<ArtworkProvider>();
-    final discoveredCount =
-        artworkProvider.artworks.where((a) => a.isDiscovered).length;
-
-    // Check achievements with new service
-    await AchievementService().checkAchievements(
-      userId: userId,
-      action: 'artwork_discovered',
-      data: {'discoverCount': discoveredCount},
-    );
-
-    // If AR artwork, also check AR view achievements
-    if (artwork.arEnabled) {
-      await AchievementService().checkAchievements(
-        userId: userId,
-        action: 'ar_viewed',
-        data: {'viewCount': discoveredCount},
-      );
-    }
-    if (!mounted) return;
-
-    // Legacy achievement system (for backward compatibility)
-    final taskProvider = context.read<TaskProvider>();
-    taskProvider.incrementAchievementProgress('local_guide');
-    if (artwork.arEnabled) {
-      taskProvider.incrementAchievementProgress('first_ar_visit');
-      taskProvider.incrementAchievementProgress('ar_collector');
-    }
-
-    setState(() {
-      _calculateProgress();
-    });
+    _refreshDiscoveryProgress();
 
     _showDiscoveryRewardForArtwork(artwork);
   }
@@ -5291,7 +5284,10 @@ class _MapScreenState extends State<MapScreen>
 
     navigator.push(
       MaterialPageRoute(
-        builder: (_) => ExhibitionDetailScreen(exhibitionId: resolved.id),
+        builder: (_) => ExhibitionDetailScreen(
+          exhibitionId: resolved.id,
+          attendanceMarkerId: marker.id,
+        ),
       ),
     );
   }
@@ -5324,7 +5320,12 @@ class _MapScreenState extends State<MapScreen>
     }
 
     final artworkToOpen = resolvedArtwork;
-    await openArtwork(context, artworkToOpen.id, source: 'map_marker');
+    await openArtwork(
+      context,
+      artworkToOpen.id,
+      source: 'map_marker',
+      attendanceMarkerId: marker.id,
+    );
   }
 
   Future<void> _showMarkerInfoFallback(ArtMarker marker) async {
@@ -6794,6 +6795,7 @@ class _ArtworkListTile extends StatelessWidget {
     final accent = _accentForArtwork(context, scheme);
     final glassTint = scheme.surface.withValues(alpha: isDark ? 0.42 : 0.54);
     final accentBorder = accent.withValues(alpha: 0.22);
+    final attendanceEnabled = AppConfig.isFeatureEnabled('attendance');
 
     return Material(
       color: Colors.transparent,
@@ -6909,24 +6911,28 @@ class _ArtworkListTile extends StatelessWidget {
                         child: Text(l10n.commonViewDetails),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    IconButton.filledTonal(
-                      tooltip: isDiscovered
-                          ? l10n.mapAlreadyDiscoveredTooltip
-                          : l10n.mapMarkAsDiscoveredTooltip,
-                      onPressed: isDiscovered ? null : onMarkDiscovered,
-                      style: IconButton.styleFrom(
-                        backgroundColor: isDiscovered
-                            ? scheme.surfaceContainerHighest
-                                .withValues(alpha: 0.35)
-                            : accent.withValues(alpha: 0.16),
-                        foregroundColor:
-                            isDiscovered ? scheme.onSurfaceVariant : accent,
+                    if (!attendanceEnabled) ...[
+                      const SizedBox(width: 12),
+                      IconButton.filledTonal(
+                        tooltip: isDiscovered
+                            ? l10n.mapAlreadyDiscoveredTooltip
+                            : l10n.mapMarkAsDiscoveredTooltip,
+                        onPressed: isDiscovered ? null : onMarkDiscovered,
+                        style: IconButton.styleFrom(
+                          backgroundColor: isDiscovered
+                              ? scheme.surfaceContainerHighest
+                                  .withValues(alpha: 0.35)
+                              : accent.withValues(alpha: 0.16),
+                          foregroundColor:
+                              isDiscovered ? scheme.onSurfaceVariant : accent,
+                        ),
+                        icon: Icon(
+                          isDiscovered
+                              ? Icons.check_circle
+                              : Icons.flag_outlined,
+                        ),
                       ),
-                      icon: Icon(
-                        isDiscovered ? Icons.check_circle : Icons.flag_outlined,
-                      ),
-                    ),
+                    ],
                   ],
                 ),
               ],
