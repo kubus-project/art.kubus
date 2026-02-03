@@ -69,7 +69,10 @@ class ArtworkDraftsProvider extends ChangeNotifier {
   String createDraft() {
     final now = DateTime.now().microsecondsSinceEpoch;
     // Random.secure() is not supported on Flutter web.
-    final rand = Random().nextInt(1 << 32);
+    // On Flutter web, Random.nextInt(max) has a max range constraint and
+    // passing 2^32 (or values that may coerce to 0) can throw RangeError.
+    // A 31-bit range is sufficient for entropy when combined with the timestamp.
+    final rand = Random().nextInt(1 << 31);
     final id = 'draft_${now}_$rand';
     _drafts[id] = ArtworkDraftState();
     notifyListeners();
