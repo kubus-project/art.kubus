@@ -17,6 +17,7 @@ import '../../models/map_marker_subject.dart';
 import '../../providers/exhibitions_provider.dart';
 import '../../providers/marker_management_provider.dart';
 import '../../providers/tile_providers.dart';
+import '../../services/storage_config.dart';
 import '../../utils/map_marker_subject_loader.dart';
 import '../../utils/marker_subject_utils.dart';
 import '../../utils/maplibre_style_utils.dart';
@@ -148,9 +149,23 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
     _styleReady = false;
 
     try {
+      final Set<String> existingLayerIds = <String>{};
       try {
-        await controller.removeLayer(_editorLayerId);
+        final raw = await controller.getLayerIds();
+        for (final id in raw) {
+          if (id is String) existingLayerIds.add(id);
+        }
       } catch (_) {}
+
+      Future<void> safeRemoveLayer(String id) async {
+        if (!existingLayerIds.contains(id)) return;
+        try {
+          await controller.removeLayer(id);
+        } catch (_) {}
+        existingLayerIds.remove(id);
+      }
+
+      await safeRemoveLayer(_editorLayerId);
       try {
         await controller.removeSource(_editorSourceId);
       } catch (_) {}
@@ -590,8 +605,15 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
     } else if (_linkedArtwork != null) {
       final modelCid = (_linkedArtwork!.model3DCID ?? '').trim();
       final modelUrl = (_linkedArtwork!.model3DURL ?? '').trim();
-      if (modelCid.isNotEmpty) payload['modelCID'] = modelCid;
-      if (modelUrl.isNotEmpty) payload['modelURL'] = modelUrl;
+      if (modelCid.isNotEmpty) {
+        final cid = modelCid.toLowerCase();
+        final isCidV0 = cid.startsWith('qm') && modelCid.length >= 46;
+        final isCidV1 = cid.startsWith('b') && modelCid.length >= 20;
+        if (isCidV0 || isCidV1) payload['modelCID'] = modelCid;
+      }
+      if (modelUrl.isNotEmpty) {
+        payload['modelURL'] = StorageConfig.resolveUrl(modelUrl) ?? modelUrl;
+      }
     }
 
     final hasCid = (payload['modelCID'] ?? '').toString().trim().isNotEmpty;
@@ -891,19 +913,6 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                                       overflow: TextOverflow.ellipsis,
                                       style: GoogleFonts.inter(fontWeight: FontWeight.w600),
                                     ),
-                                    if ((_subject?.subtitle ?? '').trim().isNotEmpty)
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 2),
-                                        child: Text(
-                                          _subject!.subtitle,
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: GoogleFonts.inter(
-                                            fontSize: 12,
-                                            color: scheme.onSurface.withValues(alpha: 0.7),
-                                          ),
-                                        ),
-                                      ),
                                   ],
                                 ),
                               ),

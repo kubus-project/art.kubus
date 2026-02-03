@@ -58,7 +58,8 @@ class ArtMapView extends StatefulWidget {
   final VoidCallback? onCameraIdle;
 
   final void Function(math.Point<double> point, ll.LatLng latLng)? onMapClick;
-  final void Function(math.Point<double> point, ll.LatLng latLng)? onMapLongClick;
+  final void Function(math.Point<double> point, ll.LatLng latLng)?
+      onMapLongClick;
 
   final bool rotateGesturesEnabled;
   final bool scrollGesturesEnabled;
@@ -283,7 +284,8 @@ class _ArtMapViewState extends State<ArtMapView> {
     try {
       await controller.setStyle(styleString);
     } catch (e, st) {
-      AppConfig.debugPrint('ArtMapView: failed to apply style via setStyle: $e');
+      AppConfig.debugPrint(
+          'ArtMapView: failed to apply style via setStyle: $e');
       if (kDebugMode) {
         AppConfig.debugPrint('ArtMapView: setStyle stack: $st');
       }
@@ -303,7 +305,8 @@ class _ArtMapViewState extends State<ArtMapView> {
       if (controller == null) return;
 
       _markStyleFailure('Map style failed to load.');
-      AppConfig.debugPrint('ArtMapView: style load timeout; switching to fallback');
+      AppConfig.debugPrint(
+          'ArtMapView: style load timeout; switching to fallback');
       unawaited(_attemptFallbackStyle());
     });
   }
@@ -327,7 +330,8 @@ class _ArtMapViewState extends State<ArtMapView> {
     // MapLibre is a platform view; in a loose Stack it can end up with a 0-size
     // layout. SizedBox.expand guarantees fullscreen rendering for our map screens.
     if (resolved == null) {
-      return const SizedBox.expand(child: ColoredBox(color: Colors.transparent));
+      return const SizedBox.expand(
+          child: ColoredBox(color: Colors.transparent));
     }
 
     return LayoutBuilder(
@@ -405,6 +409,8 @@ class _ArtMapViewState extends State<ArtMapView> {
                     // map is mounted behind onboarding / tab transitions. A forced
                     // resize after layout makes the map reliably paint on web.
                     WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (!mounted) return;
+                      if (_controller != controller) return;
                       try {
                         controller.forceResizeWebMap();
                       } catch (e, st) {
@@ -429,14 +435,17 @@ class _ArtMapViewState extends State<ArtMapView> {
                     AppConfig.debugPrint('ArtMapView: style loaded');
                   }
                   if (kIsWeb) {
-                    try {
-                      _controller?.forceResizeWebMap();
-                    } catch (e, st) {
-                      AppConfig.debugPrint(
-                          'ArtMapView: forceResizeWebMap after style load failed: $e');
-                      if (kDebugMode) {
+                    final controller = _controller;
+                    if (controller != null && mounted) {
+                      try {
+                        controller.forceResizeWebMap();
+                      } catch (e, st) {
                         AppConfig.debugPrint(
-                            'ArtMapView: resize-after-style stack: $st');
+                            'ArtMapView: forceResizeWebMap after style load failed: $e');
+                        if (kDebugMode) {
+                          AppConfig.debugPrint(
+                              'ArtMapView: resize-after-style stack: $st');
+                        }
                       }
                     }
                   }
