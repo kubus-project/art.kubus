@@ -6472,9 +6472,11 @@ class _MapScreenState extends State<MapScreen>
 
   Widget _buildPrimaryControls(ThemeData theme) {
     final l10n = AppLocalizations.of(context)!;
-    final bottomOffset = 150.0 + KubusLayout.mainBottomNavBarHeight;
+    // Keep controls clear of the discovery module and the nearby sheet.
+    // Smaller bottom offset moves controls slightly down.
+    final bottomOffset = 120.0 + KubusLayout.mainBottomNavBarHeight;
     return Positioned(
-      left: 12,
+      right: 12,
       bottom: bottomOffset,
       child: MapOverlayBlocker(
         child: Column(
@@ -6505,19 +6507,6 @@ class _MapScreenState extends State<MapScreen>
               const SizedBox(height: 10),
             ],
             Semantics(
-              label: 'map_zoom_out',
-              button: true,
-              child: _MapIconButton(
-                icon: Icons.remove,
-                tooltip: l10n.mapEmptyZoomOutAction,
-                onTap: () {
-                  final nextZoom = (_lastZoom - 1).clamp(3.0, 18.0);
-                  unawaited(_animateMapTo(_cameraCenter, zoom: nextZoom));
-                },
-              ),
-            ),
-            const SizedBox(height: 10),
-            Semantics(
               label: 'map_zoom_in',
               button: true,
               child: _MapIconButton(
@@ -6525,6 +6514,19 @@ class _MapScreenState extends State<MapScreen>
                 tooltip: 'Zoom in',
                 onTap: () {
                   final nextZoom = (_lastZoom + 1).clamp(3.0, 18.0);
+                  unawaited(_animateMapTo(_cameraCenter, zoom: nextZoom));
+                },
+              ),
+            ),
+            const SizedBox(height: 10),
+            Semantics(
+              label: 'map_zoom_out',
+              button: true,
+              child: _MapIconButton(
+                icon: Icons.remove,
+                tooltip: l10n.mapEmptyZoomOutAction,
+                onTap: () {
+                  final nextZoom = (_lastZoom - 1).clamp(3.0, 18.0);
                   unawaited(_animateMapTo(_cameraCenter, zoom: nextZoom));
                 },
               ),
