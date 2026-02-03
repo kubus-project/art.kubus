@@ -56,17 +56,40 @@ class MapMarkerStyleConfig {
     return maxScale;
   }
 
-  static List<Object> iconSizeExpression() {
+  static List<Object> iconSizeExpression({
+    double constantScale = 1.0,
+    Object? multiplier,
+  }) {
+    if (constantScale == 1.0 && multiplier == null) {
+      return <Object>[
+        'interpolate',
+        <Object>['linear'],
+        <Object>['zoom'],
+        minZoom,
+        minScale,
+        midZoom,
+        midScale,
+        maxZoom,
+        maxScale,
+      ];
+    }
+
+    Object scaled(double base) {
+      final value = base * constantScale;
+      if (multiplier == null) return value;
+      return <Object>['*', value, multiplier];
+    }
+
     return <Object>[
       'interpolate',
       <Object>['linear'],
       <Object>['zoom'],
       minZoom,
-      minScale,
+      scaled(minScale),
       midZoom,
-      midScale,
+      scaled(midScale),
       maxZoom,
-      maxScale,
+      scaled(maxScale),
     ];
   }
 

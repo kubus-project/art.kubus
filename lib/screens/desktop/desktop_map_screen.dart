@@ -177,6 +177,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   int _styleEpoch = 0;
   int _hitboxLayerEpoch = -1;
   final Set<String> _registeredMapImages = <String>{};
+  final Set<String> _managedLayerIds = <String>{};
+  final Set<String> _managedSourceIds = <String>{};
   final LayerLink _markerOverlayLink = LayerLink();
   final Debouncer _overlayAnchorDebouncer = Debouncer();
   final Debouncer _cubeSyncDebouncer = Debouncer();
@@ -821,6 +823,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _styleInitialized = false;
     _hitboxLayerReady = false;
     _registeredMapImages.clear();
+    _managedLayerIds.clear();
+    _managedSourceIds.clear();
     AppConfig.debugPrint(
       'DesktopMapScreen: map created (platform=${defaultTargetPlatform.name}, web=$kIsWeb)',
     );
@@ -852,6 +856,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _hitboxLayerReady = false;
     _hitboxLayerEpoch = -1;
     _registeredMapImages.clear();
+    _managedLayerIds.clear();
+    _managedSourceIds.clear();
 
     AppConfig.debugPrint('DesktopMapScreen: style init start');
 
@@ -900,6 +906,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         },
         promoteId: 'id',
       );
+      _managedSourceIds.add(_markerSourceId);
       await controller.addGeoJsonSource(
         _cubeSourceId,
         const <String, dynamic>{
@@ -908,6 +915,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         },
         promoteId: 'id',
       );
+      _managedSourceIds.add(_cubeSourceId);
       await controller.addGeoJsonSource(
         _cubeBevelSourceId,
         const <String, dynamic>{
@@ -916,6 +924,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         },
         promoteId: 'id',
       );
+      _managedSourceIds.add(_cubeBevelSourceId);
 
       // Layer order (bottom to top):
       // 1. Fill-extrusion (3D bevel base)
@@ -937,6 +946,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           visibility: 'none',
         ),
       );
+      _managedLayerIds.add(_cubeBevelLayerId);
 
       // 2. Fill-extrusion layer for 3D cube top (above bevel)
       await controller.addFillExtrusionLayer(
@@ -951,6 +961,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           visibility: 'none',
         ),
       );
+      _managedLayerIds.add(_cubeLayerId);
 
       // 3. Main marker symbol layer for 2D icons
       await controller.addSymbolLayer(
@@ -976,6 +987,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           iconRotationAlignment: 'map',
         ),
       );
+      _managedLayerIds.add(_markerLayerId);
 
       // 4. Cube floating icon layer (above fill-extrusion, same icons as marker layer)
       await controller.addSymbolLayer(
@@ -983,11 +995,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         _cubeIconLayerId,
         ml.SymbolLayerProperties(
           iconImage: <Object>['get', 'icon'],
-          iconSize: <Object>[
-            '*',
-            MapMarkerStyleConfig.iconSizeExpression(),
-            0.92,
-          ],
+          iconSize: MapMarkerStyleConfig.iconSizeExpression(constantScale: 0.92),
           iconOpacity: <Object>[
             'case',
             <Object>[
@@ -1007,6 +1015,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           visibility: 'none',
         ),
       );
+      _managedLayerIds.add(_cubeIconLayerId);
 
       // 5. Invisible hitbox layer (topmost) for consistent tap detection (2D + 3D)
       final Object hitboxRadius = kIsWeb
@@ -1070,6 +1079,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           ),
         );
       }
+      _managedLayerIds.add(_markerHitboxLayerId);
 
       await controller.addGeoJsonSource(
         _locationSourceId,
@@ -1079,6 +1089,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         },
         promoteId: 'id',
       );
+      _managedSourceIds.add(_locationSourceId);
       await controller.addCircleLayer(
         _locationSourceId,
         _locationLayerId,
@@ -1090,6 +1101,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           circleStrokeColor: _hexRgb(scheme.surface),
         ),
       );
+      _managedLayerIds.add(_locationLayerId);
 
       await controller.addGeoJsonSource(
         _pendingSourceId,
@@ -1099,6 +1111,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         },
         promoteId: 'id',
       );
+      _managedSourceIds.add(_pendingSourceId);
       await controller.addCircleLayer(
         _pendingSourceId,
         _pendingLayerId,
@@ -1110,6 +1123,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           circleStrokeColor: _hexRgb(scheme.surface),
         ),
       );
+      _managedLayerIds.add(_pendingLayerId);
 
       if (!mounted) return;
       _styleInitialized = true;
@@ -1407,6 +1421,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final controller = _mapController;
     if (controller == null) return;
     if (!_styleInitialized) return;
+    if (!_managedSourceIds.contains(_locationSourceId)) return;
 
     final pos = _userLocation;
     final data = (pos == null)
@@ -1437,6 +1452,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final controller = _mapController;
     if (controller == null) return;
     if (!_styleInitialized) return;
+    if (!_managedSourceIds.contains(_pendingSourceId)) return;
 
     final pos = _pendingMarkerLocation;
     final data = (pos == null)
@@ -1482,6 +1498,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final controller = _mapController;
     if (controller == null) return;
     if (!_styleInitialized) return;
+    if (!_managedSourceIds.contains(_markerSourceId)) return;
     if (!mounted) return;
 
     final scheme = Theme.of(context).colorScheme;
@@ -2114,6 +2131,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
     _styleInitialized = false;
     _registeredMapImages.clear();
+    _managedLayerIds.clear();
+    _managedSourceIds.clear();
     _pressedClearTimer?.cancel();
     _pressedClearTimer = null;
     _animationController.dispose();
@@ -5486,7 +5505,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       return;
     }
     _markerLayerStyleUpdateInFlight = true;
-    unawaited(_applyMarkerLayerStyle(controller).whenComplete(() {
+    final epoch = _styleEpoch;
+    unawaited(_applyMarkerLayerStyle(controller, epoch).whenComplete(() {
       _markerLayerStyleUpdateInFlight = false;
       if (_markerLayerStyleUpdateQueued) {
         _markerLayerStyleUpdateQueued = false;
@@ -5495,10 +5515,18 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }));
   }
 
-  Future<void> _applyMarkerLayerStyle(ml.MapLibreMapController controller) async {
-    final base = MapMarkerStyleConfig.iconSizeExpression();
-    final iconSize = _interactiveIconSizeExpression(base);
-    final cubeIconSize = <Object>['*', iconSize, 0.92];
+  Future<void> _applyMarkerLayerStyle(
+    ml.MapLibreMapController controller,
+    int styleEpoch,
+  ) async {
+    if (!_styleInitialized) return;
+    if (styleEpoch != _styleEpoch) return;
+    final canStyleMarkerLayer = _managedLayerIds.contains(_markerLayerId);
+    final canStyleCubeIconLayer = _managedLayerIds.contains(_cubeIconLayerId);
+    if (!canStyleMarkerLayer && !canStyleCubeIconLayer) return;
+
+    final iconSize = _interactiveIconSizeExpression();
+    final cubeIconSize = _interactiveIconSizeExpression(constantScale: 0.92);
     final iconOpacity = <Object>[
       'case',
       <Object>['==', <Object>['get', 'kind'], 'cluster'],
@@ -5510,47 +5538,55 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final cubeIconVisible = _cubeLayerVisible;
 
     try {
-      await controller.setLayerProperties(
-        _markerLayerId,
-        ml.SymbolLayerProperties(
-          iconImage: <Object>['get', 'icon'],
-          iconSize: iconSize,
-          iconOpacity: iconOpacity,
-          iconAllowOverlap: true,
-          iconIgnorePlacement: true,
-          iconAnchor: 'center',
-          iconPitchAlignment: 'map',
-          iconRotationAlignment: 'map',
-          visibility: markerVisible ? 'visible' : 'none',
-        ),
-      );
-      await controller.setLayerProperties(
-        _cubeIconLayerId,
-        ml.SymbolLayerProperties(
-          iconImage: <Object>['get', 'icon'],
-          iconSize: cubeIconSize,
-          iconOpacity: iconOpacity,
-          iconAllowOverlap: true,
-          iconIgnorePlacement: true,
-          iconAnchor: 'center',
-          iconPitchAlignment: 'viewport',
-          iconRotationAlignment: 'viewport',
-          iconOffset: MapMarkerStyleConfig.cubeFloatingIconOffsetEm,
-          iconRotate: _cubeIconSpinDegrees,
-          visibility: cubeIconVisible ? 'visible' : 'none',
-        ),
-      );
+      if (canStyleMarkerLayer) {
+        if (!_styleInitialized || styleEpoch != _styleEpoch) return;
+        await controller.setLayerProperties(
+          _markerLayerId,
+          ml.SymbolLayerProperties(
+            iconImage: <Object>['get', 'icon'],
+            iconSize: iconSize,
+            iconOpacity: iconOpacity,
+            iconAllowOverlap: true,
+            iconIgnorePlacement: true,
+            iconAnchor: 'center',
+            iconPitchAlignment: 'map',
+            iconRotationAlignment: 'map',
+            visibility: markerVisible ? 'visible' : 'none',
+          ),
+        );
+      }
+      if (canStyleCubeIconLayer) {
+        if (!_styleInitialized || styleEpoch != _styleEpoch) return;
+        await controller.setLayerProperties(
+          _cubeIconLayerId,
+          ml.SymbolLayerProperties(
+            iconImage: <Object>['get', 'icon'],
+            iconSize: cubeIconSize,
+            iconOpacity: iconOpacity,
+            iconAllowOverlap: true,
+            iconIgnorePlacement: true,
+            iconAnchor: 'center',
+            iconPitchAlignment: 'viewport',
+            iconRotationAlignment: 'viewport',
+            iconOffset: MapMarkerStyleConfig.cubeFloatingIconOffsetEm,
+            iconRotate: _cubeIconSpinDegrees,
+            visibility: cubeIconVisible ? 'visible' : 'none',
+          ),
+        );
+      }
     } catch (_) {
       // Best-effort: style swaps or platform limitations can reject updates.
     }
   }
 
-  Object _interactiveIconSizeExpression(Object base) {
+  Object _interactiveIconSizeExpression({double constantScale = 1.0}) {
     final pressedId = _pressedMarkerId;
     final hoveredId = _hoveredMarkerId;
     final selectedId = _selectedMarkerId;
     final any = pressedId != null || hoveredId != null || selectedId != null;
-    if (!any) return base;
+    if (!any) {
+      return MapMarkerStyleConfig.iconSizeExpression(constantScale: constantScale);
+    }
 
     final double pop = selectedId == null
         ? 1.0
@@ -5558,8 +5594,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             (MapMarkerStyleConfig.selectedPopScaleFactor - 1.0) *
                 math.sin(_animationController.value * math.pi));
 
-    // MapLibre expressions allow only a single zoom-based "step"/"interpolate"
-    // subexpression. `base` is zoom-based, so it must appear exactly once.
+    // On MapLibre GL JS, `['zoom']` must be the input to a top-level
+    // "step"/"interpolate". Encode interaction multipliers inside the stop
+    // outputs so we never wrap the zoom expression.
     final multiplier = <Object>['case'];
     if (pressedId != null) {
       multiplier.addAll(<Object>[
@@ -5580,7 +5617,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       ]);
     }
     multiplier.add(1.0);
-    return <Object>['*', base, multiplier];
+    return MapMarkerStyleConfig.iconSizeExpression(
+      constantScale: constantScale,
+      multiplier: multiplier,
+    );
   }
 
   bool _assertMarkerModeInvariant() {
@@ -5613,11 +5653,29 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     _cubeLayerVisible = shouldShowCubes;
 
+    if (kDebugMode) {
+      AppConfig.debugPrint(
+        'DesktopMapScreen: marker render mode -> cubes=$shouldShowCubes '
+        'layers(marker=${_managedLayerIds.contains(_markerLayerId)} '
+        'cubeIcon=${_managedLayerIds.contains(_cubeIconLayerId)} '
+        'cube=${_managedLayerIds.contains(_cubeLayerId)} '
+        'bevel=${_managedLayerIds.contains(_cubeBevelLayerId)})',
+      );
+    }
+
     try {
-      await controller.setLayerVisibility(_cubeBevelLayerId, shouldShowCubes);
-      await controller.setLayerVisibility(_cubeLayerId, shouldShowCubes);
-      await controller.setLayerVisibility(_cubeIconLayerId, shouldShowCubes);
-      await controller.setLayerVisibility(_markerLayerId, !shouldShowCubes);
+      if (_managedLayerIds.contains(_cubeBevelLayerId)) {
+        await controller.setLayerVisibility(_cubeBevelLayerId, shouldShowCubes);
+      }
+      if (_managedLayerIds.contains(_cubeLayerId)) {
+        await controller.setLayerVisibility(_cubeLayerId, shouldShowCubes);
+      }
+      if (_managedLayerIds.contains(_cubeIconLayerId)) {
+        await controller.setLayerVisibility(_cubeIconLayerId, shouldShowCubes);
+      }
+      if (_managedLayerIds.contains(_markerLayerId)) {
+        await controller.setLayerVisibility(_markerLayerId, !shouldShowCubes);
+      }
     } catch (_) {
       // Best-effort: layer visibility may fail during style swaps.
     }
@@ -5629,20 +5687,24 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       await _syncMarkerCubes(themeProvider: themeProvider);
     } else {
       try {
-        await controller.setGeoJsonSource(
-          _cubeSourceId,
-          const <String, dynamic>{
-            'type': 'FeatureCollection',
-            'features': <dynamic>[],
-          },
-        );
-        await controller.setGeoJsonSource(
-          _cubeBevelSourceId,
-          const <String, dynamic>{
-            'type': 'FeatureCollection',
-            'features': <dynamic>[],
-          },
-        );
+        if (_managedSourceIds.contains(_cubeSourceId)) {
+          await controller.setGeoJsonSource(
+            _cubeSourceId,
+            const <String, dynamic>{
+              'type': 'FeatureCollection',
+              'features': <dynamic>[],
+            },
+          );
+        }
+        if (_managedSourceIds.contains(_cubeBevelSourceId)) {
+          await controller.setGeoJsonSource(
+            _cubeBevelSourceId,
+            const <String, dynamic>{
+              'type': 'FeatureCollection',
+              'features': <dynamic>[],
+            },
+          );
+        }
       } catch (_) {
         // Ignore source update failures during transitions.
       }
@@ -5653,6 +5715,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final controller = _mapController;
     if (controller == null) return;
     if (!_styleInitialized) return;
+    if (!_managedSourceIds.contains(_cubeSourceId) ||
+        !_managedSourceIds.contains(_cubeBevelSourceId)) {
+      return;
+    }
     if (!mounted) return;
     if (!_is3DMarkerModeActive) return;
 
