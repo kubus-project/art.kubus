@@ -7,6 +7,7 @@ import '../models/art_marker.dart';
 import '../providers/storage_provider.dart';
 import '../utils/geo_bounds.dart';
 import 'backend_api_service.dart';
+import 'storage_config.dart';
 import 'socket_service.dart';
 
 @immutable
@@ -390,19 +391,44 @@ class MapMarkerService {
   /// Create or update an art marker record in the backend.
   Future<ArtMarker?> saveMarker(ArtMarker marker) async {
     try {
+      String? normalizeModelCid(String? cid) {
+        final raw = (cid ?? '').trim();
+        if (raw.isEmpty) return null;
+        final lower = raw.toLowerCase();
+        final isCidV0 = lower.startsWith('qm') && raw.length >= 46;
+        if (isCidV0) return raw;
+        return null;
+      }
+
+      String? resolveModelUrl(String? url) {
+        final raw = (url ?? '').trim();
+        if (raw.isEmpty) return null;
+        return StorageConfig.resolveUrl(raw) ?? raw;
+      }
+
+      final normalizedCid = normalizeModelCid(marker.modelCID);
+      final resolvedUrl = resolveModelUrl(marker.modelURL);
+      final hasCid = (normalizedCid ?? '').trim().isNotEmpty;
+      final hasUrl = (resolvedUrl ?? '').trim().isNotEmpty;
+      final storageProvider = hasCid && hasUrl
+          ? StorageProvider.hybrid
+          : hasCid
+              ? StorageProvider.ipfs
+              : StorageProvider.http;
+
       final payload = <String, dynamic>{
-        'id': marker.id,
         'name': marker.name,
         'description': marker.description,
         'category': marker.category,
         'markerType': marker.type.name,
+        // Backend DB constraint expects marker_type in {geolocation,image,qr,nfc}.
         'type': 'geolocation',
         'latitude': marker.position.latitude,
         'longitude': marker.position.longitude,
-        'artworkId': marker.artworkId,
-        'modelCID': marker.modelCID,
-        'modelURL': marker.modelURL,
-        'storageProvider': marker.storageProvider.name,
+        if ((marker.artworkId ?? '').trim().isNotEmpty) 'artworkId': marker.artworkId,
+        if (normalizedCid != null) 'modelCID': normalizedCid,
+        if (resolvedUrl != null) 'modelURL': resolvedUrl,
+        'storageProvider': storageProvider.name,
         'scale': marker.scale,
         'rotation': marker.rotation,
         'enableAnimation': marker.enableAnimation,
@@ -412,16 +438,18 @@ class MapMarkerService {
         'activationRadius': marker.activationRadius,
         'requiresProximity': marker.requiresProximity,
         'isPublic': marker.isPublic,
-        'createdBy': marker.createdBy,
+        'isActive': marker.isActive,
       };
 
       final hasId = marker.id.toString().trim().isNotEmpty;
-      if (hasId) {
-        final saved = await _backendApi.updateArtMarkerRecord(marker.id, payload);
-        return saved ?? marker;
+      final isTemporaryId = marker.id.startsWith('marker_');
+      if (!hasId || isTemporaryId) {
+        final created = await _backendApi.createArtMarkerRecord(payload);
+        return created;
       }
-      final created = await _backendApi.createArtMarkerRecord(payload);
-      return created ?? marker;
+
+      final saved = await _backendApi.updateArtMarkerRecord(marker.id, payload);
+      return saved ?? marker;
     } catch (e) {
       _log('MapMarkerService: saveMarker failed: $e');
     }
@@ -510,42 +538,54 @@ class MapMarkerService {
         }
       }
 
-      final hasCid = modelCID?.isNotEmpty ?? false;
-      final hasUrl = modelURL?.isNotEmpty ?? false;
+      String? normalizeModelCid(String? cid) {
+        final raw = (cid ?? '').trim();
+        if (raw.isEmpty) return null;
+        final lower = raw.toLowerCase();
+        final isCidV0 = lower.startsWith('qm') && raw.length >= 46;
+        if (isCidV0) return raw;
+        return null;
+      }
+
+      final normalizedCid = normalizeModelCid(modelCID);
+      final resolvedUrl = (modelURL ?? '').trim().isEmpty ? null : (StorageConfig.resolveUrl(modelURL) ?? modelURL);
+      final hasCid = (normalizedCid ?? '').trim().isNotEmpty;
+      final hasUrl = (resolvedUrl ?? '').trim().isNotEmpty;
       final storageProvider = hasCid && hasUrl
           ? StorageProvider.hybrid
           : hasCid
               ? StorageProvider.ipfs
               : StorageProvider.http;
 
-      final marker = ArtMarker(
-        id: 'marker_${DateTime.now().millisecondsSinceEpoch}',
-        name: title,
-        description: description,
-        position: location,
-        artworkId: artworkId,
-        type: type,
-        category: category,
-        modelCID: modelCID,
-        modelURL: modelURL,
-        storageProvider: storageProvider,
-        scale: scale,
-        metadata: {
+      final payload = <String, dynamic>{
+        'name': title,
+        'description': description,
+        'category': category,
+        'markerType': type.name,
+        'type': 'geolocation',
+        'latitude': location.latitude,
+        'longitude': location.longitude,
+        if ((artworkId ?? '').trim().isNotEmpty) 'artworkId': artworkId,
+        if (normalizedCid != null) 'modelCID': normalizedCid,
+        if (resolvedUrl != null) 'modelURL': resolvedUrl,
+        'storageProvider': storageProvider.name,
+        'scale': scale,
+        'metadata': {
           'source': 'user_created',
           'createdFrom': 'map_marker_service',
-          'isPublic': isPublic,
+          'visibility': isPublic ? 'public' : 'private',
           if (metadata != null) ...metadata,
         },
-        tags: tags,
-        createdAt: DateTime.now(),
-        createdBy: 'current_user',
-        isPublic: isPublic,
-      );
+        if (tags.isNotEmpty) 'tags': tags,
+        'isPublic': isPublic,
+      };
 
-      final persistedMarker = await saveMarker(marker);
-      if (persistedMarker != null) {
-        _cachedMarkers.add(persistedMarker);
-        return persistedMarker;
+      final created = await _backendApi.createArtMarkerRecord(payload);
+      if (created != null) {
+        _cachedMarkers.removeWhere((m) => m.id == created.id);
+        _cachedMarkers.add(created);
+        notifyMarkerUpserted(created);
+        return created;
       }
     } catch (e) {
       _log('MapMarkerService: Error creating marker - $e');
