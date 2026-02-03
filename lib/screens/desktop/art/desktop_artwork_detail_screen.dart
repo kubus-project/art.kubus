@@ -22,10 +22,12 @@ import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
 import '../../../utils/artwork_media_resolver.dart';
 import '../../../utils/wallet_utils.dart';
+import '../../../widgets/artwork_gallery_view.dart';
 import '../../../widgets/artwork_creator_byline.dart';
 import '../../../widgets/avatar_widget.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../../widgets/detail/detail_shell_components.dart';
+import '../../web3/artist/artwork_ar_manager_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class DesktopArtworkDetailScreen extends StatefulWidget {
@@ -263,12 +265,13 @@ class _DesktopArtworkDetailScreenState
   }) {
     return ListView(
       children: [
-        _buildMedia(coverUrl),
+        _buildMedia(artwork, coverUrl),
         const SizedBox(height: DetailSpacing.lg),
         _buildHeader(artwork),
         const SizedBox(height: DetailSpacing.md),
         _buildActionsRow(artwork, artworkProvider, isSignedIn),
         _buildAttendanceConfirmSection(artwork: artwork, isSignedIn: isSignedIn),
+        _buildArSetupSection(artwork),
         const SizedBox(height: DetailSpacing.lg),
         _buildDescription(artwork),
         _buildPoapInfoCard(artwork),
@@ -284,27 +287,135 @@ class _DesktopArtworkDetailScreenState
     return _buildCommentsPanel(artwork, artworkProvider, isSignedIn);
   }
 
-  Widget _buildMedia(String? coverUrl) {
+  Widget _buildMedia(Artwork artwork, String? coverUrl) {
     final scheme = Theme.of(context).colorScheme;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: AspectRatio(
-        aspectRatio: 16 / 9,
-        child: coverUrl == null
-            ? Container(
-                color: scheme.surfaceContainerHighest,
-                child: Icon(Icons.image_not_supported,
-                    color: scheme.onSurfaceVariant),
-              )
-            : Image.network(
-                coverUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  color: scheme.surfaceContainerHighest,
-                  child:
-                      Icon(Icons.broken_image, color: scheme.onSurfaceVariant),
+    final urls = <String>[
+      if (coverUrl != null && coverUrl.trim().isNotEmpty) coverUrl.trim(),
+      ...artwork.galleryUrls.map((u) => u.trim()).where((u) => u.isNotEmpty),
+    ];
+
+    final seen = <String>{};
+    final unique = <String>[];
+    for (final url in urls) {
+      if (seen.add(url)) unique.add(url);
+    }
+
+    if (unique.isEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: AspectRatio(
+          aspectRatio: 16 / 9,
+          child: Container(
+            color: scheme.surfaceContainerHighest,
+            child: Icon(Icons.image_not_supported, color: scheme.onSurfaceVariant),
+          ),
+        ),
+      );
+    }
+
+    return ArtworkGalleryView(imageUrls: unique, height: 320);
+  }
+
+  Widget _buildArSetupSection(Artwork artwork) {
+    if (!artwork.arEnabled) return const SizedBox.shrink();
+
+    final scheme = Theme.of(context).colorScheme;
+    final profileProvider = context.read<ProfileProvider>();
+    final walletProvider = context.read<WalletProvider>();
+    final currentWallet = profileProvider.currentUser?.walletAddress ?? walletProvider.currentWalletAddress;
+    final isOwner = (currentWallet != null &&
+        (artwork.walletAddress ?? '').isNotEmpty &&
+        currentWallet.toLowerCase() == artwork.walletAddress!.toLowerCase());
+
+    String statusLabel() {
+      switch (artwork.arStatus) {
+        case ArtworkArStatus.ready:
+          return 'AR ready';
+        case ArtworkArStatus.draft:
+          return 'AR draft';
+        case ArtworkArStatus.error:
+          return 'AR needs attention';
+        case ArtworkArStatus.none:
+        default:
+          return 'AR not set';
+      }
+    }
+
+    Color statusColor() {
+      switch (artwork.arStatus) {
+        case ArtworkArStatus.ready:
+          return scheme.primary;
+        case ArtworkArStatus.error:
+          return scheme.error;
+        case ArtworkArStatus.draft:
+        case ArtworkArStatus.none:
+        default:
+          return scheme.outline;
+      }
+    }
+
+    final color = statusColor();
+    final ready = artwork.arStatus == ArtworkArStatus.ready;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: DetailSpacing.md),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: scheme.outline.withValues(alpha: 0.18)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.view_in_ar_rounded, color: color),
+                const SizedBox(width: 8),
+                Text('AR experience', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: color.withValues(alpha: 0.35)),
+                  ),
+                  child: Text(
+                    statusLabel(),
+                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: color),
+                  ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Print or share a marker so people can scan and unlock AR.',
+              style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.7)),
+            ),
+            const SizedBox(height: 10),
+            if (ready)
+              OutlinedButton.icon(
+                onPressed: () => Navigator.pushNamed(context, '/ar'),
+                icon: const Icon(Icons.qr_code_scanner_rounded),
+                label: const Text('Scan AR'),
+              )
+            else if (isOwner)
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final navigator = Navigator.of(context);
+                  await navigator.push(
+                    MaterialPageRoute(
+                      builder: (_) => ArtworkArManagerScreen(artworkId: artwork.id),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.qr_code_2),
+                label: const Text('Finish AR setup'),
               ),
+          ],
+        ),
       ),
     );
   }

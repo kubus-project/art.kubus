@@ -6,6 +6,77 @@ enum ArtworkStatus {
   favorite,
 }
 
+enum ArtworkPoapMode {
+  none,
+  existingPoap,
+  kubusPoap,
+}
+
+extension ArtworkPoapModeApi on ArtworkPoapMode {
+  String get apiValue {
+    switch (this) {
+      case ArtworkPoapMode.none:
+        return 'NONE';
+      case ArtworkPoapMode.existingPoap:
+        return 'EXISTING_POAP';
+      case ArtworkPoapMode.kubusPoap:
+        return 'KUBUS_POAP';
+    }
+  }
+
+  static ArtworkPoapMode fromApiValue(String? value) {
+    final normalized = (value ?? '').trim().toUpperCase();
+    switch (normalized) {
+      case 'KUBUS_POAP':
+        return ArtworkPoapMode.kubusPoap;
+      case 'EXISTING_POAP':
+        return ArtworkPoapMode.existingPoap;
+      case 'NONE':
+      case '':
+      default:
+        return ArtworkPoapMode.none;
+    }
+  }
+}
+
+enum ArtworkArStatus {
+  none,
+  draft,
+  ready,
+  error,
+}
+
+extension ArtworkArStatusApi on ArtworkArStatus {
+  String get apiValue {
+    switch (this) {
+      case ArtworkArStatus.none:
+        return 'NONE';
+      case ArtworkArStatus.draft:
+        return 'DRAFT';
+      case ArtworkArStatus.ready:
+        return 'READY';
+      case ArtworkArStatus.error:
+        return 'ERROR';
+    }
+  }
+
+  static ArtworkArStatus fromApiValue(String? value) {
+    final normalized = (value ?? '').trim().toUpperCase();
+    switch (normalized) {
+      case 'READY':
+        return ArtworkArStatus.ready;
+      case 'DRAFT':
+        return ArtworkArStatus.draft;
+      case 'ERROR':
+        return ArtworkArStatus.error;
+      case 'NONE':
+      case '':
+      default:
+        return ArtworkArStatus.none;
+    }
+  }
+}
+
 class Artwork {
   final String id;
   final String? walletAddress;
@@ -13,6 +84,8 @@ class Artwork {
   final String artist;
   final String description;
   final String? imageUrl;
+  final List<String> galleryUrls;
+  final List<Map<String, dynamic>> galleryMeta;
   final LatLng position;
   final ArtworkStatus status;
   final bool isPublic;
@@ -29,12 +102,23 @@ class Artwork {
   
   // AR-specific fields
   final String? arMarkerId;      // Reference to ArtMarker
+  final String? arConfigId;      // Reference to AR config (printable marker / setup)
+  final ArtworkArStatus arStatus;
   final String? model3DCID;      // IPFS CID for 3D model
   final String? model3DURL;      // HTTP URL for 3D model
   final double? arScale;         // Scale for AR display
   final Map<String, double>? arRotation; // AR rotation {x, y, z}
   final bool? arEnableAnimation;
   final String? arAnimationName;
+
+  // POAP (attendance) configuration
+  final ArtworkPoapMode poapMode;
+  final bool poapEnabled;
+  final String? poapEventId;
+  final String? poapClaimUrl;
+  final DateTime? poapValidFrom;
+  final DateTime? poapValidTo;
+  final int? poapRewardAmount;
   
   // Social metrics
   final int likesCount;
@@ -58,6 +142,8 @@ class Artwork {
     required this.artist,
     required this.description,
     this.imageUrl,
+    this.galleryUrls = const [],
+    this.galleryMeta = const [],
     required this.position,
     this.status = ArtworkStatus.undiscovered,
     this.isPublic = true,
@@ -72,12 +158,21 @@ class Artwork {
     this.discoveredAt,
     this.discoveryUserId,
     this.arMarkerId,
+    this.arConfigId,
+    this.arStatus = ArtworkArStatus.none,
     this.model3DCID,
     this.model3DURL,
     this.arScale,
     this.arRotation,
     this.arEnableAnimation,
     this.arAnimationName,
+    this.poapMode = ArtworkPoapMode.none,
+    this.poapEnabled = false,
+    this.poapEventId,
+    this.poapClaimUrl,
+    this.poapValidFrom,
+    this.poapValidTo,
+    this.poapRewardAmount,
     this.likesCount = 0,
     this.commentsCount = 0,
     this.viewsCount = 0,
@@ -129,6 +224,8 @@ class Artwork {
       'artist': artist,
       'description': description,
       'imageUrl': imageUrl,
+      'galleryUrls': galleryUrls,
+      'galleryMeta': galleryMeta,
       'latitude': position.latitude,
       'longitude': position.longitude,
       'status': status.name,
@@ -144,12 +241,21 @@ class Artwork {
       'discoveredAt': discoveredAt?.toIso8601String(),
       'discoveryUserId': discoveryUserId,
       'arMarkerId': arMarkerId,
+      'arConfigId': arConfigId,
+      'arStatus': arStatus.apiValue,
       'model3DCID': model3DCID,
       'model3DURL': model3DURL,
       'arScale': arScale,
       'arRotation': arRotation,
       'arEnableAnimation': arEnableAnimation,
       'arAnimationName': arAnimationName,
+      'poapMode': poapMode.apiValue,
+      'poapEnabled': poapEnabled,
+      'poapEventId': poapEventId,
+      'poapClaimUrl': poapClaimUrl,
+      'poapValidFrom': poapValidFrom?.toIso8601String(),
+      'poapValidTo': poapValidTo?.toIso8601String(),
+      'poapRewardAmount': poapRewardAmount,
       'likesCount': likesCount,
       'commentsCount': commentsCount,
       'viewsCount': viewsCount,
@@ -195,6 +301,8 @@ class Artwork {
           : null,
       discoveryUserId: map['discoveryUserId'],
       arMarkerId: map['arMarkerId'],
+      arConfigId: map['arConfigId'],
+      arStatus: ArtworkArStatusApi.fromApiValue(map['arStatus']?.toString()),
       model3DCID: map['model3DCID'],
       model3DURL: map['model3DURL'],
       arScale: map['arScale']?.toDouble(),
@@ -203,6 +311,22 @@ class Artwork {
           : null,
       arEnableAnimation: map['arEnableAnimation'],
       arAnimationName: map['arAnimationName'],
+      galleryUrls: List<String>.from(map['galleryUrls'] ?? []),
+      galleryMeta: map['galleryMeta'] is List
+          ? (map['galleryMeta'] as List)
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList()
+          : const [],
+      poapMode: ArtworkPoapModeApi.fromApiValue(map['poapMode']?.toString()),
+      poapEnabled: map['poapEnabled'] == true,
+      poapEventId: map['poapEventId']?.toString(),
+      poapClaimUrl: map['poapClaimUrl']?.toString(),
+      poapValidFrom: map['poapValidFrom'] != null ? DateTime.tryParse(map['poapValidFrom'].toString()) : null,
+      poapValidTo: map['poapValidTo'] != null ? DateTime.tryParse(map['poapValidTo'].toString()) : null,
+      poapRewardAmount: map['poapRewardAmount'] is num
+          ? (map['poapRewardAmount'] as num).toInt()
+          : int.tryParse(map['poapRewardAmount']?.toString() ?? ''),
       likesCount: map['likesCount']?.toInt() ?? 0,
       commentsCount: map['commentsCount']?.toInt() ?? 0,
       viewsCount: map['viewsCount']?.toInt() ?? 0,
@@ -225,6 +349,8 @@ class Artwork {
     String? artist,
     String? description,
     String? imageUrl,
+    List<String>? galleryUrls,
+    List<Map<String, dynamic>>? galleryMeta,
     LatLng? position,
     ArtworkStatus? status,
     bool? isPublic,
@@ -239,12 +365,21 @@ class Artwork {
     DateTime? discoveredAt,
     String? discoveryUserId,
     String? arMarkerId,
+    String? arConfigId,
+    ArtworkArStatus? arStatus,
     String? model3DCID,
     String? model3DURL,
     double? arScale,
     Map<String, double>? arRotation,
     bool? arEnableAnimation,
     String? arAnimationName,
+    ArtworkPoapMode? poapMode,
+    bool? poapEnabled,
+    String? poapEventId,
+    String? poapClaimUrl,
+    DateTime? poapValidFrom,
+    DateTime? poapValidTo,
+    int? poapRewardAmount,
     int? likesCount,
     int? commentsCount,
     int? viewsCount,
@@ -264,6 +399,8 @@ class Artwork {
       artist: artist ?? this.artist,
       description: description ?? this.description,
       imageUrl: imageUrl ?? this.imageUrl,
+      galleryUrls: galleryUrls ?? this.galleryUrls,
+      galleryMeta: galleryMeta ?? this.galleryMeta,
       position: position ?? this.position,
       status: status ?? this.status,
       isPublic: isPublic ?? this.isPublic,
@@ -278,12 +415,21 @@ class Artwork {
       discoveredAt: discoveredAt ?? this.discoveredAt,
       discoveryUserId: discoveryUserId ?? this.discoveryUserId,
       arMarkerId: arMarkerId ?? this.arMarkerId,
+      arConfigId: arConfigId ?? this.arConfigId,
+      arStatus: arStatus ?? this.arStatus,
       model3DCID: model3DCID ?? this.model3DCID,
       model3DURL: model3DURL ?? this.model3DURL,
       arScale: arScale ?? this.arScale,
       arRotation: arRotation ?? this.arRotation,
       arEnableAnimation: arEnableAnimation ?? this.arEnableAnimation,
       arAnimationName: arAnimationName ?? this.arAnimationName,
+      poapMode: poapMode ?? this.poapMode,
+      poapEnabled: poapEnabled ?? this.poapEnabled,
+      poapEventId: poapEventId ?? this.poapEventId,
+      poapClaimUrl: poapClaimUrl ?? this.poapClaimUrl,
+      poapValidFrom: poapValidFrom ?? this.poapValidFrom,
+      poapValidTo: poapValidTo ?? this.poapValidTo,
+      poapRewardAmount: poapRewardAmount ?? this.poapRewardAmount,
       likesCount: likesCount ?? this.likesCount,
       commentsCount: commentsCount ?? this.commentsCount,
       viewsCount: viewsCount ?? this.viewsCount,
