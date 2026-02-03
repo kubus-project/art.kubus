@@ -32,6 +32,7 @@ class ArtworkDraftState {
 
   bool isPublic = true;
 
+  bool locationEnabled = false;
   String? locationName;
   double? latitude;
   double? longitude;
@@ -128,12 +129,21 @@ class ArtworkDraftsProvider extends ChangeNotifier {
 
   void updateLocation({
     required String draftId,
+    bool? enabled,
     String? locationName,
     double? latitude,
     double? longitude,
   }) {
     final draft = _drafts[draftId];
     if (draft == null) return;
+    if (enabled != null) draft.locationEnabled = enabled;
+    if (!draft.locationEnabled) {
+      draft.locationName = null;
+      draft.latitude = null;
+      draft.longitude = null;
+      notifyListeners();
+      return;
+    }
     draft.locationName = locationName;
     draft.latitude = latitude;
     draft.longitude = longitude;
@@ -330,7 +340,7 @@ class ArtworkDraftsProvider extends ChangeNotifier {
           'folder': 'artworks/covers',
         },
         walletAddress: wallet,
-      );
+      ).timeout(const Duration(minutes: 3));
 
       final coverUrl = coverUpload['uploadedUrl'] as String?
           ?? coverUpload['data']?['url'] as String?;
@@ -358,7 +368,7 @@ class ArtworkDraftsProvider extends ChangeNotifier {
             'index': i.toString(),
           },
           walletAddress: wallet,
-        );
+        ).timeout(const Duration(minutes: 3));
 
         final url = uploaded['uploadedUrl'] as String?
             ?? uploaded['data']?['url'] as String?;
@@ -409,9 +419,9 @@ class ArtworkDraftsProvider extends ChangeNotifier {
         return null;
       }
 
-      final lat = draft.latitude;
-      final lng = draft.longitude;
-      if (lat != null || lng != null) {
+      final lat = draft.locationEnabled ? draft.latitude : null;
+      final lng = draft.locationEnabled ? draft.longitude : null;
+      if (draft.locationEnabled && (lat != null || lng != null)) {
         if (lat == null || lng == null) {
           draft.submitError = 'Please provide both latitude and longitude (or leave both empty).';
           return null;
@@ -422,12 +432,16 @@ class ArtworkDraftsProvider extends ChangeNotifier {
         }
       }
 
+      final locationName = draft.locationEnabled
+          ? (draft.locationName?.trim().isNotEmpty == true ? draft.locationName!.trim() : null)
+          : null;
+
       String? poapImageUrl;
       final wantsPoap = poapMode != ArtworkPoapMode.none;
       if (wantsPoap) {
         final poapBytes = draft.poapImageBytes;
         if (poapBytes != null && poapBytes.isNotEmpty) {
-          draft.uploadProgress = 0.80;
+          draft.uploadProgress = max(draft.uploadProgress, 0.90);
           notifyListeners();
           final uploaded = await _api.uploadFile(
             fileBytes: poapBytes,
@@ -438,7 +452,7 @@ class ArtworkDraftsProvider extends ChangeNotifier {
               'folder': 'poap/images',
             },
             walletAddress: wallet,
-          );
+          ).timeout(const Duration(minutes: 3));
           poapImageUrl = uploaded['uploadedUrl'] as String?
               ?? uploaded['data']?['url'] as String?;
           if (poapImageUrl == null || poapImageUrl.trim().isEmpty) {
@@ -461,6 +475,9 @@ class ArtworkDraftsProvider extends ChangeNotifier {
       final poapTitle = draft.poapTitle.trim().isNotEmpty ? draft.poapTitle.trim() : title;
       final poapDescription = draft.poapDescription.trim().isNotEmpty ? draft.poapDescription.trim() : description;
 
+      draft.uploadProgress = max(draft.uploadProgress, 0.95);
+      notifyListeners();
+
       final artwork = await _api.createArtworkRecord(
         title: title,
         description: description,
@@ -469,7 +486,7 @@ class ArtworkDraftsProvider extends ChangeNotifier {
         category: draft.category,
         tags: _parseTagsCsv(draft.tagsCsv),
         galleryUrls: galleryUrls,
-        galleryMeta: galleryMeta,
+        galleryMeta: galleryMeta.isEmpty ? null : galleryMeta,
         isPublic: draft.isPublic,
         enableAR: draft.arEnabled && AppConfig.isFeatureEnabled('ar'),
         // AR model is managed separately; do not attach model here.
@@ -483,13 +500,18 @@ class ArtworkDraftsProvider extends ChangeNotifier {
         poapValidFrom: poapValidFrom,
         poapValidTo: poapValidTo,
         poapRewardAmount: poapRewardAmount,
-        locationName: draft.locationName?.trim().isNotEmpty == true ? draft.locationName!.trim() : null,
+        locationName: locationName,
         latitude: lat,
         longitude: lng,
         metadata: {
           'source': 'artwork_creator_v2',
         },
       );
+
+      if (artwork == null) {
+        draft.submitError = 'Failed to publish artwork. Please try again.';
+        return null;
+      }
 
       draft.uploadProgress = 1;
       notifyListeners();
