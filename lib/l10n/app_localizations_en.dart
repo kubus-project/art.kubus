@@ -4330,7 +4330,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String sendTokenSummaryFeesLabel(Object percent) {
-    return 'Kubus fees (~$percent%)';
+    return 'kubus fees (~$percent%)';
   }
 
   @override

@@ -1962,7 +1962,7 @@
   },
   "sendTokenTransactionSummaryTitle": "Povzetek transakcije",
   "sendTokenSummaryAmountLabel": "Znesek",
-  "sendTokenSummaryFeesLabel": "Kubus provizije (~{percent}%)",
+  "sendTokenSummaryFeesLabel": "kubus provizije (~{percent}%)",
   "@sendTokenSummaryFeesLabel": {
     "placeholders": {
       "percent": {}

@@ -301,9 +301,9 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     }
 
     final ratio = width / height;
-    if (ratio < 0.75 || ratio > 1.8) {
+    if (ratio < 0.75 || ratio > 3.5) {
       messenger.showKubusSnackBar(
-        const SnackBar(content: Text('Cover aspect ratio is unsupported. Use a landscape image (recommended ~4:3).')),
+        const SnackBar(content: Text('Cover aspect ratio is unsupported. Use a landscape image (e.g., 16:9 or 4:3).')),
       );
       return;
     }
@@ -1058,7 +1058,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
             title: Row(
               children: [
                 const Expanded(child: Text('Web3 / Attendance badge')),
-                _infoIcon('A POAP is a badge people can claim to prove they visited. Kubus can host a simple claim link for you.'),
+                _infoIcon('A POAP is a badge people can claim to prove they visited. kubus can host a simple claim link for you.'),
               ],
             ),
             children: [
@@ -1212,8 +1212,8 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                       ),
                       RadioListTile<ArtworkPoapMode>(
                         value: ArtworkPoapMode.kubusPoap,
-                        title: Text('Create with Kubus'),
-                        subtitle: Text('Kubus generates a simple claim link automatically (no POAP setup required).'),
+                        title: Text('Create with kubus'),
+                        subtitle: Text('kubus generates a simple claim link automatically (no POAP setup required).'),
                       ),
                     ],
                   ),

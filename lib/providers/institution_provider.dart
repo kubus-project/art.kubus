@@ -102,7 +102,7 @@ class InstitutionProvider extends ChangeNotifier {
     _institutions = [
       Institution(
         id: 'inst_demo_1',
-        name: 'Kubus Contemporary',
+        name: 'kubus Contemporary',
         description: 'A digital-first gallery exploring AR-native installations and generative work.',
         type: 'gallery',
         address: 'Central District',
