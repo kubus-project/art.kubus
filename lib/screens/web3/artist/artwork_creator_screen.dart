@@ -24,6 +24,7 @@ import '../../../utils/maplibre_style_utils.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../../widgets/art_map_view.dart';
 import '../../../widgets/inline_loading.dart';
+import '../../desktop/desktop_shell.dart';
 import 'artwork_ar_manager_screen.dart';
 
 class ArtworkCreatorScreen extends StatefulWidget {
@@ -110,6 +111,23 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
 
   bool _validateLatLng(double lat, double lng) =>
       lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+
+  void _updateLocationFromFields(ArtworkDraftsProvider drafts) {
+    final lat = double.tryParse(_latController.text.trim());
+    final lng = double.tryParse(_lngController.text.trim());
+    if (lat == null || lng == null) return;
+    if (!_validateLatLng(lat, lng)) return;
+    setState(() => _location = LatLng(lat, lng));
+    drafts.updateLocation(
+      draftId: widget.draftId,
+      enabled: true,
+      locationName: _locationNameController.text.trim().isEmpty ? null : _locationNameController.text.trim(),
+      latitude: lat,
+      longitude: lng,
+    );
+    unawaited(_syncLocationOnMap());
+    unawaited(_moveCameraTo(_location));
+  }
 
   String _resolveWalletAddress(BuildContext context) {
     final profileProvider = context.read<ProfileProvider>();
@@ -420,8 +438,6 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
       return true;
     }
 
-    final ok = _locationFormKey.currentState?.validate() == true;
-    if (!ok) return false;
     final latText = _latController.text.trim();
     final lngText = _lngController.text.trim();
     final nameText = _locationNameController.text.trim();
@@ -432,9 +448,21 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
       return true;
     }
 
+    if (latText.isEmpty || lngText.isEmpty) {
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        const SnackBar(content: Text('Please provide both latitude and longitude.')),
+      );
+      return false;
+    }
+
     final lat = double.tryParse(latText);
     final lng = double.tryParse(lngText);
-    if (lat == null || lng == null || !_validateLatLng(lat, lng)) return false;
+    if (lat == null || lng == null || !_validateLatLng(lat, lng)) {
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        const SnackBar(content: Text('Location coordinates are invalid.')),
+      );
+      return false;
+    }
     drafts.updateLocation(
       draftId: widget.draftId,
       enabled: true,
@@ -796,50 +824,50 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
             ),
             if (locationEnabled) ...[
               const SizedBox(height: 12),
-              SizedBox(
-                height: 240,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: Builder(
-                    builder: (context) {
-                      final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-                      final tileProviders = context.read<TileProviders>();
-                      return ArtMapView(
-                        initialCenter: _location,
-                        initialZoom: 14,
-                        minZoom: 3,
-                        maxZoom: 24,
-                        isDarkMode: isDarkMode,
-                        styleAsset: tileProviders.mapStyleAsset(isDarkMode: isDarkMode),
-                        onMapCreated: (controller) {
-                          _mapController = controller;
-                          _styleReady = false;
-                        },
-                        onStyleLoaded: () {
-                          unawaited(_handleMapStyleLoaded(context).then((_) => _syncLocationOnMap()));
-                        },
-                        onMapClick: (_, point) {
-                          setState(() {
-                            _location = point;
-                            _latController.text = point.latitude.toStringAsFixed(6);
-                            _lngController.text = point.longitude.toStringAsFixed(6);
-                          });
-                          drafts.updateLocation(
-                            draftId: widget.draftId,
-                            enabled: true,
-                            locationName: _locationNameController.text.trim().isEmpty ? null : _locationNameController.text.trim(),
-                            latitude: point.latitude,
-                            longitude: point.longitude,
-                          );
-                          unawaited(_syncLocationOnMap());
-                        },
-                        rotateGesturesEnabled: false,
-                        compassEnabled: false,
-                      );
-                    },
-                  ),
+            SizedBox(
+              height: 220,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Builder(
+                  builder: (context) {
+                    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+                    final tileProviders = context.read<TileProviders>();
+                    return ArtMapView(
+                      initialCenter: _location,
+                      initialZoom: 15,
+                      minZoom: 3,
+                      maxZoom: 24,
+                      isDarkMode: isDarkMode,
+                      styleAsset: tileProviders.mapStyleAsset(isDarkMode: isDarkMode),
+                      onMapCreated: (controller) {
+                        _mapController = controller;
+                        _styleReady = false;
+                      },
+                      onStyleLoaded: () {
+                        unawaited(_handleMapStyleLoaded(context).then((_) => _syncLocationOnMap()));
+                      },
+                      onMapClick: (_, point) {
+                        setState(() {
+                          _location = point;
+                          _latController.text = point.latitude.toStringAsFixed(6);
+                          _lngController.text = point.longitude.toStringAsFixed(6);
+                        });
+                        drafts.updateLocation(
+                          draftId: widget.draftId,
+                          enabled: true,
+                          locationName: _locationNameController.text.trim().isEmpty ? null : _locationNameController.text.trim(),
+                          latitude: point.latitude,
+                          longitude: point.longitude,
+                        );
+                        unawaited(_syncLocationOnMap());
+                      },
+                      rotateGesturesEnabled: false,
+                      compassEnabled: false,
+                    );
+                  },
                 ),
               ),
+            ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _locationNameController,
@@ -865,20 +893,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                       decoration: const InputDecoration(labelText: 'Latitude'),
                       keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
                       textInputAction: TextInputAction.next,
-                      validator: (value) {
-                        if (!locationEnabled) return null;
-                        final latText = (value ?? '').trim();
-                        final lngText = _lngController.text.trim();
-                        if (latText.isEmpty || lngText.isEmpty) return 'Required';
-                        final lat = double.tryParse(latText);
-                        final lng = double.tryParse(lngText);
-                        if (lat == null || lng == null || !_validateLatLng(lat, lng)) return 'Invalid';
-                        return null;
-                      },
-                      onChanged: (_) {
-                        if (!_validateAndSaveLocation(drafts: drafts, draft: draft)) return;
-                        unawaited(_moveCameraTo(_location));
-                      },
+                      onChanged: (_) => _updateLocationFromFields(drafts),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -888,20 +903,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                       decoration: const InputDecoration(labelText: 'Longitude'),
                       keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
                       textInputAction: TextInputAction.done,
-                      validator: (value) {
-                        if (!locationEnabled) return null;
-                        final lngText = (value ?? '').trim();
-                        final latText = _latController.text.trim();
-                        if (latText.isEmpty || lngText.isEmpty) return 'Required';
-                        final lng = double.tryParse(lngText);
-                        final lat = double.tryParse(latText);
-                        if (lat == null || lng == null || !_validateLatLng(lat, lng)) return 'Invalid';
-                        return null;
-                      },
-                      onChanged: (_) {
-                        if (!_validateAndSaveLocation(drafts: drafts, draft: draft)) return;
-                        unawaited(_moveCameraTo(_location));
-                      },
+                      onChanged: (_) => _updateLocationFromFields(drafts),
                     ),
                   ),
                 ],
@@ -1544,18 +1546,23 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
             const SizedBox(height: 10),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  if (widget.onCreated != null) {
-                    widget.onCreated?.call();
-                    return;
-                  }
-                  Navigator.of(context).pop(_createdArtwork?.id);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: accent,
-                  foregroundColor: scheme.onPrimary,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                child: ElevatedButton(
+                  onPressed: () {
+                    if (widget.onCreated != null) {
+                      widget.onCreated?.call();
+                      return;
+                    }
+                    final shellScope = DesktopShellScope.of(context);
+                    if (shellScope != null) {
+                      shellScope.popScreen();
+                      return;
+                    }
+                    Navigator.of(context).maybePop(_createdArtwork?.id);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: accent,
+                    foregroundColor: scheme.onPrimary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
                 child: const Text('Done'),
               ),
