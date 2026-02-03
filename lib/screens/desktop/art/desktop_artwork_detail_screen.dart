@@ -336,7 +336,6 @@ class _DesktopArtworkDetailScreenState
         case ArtworkArStatus.error:
           return 'AR needs attention';
         case ArtworkArStatus.none:
-        default:
           return 'AR not set';
       }
     }
@@ -349,7 +348,6 @@ class _DesktopArtworkDetailScreenState
           return scheme.error;
         case ArtworkArStatus.draft:
         case ArtworkArStatus.none:
-        default:
           return scheme.outline;
       }
     }

@@ -503,7 +503,6 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
       case ArtworkArStatus.error:
         return 'AR: Needs attention';
       case ArtworkArStatus.none:
-      default:
         return 'AR: Not set';
     }
   }

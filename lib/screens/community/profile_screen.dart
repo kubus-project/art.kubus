@@ -9,7 +9,6 @@ import '../../utils/design_tokens.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/web3provider.dart';
-import '../../providers/config_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/dao_provider.dart';
 import '../../providers/task_provider.dart';
