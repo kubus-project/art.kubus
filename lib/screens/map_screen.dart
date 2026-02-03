@@ -34,7 +34,6 @@ import '../services/task_service.dart';
 import '../services/ar_integration_service.dart';
 import '../services/map_marker_service.dart';
 import '../services/push_notification_service.dart';
-import '../services/achievement_service.dart';
 import '../services/map_attribution_helper.dart';
 import '../models/art_marker.dart';
 import '../widgets/art_marker_cube.dart';
@@ -187,9 +186,7 @@ class _MapScreenState extends State<MapScreen>
   static const String _markerLayerId = 'kubus_marker_layer';
   static const String _markerHitboxLayerId = 'kubus_marker_hitbox_layer';
   static const String _cubeSourceId = 'kubus_marker_cubes';
-  static const String _cubeBevelSourceId = 'kubus_marker_cubes_bevel';
   static const String _cubeLayerId = 'kubus_marker_cubes_layer';
-  static const String _cubeBevelLayerId = 'kubus_marker_cubes_bevel_layer';
   static const String _cubeIconLayerId = 'kubus_marker_cubes_icon_layer';
   static const String _locationSourceId = 'kubus_user_location';
   static const String _locationLayerId = 'kubus_user_location_layer';
@@ -310,6 +307,7 @@ class _MapScreenState extends State<MapScreen>
 
   late AnimationController _cubeIconSpinController;
   double _cubeIconSpinDegrees = 0.0;
+  double _cubeIconBobOffsetEm = 0.0;
   int _lastMarkerLayerStyleUpdateMs = 0;
   bool _markerLayerStyleUpdateInFlight = false;
   bool _markerLayerStyleUpdateQueued = false;
@@ -511,11 +509,9 @@ class _MapScreenState extends State<MapScreen>
       await safeRemoveLayer(_markerLayerId);
       await safeRemoveLayer(_markerHitboxLayerId);
       await safeRemoveLayer(_cubeLayerId);
-      await safeRemoveLayer(_cubeBevelLayerId);
       await safeRemoveLayer(_cubeIconLayerId);
       await safeRemoveSource(_markerSourceId);
       await safeRemoveSource(_cubeSourceId);
-      await safeRemoveSource(_cubeBevelSourceId);
       await safeRemoveLayer(_locationLayerId);
       await safeRemoveSource(_locationSourceId);
 
@@ -539,39 +535,13 @@ class _MapScreenState extends State<MapScreen>
       );
       _managedSourceIds.add(_cubeSourceId);
 
-      await controller.addGeoJsonSource(
-        _cubeBevelSourceId,
-        const <String, dynamic>{
-          'type': 'FeatureCollection',
-          'features': <dynamic>[],
-        },
-        promoteId: 'id',
-      );
-      _managedSourceIds.add(_cubeBevelSourceId);
-
       // Layer order (bottom to top):
-      // 1. Fill-extrusion (3D bevel base)
-      // 2. Fill-extrusion (3D cube top)
-      // 3. Marker symbol layer (2D icons)
-      // 4. Cube icon layer (3D mode floating icons)
-      // 5. Hitbox circle layer (TOPMOST for click detection)
+      // 1. Fill-extrusion (3D cube)
+      // 2. Marker symbol layer (2D icons)
+      // 3. Cube icon layer (3D mode floating icons)
+      // 4. Hitbox circle layer (TOPMOST for click detection)
 
-      // 1. Fill-extrusion layer for 3D bevel base (bottom)
-      await controller.addFillExtrusionLayer(
-        _cubeBevelSourceId,
-        _cubeBevelLayerId,
-        ml.FillExtrusionLayerProperties(
-          fillExtrusionColor: <Object>['get', 'color'],
-          fillExtrusionHeight: <Object>['get', 'height'],
-          fillExtrusionBase: 0.0,
-          fillExtrusionOpacity: 0.88,
-          fillExtrusionVerticalGradient: true,
-          visibility: 'none',
-        ),
-      );
-      _managedLayerIds.add(_cubeBevelLayerId);
-
-      // 2. Fill-extrusion layer for 3D cube top (above bevel)
+      // 1. Fill-extrusion layer for 3D cube (solid, no bevel/inset styling)
       await controller.addFillExtrusionLayer(
         _cubeSourceId,
         _cubeLayerId,
@@ -579,14 +549,14 @@ class _MapScreenState extends State<MapScreen>
           fillExtrusionColor: <Object>['get', 'color'],
           fillExtrusionHeight: <Object>['get', 'height'],
           fillExtrusionBase: 0.0,
-          fillExtrusionOpacity: 0.96,
-          fillExtrusionVerticalGradient: true,
+          fillExtrusionOpacity: 0.95,
+          fillExtrusionVerticalGradient: false,
           visibility: 'none',
         ),
       );
       _managedLayerIds.add(_cubeLayerId);
 
-      // 3. Main marker symbol layer for 2D icons
+      // 2. Main marker symbol layer for 2D icons
       await controller.addSymbolLayer(
         _markerSourceId,
         _markerLayerId,
@@ -612,7 +582,7 @@ class _MapScreenState extends State<MapScreen>
       );
       _managedLayerIds.add(_markerLayerId);
 
-      // 4. Cube floating icon layer (above fill-extrusion, same icons as marker layer)
+      // 3. Cube floating icon layer (above fill-extrusion, same icons as marker layer)
       await controller.addSymbolLayer(
         _markerSourceId,
         _cubeIconLayerId,
@@ -640,7 +610,7 @@ class _MapScreenState extends State<MapScreen>
       );
       _managedLayerIds.add(_cubeIconLayerId);
 
-      // 5. Invisible hitbox layer (topmost) for consistent tap detection (2D + 3D)
+      // 4. Invisible hitbox layer (topmost) for consistent tap detection (2D + 3D)
       final Object hitboxRadius = kIsWeb
           ? 32.0
           : <Object>[
@@ -2018,6 +1988,10 @@ class _MapScreenState extends State<MapScreen>
 
     if (shouldSpin) {
       _cubeIconSpinDegrees = _cubeIconSpinController.value * 360.0;
+      final bobMs = MapMarkerStyleConfig.cubeIconBobPeriod.inMilliseconds;
+      final t = (DateTime.now().millisecondsSinceEpoch % bobMs) / bobMs;
+      _cubeIconBobOffsetEm =
+          math.sin(t * 2 * math.pi) * MapMarkerStyleConfig.cubeIconBobAmplitudeEm;
     }
     _requestMarkerLayerStyleUpdate();
   }
@@ -2099,7 +2073,9 @@ class _MapScreenState extends State<MapScreen>
             iconAnchor: 'center',
             iconPitchAlignment: 'viewport',
             iconRotationAlignment: 'viewport',
-            iconOffset: MapMarkerStyleConfig.cubeFloatingIconOffsetEm,
+            iconOffset: MapMarkerStyleConfig.cubeFloatingIconOffsetEmWithBob(
+              _cubeIconBobOffsetEm,
+            ),
             iconRotate: _cubeIconSpinDegrees,
             visibility: cubeIconVisible ? 'visible' : 'none',
           ),
@@ -2187,15 +2163,11 @@ class _MapScreenState extends State<MapScreen>
         'MapScreen: marker render mode -> cubes=$shouldShowCubes '
         'layers(marker=${_managedLayerIds.contains(_markerLayerId)} '
         'cubeIcon=${_managedLayerIds.contains(_cubeIconLayerId)} '
-        'cube=${_managedLayerIds.contains(_cubeLayerId)} '
-        'bevel=${_managedLayerIds.contains(_cubeBevelLayerId)})',
+        'cube=${_managedLayerIds.contains(_cubeLayerId)})',
       );
     }
 
     try {
-      if (_managedLayerIds.contains(_cubeBevelLayerId)) {
-        await controller.setLayerVisibility(_cubeBevelLayerId, shouldShowCubes);
-      }
       if (_managedLayerIds.contains(_cubeLayerId)) {
         await controller.setLayerVisibility(_cubeLayerId, shouldShowCubes);
       }
@@ -2219,15 +2191,6 @@ class _MapScreenState extends State<MapScreen>
         if (_managedSourceIds.contains(_cubeSourceId)) {
           await controller.setGeoJsonSource(
             _cubeSourceId,
-            const <String, dynamic>{
-              'type': 'FeatureCollection',
-              'features': <dynamic>[],
-            },
-          );
-        }
-        if (_managedSourceIds.contains(_cubeBevelSourceId)) {
-          await controller.setGeoJsonSource(
-            _cubeBevelSourceId,
             const <String, dynamic>{
               'type': 'FeatureCollection',
               'features': <dynamic>[],
@@ -4159,10 +4122,7 @@ class _MapScreenState extends State<MapScreen>
     final controller = _mapController;
     if (controller == null) return;
     if (!_styleInitialized) return;
-    if (!_managedSourceIds.contains(_cubeSourceId) ||
-        !_managedSourceIds.contains(_cubeBevelSourceId)) {
-      return;
-    }
+    if (!_managedSourceIds.contains(_cubeSourceId)) return;
     if (!mounted) return;
     if (!_is3DMarkerModeActive) return;
 
@@ -4174,8 +4134,7 @@ class _MapScreenState extends State<MapScreen>
         .where((m) => m.hasValidPosition)
         .toList(growable: false);
 
-    final topFeatures = <Map<String, dynamic>>[];
-    final bevelFeatures = <Map<String, dynamic>>[];
+    final cubeFeatures = <Map<String, dynamic>>[];
     for (final marker in visibleMarkers) {
       final baseColor = AppColorUtils.markerSubjectColor(
         markerType: marker.type.name,
@@ -4187,47 +4146,27 @@ class _MapScreenState extends State<MapScreen>
         zoom: zoom,
         latitude: marker.position.latitude,
       );
-      final topSizeMeters = fullSizeMeters * 0.92;
-      final topHeightMeters = fullSizeMeters * 0.90;
-      final bevelHeightMeters = fullSizeMeters * 0.72;
+      final heightMeters = fullSizeMeters * 0.90;
+      final colorHex = MarkerCubeGeometry.toHex(baseColor);
 
-      final topColor = AppColorUtils.shiftLightness(baseColor, 0.04);
-      final topColorHex = MarkerCubeGeometry.toHex(topColor);
-      final bevelColor = AppColorUtils.shiftLightness(baseColor, -0.10);
-      final bevelColorHex = MarkerCubeGeometry.toHex(bevelColor);
-
-      topFeatures.add(
+      cubeFeatures.add(
         MarkerCubeGeometry.cubeFeatureForMarkerWithMeters(
           marker: marker,
-          colorHex: topColorHex,
-          sizeMeters: topSizeMeters,
-          heightMeters: topHeightMeters,
-          kind: 'cubeTop',
-        ),
-      );
-      bevelFeatures.add(
-        MarkerCubeGeometry.cubeFeatureForMarkerWithMeters(
-          marker: marker,
-          colorHex: bevelColorHex,
+          colorHex: colorHex,
           sizeMeters: fullSizeMeters,
-          heightMeters: bevelHeightMeters,
-          kind: 'cubeBevel',
+          heightMeters: heightMeters,
+          kind: 'cube',
         ),
       );
     }
 
-    final topCollection = <String, dynamic>{
+    final cubeCollection = <String, dynamic>{
       'type': 'FeatureCollection',
-      'features': topFeatures,
-    };
-    final bevelCollection = <String, dynamic>{
-      'type': 'FeatureCollection',
-      'features': bevelFeatures,
+      'features': cubeFeatures,
     };
 
     if (!mounted) return;
-    await controller.setGeoJsonSource(_cubeBevelSourceId, bevelCollection);
-    await controller.setGeoJsonSource(_cubeSourceId, topCollection);
+    await controller.setGeoJsonSource(_cubeSourceId, cubeCollection);
   }
 
   Future<Map<String, dynamic>> _markerFeatureFor({
@@ -4553,13 +4492,6 @@ class _MapScreenState extends State<MapScreen>
       showTypeLabel: canPresentExhibition,
     );
 
-    if (_selectedMarkerViewportSignature == null) {
-      _scheduleEnsureActiveMarkerOverlayInView(
-        marker: marker,
-        overlayHeight: estimatedHeight,
-      );
-    }
-
     return Positioned.fill(
       child: IgnorePointer(
         ignoring: false,
@@ -4569,7 +4501,7 @@ class _MapScreenState extends State<MapScreen>
             const double cardWidth = 360;
             final double maxWidth =
                 math.min(cardWidth, constraints.maxWidth - 32);
-            // Clamp maxHeight to 55% of viewport to prevent oversized cards
+            // Clamp maxHeight to the available viewport (safe-area aware).
             final double safeVerticalPadding =
                 MediaQuery.of(context).padding.vertical;
             final double maxCardHeight = math
@@ -4578,7 +4510,12 @@ class _MapScreenState extends State<MapScreen>
                   constraints.maxHeight - safeVerticalPadding - 24,
                 )
                 .toDouble();
-            final double cardHeight = math.min(estimatedHeight, maxCardHeight);
+            final double minExpandedHeight =
+                constraints.maxWidth < 600 ? 320.0 : 260.0;
+            final double cardHeight = math.min(
+              math.max(estimatedHeight, minExpandedHeight),
+              maxCardHeight,
+            );
             final double topSafe = MediaQuery.of(context).padding.top + 12;
             final double bottomSafe = constraints.maxHeight - cardHeight - 12;
 
@@ -4588,25 +4525,22 @@ class _MapScreenState extends State<MapScreen>
             double left = (constraints.maxWidth - maxWidth) / 2;
 
             final bool isCompact = constraints.maxWidth < 600;
-            double top;
-            if (isCompact) {
-              final desiredTop = (constraints.maxHeight - cardHeight) * 0.18;
-              top = desiredTop.clamp(topSafe, math.max(topSafe, bottomSafe));
-            } else {
-              // Position above marker by default; if it would go off-screen,
-              // keep it within the safe area and nudge the camera instead.
-              top = (anchor?.dy ?? (constraints.maxHeight / 2)) -
-                  cardHeight -
-                  markerOffset;
-              if (top < topSafe) {
-                top = topSafe;
-                _scheduleEnsureActiveMarkerOverlayInView(
-                  marker: marker,
-                  overlayHeight: estimatedHeight,
-                );
-              }
-              // Ensure card stays within viewport bounds
-              top = top.clamp(topSafe, math.max(topSafe, bottomSafe));
+
+            // Prefer anchoring above the marker. If the anchor isn't ready yet,
+            // fall back to a stable heuristic so the first frame looks good.
+            final markerY = anchor?.dy ??
+                (constraints.maxHeight * (isCompact ? 0.72 : 0.66));
+            double top = markerY - cardHeight - markerOffset;
+            if (top < topSafe) {
+              top = topSafe;
+            }
+            top = top.clamp(topSafe, math.max(topSafe, bottomSafe));
+
+            if (_selectedMarkerViewportSignature == null) {
+              _scheduleEnsureActiveMarkerOverlayInView(
+                marker: marker,
+                overlayHeight: cardHeight,
+              );
             }
 
             if (kDebugMode) {
@@ -4664,19 +4598,23 @@ class _MapScreenState extends State<MapScreen>
                                 showBorder: false,
                                 backgroundColor:
                                     scheme.surface.withValues(alpha: 0.45),
-                                // Use shrink-wrapped scroll view so the card
-                                // only grows when content requires it.
-                                child: CustomScrollView(
-                                  shrinkWrap: true,
-                                  physics: const ClampingScrollPhysics(),
-                                  slivers: [
-                                    SliverToBoxAdapter(
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                        Row(
+                                // Keep the primary action visible by rendering
+                                // it as a sticky footer (outside the scroll view).
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.max,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: CustomScrollView(
+                                        physics: const ClampingScrollPhysics(),
+                                        slivers: [
+                                          SliverToBoxAdapter(
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Row(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
@@ -4865,54 +4803,56 @@ class _MapScreenState extends State<MapScreen>
                                             ],
                                           ),
                                         ],
-                                        const SizedBox(height: 12),
-                                        SizedBox(
-                                          width: double.infinity,
-                                          child: Semantics(
-                                            label: 'marker_more_info',
-                                            button: true,
-                                            child: FilledButton.icon(
-                                              style: FilledButton.styleFrom(
-                                                backgroundColor: baseColor,
-                                                foregroundColor: actionFg,
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                  horizontal: 12,
-                                                  vertical: 10,
-                                                ),
-                                              ),
-                                              onPressed: canPresentExhibition
-                                                  ? () =>
-                                                      _openExhibitionFromMarker(
-                                                          marker,
-                                                          primaryExhibition,
-                                                          artwork)
-                                                  : () => _openMarkerDetail(
-                                                      marker, artwork),
-                                              icon: Icon(
-                                                canPresentExhibition
-                                                    ? Icons.museum_outlined
-                                                    : Icons.arrow_forward,
-                                                size: 18,
-                                              ),
-                                              label: Text(
-                                                canPresentExhibition
-                                                    ? 'Odpri razstavo'
-                                                    : l10n.commonViewDetails,
-                                                style: KubusTypography
-                                                    .textTheme.labelLarge
-                                                    ?.copyWith(
-                                                        fontWeight:
-                                                            FontWeight.w700),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
                                       ],
                                     ),
                                   ),
-                                ],
-                              ), // Close CustomScrollView
+                                ],                                
+                               ),
+                              ),
+                                    const SizedBox(height: 12),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: Semantics(
+                                    label: 'marker_more_info',
+                                    button: true,
+                                    child: FilledButton.icon(
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: baseColor,
+                                        foregroundColor: actionFg,
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 10,
+                                        ),
+                                      ),
+                                      onPressed: canPresentExhibition
+                                          ? () => _openExhibitionFromMarker(
+                                                marker,
+                                                primaryExhibition,
+                                                artwork,
+                                              )
+                                          : () => _openMarkerDetail(
+                                                marker,
+                                                artwork,
+                                              ),
+                                      icon: Icon(
+                                        canPresentExhibition
+                                            ? Icons.museum_outlined
+                                            : Icons.arrow_forward,
+                                        size: 18,
+                                      ),
+                                      label: Text(
+                                        canPresentExhibition
+                                            ? 'Odpri razstavo'
+                                            : l10n.commonViewDetails,
+                                        style: KubusTypography
+                                            .textTheme.labelLarge
+                                            ?.copyWith(
+                                                fontWeight: FontWeight.w700),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ), // Close LiquidGlassPanel
                           ), // Close Container
                           ), // Close Material
@@ -4921,7 +4861,8 @@ class _MapScreenState extends State<MapScreen>
                     ), // Close AnimatedSize
                   ), // Close Listener
                 ), // Close Positioned
-              ],
+              ),
+            ],
             );
           },
         ),
@@ -5072,7 +5013,7 @@ class _MapScreenState extends State<MapScreen>
     required String buttonLabel,
     bool showTypeLabel = false,
   }) {
-    // FIX: Use same width as actual card render (was 240, should be 360)
+    // Use the same width as the actual card render.
     const double cardWidth = 360;
     const double horizontalPadding = 12;
     const double verticalPadding = 12;
@@ -5124,8 +5065,8 @@ class _MapScreenState extends State<MapScreen>
       distanceBadgeHeight = (distancePainter.size.height).clamp(10, 20) + 4;
     }
 
-    // Close icon height (18)
-    const double closeIconHeight = 18;
+    // Close icon button is 36x36 in the UI.
+    const double closeIconHeight = 36;
     final double headerContentHeight = typeLabelHeight + titleHeight;
     final double headerHeight = [
       headerContentHeight,
@@ -5141,7 +5082,7 @@ class _MapScreenState extends State<MapScreen>
           text: description,
           style: KubusTypography.textTheme.bodySmall?.copyWith(
             height: 1.4,
-            fontSize: 11,
+            fontSize: 12,
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
@@ -5151,19 +5092,24 @@ class _MapScreenState extends State<MapScreen>
       descriptionHeight = descriptionPainter.size.height;
     }
 
-    // Chips height
+    // Chips height (single row; wrap may grow, but this is used as a
+    // best-effort expansion hint and safe camera offset).
     final double chipsHeight = hasChips ? 24.0 : 0.0;
 
-    // Button height (text + padding *2)
+    // Button height (content + padding * 2)
     final buttonTextPainter = TextPainter(
       text: TextSpan(
         text: buttonLabel,
-        style: KubusTypography.textTheme.labelMedium
-            ?.copyWith(fontWeight: FontWeight.w600),
+        style: KubusTypography.textTheme.labelLarge
+            ?.copyWith(fontWeight: FontWeight.w700),
       ),
       textDirection: TextDirection.ltr,
     )..layout();
-    final double buttonHeight = buttonTextPainter.size.height + (8 * 2);
+    const double buttonIconSize = 18;
+    const double buttonPaddingV = 10;
+    final buttonContentHeight =
+        math.max(buttonTextPainter.size.height, buttonIconSize);
+    final double buttonHeight = buttonContentHeight + (buttonPaddingV * 2);
 
     // Spacing between sections
     double spacing = 0;
@@ -5171,11 +5117,11 @@ class _MapScreenState extends State<MapScreen>
     spacing += 10; // after image
     if (descriptionHeight > 0) spacing += 10;
     if (chipsHeight > 0) spacing += 10;
-    spacing += 10; // before button
+    spacing += 12; // before button
 
     final double containerHeight = verticalPadding * 2 +
         headerHeight +
-        100 +
+        120 +
         descriptionHeight +
         chipsHeight +
         buttonHeight +
