@@ -5584,6 +5584,19 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/exhibitions/$id');
+      if (kDebugMode && AppConfig.enableNetworkLogging) {
+        final cover =
+            updates['coverUrl'] ?? updates['cover_url'] ?? updates['coverImageUrl'] ?? updates['cover_image_url'];
+        if (cover != null) {
+          AppConfig.networkLog(
+            'PUT',
+            uri.toString(),
+            data: <String, dynamic>{
+              'coverUrl': cover,
+            },
+          );
+        }
+      }
       final response = await _put(uri, headers: _getHeaders(), body: jsonEncode(updates), isIdempotent: true);
       final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (response.statusCode == 200) {
@@ -6016,6 +6029,22 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
               request.fields['metadata'] = jsonEncode(metadata);
             }
 
+            if (kDebugMode && AppConfig.enableNetworkLogging) {
+              AppConfig.networkLog(
+                'UPLOAD',
+                request.url.toString(),
+                data: <String, dynamic>{
+                  'attempt': attempt,
+                  'contentType': 'multipart/form-data',
+                  'fileField': 'file',
+                  'fileName': fileName,
+                  'bytes': fileBytes.length,
+                  'fileType': fileType,
+                  'targetStorage': 'http',
+                  if (metadata != null) 'metadata': metadata,
+                },
+              );
+            }
             return request;
           }
 
@@ -6032,7 +6061,27 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
           // Try to determine the best URL for the uploaded file
           String? uploadedUrl;
           try {
-            if (data.containsKey('url') && (data['url'] as String).isNotEmpty) {
+            // Prefer backend-stable relative URLs so entities can persist a canonical
+            // storage ref (backend cover fields expect `/uploads/...`-style paths).
+            if (data.containsKey('relativeUrl') && (data['relativeUrl'] as String).isNotEmpty) {
+              uploadedUrl = data['relativeUrl'] as String;
+            } else if (data.containsKey('relative_url') && (data['relative_url'] as String).isNotEmpty) {
+              uploadedUrl = data['relative_url'] as String;
+            } else if (data.containsKey('publicPath') && (data['publicPath'] as String).isNotEmpty) {
+              final publicPath = (data['publicPath'] as String).trim();
+              if (publicPath.startsWith('/uploads/') || publicPath.startsWith('uploads/')) {
+                uploadedUrl = publicPath.startsWith('/') ? publicPath : '/$publicPath';
+              } else if (publicPath.isNotEmpty) {
+                uploadedUrl = '/uploads/$publicPath';
+              }
+            } else if (data.containsKey('public_path') && (data['public_path'] as String).isNotEmpty) {
+              final publicPath = (data['public_path'] as String).trim();
+              if (publicPath.startsWith('/uploads/') || publicPath.startsWith('uploads/')) {
+                uploadedUrl = publicPath.startsWith('/') ? publicPath : '/$publicPath';
+              } else if (publicPath.isNotEmpty) {
+                uploadedUrl = '/uploads/$publicPath';
+              }
+            } else if (data.containsKey('url') && (data['url'] as String).isNotEmpty) {
               uploadedUrl = data['url'] as String;
             } else if (data.containsKey('ipfsUrl') && (data['ipfsUrl'] as String).isNotEmpty) {
               uploadedUrl = data['ipfsUrl'] as String;
@@ -6048,6 +6097,20 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
           }
 
           // Return structured result including computed uploadedUrl for easy consumption
+          if (kDebugMode && AppConfig.enableNetworkLogging) {
+            AppConfig.networkLog(
+              'UPLOAD_RES',
+              Uri.parse('$baseUrl/api/upload').toString(),
+              data: <String, dynamic>{
+                'status': response.statusCode,
+                'success': body['success'],
+                'data.url': data['url'],
+                'data.relativeUrl': data['relativeUrl'] ?? data['relative_url'],
+                'data.publicPath': data['publicPath'] ?? data['public_path'],
+                'uploadedUrl': uploadedUrl,
+              },
+            );
+          }
           return {
             'raw': body,
             'data': data,
@@ -6055,6 +6118,16 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
           };
         }
 
+        if (kDebugMode && AppConfig.enableNetworkLogging) {
+          AppConfig.networkLog(
+            'UPLOAD_RES',
+            Uri.parse('$baseUrl/api/upload').toString(),
+            data: <String, dynamic>{
+              'status': response.statusCode,
+              'bodyLen': response.body.length,
+            },
+          );
+        }
         if (response.statusCode == 429) {
           final retryAfter = response.headers['retry-after'];
           final waitSeconds = int.tryParse(retryAfter ?? '') ?? (2 << (attempt - 1));
@@ -6413,6 +6486,16 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         if (isPublic != null) 'isPublic': isPublic,
         if (thumbnailUrl != null) 'thumbnailUrl': thumbnailUrl,
       };
+
+      if (kDebugMode && AppConfig.enableNetworkLogging && payload.containsKey('thumbnailUrl')) {
+        AppConfig.networkLog(
+          'PUT',
+          '$baseUrl/api/collections/$collectionId',
+          data: <String, dynamic>{
+            'thumbnailUrl': payload['thumbnailUrl'],
+          },
+        );
+      }
 
       final response = await _put(
         Uri.parse('$baseUrl/api/collections/$collectionId'),

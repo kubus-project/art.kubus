@@ -358,25 +358,32 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             walletAddress: wallet,
           );
 
-          // Extract URL from result
-          final rawUploadedUrl = result['uploadedUrl']?.toString() ?? 
-                                 result['url']?.toString() ?? 
-                                 result['data']?['url']?.toString() ?? '';
-          final uploadedUrl = _normalizeMediaUrl(rawUploadedUrl);
+          // Prefer a backend-stable ref for persistence (covers must be saved as
+          // `/uploads/...`/`/profiles/...` paths; absolute URLs get rejected and
+          // can clear the cover on save).
+          final uploadedRef = (result['uploadedUrl']?.toString() ??
+                  result['data']?['relativeUrl']?.toString() ??
+                  result['data']?['relative_url']?.toString() ??
+                  result['data']?['url']?.toString() ??
+                  result['url']?.toString() ??
+                  '')
+              .trim();
 
-          if (uploadedUrl == null || uploadedUrl.isEmpty) {
-            throw Exception('Failed to get upload URL');
+          if (uploadedRef.isEmpty) {
+            throw Exception('Failed to get uploaded cover ref');
           }
 
-          // Save cover image URL to profile
+          final displayUrl = _normalizeMediaUrl(uploadedRef) ?? uploadedRef;
+
+          // Save cover ref to profile (persist raw, not resolved)
           final saved = await profileProvider.saveProfile(
             walletAddress: wallet,
-            coverImage: uploadedUrl,
+            coverImage: uploadedRef,
           );
 
           if (mounted) {
             setState(() {
-              _coverImageUrl = uploadedUrl;
+              _coverImageUrl = displayUrl;
               _localCoverBytes = null;
               _isLoading = false;
             });

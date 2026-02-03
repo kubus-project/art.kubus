@@ -1,48 +1,43 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:art_kubus/utils/media_url_resolver.dart';
+import 'package:art_kubus/services/storage_config.dart';
+import 'package:flutter/foundation.dart';
 
 void main() {
-  group('MediaUrlResolver rate limiting', () {
+  group('MediaUrlResolver proxy + rate limiting', () {
+    final originalCustom = StorageConfig.customHttpBackend;
+
     setUp(() {
       // Reset state before each test
       MediaUrlResolver.markProxySuccess();
+      StorageConfig.customHttpBackend = null;
+      StorageConfig.setHttpBackend('https://api.example.test');
     });
 
-    test('isProxyRateLimited returns false initially', () {
-      // Access the private method via reflection or verify indirectly
-      // Since _isProxyRateLimited is private, we test the public behavior
-      // by checking that resolve doesn't skip proxying initially
-      MediaUrlResolver.markProxySuccess(); // Ensure clean state
-      // The proxy is not rate limited initially
+    tearDown(() {
+      StorageConfig.customHttpBackend = originalCustom;
     });
 
-    test('markProxyRateLimited sets rate limit', () {
-      MediaUrlResolver.markProxyRateLimited();
-      // After marking rate limited, subsequent calls should respect backoff
-      // We can't directly test the private field, but we verify the public API exists
-      expect(true, isTrue); // API call succeeded
+    test('proxies known CORS-problematic domains on web', () {
+      const raw = 'https://upload.wikimedia.org/wikipedia/commons/a/a1/Example.jpg';
+      final resolved = MediaUrlResolver.resolve(raw);
+      if (kIsWeb) {
+        expect(resolved, isNotNull);
+        expect(resolved!, contains('/api/media/proxy?url='));
+      } else {
+        expect(resolved, equals(raw));
+      }
     });
 
-    test('markProxySuccess resets rate limit', () {
+    test('rate limiting disables proxying on web', () {
+      const raw = 'https://upload.wikimedia.org/wikipedia/commons/a/a1/Example.jpg';
       MediaUrlResolver.markProxyRateLimited();
-      MediaUrlResolver.markProxySuccess();
-      // After success, rate limit should be cleared
-      expect(true, isTrue); // API call succeeded
-    });
-
-    test('repeated failures increase backoff', () {
-      // First failure: 5 min backoff
-      MediaUrlResolver.markProxyRateLimited();
-      // Second failure: 10 min backoff  
-      MediaUrlResolver.markProxyRateLimited();
-      // Third failure: 20 min backoff (capped)
-      MediaUrlResolver.markProxyRateLimited();
-      // Fourth failure: still 20 min backoff (capped at 3)
-      MediaUrlResolver.markProxyRateLimited();
-      
-      // Reset
-      MediaUrlResolver.markProxySuccess();
-      expect(true, isTrue);
+      final resolved = MediaUrlResolver.resolve(raw);
+      if (kIsWeb) {
+        expect(resolved, equals(raw));
+      } else {
+        expect(resolved, equals(raw));
+      }
     });
   });
 
@@ -72,6 +67,25 @@ void main() {
     test('passes through asset: URIs', () {
       const assetUri = 'asset:images/logo.png';
       expect(MediaUrlResolver.resolve(assetUri), equals(assetUri));
+    });
+
+    test('normalizes protocol-relative URLs to https', () {
+      const raw = '//example.com/img.png';
+      expect(MediaUrlResolver.resolve(raw), equals('https://example.com/img.png'));
+    });
+
+    test('resolves backend-relative uploads via StorageConfig', () {
+      final originalCustom = StorageConfig.customHttpBackend;
+      StorageConfig.customHttpBackend = null;
+      StorageConfig.setHttpBackend('https://api.example.test');
+      try {
+        expect(
+          MediaUrlResolver.resolve('/uploads/foo.jpg'),
+          equals('https://api.example.test/uploads/foo.jpg'),
+        );
+      } finally {
+        StorageConfig.customHttpBackend = originalCustom;
+      }
     });
   });
 }
