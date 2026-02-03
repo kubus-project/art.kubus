@@ -687,6 +687,7 @@ class _MapScreenState extends State<MapScreen>
             circleColor: '#000000',
             circleOpacity: 0.0,
             circleStrokeOpacity: 0.0,
+            circleStrokeWidth: 0.0,
             circleRadius: hitboxRadius,
           ),
         );
@@ -701,6 +702,7 @@ class _MapScreenState extends State<MapScreen>
             circleColor: '#000000',
             circleOpacity: 0.0,
             circleStrokeOpacity: 0.0,
+            circleStrokeWidth: 0.0,
             circleRadius: kIsWeb ? 32 : 28,
           ),
         );
@@ -6472,7 +6474,7 @@ class _MapScreenState extends State<MapScreen>
     final l10n = AppLocalizations.of(context)!;
     final bottomOffset = 150.0 + KubusLayout.mainBottomNavBarHeight;
     return Positioned(
-      right: 12,
+      left: 12,
       bottom: bottomOffset,
       child: MapOverlayBlocker(
         child: Column(
@@ -6536,13 +6538,16 @@ class _MapScreenState extends State<MapScreen>
               onTap: _currentPosition == null
                   ? null
                   : () {
-                      setState(() => _autoFollow = true);
-                      unawaited(
-                        _animateMapTo(
-                          _currentPosition!,
-                          zoom: math.max(_lastZoom, 16),
-                        ),
-                      );
+                      final enable = !_autoFollow;
+                      setState(() => _autoFollow = enable);
+                      if (enable) {
+                        unawaited(
+                          _animateMapTo(
+                            _currentPosition!,
+                            zoom: math.max(_lastZoom, 16),
+                          ),
+                        );
+                      }
                     },
             ),
             const SizedBox(height: 10),

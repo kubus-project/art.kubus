@@ -1261,6 +1261,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             circleColor: '#000000',
             circleOpacity: 0.0,
             circleStrokeOpacity: 0.0,
+            circleStrokeWidth: 0.0,
             circleRadius: hitboxRadius,
           ),
         );
@@ -1275,6 +1276,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             circleColor: '#000000',
             circleOpacity: 0.0,
             circleStrokeOpacity: 0.0,
+            circleStrokeWidth: 0.0,
             circleRadius: kIsWeb ? 32 : 28,
           ),
         );

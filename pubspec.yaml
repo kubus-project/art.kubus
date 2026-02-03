@@ -115,6 +115,7 @@ dependencies:
   app_links: ^7.0.0
   google_sign_in_web: ^1.1.0
   google_sign_in_platform_interface: ^3.1.0
+  flutter_cache_manager: ^3.4.1
 
 # Dependency overrides to fix arkit_plugin compatibility with vector_math 2.1.4
 # The scaleByVector3 method was removed in vector_math 2.1.4
