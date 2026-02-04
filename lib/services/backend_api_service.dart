@@ -2607,7 +2607,11 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         return null;
       }
 
-      throw Exception('Failed to create marker: ${response.statusCode} ${response.body}');
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: uri.path,
+        body: response.body,
+      );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.createArtMarkerRecord failed: $e');
       rethrow;
@@ -2639,7 +2643,11 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         return null;
       }
 
-      throw Exception('Failed to update marker: ${response.statusCode} ${response.body}');
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: uri.path,
+        body: response.body,
+      );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.updateArtMarkerRecord failed: $e');
       rethrow;
@@ -7151,6 +7159,23 @@ ArtMarker _artMarkerFromBackendJson(Map<String, dynamic> json) {
     return s.isEmpty ? null : s;
   }
 
+  double doubleVal(dynamic v, double fallback) {
+    if (v is num) return v.toDouble();
+    final s = (v ?? '').toString().trim();
+    if (s.isEmpty) return fallback;
+    final parsed = double.tryParse(s);
+    return parsed ?? fallback;
+  }
+
+  int intVal(dynamic v, int fallback) {
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    final s = (v ?? '').toString().trim();
+    if (s.isEmpty) return fallback;
+    final parsed = int.tryParse(s);
+    return parsed ?? fallback;
+  }
+
   final mergedMeta = _mergeMarkerMetadata(json);
   final subjectType = stringVal(
     json['subjectType'] ??
@@ -7197,13 +7222,13 @@ ArtMarker _artMarkerFromBackendJson(Map<String, dynamic> json) {
     'id': json['id'] ?? json['_id'] ?? '',
     'name': json['name'] ?? json['title'] ?? json['label'] ?? '',
     'description': json['description'] ?? json['summary'] ?? '',
-    'latitude': (json['latitude'] ?? json['lat'] ?? 0).toDouble(),
-    'longitude': (json['longitude'] ?? json['lng'] ?? 0).toDouble(),
+    'latitude': doubleVal(json['latitude'] ?? json['lat'], 0.0),
+    'longitude': doubleVal(json['longitude'] ?? json['lng'], 0.0),
     'artworkId': artworkId,
     'modelCID': json['modelCID'] ?? json['model_cid'],
     'modelURL': json['modelURL'] ?? json['model_url'],
     'storageProvider': json['storageProvider'] ?? json['storage_provider'] ?? 'hybrid',
-    'scale': (json['scale'] ?? 1.0).toDouble(),
+    'scale': doubleVal(json['scale'], 1.0),
     'rotation': json['rotation'],
     'enableAnimation': json['enableAnimation'] ?? json['animate'] ?? false,
     'animationName': json['animationName'] ?? json['animation_name'],
@@ -7215,9 +7240,10 @@ ArtMarker _artMarkerFromBackendJson(Map<String, dynamic> json) {
     'createdAt': json['createdAt'] ?? json['created_at'] ?? DateTime.now().toIso8601String(),
     'updatedAt': json['updatedAt'] ?? json['updated_at'],
     'createdBy': json['createdBy'] ?? json['created_by'] ?? 'system',
-    'viewCount': json['viewCount'] ?? json['views'] ?? 0,
-    'interactionCount': json['interactionCount'] ?? json['interactions'] ?? 0,
-    'activationRadius': json['activationRadius'] ?? json['activation_radius'] ?? 50.0,
+    'viewCount': intVal(json['viewCount'] ?? json['views'], 0),
+    'interactionCount': intVal(json['interactionCount'] ?? json['interactions'], 0),
+    'activationRadius':
+        doubleVal(json['activationRadius'] ?? json['activation_radius'], 50.0),
     'requiresProximity': json['requiresProximity'] ?? json['requires_proximity'] ?? true,
     'isPublic': json['isPublic'] ?? json['is_public'] ?? true,
     'isActive': json['isActive'] ?? json['is_active'] ?? true,

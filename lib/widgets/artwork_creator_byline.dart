@@ -113,8 +113,12 @@ class _ArtworkCreatorBylineState extends State<ArtworkCreatorByline> {
 
     final creators = _creators;
     if (creators.isEmpty) {
+      final artist = widget.artwork.artist.trim();
+      final safeArtist = artist.isNotEmpty && !WalletUtils.looksLikeWallet(artist)
+          ? artist
+          : 'Unknown creator';
       return Text(
-        widget.artwork.artist.isNotEmpty ? widget.artwork.artist : 'Unknown',
+        safeArtist,
         style: baseStyle,
         maxLines: widget.maxLines,
         overflow: TextOverflow.ellipsis,
@@ -203,9 +207,9 @@ List<_CreatorRef> _extractCreators(Artwork artwork) {
     final safeUserId = (userId ?? '').trim();
     if (safeLabel.isEmpty && safeUserId.isEmpty) return;
 
-    final display = safeLabel.isNotEmpty
+    final display = (safeLabel.isNotEmpty && !WalletUtils.looksLikeWallet(safeLabel))
         ? safeLabel
-        : 'User ${WalletUtils.normalize(safeUserId).substring(0, 8)}';
+        : 'Unknown creator';
 
     creators.add(
       _CreatorRef(
@@ -227,7 +231,11 @@ List<_CreatorRef> _extractCreators(Artwork artwork) {
   if (raw is List) {
     for (final entry in raw) {
       if (entry is String) {
-        add(userId: entry, label: entry);
+        final s = entry.trim();
+        add(
+          userId: s,
+          label: WalletUtils.looksLikeWallet(s) ? null : s,
+        );
       } else if (entry is Map) {
         final map = entry.cast<dynamic, dynamic>();
         final userId = map['walletAddress'] ??
@@ -255,7 +263,7 @@ List<_CreatorRef> _extractCreators(Artwork artwork) {
       meta?['wallets'];
   if (creators.isEmpty && rawWallets is List) {
     for (final entry in rawWallets) {
-      add(userId: entry?.toString(), label: entry?.toString());
+      add(userId: entry?.toString(), label: null);
     }
   }
 
@@ -271,9 +279,12 @@ List<_CreatorRef> _extractCreators(Artwork artwork) {
 
     final rawArtistName = meta?['artistName'] ?? meta?['artist_name'];
     final artistName = rawArtistName?.toString().trim();
-    final label = artwork.artist.trim().isNotEmpty
-      ? artwork.artist.trim()
-      : (artistName != null && artistName.isNotEmpty ? artistName : 'Unknown');
+    final labelCandidate = artwork.artist.trim().isNotEmpty
+        ? artwork.artist.trim()
+        : (artistName != null && artistName.isNotEmpty ? artistName : '');
+    final label = labelCandidate.isNotEmpty && !WalletUtils.looksLikeWallet(labelCandidate)
+        ? labelCandidate
+        : 'Unknown creator';
 
     add(userId: wallet, label: label);
   }

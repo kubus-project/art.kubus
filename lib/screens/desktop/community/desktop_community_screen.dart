@@ -39,6 +39,7 @@ import '../../../utils/design_tokens.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/wallet_utils.dart';
+import '../../../utils/user_identity_display.dart';
 import '../../../utils/community_subject_navigation.dart';
 import '../../../widgets/glass_components.dart';
 import '../components/desktop_widgets.dart';
@@ -1530,27 +1531,17 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   ),
                   itemBuilder: (context, index) {
                     final profile = _searchResults[index];
-                    final displayName = profile['displayName']?.toString() ??
-                        profile['display_name']?.toString() ??
-                        profile['username']?.toString() ??
-                        profile['wallet']?.toString() ??
-                        'Profile';
-                    final username =
-                        profile['username']?.toString() ?? profile['handle']?.toString();
                     final wallet = (profile['wallet_address'] ??
                             profile['walletAddress'] ??
                             profile['wallet'])
                         ?.toString();
 
-                    final subtitleText = () {
-                      if (username != null && username.isNotEmpty) {
-                        return '@$username';
-                      }
-                      if (wallet != null && wallet.isNotEmpty) {
-                        return _formatWalletPreview(wallet);
-                      }
-                      return null;
-                    }();
+                    final identity = UserIdentityDisplayUtils.fromProfileMap(
+                      Map<String, dynamic>.from(
+                        profile.map((k, v) => MapEntry(k.toString(), v)),
+                      ),
+                    );
+                    final subtitleText = identity.handle;
 
                     final avatarUrl = profile['avatar'] ??
                         profile['avatar_url'] ??
@@ -1563,7 +1554,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                         allowFabricatedFallback: true,
                       ),
                       title: Text(
-                        displayName,
+                        identity.name,
                         style: GoogleFonts.inter(fontWeight: FontWeight.w600),
                       ),
                       subtitle: subtitleText == null
@@ -1852,13 +1843,6 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     return mapped;
   }
 
-  String _formatWalletPreview(String wallet) {
-    if (wallet.length <= 10) {
-      return wallet;
-    }
-    return '${wallet.substring(0, 4)}...${wallet.substring(wallet.length - 4)}';
-  }
-
   void _handleSearchSubmit(String value) {
     setState(() {
       _searchQuery = value.trim();
@@ -1869,11 +1853,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   }
 
   void _handleSearchResultTap(Map<String, dynamic> profile) {
-    final label = profile['displayName']?.toString() ??
-        profile['display_name']?.toString() ??
-        profile['username']?.toString() ??
-        profile['wallet']?.toString() ??
-        '';
+    final identity = UserIdentityDisplayUtils.fromProfileMap(profile);
+    final label = identity.name == 'Unknown creator' ? '' : identity.name;
     setState(() {
       if (label.isNotEmpty) {
         _communitySearchController.text = label;
@@ -3864,9 +3845,6 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                         if (user.username != null && user.username!.isNotEmpty) {
                           subtitleParts.add('@${user.username}');
                         }
-                        if (user.walletAddress != null && user.walletAddress!.isNotEmpty) {
-                          subtitleParts.add(user.walletAddress!);
-                        }
                         if (user.likedAt != null) {
                           subtitleParts.add(_formatTimeAgo(user.likedAt));
                         }
@@ -5676,17 +5654,17 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                   ),
                                   itemBuilder: (_, index) {
                                     final profile = results[index];
-                                    final displayName = profile['displayName']
-                                            ?.toString() ??
-                                        profile['display_name']?.toString() ??
-                                        profile['username']?.toString() ??
-                                        profile['wallet']?.toString() ??
-                                        'Profile';
+                                    final identity =
+                                        UserIdentityDisplayUtils.fromProfileMap(
+                                      Map<String, dynamic>.from(
+                                        profile.map(
+                                          (k, v) => MapEntry(k.toString(), v),
+                                        ),
+                                      ),
+                                    );
                                     final handle = _sanitizeHandle(
                                       profile['username'] ??
                                           profile['handle'] ??
-                                          profile['wallet_address'] ??
-                                          profile['wallet'] ??
                                           profile['id'] ??
                                           '',
                                     );
@@ -5709,22 +5687,22 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                         allowFabricatedFallback: true,
                                       ),
                                       title: Text(
-                                        displayName,
+                                        identity.name,
                                         style: GoogleFonts.inter(
                                             fontWeight: FontWeight.w600),
                                       ),
-                                      subtitle: Text(
-                                        handle.isNotEmpty
-                                            ? '@$handle'
-                                            : _formatWalletPreview(wallet),
-                                        style: GoogleFonts.inter(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurface
-                                              .withValues(alpha: 0.6),
-                                          fontSize: 12,
-                                        ),
-                                      ),
+                                      subtitle: identity.handle == null
+                                          ? null
+                                          : Text(
+                                              identity.handle!,
+                                              style: GoogleFonts.inter(
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .onSurface
+                                                    .withValues(alpha: 0.6),
+                                                fontSize: 12,
+                                              ),
+                                            ),
                                       trailing: Icon(
                                           Icons.person_add_alt_1_outlined,
                                           color: Theme.of(context)
