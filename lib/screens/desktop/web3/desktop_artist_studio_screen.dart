@@ -789,47 +789,44 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
   Widget _buildStatCard(
       String label, String value, IconData icon, Color color) {
     final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final radius = BorderRadius.circular(KubusRadius.md);
-    return LiquidGlassCard(
-      padding: EdgeInsets.zero,
-      borderRadius: radius,
-      showBorder: false,
-      blurSigma: KubusGlassEffects.blurSigmaLight,
-      backgroundColor: color.withValues(alpha: 0.10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: radius,
-              border: Border.all(
-                color: color.withValues(alpha: 0.20),
-                width: KubusSizes.hairline,
+    final glassTint = color.withValues(alpha: isDark ? 0.12 : 0.08);
+
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        border: Border.all(
+          color: color.withValues(alpha: 0.22),
+          width: 1,
+        ),
+      ),
+      child: LiquidGlassCard(
+        padding: const EdgeInsets.all(KubusSpacing.md),
+        margin: EdgeInsets.zero,
+        borderRadius: radius,
+        showBorder: false,
+        blurSigma: KubusGlassEffects.blurSigmaLight,
+        backgroundColor: glassTint,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: color, size: KubusSizes.sidebarActionIcon),
+            const SizedBox(height: KubusSpacing.sm),
+            Text(
+              value,
+              style: KubusTypography.textTheme.titleLarge
+                  ?.copyWith(color: scheme.onSurface),
+            ),
+            Text(
+              label,
+              style: KubusTextStyles.actionTileSubtitle.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(KubusSpacing.md),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(icon, color: color, size: KubusSizes.sidebarActionIcon),
-                  const SizedBox(height: KubusSpacing.sm),
-                  Text(
-                    value,
-                    style: KubusTypography.textTheme.titleLarge
-                        ?.copyWith(color: scheme.onSurface),
-                  ),
-                  Text(
-                    label,
-                    style: KubusTextStyles.actionTileSubtitle.copyWith(
-                      color: scheme.onSurface.withValues(alpha: 0.6),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
