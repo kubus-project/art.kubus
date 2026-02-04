@@ -12,13 +12,13 @@ void main() {
       expect(identity.handle, isNull);
     });
 
-    test('derives a handle from displayName when username missing', () {
+    test('does not derive a handle from displayName when username missing', () {
       final identity = UserIdentityDisplayUtils.fromProfileMap({
         'displayName': 'Franc Purg',
       });
       expect(identity.name, 'Franc Purg');
-      expect(identity.username, 'franc_purg');
-      expect(identity.handle, '@franc_purg');
+      expect(identity.username, isNull);
+      expect(identity.handle, isNull);
     });
 
     test('uses username as both name and handle when name missing', () {
@@ -40,13 +40,13 @@ void main() {
       expect(identity.handle, '@john_doe');
     });
 
-    test('prefixes numeric usernames for UI safety', () {
+    test('does not derive username from numeric displayName', () {
       final identity = UserIdentityDisplayUtils.fromProfileMap({
         'displayName': '123 abc',
       });
       expect(identity.name, '123 abc');
-      expect(identity.username, 'u123_abc');
-      expect(identity.handle, '@u123_abc');
+      expect(identity.username, isNull);
+      expect(identity.handle, isNull);
     });
   });
 }

@@ -35,7 +35,7 @@ class UserService {
     const User(
       id: 'maya_3d',
       name: 'Maya Digital',
-      username: '@maya_3d',
+      username: 'maya_3d',
       bio: 'AR artist exploring the intersection of digital and physical reality. Creating immersive experiences that transform everyday spaces.',
       followersCount: 1250,
       followingCount: 189,
@@ -54,7 +54,7 @@ class UserService {
     const User(
       id: 'alex_nft',
       name: 'Alex Creator',
-      username: '@alex_nft',
+      username: 'alex_nft',
       bio: 'NFT creator and blockchain enthusiast. Building the future of digital ownership through art and technology.',
       followersCount: 892,
       followingCount: 341,
@@ -72,7 +72,7 @@ class UserService {
     const User(
       id: 'sam_ar',
       name: 'Sam Artist',
-      username: '@sam_ar',
+      username: 'sam_ar',
       bio: 'Interactive AR sculptor. Passionate about collaborative art that responds to viewer interaction. Let\'s build the future together! 🚀',
       followersCount: 2150,
       followingCount: 203,
@@ -91,7 +91,7 @@ class UserService {
     const User(
       id: 'luna_viz',
       name: 'Luna Vision',
-      username: '@luna_viz',
+      username: 'luna_viz',
       bio: 'Exploring the infinite possibilities at the intersection of blockchain and creativity. Every pixel tells a story.',
       followersCount: 743,
       followingCount: 156,
@@ -210,14 +210,27 @@ class UserService {
       } catch (_) {}
 
       // Convert backend profile to User model
-      // Safely compute defaults, avoid substring errors when wallet length is short
-      final safeId = userId.toString();
-      String shortWallet() => safeId.length > 8 ? safeId.substring(0, 8) : safeId;
-      String rawUsername() => (profile['username'] ?? '').toString();
+      // NOTE: Do not fabricate @handles from wallet addresses. Keep username
+      // as the backend-provided handle (without leading '@') or empty.
+      final rawUsername = (profile['username'] ?? '').toString().trim();
+      final normalizedUsername = rawUsername.replaceFirst(RegExp(r'^@+'), '').trim();
+      final safeUsername =
+          normalizedUsername.isNotEmpty && !WalletUtils.looksLikeWallet(normalizedUsername)
+              ? normalizedUsername
+              : '';
+
+      final rawDisplayName = (profile['displayName'] ?? profile['display_name'] ?? '').toString().trim();
+      final safeDisplayName = rawDisplayName.isNotEmpty && !WalletUtils.looksLikeWallet(rawDisplayName)
+          ? rawDisplayName
+          : '';
+
+      final effectiveName = safeDisplayName.isNotEmpty
+          ? safeDisplayName
+          : (safeUsername.isNotEmpty ? safeUsername : 'Unknown creator');
       final user = User(
         id: resolvedWallet,
-        name: profile['displayName']?.toString() ?? (rawUsername().isNotEmpty ? rawUsername() : 'Anonymous'),
-        username: '@${rawUsername().isNotEmpty ? rawUsername() : shortWallet()}',
+        name: effectiveName,
+        username: safeUsername,
         bio: profile['bio']?.toString() ?? '',
         followersCount: followersFromProfile,
         followingCount: followingFromProfile,
@@ -490,8 +503,8 @@ class UserService {
           }
           final user = User(
             id: v['id']?.toString() ?? k,
-            name: v['name']?.toString() ?? k,
-            username: v['username']?.toString() ?? '@${k.substring(0, k.length > 8 ? 8 : k.length)}',
+            name: v['name']?.toString() ?? 'Unknown creator',
+            username: (v['username']?.toString() ?? '').replaceFirst(RegExp(r'^@+'), ''),
             bio: v['bio']?.toString() ?? '',
             followersCount: (v['followersCount'] is int) ? v['followersCount'] as int : int.tryParse((v['followersCount'] ?? '0').toString()) ?? 0,
             followingCount: (v['followingCount'] is int) ? v['followingCount'] as int : int.tryParse((v['followingCount'] ?? '0').toString()) ?? 0,
@@ -647,8 +660,16 @@ class UserService {
 
       final user = User(
         id: wallet,
-        name: profile['displayName']?.toString() ?? profile['username']?.toString() ?? wallet,
-        username: '@$resolvedUsername',
+        name: ((profile['displayName'] ?? '').toString().trim().isNotEmpty &&
+          !WalletUtils.looksLikeWallet((profile['displayName'] ?? '').toString().trim()))
+            ? (profile['displayName'] ?? '').toString().trim()
+            : ((resolvedUsername.trim().isNotEmpty &&
+              !WalletUtils.looksLikeWallet(resolvedUsername.trim()))
+          ? resolvedUsername.trim()
+          : 'Unknown creator'),
+        username: (!WalletUtils.looksLikeWallet(resolvedUsername.trim()))
+            ? resolvedUsername.trim()
+            : '',
         bio: profile['bio']?.toString() ?? '',
         followersCount: followers,
         followingCount: following,
@@ -913,8 +934,8 @@ class UserService {
             )
           : User(
               id: walletAddress,
-              name: walletAddress,
-              username: '@${walletAddress.substring(0, walletAddress.length > 8 ? 8 : walletAddress.length)}',
+              name: 'Unknown creator',
+              username: '',
               bio: '',
               followersCount: followers,
               followingCount: following,
@@ -960,8 +981,17 @@ class UserService {
               if (wallet.isEmpty) continue;
               final user = User(
                 id: wallet,
-                name: profile['displayName'] ?? profile['username'] ?? wallet,
-                username: '@${(profile['username'] ?? wallet).toString().replaceAll('@', '')}',
+                name: ((profile['displayName'] ?? '').toString().trim().isNotEmpty &&
+                  !WalletUtils.looksLikeWallet((profile['displayName'] ?? '').toString().trim()))
+                    ? (profile['displayName'] ?? '').toString().trim()
+                    : (((profile['username'] ?? '').toString().replaceAll('@', '').trim().isNotEmpty &&
+                      !WalletUtils.looksLikeWallet((profile['username'] ?? '').toString().replaceAll('@', '').trim()))
+                  ? (profile['username'] ?? '').toString().replaceAll('@', '').trim()
+                  : 'Unknown creator'),
+                username: (!WalletUtils.looksLikeWallet(
+                  (profile['username'] ?? '').toString().replaceAll('@', '').trim()))
+                    ? (profile['username'] ?? '').toString().replaceAll('@', '').trim()
+                    : '',
                 bio: profile['bio'] ?? '',
                 followersCount: 0,
                 followingCount: 0,
@@ -1009,8 +1039,8 @@ class UserService {
           } else {
             results.add(User(
               id: w,
-              name: w,
-              username: '@${w.substring(0, w.length > 8 ? 8 : w.length)}',
+              name: 'Unknown creator',
+              username: '',
               bio: '',
               followersCount: 0,
               followingCount: 0,
@@ -1075,10 +1105,19 @@ class UserService {
             final profile = p as Map<String, dynamic>;
             final wallet = (profile['walletAddress'] ?? profile['id'] ?? '').toString();
             if (wallet.isEmpty) continue;
-              final user = User(
-              id: wallet,
-              name: profile['displayName'] ?? profile['username'] ?? wallet,
-              username: '@${(profile['username'] ?? wallet).toString().replaceAll('@', '')}',
+                final user = User(
+                id: wallet,
+                name: ((profile['displayName'] ?? '').toString().trim().isNotEmpty &&
+                    !WalletUtils.looksLikeWallet((profile['displayName'] ?? '').toString().trim()))
+                  ? (profile['displayName'] ?? '').toString().trim()
+                  : (((profile['username'] ?? '').toString().replaceAll('@', '').trim().isNotEmpty &&
+                      !WalletUtils.looksLikeWallet((profile['username'] ?? '').toString().replaceAll('@', '').trim()))
+                    ? (profile['username'] ?? '').toString().replaceAll('@', '').trim()
+                    : 'Unknown creator'),
+                username: (!WalletUtils.looksLikeWallet(
+                    (profile['username'] ?? '').toString().replaceAll('@', '').trim()))
+                  ? (profile['username'] ?? '').toString().replaceAll('@', '').trim()
+                  : '',
               bio: profile['bio'] ?? '',
               followersCount: 0,
               followingCount: 0,
@@ -1126,8 +1165,8 @@ class UserService {
         } else {
           results.add(User(
             id: w,
-            name: w,
-            username: '@${w.substring(0, w.length > 8 ? 8 : w.length)}',
+            name: 'Unknown creator',
+            username: '',
             bio: '',
             followersCount: 0,
             followingCount: 0,
@@ -1158,25 +1197,25 @@ class UserService {
           results.add(u);
         } else {
           results.add(User(
-          id: w,
-          name: w,
-          username: '@${w.substring(0, w.length > 8 ? 8 : w.length)}',
-          bio: '',
-          followersCount: 0,
-          followingCount: 0,
-          postsCount: 0,
-          isFollowing: false,
-          isVerified: false,
-          joinedDate: 'Joined recently',
-          achievementProgress: [],
-          profileImageUrl: null,
-        ));
+            id: w,
+            name: 'Unknown creator',
+            username: '',
+            bio: '',
+            followersCount: 0,
+            followingCount: 0,
+            postsCount: 0,
+            isFollowing: false,
+            isVerified: false,
+            joinedDate: 'Joined recently',
+            achievementProgress: [],
+            profileImageUrl: null,
+          ));
         }
       } catch (_) {
         results.add(User(
           id: w,
-          name: w,
-          username: '@${w.substring(0, w.length > 8 ? 8 : w.length)}',
+          name: 'Unknown creator',
+          username: '',
           bio: '',
           followersCount: 0,
           followingCount: 0,

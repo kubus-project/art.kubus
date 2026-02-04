@@ -38,6 +38,8 @@ import '../../../utils/app_color_utils.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../utils/kubus_color_roles.dart';
+import '../../../utils/creator_display_format.dart';
+import '../../../utils/search_suggestions.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../../utils/user_identity_display.dart';
 import '../../../utils/community_subject_navigation.dart';
@@ -3961,28 +3963,46 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     itemBuilder: (ctx, idx) {
                       final repost = reposts[idx];
                       final user = repost['user'] as Map<String, dynamic>?;
-                      final username = user?['username'] ??
-                          user?['walletAddress'] ??
-                          l10n.commonUnknown;
-                      final displayName = user?['displayName'] ?? username;
+                        final rawUsername = (user?['username'] ?? '').toString().trim();
+                        final username = rawUsername.startsWith('@')
+                            ? rawUsername.substring(1).trim()
+                            : rawUsername;
+                        final wallet = WalletUtils.coalesce(
+                          walletAddress: user?['walletAddress']?.toString(),
+                          wallet: user?['wallet_address']?.toString() ?? user?['wallet']?.toString(),
+                          userId: user?['id']?.toString(),
+                          fallback: '',
+                        );
+                        final displayName = (user?['displayName'] ?? user?['display_name'])?.toString().trim();
                       final avatar = user?['avatar'];
                       final comment = repost['repostComment'] as String?;
                       final createdAt = DateTime.tryParse(repost['createdAt'] ?? '');
 
+                        final formatted = CreatorDisplayFormat.format(
+                          fallbackLabel: l10n.commonUnknown,
+                          displayName: displayName,
+                          username: username,
+                          wallet: wallet,
+                        );
+
                       return ListTile(
                         leading: AvatarWidget(
-                          wallet: username,
+                          wallet: wallet.isNotEmpty ? wallet : (username.isNotEmpty ? username : l10n.commonUnknown),
                           avatarUrl: avatar,
                           radius: 20,
+                          allowFabricatedFallback: false,
                         ),
                         title: Text(
-                          displayName,
+                          formatted.primary,
                           style: GoogleFonts.inter(fontWeight: FontWeight.w600),
                         ),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('@$username', style: GoogleFonts.inter(fontSize: 12)),
+                            if (formatted.secondary != null)
+                              Text(formatted.secondary!, style: GoogleFonts.inter(fontSize: 12))
+                            else if (wallet.isNotEmpty)
+                              Text(maskWallet(wallet), style: GoogleFonts.inter(fontSize: 12)),
                             if (comment != null && comment.isNotEmpty) ...[
                               const SizedBox(height: 4),
                               Text(
@@ -8158,15 +8178,18 @@ class _NewConversationDialogState extends State<_NewConversationDialog> {
                                         user['id'])
                                     ?.toString() ??
                                 '';
-                            final name = user['displayName']?.toString() ??
-                                user['display_name']?.toString() ??
-                                user['username']?.toString() ??
-                                (wallet.isNotEmpty ? wallet : 'User');
-                            final username = user['username']?.toString();
-                            final subtitle =
-                                username != null && username.isNotEmpty
-                                    ? '@$username'
-                                    : wallet;
+                            final rawUsername = (user['username'] ?? '').toString().trim();
+                            final username = rawUsername.startsWith('@')
+                                ? rawUsername.substring(1).trim()
+                                : rawUsername;
+                            final displayName = (user['displayName'] ?? user['display_name'])?.toString().trim();
+                            final formatted = CreatorDisplayFormat.format(
+                              fallbackLabel: wallet.isNotEmpty ? maskWallet(wallet) : 'User',
+                              displayName: displayName,
+                              username: username,
+                              wallet: wallet,
+                            );
+                            final subtitle = formatted.secondary ?? (wallet.isNotEmpty ? maskWallet(wallet) : null);
                             final avatarUrl = user['avatar'] ??
                                 user['avatar_url'] ??
                                 user['profileImageUrl'] ??
@@ -8178,9 +8201,14 @@ class _NewConversationDialogState extends State<_NewConversationDialog> {
                                 radius: 20,
                                 allowFabricatedFallback: true,
                               ),
-                              title: Text(name),
-                              subtitle:
-                                  subtitle.isNotEmpty ? Text(subtitle) : null,
+                              title: Text(formatted.primary),
+                              subtitle: subtitle == null || subtitle.isEmpty
+                                  ? null
+                                  : Text(
+                                      subtitle,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                               onTap: wallet.isEmpty
                                   ? null
                                   : () => widget.onStartConversation(wallet),

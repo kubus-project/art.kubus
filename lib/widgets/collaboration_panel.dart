@@ -5,9 +5,14 @@ import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/collab_member.dart';
+import '../models/user.dart';
 import '../providers/collab_provider.dart';
+import '../providers/profile_provider.dart';
 import '../services/backend_api_service.dart';
+import '../services/user_service.dart';
+import '../utils/creator_display_format.dart';
 import '../utils/design_tokens.dart';
+import '../utils/wallet_utils.dart';
 import '../utils/user_profile_navigation.dart';
 import '../widgets/avatar_widget.dart';
 import 'glass_components.dart';
@@ -37,12 +42,16 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
   final TextEditingController _inviteController = TextEditingController();
 
   Timer? _debounce;
+  Timer? _memberProfileResolveDebounce;
   int _requestSeq = 0;
 
   bool _loadingSuggestions = false;
   List<_ProfileSuggestion> _suggestions = <_ProfileSuggestion>[];
 
   String _inviteRole = 'viewer';
+
+  final Map<String, User> _resolvedUsersByWallet = <String, User>{};
+  bool _memberProfileResolutionInFlight = false;
 
   @override
   void initState() {
@@ -56,6 +65,7 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
   @override
   void dispose() {
     _debounce?.cancel();
+    _memberProfileResolveDebounce?.cancel();
     _inviteController.dispose();
     super.dispose();
   }
@@ -64,8 +74,59 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
     final collab = context.read<CollabProvider>();
     try {
       await collab.loadCollaborators(widget.entityType, widget.entityId);
+      if (!mounted) return;
+      final members = collab.collaboratorsFor(widget.entityType, widget.entityId);
+      _scheduleMemberProfileResolution(members, forceRefresh: true);
     } catch (_) {
       // provider handles error state
+    }
+  }
+
+  void _scheduleMemberProfileResolution(
+    List<CollabMember> members, {
+    required bool forceRefresh,
+  }) {
+    if (members.isEmpty) return;
+    if (_memberProfileResolutionInFlight) return;
+
+    final wallets = members
+        .map((m) => WalletUtils.canonical(m.user?.walletAddress ?? m.userId))
+        .where((w) => w.isNotEmpty && WalletUtils.looksLikeWallet(w))
+        .toSet()
+        .toList(growable: false);
+
+    if (wallets.isEmpty) return;
+
+    _memberProfileResolveDebounce?.cancel();
+    _memberProfileResolveDebounce = Timer(const Duration(milliseconds: 120), () {
+      if (!mounted) return;
+      unawaited(_resolveMemberProfiles(wallets, forceRefresh: forceRefresh));
+    });
+  }
+
+  Future<void> _resolveMemberProfiles(
+    List<String> wallets, {
+    required bool forceRefresh,
+  }) async {
+    if (wallets.isEmpty) return;
+    if (_memberProfileResolutionInFlight) return;
+    _memberProfileResolutionInFlight = true;
+    try {
+      final users = await UserService.getUsersByWallets(
+        wallets,
+        forceRefresh: forceRefresh,
+        batchFirstThreshold: 2,
+      );
+      if (!mounted) return;
+      setState(() {
+        for (final u in users) {
+          final key = WalletUtils.canonical(u.id);
+          if (key.isEmpty) continue;
+          _resolvedUsersByWallet[key] = u;
+        }
+      });
+    } finally {
+      _memberProfileResolutionInFlight = false;
     }
   }
 
@@ -78,18 +139,43 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
       'publisher': 3,
       'admin': 4,
       'owner': 5,
+      // Some backends use synonyms for the top role.
+      'author': 5,
+      'creator': 5,
     };
     return ranks[r];
   }
 
-  bool get _canManageMembers {
-    final my = _rank(widget.myRole);
+  String? _resolveMyRole(
+    String? explicit,
+    List<CollabMember> members,
+    String viewerWallet,
+  ) {
+    final safeExplicit = (explicit ?? '').trim();
+    if (safeExplicit.isNotEmpty) return safeExplicit;
+    final viewer = WalletUtils.canonical(viewerWallet);
+    if (viewer.isEmpty) return null;
+
+    for (final m in members) {
+      final wallet = WalletUtils.canonical(m.user?.walletAddress);
+      if (wallet.isNotEmpty && WalletUtils.equals(wallet, viewer)) {
+        return m.role;
+      }
+      if (WalletUtils.equals(m.userId, viewer)) {
+        return m.role;
+      }
+    }
+    return null;
+  }
+
+  bool _canManageMembers(String? myRole) {
+    final my = _rank(myRole);
     if (my == null) return false;
     return my >= (_rank('admin') ?? 4);
   }
 
-  bool _canAssignRole(String targetRole) {
-    final my = _rank(widget.myRole);
+  bool _canAssignRole(String? myRole, String targetRole) {
+    final my = _rank(myRole);
     final target = _rank(targetRole);
     if (my == null || target == null) return false;
     if (targetRole.toLowerCase() == 'owner') return false;
@@ -183,6 +269,25 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
     final scheme = Theme.of(context).colorScheme;
     final collab = context.read<CollabProvider>();
 
+    final profile = context.read<ProfileProvider>();
+    if (profile.isSignedIn != true) {
+      // Collaboration actions require authentication; this panel should be hidden
+      // when signed out, but guard defensively.
+      return;
+    }
+    final members = collab.collaboratorsFor(widget.entityType, widget.entityId);
+    final viewerWallet = (profile.currentUser?.walletAddress ?? '').trim();
+    final myRole = _resolveMyRole(widget.myRole, members, viewerWallet);
+    if (!_canManageMembers(myRole)) {
+      messenger.showKubusSnackBar(
+        SnackBar(
+          content: const Text('You do not have permission to invite collaborators.'),
+          backgroundColor: scheme.surface,
+        ),
+      );
+      return;
+    }
+
     final raw = _inviteController.text.trim();
     final identifier = raw.replaceFirst(RegExp(r'^@+'), '').trim();
 
@@ -214,7 +319,7 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
         entityType: widget.entityType,
         entityId: widget.entityId,
         invitedIdentifier: identifier,
-        role: _canAssignRole(_inviteRole) ? _inviteRole : 'viewer',
+        role: _canAssignRole(myRole, _inviteRole) ? _inviteRole : 'viewer',
       );
       if (!mounted) return;
       setState(() {
@@ -239,11 +344,17 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
   }
 
   Future<void> _updateMemberRole(CollabMember member, String newRole) async {
-    if (!_canManageMembers) return;
-    if (!_canAssignRole(newRole)) return;
+    final collab = context.read<CollabProvider>();
+    final profile = context.read<ProfileProvider>();
+    final members = collab.collaboratorsFor(widget.entityType, widget.entityId);
+    final viewerWallet = (profile.currentUser?.walletAddress ?? '').trim();
+    final myRole = _resolveMyRole(widget.myRole, members, viewerWallet);
+
+    if (!_canManageMembers(myRole)) return;
+    if (!_canAssignRole(myRole, newRole)) return;
 
     final messenger = ScaffoldMessenger.of(context);
-    final collab = context.read<CollabProvider>();
+    // collab already read above
 
     try {
       await collab.updateCollaboratorRole(
@@ -260,10 +371,14 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
   }
 
   Future<void> _removeMember(CollabMember member) async {
-    if (!_canManageMembers) return;
+    final collab = context.read<CollabProvider>();
+    final profile = context.read<ProfileProvider>();
+    final members = collab.collaboratorsFor(widget.entityType, widget.entityId);
+    final viewerWallet = (profile.currentUser?.walletAddress ?? '').trim();
+    final myRole = _resolveMyRole(widget.myRole, members, viewerWallet);
+    if (!_canManageMembers(myRole)) return;
 
     final messenger = ScaffoldMessenger.of(context);
-    final collab = context.read<CollabProvider>();
 
     final ok = await showKubusDialog<bool>(
       context: context,
@@ -297,8 +412,20 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final profile = context.watch<ProfileProvider>();
+    if (profile.isSignedIn != true) {
+      // Hide collaboration UI when the user is not authenticated.
+      return const SizedBox.shrink();
+    }
+
     final collab = context.watch<CollabProvider>();
     final members = collab.collaboratorsFor(widget.entityType, widget.entityId);
+    final viewerWallet = (profile.currentUser?.walletAddress ?? '').trim();
+    final myRole = _resolveMyRole(widget.myRole, members, viewerWallet);
+    final canManageMembers = _canManageMembers(myRole);
+
+    // Keep member identities fresh (e.g. username/displayName changes).
+    _scheduleMemberProfileResolution(members, forceRefresh: false);
 
     return LiquidGlassCard(
       padding: const EdgeInsets.all(KubusSpacing.md),
@@ -348,8 +475,10 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
                     ),
               ),
             ),
-          _buildInviteSection(scheme),
-          const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
+          if (canManageMembers) ...[
+            _buildInviteSection(scheme, myRole: myRole),
+            const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
+          ],
           if (members.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: KubusSpacing.sm),
@@ -363,7 +492,12 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
           else
             Column(
               children: members
-                  .map((m) => _buildMemberRow(m, scheme))
+                  .map((m) => _buildMemberRow(
+                        m,
+                        scheme,
+                        canManageMembers: canManageMembers,
+                        myRole: myRole,
+                      ))
                   .toList(growable: false),
             ),
         ],
@@ -371,8 +505,8 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
     );
   }
 
-  Widget _buildInviteSection(ColorScheme scheme) {
-    final canPickRole = _canManageMembers;
+  Widget _buildInviteSection(ColorScheme scheme, {required String? myRole}) {
+    final canPickRole = _canManageMembers(myRole);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -504,7 +638,7 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
                       ],
                       onChanged: (v) {
                         if (v == null) return;
-                        if (!_canAssignRole(v)) return;
+                        if (!_canAssignRole(myRole, v)) return;
                         setState(() => _inviteRole = v);
                       },
                       decoration: InputDecoration(
@@ -540,23 +674,39 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
     );
   }
 
-  Widget _buildMemberRow(CollabMember member, ColorScheme scheme) {
+  Widget _buildMemberRow(
+    CollabMember member,
+    ColorScheme scheme, {
+    required bool canManageMembers,
+    required String? myRole,
+  }) {
     final user = member.user;
-    final displayName = (user?.displayName ?? '').trim();
-    final username = (user?.username ?? '').trim();
-    final title = displayName.isNotEmpty
-        ? displayName
-        : (username.isNotEmpty ? '@$username' : 'Collaborator');
-    final subtitle = username.isNotEmpty ? '@$username' : null;
+    final wallet = WalletUtils.canonical(user?.walletAddress ?? member.userId);
+    final resolved = wallet.isNotEmpty ? _resolvedUsersByWallet[wallet] : null;
 
-    final seed = (user?.walletAddress ?? '').trim().isNotEmpty
-        ? user!.walletAddress!
-        : (username.isNotEmpty ? username : (displayName.isNotEmpty ? displayName : member.userId));
+    final formatted = CreatorDisplayFormat.format(
+      fallbackLabel: 'Collaborator',
+      displayName: resolved?.name ?? user?.displayName,
+      username: resolved?.username ?? user?.username,
+      wallet: wallet,
+    );
 
-    final walletAddress = (user?.walletAddress ?? '').trim();
-    final canOpenProfile = walletAddress.isNotEmpty || username.isNotEmpty;
-    final navUserId = walletAddress.isNotEmpty ? walletAddress : member.userId;
-    final navUsername = username.isNotEmpty ? username : null;
+    final title = formatted.primary;
+    final subtitle = formatted.secondary;
+
+    final seed = wallet.isNotEmpty
+        ? wallet
+        : (subtitle ?? title).replaceFirst('@', '').trim();
+
+    final avatarUrl = (resolved?.profileImageUrl ?? '').trim().isNotEmpty
+        ? resolved!.profileImageUrl
+        : user?.avatarUrl;
+
+    final canOpenProfile = wallet.isNotEmpty;
+    final navUserId = wallet.isNotEmpty ? wallet : member.userId;
+    final navUsername = subtitle == null
+        ? (title.startsWith('@') ? title.substring(1) : null)
+        : subtitle.substring(1);
 
     return LiquidGlassPanel(
       margin: const EdgeInsets.only(bottom: KubusSpacing.sm),
@@ -584,7 +734,7 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
                 child: Row(
                   children: [
                     AvatarWidget(
-                      avatarUrl: user?.avatarUrl,
+                      avatarUrl: avatarUrl,
                       wallet: seed,
                       radius: KubusSizes.sidebarActionIcon - KubusSpacing.xxs,
                       allowFabricatedFallback: true,
@@ -619,7 +769,7 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
             ),
           ),
           const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
-          if (_canManageMembers)
+          if (canManageMembers)
             SizedBox(
               width: 150,
               child: DropdownButtonFormField<String>(
@@ -654,7 +804,7 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
                     color: scheme.onSurface.withValues(alpha: 0.75),
                   ),
             ),
-          if (_canManageMembers)
+          if (canManageMembers)
             IconButton(
               tooltip: AppLocalizations.of(context)!.commonRemove,
               onPressed: () => unawaited(_removeMember(member)),
@@ -671,6 +821,10 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
   String _roleLabel(String raw) {
     final r = raw.trim().toLowerCase();
     switch (r) {
+      case 'owner':
+      case 'author':
+      case 'creator':
+        return 'Owner';
       case 'admin':
         return 'Admin';
       case 'publisher':

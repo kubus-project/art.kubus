@@ -11,6 +11,8 @@ import '../../services/backend_api_service.dart';
 import '../../services/user_service.dart';
 import 'user_profile_screen.dart';
 import '../../utils/artwork_navigation.dart';
+import '../../utils/creator_display_format.dart';
+import '../../utils/search_suggestions.dart';
 
 // Helper methods for ProfileScreen
 class ProfileScreenMethods {
@@ -201,11 +203,20 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
       itemCount: _followers!.length,
       itemBuilder: (context, index) {
         final follower = _followers![index];
-        final username = follower['username'] as String? ?? 'anonymous';
-        final displayName = (follower['displayName'] ?? follower['display_name'] ?? follower['name']) as String? ?? username;
+        final rawUsername = (follower['username'] as String?)?.trim() ?? '';
+        final username = rawUsername.startsWith('@') ? rawUsername.substring(1).trim() : rawUsername;
+        final displayName = (follower['displayName'] ?? follower['display_name'] ?? follower['name']) as String?;
         final walletAddress = follower['walletAddress'] as String? ?? follower['id'] as String? ?? '';
         final isVerified = follower['isVerified'] as bool? ?? false;
         final avatarUrl = (follower['profileImageUrl'] ?? follower['avatar'] ?? follower['avatarUrl'] ?? follower['avatar_url']) as String?;
+
+        final formatted = CreatorDisplayFormat.format(
+          fallbackLabel: walletAddress.isNotEmpty ? maskWallet(walletAddress) : 'Unknown creator',
+          displayName: displayName,
+          username: username,
+          wallet: walletAddress,
+        );
+        final subtitle = formatted.secondary ?? (walletAddress.isNotEmpty ? maskWallet(walletAddress) : null);
 
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
@@ -239,7 +250,7 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
               children: [
                 Flexible(
                   child: Text(
-                    displayName,
+                    formatted.primary,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.inter(
                       fontWeight: FontWeight.w600,
@@ -253,13 +264,17 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
                 ],
               ],
             ),
-            subtitle: Text(
-              '@$username',
-              style: GoogleFonts.inter(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                fontSize: 12,
-              ),
-            ),
+            subtitle: subtitle == null
+                ? null
+                : Text(
+                    subtitle,
+                    style: GoogleFonts.inter(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                      fontSize: 12,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
           ),
         );
       },
@@ -465,11 +480,20 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
       itemCount: _following!.length,
       itemBuilder: (context, index) {
         final user = _following![index];
-        final username = user['username'] as String? ?? 'anonymous';
-        final displayName = (user['displayName'] ?? user['display_name'] ?? user['name']) as String? ?? username;
+        final rawUsername = (user['username'] as String?)?.trim() ?? '';
+        final username = rawUsername.startsWith('@') ? rawUsername.substring(1).trim() : rawUsername;
+        final displayName = (user['displayName'] ?? user['display_name'] ?? user['name']) as String?;
         final walletAddress = user['walletAddress'] as String? ?? user['id'] as String? ?? '';
         final isVerified = user['isVerified'] as bool? ?? false;
         final avatarUrl = (user['profileImageUrl'] ?? user['avatar'] ?? user['avatarUrl'] ?? user['avatar_url']) as String?;
+
+        final formatted = CreatorDisplayFormat.format(
+          fallbackLabel: walletAddress.isNotEmpty ? maskWallet(walletAddress) : 'Unknown creator',
+          displayName: displayName,
+          username: username,
+          wallet: walletAddress,
+        );
+        final subtitle = formatted.secondary ?? (walletAddress.isNotEmpty ? maskWallet(walletAddress) : null);
 
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
@@ -503,7 +527,7 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
               children: [
                 Flexible(
                   child: Text(
-                    displayName,
+                    formatted.primary,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.inter(
                       fontWeight: FontWeight.w600,
@@ -517,13 +541,17 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
                 ],
               ],
             ),
-            subtitle: Text(
-              '@$username',
-              style: GoogleFonts.inter(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                fontSize: 12,
-              ),
-            ),
+            subtitle: subtitle == null
+                ? null
+                : Text(
+                    subtitle,
+                    style: GoogleFonts.inter(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                      fontSize: 12,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
           ),
         );
       },

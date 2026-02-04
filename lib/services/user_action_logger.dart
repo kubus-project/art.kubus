@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'user_action_service.dart';
+import '../utils/creator_display_format.dart';
 
 /// Centralized helper for writing the current user's actions to the
 /// [UserActionService] so they surface inside the unified recent activity feed.
@@ -194,13 +195,19 @@ class UserActionLogger {
     String? username,
     String? avatarUrl,
   }) async {
-    final targetName = _safeDisplayName(displayName ?? username, fallback: _shortWallet(walletAddress));
+    final formatted = CreatorDisplayFormat.format(
+      fallbackLabel: _shortWallet(walletAddress),
+      displayName: displayName,
+      username: username,
+      wallet: walletAddress,
+    );
+    final targetName = formatted.primary;
     await _record(
       type: 'follow',
       idPrefix: 'follow',
       targetId: walletAddress,
       title: 'You followed $targetName',
-      description: username != null ? '@${username.replaceAll('@', '')}' : null,
+      description: formatted.secondary,
       metadata: {
         'userId': walletAddress,
         'targetWallet': walletAddress,

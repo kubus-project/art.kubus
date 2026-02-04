@@ -13,6 +13,8 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../config/config.dart';
 import '../../utils/wallet_utils.dart';
 import '../../utils/user_identity_display.dart';
+import '../../utils/creator_display_format.dart';
+import '../../utils/search_suggestions.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/app_loading.dart';
 import '../../widgets/topbar_icon.dart';
@@ -7382,26 +7384,50 @@ class _CommunityScreenState extends State<CommunityScreen>
                     itemBuilder: (ctx, idx) {
                       final repost = reposts[idx];
                       final user = repost['user'] as Map<String, dynamic>?;
-                      final username = user?['username'] ??
-                          user?['walletAddress'] ??
-                          l10n.commonUnknown;
-                      final displayName = user?['displayName'] ?? username;
+                      final rawUsername = (user?['username'] ?? '').toString().trim();
+                      final username = rawUsername.startsWith('@')
+                          ? rawUsername.substring(1).trim()
+                          : rawUsername;
+                      final wallet = WalletUtils.coalesce(
+                        walletAddress: user?['walletAddress']?.toString(),
+                        wallet: user?['wallet_address']?.toString() ?? user?['wallet']?.toString(),
+                        userId: user?['id']?.toString(),
+                        fallback: '',
+                      );
+                      final displayName =
+                          (user?['displayName'] ?? user?['display_name'])?.toString().trim();
                       final avatar = user?['avatar'];
                       final comment = repost['repostComment'] as String?;
                       final createdAt =
                           DateTime.tryParse(repost['createdAt'] ?? '');
 
+                      final formatted = CreatorDisplayFormat.format(
+                        fallbackLabel: l10n.commonUnknown,
+                        displayName: displayName,
+                        username: username,
+                        wallet: wallet,
+                      );
+
                       return ListTile(
                         leading: AvatarWidget(
-                            wallet: username, avatarUrl: avatar, radius: 20),
-                        title: Text(displayName,
+                            wallet: wallet.isNotEmpty
+                                ? wallet
+                                : (username.isNotEmpty ? username : l10n.commonUnknown),
+                            avatarUrl: avatar,
+                            radius: 20,
+                            allowFabricatedFallback: false),
+                        title: Text(formatted.primary,
                             style:
                                 GoogleFonts.inter(fontWeight: FontWeight.w600)),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('@$username',
-                                style: GoogleFonts.inter(fontSize: 12)),
+                            if (formatted.secondary != null)
+                              Text(formatted.secondary!,
+                                  style: GoogleFonts.inter(fontSize: 12))
+                            else if (wallet.isNotEmpty)
+                              Text(maskWallet(wallet),
+                                  style: GoogleFonts.inter(fontSize: 12)),
                             if (comment != null && comment.isNotEmpty) ...[
                               const SizedBox(height: 4),
                               Text(comment,

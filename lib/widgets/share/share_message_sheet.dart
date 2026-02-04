@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/share/share_types.dart';
+import 'package:art_kubus/utils/creator_display_format.dart';
+import 'package:art_kubus/utils/search_suggestions.dart';
 import 'package:art_kubus/widgets/avatar_widget.dart';
 import 'package:art_kubus/widgets/empty_state_card.dart';
 import 'package:flutter/material.dart';
@@ -82,7 +84,6 @@ class _ShareMessageSheetState extends State<ShareMessageSheet> {
   }
 
   Future<void> _sendTo(Map<String, dynamic> profile) async {
-    final l10n = AppLocalizations.of(context)!;
     if (_isSending) return;
 
     final walletAddr = (profile['wallet_address'] ??
@@ -92,7 +93,9 @@ class _ShareMessageSheetState extends State<ShareMessageSheet> {
             profile['id'])
         ?.toString()
         .trim();
-    final username = (profile['username'] ?? walletAddr ?? l10n.commonUnknown).toString().trim();
+
+    final rawUsername = (profile['username'] ?? '').toString().trim();
+    final username = rawUsername.startsWith('@') ? rawUsername.substring(1).trim() : rawUsername;
     final recipientWallet = (walletAddr?.isNotEmpty == true ? walletAddr! : username).trim();
     if (recipientWallet.isEmpty) return;
 
@@ -200,18 +203,51 @@ class _ShareMessageSheetState extends State<ShareMessageSheet> {
                               itemCount: _searchResults.length,
                               itemBuilder: (ctx, idx) {
                                 final profile = _searchResults[idx];
-                                final walletAddr = profile['wallet_address'] ??
-                                    profile['walletAddress'] ??
-                                    profile['wallet'] ??
-                                    profile['walletAddr'];
-                                final username = profile['username'] ?? walletAddr ?? l10n.commonUnknown;
-                                final display = profile['displayName'] ?? profile['display_name'] ?? username;
-                                final avatar = profile['avatar'] ?? profile['avatar_url'];
+                                final walletAddr = (profile['wallet_address'] ??
+                                        profile['walletAddress'] ??
+                                        profile['wallet'] ??
+                                        profile['walletAddr'] ??
+                                        profile['id'])
+                                    ?.toString()
+                                    .trim();
+                                final rawUsername = (profile['username'] ?? '').toString().trim();
+                                final username = rawUsername.startsWith('@')
+                                    ? rawUsername.substring(1).trim()
+                                    : rawUsername;
+                                final displayName =
+                                    (profile['displayName'] ?? profile['display_name'])?.toString().trim();
+                                final avatar = (profile['avatar'] ?? profile['avatar_url'])?.toString();
+
+                                final formatted = CreatorDisplayFormat.format(
+                                  fallbackLabel: l10n.commonUnknown,
+                                  displayName: displayName,
+                                  username: username,
+                                  wallet: walletAddr,
+                                );
+
+                                final subtitle = formatted.secondary ??
+                                    ((walletAddr != null && walletAddr.isNotEmpty)
+                                        ? maskWallet(walletAddr)
+                                        : null);
                                 return ListTile(
                                   enabled: !_isSending,
-                                  leading: AvatarWidget(wallet: username.toString(), avatarUrl: avatar, radius: 20),
-                                  title: Text(display?.toString() ?? l10n.commonUnnamed, style: GoogleFonts.inter()),
-                                  subtitle: Text('@$username', style: GoogleFonts.inter(fontSize: 12)),
+                                  leading: AvatarWidget(
+                                    wallet: (walletAddr != null && walletAddr.isNotEmpty)
+                                        ? walletAddr
+                                        : username,
+                                    avatarUrl: avatar,
+                                    radius: 20,
+                                    allowFabricatedFallback: false,
+                                  ),
+                                  title: Text(formatted.primary, style: GoogleFonts.inter()),
+                                  subtitle: subtitle == null
+                                      ? null
+                                      : Text(
+                                          subtitle,
+                                          style: GoogleFonts.inter(fontSize: 12),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                   trailing: _isSending
                                       ? const SizedBox(
                                           width: 16,

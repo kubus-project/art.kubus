@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/wallet_utils.dart';
 import 'detail_shell_components.dart';
 
 /// A shared profile header component for profile screens (own + other users)
@@ -231,6 +232,13 @@ class ProfileHeaderShell extends StatelessWidget {
 
   Widget _buildFullContent(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final rawUsername = (username ?? '').trim();
+    final normalized = rawUsername.startsWith('@')
+      ? rawUsername.substring(1).trim()
+      : rawUsername;
+    final safeHandle = (normalized.isNotEmpty && !WalletUtils.looksLikeWallet(normalized))
+      ? '@$normalized'
+      : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -269,10 +277,10 @@ class ProfileHeaderShell extends StatelessWidget {
           ],
         ),
         // Username
-        if (username != null && username!.isNotEmpty) ...[
+        if (safeHandle != null) ...[
           const SizedBox(height: DetailSpacing.xs),
           Text(
-            username!.startsWith('@') ? username! : '@$username',
+            safeHandle,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: scheme.onSurface.withValues(alpha: 0.6),
                 ),
@@ -303,6 +311,13 @@ class ProfileHeaderShell extends StatelessWidget {
 
   Widget _buildCompactContent(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final rawUsername = (username ?? '').trim();
+    final normalized = rawUsername.startsWith('@')
+      ? rawUsername.substring(1).trim()
+      : rawUsername;
+    final safeHandle = (normalized.isNotEmpty && !WalletUtils.looksLikeWallet(normalized))
+      ? '@$normalized'
+      : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -342,10 +357,10 @@ class ProfileHeaderShell extends StatelessWidget {
                           )),
                     ],
                   ),
-                  if (username != null && username!.isNotEmpty) ...[
+                  if (safeHandle != null) ...[
                     const SizedBox(height: KubusSpacing.xxs),
                     Text(
-                      username!.startsWith('@') ? username! : '@$username',
+                      safeHandle,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: scheme.onSurface.withValues(alpha: 0.6),
                           ),

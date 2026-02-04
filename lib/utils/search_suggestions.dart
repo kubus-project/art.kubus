@@ -1,5 +1,8 @@
 import 'package:flutter/foundation.dart';
 
+import 'creator_display_format.dart';
+import 'wallet_utils.dart';
+
 /// Utilities for normalizing search suggestion payloads and small helpers
 /// used across UI screens.
 
@@ -41,19 +44,50 @@ List<Map<String, dynamic>> normalizeSearchSuggestionsPayload(dynamic raw) {
       if (e is! Map) continue;
       final Map<String, dynamic> m = Map<String, dynamic>.from(e);
 
-      final label = (m['displayName'] ?? m['display_name'] ?? m['title'] ?? m['label'] ?? m['name'] ?? m['username'] ?? m['wallet'] ?? '').toString();
+      final type = (m['type'] ?? (m.containsKey('username') ? 'profile' : 'artwork')).toString();
 
-      final id = (m['username'] ?? m['id'] ?? m['walletAddress'] ?? m['wallet'] ?? m['wallet_address'])?.toString();
+      final rawDisplayName = (m['displayName'] ?? m['display_name'] ?? m['name'] ?? m['label'])?.toString();
+      final rawUsername = (m['username'] ?? m['handle'])?.toString();
+      final wallet = (m['wallet'] ?? m['walletAddress'] ?? m['wallet_address'] ?? m['id'])?.toString();
 
+      String label;
       String? subtitle;
-      final username = (m['username'] ?? m['handle'])?.toString();
-      final wallet = (m['wallet'] ?? m['walletAddress'] ?? m['wallet_address'])?.toString();
-      if (username != null && username.isNotEmpty) {
-        subtitle = '@$username';
-      } else if (wallet != null && wallet.isNotEmpty) {
-        subtitle = maskWallet(wallet);
-      } else if (m['subtitle'] != null) {
-        subtitle = m['subtitle'].toString();
+      String? id;
+
+      if (type == 'profile' || type == 'institution') {
+        final formatted = CreatorDisplayFormat.format(
+          fallbackLabel: 'Unknown creator',
+          displayName: rawDisplayName,
+          username: rawUsername,
+          wallet: wallet,
+        );
+        label = formatted.primary;
+        subtitle = formatted.secondary;
+        id = wallet ?? (m['id']?.toString() ?? m['username']?.toString());
+      } else {
+        label = (m['displayName'] ??
+                m['display_name'] ??
+                m['title'] ??
+                m['label'] ??
+                m['name'] ??
+                '')
+            .toString();
+        id = (m['id'] ?? m['walletAddress'] ?? m['wallet'] ?? m['wallet_address'])?.toString();
+        var username = rawUsername;
+        if (username != null) {
+          username = username.trim();
+          if (username.startsWith('@')) username = username.substring(1).trim();
+        }
+        final hasSafeUsername =
+            username != null && username.isNotEmpty && !WalletUtils.looksLikeWallet(username);
+
+        if (hasSafeUsername) {
+          subtitle = '@$username';
+        } else if (wallet != null && wallet.isNotEmpty) {
+          subtitle = maskWallet(wallet);
+        } else if (m['subtitle'] != null) {
+          subtitle = m['subtitle'].toString();
+        }
       }
 
       double? lat;
@@ -62,8 +96,6 @@ List<Map<String, dynamic>> normalizeSearchSuggestionsPayload(dynamic raw) {
       final lngRaw = m['lng'] ?? m['longitude'] ?? (m['latlng'] is Map ? (m['latlng']['lng']) : null);
       if (latRaw is num) lat = latRaw.toDouble();
       if (lngRaw is num) lng = lngRaw.toDouble();
-
-      final type = (m['type'] ?? (m.containsKey('username') ? 'profile' : 'artwork')).toString();
 
       final normalized = <String, dynamic>{
         'label': label,

@@ -2929,6 +2929,12 @@
   "mnemonicRevealPinError": "PIN mora imeti vsaj 4 številke",
   "mnemonicRevealPinLockedError": "PIN je zaklenjen za {seconds} sekund",
   "securityPinAttemptsRemaining": "Preostali poskusi: {remaining} / {max}",
+  "@securityPinAttemptsRemaining": {
+    "placeholders": {
+      "remaining": {},
+      "max": {}
+    }
+  },
   "mnemonicRevealIncorrectPinError": "Napačen PIN",
   "mnemonicRevealCopiedToast": "Obnovitvena fraza je kopirana v odložišče",
   "mnemonicRevealShowButton": "Prikaži",

@@ -11,6 +11,8 @@ import '../../providers/community_subject_provider.dart';
 import '../../providers/exhibitions_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../services/backend_api_service.dart';
+import '../../utils/creator_display_format.dart';
+import '../../utils/search_suggestions.dart';
 import '../../utils/media_url_resolver.dart';
 import '../inline_loading.dart';
 
@@ -444,9 +446,15 @@ class _CommunitySubjectPickerContentState
             if (wallet.isEmpty) {
               return const SizedBox.shrink();
             }
-            final title = (profile['displayName'] ?? profile['username'] ?? wallet).toString();
-            final username = (profile['username'] ?? '').toString();
-            final subtitle = username.isNotEmpty ? '@$username' : null;
+              final rawUsername = (profile['username'] ?? '').toString().trim();
+              final formatted = CreatorDisplayFormat.format(
+                fallbackLabel: maskWallet(wallet),
+                displayName: (profile['displayName'] ?? profile['display_name'])?.toString(),
+                username: rawUsername,
+                wallet: wallet,
+              );
+              final title = formatted.primary;
+              final subtitle = formatted.secondary;
             final image = profile['coverImageUrl'] ?? profile['cover_image_url'] ?? profile['avatar'];
             final preview = CommunitySubjectPreview(
               ref: CommunitySubjectRef(type: 'institution', id: wallet),

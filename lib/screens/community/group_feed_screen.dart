@@ -23,6 +23,8 @@ import '../../utils/app_animations.dart';
 import '../../utils/community_subject_navigation.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/wallet_utils.dart';
+import '../../utils/creator_display_format.dart';
+import '../../utils/search_suggestions.dart';
 import '../../widgets/app_loading.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/community/community_post_card.dart';
@@ -963,25 +965,45 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                       itemCount: likes.length,
                       separatorBuilder: (_, __) => const Divider(height: 1),
                       itemBuilder: (context, index) {
+                        final l10n = AppLocalizations.of(context)!;
                         final user = likes[index];
-                        final username = (user.username ?? user.walletAddress ?? '').trim();
+                        final rawUsername = (user.username ?? '').trim();
+                        final username = rawUsername.startsWith('@')
+                            ? rawUsername.substring(1).trim()
+                            : rawUsername;
+                        final walletAddress = (user.walletAddress ?? '').trim();
+                        final wallet = walletAddress.isNotEmpty
+                          ? walletAddress
+                          : user.userId.trim();
+
+                        final formatted = CreatorDisplayFormat.format(
+                          fallbackLabel: l10n.commonUnknown,
+                          displayName: user.displayName,
+                          username: username,
+                          wallet: wallet,
+                        );
+
+                        final subtitle = formatted.secondary ??
+                            (wallet.isNotEmpty ? maskWallet(wallet) : null);
                         return ListTile(
                           leading: AvatarWidget(
-                            wallet: user.walletAddress ?? user.userId,
+                            wallet: wallet,
                             avatarUrl: user.avatarUrl,
                             radius: 20,
                             allowFabricatedFallback: true,
                           ),
                           title: Text(
-                            user.displayName,
+                            formatted.primary,
                             style: GoogleFonts.inter(fontWeight: FontWeight.w600),
                           ),
-                          subtitle: username.isNotEmpty
-                              ? Text(
-                                  '@$username',
+                          subtitle: subtitle == null
+                              ? null
+                              : Text(
+                                  subtitle,
                                   style: GoogleFonts.inter(fontSize: 12),
-                                )
-                              : null,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                         );
                       },
                     );
@@ -1073,30 +1095,52 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                     itemBuilder: (ctx, idx) {
                       final repost = reposts[idx];
                       final user = repost['user'] as Map<String, dynamic>?;
-                      final username = user?['username'] ??
-                          user?['walletAddress'] ??
-                          l10n.commonUnknown;
-                      final displayName = user?['displayName'] ?? username;
+                      final rawUsername = (user?['username'] ?? '').toString().trim();
+                      final username = rawUsername.startsWith('@')
+                          ? rawUsername.substring(1).trim()
+                          : rawUsername;
+                      final wallet = WalletUtils.coalesce(
+                        walletAddress: user?['walletAddress']?.toString(),
+                        wallet: user?['wallet_address']?.toString() ?? user?['wallet']?.toString(),
+                        userId: user?['id']?.toString(),
+                        fallback: '',
+                      );
+                      final displayName =
+                          (user?['displayName'] ?? user?['display_name'])?.toString().trim();
                       final avatar = user?['avatar'];
                       final comment = repost['repostComment'] as String?;
                       final createdAt =
                           DateTime.tryParse(repost['createdAt'] ?? '');
 
+                      final formatted = CreatorDisplayFormat.format(
+                        fallbackLabel: l10n.commonUnknown,
+                        displayName: displayName,
+                        username: username,
+                        wallet: wallet,
+                      );
+
                       return ListTile(
                         leading: AvatarWidget(
-                          wallet: username,
+                          wallet: wallet.isNotEmpty
+                              ? wallet
+                              : (username.isNotEmpty ? username : l10n.commonUnknown),
                           avatarUrl: avatar,
                           radius: 20,
+                          allowFabricatedFallback: false,
                         ),
                         title: Text(
-                          displayName,
+                          formatted.primary,
                           style: GoogleFonts.inter(fontWeight: FontWeight.w600),
                         ),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('@$username',
-                                style: GoogleFonts.inter(fontSize: 12)),
+                            if (formatted.secondary != null)
+                              Text(formatted.secondary!,
+                                  style: GoogleFonts.inter(fontSize: 12))
+                            else if (wallet.isNotEmpty)
+                              Text(maskWallet(wallet),
+                                  style: GoogleFonts.inter(fontSize: 12)),
                             if (comment != null && comment.isNotEmpty) ...[
                               const SizedBox(height: 4),
                               Text(

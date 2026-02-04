@@ -17,7 +17,7 @@ import '../../../config/config.dart';
 import '../../../utils/app_color_utils.dart';
 import '../../../utils/kubus_color_roles.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
-import 'package:art_kubus/widgets/glass_components.dart';
+ 
 
 class GovernanceHub extends StatefulWidget {
   const GovernanceHub({super.key});
