@@ -52,8 +52,10 @@ import '../activity/advanced_analytics_screen.dart';
 import '../../services/search_service.dart';
 import '../home_screen.dart' show ActivityScreen;
 import '../../services/backend_api_service.dart';
+import '../../services/user_service.dart';
 import '../../utils/app_color_utils.dart';
-import '../../utils/user_identity_display.dart';
+import '../../utils/creator_display_format.dart';
+import '../../utils/wallet_utils.dart';
 import '../../widgets/support/support_section.dart';
 
 /// Desktop home screen with spacious layout and proper grid systems
@@ -90,6 +92,13 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   bool _popularCommunityLoading = false;
   bool _popularCommunityFetchFailed = false;
   bool _artFeedLoadQueued = false;
+
+  final Map<String, ({String displayName, String? username})>
+      _resolvedCreatorIdentityByWallet =
+      <String, ({String displayName, String? username})>{};
+  final Set<String> _creatorIdentityInFlight = <String>{};
+  final Set<String> _pendingCreatorWallets = <String>{};
+  Timer? _creatorResolveDebounce;
 
   @override
   void initState() {
@@ -147,12 +156,97 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     _searchDebounce?.cancel();
+    _creatorResolveDebounce?.cancel();
     _searchOverlayEntry?.remove();
     _searchController.dispose();
     _searchFocusNode
       ..removeListener(_handleSearchFocusChange)
       ..dispose();
     super.dispose();
+  }
+
+  void _scheduleCreatorIdentityResolution(
+    Iterable<String?> wallets, {
+    bool forceRefresh = false,
+  }) {
+    final toAdd = <String>[];
+    for (final raw in wallets) {
+      final w = WalletUtils.canonical(raw);
+      if (w.isEmpty) continue;
+      if (!WalletUtils.looksLikeWallet(w)) continue;
+      if (!forceRefresh && _resolvedCreatorIdentityByWallet.containsKey(w)) {
+        continue;
+      }
+      if (_creatorIdentityInFlight.contains(w)) continue;
+      toAdd.add(w);
+    }
+
+    if (toAdd.isEmpty) return;
+
+    _pendingCreatorWallets.addAll(toAdd);
+    _creatorResolveDebounce?.cancel();
+    _creatorResolveDebounce = Timer(const Duration(milliseconds: 90), () {
+      if (!mounted) return;
+      final batch = _pendingCreatorWallets.toList(growable: false);
+      _pendingCreatorWallets.clear();
+      unawaited(_resolveCreatorIdentities(batch, forceRefresh: forceRefresh));
+    });
+  }
+
+  Future<void> _resolveCreatorIdentities(
+    List<String> wallets, {
+    required bool forceRefresh,
+  }) async {
+    if (wallets.isEmpty) return;
+
+    final targets = <String>[];
+    for (final raw in wallets) {
+      final w = WalletUtils.canonical(raw);
+      if (w.isEmpty) continue;
+      if (!forceRefresh && _resolvedCreatorIdentityByWallet.containsKey(w)) {
+        continue;
+      }
+      if (_creatorIdentityInFlight.contains(w)) continue;
+      _creatorIdentityInFlight.add(w);
+      targets.add(w);
+    }
+    if (targets.isEmpty) return;
+
+    if (kDebugMode) {
+      debugPrint(
+          'DesktopHomeScreen: resolving creator identities for ${targets.length} wallet(s)');
+    }
+
+    final updates =
+        <String, ({String displayName, String? username})>{};
+    try {
+      final futures = targets.map((wallet) async {
+        try {
+          final user =
+              await UserService.getUserById(wallet, forceRefresh: forceRefresh);
+          final displayName = (user?.name ?? '').trim();
+          var username = (user?.username ?? '').trim();
+          if (username.startsWith('@')) username = username.substring(1);
+          username = username.trim();
+          if (displayName.isEmpty) return;
+          updates[wallet] = (
+            displayName: displayName,
+            username: username.isEmpty ? null : username,
+          );
+        } catch (_) {}
+      });
+      await Future.wait(futures);
+    } finally {
+      for (final w in targets) {
+        _creatorIdentityInFlight.remove(w);
+      }
+    }
+
+    if (!mounted) return;
+    if (updates.isEmpty) return;
+    setState(() {
+      _resolvedCreatorIdentityByWallet.addAll(updates);
+    });
   }
 
   void _onScroll() {
@@ -1705,6 +1799,9 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         final feedPosts = communityProvider.artFeedPosts;
 
         final trendingEntries = _getTrendingEntries(artworkProvider, feedPosts);
+        _scheduleCreatorIdentityResolution(
+          trendingEntries.map((e) => e.creatorWallet),
+        );
         final isLoading = (artworkProvider.isLoading('load_artworks') ||
                 communityProvider.artFeedLoading) &&
             trendingEntries.isEmpty;
@@ -1898,6 +1995,12 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
 
         final creators =
             _buildTopCreatorSummaries(communityPosts, artworkProvider);
+        _scheduleCreatorIdentityResolution(
+          creators.map((c) {
+            final raw = c['wallet'] ?? c['id'];
+            return raw?.toString();
+          }),
+        );
         final isLoading = _popularCommunityLoading &&
             _popularCommunityPosts.isEmpty &&
             creators.isEmpty;
@@ -1982,10 +2085,22 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         ? creator['wallet'].toString()
         : userId;
     final avatarUrl = creator['avatar'] ?? creator['avatarUrl'];
-    final identity = UserIdentityDisplayUtils.fromCreatorMap(creator);
-    final displayName = identity.name.isNotEmpty
-        ? identity.name
-        : l10n.desktopHomeCreatorFallbackName;
+
+    final canonicalWallet = WalletUtils.canonical(wallet);
+    final resolved = canonicalWallet.isNotEmpty
+        ? _resolvedCreatorIdentityByWallet[canonicalWallet]
+        : null;
+
+    final formatted = CreatorDisplayFormat.format(
+      fallbackLabel: l10n.desktopHomeCreatorFallbackName,
+      displayName: resolved?.displayName ?? creator['name']?.toString(),
+      username: resolved?.username ?? creator['username']?.toString(),
+      wallet: canonicalWallet,
+    );
+    final displayName = formatted.primary;
+    final handle = formatted.secondary;
+
+    _scheduleCreatorIdentityResolution([canonicalWallet]);
     return DesktopCard(
       onTap: () {
         if (userId.isNotEmpty) {
@@ -2030,9 +2145,9 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                if (identity.handle != null)
+                if (handle != null)
                   Text(
-                    identity.handle!,
+                    handle,
                     style: DetailTypography.caption(context).copyWith(
                       fontSize: 12,
                     ),
@@ -3190,12 +3305,23 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     };
 
     for (final art in artworkProvider.artworks) {
-      final creatorIdentity = UserIdentityDisplayUtils.fromProfileMap(
-        <String, dynamic>{'displayName': art.artist},
+      final walletFromField = WalletUtils.canonical(art.walletAddress);
+      final wallet = walletFromField.isNotEmpty
+          ? walletFromField
+          : (WalletUtils.looksLikeWallet(art.artist)
+              ? WalletUtils.canonical(art.artist)
+              : '');
+      final resolved =
+          wallet.isNotEmpty ? _resolvedCreatorIdentityByWallet[wallet] : null;
+      final formatted = CreatorDisplayFormat.format(
+        fallbackLabel: AppLocalizations.of(context)!.desktopHomeCreatorFallbackName,
+        displayName: resolved?.displayName ?? art.artist,
+        username: resolved?.username,
+        wallet: wallet,
       );
-      final creatorLine = creatorIdentity.handle == null
-          ? creatorIdentity.name
-          : '${creatorIdentity.name} • ${creatorIdentity.handle!}';
+      final creatorLine = formatted.secondary == null
+          ? formatted.primary
+          : '${formatted.primary} • ${formatted.secondary!}';
       entries.add(_TrendingArtEntry(
         id: art.id,
         artworkId: art.id,
@@ -3206,6 +3332,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         likes: art.likesCount,
         hasAR: art.arEnabled,
         score: _trendingScore(art),
+        creatorWallet: wallet.isEmpty ? null : wallet,
       ));
     }
 
@@ -3217,32 +3344,42 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       final idx = entries.indexWhere((e) => e.id == artId);
       if (idx != -1) {
         final existing = entries[idx];
-        final authorIdentity = UserIdentityDisplayUtils.fromProfileMap(
-          <String, dynamic>{
-            'displayName': post.authorName,
-            'username': post.authorUsername,
-          },
+        final wallet = WalletUtils.canonical(post.authorWallet);
+        final resolved =
+            wallet.isNotEmpty ? _resolvedCreatorIdentityByWallet[wallet] : null;
+        final formatted = CreatorDisplayFormat.format(
+          fallbackLabel:
+              AppLocalizations.of(context)!.desktopHomeCreatorFallbackName,
+          displayName: resolved?.displayName ?? post.authorName,
+          username: resolved?.username ?? post.authorUsername,
+          wallet: wallet,
         );
-        final authorLine = authorIdentity.handle == null
-            ? authorIdentity.name
-            : '${authorIdentity.name} • ${authorIdentity.handle!}';
+        final authorLine = formatted.secondary == null
+            ? formatted.primary
+            : '${formatted.primary} • ${formatted.secondary!}';
         entries[idx] = existing.copyWith(
           score: existing.score + boost,
           likes: post.likeCount > 0 ? post.likeCount : existing.likes,
           subtitle: existing.subtitle?.isNotEmpty == true
               ? existing.subtitle
               : authorLine,
+          creatorWallet:
+              existing.creatorWallet ?? (wallet.isEmpty ? null : wallet),
         );
       } else {
-        final authorIdentity = UserIdentityDisplayUtils.fromProfileMap(
-          <String, dynamic>{
-            'displayName': post.authorName,
-            'username': post.authorUsername,
-          },
+        final wallet = WalletUtils.canonical(post.authorWallet);
+        final resolved =
+            wallet.isNotEmpty ? _resolvedCreatorIdentityByWallet[wallet] : null;
+        final formatted = CreatorDisplayFormat.format(
+          fallbackLabel:
+              AppLocalizations.of(context)!.desktopHomeCreatorFallbackName,
+          displayName: resolved?.displayName ?? post.authorName,
+          username: resolved?.username ?? post.authorUsername,
+          wallet: wallet,
         );
-        final authorLine = authorIdentity.handle == null
-            ? authorIdentity.name
-            : '${authorIdentity.name} • ${authorIdentity.handle!}';
+        final authorLine = formatted.secondary == null
+            ? formatted.primary
+            : '${formatted.primary} • ${formatted.secondary!}';
         entries.add(
           _TrendingArtEntry(
             id: artId,
@@ -3252,6 +3389,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             likes: post.likeCount,
             hasAR: artworkMap[artId]?.arEnabled ?? true,
             score: boost,
+            creatorWallet: wallet.isEmpty ? null : wallet,
           ),
         );
       }
@@ -3308,17 +3446,31 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
 
     // Fallback when no community posts: derive creators from artworks
     if (creatorsMap.isEmpty) {
+      final l10n = AppLocalizations.of(context)!;
       for (final art in artworkProvider.artworks) {
-        final identity = UserIdentityDisplayUtils.fromProfileMap(
-          <String, dynamic>{'displayName': art.artist},
+        final walletFromField = WalletUtils.canonical(art.walletAddress);
+        final wallet = walletFromField.isNotEmpty
+            ? walletFromField
+            : (WalletUtils.looksLikeWallet(art.artist)
+                ? WalletUtils.canonical(art.artist)
+                : '');
+        final resolved =
+            wallet.isNotEmpty ? _resolvedCreatorIdentityByWallet[wallet] : null;
+        final formatted = CreatorDisplayFormat.format(
+          fallbackLabel: l10n.desktopHomeCreatorFallbackName,
+          displayName: resolved?.displayName ?? art.artist,
+          username: resolved?.username,
+          wallet: wallet,
         );
-        final key = identity.name;
+
+        final key = wallet.isNotEmpty ? wallet : formatted.primary;
         final stats = creatorsMap.putIfAbsent(
           key,
           () => _CreatorStats(
-            id: key,
-            name: identity.name,
-            username: identity.username,
+            id: wallet.isNotEmpty ? wallet : key,
+            wallet: wallet.isEmpty ? null : wallet,
+            name: formatted.primary,
+            username: resolved?.username,
           ),
         );
         stats.postCount += 1;
@@ -3341,6 +3493,7 @@ class _TrendingArtEntry {
   final int likes;
   final bool hasAR;
   final double score;
+  final String? creatorWallet;
 
   const _TrendingArtEntry({
     required this.id,
@@ -3350,6 +3503,7 @@ class _TrendingArtEntry {
     required this.likes,
     this.hasAR = false,
     required this.score,
+    this.creatorWallet,
   });
 
   _TrendingArtEntry copyWith({
@@ -3358,6 +3512,7 @@ class _TrendingArtEntry {
     int? likes,
     bool? hasAR,
     double? score,
+    String? creatorWallet,
   }) {
     return _TrendingArtEntry(
       id: id,
@@ -3367,6 +3522,7 @@ class _TrendingArtEntry {
       likes: likes ?? this.likes,
       hasAR: hasAR ?? this.hasAR,
       score: score ?? this.score,
+      creatorWallet: creatorWallet ?? this.creatorWallet,
     );
   }
 }
