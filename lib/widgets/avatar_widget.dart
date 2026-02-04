@@ -47,6 +47,8 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
   late AnimationController _shimmerController;
   String? _currentHeroTag;
   String? _presencePrefetchKey;
+  DateTime? _presenceLastTouchAt;
+  bool _presenceTouchScheduled = false;
 
   @override
   void initState() {
@@ -252,6 +254,10 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
         presenceVisible &&
         effectiveOnline != null;
 
+    // Keep presence watch alive on long-lived surfaces.
+    // PresenceProvider prunes watched wallets after a short TTL unless they are re-requested.
+    _touchPresenceWatchIfNeeded();
+
     if (shouldShowPresence) {
       final indicatorSize = (radius * 0.75).clamp(14.0, 18.0).toDouble();
       final indicatorColor = widget.statusColor ?? (effectiveOnline == true ? colorScheme.tertiary : colorScheme.outlineVariant);
@@ -337,7 +343,43 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
 
     if (_presencePrefetchKey == normalized) return;
     _presencePrefetchKey = normalized;
+    _presenceLastTouchAt = DateTime.now();
     provider.prefetch([wallet]);
+  }
+
+  void _touchPresenceWatchIfNeeded() {
+    if (!AppConfig.isFeatureEnabled('presence')) return;
+    if (!widget.showStatusIndicator) return;
+
+    final wallet = widget.wallet.trim();
+    if (wallet.isEmpty) return;
+
+    final normalized = WalletUtils.normalize(wallet);
+    const invalid = {'unknown', 'anonymous', 'n/a', 'none'};
+    if (normalized.isEmpty || invalid.contains(normalized.toLowerCase())) return;
+    if (!WalletUtils.looksLikeWallet(normalized)) return;
+
+    // PresenceProvider uses a short watched-wallet TTL (currently 2 minutes).
+    // Touch at a safe interval below that to avoid stale indicators.
+    final now = DateTime.now();
+    final last = _presenceLastTouchAt;
+    if (last != null && now.difference(last) < const Duration(seconds: 55)) return;
+
+    if (_presenceTouchScheduled) return;
+    _presenceTouchScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _presenceTouchScheduled = false;
+      if (!mounted) return;
+      PresenceProvider? provider;
+      try {
+        provider = Provider.of<PresenceProvider>(context, listen: false);
+      } catch (_) {
+        provider = null;
+      }
+      if (provider == null) return;
+      _presenceLastTouchAt = DateTime.now();
+      provider.prefetch([wallet]);
+    });
   }
 
   String? _normalizeAvatar(String? raw) {
