@@ -953,6 +953,32 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (_isRouteVisible == isVisible) return;
     _isRouteVisible = isVisible;
     _handleActiveStateChanged();
+    if (isVisible) {
+      _scheduleWebMapResizeRecovery(reason: 'routeVisible');
+    }
+  }
+
+  void _scheduleWebMapResizeRecovery({required String reason}) {
+    if (!kIsWeb) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final controller = _mapController;
+      if (controller == null) return;
+
+      try {
+        controller.forceResizeWebMap();
+      } catch (_) {}
+      try {
+        controller.resizeWebMap();
+      } catch (_) {}
+
+      _perf.logEvent(
+        'webResizeRecovery',
+        extra: <String, Object?>{
+          'reason': reason,
+        },
+      );
+    });
   }
 
   void _handleActiveStateChanged() {

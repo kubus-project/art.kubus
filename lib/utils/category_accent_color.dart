@@ -1,27 +1,28 @@
 import 'package:flutter/material.dart';
 
 import 'app_color_utils.dart';
+import 'kubus_color_roles.dart';
 
 class CategoryAccentColor {
   static Color resolve(BuildContext context, String category) {
-    final base = Theme.of(context).colorScheme.primary;
+    final roles = KubusColorRoles.of(context);
     final normalized = category.trim().toLowerCase();
 
     switch (normalized) {
       case 'ar exploration':
-        return base;
+        return roles.statTeal;
       case 'exploration':
-        return AppColorUtils.shiftLightness(base, 0.08);
+        return roles.statGreen;
       case 'community':
-        return AppColorUtils.shiftLightness(base, -0.06);
+        return roles.statAmber;
       case 'collection':
-        return AppColorUtils.shiftLightness(base, 0.14);
+        return roles.positiveAction;
       case 'web3':
-        return AppColorUtils.shiftLightness(base, -0.10);
+        return roles.statCoral;
       case 'special':
-        return AppColorUtils.shiftLightness(base, 0.04);
+        return roles.achievementGold;
       default:
-        return base;
+        return roles.statTeal;
     }
   }
 }
