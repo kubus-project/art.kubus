@@ -1381,7 +1381,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                   ),
                 ),
                 Text(
-                  '$views â€¢ $rating',
+                  '$views • $rating',
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     color: Theme.of(context)

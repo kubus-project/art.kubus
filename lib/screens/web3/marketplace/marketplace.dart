@@ -1018,7 +1018,7 @@ class _MarketplaceState extends State<Marketplace>
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Owned NFT ${collectible.isForSale ? 'â€¢ Listed for Sale' : ''}',
+                    'Owned NFT ${collectible.isForSale ? '• Listed for Sale' : ''}',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.inter(
                       fontSize: 14,
@@ -1716,7 +1716,7 @@ class _MarketplaceState extends State<Marketplace>
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'NFT Collection${series.requiresARInteraction ? ' â€¢ AR Enabled' : ''}',
+                    'NFT Collection${series.requiresARInteraction ? ' • AR Enabled' : ''}',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.inter(
                       fontSize: 14,

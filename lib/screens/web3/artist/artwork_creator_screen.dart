@@ -13,6 +13,7 @@ import 'package:provider/provider.dart';
 
 import '../../../config/config.dart';
 import '../../../models/artwork.dart';
+import '../../../providers/app_refresh_provider.dart';
 import '../../../providers/artwork_drafts_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/tile_providers.dart';
@@ -494,6 +495,15 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
       return;
     }
     setState(() => _createdArtwork = created);
+    
+    // Trigger portfolio refresh so gallery auto-updates
+    if (mounted) {
+      try {
+        context.read<AppRefreshProvider>().triggerPortfolio();
+      } catch (_) {
+        // Silently fail if AppRefreshProvider is not available
+      }
+    }
   }
 
   Future<void> _mintNftForCreated({

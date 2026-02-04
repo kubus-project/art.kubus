@@ -5,6 +5,7 @@ import '../models/collection_record.dart';
 import '../models/exhibition.dart';
 import '../models/portfolio_entry.dart';
 import '../providers/artwork_provider.dart';
+import '../providers/app_refresh_provider.dart';
 import '../services/backend_api_service.dart';
 
 class PortfolioProvider extends ChangeNotifier {
@@ -14,6 +15,8 @@ class PortfolioProvider extends ChangeNotifier {
 
   String _walletAddress = '';
   ArtworkProvider? _artworkProvider;
+  AppRefreshProvider? _appRefreshProvider;
+  int _lastPortfolioRefreshVersion = -1;
 
   bool _loading = false;
   String? _error;
@@ -35,6 +38,17 @@ class PortfolioProvider extends ChangeNotifier {
     _artworkProvider = artworkProvider;
   }
 
+  void bindAppRefreshProvider(AppRefreshProvider? appRefreshProvider) {
+    if (identical(_appRefreshProvider, appRefreshProvider)) return;
+    _appRefreshProvider = appRefreshProvider;
+  }
+
+  @override
+  void notifyListeners() {
+    _checkAndHandleRefresh();
+    super.notifyListeners();
+  }
+
   List<PortfolioEntry> get entries {
     final result = <PortfolioEntry>[
       ..._artworks.where((a) => a.isActive).map(PortfolioEntry.fromArtwork),
@@ -48,6 +62,15 @@ class PortfolioProvider extends ChangeNotifier {
 
     result.sort((a, b) => sortKey(b).compareTo(sortKey(a)));
     return result;
+  }
+
+  void _checkAndHandleRefresh() {
+    if (_appRefreshProvider == null || _walletAddress.isEmpty) return;
+    final currentVersion = _appRefreshProvider!.portfolioVersion;
+    if (currentVersion > _lastPortfolioRefreshVersion) {
+      _lastPortfolioRefreshVersion = currentVersion;
+      Future.microtask(() => refresh(force: true));
+    }
   }
 
   Artwork? artworkById(String id) {
@@ -82,7 +105,18 @@ class PortfolioProvider extends ChangeNotifier {
 
   void setWalletAddress(String? walletAddress) {
     final next = (walletAddress ?? '').trim();
-    if (next == _walletAddress) return;
+    
+    // Check for refresh triggers from app refresh provider
+    _checkAndHandleRefresh();
+    
+    if (next == _walletAddress) {
+      // Wallet didn't change, but ensure we have data if this is the first time
+      if (_walletAddress.isNotEmpty && _artworks.isEmpty && _collections.isEmpty && _exhibitions.isEmpty && !_loading) {
+        Future.microtask(() => refresh(force: true));
+      }
+      return;
+    }
+    
     _walletAddress = next;
     _error = null;
     _artworks = const <Artwork>[];

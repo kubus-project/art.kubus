@@ -474,11 +474,12 @@ class _AppLauncherState extends State<AppLauncher> {
                   create: (context) => ArtworkDraftsProvider()),
               ChangeNotifierProvider(
                   create: (context) => ArtworkArConfigProvider()),
-              ChangeNotifierProxyProvider<ArtworkProvider, PortfolioProvider>(
+              ChangeNotifierProxyProvider2<ArtworkProvider, AppRefreshProvider, PortfolioProvider>(
                 create: (context) => PortfolioProvider(),
-                update: (context, artworkProvider, portfolioProvider) {
+                update: (context, artworkProvider, appRefreshProvider, portfolioProvider) {
                   final provider = portfolioProvider ?? PortfolioProvider();
                   provider.bindArtworkProvider(artworkProvider);
+                  provider.bindAppRefreshProvider(appRefreshProvider);
                   return provider;
                 },
               ),

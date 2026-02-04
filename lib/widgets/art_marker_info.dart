@@ -167,7 +167,7 @@ Future<void> showArtMarkerInfoDialog({
                   _chip(
                     scheme,
                     Icons.emoji_events_outlined,
-                    '$poapCount POAP â€¢ $badgeCount badges',
+                    '$poapCount POAP • $badgeCount badges',
                     baseColor,
                   ),
               ],

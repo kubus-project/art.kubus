@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'app_color_utils.dart';
 import 'kubus_color_roles.dart';
 
 class CategoryAccentColor {
