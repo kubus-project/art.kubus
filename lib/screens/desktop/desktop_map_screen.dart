@@ -874,7 +874,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     shellScope.setFunctionsPanelContent(
       KeyedSubtree(
         key: ValueKey<String>('nearby_sidebar_$sig'),
-        child: _buildNearbyArtSidebar(themeProvider, filteredArtworks),
+        child: Builder(
+          builder: (context) {
+            final themeProvider = context.watch<ThemeProvider>();
+            return _buildNearbyArtSidebar(themeProvider, filteredArtworks);
+          },
+        ),
       ),
     );
   }
