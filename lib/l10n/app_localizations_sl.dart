@@ -2476,7 +2476,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get mapTravelModeStatusTravelling => 'Potuješ';
 
   @override
-  String get mapTravelModeStatusTravellingTooltip => 'Način potovanja je vklopljen — prikazujem označevalce v pogledu';
+  String get mapTravelModeStatusTravellingTooltip => 'Način potovanja je vklopljen - prikazujem označevalce v pogledu';
 
   @override
   String get mapArArtworkNearbyTitle => 'AR umetnina v bližini!';
@@ -2797,7 +2797,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get mapTravelModeTutorialBody => 'Način potovanja ti omogoča brskanje kjerkoli. Zemljevid naloži tisto, kar je trenutno v pogledu.';
 
   @override
-  String get mapTravelModeTutorialHint => 'Namig: Premakni in približaj/oddalji — označevalci se osvežijo glede na pogled.';
+  String get mapTravelModeTutorialHint => 'Namig: Premakni in približaj/oddalji - označevalci se osvežijo glede na pogled.';
 
   @override
   String get mapTravelModeTutorialGotIt => 'Razumem';
@@ -6809,7 +6809,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get supportSectionTitle => 'Podpri';
 
   @override
-  String get supportSectionSubtitle => 'Pomagaj nam graditi art.kubus — vsaka donacija šteje.';
+  String get supportSectionSubtitle => 'Pomagaj nam graditi art.kubus - vsaka donacija šteje.';
 
   @override
   String get supportSectionMoreInfo => 'Več informacij';
@@ -6836,7 +6836,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get supportDialogTitle => 'Kaj omogoča tvoja podpora';
 
   @override
-  String get supportDialogSubtitle => 'Tri ravni — vsaka je pomembna. Hvala, ker nam pomagaš graditi naprej.';
+  String get supportDialogSubtitle => 'Tri ravni - vsaka je pomembna. Hvala, ker nam pomagaš graditi naprej.';
 
   @override
   String get supportTier5Amount => '5 €';

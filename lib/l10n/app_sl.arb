@@ -174,7 +174,7 @@
   "authWalletConnectionDisabled": "Povezava denarnice je trenutno onemogočena.",
   "authEnterValidEmailPassword": "Vnesi veljavno e-pošto in geslo (vsaj 8 znakov).",
   "authEnterValidEmailInline": "Vnesi veljaven e-poštni naslov.",
-  "authPasswordPolicyError": "Geslo mora biti dolgo 8–128 znakov in vsebuje črko ter številko.",
+  "authPasswordPolicyError": "Geslo mora biti dolgo vsaj 8 znakov in vsebuje črko ter številko.",
   "authPasswordMismatchInline": "Gesli se ne ujemata.",
   "authAccountAlreadyExistsToast": "Račun s tem e-poštnim naslovom že obstaja. Prijavi se.",
   "authEmailSignInFailed": "Prijava z e-pošto ni uspela. Poskusi znova.",
@@ -964,7 +964,7 @@
   "@mapTravelModeStatusTravelling": {
     "description": "Kratek statusni napis, ko je vključen način potovanja (namesto številčnega radija)."
   },
-  "mapTravelModeStatusTravellingTooltip": "Način potovanja je vklopljen — prikazujem označevalce v pogledu",
+  "mapTravelModeStatusTravellingTooltip": "Način potovanja je vklopljen - prikazujem označevalce v pogledu",
   "@mapTravelModeStatusTravellingTooltip": {
     "description": "Namig ob kontroli radija bližine, ko je vključen način potovanja."
   },
@@ -1179,7 +1179,7 @@
   },
   "mapTravelModeTutorialTitle": "Razišči širše območje",
   "mapTravelModeTutorialBody": "Način potovanja ti omogoča brskanje kjerkoli. Zemljevid naloži tisto, kar je trenutno v pogledu.",
-  "mapTravelModeTutorialHint": "Namig: Premakni in približaj/oddalji — označevalci se osvežijo glede na pogled.",
+  "mapTravelModeTutorialHint": "Namig: Premakni in približaj/oddalji - označevalci se osvežijo glede na pogled.",
   "mapTravelModeTutorialGotIt": "Razumem",
   "mapTravelModeTutorialEnable": "Vključi način potovanja",
   "mapNearbyArtTitle": "Umetnost v bližini",
@@ -3049,7 +3049,7 @@
   "communitySubjectPickerEmptyInstitution": "Ni najdenih institucij.",
 
   "supportSectionTitle": "Podpri",
-  "supportSectionSubtitle": "Pomagaj nam graditi art.kubus — vsaka donacija šteje.",
+  "supportSectionSubtitle": "Pomagaj nam graditi art.kubus - vsaka donacija šteje.",
   "supportSectionMoreInfo": "Več informacij",
   "supportMethodKofi": "Ko-fi",
   "supportMethodKofiHint": "Podpora v velikosti kave",
@@ -3058,7 +3058,7 @@
   "supportMethodGithubSponsors": "GitHub Sponsors",
   "supportMethodGithubSponsorsHint": "Podpri prek GitHuba",
   "supportDialogTitle": "Kaj omogoča tvoja podpora",
-  "supportDialogSubtitle": "Tri ravni — vsaka je pomembna. Hvala, ker nam pomagaš graditi naprej.",
+  "supportDialogSubtitle": "Tri ravni - vsaka je pomembna. Hvala, ker nam pomagaš graditi naprej.",
   "supportTier5Amount": "5 €",
   "supportTier5Body": "Pomaga pokriti mesečne stroške infrastrukture.",
   "supportTier15Amount": "15 €",

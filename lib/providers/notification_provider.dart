@@ -371,7 +371,7 @@ class NotificationProvider extends ChangeNotifier {
       } catch (_) {}
       final token = _backend.getAuthToken();
       if (token == null || token.isEmpty) {
-        debugPrint('NotificationProvider.refresh: skipping unread fetch — no auth token available');
+        debugPrint('NotificationProvider.refresh: skipping unread fetch - no auth token available');
         if (_communityUnreadCount != 0 || _hasNew) {
           _communityUnreadCount = 0;
           _hasNew = false;

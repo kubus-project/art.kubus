@@ -26,7 +26,7 @@ class SupportSectionCard extends StatelessWidget {
     // Localizations may be null during very early app initialization.
     final title = l10n?.supportSectionTitle ?? 'Support';
     final subtitle = l10n?.supportSectionSubtitle ??
-        'Help us keep building art.kubus — every donation helps.';
+        'Help us keep building art.kubus - every donation helps.';
 
     return LiquidGlassCard(
       padding: const EdgeInsets.all(KubusSpacing.lg),
@@ -140,7 +140,7 @@ class SupportSectionCard extends StatelessWidget {
 
         final title = l10n?.supportDialogTitle ?? 'What your support enables';
         final subtitle = l10n?.supportDialogSubtitle ??
-            'Three tiers — all meaningful. Thank you for helping us keep building.';
+            'Three tiers - all meaningful. Thank you for helping us keep building.';
 
         return ConstrainedBox(
           constraints: BoxConstraints(

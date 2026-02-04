@@ -254,7 +254,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get personaOnboardingTitle => 'How do you want to use art.kubus?';
 
   @override
-  String get personaOnboardingSubtitle => 'Choose what you’re here for. This only changes what we highlight—not what you can access.';
+  String get personaOnboardingSubtitle => 'Choose what you’re here for. This only changes what we highlight-not what you can access.';
 
   @override
   String get personaOptionLoverTitle => 'Art lover';
@@ -623,7 +623,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingWelcomeSubtitle => 'Exhibition and community in one place';
 
   @override
-  String get onboardingWelcomeDescription => 'Discover artworks, explore places, and connect with creators. XR and Web3 are optional layers — the core experience works without them.';
+  String get onboardingWelcomeDescription => 'Discover artworks, explore places, and connect with creators. XR and Web3 are optional layers - the core experience works without them.';
 
   @override
   String get onboardingExploreTitle => 'Explore artworks';
@@ -650,7 +650,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingCommunitySubtitle => 'Collaborate by default';
 
   @override
-  String get onboardingCommunityDescription => 'Follow artists, message, and collaborate on projects — cooperation is the default where it makes sense.';
+  String get onboardingCommunityDescription => 'Follow artists, message, and collaborate on projects - cooperation is the default where it makes sense.';
 
   @override
   String get onboardingCollectiblesTitle => 'Collectibles (optional)';
@@ -1990,7 +1990,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3DaoP2Title => 'Your voting weight';
 
   @override
-  String get web3DaoP2Description => 'Your voting weight can reflect your Season 0 progress (KUB8 points). No financial value—just participation and recognition.';
+  String get web3DaoP2Description => 'Your voting weight can reflect your Season 0 progress (KUB8 points). No financial value-just participation and recognition.';
 
   @override
   String get web3DaoP2Feature1 => 'Voting weight can follow your KUB8 points';
@@ -2476,7 +2476,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapTravelModeStatusTravelling => 'You are travelling';
 
   @override
-  String get mapTravelModeStatusTravellingTooltip => 'Travel mode is on — showing markers in view';
+  String get mapTravelModeStatusTravellingTooltip => 'Travel mode is on - showing markers in view';
 
   @override
   String get mapArArtworkNearbyTitle => 'AR artwork nearby!';
@@ -2797,7 +2797,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapTravelModeTutorialBody => 'Travel mode lets you browse markers anywhere. The map loads what’s currently in view.';
 
   @override
-  String get mapTravelModeTutorialHint => 'Tip: Pan and zoom — markers refresh to match the viewport.';
+  String get mapTravelModeTutorialHint => 'Tip: Pan and zoom - markers refresh to match the viewport.';
 
   @override
   String get mapTravelModeTutorialGotIt => 'Got it';
@@ -6785,7 +6785,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get supportSectionTitle => 'Support';
 
   @override
-  String get supportSectionSubtitle => 'Help us keep building art.kubus — every donation helps.';
+  String get supportSectionSubtitle => 'Help us keep building art.kubus - every donation helps.';
 
   @override
   String get supportSectionMoreInfo => 'More info';
@@ -6812,7 +6812,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get supportDialogTitle => 'What your support enables';
 
   @override
-  String get supportDialogSubtitle => 'Three tiers — all meaningful. Thank you for helping us keep building.';
+  String get supportDialogSubtitle => 'Three tiers - all meaningful. Thank you for helping us keep building.';
 
   @override
   String get supportTier5Amount => '€5';
