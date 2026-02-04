@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 import '../models/art_marker.dart';
 import '../services/backend_api_service.dart';
 import '../services/map_marker_service.dart';
+import '../services/telemetry/telemetry_uuid.dart';
 
 class MarkerManagementProvider extends ChangeNotifier {
   MarkerManagementProvider({
@@ -178,15 +179,66 @@ class MarkerManagementProvider extends ChangeNotifier {
   }
 
   Future<ArtMarker?> createMarker(Map<String, dynamic> payload) async {
+    String? clientNonce;
+    final normalizedPayload = Map<String, dynamic>.from(payload);
     try {
-      final created = await _api.createArtMarkerRecord(payload).timeout(const Duration(seconds: 20));
-      if (created == null) return null;
+      final rawMeta = normalizedPayload['metadata'];
+      final meta = rawMeta is Map
+          ? Map<String, dynamic>.from(
+              rawMeta.map((key, value) => MapEntry(key.toString(), value)),
+            )
+          : <String, dynamic>{};
+
+      clientNonce = meta['clientNonce']?.toString().trim();
+      if (clientNonce != null && clientNonce.isEmpty) clientNonce = null;
+      clientNonce ??= TelemetryUuid.v4();
+
+      meta['clientNonce'] = clientNonce;
+      meta.putIfAbsent('clientCreatedAtMs', () => DateTime.now().millisecondsSinceEpoch);
+      normalizedPayload['metadata'] = meta;
+    } catch (_) {
+      // Best-effort; keep original payload and disable nonce recovery.
+      clientNonce = null;
+    }
+
+    try {
+      final created = await _api
+          .createArtMarkerRecord(normalizedPayload)
+          .timeout(const Duration(seconds: 20));
+      if (created == null) {
+        if (clientNonce != null && clientNonce.isNotEmpty) {
+          await refresh(force: true);
+          for (final marker in _markers) {
+            if ((marker.metadata?['clientNonce'] ?? '').toString() == clientNonce) {
+              _mapMarkerService.notifyMarkerUpserted(marker);
+              return marker;
+            }
+          }
+        }
+        return null;
+      }
       _markers = <ArtMarker>[created, ..._markers.where((m) => m.id != created.id)];
       _mapMarkerService.notifyMarkerUpserted(created);
       notifyListeners();
       return created;
     } catch (e) {
       _error = e.toString();
+      if (kDebugMode) {
+        debugPrint('MarkerManagementProvider: create failed: $e');
+      }
+      if (clientNonce != null && clientNonce.isNotEmpty) {
+        try {
+          await refresh(force: true);
+          for (final marker in _markers) {
+            if ((marker.metadata?['clientNonce'] ?? '').toString() == clientNonce) {
+              _mapMarkerService.notifyMarkerUpserted(marker);
+              return marker;
+            }
+          }
+        } catch (_) {
+          // Ignore recovery failures.
+        }
+      }
       notifyListeners();
       return null;
     }

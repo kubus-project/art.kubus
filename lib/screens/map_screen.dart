@@ -3821,6 +3821,14 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _handleCameraMove(ml.CameraPosition position) {
+    if (!mounted) return;
+    // Any user gesture should immediately cancel auto-follow so we don't fight
+    // the user. This must run before the throttle early-return.
+    final bool hasGesture = !_programmaticCameraMove;
+    if (hasGesture && _autoFollow) {
+      setState(() => _autoFollow = false);
+    }
+
     final now = DateTime.now();
     if (now.difference(_lastCameraUpdateTime) < _cameraUpdateThrottle) return;
     _lastCameraUpdateTime = now;
@@ -3857,6 +3865,7 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _handleCameraIdle() {
+    if (!mounted) return;
     final wasProgrammatic = _programmaticCameraMove;
     _programmaticCameraMove = false;
 
@@ -6474,7 +6483,7 @@ class _MapScreenState extends State<MapScreen>
     final l10n = AppLocalizations.of(context)!;
     // Keep controls clear of the discovery module and the nearby sheet.
     // Smaller bottom offset moves controls slightly down.
-    final bottomOffset = 120.0 + KubusLayout.mainBottomNavBarHeight;
+    final bottomOffset = 90.0 + KubusLayout.mainBottomNavBarHeight;
     return Positioned(
       right: 12,
       bottom: bottomOffset,

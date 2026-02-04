@@ -12,6 +12,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../config/config.dart';
 import '../../utils/wallet_utils.dart';
+import '../../utils/user_identity_display.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/app_loading.dart';
 import '../../widgets/topbar_icon.dart';
@@ -5467,31 +5468,32 @@ class _CommunityScreenState extends State<CommunityScreen>
         onTap: onTap,
       );
     } else if (searchType == 'profiles') {
-      final name = result['display_name'] ?? result['displayName'] ?? result['username'] ?? 'User';
-      final handle = result['username'] ?? result['wallet_address'] ?? '';
-      final avatar = result['avatar'] ?? result['avatar_url'] ?? result['profileImage'];
+      final identity = UserIdentityDisplayUtils.fromProfileMap(result);
+      final wallet = WalletUtils.resolveFromMap(result);
+      final avatar =
+          result['avatar'] ?? result['avatar_url'] ?? result['profileImage'];
 
       return ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
         leading: AvatarWidget(
-          wallet: handle,
+          wallet: wallet,
           avatarUrl: avatar,
           radius: 20,
           allowFabricatedFallback: true,
         ),
         title: Text(
-          name,
+          identity.name,
           style: GoogleFonts.inter(fontWeight: FontWeight.w600),
         ),
-        subtitle: handle.isNotEmpty
-            ? Text(
-                '@$handle',
+        subtitle: identity.handle == null
+            ? null
+            : Text(
+                identity.handle!,
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   color: scheme.onSurface.withValues(alpha: 0.6),
                 ),
-              )
-            : null,
+              ),
         trailing: const Icon(Icons.add_circle_outline, size: 20),
         onTap: onTap,
       );
@@ -6205,16 +6207,6 @@ class _CommunityScreenState extends State<CommunityScreen>
                         if (user.username != null &&
                             user.username!.isNotEmpty) {
                           subtitleParts.add('@${user.username}');
-                        }
-                        if (user.walletAddress != null &&
-                            user.walletAddress!.isNotEmpty) {
-                          final wallet = user.walletAddress!;
-                          if (wallet.length > 8) {
-                            subtitleParts.add(
-                                '${wallet.substring(0, 4)}...${wallet.substring(wallet.length - 4)}');
-                          } else {
-                            subtitleParts.add(wallet);
-                          }
                         }
                         if (user.likedAt != null) {
                           subtitleParts.add(_getTimeAgo(user.likedAt!));

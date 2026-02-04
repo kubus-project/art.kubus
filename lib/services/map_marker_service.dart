@@ -9,6 +9,7 @@ import '../utils/geo_bounds.dart';
 import 'backend_api_service.dart';
 import 'storage_config.dart';
 import 'socket_service.dart';
+import 'telemetry/telemetry_uuid.dart';
 
 @immutable
 class _MarkerCacheEntry {
@@ -514,6 +515,7 @@ class MapMarkerService {
     String? modelCID,
     String? modelURL,
   }) async {
+    String? clientNonce;
     try {
       if (artworkId != null && artworkId.isNotEmpty) {
         // Local cache check
@@ -557,6 +559,21 @@ class MapMarkerService {
               ? StorageProvider.ipfs
               : StorageProvider.http;
 
+      final mergedMetadata = <String, dynamic>{
+        'source': 'user_created',
+        'createdFrom': 'map_marker_service',
+        'visibility': isPublic ? 'public' : 'private',
+        if (metadata != null) ...metadata,
+      };
+      clientNonce = mergedMetadata['clientNonce']?.toString().trim();
+      if (clientNonce != null && clientNonce.isEmpty) clientNonce = null;
+      clientNonce ??= TelemetryUuid.v4();
+      mergedMetadata['clientNonce'] = clientNonce;
+      mergedMetadata.putIfAbsent(
+        'clientCreatedAtMs',
+        () => DateTime.now().millisecondsSinceEpoch,
+      );
+
       final payload = <String, dynamic>{
         'name': title,
         'description': description,
@@ -570,12 +587,7 @@ class MapMarkerService {
         if (resolvedUrl != null) 'modelURL': resolvedUrl,
         'storageProvider': storageProvider.name,
         'scale': scale,
-        'metadata': {
-          'source': 'user_created',
-          'createdFrom': 'map_marker_service',
-          'visibility': isPublic ? 'public' : 'private',
-          if (metadata != null) ...metadata,
-        },
+        'metadata': mergedMetadata,
         if (tags.isNotEmpty) 'tags': tags,
         'isPublic': isPublic,
       };
@@ -587,8 +599,41 @@ class MapMarkerService {
         notifyMarkerUpserted(created);
         return created;
       }
+
+      final String nonce = clientNonce;
+      try {
+        final mine = await _backendApi.getMyArtMarkers();
+        for (final marker in mine) {
+          if ((marker.metadata?['clientNonce'] ?? '').toString() == nonce) {
+            _cachedMarkers.removeWhere((m) => m.id == marker.id);
+            _cachedMarkers.add(marker);
+            notifyMarkerUpserted(marker);
+            _log('MapMarkerService: recovered created marker via nonce ${marker.id}');
+            return marker;
+          }
+        }
+      } catch (e) {
+        _log('MapMarkerService: nonce recovery failed: $e');
+      }
     } catch (e) {
       _log('MapMarkerService: Error creating marker - $e');
+      final nonce = clientNonce;
+      if (nonce != null && nonce.isNotEmpty) {
+        try {
+          final mine = await _backendApi.getMyArtMarkers();
+          for (final marker in mine) {
+            if ((marker.metadata?['clientNonce'] ?? '').toString() == nonce) {
+              _cachedMarkers.removeWhere((m) => m.id == marker.id);
+              _cachedMarkers.add(marker);
+              notifyMarkerUpserted(marker);
+              _log('MapMarkerService: recovered created marker after error ${marker.id}');
+              return marker;
+            }
+          }
+        } catch (e) {
+          _log('MapMarkerService: nonce recovery after error failed: $e');
+        }
+      }
     }
     return null;
   }

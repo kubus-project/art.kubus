@@ -714,6 +714,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     final isOwner = (currentWallet != null &&
         (artwork.walletAddress ?? '').isNotEmpty &&
         currentWallet.toLowerCase() == artwork.walletAddress!.toLowerCase());
+    final canManage = profileProvider.isSignedIn && isOwner;
+    final canMint = canManage &&
+        AppConfig.isFeatureEnabled('web3') &&
+        AppConfig.isFeatureEnabled('nftMinting');
 
     return Column(
       children: [
@@ -762,53 +766,62 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
             ),
           ],
         ),
-        const SizedBox(height: DetailSpacing.md),
-        Row(
-          children: [
-            if (isOwner) ...[
+        if (canManage) ...[
+          const SizedBox(height: DetailSpacing.md),
+          Row(
+            children: [
               Expanded(
                 child: DetailActionButton(
                   icon: Icons.edit_outlined,
                   label: l10n.commonEdit,
-                  onPressed: () => openArtworkEditor(context, artwork.id, source: 'art_detail'),
+                  onPressed: () => openArtworkEditor(
+                    context,
+                    artwork.id,
+                    source: 'art_detail',
+                  ),
                 ),
               ),
               const SizedBox(width: DetailSpacing.md),
-            ],
-            Expanded(
-              child: DetailActionButton(
-                icon: artwork.isPublic ? Icons.visibility_off : Icons.publish_outlined,
-                label: artwork.isPublic ? l10n.commonUnpublish : l10n.commonPublish,
-                backgroundColor: scheme.primaryContainer.withValues(alpha: 0.35),
-                foregroundColor: scheme.primary,
-                onPressed: !isOwner
-                    ? null
-                    : () async {
-                        final messenger = ScaffoldMessenger.of(context);
-                        final provider = context.read<ArtworkProvider>();
-                        try {
-                          final updated = artwork.isPublic
-                              ? await provider.unpublishArtwork(artwork.id)
-                              : await provider.publishArtwork(artwork.id);
-                          if (!mounted) return;
-                          messenger.showKubusSnackBar(
-                            SnackBar(
-                              content: Text(
-                                updated != null ? l10n.commonSavedToast : l10n.commonActionFailedToast,
-                              ),
-                            ),
-                          );
-                        } catch (_) {
-                          if (!mounted) return;
-                          messenger.showKubusSnackBar(
-                            SnackBar(content: Text(l10n.commonActionFailedToast)),
-                          );
-                        }
-                      },
+              Expanded(
+                child: DetailActionButton(
+                  icon: artwork.isPublic
+                      ? Icons.visibility_off
+                      : Icons.publish_outlined,
+                  label:
+                      artwork.isPublic ? l10n.commonUnpublish : l10n.commonPublish,
+                  backgroundColor:
+                      scheme.primaryContainer.withValues(alpha: 0.35),
+                  foregroundColor: scheme.primary,
+                  onPressed: () async {
+                    if (!canManage) return;
+                    final messenger = ScaffoldMessenger.of(context);
+                    final provider = context.read<ArtworkProvider>();
+                    try {
+                      final updated = artwork.isPublic
+                          ? await provider.unpublishArtwork(artwork.id)
+                          : await provider.publishArtwork(artwork.id);
+                      if (!mounted) return;
+                      messenger.showKubusSnackBar(
+                        SnackBar(
+                          content: Text(
+                            updated != null
+                                ? l10n.commonSavedToast
+                                : l10n.commonActionFailedToast,
+                          ),
+                        ),
+                      );
+                    } catch (_) {
+                      if (!mounted) return;
+                      messenger.showKubusSnackBar(
+                        SnackBar(content: Text(l10n.commonActionFailedToast)),
+                      );
+                    }
+                  },
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
+        ],
         _buildAttendanceConfirmSection(artwork),
         Row(
           children: [
@@ -853,16 +866,21 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
           ],
         ),
         const SizedBox(height: DetailSpacing.md),
-        SizedBox(
-          width: double.infinity,
-          child: DetailActionButton(
-            icon: Icons.diamond_rounded,
-            label: l10n.artworkDetailMintNft,
-            backgroundColor: scheme.tertiaryContainer.withValues(alpha: 0.85),
-            foregroundColor: scheme.onTertiaryContainer,
-            onPressed: () => _showMintNFTDialog(artwork),
+        if (canMint)
+          SizedBox(
+            width: double.infinity,
+            child: DetailActionButton(
+              icon: Icons.diamond_rounded,
+              label: l10n.artworkDetailMintNft,
+              backgroundColor:
+                  scheme.tertiaryContainer.withValues(alpha: 0.85),
+              foregroundColor: scheme.onTertiaryContainer,
+              onPressed: () {
+                if (!canMint) return;
+                _showMintNFTDialog(artwork);
+              },
+            ),
           ),
-        ),
       ],
     );
   }

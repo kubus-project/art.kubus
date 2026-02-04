@@ -53,6 +53,7 @@ import '../../services/search_service.dart';
 import '../home_screen.dart' show ActivityScreen;
 import '../../services/backend_api_service.dart';
 import '../../utils/app_color_utils.dart';
+import '../../utils/user_identity_display.dart';
 import '../../widgets/support/support_section.dart';
 
 /// Desktop home screen with spacious layout and proper grid systems
@@ -1981,8 +1982,10 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         ? creator['wallet'].toString()
         : userId;
     final avatarUrl = creator['avatar'] ?? creator['avatarUrl'];
-    final displayName =
-        (creator['displayName'] ?? creator['username'] ?? 'Artist').toString();
+    final identity = UserIdentityDisplayUtils.fromCreatorMap(creator);
+    final displayName = identity.name.isNotEmpty
+        ? identity.name
+        : l10n.desktopHomeCreatorFallbackName;
     return DesktopCard(
       onTap: () {
         if (userId.isNotEmpty) {
@@ -2020,17 +2023,16 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  (creator['name'] ?? l10n.desktopHomeCreatorFallbackName)
-                      .toString(),
+                  displayName,
                   style: DetailTypography.cardTitle(context).copyWith(
                     fontSize: 14,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                if (creator['username'] != null)
+                if (identity.handle != null)
                   Text(
-                    '@${creator['username']}',
+                    identity.handle!,
                     style: DetailTypography.caption(context).copyWith(
                       fontSize: 12,
                     ),
@@ -3188,11 +3190,19 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     };
 
     for (final art in artworkProvider.artworks) {
+      final creatorIdentity = UserIdentityDisplayUtils.fromProfileMap(
+        <String, dynamic>{'displayName': art.artist},
+      );
+      final creatorLine = creatorIdentity.handle == null
+          ? creatorIdentity.name
+          : '${creatorIdentity.name} • ${creatorIdentity.handle!}';
       entries.add(_TrendingArtEntry(
         id: art.id,
         artworkId: art.id,
         title: art.title,
-        subtitle: AppLocalizations.of(context)!.commonByArtist(art.artist),
+        subtitle: creatorLine.isNotEmpty
+            ? creatorLine
+            : AppLocalizations.of(context)!.commonNotAvailableShort,
         likes: art.likesCount,
         hasAR: art.arEnabled,
         score: _trendingScore(art),
@@ -3207,25 +3217,38 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       final idx = entries.indexWhere((e) => e.id == artId);
       if (idx != -1) {
         final existing = entries[idx];
+        final authorIdentity = UserIdentityDisplayUtils.fromProfileMap(
+          <String, dynamic>{
+            'displayName': post.authorName,
+            'username': post.authorUsername,
+          },
+        );
+        final authorLine = authorIdentity.handle == null
+            ? authorIdentity.name
+            : '${authorIdentity.name} • ${authorIdentity.handle!}';
         entries[idx] = existing.copyWith(
           score: existing.score + boost,
           likes: post.likeCount > 0 ? post.likeCount : existing.likes,
           subtitle: existing.subtitle?.isNotEmpty == true
               ? existing.subtitle
-              : (post.authorUsername != null && post.authorUsername!.isNotEmpty
-                  ? '@${post.authorUsername}'
-                  : post.authorName),
+              : authorLine,
         );
       } else {
+        final authorIdentity = UserIdentityDisplayUtils.fromProfileMap(
+          <String, dynamic>{
+            'displayName': post.authorName,
+            'username': post.authorUsername,
+          },
+        );
+        final authorLine = authorIdentity.handle == null
+            ? authorIdentity.name
+            : '${authorIdentity.name} • ${authorIdentity.handle!}';
         entries.add(
           _TrendingArtEntry(
             id: artId,
             artworkId: artId,
             title: ref.title,
-            subtitle:
-                post.authorUsername != null && post.authorUsername!.isNotEmpty
-                    ? '@${post.authorUsername}'
-                    : post.authorName,
+            subtitle: authorLine,
             likes: post.likeCount,
             hasAR: artworkMap[artId]?.arEnabled ?? true,
             score: boost,
@@ -3286,13 +3309,16 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     // Fallback when no community posts: derive creators from artworks
     if (creatorsMap.isEmpty) {
       for (final art in artworkProvider.artworks) {
-        final key = art.artist;
+        final identity = UserIdentityDisplayUtils.fromProfileMap(
+          <String, dynamic>{'displayName': art.artist},
+        );
+        final key = identity.name;
         final stats = creatorsMap.putIfAbsent(
           key,
           () => _CreatorStats(
             id: key,
-            name: art.artist,
-            username: art.artist.toLowerCase().replaceAll(' ', '_'),
+            name: identity.name,
+            username: identity.username,
           ),
         );
         stats.postCount += 1;
