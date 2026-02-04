@@ -230,6 +230,12 @@ class _SignInScreenState extends State<SignInScreen> {
     String? address = walletProvider.currentWalletAddress;
     bool createdFreshWallet = false;
 
+    // Keep auth completion snappy and offline-friendly.
+    // Wallet + Web3 initialization is best-effort and must never block the UI
+    // indefinitely (e.g. on slow RPC / captive portals / flaky mobile data).
+    const walletConnectTimeout = Duration(seconds: 6);
+    const web3ConnectTimeout = Duration(seconds: 10);
+
     if (address == null || address.isEmpty) {
       if (sanitizedExisting != null && sanitizedExisting.isNotEmpty) {
         address = sanitizedExisting;
@@ -239,7 +245,9 @@ class _SignInScreenState extends State<SignInScreen> {
     if (address != null && address.isNotEmpty) {
       if ((walletProvider.currentWalletAddress ?? '').isEmpty) {
         try {
-          await walletProvider.connectWalletWithAddress(address);
+          await walletProvider
+              .connectWalletWithAddress(address)
+              .timeout(walletConnectTimeout);
         } catch (e) {
           AppConfig.debugPrint(
               'SignInScreen: connectWalletWithAddress failed: $e');
@@ -248,7 +256,17 @@ class _SignInScreenState extends State<SignInScreen> {
       try {
         if (!web3Provider.isConnected ||
             web3Provider.walletAddress != address) {
-          await web3Provider.connectExistingWallet(address);
+          // Do not block sign-in on Web3 initialization; it can be retried later.
+          unawaited(() async {
+            try {
+              await web3Provider
+                  .connectExistingWallet(address!)
+                  .timeout(web3ConnectTimeout);
+            } catch (e) {
+              AppConfig.debugPrint(
+                  'SignInScreen: connectExistingWallet skipped/failed: $e');
+            }
+          }());
         }
       } catch (e) {
         AppConfig.debugPrint('SignInScreen: connectExistingWallet failed: $e');
@@ -262,7 +280,8 @@ class _SignInScreenState extends State<SignInScreen> {
       address = result['address']!;
       createdFreshWallet = true;
       try {
-        await web3Provider.importWallet(mnemonic);
+        // Importing may trigger RPC/network sync; keep it bounded.
+        await web3Provider.importWallet(mnemonic).timeout(web3ConnectTimeout);
       } catch (e) {
         AppConfig.debugPrint('SignInScreen: web3 import failed: $e');
       }

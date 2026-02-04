@@ -20,9 +20,18 @@ class PostAuthSecuritySetupService {
   }) async {
     if (!shouldEnforceOnThisDevice()) return true;
     try {
-      await securityGateProvider.reloadSettings();
+      await securityGateProvider
+          .reloadSettings()
+          .timeout(const Duration(seconds: 3));
     } catch (_) {}
-    final hasPin = await walletProvider.hasPin();
+    bool hasPin = false;
+    try {
+      hasPin = await walletProvider
+          .hasPin()
+          .timeout(const Duration(seconds: 3), onTimeout: () => false);
+    } catch (_) {
+      hasPin = false;
+    }
     if (!navigator.mounted) return false;
     if (hasPin) return true;
 

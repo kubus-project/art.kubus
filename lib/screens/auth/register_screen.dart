@@ -230,6 +230,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
     String? address = walletProvider.currentWalletAddress;
     bool createdFreshWallet = false;
 
+    // Keep registration completion offline-friendly.
+    // Web3 sync can be slow on mobile networks; never block UI indefinitely.
+    const walletConnectTimeout = Duration(seconds: 6);
+    const web3ConnectTimeout = Duration(seconds: 10);
+
     if (address == null || address.isEmpty) {
       if (sanitizedExisting != null && sanitizedExisting.isNotEmpty) {
         address = sanitizedExisting;
@@ -239,7 +244,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (address != null && address.isNotEmpty) {
       if ((walletProvider.currentWalletAddress ?? '').isEmpty) {
         try {
-          await walletProvider.connectWalletWithAddress(address);
+          await walletProvider
+              .connectWalletWithAddress(address)
+              .timeout(walletConnectTimeout);
         } catch (e) {
           debugPrint('RegisterScreen: connectWalletWithAddress failed: $e');
         }
@@ -247,7 +254,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
       try {
         if (!web3Provider.isConnected ||
             web3Provider.walletAddress != address) {
-          await web3Provider.connectExistingWallet(address);
+          unawaited(() async {
+            try {
+              await web3Provider
+                  .connectExistingWallet(address!)
+                  .timeout(web3ConnectTimeout);
+            } catch (e) {
+              debugPrint('RegisterScreen: connectExistingWallet skipped/failed: $e');
+            }
+          }());
         }
       } catch (e) {
         debugPrint('RegisterScreen: connectExistingWallet failed: $e');
@@ -261,7 +276,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       address = result['address']!;
       createdFreshWallet = true;
       try {
-        await web3Provider.importWallet(mnemonic);
+        await web3Provider.importWallet(mnemonic).timeout(web3ConnectTimeout);
       } catch (e) {
         debugPrint('RegisterScreen: web3 import failed: $e');
       }
