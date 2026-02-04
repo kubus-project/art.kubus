@@ -698,43 +698,44 @@ class _DesktopInstitutionHubScreenState
       String label, String value, IconData icon, Color color) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final radius = BorderRadius.circular(KubusRadius.md);
-    return LiquidGlassCard(
-      padding: EdgeInsets.zero,
-      borderRadius: radius,
-      showBorder: false,
-      backgroundColor: color.withValues(alpha: isDark ? 0.15 : 0.10),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: radius,
-          border: Border.all(
-            color: color.withValues(alpha: 0.18),
-            width: KubusSizes.hairline,
-          ),
+    final glassTint = color.withValues(alpha: isDark ? 0.12 : 0.08);
+
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        border: Border.all(
+          color: color.withValues(alpha: 0.22),
+          width: 1,
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(KubusSpacing.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon, color: color, size: KubusSizes.sidebarActionIcon),
-              const SizedBox(height: KubusSpacing.sm),
-              Text(
-                value,
-                style: KubusTypography.textTheme.titleLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
+      ),
+      child: LiquidGlassCard(
+        padding: const EdgeInsets.all(KubusSpacing.md),
+        margin: EdgeInsets.zero,
+        borderRadius: radius,
+        showBorder: false,
+        backgroundColor: glassTint,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: color, size: KubusSizes.sidebarActionIcon),
+            const SizedBox(height: KubusSpacing.sm),
+            Text(
+              value,
+              style: KubusTypography.textTheme.titleLarge?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface,
               ),
-              Text(
-                label,
-                style: KubusTextStyles.actionTileSubtitle.copyWith(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.6),
-                ),
+            ),
+            Text(
+              label,
+              style: KubusTextStyles.actionTileSubtitle.copyWith(
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.6),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

@@ -143,225 +143,192 @@ class MarkerOverlayCard extends StatelessWidget {
             showBorder: false,
             backgroundColor: scheme.surface.withValues(alpha: 0.45),
             child: Column(
-              mainAxisSize: MainAxisSize.max,
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: CustomScrollView(
-                    physics: const ClampingScrollPhysics(),
-                    slivers: [
-                      SliverToBoxAdapter(
-                        child: Column(
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (canPresentExhibition) ...[
+                            Text(
+                              l10n.commonExhibition,
+                              style: KubusTypography.textTheme.labelSmall
+                                  ?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: baseColor,
+                                height: 1.0,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                          ],
+                          Text(
+                            displayTitle,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: KubusTypography.textTheme.titleSmall
+                                ?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              height: 1.2,
+                              color: scheme.onSurface,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    if (distanceText != null && distanceText!.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: baseColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      if (canPresentExhibition) ...[
-                                        Text(
-                                          l10n.commonExhibition,
-                                          style: KubusTypography
-                                              .textTheme.labelSmall
-                                              ?.copyWith(
-                                            fontWeight: FontWeight.w700,
-                                            color: baseColor,
-                                            height: 1.0,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                      ],
-                                      Text(
-                                        displayTitle,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: KubusTypography
-                                            .textTheme.titleSmall
-                                            ?.copyWith(
-                                          fontWeight: FontWeight.w700,
-                                          height: 1.2,
-                                          color: scheme.onSurface,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                if (distanceText != null &&
-                                    distanceText!.isNotEmpty)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: baseColor.withValues(alpha: 0.12),
-                                      borderRadius: BorderRadius.circular(999),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.near_me,
-                                          size: 12,
-                                          color: baseColor,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          distanceText!,
-                                          style: KubusTypography
-                                              .textTheme.labelSmall
-                                              ?.copyWith(
-                                            fontWeight: FontWeight.w700,
-                                            color: baseColor,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                const SizedBox(width: 6),
-                                _OverlayIconButton(
-                                  icon: Icons.close,
-                                  tooltip: l10n.commonClose,
-                                  onTap: onClose,
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            ClipRRect(
-                              borderRadius:
-                                  BorderRadius.circular(KubusRadius.md),
-                              child: SizedBox(
-                                height: 120,
-                                width: double.infinity,
-                                child: imageUrl != null
-                                    ? Image.network(
-                                        imageUrl,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) =>
-                                            _imageFallback(
-                                          baseColor,
-                                          scheme,
-                                          marker,
-                                        ),
-                                        loadingBuilder:
-                                            (context, child, progress) {
-                                          if (progress == null) return child;
-                                          return Container(
-                                            color: baseColor.withValues(
-                                              alpha: 0.12,
-                                            ),
-                                            child: const Center(
-                                              child:
-                                                  CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                      )
-                                    : _imageFallback(
-                                        baseColor,
-                                        scheme,
-                                        marker,
-                                      ),
+                            Icon(Icons.near_me, size: 12, color: baseColor),
+                            const SizedBox(width: 4),
+                            Text(
+                              distanceText!,
+                              style: KubusTypography.textTheme.labelSmall
+                                  ?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: baseColor,
                               ),
                             ),
-                            if (visibleDescription.isNotEmpty) ...[
-                              const SizedBox(height: 10),
-                              Text(
-                                visibleDescription,
-                                style: KubusTypography.textTheme.bodySmall
-                                    ?.copyWith(
-                                  color: scheme.onSurfaceVariant,
-                                  height: 1.4,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                            if (showChips) ...[
-                              const SizedBox(height: 10),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: [
-                                  if (canPresentExhibition)
-                                    _OverlayChip(
-                                      label: 'POAP',
-                                      icon: Icons.verified_outlined,
-                                      accent: baseColor,
-                                      selected: true,
-                                    ),
-                                  if (artwork != null &&
-                                      artwork!.category.isNotEmpty &&
-                                      artwork!.category != 'General')
-                                    _OverlayChip(
-                                      label: artwork!.category,
-                                      icon: Icons.palette,
-                                      accent: baseColor,
-                                      selected: false,
-                                    ),
-                                  if (marker.metadata?['subjectCategory'] !=
-                                          null ||
-                                      marker.metadata?['subject_category'] !=
-                                          null)
-                                    _OverlayChip(
-                                      label: (marker
-                                                  .metadata!['subjectCategory'] ??
-                                              marker
-                                                  .metadata!['subject_category'])
-                                          .toString(),
-                                      icon: Icons.category_outlined,
-                                      accent: baseColor,
-                                      selected: false,
-                                    ),
-                                  if (marker.metadata?['locationName'] != null ||
-                                      marker.metadata?['location'] != null)
-                                    _OverlayChip(
-                                      label: (marker.metadata!['locationName'] ??
-                                              marker.metadata!['location'])
-                                          .toString(),
-                                      icon: Icons.place_outlined,
-                                      accent: baseColor,
-                                      selected: false,
-                                    ),
-                                  if (artwork != null && artwork!.rewards > 0)
-                                    _OverlayChip(
-                                      label: '+${artwork!.rewards}',
-                                      icon: Icons.card_giftcard,
-                                      accent: baseColor,
-                                      selected: false,
-                                    ),
-                                ],
-                              ),
-                            ],
-                            if (actions.isNotEmpty) ...[
-                              const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  for (int i = 0; i < actions.length; i++) ...[
-                                    Expanded(
-                                      child: _OverlayActionButton(
-                                        spec: actions[i],
-                                      ),
-                                    ),
-                                    if (i != actions.length - 1)
-                                      const SizedBox(width: 8),
-                                  ],
-                                ],
-                              ),
-                            ],
                           ],
                         ),
                       ),
-                    ],
+                    const SizedBox(width: 6),
+                    _OverlayIconButton(
+                      icon: Icons.close,
+                      tooltip: l10n.commonClose,
+                      onTap: onClose,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
+                  child: SizedBox(
+                    height: 120,
+                    width: double.infinity,
+                    child: imageUrl != null
+                        ? Image.network(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => _imageFallback(
+                              baseColor,
+                              scheme,
+                              marker,
+                            ),
+                            loadingBuilder: (context, child, progress) {
+                              if (progress == null) return child;
+                              return Container(
+                                color: baseColor.withValues(alpha: 0.12),
+                                child: const Center(
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              );
+                            },
+                          )
+                        : _imageFallback(
+                            baseColor,
+                            scheme,
+                            marker,
+                          ),
                   ),
                 ),
+                if (visibleDescription.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    visibleDescription,
+                    maxLines: 6,
+                    overflow: TextOverflow.ellipsis,
+                    style: KubusTypography.textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                      height: 1.4,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+                if (showChips) ...[
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      if (canPresentExhibition)
+                        _OverlayChip(
+                          label: 'POAP',
+                          icon: Icons.verified_outlined,
+                          accent: baseColor,
+                          selected: true,
+                        ),
+                      if (artwork != null &&
+                          artwork!.category.isNotEmpty &&
+                          artwork!.category != 'General')
+                        _OverlayChip(
+                          label: artwork!.category,
+                          icon: Icons.palette,
+                          accent: baseColor,
+                          selected: false,
+                        ),
+                      if (marker.metadata?['subjectCategory'] != null ||
+                          marker.metadata?['subject_category'] != null)
+                        _OverlayChip(
+                          label: (marker.metadata!['subjectCategory'] ??
+                                  marker.metadata!['subject_category'])
+                              .toString(),
+                          icon: Icons.category_outlined,
+                          accent: baseColor,
+                          selected: false,
+                        ),
+                      if (marker.metadata?['locationName'] != null ||
+                          marker.metadata?['location'] != null)
+                        _OverlayChip(
+                          label: (marker.metadata!['locationName'] ??
+                                  marker.metadata!['location'])
+                              .toString(),
+                          icon: Icons.place_outlined,
+                          accent: baseColor,
+                          selected: false,
+                        ),
+                      if (artwork != null && artwork!.rewards > 0)
+                        _OverlayChip(
+                          label: '+${artwork!.rewards}',
+                          icon: Icons.card_giftcard,
+                          accent: baseColor,
+                          selected: false,
+                        ),
+                    ],
+                  ),
+                ],
+                if (actions.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      for (int i = 0; i < actions.length; i++) ...[
+                        Expanded(
+                          child: _OverlayActionButton(
+                            spec: actions[i],
+                          ),
+                        ),
+                        if (i != actions.length - 1)
+                          const SizedBox(width: 8),
+                      ],
+                    ],
+                  ),
+                ],
                 if (stackCount > 1)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -410,23 +377,48 @@ class MarkerOverlayCard extends StatelessWidget {
       ),
     );
 
-    final constrained = ConstrainedBox(
-      constraints: BoxConstraints(
-        maxWidth: maxWidth ?? double.infinity,
-        maxHeight: maxHeight ?? double.infinity,
-      ),
-      child: card,
+    Widget wrapped = LayoutBuilder(
+      builder: (context, constraints) {
+        final double? resolvedMaxWidth = maxWidth ??
+            (constraints.maxWidth.isFinite ? constraints.maxWidth : null);
+        final double? resolvedMaxHeight = maxHeight ??
+            (constraints.maxHeight.isFinite ? constraints.maxHeight : null);
+
+        // If we have a bounded height, scale down the whole card (instead of
+        // scrolling) so it always fits vertically across devices.
+        if (resolvedMaxHeight != null && resolvedMaxHeight.isFinite) {
+          return SizedBox(
+            width: resolvedMaxWidth,
+            height: resolvedMaxHeight,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.topCenter,
+              child: SizedBox(
+                width: resolvedMaxWidth,
+                child: card,
+              ),
+            ),
+          );
+        }
+
+        return ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: resolvedMaxWidth ?? double.infinity,
+          ),
+          child: card,
+        );
+      },
     );
 
-    if (onHorizontalDragEnd == null) {
-      return constrained;
+    if (onHorizontalDragEnd != null) {
+      wrapped = GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onHorizontalDragEnd: onHorizontalDragEnd,
+        child: wrapped,
+      );
     }
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onHorizontalDragEnd: onHorizontalDragEnd,
-      child: constrained,
-    );
+    return wrapped;
   }
 
   static bool _hasChips({required ArtMarker marker, required Artwork? artwork}) {

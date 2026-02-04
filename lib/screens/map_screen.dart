@@ -2318,20 +2318,43 @@ class _MapScreenState extends State<MapScreen>
   void _nextStackedMarker() {
     if (_selectedMarkerStack.length <= 1) return;
     setState(() {
-      _selectedMarkerStackIndex = (_selectedMarkerStackIndex + 1) % _selectedMarkerStack.length;
+      _selectedMarkerStackIndex =
+          (_selectedMarkerStackIndex + 1) % _selectedMarkerStack.length;
       _selectedMarkerData = _selectedMarkerStack[_selectedMarkerStackIndex];
       _selectedMarkerId = _selectedMarkerData?.id;
+      _selectedMarkerAnchorNotifier.value = null;
+      _selectedMarkerViewportSignature = null;
     });
+    final next = _selectedMarkerData;
+    if (next != null) {
+      _queueOverlayAnchorRefresh();
+      _requestMarkerLayerStyleUpdate(force: true);
+      if (!next.isExhibitionMarker) {
+        _ensureLinkedArtworkLoaded(next);
+      }
+    }
   }
 
   /// Navigate to the previous marker in the stacked markers list (swipe right).
   void _previousStackedMarker() {
     if (_selectedMarkerStack.length <= 1) return;
     setState(() {
-      _selectedMarkerStackIndex = (_selectedMarkerStackIndex - 1 + _selectedMarkerStack.length) % _selectedMarkerStack.length;
+      _selectedMarkerStackIndex = (_selectedMarkerStackIndex - 1 +
+              _selectedMarkerStack.length) %
+          _selectedMarkerStack.length;
       _selectedMarkerData = _selectedMarkerStack[_selectedMarkerStackIndex];
       _selectedMarkerId = _selectedMarkerData?.id;
+      _selectedMarkerAnchorNotifier.value = null;
+      _selectedMarkerViewportSignature = null;
     });
+    final next = _selectedMarkerData;
+    if (next != null) {
+      _queueOverlayAnchorRefresh();
+      _requestMarkerLayerStyleUpdate(force: true);
+      if (!next.isExhibitionMarker) {
+        _ensureLinkedArtworkLoaded(next);
+      }
+    }
   }
 
   void _startPressedMarkerFeedback(String markerId) {
@@ -4283,18 +4306,36 @@ class _MapScreenState extends State<MapScreen>
         }
       }
       if (selected == null) return;
+
+        final ArtMarker selectedMarker = selected;
       
-      // Check for other markers at the exact same coordinates (stacked markers).
-      // This allows swiping through multiple markers in the overlay card.
+      // Check for other markers in the same visible grid cell ("same tile")
+      // so users can swipe through overlapping markers.
+      final int gridLevel = _clusterGridLevelForZoom(_lastZoom) >= 0
+          ? _clusterGridLevelForZoom(_lastZoom)
+          : GridUtils.resolvePrimaryGridLevel(_lastZoom);
+      final selectedCell =
+          GridUtils.gridCellForLevel(selectedMarker.position, gridLevel)
+            .anchorKey;
+
       final stackedMarkers = <ArtMarker>[];
       for (final marker in _artMarkers) {
-        if ((marker.position.latitude - selected.position.latitude).abs() < 0.0001 &&
-            (marker.position.longitude - selected.position.longitude).abs() < 0.0001) {
+        final cell =
+            GridUtils.gridCellForLevel(marker.position, gridLevel).anchorKey;
+        if (cell == selectedCell) {
           stackedMarkers.add(marker);
         }
       }
+
+      // Ensure the tapped marker is first in the stack so the overlay shows it.
+      final selectedIndex =
+          stackedMarkers.indexWhere((m) => m.id == selectedMarker.id);
+      if (selectedIndex > 0) {
+        final tapped = stackedMarkers.removeAt(selectedIndex);
+        stackedMarkers.insert(0, tapped);
+      }
       
-      _handleMarkerTap(selected, stackedMarkers: stackedMarkers);
+      _handleMarkerTap(selectedMarker, stackedMarkers: stackedMarkers);
     } catch (e) {
       if (kDebugMode) {
         AppConfig.debugPrint('MapScreen: queryRenderedFeatures failed: $e');
@@ -5099,8 +5140,10 @@ class _MapScreenState extends State<MapScreen>
                         child: AnimatedSize(
                           duration: const Duration(milliseconds: 220),
                           curve: Curves.easeOutCubic,
-                          child: SizedBox(
-                            height: cardHeight,
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxHeight: maxCardHeight,
+                            ),
                             child: MarkerOverlayCard(
                               marker: marker,
                               artwork: artwork,
@@ -5138,7 +5181,6 @@ class _MapScreenState extends State<MapScreen>
                                   _nextStackedMarker();
                                 }
                               },
-                              maxHeight: cardHeight,
                             ),
                           ),
                         ),

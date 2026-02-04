@@ -206,43 +206,50 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
   }
 
   Widget _buildStatCard(String label, String value, IconData icon) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final radius = BorderRadius.circular(12);
+    final statColor = scheme.primary;
+    final glassTint = statColor.withValues(alpha: isDark ? 0.12 : 0.08);
+
     return Container(
-      padding: const EdgeInsets.all(12),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: radius,
         border: Border.all(
-          color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1),
+          color: statColor.withValues(alpha: 0.22),
+          width: 1,
         ),
       ),
-      child: Column(
-        children: [
-          Icon(icon,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.7),
-              size: 16),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
+      child: LiquidGlassPanel(
+        padding: const EdgeInsets.all(12),
+        margin: EdgeInsets.zero,
+        borderRadius: radius,
+        showBorder: false,
+        backgroundColor: glassTint,
+        child: Column(
+          children: [
+            Icon(icon,
+                color: statColor,
+                size: 16),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: scheme.onSurface,
+              ),
             ),
-          ),
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 10,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.7),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                color: scheme.onSurface.withValues(alpha: 0.7),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

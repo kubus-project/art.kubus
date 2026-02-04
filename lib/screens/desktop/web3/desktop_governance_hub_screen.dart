@@ -446,40 +446,47 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
       String label, String value, IconData icon, Color color) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final radius = BorderRadius.circular(12);
-    return LiquidGlassPanel(
-      padding: const EdgeInsets.all(16),
-      borderRadius: radius,
-      showBorder: false,
-      backgroundColor: color.withValues(alpha: isDark ? 0.15 : 0.10),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: radius,
-          border: Border.all(color: color.withValues(alpha: 0.18)),
+    final glassTint = color.withValues(alpha: isDark ? 0.12 : 0.08);
+
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        border: Border.all(
+          color: color.withValues(alpha: 0.22),
+          width: 1,
         ),
+      ),
+      child: LiquidGlassPanel(
+        padding: const EdgeInsets.all(16),
+        margin: EdgeInsets.zero,
+        borderRadius: radius,
+        showBorder: false,
+        backgroundColor: glassTint,
         child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
-          ),
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.6),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.6),
+              ),
             ),
-          ),
-        ],
+          ],
         ),
       ),
     );

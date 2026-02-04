@@ -610,19 +610,34 @@ class _ArtistStudioState extends State<ArtistStudio> {
     final studioColor = KubusColorRoles.of(context).web3ArtistStudioAccent;
     final exhibitionsEnabled = AppConfig.isFeatureEnabled('exhibitions');
     final scheme = Theme.of(context).colorScheme;
-    return LiquidGlassCard(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final radius = BorderRadius.circular(KubusRadius.md);
+    final glassTint = scheme.surfaceContainerHighest.withValues(alpha: isDark ? 0.22 : 0.14);
+
+    return Container(
       margin: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
-      padding: const EdgeInsets.all(KubusSpacing.xs),
-      borderRadius: BorderRadius.circular(KubusRadius.md),
-      blurSigma: KubusGlassEffects.blurSigmaLight,
-      backgroundColor: scheme.surfaceContainerHighest.withValues(alpha: 0.18),
-      child: Row(
-        children: [
-          Expanded(
-              child: _buildTabButton(l10n.artistStudioTabGallery,
-                  Icons.collections, 0, isApprovedArtist, studioColor)),
-          Expanded(
-              child: _buildTabButton(l10n.artistStudioTabCreate,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        border: Border.all(
+          color: studioColor.withValues(alpha: 0.22),
+          width: 1,
+        ),
+      ),
+      child: LiquidGlassCard(
+        margin: EdgeInsets.zero,
+        padding: const EdgeInsets.all(KubusSpacing.xs),
+        borderRadius: radius,
+        blurSigma: KubusGlassEffects.blurSigmaLight,
+        showBorder: false,
+        backgroundColor: glassTint,
+        child: Row(
+          children: [
+            Expanded(
+                child: _buildTabButton(l10n.artistStudioTabGallery,
+                    Icons.collections, 0, isApprovedArtist, studioColor)),
+            Expanded(
+                child: _buildTabButton(l10n.artistStudioTabCreate,
                   Icons.add_circle_outline, 1, isApprovedArtist, studioColor)),
           if (exhibitionsEnabled)
             Expanded(
@@ -639,8 +654,9 @@ class _ArtistStudioState extends State<ArtistStudio> {
                   exhibitionsEnabled ? 3 : 2,
                   isApprovedArtist,
                   studioColor)),
-        ],
-      ),
+          ],
+        ),
+      )
     );
   }
 

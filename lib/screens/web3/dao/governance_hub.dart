@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
+import 'package:art_kubus/widgets/glass_components.dart';
 import '../../onboarding/web3/web3_onboarding.dart';
 import '../../onboarding/web3/onboarding_data.dart';
 import '../../../providers/dao_provider.dart';
@@ -257,58 +258,87 @@ class _GovernanceHubState extends State<GovernanceHub>
   }
 
   Widget _buildStatCard(String label, String value) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final radius = BorderRadius.circular(8);
+    final statColor = _daoAccent;
+    final glassTint = statColor.withValues(alpha: isDark ? 0.12 : 0.08);
+
     return Container(
-      padding: const EdgeInsets.all(10),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: radius,
+        border: Border.all(
+          color: statColor.withValues(alpha: 0.22),
+          width: 1,
+        ),
       ),
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
+      child: LiquidGlassPanel(
+        padding: const EdgeInsets.all(10),
+        margin: EdgeInsets.zero,
+        borderRadius: radius,
+        showBorder: false,
+        backgroundColor: glassTint,
+        child: Column(
+          children: [
+            Text(
+              value,
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: scheme.onSurface,
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 10,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.8),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                color: scheme.onSurface.withValues(alpha: 0.8),
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildNavigationTabs() {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final radius = BorderRadius.circular(12);
+    final glassTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: radius,
+        border: Border.all(
+          color: _daoAccent.withValues(alpha: 0.22),
+          width: 1,
+        ),
       ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            _buildTabButton('Proposals', Icons.how_to_vote, 0),
-            _buildTabButton('History', Icons.history, 1),
-            _buildTabButton('Create', Icons.add_circle_outline, 2),
-            _buildTabButton('Treasury', Icons.account_balance, 3),
-            _buildTabButton('Delegate', Icons.people, 4),
-          ],
+      child: LiquidGlassPanel(
+        padding: EdgeInsets.zero,
+        margin: EdgeInsets.zero,
+        borderRadius: radius,
+        showBorder: false,
+        backgroundColor: glassTint,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              _buildTabButton('Proposals', Icons.how_to_vote, 0),
+              _buildTabButton('History', Icons.history, 1),
+              _buildTabButton('Create', Icons.add_circle_outline, 2),
+              _buildTabButton('Treasury', Icons.account_balance, 3),
+              _buildTabButton('Delegate', Icons.people, 4),
+            ],
+          ),
         ),
       ),
     );
