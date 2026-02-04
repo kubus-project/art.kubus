@@ -22,7 +22,9 @@ import '../../services/event_bus.dart';
 import '../../services/push_notification_service.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/inline_loading.dart';
+import '../../utils/creator_display_format.dart';
 import '../../utils/wallet_utils.dart';
+import '../../utils/search_suggestions.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/app_color_utils.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
@@ -2358,37 +2360,48 @@ class _AddMemberDialogState extends State<_AddMemberDialog> {
                         itemCount: _suggestions.length,
                         itemBuilder: (itemCtx, index) {
                           final suggestion = _suggestions[index];
-                          final username =
+                          final rawUsername =
                               suggestion['username']?.toString() ?? '';
                           final wallet =
                               suggestion['walletAddress']?.toString() ??
                                   suggestion['wallet_address']?.toString() ??
                                   '';
-                          final displayName =
-                              suggestion['displayName']?.toString() ??
-                                  suggestion['display_name']?.toString() ??
-                                  username;
+                          final displayName = suggestion['displayName']?.toString() ??
+                              suggestion['display_name']?.toString();
                           final avatarCandidate =
                               suggestion['avatar'] ?? suggestion['avatar_url'];
                           final effectiveAvatar = avatarCandidate != null &&
                                   avatarCandidate.toString().isNotEmpty
                               ? avatarCandidate.toString()
                               : null;
+
+                          final formatted = CreatorDisplayFormat.format(
+                            fallbackLabel: l10n.commonUnknown,
+                            displayName: displayName,
+                            username: rawUsername,
+                            wallet: wallet,
+                          );
+                          final subtitle = formatted.secondary ??
+                              (wallet.isNotEmpty ? maskWallet(wallet) : null);
+
                           return ListTile(
                             leading: AvatarWidget(
                               avatarUrl: effectiveAvatar,
-                              wallet: wallet.isNotEmpty ? wallet : username,
+                              wallet: wallet.isNotEmpty ? wallet : rawUsername,
                               allowFabricatedFallback: false,
                             ),
-                            title: Text(displayName.isNotEmpty
-                                ? displayName
-                                : username),
-                            subtitle:
-                                Text(wallet.isNotEmpty ? wallet : username),
+                            title: Text(formatted.primary),
+                            subtitle: subtitle == null
+                                ? null
+                                : Text(
+                                    subtitle,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                             onTap: () {
-                              final ret = wallet.isNotEmpty ? wallet : username;
+                              final ret = wallet.isNotEmpty ? wallet : rawUsername;
                               debugPrint(
-                                  'AddMemberDialog: tapped suggestion -> username="$username" wallet="$wallet" returning="$ret"');
+                                  'AddMemberDialog: tapped suggestion -> username="$rawUsername" wallet="$wallet" returning="$ret"');
                               Navigator.of(dialogCtx).pop(ret);
                             },
                           );

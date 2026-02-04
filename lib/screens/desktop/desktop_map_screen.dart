@@ -119,6 +119,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   ArtMarker? _selectedMarkerData;
   DateTime? _selectedMarkerAt;
   _MarkerOverlayMode _markerOverlayMode = _MarkerOverlayMode.anchored;
+  int _markerSelectionToken = 0;
+  List<ArtMarker> _selectedMarkerStack = const <ArtMarker>[];
+  int _selectedMarkerStackIndex = 0;
+  bool _markerStackPagerSyncing = false;
+  final PageController _markerStackPageController = PageController();
   bool _didOpenInitialMarker = false;
   bool _showFiltersPanel = false;
   bool _isDiscoveryExpanded = false;
@@ -213,6 +218,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   static const String _pendingSourceId = 'kubus_pending_marker';
   static const String _pendingLayerId = 'kubus_pending_marker_layer';
   static const double _cubePitchThreshold = 5.0;
+  static const double _sameCoordinateMeters = 0.75;
   bool _cubeLayerVisible = false;
   static const double _markerRefreshDistanceMeters = 1200;
   static const Duration _markerRefreshInterval = Duration(minutes: 5);
@@ -1558,6 +1564,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         _selectedMarkerId = null;
         _selectedMarkerData = null;
         _selectedMarkerAt = null;
+        _selectedMarkerStack = const <ArtMarker>[];
+        _selectedMarkerStackIndex = 0;
       });
       _requestMarkerLayerStyleUpdate(force: true);
       unawaited(_syncPendingMarker(themeProvider: themeProvider));
@@ -1634,6 +1642,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           _selectedMarkerId = null;
           _selectedMarkerData = null;
           _selectedMarkerAt = null;
+          _selectedMarkerStack = const <ArtMarker>[];
+          _selectedMarkerStackIndex = 0;
         });
         _requestMarkerLayerStyleUpdate(force: true);
         unawaited(_syncPendingMarker(themeProvider: themeProvider));
@@ -2451,6 +2461,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _markerDeletedSub?.cancel();
     _perf.subscriptionStopped('marker_socket_deleted');
     _searchController.dispose();
+    _markerStackPageController.dispose();
     _selectedMarkerAnchorNotifier.dispose();
     _bearingDegrees.dispose();
     WidgetsBinding.instance.removeObserver(this);
@@ -2740,6 +2751,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     _selectedMarkerId = null;
                     _selectedMarkerData = null;
                     _selectedMarkerAt = null;
+                    _selectedMarkerStack = const <ArtMarker>[];
+                    _selectedMarkerStackIndex = 0;
                   });
                   _requestMarkerLayerStyleUpdate(force: true);
                 }
@@ -2765,6 +2778,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   _selectedMarkerId = null;
                   _selectedMarkerData = null;
                   _selectedMarkerAt = null;
+                  _selectedMarkerStack = const <ArtMarker>[];
+                  _selectedMarkerStackIndex = 0;
                   _selectedMarkerAnchorNotifier.value = null;
                 });
                 unawaited(_syncPendingMarker(themeProvider: themeProvider));
@@ -5695,7 +5710,25 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           if (stillSelectedId != selectedIdBeforeSetState) return;
 
           if (resolvedSelected != null) {
-            _selectedMarkerData = resolvedSelected;
+            final stack = _computeMarkerStack(
+              resolvedSelected,
+              pinSelectedFirst: false,
+            );
+            final selectedId = _selectedMarkerId;
+            int index = selectedId == null
+                ? 0
+                : stack.indexWhere((m) => m.id == selectedId);
+            if (index < 0) index = 0;
+            index = index.clamp(0, stack.length - 1);
+
+            final effectiveSelected = stack.isNotEmpty
+                ? stack[index]
+                : resolvedSelected;
+
+            _selectedMarkerStack = stack;
+            _selectedMarkerStackIndex = index;
+            _selectedMarkerId = effectiveSelected.id;
+            _selectedMarkerData = effectiveSelected;
             _selectedMarkerAnchorNotifier.value = null;
             return;
           }
@@ -5703,12 +5736,18 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           _selectedMarkerId = null;
           _selectedMarkerData = null;
           _selectedMarkerAt = null;
+          _selectedMarkerStack = const <ArtMarker>[];
+          _selectedMarkerStackIndex = 0;
           _selectedMarkerAnchorNotifier.value = null;
         });
         if (markersChanged) {
           unawaited(_syncMapMarkers(themeProvider: themeProvider));
         }
       }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _syncMarkerStackPager();
+      });
       _queueOverlayAnchorRefresh();
       _lastMarkerFetchCenter = result.center;
       _lastMarkerFetchTime = result.fetchedAt;
@@ -5735,6 +5774,119 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
   }
 
+  List<ArtMarker> _computeMarkerStack(
+    ArtMarker marker, {
+    required bool pinSelectedFirst,
+  }) {
+    if (!marker.hasValidPosition) return <ArtMarker>[marker];
+
+    final visibleMarkers = _artMarkers
+        .where((m) =>
+            m.hasValidPosition && (_markerLayerVisibility[m.type] ?? true))
+        .toList(growable: false);
+
+    final stacked = <ArtMarker>[];
+    for (final other in visibleMarkers) {
+      final meters = _distance.as(
+        LengthUnit.Meter,
+        marker.position,
+        other.position,
+      );
+      if (meters <= _sameCoordinateMeters) {
+        stacked.add(other);
+      }
+    }
+
+    if (stacked.isEmpty) return <ArtMarker>[marker];
+
+    stacked.sort((a, b) => a.id.compareTo(b.id));
+
+    if (pinSelectedFirst) {
+      final idx = stacked.indexWhere((m) => m.id == marker.id);
+      if (idx > 0) {
+        final selected = stacked.removeAt(idx);
+        stacked.insert(0, selected);
+      }
+    }
+
+    return stacked;
+  }
+
+  void _syncMarkerStackPager({int? targetIndex}) {
+    if (!_markerStackPageController.hasClients) return;
+    final stack = _selectedMarkerStack;
+    if (stack.length <= 1) return;
+    final desired = (targetIndex ?? _selectedMarkerStackIndex)
+        .clamp(0, stack.length - 1);
+    final current = _markerStackPageController.page?.round();
+    if (current == desired) return;
+    _markerStackPagerSyncing = true;
+    try {
+      _markerStackPageController.jumpToPage(desired);
+    } catch (_) {
+      // Ignore pager sync failures when the controller detaches mid-frame.
+    } finally {
+      _markerStackPagerSyncing = false;
+    }
+  }
+
+  Future<void> _animateMarkerStackToIndex(int index) async {
+    final stack = _selectedMarkerStack;
+    if (stack.length <= 1) return;
+    final desired = index.clamp(0, stack.length - 1);
+
+    if (!_markerStackPageController.hasClients) {
+      _handleMarkerStackPageChanged(desired);
+      return;
+    }
+
+    try {
+      await _markerStackPageController.animateToPage(
+        desired,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+      );
+    } catch (_) {
+      // Fall back to state update if the controller is not attached.
+      _handleMarkerStackPageChanged(desired);
+    }
+  }
+
+  void _handleMarkerStackPageChanged(int index) {
+    if (_markerStackPagerSyncing) return;
+    final stack = _selectedMarkerStack;
+    if (stack.length <= 1) return;
+    final desired = index.clamp(0, stack.length - 1);
+    if (desired == _selectedMarkerStackIndex) return;
+    final marker = stack[desired];
+
+    _perf.recordSetState('markerStackPageChanged');
+    setState(() {
+      _selectedMarkerStackIndex = desired;
+      _selectedMarkerId = marker.id;
+      _selectedMarkerData = marker;
+      _selectedMarkerAnchorNotifier.value = null;
+    });
+
+    final userLocation = _userLocation;
+    if (userLocation != null) {
+      context.read<AttendanceProvider>().updateProximity(
+            markerId: marker.id,
+            lat: userLocation.latitude,
+            lng: userLocation.longitude,
+            distanceMeters: _calculateDistance(userLocation, marker.position),
+            activationRadiusMeters: marker.activationRadius,
+            requiresProximity: marker.requiresProximity,
+            accuracyMeters: _userLocationAccuracyMeters,
+            timestampMs: _userLocationTimestampMs,
+          );
+    }
+
+    _requestMarkerLayerStyleUpdate(force: true);
+    _queueOverlayAnchorRefresh();
+    unawaited(_ensureLinkedArtworkLoaded(marker, allowAutoSelect: false));
+  }
+
   void _handleMarkerTap(
     ArtMarker marker, {
     _MarkerOverlayMode overlayMode = _MarkerOverlayMode.anchored,
@@ -5755,10 +5907,29 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       }
     }
     // Desktop UX: open the marker overlay anchored above the marker.
+    final stack = _computeMarkerStack(
+      marker,
+      pinSelectedFirst: true,
+    );
+    final selectedMarker = stack.first;
+
+    if (_markerStackPageController.hasClients) {
+      _markerStackPagerSyncing = true;
+      try {
+        _markerStackPageController.jumpToPage(0);
+      } catch (_) {
+        // Ignore pager reset failures when detaching/attaching between selections.
+      } finally {
+        _markerStackPagerSyncing = false;
+      }
+    }
     _perf.recordSetState('markerTap');
     setState(() {
-      _selectedMarkerId = marker.id;
-      _selectedMarkerData = marker;
+      _markerSelectionToken += 1;
+      _selectedMarkerStack = stack;
+      _selectedMarkerStackIndex = 0;
+      _selectedMarkerId = selectedMarker.id;
+      _selectedMarkerData = selectedMarker;
       _selectedMarkerAt = DateTime.now();
       _markerOverlayMode = overlayMode;
       _selectedMarkerAnchorNotifier.value = null;
@@ -5767,25 +5938,33 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _selectedExhibition = null;
     });
 
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _syncMarkerStackPager(targetIndex: 0);
+    });
+
     final userLocation = _userLocation;
     if (userLocation != null) {
       context.read<AttendanceProvider>().updateProximity(
-            markerId: marker.id,
+            markerId: selectedMarker.id,
             lat: userLocation.latitude,
             lng: userLocation.longitude,
-            distanceMeters: _calculateDistance(userLocation, marker.position),
-            activationRadiusMeters: marker.activationRadius,
-            requiresProximity: marker.requiresProximity,
+            distanceMeters:
+                _calculateDistance(userLocation, selectedMarker.position),
+            activationRadiusMeters: selectedMarker.activationRadius,
+            requiresProximity: selectedMarker.requiresProximity,
             accuracyMeters: _userLocationAccuracyMeters,
             timestampMs: _userLocationTimestampMs,
           );
     }
-    _startPressedMarkerFeedback(marker.id);
+    _startPressedMarkerFeedback(selectedMarker.id);
     _startSelectionPopAnimation();
-    _maybeRecordPresenceVisitForMarker(marker);
+    _maybeRecordPresenceVisitForMarker(selectedMarker);
     _requestMarkerLayerStyleUpdate(force: true);
     _queueOverlayAnchorRefresh();
-    unawaited(_ensureLinkedArtworkLoaded(marker, allowAutoSelect: false));
+    unawaited(
+      _ensureLinkedArtworkLoaded(selectedMarker, allowAutoSelect: false),
+    );
   }
 
   void _maybeRecordPresenceVisitForMarker(ArtMarker marker) {
@@ -5839,7 +6018,42 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     try {
       setState(() {
         _artMarkers.removeWhere((m) => m.id == markerId);
-        // Clear selection if the deleted marker was selected
+        final selectedId = _selectedMarkerId;
+        final hadSelection = selectedId != null && selectedId.isNotEmpty;
+        if (!hadSelection) return;
+
+        final stack = _selectedMarkerStack;
+        if (stack.isNotEmpty) {
+          final updated = List<ArtMarker>.from(stack)
+            ..removeWhere((m) => m.id == markerId);
+
+          if (updated.isEmpty) {
+            _selectedMarkerId = null;
+            _selectedMarkerData = null;
+            _selectedMarkerAt = null;
+            _selectedMarkerStack = const <ArtMarker>[];
+            _selectedMarkerStackIndex = 0;
+            _selectedMarkerAnchorNotifier.value = null;
+            return;
+          }
+
+          final desiredId = selectedId == markerId ? null : selectedId;
+          int nextIndex = desiredId == null
+              ? _selectedMarkerStackIndex
+              : updated.indexWhere((m) => m.id == desiredId);
+          if (nextIndex < 0) nextIndex = 0;
+          nextIndex = nextIndex.clamp(0, updated.length - 1);
+
+          final nextMarker = updated[nextIndex];
+          _selectedMarkerStack = updated;
+          _selectedMarkerStackIndex = nextIndex;
+          _selectedMarkerId = nextMarker.id;
+          _selectedMarkerData = nextMarker;
+          _selectedMarkerAnchorNotifier.value = null;
+          return;
+        }
+
+        // Clear selection if the deleted marker was selected.
         if (_selectedMarkerId == markerId) {
           _selectedMarkerId = null;
           _selectedMarkerData = null;
@@ -5848,6 +6062,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         }
       });
     } catch (_) {}
+    _requestMarkerLayerStyleUpdate(force: true);
+    _queueOverlayAnchorRefresh();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _syncMarkerStackPager();
+    });
     unawaited(_syncMapMarkers(themeProvider: context.read<ThemeProvider>()));
   }
 
@@ -5857,6 +6077,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _selectedMarkerId = null;
       _selectedMarkerData = null;
       _selectedMarkerAt = null;
+      _selectedMarkerStack = const <ArtMarker>[];
+      _selectedMarkerStackIndex = 0;
       _selectedMarkerAnchorNotifier.value = null;
     });
     _pressedClearTimer?.cancel();
@@ -6224,6 +6446,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     ArtMarker marker,
     Artwork? artwork,
     ThemeProvider themeProvider,
+    {
+      required int stackCount,
+      required int stackIndex,
+      VoidCallback? onNextStacked,
+      VoidCallback? onPreviousStacked,
+      ValueChanged<int>? onSelectStackIndex,
+    }
   ) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
@@ -6336,6 +6565,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 : Icons.arrow_forward,
             primaryActionLabel: l10n.commonViewDetails,
             actions: overlayActions,
+            stackCount: stackCount,
+            stackIndex: stackIndex,
+            onNextStacked: onNextStacked,
+            onPreviousStacked: onPreviousStacked,
+            onSelectStackIndex: onSelectStackIndex,
             maxHeight: estimatedCardHeight,
           ),
         ),
@@ -6348,10 +6582,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     required ArtworkProvider artworkProvider,
   }) {
     final marker = _selectedMarkerData;
-    final selectionKey = _selectedMarkerAt?.millisecondsSinceEpoch ?? 0;
+    final selectionKey = _markerSelectionToken;
     final animationKey = marker == null
         ? const ValueKey<String>('marker_overlay_empty')
-        : ValueKey<String>('marker_overlay:${marker.id}:$selectionKey');
+        : ValueKey<String>('marker_overlay:$selectionKey');
     final shouldIntercept = marker != null;
     final overlay = AnimatedSwitcher(
       duration: const Duration(milliseconds: 240),
@@ -6428,11 +6662,68 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     required ArtworkProvider artworkProvider,
     required ThemeProvider themeProvider,
   }) {
-    final artwork = marker.isExhibitionMarker
-        ? null
-        : artworkProvider.getArtworkById(marker.artworkId ?? '');
+    final stack = _selectedMarkerStack.isNotEmpty
+        ? _selectedMarkerStack
+        : <ArtMarker>[marker];
+    final count = stack.length;
 
-    final card = _buildMarkerOverlayCard(marker, artwork, themeProvider);
+    final viewportHeight = MediaQuery.of(context).size.height;
+    final safeVerticalPadding = MediaQuery.of(context).padding.vertical;
+    final double maxCardHeight =
+        math.max(240.0, viewportHeight - safeVerticalPadding - 24).toDouble();
+    final double estimatedCardHeight = math.min(360.0, maxCardHeight);
+
+    Widget card;
+    if (count <= 1) {
+      final single = stack.first;
+      final artwork = single.isExhibitionMarker
+          ? null
+          : artworkProvider.getArtworkById(single.artworkId ?? '');
+      card = _buildMarkerOverlayCard(
+        single,
+        artwork,
+        themeProvider,
+        stackCount: 1,
+        stackIndex: 0,
+      );
+    } else {
+      card = SizedBox(
+        height: estimatedCardHeight,
+        width: 280,
+        child: PageView.builder(
+          controller: _markerStackPageController,
+          onPageChanged: _handleMarkerStackPageChanged,
+          itemCount: count,
+          itemBuilder: (context, index) {
+            final stackedMarker = stack[index];
+            final artwork = stackedMarker.isExhibitionMarker
+                ? null
+                : artworkProvider.getArtworkById(
+                    stackedMarker.artworkId ?? '',
+                  );
+            final onPrev = index > 0
+                ? () => unawaited(_animateMarkerStackToIndex(index - 1))
+                : null;
+            final onNext = index < count - 1
+                ? () => unawaited(_animateMarkerStackToIndex(index + 1))
+                : null;
+
+            return _buildMarkerOverlayCard(
+              stackedMarker,
+              artwork,
+              themeProvider,
+              stackCount: count,
+              stackIndex: index,
+              onPreviousStacked: onPrev,
+              onNextStacked: onNext,
+              onSelectStackIndex: (i) {
+                unawaited(_animateMarkerStackToIndex(i));
+              },
+            );
+          },
+        ),
+      );
+    }
 
     // Wrap card in a Listener to absorb pointer events and prevent them
     // from passing through to the map underneath (gesture conflict resolution).
@@ -6819,6 +7110,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _selectedMarkerId = null;
       _selectedMarkerData = null;
       _selectedMarkerAt = null;
+      _selectedMarkerStack = const <ArtMarker>[];
+      _selectedMarkerStackIndex = 0;
       _selectedMarkerAnchorNotifier.value = null;
     });
     final subjectData = await _refreshMarkerSubjectData(force: true) ??
@@ -6871,6 +7164,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           _selectedMarkerId = null;
           _selectedMarkerData = null;
           _selectedMarkerAt = null;
+          _selectedMarkerStack = const <ArtMarker>[];
+          _selectedMarkerStackIndex = 0;
           _selectedMarkerAnchorNotifier.value = null;
         });
       },

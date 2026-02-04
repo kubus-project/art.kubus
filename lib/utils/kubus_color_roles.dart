@@ -184,6 +184,7 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
     Color? statGreen,
     Color? statAmber,
     Color? statPurple,
+    Color? statBlue,
     Color? achievementGold,
     Color? artistStudioRed,
   }) {

@@ -131,6 +131,11 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
       builder: (context, artworkProvider, profileProvider, child) {
         final artwork = artworkProvider.getArtworkById(widget.artworkId);
         final isSignedIn = profileProvider.isSignedIn;
+        final viewerWallet = (profileProvider.currentUser?.walletAddress ?? '').trim();
+        final artworkOwnerWallet = WalletUtils.canonical(artwork?.walletAddress);
+        final isOwner = viewerWallet.isNotEmpty &&
+          artworkOwnerWallet.isNotEmpty &&
+          WalletUtils.equals(viewerWallet, artworkOwnerWallet);
 
         if (_artworkLoading) {
           return AnimatedGradientBackground(
@@ -267,10 +272,11 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                               const SizedBox(height: DetailSpacing.xl),
                               _buildActionButtons(artwork),
                               const SizedBox(height: DetailSpacing.xl),
-                              if (AppConfig.isFeatureEnabled('collabInvites')) ...[
+                              if (AppConfig.isFeatureEnabled('collabInvites') && isSignedIn) ...[
                                 CollaborationPanel(
                                   entityType: 'artworks',
                                   entityId: artwork.id,
+                                  myRole: isOwner ? 'owner' : null,
                                 ),
                                 const SizedBox(height: DetailSpacing.xl),
                               ],

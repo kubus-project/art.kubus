@@ -15,8 +15,12 @@ class UserIdentityDisplay {
   /// Username handle without '@' (never a wallet address).
   final String? username;
 
-  String? get handle =>
-      (username == null || username!.isEmpty) ? null : '@$username';
+  String? get handle {
+    final u = (username ?? '').trim();
+    if (u.isEmpty) return null;
+    if (WalletUtils.looksLikeWallet(u)) return null;
+    return '@$u';
+  }
 }
 
 class UserIdentityDisplayUtils {
@@ -39,11 +43,10 @@ class UserIdentityDisplayUtils {
     );
 
     if (displayName.isNotEmpty) {
-      final resolvedUsername =
-          username ?? _deriveUsernameFromName(displayName);
+      // Do not derive usernames. Only show a handle when explicitly present.
       return UserIdentityDisplay(
         name: displayName,
-        username: resolvedUsername,
+        username: username,
       );
     }
 
@@ -103,9 +106,6 @@ class UserIdentityDisplayUtils {
     return normalized;
   }
 
-  static String? _deriveUsernameFromName(String name) {
-    final cleaned = _cleanUsername(name);
-    return cleaned;
-  }
+  // Intentionally no derived username helpers.
 }
 

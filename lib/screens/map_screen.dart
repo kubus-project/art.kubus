@@ -4,7 +4,6 @@ import 'dart:developer' as dev;
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:geolocator/geolocator.dart';
@@ -178,6 +177,7 @@ class _MapScreenState extends State<MapScreen>
   bool _mobileLocationStreamStarted = false;
   bool _mobileLocationStreamFailed = false;
   bool _programmaticCameraMove = false;
+  bool _cameraIsMoving = false;
   double _lastBearing = 0.0;
   double _lastPitch = 0.0;
   final ValueNotifier<double> _bearingDegrees = ValueNotifier<double>(0.0);
@@ -227,7 +227,10 @@ class _MapScreenState extends State<MapScreen>
   List<ArtMarker> _selectedMarkerStack = []; // All markers at the same coordinate
   int _selectedMarkerStackIndex = 0; // Current index in the stack
   DateTime? _selectedMarkerAt;
-  String? _selectedMarkerViewportSignature;
+  final PageController _markerStackPageController = PageController();
+  int _markerSelectionToken = 0;
+  int _lastFocusedSelectionToken = -1;
+  double _lastComputedMarkerOverlayHeightPx = 320.0;
   Offset? _markerTapRippleOffset;
   DateTime? _markerTapRippleAt;
   Color? _markerTapRippleColor;
@@ -458,7 +461,37 @@ class _MapScreenState extends State<MapScreen>
       }
     }
     if (selected == null) return;
-    _handleMarkerTap(selected);
+
+    final selectedMarker = selected;
+
+    // Support stacked marker navigation for truly overlapping markers.
+    const double sameCoordinateMeters = 0.75;
+    final stackedMarkers = <ArtMarker>[];
+    for (final marker in _artMarkers) {
+      final meters = _distanceCalculator.as(
+        LengthUnit.Meter,
+        selectedMarker.position,
+        marker.position,
+      );
+      if (meters <= sameCoordinateMeters) {
+        stackedMarkers.add(marker);
+      }
+    }
+
+    if (stackedMarkers.length <= 1) {
+      _handleMarkerTap(selectedMarker);
+      return;
+    }
+
+    stackedMarkers.sort((a, b) => a.id.compareTo(b.id));
+    final selectedIndex =
+        stackedMarkers.indexWhere((m) => m.id == selectedMarker.id);
+    if (selectedIndex > 0) {
+      final tapped = stackedMarkers.removeAt(selectedIndex);
+      stackedMarkers.insert(0, tapped);
+    }
+
+    _handleMarkerTap(selectedMarker, stackedMarkers: stackedMarkers);
   }
 
   void _handleMapFeatureHover(
@@ -1487,6 +1520,7 @@ class _MapScreenState extends State<MapScreen>
     _perf.controllerDisposed('cube_spin');
     _locationIndicatorController?.dispose();
     _perf.controllerDisposed('location_indicator');
+    _markerStackPageController.dispose();
     _sheetController.dispose();
     _bearingDegrees.dispose();
     _selectedMarkerAnchorNotifier.dispose();
@@ -1850,7 +1884,6 @@ class _MapScreenState extends State<MapScreen>
           _selectedMarkerId = null;
           _selectedMarkerData = null;
           _selectedMarkerAt = null;
-          _selectedMarkerViewportSignature = null;
           _selectedMarkerAnchorNotifier.value = null;
         });
         if (markersChanged) {
@@ -1924,7 +1957,6 @@ class _MapScreenState extends State<MapScreen>
           _selectedMarkerData = null;
           _selectedMarkerAt = null;
           _selectedMarkerAnchorNotifier.value = null;
-          _selectedMarkerViewportSignature = null;
         }
       });
       unawaited(_syncMapMarkers(themeProvider: context.read<ThemeProvider>()));
@@ -2261,6 +2293,7 @@ class _MapScreenState extends State<MapScreen>
       }
     }
     _maybeRecordPresenceVisitForMarker(marker);
+    final int selectionToken = ++_markerSelectionToken;
     _perf.recordSetState('markerTap');
     setState(() {
       _selectedMarkerId = marker.id;
@@ -2271,13 +2304,14 @@ class _MapScreenState extends State<MapScreen>
       _selectedMarkerAnchorNotifier.value = null;
       // Selecting an item implies exploration; stop snapping back to user.
       _autoFollow = false;
-      _selectedMarkerViewportSignature = null;
     });
     _startPressedMarkerFeedback(marker.id);
     _startSelectionPopAnimation();
     _requestMarkerLayerStyleUpdate(force: true);
     unawaited(_playMarkerSelectionFeedback(marker));
     _queueOverlayAnchorRefresh();
+    _syncMarkerStackPager(selectionToken);
+    _requestFocusSelectedMarker(selectionToken);
     if (marker.isExhibitionMarker) return;
     _ensureLinkedArtworkLoaded(marker);
   }
@@ -2305,8 +2339,8 @@ class _MapScreenState extends State<MapScreen>
       _selectedMarkerStackIndex = 0;
       _selectedMarkerAt = null;
       _selectedMarkerAnchorNotifier.value = null;
-      _selectedMarkerViewportSignature = null;
     });
+    _syncMarkerStackPager(_markerSelectionToken);
     _pressedClearTimer?.cancel();
     _perf.timerStopped('pressed_clear');
     _pressedClearTimer = null;
@@ -2314,47 +2348,113 @@ class _MapScreenState extends State<MapScreen>
     _requestMarkerLayerStyleUpdate(force: true);
   }
 
-  /// Navigate to the next marker in the stacked markers list (swipe left).
-  void _nextStackedMarker() {
-    if (_selectedMarkerStack.length <= 1) return;
+  void _syncMarkerStackPager(int selectionToken) {
+    // Ensure the PageView shows the first marker in the stack when a new marker
+    // is selected (or when the overlay is dismissed).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (selectionToken != _markerSelectionToken) return;
+      if (!_markerStackPageController.hasClients) return;
+      final targetPage = (_selectedMarkerData == null) ? 0 : _selectedMarkerStackIndex;
+      try {
+        _markerStackPageController.jumpToPage(targetPage);
+      } catch (_) {
+        // Best-effort; controller may not be attached during transitions.
+      }
+    });
+  }
+
+  void _requestFocusSelectedMarker(int selectionToken) {
+    // Never call camera movement from build(). Instead, schedule a controlled
+    // focus effect that runs at most once per selection token.
+    if (_selectedMarkerData == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (selectionToken != _markerSelectionToken) return;
+      if (_selectedMarkerData == null) return;
+      if (_lastFocusedSelectionToken == selectionToken) return;
+      if (_styleInitializationInProgress || !_styleInitialized) return;
+
+      final marker = _selectedMarkerData!;
+
+      // Compute a deterministic vertical offset based on the last computed
+      // overlay height. This avoids the visible two-step recenter.
+      final media = MediaQuery.of(context);
+      final size = _mapViewportSize() ?? media.size;
+      final overlayHeight = _lastComputedMarkerOverlayHeightPx;
+      final topSafe = media.padding.top;
+      final double minMarkerY =
+          (topSafe + overlayHeight + 24).clamp(0.0, size.height).toDouble();
+
+      final double desiredY =
+          math.max(size.height * (2 / 3), minMarkerY).clamp(0.0, size.height).toDouble();
+      final double dy = desiredY - (size.height / 2);
+
+      // If the required offset is negligible, just center at the target zoom.
+      final Offset offset = dy.abs() < 1.0 ? Offset.zero : Offset(0, -dy);
+
+      _lastFocusedSelectionToken = selectionToken;
+      final targetZoom = math.max(_lastZoom, 15.5);
+      unawaited(
+        _animateMapTo(
+          marker.position,
+          zoom: targetZoom,
+          rotation: _lastBearing,
+          offset: offset,
+          duration: const Duration(milliseconds: 420),
+        ),
+      );
+    });
+  }
+
+  void _handleMarkerStackPageChanged(int index) {
+    if (!mounted) return;
+    if (index == _selectedMarkerStackIndex) return;
+    if (index < 0 || index >= _selectedMarkerStack.length) return;
+
     setState(() {
-      _selectedMarkerStackIndex =
-          (_selectedMarkerStackIndex + 1) % _selectedMarkerStack.length;
-      _selectedMarkerData = _selectedMarkerStack[_selectedMarkerStackIndex];
+      _selectedMarkerStackIndex = index;
+      _selectedMarkerData = _selectedMarkerStack[index];
       _selectedMarkerId = _selectedMarkerData?.id;
       _selectedMarkerAnchorNotifier.value = null;
-      _selectedMarkerViewportSignature = null;
     });
+
     final next = _selectedMarkerData;
-    if (next != null) {
-      _queueOverlayAnchorRefresh();
-      _requestMarkerLayerStyleUpdate(force: true);
-      if (!next.isExhibitionMarker) {
-        _ensureLinkedArtworkLoaded(next);
-      }
+    if (next == null) return;
+    _queueOverlayAnchorRefresh();
+    _requestMarkerLayerStyleUpdate(force: true);
+    if (!next.isExhibitionMarker) {
+      _ensureLinkedArtworkLoaded(next);
     }
   }
 
-  /// Navigate to the previous marker in the stacked markers list (swipe right).
+  void _nextStackedMarker() {
+    if (_selectedMarkerStack.length <= 1) return;
+    final next = (_selectedMarkerStackIndex + 1) % _selectedMarkerStack.length;
+    if (_markerStackPageController.hasClients) {
+      unawaited(_markerStackPageController.animateToPage(
+        next,
+        duration: const Duration(milliseconds: 240),
+        curve: Curves.easeOutCubic,
+      ));
+      return;
+    }
+    _handleMarkerStackPageChanged(next);
+  }
+
   void _previousStackedMarker() {
     if (_selectedMarkerStack.length <= 1) return;
-    setState(() {
-      _selectedMarkerStackIndex = (_selectedMarkerStackIndex - 1 +
-              _selectedMarkerStack.length) %
-          _selectedMarkerStack.length;
-      _selectedMarkerData = _selectedMarkerStack[_selectedMarkerStackIndex];
-      _selectedMarkerId = _selectedMarkerData?.id;
-      _selectedMarkerAnchorNotifier.value = null;
-      _selectedMarkerViewportSignature = null;
-    });
-    final next = _selectedMarkerData;
-    if (next != null) {
-      _queueOverlayAnchorRefresh();
-      _requestMarkerLayerStyleUpdate(force: true);
-      if (!next.isExhibitionMarker) {
-        _ensureLinkedArtworkLoaded(next);
-      }
+    final prev = (_selectedMarkerStackIndex - 1 + _selectedMarkerStack.length) %
+        _selectedMarkerStack.length;
+    if (_markerStackPageController.hasClients) {
+      unawaited(_markerStackPageController.animateToPage(
+        prev,
+        duration: const Duration(milliseconds: 240),
+        curve: Curves.easeOutCubic,
+      ));
+      return;
     }
+    _handleMarkerStackPageChanged(prev);
   }
 
   void _startPressedMarkerFeedback(String markerId) {
@@ -2598,6 +2698,8 @@ class _MapScreenState extends State<MapScreen>
 
   bool _assertMarkerRenderModeInvariant() {
     if (!_styleInitialized) return true;
+    if (_styleInitializationInProgress) return true;
+    if (_cameraIsMoving) return true;
     if (_cubeLayerVisible && !_is3DMarkerModeActive) return false;
     if (!_cubeLayerVisible && _is3DMarkerModeActive) return false;
     return true;
@@ -2735,7 +2837,6 @@ class _MapScreenState extends State<MapScreen>
   void _showArtMarkerDialog(ArtMarker marker) {
     // For compatibility with legacy calls: center and show inline overlay
     _handleMarkerTap(marker);
-    unawaited(_animateMapTo(marker.position, zoom: math.max(_lastZoom, 15)));
   }
 
   Color _resolveArtMarkerColor(ArtMarker marker, ThemeProvider themeProvider) {
@@ -3383,90 +3484,6 @@ class _MapScreenState extends State<MapScreen>
     return null;
   }
 
-  Future<void> _focusMarkerWithCardOffset(
-    LatLng markerPosition, {
-    required double targetZoom,
-    double desiredMarkerYFraction = 2 / 3,
-    required double minMarkerY,
-  }) async {
-    final controller = _mapController;
-    if (controller == null) return;
-    final fallbackSize = MediaQuery.of(context).size;
-
-    // Step 1: fly directly to the marker coordinate at the desired zoom.
-    final bearing = _lastBearing;
-    await _animateMapTo(
-      markerPosition,
-      zoom: targetZoom,
-      rotation: bearing,
-      offset: Offset.zero,
-      duration: const Duration(milliseconds: 360),
-    );
-    if (!mounted) return;
-    if (!_styleInitialized) return;
-
-    // Step 2: after the camera settles, offset the camera center so the marker
-    // ends up around 2/3 down the viewport (below the floating card).
-    await SchedulerBinding.instance.endOfFrame;
-    final size = _mapViewportSize() ?? fallbackSize;
-
-    final desiredY = math
-        .max(size.height * desiredMarkerYFraction, minMarkerY)
-        .clamp(0.0, size.height)
-        .toDouble();
-    final dy = desiredY - (size.height / 2);
-    if (dy.abs() < 1.0) return;
-
-    try {
-      final screenTarget = math.Point<double>(
-        size.width / 2,
-        (size.height / 2) - dy,
-      );
-      final center = await controller.toLatLng(screenTarget);
-      if (!mounted) return;
-      await _animateMapTo(
-        LatLng(center.latitude, center.longitude),
-        zoom: targetZoom,
-        rotation: bearing,
-        offset: Offset.zero,
-        duration: const Duration(milliseconds: 260),
-      );
-    } catch (_) {
-      // Best-effort: projection may fail during style swaps.
-    }
-  }
-
-  void _scheduleEnsureActiveMarkerOverlayInView({
-    required ArtMarker marker,
-    required double overlayHeight,
-  }) {
-    final screen = MediaQuery.of(context);
-    final topSafe = screen.padding.top;
-    final size = screen.size;
-
-    final double minMarkerY =
-        (topSafe + overlayHeight + 24).clamp(0.0, size.height).toDouble();
-
-    final signature =
-        '${marker.id}|${overlayHeight.round()}|${_lastZoom.toStringAsFixed(2)}|${_lastBearing.toStringAsFixed(3)}|${minMarkerY.round()}';
-    if (signature == _selectedMarkerViewportSignature) return;
-    _selectedMarkerViewportSignature = signature;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (_selectedMarkerId != marker.id) return;
-
-      final targetZoom = math.max(_lastZoom, 15.5);
-      unawaited(
-        _focusMarkerWithCardOffset(
-          marker.position,
-          targetZoom: targetZoom,
-          minMarkerY: minMarkerY,
-        ),
-      );
-    });
-  }
-
   void _queueOverlayAnchorRefresh() {
     if (_selectedMarkerData == null) return;
     if (!_styleInitialized) return;
@@ -3985,6 +4002,7 @@ class _MapScreenState extends State<MapScreen>
 
   void _handleCameraMove(ml.CameraPosition position) {
     if (!mounted) return;
+    _cameraIsMoving = true;
     // Any user gesture should immediately cancel auto-follow so we don't fight
     // the user. This must run before the throttle early-return.
     final bool hasGesture = !_programmaticCameraMove;
@@ -4029,6 +4047,7 @@ class _MapScreenState extends State<MapScreen>
 
   void _handleCameraIdle() {
     if (!mounted) return;
+    _cameraIsMoving = false;
     final wasProgrammatic = _programmaticCameraMove;
     _programmaticCameraMove = false;
 
@@ -4307,34 +4326,38 @@ class _MapScreenState extends State<MapScreen>
       }
       if (selected == null) return;
 
-        final ArtMarker selectedMarker = selected;
-      
-      // Check for other markers in the same visible grid cell ("same tile")
-      // so users can swipe through overlapping markers.
-      final int gridLevel = _clusterGridLevelForZoom(_lastZoom) >= 0
-          ? _clusterGridLevelForZoom(_lastZoom)
-          : GridUtils.resolvePrimaryGridLevel(_lastZoom);
-      final selectedCell =
-          GridUtils.gridCellForLevel(selectedMarker.position, gridLevel)
-            .anchorKey;
+      final ArtMarker selectedMarker = selected;
 
+      // Stack navigation is only for markers that truly overlap (same
+      // coordinates). Paging through nearby-but-not-identical markers causes
+      // anchor jitter and confusing composition.
+      const double sameCoordinateMeters = 0.75;
       final stackedMarkers = <ArtMarker>[];
       for (final marker in _artMarkers) {
-        final cell =
-            GridUtils.gridCellForLevel(marker.position, gridLevel).anchorKey;
-        if (cell == selectedCell) {
+        final meters = _distanceCalculator.as(
+          LengthUnit.Meter,
+          selectedMarker.position,
+          marker.position,
+        );
+        if (meters <= sameCoordinateMeters) {
           stackedMarkers.add(marker);
         }
       }
 
-      // Ensure the tapped marker is first in the stack so the overlay shows it.
+      if (stackedMarkers.length <= 1) {
+        _handleMarkerTap(selectedMarker);
+        return;
+      }
+
+      // Make ordering deterministic and keep the tapped marker first.
+      stackedMarkers.sort((a, b) => a.id.compareTo(b.id));
       final selectedIndex =
           stackedMarkers.indexWhere((m) => m.id == selectedMarker.id);
       if (selectedIndex > 0) {
         final tapped = stackedMarkers.removeAt(selectedIndex);
         stackedMarkers.insert(0, tapped);
       }
-      
+
       _handleMarkerTap(selectedMarker, stackedMarkers: stackedMarkers);
     } catch (e) {
       if (kDebugMode) {
@@ -5009,7 +5032,6 @@ class _MapScreenState extends State<MapScreen>
             .getArtworkById(marker.artworkId ?? '');
 
     final l10n = AppLocalizations.of(context)!;
-    final baseColor = _resolveArtMarkerColor(marker, themeProvider);
 
     final primaryExhibition = marker.resolvedExhibitionSummary;
     final exhibitionsFeatureEnabled = AppConfig.isFeatureEnabled('exhibitions');
@@ -5087,6 +5109,14 @@ class _MapScreenState extends State<MapScreen>
                   math.max(estimatedHeight, minExpandedHeight),
                   maxCardHeight,
                 );
+
+                // Cache the last computed overlay height so camera focus can
+                // compute an offset deterministically (without measuring/looping
+                // from build).
+                if ((_lastComputedMarkerOverlayHeightPx - cardHeight).abs() >
+                    1.0) {
+                  _lastComputedMarkerOverlayHeightPx = cardHeight;
+                }
                 final double topSafe = MediaQuery.of(context).padding.top + 12;
                 final double bottomSafe =
                     constraints.maxHeight - cardHeight - 12;
@@ -5108,13 +5138,6 @@ class _MapScreenState extends State<MapScreen>
                 }
                 top = top.clamp(topSafe, math.max(topSafe, bottomSafe));
 
-                if (_selectedMarkerViewportSignature == null) {
-                  _scheduleEnsureActiveMarkerOverlayInView(
-                    marker: marker,
-                    overlayHeight: cardHeight,
-                  );
-                }
-
                 if (kDebugMode) {
                   AppConfig.debugPrint(
                     'MapScreen: card anchor=(${anchor?.dx.toStringAsFixed(0)}, ${anchor?.dy.toStringAsFixed(0)}) '
@@ -5123,68 +5146,134 @@ class _MapScreenState extends State<MapScreen>
                   );
                 }
 
+                final stack = _selectedMarkerStack.isNotEmpty
+                    ? _selectedMarkerStack
+                    : <ArtMarker>[marker];
+                final int stackIndex = _selectedMarkerStackIndex
+                    .clamp(0, math.max(0, stack.length - 1));
+
+                void goToStackIndex(int index) {
+                  if (index < 0 || index >= stack.length) return;
+                  if (_markerStackPageController.hasClients) {
+                    unawaited(
+                      _markerStackPageController.animateToPage(
+                        index,
+                        duration: const Duration(milliseconds: 240),
+                        curve: Curves.easeOutCubic,
+                      ),
+                    );
+                    return;
+                  }
+                  _handleMarkerStackPageChanged(index);
+                }
+
+                MarkerOverlayCard buildCardForMarker(ArtMarker pageMarker) {
+                  final pageArtwork = pageMarker.isExhibitionMarker
+                      ? null
+                      : context
+                          .read<ArtworkProvider>()
+                          .getArtworkById(pageMarker.artworkId ?? '');
+
+                  final pagePrimaryExhibition =
+                      pageMarker.resolvedExhibitionSummary;
+                  final exhibitionsFeatureEnabled =
+                      AppConfig.isFeatureEnabled('exhibitions');
+                  final exhibitionsApiAvailable =
+                      BackendApiService().exhibitionsApiAvailable;
+                  final canPresentExhibition = exhibitionsFeatureEnabled &&
+                      pagePrimaryExhibition != null &&
+                      pagePrimaryExhibition.id.isNotEmpty &&
+                      exhibitionsApiAvailable != false;
+
+                  final exhibitionTitle =
+                      (pagePrimaryExhibition?.title ?? '').trim();
+                  final pageDisplayTitle =
+                      canPresentExhibition && exhibitionTitle.isNotEmpty
+                          ? exhibitionTitle
+                          : (pageArtwork?.title.isNotEmpty == true
+                              ? pageArtwork!.title
+                              : pageMarker.name);
+
+                  final pageDistanceText = () {
+                    if (_currentPosition == null) return null;
+                    final meters = _distanceCalculator.as(
+                      LengthUnit.Meter,
+                      _currentPosition!,
+                      pageMarker.position,
+                    );
+                    if (meters >= 1000) {
+                      return l10n
+                          .commonDistanceKm((meters / 1000).toStringAsFixed(1));
+                    }
+                    return l10n.commonDistanceM(meters.round().toString());
+                  }();
+
+                  final pageBaseColor =
+                      _resolveArtMarkerColor(pageMarker, themeProvider);
+
+                  return MarkerOverlayCard(
+                    marker: pageMarker,
+                    artwork: pageArtwork,
+                    baseColor: pageBaseColor,
+                    displayTitle: pageDisplayTitle,
+                    canPresentExhibition: canPresentExhibition,
+                    distanceText: pageDistanceText,
+                    description: pageMarker.description.isNotEmpty
+                        ? pageMarker.description
+                        : (pageArtwork?.description ?? ''),
+                    onClose: _dismissSelectedMarker,
+                    onPrimaryAction: canPresentExhibition
+                        ? () => _openExhibitionFromMarker(
+                              pageMarker,
+                              pagePrimaryExhibition,
+                              pageArtwork,
+                            )
+                        : () => _openMarkerDetail(pageMarker, pageArtwork),
+                    primaryActionIcon: canPresentExhibition
+                        ? Icons.museum_outlined
+                        : Icons.arrow_forward,
+                    primaryActionLabel: l10n.commonViewDetails,
+                    stackCount: stack.length,
+                    stackIndex: stackIndex,
+                    onNextStacked: stack.length > 1 ? _nextStackedMarker : null,
+                    onPreviousStacked:
+                        stack.length > 1 ? _previousStackedMarker : null,
+                    onSelectStackIndex:
+                        stack.length > 1 ? (i) => goToStackIndex(i) : null,
+                  );
+                }
+
+                final Widget cardDeck = stack.length <= 1
+                    ? buildCardForMarker(marker)
+                    : PageView.builder(
+                        controller: _markerStackPageController,
+                        itemCount: stack.length,
+                        onPageChanged: _handleMarkerStackPageChanged,
+                        itemBuilder: (context, index) {
+                          return buildCardForMarker(stack[index]);
+                        },
+                      );
+
                 return Stack(
                   children: [
                     Positioned(
                       left: left,
                       top: top,
                       width: maxWidth,
-                      // Wrap in Listener to absorb pointer events and prevent
-                      // them from passing through to the map underneath.
-                      child: Listener(
-                        behavior: HitTestBehavior.opaque,
-                        onPointerDown: (_) {},
-                        onPointerMove: (_) {},
-                        onPointerUp: (_) {},
-                        onPointerSignal: (_) {},
-                        child: AnimatedSize(
-                          duration: const Duration(milliseconds: 220),
-                          curve: Curves.easeOutCubic,
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(
-                              maxHeight: maxCardHeight,
-                            ),
-                            child: MarkerOverlayCard(
-                              marker: marker,
-                              artwork: artwork,
-                              baseColor: baseColor,
-                              displayTitle: displayTitle,
-                              canPresentExhibition: canPresentExhibition,
-                              distanceText: distanceText,
-                              description: rawDescription,
-                              onClose: _dismissSelectedMarker,
-                              onPrimaryAction: canPresentExhibition
-                                  ? () => _openExhibitionFromMarker(
-                                        marker,
-                                        primaryExhibition,
-                                        artwork,
-                                      )
-                                  : () => _openMarkerDetail(marker, artwork),
-                              primaryActionIcon: canPresentExhibition
-                                  ? Icons.museum_outlined
-                                  : Icons.arrow_forward,
-                              primaryActionLabel: l10n.commonViewDetails,
-                              stackCount: _selectedMarkerStack.length,
-                              stackIndex: _selectedMarkerStackIndex,
-                              onNextStacked: _selectedMarkerStack.length > 1
-                                  ? _nextStackedMarker
-                                  : null,
-                              onPreviousStacked:
-                                  _selectedMarkerStack.length > 1
-                                      ? _previousStackedMarker
-                                      : null,
-                              onHorizontalDragEnd: (details) {
-                                final velocity = details.primaryVelocity ?? 0;
-                                if (velocity > 200) {
-                                  _previousStackedMarker();
-                                } else if (velocity < -200) {
-                                  _nextStackedMarker();
-                                }
-                              },
-                            ),
+                      child: MapOverlayBlocker(
+                        enabled: true,
+                        cursor: SystemMouseCursors.basic,
+                        interceptPlatformViews: true,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxHeight: maxCardHeight,
+                          ),
+                          child: SizedBox(
+                            height: cardHeight,
+                            child: cardDeck,
                           ),
                         ),
-                      ), // Close Positioned
+                      ),
                     ),
                   ],
                 );
@@ -5322,26 +5411,6 @@ class _MapScreenState extends State<MapScreen>
                   const SizedBox(height: 10),
                 ],
                 _buildDiscoveryCard(theme, taskProvider),
-                ValueListenableBuilder<double>(
-                  valueListenable: _bearingDegrees,
-                  builder: (context, bearing, _) {
-                    if (bearing.abs() <= 1.0) {
-                      return const SizedBox.shrink();
-                    }
-                    final l10n = AppLocalizations.of(context)!;
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 10),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: _MapIconButton(
-                          icon: Icons.explore,
-                          tooltip: l10n.mapResetBearingTooltip,
-                          onTap: () => unawaited(_resetBearing()),
-                        ),
-                      ),
-                    );
-                  },
-                ),
               ],
             ),
           ),
@@ -6375,6 +6444,28 @@ class _MapScreenState extends State<MapScreen>
       child: MapOverlayBlocker(
         child: Column(
           children: [
+            ValueListenableBuilder<double>(
+              valueListenable: _bearingDegrees,
+              builder: (context, bearing, _) {
+                if (bearing.abs() <= 1.0) {
+                  return const SizedBox.shrink();
+                }
+                return Column(
+                  children: [
+                    Semantics(
+                      label: 'map_reset_bearing',
+                      button: true,
+                      child: _MapIconButton(
+                        icon: Icons.explore,
+                        tooltip: l10n.mapResetBearingTooltip,
+                        onTap: () => unawaited(_resetBearing()),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                );
+              },
+            ),
             if (AppConfig.isFeatureEnabled('mapTravelMode')) ...[
               _MapIconButton(
                 key: _tutorialTravelButtonKey,

@@ -8,6 +8,7 @@ import '../services/backend_api_service.dart';
 import '../services/push_notification_service.dart';
 import '../services/user_action_service.dart';
 import 'notification_provider.dart';
+import '../utils/creator_display_format.dart';
 
 class RecentActivityProvider extends ChangeNotifier {
   RecentActivityProvider({
@@ -178,7 +179,25 @@ class RecentActivityProvider extends ChangeNotifier {
     final data = _extractData(raw['data']);
     final customMetadata = _extractData(raw['metadata']);
     final sender = _extractData(raw['sender']);
-    final actorName = _string(raw['actorName']) ?? _string(sender['displayName']) ?? _string(sender['username']) ?? _string(raw['userName']) ?? _string(raw['authorName']);
+
+    final actorDisplayName = _string(sender['displayName']) ??
+        _string(sender['display_name']) ??
+        _string(raw['actorName']) ??
+        _string(raw['authorName']);
+    final actorUsername = _string(sender['username']) ??
+        _string(sender['userName']) ??
+        _string(raw['userName']);
+    final actorWallet = _string(sender['walletAddress']) ??
+        _string(sender['wallet_address']) ??
+        _string(sender['wallet']) ??
+        _string(sender['id']);
+    final actorFormatted = CreatorDisplayFormat.format(
+      fallbackLabel: 'Someone',
+      displayName: actorDisplayName,
+      username: actorUsername,
+      wallet: actorWallet,
+    );
+    final actorName = actorFormatted.primary;
     final actorAvatar = _string(sender['avatar']) ?? _string(sender['avatarUrl']) ?? _string(raw['actorAvatar']);
     final timestamp = _parseTimestamp(raw['timestamp'] ?? raw['createdAt'] ?? raw['time'] ?? data['timestamp']);
     final id = _string(raw['id']) ?? _string(raw['notificationId']) ?? _buildSyntheticId(type, timestamp, actorName, data);

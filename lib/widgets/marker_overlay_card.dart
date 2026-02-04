@@ -54,6 +54,7 @@ class MarkerOverlayCard extends StatelessWidget {
     this.stackIndex = 0,
     this.onNextStacked,
     this.onPreviousStacked,
+    this.onSelectStackIndex,
     this.onHorizontalDragEnd,
     this.maxWidth,
     this.maxHeight,
@@ -85,6 +86,7 @@ class MarkerOverlayCard extends StatelessWidget {
   final int stackIndex;
   final VoidCallback? onNextStacked;
   final VoidCallback? onPreviousStacked;
+  final ValueChanged<int>? onSelectStackIndex;
   final ValueChanged<DragEndDetails>? onHorizontalDragEnd;
 
   /// Optional sizing hints.
@@ -339,6 +341,7 @@ class MarkerOverlayCard extends StatelessWidget {
                         accent: baseColor,
                         onPrevious: onPreviousStacked,
                         onNext: onNextStacked,
+                        onSelectIndex: onSelectStackIndex,
                         inactiveColor:
                             scheme.onSurfaceVariant.withValues(alpha: 0.4),
                         arrowColor: scheme.onSurfaceVariant,
@@ -668,6 +671,7 @@ class _OverlayPager extends StatelessWidget {
     required this.arrowColor,
     required this.onPrevious,
     required this.onNext,
+    required this.onSelectIndex,
   });
 
   final int count;
@@ -677,6 +681,7 @@ class _OverlayPager extends StatelessWidget {
   final Color arrowColor;
   final VoidCallback? onPrevious;
   final VoidCallback? onNext;
+  final ValueChanged<int>? onSelectIndex;
 
   @override
   Widget build(BuildContext context) {
@@ -698,18 +703,36 @@ class _OverlayPager extends StatelessWidget {
         ),
         ...List.generate(
           count,
-          (dotIndex) => Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4.0),
-            child: AnimatedContainer(
+          (dotIndex) {
+            final isActive = index == dotIndex;
+            final dot = AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              width: index == dotIndex ? 12 : 6,
+              width: isActive ? 12 : 6,
               height: 6,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: index == dotIndex ? accent : inactiveColor,
+                color: isActive ? accent : inactiveColor,
               ),
-            ),
-          ),
+            );
+
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4.0),
+              child: onSelectIndex == null
+                  ? dot
+                  : MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => onSelectIndex!(dotIndex),
+                        child: SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: Center(child: dot),
+                        ),
+                      ),
+                    ),
+            );
+          },
         ),
         MouseRegion(
           cursor:
