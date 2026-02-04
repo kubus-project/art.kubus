@@ -584,7 +584,7 @@ abstract class AppLocalizations {
   /// No description provided for @personaOnboardingSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Choose what you’re here for. This only changes what we highlight—not what you can access.'**
+  /// **'Choose what you’re here for. This only changes what we highlight-not what you can access.'**
   String get personaOnboardingSubtitle;
 
   /// No description provided for @personaOptionLoverTitle.
@@ -1310,7 +1310,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingWelcomeDescription.
   ///
   /// In en, this message translates to:
-  /// **'Discover artworks, explore places, and connect with creators. XR and Web3 are optional layers — the core experience works without them.'**
+  /// **'Discover artworks, explore places, and connect with creators. XR and Web3 are optional layers - the core experience works without them.'**
   String get onboardingWelcomeDescription;
 
   /// No description provided for @onboardingExploreTitle.
@@ -1364,7 +1364,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingCommunityDescription.
   ///
   /// In en, this message translates to:
-  /// **'Follow artists, message, and collaborate on projects — cooperation is the default where it makes sense.'**
+  /// **'Follow artists, message, and collaborate on projects - cooperation is the default where it makes sense.'**
   String get onboardingCommunityDescription;
 
   /// No description provided for @onboardingCollectiblesTitle.
@@ -3968,7 +3968,7 @@ abstract class AppLocalizations {
   /// No description provided for @web3DaoP2Description.
   ///
   /// In en, this message translates to:
-  /// **'Your voting weight can reflect your Season 0 progress (KUB8 points). No financial value—just participation and recognition.'**
+  /// **'Your voting weight can reflect your Season 0 progress (KUB8 points). No financial value-just participation and recognition.'**
   String get web3DaoP2Description;
 
   /// No description provided for @web3DaoP2Feature1.
@@ -4916,7 +4916,7 @@ abstract class AppLocalizations {
   /// Tooltip shown near the Nearby Art radius control when Travel mode is enabled.
   ///
   /// In en, this message translates to:
-  /// **'Travel mode is on — showing markers in view'**
+  /// **'Travel mode is on - showing markers in view'**
   String get mapTravelModeStatusTravellingTooltip;
 
   /// No description provided for @mapArArtworkNearbyTitle.
@@ -5534,7 +5534,7 @@ abstract class AppLocalizations {
   /// No description provided for @mapTravelModeTutorialHint.
   ///
   /// In en, this message translates to:
-  /// **'Tip: Pan and zoom — markers refresh to match the viewport.'**
+  /// **'Tip: Pan and zoom - markers refresh to match the viewport.'**
   String get mapTravelModeTutorialHint;
 
   /// No description provided for @mapTravelModeTutorialGotIt.
@@ -12866,7 +12866,7 @@ abstract class AppLocalizations {
   /// No description provided for @supportSectionSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Help us keep building art.kubus — every donation helps.'**
+  /// **'Help us keep building art.kubus - every donation helps.'**
   String get supportSectionSubtitle;
 
   /// No description provided for @supportSectionMoreInfo.
@@ -12920,7 +12920,7 @@ abstract class AppLocalizations {
   /// No description provided for @supportDialogSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Three tiers — all meaningful. Thank you for helping us keep building.'**
+  /// **'Three tiers - all meaningful. Thank you for helping us keep building.'**
   String get supportDialogSubtitle;
 
   /// No description provided for @supportTier5Amount.

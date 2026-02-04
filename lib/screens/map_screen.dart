@@ -78,6 +78,7 @@ import '../widgets/glass_components.dart';
 import '../widgets/kubus_snackbar.dart';
 import '../widgets/map_overlay_blocker.dart';
 import '../widgets/tutorial/interactive_tutorial_overlay.dart';
+import '../widgets/marker_overlay_card.dart';
 
 /// Custom painter for the direction cone indicator
 class DirectionConePainter extends CustomPainter {
@@ -195,6 +196,7 @@ class _MapScreenState extends State<MapScreen>
   static const String _markerSourceId = 'kubus_markers';
   static const String _markerLayerId = 'kubus_marker_layer';
   static const String _markerHitboxLayerId = 'kubus_marker_hitbox_layer';
+  static const String _markerHitboxImageId = 'kubus_hitbox_square_transparent'; // Transparent square for hitbox
   static const String _cubeSourceId = 'kubus_marker_cubes';
   static const String _cubeLayerId = 'kubus_marker_cubes_layer';
   static const String _cubeIconLayerId = 'kubus_marker_cubes_icon_layer';
@@ -222,6 +224,8 @@ class _MapScreenState extends State<MapScreen>
       {}; // Track which markers we've notified about
   String? _selectedMarkerId;
   ArtMarker? _selectedMarkerData;
+  List<ArtMarker> _selectedMarkerStack = []; // All markers at the same coordinate
+  int _selectedMarkerStackIndex = 0; // Current index in the stack
   DateTime? _selectedMarkerAt;
   String? _selectedMarkerViewportSignature;
   Offset? _markerTapRippleOffset;
@@ -627,9 +631,24 @@ class _MapScreenState extends State<MapScreen>
       );
       _managedLayerIds.add(_cubeIconLayerId);
 
-      // 4. Invisible hitbox layer (topmost) for consistent tap detection (2D + 3D)
-      final Object hitboxRadius = kIsWeb
-          ? 32.0
+      // 4. Invisible square hitbox layer (topmost) for consistent tap detection.
+      // Uses a transparent square image with zoom-dependent scaling.
+      // Square hitbox is more reliable than circles for UI interaction.
+      try {
+        // Register the transparent square image if not already done
+        final hitboxImageBytes = _createTransparentSquareImage();
+        await controller.addImage(_markerHitboxImageId, hitboxImageBytes);
+        _registeredMapImages.add(_markerHitboxImageId);
+      } catch (e) {
+        if (kDebugMode) {
+          AppConfig.debugPrint('MapScreen: hitbox image registration failed: $e');
+        }
+      }
+
+      // Define zoom-dependent icon sizes for the hitbox square (in pixels).
+      // Clusters get larger hitbox; individual markers smaller.
+      final Object hitboxIconSize = kIsWeb
+          ? 60.0
           : <Object>[
               'interpolate',
               <Object>['linear'],
@@ -642,8 +661,8 @@ class _MapScreenState extends State<MapScreen>
                   <Object>['get', 'kind'],
                   'cluster'
                 ],
-                18,
-                14,
+                50,
+                36,
               ],
               12,
               <Object>[
@@ -653,8 +672,8 @@ class _MapScreenState extends State<MapScreen>
                   <Object>['get', 'kind'],
                   'cluster'
                 ],
-                26,
-                22,
+                64,
+                44,
               ],
               15,
               <Object>[
@@ -664,8 +683,8 @@ class _MapScreenState extends State<MapScreen>
                   <Object>['get', 'kind'],
                   'cluster'
                 ],
-                32,
-                28,
+                76,
+                56,
               ],
               24,
               <Object>[
@@ -675,11 +694,82 @@ class _MapScreenState extends State<MapScreen>
                   <Object>['get', 'kind'],
                   'cluster'
                 ],
-                42,
-                38,
+                84,
+                76,
               ],
             ];
+
       try {
+        await controller.addSymbolLayer(
+          _markerSourceId,
+          _markerHitboxLayerId,
+          ml.SymbolLayerProperties(
+            iconImage: _markerHitboxImageId,
+            iconSize: hitboxIconSize,
+            iconOpacity: 0.0, // Invisible hitbox
+            iconAllowOverlap: true,
+            iconIgnorePlacement: true,
+            iconAnchor: 'center',
+            iconPitchAlignment: 'map',
+            iconRotationAlignment: 'map',
+          ),
+        );
+      } catch (e) {
+        if (kDebugMode) {
+          AppConfig.debugPrint('MapScreen: square hitbox layer add failed: $e');
+        }
+        // Fallback: use circle hitbox if symbol layer fails
+        final Object hitboxRadius = kIsWeb
+            ? 32.0
+            : <Object>[
+                'interpolate',
+                <Object>['linear'],
+                <Object>['zoom'],
+                3,
+                <Object>[
+                  'case',
+                  <Object>[
+                    '==',
+                    <Object>['get', 'kind'],
+                    'cluster'
+                  ],
+                  25,
+                  18,
+                ],
+                12,
+                <Object>[
+                  'case',
+                  <Object>[
+                    '==',
+                    <Object>['get', 'kind'],
+                    'cluster'
+                  ],
+                  32,
+                  22,
+                ],
+                15,
+                <Object>[
+                  'case',
+                  <Object>[
+                    '==',
+                    <Object>['get', 'kind'],
+                    'cluster'
+                  ],
+                  38,
+                  28,
+                ],
+                24,
+                <Object>[
+                  'case',
+                  <Object>[
+                    '==',
+                    <Object>['get', 'kind'],
+                    'cluster'
+                  ],
+                  42,
+                  38,
+                ],
+              ];
         await controller.addCircleLayer(
           _markerSourceId,
           _markerHitboxLayerId,
@@ -689,21 +779,6 @@ class _MapScreenState extends State<MapScreen>
             circleStrokeOpacity: 0.0,
             circleStrokeWidth: 0.0,
             circleRadius: hitboxRadius,
-          ),
-        );
-      } catch (e) {
-        if (kDebugMode) {
-          AppConfig.debugPrint('MapScreen: hitbox layer add failed: $e');
-        }
-        await controller.addCircleLayer(
-          _markerSourceId,
-          _markerHitboxLayerId,
-          ml.CircleLayerProperties(
-            circleColor: '#000000',
-            circleOpacity: 0.0,
-            circleStrokeOpacity: 0.0,
-            circleStrokeWidth: 0.0,
-            circleRadius: kIsWeb ? 32 : 28,
           ),
         );
       }
@@ -2137,7 +2212,7 @@ class _MapScreenState extends State<MapScreen>
     );
   }
 
-  void _handleMarkerTap(ArtMarker marker) {
+  void _handleMarkerTap(ArtMarker marker, {List<ArtMarker> stackedMarkers = const []}) {
     // Guard against rapid repeated taps on the same marker
     if (_selectedMarkerId == marker.id && _selectedMarkerAt != null) {
       final elapsed = DateTime.now().difference(_selectedMarkerAt!);
@@ -2158,6 +2233,8 @@ class _MapScreenState extends State<MapScreen>
     setState(() {
       _selectedMarkerId = marker.id;
       _selectedMarkerData = marker;
+      _selectedMarkerStack = stackedMarkers.isEmpty ? [marker] : stackedMarkers;
+      _selectedMarkerStackIndex = 0; // Start at first marker in stack
       _selectedMarkerAt = DateTime.now();
       _selectedMarkerAnchorNotifier.value = null;
       // Selecting an item implies exploration; stop snapping back to user.
@@ -2192,6 +2269,8 @@ class _MapScreenState extends State<MapScreen>
     setState(() {
       _selectedMarkerId = null;
       _selectedMarkerData = null;
+      _selectedMarkerStack = [];
+      _selectedMarkerStackIndex = 0;
       _selectedMarkerAt = null;
       _selectedMarkerAnchorNotifier.value = null;
       _selectedMarkerViewportSignature = null;
@@ -2201,6 +2280,26 @@ class _MapScreenState extends State<MapScreen>
     _pressedClearTimer = null;
     _pressedMarkerId = null;
     _requestMarkerLayerStyleUpdate(force: true);
+  }
+
+  /// Navigate to the next marker in the stacked markers list (swipe left).
+  void _nextStackedMarker() {
+    if (_selectedMarkerStack.length <= 1) return;
+    setState(() {
+      _selectedMarkerStackIndex = (_selectedMarkerStackIndex + 1) % _selectedMarkerStack.length;
+      _selectedMarkerData = _selectedMarkerStack[_selectedMarkerStackIndex];
+      _selectedMarkerId = _selectedMarkerData?.id;
+    });
+  }
+
+  /// Navigate to the previous marker in the stacked markers list (swipe right).
+  void _previousStackedMarker() {
+    if (_selectedMarkerStack.length <= 1) return;
+    setState(() {
+      _selectedMarkerStackIndex = (_selectedMarkerStackIndex - 1 + _selectedMarkerStack.length) % _selectedMarkerStack.length;
+      _selectedMarkerData = _selectedMarkerStack[_selectedMarkerStackIndex];
+      _selectedMarkerId = _selectedMarkerData?.id;
+    });
   }
 
   void _startPressedMarkerFeedback(String markerId) {
@@ -3762,6 +3861,15 @@ class _MapScreenState extends State<MapScreen>
     return dpr.clamp(1.0, 2.5);
   }
 
+  /// Generate a transparent square image for the hitbox layer.
+  /// Returns bytes for a 1x1 transparent PNG which MapLibre will scale to the icon-size.
+  /// This allows us to use a symbol layer for square-based tap detection.
+  Uint8List _createTransparentSquareImage() {
+    // 1x1 transparent PNG (base64 decoded)
+    const String base64Png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+    return Uint8List.fromList(base64Decode(base64Png));
+  }
+
   Future<void> _applyIsometricCamera(
       {required bool enabled, bool adjustZoomForScale = false}) async {
     final controller = _mapController;
@@ -3877,12 +3985,13 @@ class _MapScreenState extends State<MapScreen>
   }
 
   int _clusterGridLevelForZoom(double zoom) {
-    // Smaller spacing at low zoom reduces over-grouping while still clustering.
-    final double targetSpacingPx =
-        zoom < 6.5 ? 56.0 : (zoom < 9.5 ? 64.0 : 72.0);
-    final level = GridUtils.resolvePrimaryGridLevel(zoom,
-        targetScreenSpacing: targetSpacingPx);
-    return level.clamp(3, 14);
+    // Optimized grid levels for smoother cluster transitions during incremental zoom.
+    // Fewer jumpy re-organizations = better perceived responsiveness.
+    if (zoom < 5) return 2;
+    if (zoom < 7) return 3;
+    if (zoom < 9) return 4;
+    if (zoom < 11) return 5;
+    return 6;
   }
 
   void _queueMarkerVisualRefreshForZoom(double zoom) {
@@ -4113,10 +4222,12 @@ class _MapScreenState extends State<MapScreen>
         final lng = (props['lng'] as num?)?.toDouble();
         final lat = (props['lat'] as num?)?.toDouble();
         if (lat == null || lng == null) return;
-        final nextZoom = math.min(_lastZoom + 2.0, 18.0);
+        // Incremental zoom: step by 1.5 instead of 2.0 to reduce re-clustering lag
+        // and avoid overshooting the cluster-breakdown zoom level.
+        final nextZoom = math.min(_lastZoom + 1.5, 18.0);
         if (kDebugMode) {
           AppConfig.debugPrint(
-            'MapScreen: cluster tap → zoom=${nextZoom.toStringAsFixed(1)}',
+            'MapScreen: cluster tap → zoom=${nextZoom.toStringAsFixed(1)} from ${_lastZoom.toStringAsFixed(1)}',
           );
         }
         await _animateMapTo(
@@ -4140,7 +4251,18 @@ class _MapScreenState extends State<MapScreen>
         }
       }
       if (selected == null) return;
-      _handleMarkerTap(selected);
+      
+      // Check for other markers at the exact same coordinates (stacked markers).
+      // This allows swiping through multiple markers in the overlay card.
+      final stackedMarkers = <ArtMarker>[];
+      for (final marker in _artMarkers) {
+        if ((marker.position.latitude - selected.position.latitude).abs() < 0.0001 &&
+            (marker.position.longitude - selected.position.longitude).abs() < 0.0001) {
+          stackedMarkers.add(marker);
+        }
+      }
+      
+      _handleMarkerTap(selected, stackedMarkers: stackedMarkers);
     } catch (e) {
       if (kDebugMode) {
         AppConfig.debugPrint('MapScreen: queryRenderedFeatures failed: $e');
@@ -4512,18 +4634,20 @@ class _MapScreenState extends State<MapScreen>
         scheme: scheme,
         roles: roles,
       );
-      final fullSizeMeters = MarkerCubeGeometry.cubeBaseSizeMeters(
-        zoom: zoom,
-        latitude: marker.position.latitude,
-      );
-      final heightMeters = fullSizeMeters * 0.90;
+      // CONSTANT SCREEN SIZE: Cube appears same size on screen across all zoom levels.
+      // Formula: pixel_size × meters_per_pixel = constant_map_units
+      // This ensures the visual 2D icon and 3D cube are always aligned.
+      final cubePixelSize = MarkerCubeGeometry.markerPixelSize(zoom);
+      final mpp = MarkerCubeGeometry.metersPerPixel(zoom, marker.position.latitude);
+      final cubeSizeMeters = cubePixelSize * mpp;
+      final heightMeters = cubeSizeMeters * 0.90;
       final colorHex = MarkerCubeGeometry.toHex(baseColor);
 
       cubeFeatures.add(
         MarkerCubeGeometry.cubeFeatureForMarkerWithMeters(
           marker: marker,
           colorHex: colorHex,
-          sizeMeters: fullSizeMeters,
+          sizeMeters: cubeSizeMeters,
           heightMeters: heightMeters,
           kind: 'cube',
         ),
@@ -4812,12 +4936,7 @@ class _MapScreenState extends State<MapScreen>
             .getArtworkById(marker.artworkId ?? '');
 
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
     final baseColor = _resolveArtMarkerColor(marker, themeProvider);
-    final actionFg =
-        ThemeData.estimateBrightnessForColor(baseColor) == Brightness.dark
-            ? KubusColors.textPrimaryDark
-            : KubusColors.textPrimaryLight;
 
     final primaryExhibition = marker.resolvedExhibitionSummary;
     final exhibitionsFeatureEnabled = AppConfig.isFeatureEnabled('exhibitions');
@@ -4855,15 +4974,9 @@ class _MapScreenState extends State<MapScreen>
       return l10n.commonDistanceM(meters.round().toString());
     }();
 
-    final imageUrl = ArtworkMediaResolver.resolveCover(
-      artwork: artwork,
-      metadata: marker.metadata,
-    );
-
     final showChips =
         _hasMetadataChips(marker, artwork) || canPresentExhibition;
-    final buttonLabel =
-        canPresentExhibition ? 'Odpri razstavo' : l10n.commonViewDetails;
+    final buttonLabel = l10n.commonViewDetails;
 
     final estimatedHeight = _computeMobileMarkerHeight(
       title: displayTitle,
@@ -4956,354 +5069,47 @@ class _MapScreenState extends State<MapScreen>
                           curve: Curves.easeOutCubic,
                           child: SizedBox(
                             height: cardHeight,
-                            child: Semantics(
-                              label: 'marker_floating_card',
-                              container: true,
-                              child: Material(
-                                color: Colors.transparent,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    borderRadius:
-                                        BorderRadius.circular(KubusRadius.lg),
-                                    border: Border.all(
-                                      color: baseColor.withValues(alpha: 0.35),
-                                      width: KubusSizes.hairline,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color:
-                                            baseColor.withValues(alpha: 0.22),
-                                        blurRadius: 20,
-                                        offset: const Offset(0, 12),
-                                      ),
-                                    ],
-                                  ),
-                                  child: LiquidGlassPanel(
-                                    padding:
-                                        const EdgeInsets.all(KubusSpacing.md),
-                                    borderRadius:
-                                        BorderRadius.circular(KubusRadius.lg),
-                                    showBorder: false,
-                                    backgroundColor:
-                                        scheme.surface.withValues(alpha: 0.45),
-                                    // Keep the primary action visible by rendering
-                                    // it as a sticky footer (outside the scroll view).
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.max,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Expanded(
-                                          child: CustomScrollView(
-                                            physics:
-                                                const ClampingScrollPhysics(),
-                                            slivers: [
-                                              SliverToBoxAdapter(
-                                                child: Column(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    Row(
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .start,
-                                                      children: [
-                                                        Expanded(
-                                                          child: Column(
-                                                            crossAxisAlignment:
-                                                                CrossAxisAlignment
-                                                                    .start,
-                                                            children: [
-                                                              if (canPresentExhibition) ...[
-                                                                Text(
-                                                                  'Razstava',
-                                                                  style: KubusTypography
-                                                                      .textTheme
-                                                                      .labelSmall
-                                                                      ?.copyWith(
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .w700,
-                                                                    color:
-                                                                        baseColor,
-                                                                    height: 1.0,
-                                                                  ),
-                                                                ),
-                                                                const SizedBox(
-                                                                    height: 2),
-                                                              ],
-                                                              Text(
-                                                                displayTitle,
-                                                                maxLines: 2,
-                                                                overflow:
-                                                                    TextOverflow
-                                                                        .ellipsis,
-                                                                style: KubusTypography
-                                                                    .textTheme
-                                                                    .titleSmall
-                                                                    ?.copyWith(
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .w700,
-                                                                  height: 1.2,
-                                                                  color: scheme
-                                                                      .onSurface,
-                                                                ),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                        ),
-                                                        const SizedBox(
-                                                            width: 10),
-                                                        if (distanceText !=
-                                                            null)
-                                                          Container(
-                                                            padding:
-                                                                const EdgeInsets
-                                                                    .symmetric(
-                                                              horizontal: 8,
-                                                              vertical: 4,
-                                                            ),
-                                                            decoration:
-                                                                BoxDecoration(
-                                                              color: baseColor
-                                                                  .withValues(
-                                                                      alpha:
-                                                                          0.12),
-                                                              borderRadius:
-                                                                  BorderRadius
-                                                                      .circular(
-                                                                          999),
-                                                            ),
-                                                            child: Row(
-                                                              mainAxisSize:
-                                                                  MainAxisSize
-                                                                      .min,
-                                                              children: [
-                                                                Icon(
-                                                                    Icons
-                                                                        .near_me,
-                                                                    size: 12,
-                                                                    color:
-                                                                        baseColor),
-                                                                const SizedBox(
-                                                                    width: 4),
-                                                                Text(
-                                                                  distanceText,
-                                                                  style: KubusTypography
-                                                                      .textTheme
-                                                                      .labelSmall
-                                                                      ?.copyWith(
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .w700,
-                                                                    color:
-                                                                        baseColor,
-                                                                  ),
-                                                                ),
-                                                              ],
-                                                            ),
-                                                          ),
-                                                        const SizedBox(
-                                                            width: 6),
-                                                        _glassIconButton(
-                                                          icon: Icons.close,
-                                                          tooltip:
-                                                              l10n.commonClose,
-                                                          onTap:
-                                                              _dismissSelectedMarker,
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    const SizedBox(height: 10),
-                                                    ClipRRect(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              KubusRadius.md),
-                                                      child: SizedBox(
-                                                        height: 120,
-                                                        width: double.infinity,
-                                                        child: imageUrl != null
-                                                            ? Image.network(
-                                                                imageUrl,
-                                                                fit: BoxFit
-                                                                    .cover,
-                                                                errorBuilder: (_,
-                                                                        __,
-                                                                        ___) =>
-                                                                    _markerImageFallback(
-                                                                        baseColor,
-                                                                        scheme,
-                                                                        marker),
-                                                                loadingBuilder:
-                                                                    (context,
-                                                                        child,
-                                                                        progress) {
-                                                                  if (progress ==
-                                                                      null) {
-                                                                    return child;
-                                                                  }
-                                                                  return Container(
-                                                                    color: baseColor
-                                                                        .withValues(
-                                                                            alpha:
-                                                                                0.12),
-                                                                    child:
-                                                                        const Center(
-                                                                      child: CircularProgressIndicator(
-                                                                          strokeWidth:
-                                                                              2),
-                                                                    ),
-                                                                  );
-                                                                },
-                                                              )
-                                                            : _markerImageFallback(
-                                                                baseColor,
-                                                                scheme,
-                                                                marker),
-                                                      ),
-                                                    ),
-                                                    if (visibleDescription
-                                                        .isNotEmpty) ...[
-                                                      const SizedBox(
-                                                          height: 10),
-                                                      Text(
-                                                        visibleDescription,
-                                                        style: KubusTypography
-                                                            .textTheme.bodySmall
-                                                            ?.copyWith(
-                                                          color: scheme
-                                                              .onSurfaceVariant,
-                                                          height: 1.4,
-                                                          fontSize: 12,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                    if (showChips) ...[
-                                                      const SizedBox(
-                                                          height: 10),
-                                                      Wrap(
-                                                        spacing: 8,
-                                                        runSpacing: 8,
-                                                        children: [
-                                                          if (canPresentExhibition)
-                                                            _glassChip(
-                                                              label: 'POAP',
-                                                              icon: Icons
-                                                                  .verified_outlined,
-                                                              selected: true,
-                                                              accent: baseColor,
-                                                              onTap: null,
-                                                            ),
-                                                          if (artwork != null &&
-                                                              artwork.category
-                                                                  .isNotEmpty &&
-                                                              artwork.category !=
-                                                                  'General')
-                                                            _glassChip(
-                                                              label: artwork
-                                                                  .category,
-                                                              icon:
-                                                                  Icons.palette,
-                                                              selected: false,
-                                                              accent: baseColor,
-                                                              onTap: null,
-                                                            ),
-                                                          if (marker.metadata?[
-                                                                      'subjectCategory'] !=
-                                                                  null ||
-                                                              marker.metadata?[
-                                                                      'subject_category'] !=
-                                                                  null)
-                                                            _glassChip(
-                                                              label: (marker.metadata![
-                                                                          'subjectCategory'] ??
-                                                                      marker.metadata![
-                                                                          'subject_category'])
-                                                                  .toString(),
-                                                              icon: Icons
-                                                                  .category_outlined,
-                                                              selected: false,
-                                                              accent: baseColor,
-                                                              onTap: null,
-                                                            ),
-                                                          if (artwork != null &&
-                                                              artwork.rewards >
-                                                                  0)
-                                                            _glassChip(
-                                                              label:
-                                                                  '+${artwork.rewards}',
-                                                              icon: Icons
-                                                                  .card_giftcard,
-                                                              selected: false,
-                                                              accent: baseColor,
-                                                              onTap: null,
-                                                            ),
-                                                        ],
-                                                      ),
-                                                    ],
-                                                  ],
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        const SizedBox(height: 12),
-                                        SizedBox(
-                                          width: double.infinity,
-                                          child: Semantics(
-                                            label: 'marker_more_info',
-                                            button: true,
-                                            child: FilledButton.icon(
-                                              style: FilledButton.styleFrom(
-                                                backgroundColor: baseColor,
-                                                foregroundColor: actionFg,
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                  horizontal: 12,
-                                                  vertical: 10,
-                                                ),
-                                              ),
-                                              onPressed: canPresentExhibition
-                                                  ? () =>
-                                                      _openExhibitionFromMarker(
-                                                        marker,
-                                                        primaryExhibition,
-                                                        artwork,
-                                                      )
-                                                  : () => _openMarkerDetail(
-                                                        marker,
-                                                        artwork,
-                                                      ),
-                                              icon: Icon(
-                                                canPresentExhibition
-                                                    ? Icons.museum_outlined
-                                                    : Icons.arrow_forward,
-                                                size: 18,
-                                              ),
-                                              label: Text(
-                                                canPresentExhibition
-                                                    ? 'Odpri razstavo'
-                                                    : l10n.commonViewDetails,
-                                                style: KubusTypography
-                                                    .textTheme.labelLarge
-                                                    ?.copyWith(
-                                                        fontWeight:
-                                                            FontWeight.w700),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ), // Close LiquidGlassPanel
-                                  ), // Close Container
-                                ), // Close Material
-                              ), // Close Semantics
-                            ), // Close SizedBox
-                          ), // Close AnimatedSize
-                        ), // Close Listener
+                            child: MarkerOverlayCard(
+                              marker: marker,
+                              artwork: artwork,
+                              baseColor: baseColor,
+                              displayTitle: displayTitle,
+                              canPresentExhibition: canPresentExhibition,
+                              distanceText: distanceText,
+                              description: rawDescription,
+                              onClose: _dismissSelectedMarker,
+                              onPrimaryAction: canPresentExhibition
+                                  ? () => _openExhibitionFromMarker(
+                                        marker,
+                                        primaryExhibition,
+                                        artwork,
+                                      )
+                                  : () => _openMarkerDetail(marker, artwork),
+                              primaryActionIcon: canPresentExhibition
+                                  ? Icons.museum_outlined
+                                  : Icons.arrow_forward,
+                              primaryActionLabel: l10n.commonViewDetails,
+                              stackCount: _selectedMarkerStack.length,
+                              stackIndex: _selectedMarkerStackIndex,
+                              onNextStacked: _selectedMarkerStack.length > 1
+                                  ? _nextStackedMarker
+                                  : null,
+                              onPreviousStacked:
+                                  _selectedMarkerStack.length > 1
+                                      ? _previousStackedMarker
+                                      : null,
+                              onHorizontalDragEnd: (details) {
+                                final velocity = details.primaryVelocity ?? 0;
+                                if (velocity > 200) {
+                                  _previousStackedMarker();
+                                } else if (velocity < -200) {
+                                  _nextStackedMarker();
+                                }
+                              },
+                              maxHeight: cardHeight,
+                            ),
+                          ),
+                        ),
                       ), // Close Positioned
                     ),
                   ],
@@ -5819,7 +5625,12 @@ class _MapScreenState extends State<MapScreen>
       bucket.centroid = LatLng(sumLat / count, sumLng / count);
     }
 
-    return buckets.values.toList(growable: false);
+    // Sort by marker count (descending): largest clusters first.
+    // This improves hitbox reliability; queryRenderedFeatures().first will hit
+    // the most visually prominent cluster, preventing mis-taps on smaller clusters.
+    final sorted = buckets.values.toList(growable: false);
+    sorted.sort((a, b) => b.markers.length.compareTo(a.markers.length));
+    return sorted;
   }
 
   Widget _buildSearchCard(ThemeData theme) {

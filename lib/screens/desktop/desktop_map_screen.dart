@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:developer' as dev;
 import 'dart:math' as math;
 
@@ -74,6 +75,7 @@ import '../../widgets/glass_components.dart';
 import '../../widgets/kubus_snackbar.dart';
 import '../../widgets/tutorial/interactive_tutorial_overlay.dart';
 import '../../widgets/inline_progress.dart';
+import '../../widgets/marker_overlay_card.dart';
 import '../../providers/task_provider.dart';
 import '../../models/task.dart';
 
@@ -201,6 +203,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   static const String _markerSourceId = 'kubus_markers';
   static const String _markerLayerId = 'kubus_marker_layer';
   static const String _markerHitboxLayerId = 'kubus_marker_hitbox_layer';
+  static const String _markerHitboxImageId =
+      'kubus_hitbox_square_transparent';
   static const String _cubeSourceId = 'kubus_marker_cubes';
   static const String _cubeLayerId = 'kubus_marker_cubes_layer';
   static const String _cubeIconLayerId = 'kubus_marker_cubes_icon_layer';
@@ -1057,6 +1061,15 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     return dpr.clamp(1.0, 2.5);
   }
 
+  /// Generate a transparent square image for the hitbox layer.
+  /// Returns bytes for a 1x1 transparent PNG which MapLibre will scale.
+  Uint8List _createTransparentSquareImage() {
+    // 1x1 transparent PNG (base64 decoded)
+    const String base64Png =
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+    return Uint8List.fromList(base64Decode(base64Png));
+  }
+
   Future<void> _handleMapStyleLoaded(ThemeProvider themeProvider) async {
     final controller = _mapController;
     if (controller == null) return;
@@ -1206,9 +1219,22 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       );
       _managedLayerIds.add(_cubeIconLayerId);
 
-      // 4. Invisible hitbox layer (topmost) for consistent tap detection (2D + 3D)
-      final Object hitboxRadius = kIsWeb
-          ? 32.0
+      // 4. Invisible square hitbox layer (topmost) for consistent tap detection.
+      // Uses a transparent square image with zoom-dependent scaling.
+      // Square hitbox is more reliable than circles for UI interaction.
+      try {
+        final hitboxImageBytes = _createTransparentSquareImage();
+        await controller.addImage(_markerHitboxImageId, hitboxImageBytes);
+        _registeredMapImages.add(_markerHitboxImageId);
+      } catch (e) {
+        if (kDebugMode) {
+          AppConfig.debugPrint(
+              'DesktopMapScreen: hitbox image registration failed: $e');
+        }
+      }
+
+      final Object hitboxIconSize = kIsWeb
+          ? 60.0
           : <Object>[
               'interpolate',
               <Object>['linear'],
@@ -1221,8 +1247,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   <Object>['get', 'kind'],
                   'cluster'
                 ],
-                18,
-                14,
+                50,
+                36,
               ],
               12,
               <Object>[
@@ -1232,8 +1258,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   <Object>['get', 'kind'],
                   'cluster'
                 ],
-                26,
-                22,
+                64,
+                44,
               ],
               15,
               <Object>[
@@ -1243,8 +1269,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   <Object>['get', 'kind'],
                   'cluster'
                 ],
-                32,
-                28,
+                76,
+                56,
               ],
               24,
               <Object>[
@@ -1254,11 +1280,82 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   <Object>['get', 'kind'],
                   'cluster'
                 ],
-                42,
-                38,
+                84,
+                76,
               ],
             ];
+
       try {
+        await controller.addSymbolLayer(
+          _markerSourceId,
+          _markerHitboxLayerId,
+          ml.SymbolLayerProperties(
+            iconImage: _markerHitboxImageId,
+            iconSize: hitboxIconSize,
+            iconOpacity: 0.0,
+            iconAllowOverlap: true,
+            iconIgnorePlacement: true,
+            iconAnchor: 'center',
+            iconPitchAlignment: 'map',
+            iconRotationAlignment: 'map',
+          ),
+        );
+      } catch (e) {
+        if (kDebugMode) {
+          AppConfig.debugPrint(
+              'DesktopMapScreen: square hitbox layer add failed: $e');
+        }
+        final Object hitboxRadius = kIsWeb
+            ? 32.0
+            : <Object>[
+                'interpolate',
+                <Object>['linear'],
+                <Object>['zoom'],
+                3,
+                <Object>[
+                  'case',
+                  <Object>[
+                    '==',
+                    <Object>['get', 'kind'],
+                    'cluster'
+                  ],
+                  25,
+                  18,
+                ],
+                12,
+                <Object>[
+                  'case',
+                  <Object>[
+                    '==',
+                    <Object>['get', 'kind'],
+                    'cluster'
+                  ],
+                  32,
+                  22,
+                ],
+                15,
+                <Object>[
+                  'case',
+                  <Object>[
+                    '==',
+                    <Object>['get', 'kind'],
+                    'cluster'
+                  ],
+                  38,
+                  28,
+                ],
+                24,
+                <Object>[
+                  'case',
+                  <Object>[
+                    '==',
+                    <Object>['get', 'kind'],
+                    'cluster'
+                  ],
+                  42,
+                  38,
+                ],
+              ];
         await controller.addCircleLayer(
           _markerSourceId,
           _markerHitboxLayerId,
@@ -1268,21 +1365,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             circleStrokeOpacity: 0.0,
             circleStrokeWidth: 0.0,
             circleRadius: hitboxRadius,
-          ),
-        );
-      } catch (e) {
-        if (kDebugMode) {
-          AppConfig.debugPrint('DesktopMapScreen: hitbox layer add failed: $e');
-        }
-        await controller.addCircleLayer(
-          _markerSourceId,
-          _markerHitboxLayerId,
-          ml.CircleLayerProperties(
-            circleColor: '#000000',
-            circleOpacity: 0.0,
-            circleStrokeOpacity: 0.0,
-            circleStrokeWidth: 0.0,
-            circleRadius: kIsWeb ? 32 : 28,
           ),
         );
       }
@@ -6132,11 +6214,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final distanceText = _userLocation != null
         ? _formatDistance(_calculateDistance(_userLocation!, marker.position))
         : null;
-    final imageUrl = ArtworkMediaResolver.resolveCover(
-      artwork: artwork,
-      metadata: marker.metadata,
-    );
-
     final displayTitle = canPresentExhibition && exhibitionTitle.isNotEmpty
         ? exhibitionTitle
         : (artwork?.title.isNotEmpty == true ? artwork!.title : marker.name);
@@ -6144,341 +6221,96 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             ? marker.description
             : (artwork?.description ?? ''))
         .trim();
-
-    const int maxPreviewChars = 300;
-    final String visibleDescription = rawDescription.length <= maxPreviewChars
-        ? rawDescription
-        : '${rawDescription.substring(0, maxPreviewChars)}...';
-
-    final showChips =
-        _hasMetadataChips(marker, artwork) || canPresentExhibition;
-    final artworkProvider = context.read<ArtworkProvider>();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     final viewportHeight = MediaQuery.of(context).size.height;
     final safeVerticalPadding = MediaQuery.of(context).padding.vertical;
     final double maxCardHeight =
         math.max(240.0, viewportHeight - safeVerticalPadding - 24).toDouble();
 
-    return Semantics(
-      label: 'marker_floating_card',
-      container: true,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: 280, maxHeight: maxCardHeight),
-        child: AnimatedSize(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
-          alignment: Alignment.topCenter,
-          child: Material(
-            color: Colors.transparent,
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: baseColor.withValues(alpha: 0.35),
-                  width: 1.1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: baseColor.withValues(alpha: 0.22),
-                    blurRadius: 20,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+    final artworkProvider = context.read<ArtworkProvider>();
+    final overlayActions = <MarkerOverlayActionSpec>[];
+    if (artwork != null && !canPresentExhibition) {
+      overlayActions.addAll([
+        MarkerOverlayActionSpec(
+          icon: artwork.isLikedByCurrentUser
+              ? Icons.favorite
+              : Icons.favorite_border,
+          label: '${artwork.likesCount}',
+          isActive: artwork.isLikedByCurrentUser,
+          activeColor: scheme.error,
+          tooltip: l10n.commonLikes,
+          semanticsLabel: 'marker_like',
+          onTap: () {
+            unawaited(artworkProvider.toggleLike(artwork.id));
+          },
+        ),
+        MarkerOverlayActionSpec(
+          icon: artwork.isFavoriteByCurrentUser || artwork.isFavorite
+              ? Icons.bookmark
+              : Icons.bookmark_border,
+          label: l10n.commonSave,
+          isActive: artwork.isFavoriteByCurrentUser || artwork.isFavorite,
+          activeColor: baseColor,
+          tooltip: l10n.commonSave,
+          semanticsLabel: 'marker_save',
+          onTap: () {
+            unawaited(artworkProvider.toggleFavorite(artwork.id));
+          },
+        ),
+        MarkerOverlayActionSpec(
+          icon: Icons.share_outlined,
+          label: l10n.commonShare,
+          isActive: false,
+          activeColor: baseColor,
+          tooltip: l10n.commonShare,
+          semanticsLabel: 'marker_share',
+          onTap: () {
+            ShareService().showShareSheet(
+              context,
+              target: ShareTarget.artwork(
+                artworkId: artwork.id,
+                title: artwork.title,
               ),
-              child: LiquidGlassPanel(
-                padding: const EdgeInsets.all(14),
-                borderRadius: BorderRadius.circular(18),
-                showBorder: false,
-                backgroundColor: scheme.surface.withValues(alpha: 0.45),
-                child: CustomScrollView(
-                  shrinkWrap: true,
-                  physics: const ClampingScrollPhysics(),
-                  slivers: [
-                    SliverToBoxAdapter(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    if (canPresentExhibition) ...[
-                                      Text(
-                                        'Exhibition',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium
-                                            ?.copyWith(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.w700,
-                                              color: baseColor,
-                                              height: 1.0,
-                                            ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                    ],
-                                    Text(
-                                      displayTitle,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 14,
-                                            height: 1.2,
-                                          ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              if (distanceText != null) ...[
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: baseColor.withValues(alpha: 0.12),
-                                    borderRadius: BorderRadius.circular(999),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.near_me,
-                                          size: 12, color: baseColor),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        distanceText,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium
-                                            ?.copyWith(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.w700,
-                                              color: baseColor,
-                                            ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                              ],
-                              _markerOverlayIconButton(
-                                icon: Icons.close,
-                                tooltip: l10n.commonClose,
-                                scheme: scheme,
-                                isDark: isDark,
-                                onTap: _dismissSelectedMarkerOverlay,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: SizedBox(
-                              height: 120,
-                              width: double.infinity,
-                              child: imageUrl != null
-                                  ? Image.network(
-                                      imageUrl,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) =>
-                                          _markerImageFallback(
-                                              baseColor, scheme, marker),
-                                      loadingBuilder:
-                                          (context, child, progress) {
-                                        if (progress == null) return child;
-                                        return Container(
-                                          color:
-                                              baseColor.withValues(alpha: 0.12),
-                                          child: const Center(
-                                            child: CircularProgressIndicator(
-                                                strokeWidth: 2),
-                                          ),
-                                        );
-                                      },
-                                    )
-                                  : _markerImageFallback(
-                                      baseColor, scheme, marker),
-                            ),
-                          ),
-                          if (visibleDescription.isNotEmpty) ...[
-                            const SizedBox(height: 10),
-                            Text(
-                              visibleDescription,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(
-                                    fontSize: 12,
-                                    color: scheme.onSurfaceVariant,
-                                    height: 1.4,
-                                  ),
-                            ),
-                          ],
-                          if (showChips) ...[
-                            const SizedBox(height: 10),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                if (canPresentExhibition)
-                                  _attendanceProofChip(scheme, baseColor),
-                                if (artwork != null &&
-                                    artwork.category.isNotEmpty &&
-                                    artwork.category != 'General')
-                                  _compactChip(
-                                    scheme,
-                                    Icons.palette,
-                                    artwork.category,
-                                    baseColor,
-                                  ),
-                                if (marker.metadata?['subjectCategory'] !=
-                                        null ||
-                                    marker.metadata?['subject_category'] !=
-                                        null)
-                                  _compactChip(
-                                    scheme,
-                                    Icons.category_outlined,
-                                    (marker.metadata!['subjectCategory'] ??
-                                            marker
-                                                .metadata!['subject_category'])
-                                        .toString(),
-                                    baseColor,
-                                  ),
-                                if (marker.metadata?['locationName'] != null ||
-                                    marker.metadata?['location'] != null)
-                                  _compactChip(
-                                    scheme,
-                                    Icons.place_outlined,
-                                    (marker.metadata!['locationName'] ??
-                                            marker.metadata!['location'])
-                                        .toString(),
-                                    baseColor,
-                                  ),
-                                if (artwork != null && artwork.rewards > 0)
-                                  _compactChip(
-                                    scheme,
-                                    Icons.card_giftcard,
-                                    '+${artwork.rewards}',
-                                    baseColor,
-                                  ),
-                              ],
-                            ),
-                          ],
-                          if (artwork != null && !canPresentExhibition) ...[
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                _markerOverlayActionButton(
-                                  icon: artwork.isLikedByCurrentUser
-                                      ? Icons.favorite
-                                      : Icons.favorite_border,
-                                  label: '${artwork.likesCount}',
-                                  isActive: artwork.isLikedByCurrentUser,
-                                  activeColor: scheme.error,
-                                  scheme: scheme,
-                                  isDark: isDark,
-                                  onTap: () {
-                                    unawaited(
-                                        artworkProvider.toggleLike(artwork.id));
-                                  },
-                                ),
-                                const SizedBox(width: 8),
-                                _markerOverlayActionButton(
-                                  icon: artwork.isFavoriteByCurrentUser ||
-                                          artwork.isFavorite
-                                      ? Icons.bookmark
-                                      : Icons.bookmark_border,
-                                  label: l10n.commonSave,
-                                  isActive: artwork.isFavoriteByCurrentUser ||
-                                      artwork.isFavorite,
-                                  activeColor: baseColor,
-                                  scheme: scheme,
-                                  isDark: isDark,
-                                  onTap: () {
-                                    unawaited(artworkProvider
-                                        .toggleFavorite(artwork.id));
-                                  },
-                                ),
-                                const SizedBox(width: 8),
-                                _markerOverlayActionButton(
-                                  icon: Icons.share_outlined,
-                                  label: l10n.commonShare,
-                                  isActive: false,
-                                  activeColor: baseColor,
-                                  scheme: scheme,
-                                  isDark: isDark,
-                                  onTap: () {
-                                    ShareService().showShareSheet(
-                                      context,
-                                      target: ShareTarget.artwork(
-                                        artworkId: artwork.id,
-                                        title: artwork.title,
-                                      ),
-                                      sourceScreen: 'desktop_map_marker',
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
-                          ],
-                          const SizedBox(height: 12),
-                          SizedBox(
-                            width: double.infinity,
-                            child: Semantics(
-                              label: 'marker_more_info',
-                              button: true,
-                              child: FilledButton.icon(
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: baseColor,
-                                  foregroundColor:
-                                      AppColorUtils.contrastText(baseColor),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 10,
-                                  ),
-                                ),
-                                onPressed: canPresentExhibition
-                                    ? () => _openExhibitionFromMarker(
-                                        marker, primaryExhibition, artwork)
-                                    : () => _openMarkerDetail(marker, artwork),
-                                icon: Icon(
-                                  canPresentExhibition
-                                      ? Icons.museum_outlined
-                                      : Icons.arrow_forward,
-                                  size: 18,
-                                ),
-                                label: Text(
-                                  canPresentExhibition
-                                      ? 'Open Exhibition'
-                                      : l10n.commonViewDetails,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 13,
-                                      ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+              sourceScreen: 'desktop_map_marker',
+            );
+          },
+        ),
+      ]);
+    }
+
+    // Keep the card height stable (matches the positioning estimate) so the
+    // shared overlay widget can reserve space for its sticky footer.
+    final estimatedCardHeight = math.min(360.0, maxCardHeight);
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: 280, maxHeight: maxCardHeight),
+      child: AnimatedSize(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        alignment: Alignment.topCenter,
+        child: SizedBox(
+          height: estimatedCardHeight,
+          child: MarkerOverlayCard(
+            marker: marker,
+            artwork: artwork,
+            baseColor: baseColor,
+            displayTitle: displayTitle,
+            canPresentExhibition: canPresentExhibition,
+            distanceText: distanceText,
+            description: rawDescription,
+            onClose: _dismissSelectedMarkerOverlay,
+            onPrimaryAction: canPresentExhibition
+                ? () => _openExhibitionFromMarker(
+                      marker,
+                      primaryExhibition,
+                      artwork,
+                    )
+                : () => _openMarkerDetail(marker, artwork),
+            primaryActionIcon: canPresentExhibition
+                ? Icons.museum_outlined
+                : Icons.arrow_forward,
+            primaryActionLabel: l10n.commonViewDetails,
+            actions: overlayActions,
+            maxHeight: estimatedCardHeight,
           ),
         ),
       ),
@@ -6681,192 +6513,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           },
         );
       },
-    );
-  }
-
-  /// Small icon button for marker overlay header
-  Widget _markerOverlayIconButton({
-    required IconData icon,
-    required String tooltip,
-    required ColorScheme scheme,
-    required bool isDark,
-    required VoidCallback? onTap,
-  }) {
-    final bg = scheme.surface.withValues(alpha: isDark ? 0.46 : 0.52);
-    final cursor =
-        onTap == null ? SystemMouseCursors.basic : SystemMouseCursors.click;
-    return MouseRegion(
-      cursor: cursor,
-      child: Tooltip(
-        message: tooltip,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(999),
-            onTap: onTap,
-            child: Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(
-                  color: scheme.outlineVariant.withValues(alpha: 0.35),
-                ),
-              ),
-              child: LiquidGlassPanel(
-                padding: EdgeInsets.zero,
-                margin: EdgeInsets.zero,
-                borderRadius: BorderRadius.circular(999),
-                showBorder: false,
-                backgroundColor: bg,
-                child: Center(
-                  child: Icon(icon, size: 16, color: scheme.onSurface),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Action button for marker overlay (like, save, share)
-  Widget _markerOverlayActionButton({
-    required IconData icon,
-    required String label,
-    required bool isActive,
-    required Color activeColor,
-    required ColorScheme scheme,
-    required bool isDark,
-    required VoidCallback? onTap,
-  }) {
-    final bg = isActive
-        ? activeColor.withValues(alpha: isDark ? 0.24 : 0.18)
-        : scheme.surface.withValues(alpha: isDark ? 0.34 : 0.42);
-    final border = isActive
-        ? activeColor.withValues(alpha: 0.35)
-        : scheme.outlineVariant.withValues(alpha: 0.30);
-    final fg = isActive ? activeColor : scheme.onSurfaceVariant;
-
-    final cursor =
-        onTap == null ? SystemMouseCursors.basic : SystemMouseCursors.click;
-    return Expanded(
-      child: MouseRegion(
-        cursor: cursor,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(10),
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: border),
-              ),
-              child: LiquidGlassPanel(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                margin: EdgeInsets.zero,
-                borderRadius: BorderRadius.circular(10),
-                showBorder: false,
-                backgroundColor: bg,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(icon, size: 16, color: fg),
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: Text(
-                        label,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: fg,
-                            ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _attendanceProofChip(ColorScheme scheme, Color baseColor) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: baseColor.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: baseColor.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.verified_outlined, size: 12, color: baseColor),
-          const SizedBox(width: 4),
-          Text(
-            'POAP',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: baseColor,
-                ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Check if marker has any metadata chips to display
-  bool _hasMetadataChips(ArtMarker marker, Artwork? artwork) {
-    return (artwork != null &&
-            artwork.category.isNotEmpty &&
-            artwork.category != 'General') ||
-        marker.metadata?['subjectCategory'] != null ||
-        marker.metadata?['subject_category'] != null ||
-        marker.metadata?['subjectLabel'] != null ||
-        marker.metadata?['subject_type'] != null ||
-        marker.metadata?['locationName'] != null ||
-        marker.metadata?['location'] != null ||
-        (artwork != null && artwork.rewards > 0);
-  }
-
-  /// Unified chip widget for displaying metadata with icon
-  Widget _compactChip(
-    ColorScheme scheme,
-    IconData icon,
-    String label,
-    Color accent, {
-    bool isLarge = false,
-  }) {
-    return Container(
-      padding: isLarge
-          ? const EdgeInsets.symmetric(horizontal: 8, vertical: 6)
-          : const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-      decoration: BoxDecoration(
-        color: accent.withValues(alpha: isLarge ? 0.14 : 0.12),
-        borderRadius: BorderRadius.circular(isLarge ? 10 : 6),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: isLarge ? 14 : 11, color: accent),
-          SizedBox(width: isLarge ? 6 : 4),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontSize: isLarge ? 11 : 10,
-                  fontWeight: FontWeight.w500,
-                  color: scheme.onSurface,
-                ),
-          ),
-        ],
-      ),
     );
   }
 
