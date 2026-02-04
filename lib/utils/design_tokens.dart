@@ -29,6 +29,7 @@ class KubusColors {
   static const Color accentTealLight = Color(0xFF00897B);
   static const Color achievementGoldDark = Color(0xFFFFD700);
   static const Color achievementGoldLight = Color(0xFFFFC107);
+  static const Color accentBlue = Color(0xFF2979FF);
 
   // --- Semantic Colors ---
   static const Color error = Color(0xFFE53935); // Red 600

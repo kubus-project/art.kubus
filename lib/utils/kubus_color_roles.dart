@@ -23,6 +23,7 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
     required this.statGreen,
     required this.statAmber,
     required this.statPurple,
+    required this.statBlue,
     required this.achievementGold,
     required this.artistStudioRed,
   });
@@ -54,6 +55,7 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
   final Color statGreen;
   final Color statAmber;
   final Color statPurple;
+  final Color statBlue;
 
   /// Achievement/reward gold accent
   final Color achievementGold;
@@ -137,6 +139,7 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
     statGreen: KubusColors.successDark,
     statAmber: KubusColors.warningDark,
     statPurple: KubusColors.primaryVariantDark,
+    statBlue: KubusColors.accentBlue,
     achievementGold: KubusColors.achievementGoldDark,
     artistStudioRed: KubusColors.errorDark,
   );
@@ -154,6 +157,7 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
     statCoral: KubusColors.error, // Red 600
     statGreen: KubusColors.success, // Green 600
     statAmber: KubusColors.warning, // Amber 700
+    statBlue: KubusColors.accentBlue,
     statPurple: KubusColors.primaryVariantLight,
     achievementGold: KubusColors.achievementGoldLight,
     artistStudioRed: KubusColors.error,
@@ -196,6 +200,7 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
       statGreen: statGreen ?? this.statGreen,
       statAmber: statAmber ?? this.statAmber,
       statPurple: statPurple ?? this.statPurple,
+      statBlue: statBlue ?? this.statBlue,
       achievementGold: achievementGold ?? this.achievementGold, 
       artistStudioRed: artistStudioRed ?? this.artistStudioRed,
     );
@@ -219,6 +224,7 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
       statGreen: Color.lerp(statGreen, other.statGreen, t)!,
       statAmber: Color.lerp(statAmber, other.statAmber, t)!,
       statPurple: Color.lerp(statPurple, other.statPurple, t)!,
+      statBlue: Color.lerp(statBlue, other.statBlue, t)!,
       achievementGold: Color.lerp(achievementGold, other.achievementGold, t)!,
       artistStudioRed: Color.lerp(artistStudioRed, other.artistStudioRed, t)!, 
     );
