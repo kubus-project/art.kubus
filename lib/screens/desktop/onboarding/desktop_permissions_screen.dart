@@ -16,6 +16,8 @@ import '../../../providers/profile_provider.dart';
 import '../../../services/push_notification_service.dart';
 import '../../../services/notification_helper.dart';
 import '../../../utils/app_animations.dart';
+import '../../../utils/app_color_utils.dart';
+import '../../../utils/kubus_color_roles.dart';
 import '../desktop_shell.dart';
 import '../../../widgets/glass_components.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
@@ -42,6 +44,7 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
 
   List<PermissionPage> get _allPages {
     final l10n = AppLocalizations.of(context)!;
+    final roles = KubusColorRoles.of(context);
 
     return [
       PermissionPage(
@@ -55,8 +58,8 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
           l10n.permissionsLocationBenefit4,
         ],
         iconData: Icons.location_on,
-        gradient: const LinearGradient(
-          colors: [Color(0xFF06B6D4), Color(0xFF3B82F6)],
+        gradient: LinearGradient(
+          colors: [roles.statTeal, AppColorUtils.shiftLightness(roles.statTeal, 0.10)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -73,8 +76,8 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
           l10n.permissionsCameraBenefit4,
         ],
         iconData: Icons.camera_alt,
-        gradient: const LinearGradient(
-          colors: [Color(0xFF10B981), Color(0xFF059669)],
+        gradient: LinearGradient(
+          colors: [roles.positiveAction, AppColorUtils.shiftLightness(roles.positiveAction, -0.10)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -91,8 +94,8 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
           l10n.permissionsNotificationsBenefit4,
         ],
         iconData: Icons.notifications,
-        gradient: const LinearGradient(
-          colors: [Color(0xFFF59E0B), Color(0xFFEF4444)],
+        gradient: LinearGradient(
+          colors: [roles.statAmber, AppColorUtils.shiftLightness(roles.statAmber, 0.10)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -109,8 +112,8 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
           l10n.permissionsPhotosBenefit4,
         ],
         iconData: Icons.photo_library,
-        gradient: const LinearGradient(
-          colors: [Color(0xFFEC4899), Color(0xFF0B6E4F)],
+        gradient: LinearGradient(
+          colors: [roles.statCoral, AppColorUtils.shiftLightness(roles.statCoral, -0.10)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),

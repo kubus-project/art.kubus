@@ -19,6 +19,7 @@ import '../../providers/profile_provider.dart';
 import '../desktop/onboarding/desktop_permissions_screen.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/kubus_color_roles.dart';
 import '../../widgets/kubus_button.dart';
 import '../../widgets/glass_components.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
@@ -112,8 +113,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
 
   List<PermissionPage> get _allPages {
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-    final base = scheme.primary;
+    final roles = KubusColorRoles.of(context);
 
     return [
     PermissionPage(
@@ -128,7 +128,9 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       ],
       iconData: Icons.location_on_outlined,
       gradient: LinearGradient(
-        colors: [base, AppColorUtils.shiftLightness(base, 0.10)],
+        colors: [roles.statTeal, AppColorUtils.shiftLightness(roles.statTeal, 0.12)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
       ),
       permissionType: PermissionType.location,
     ),
@@ -144,7 +146,9 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       ],
       iconData: Icons.camera_alt_outlined,
       gradient: LinearGradient(
-        colors: [AppColorUtils.shiftLightness(base, -0.10), base],
+        colors: [roles.positiveAction, AppColorUtils.shiftLightness(roles.positiveAction, -0.15)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
       ),
       permissionType: PermissionType.camera,
     ),
@@ -160,7 +164,9 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       ],
       iconData: Icons.notifications_outlined,
       gradient: LinearGradient(
-        colors: [base, AppColorUtils.shiftLightness(base, 0.18)],
+        colors: [roles.statAmber, roles.negativeAction],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
       ),
       permissionType: PermissionType.notifications,
     ),
@@ -176,7 +182,9 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       ],
       iconData: Icons.photo_library_outlined,
       gradient: LinearGradient(
-        colors: [base, AppColorUtils.shiftLightness(base, -0.14)],
+        colors: [roles.statCoral, AppColorUtils.shiftLightness(roles.statCoral, -0.12)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
       ),
       permissionType: PermissionType.storage,
     ),

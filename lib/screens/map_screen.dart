@@ -971,12 +971,44 @@ class _MapScreenState extends State<MapScreen>
     if (_isMapTabVisible == isVisible) return;
     _isMapTabVisible = isVisible;
     _handleActiveStateChanged();
+    if (isVisible) {
+      _scheduleWebMapResizeRecovery(reason: 'tabVisible');
+    }
   }
 
   void _setRouteVisible(bool isVisible) {
     if (_isRouteVisible == isVisible) return;
     _isRouteVisible = isVisible;
     _handleActiveStateChanged();
+    if (isVisible) {
+      _scheduleWebMapResizeRecovery(reason: 'routeVisible');
+    }
+  }
+
+  void _scheduleWebMapResizeRecovery({required String reason}) {
+    if (!kIsWeb) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final controller = _mapController;
+      if (controller == null) return;
+
+      // MapLibre GL JS can end up with a blank canvas after transient route
+      // overlays (e.g. modal bottom sheets) on first load. A forced resize
+      // reliably triggers a repaint without requiring a full page refresh.
+      try {
+        controller.forceResizeWebMap();
+      } catch (_) {}
+      try {
+        controller.resizeWebMap();
+      } catch (_) {}
+
+      _perf.logEvent(
+        'webResizeRecovery',
+        extra: <String, Object?>{
+          'reason': reason,
+        },
+      );
+    });
   }
 
   void _handleActiveStateChanged() {
