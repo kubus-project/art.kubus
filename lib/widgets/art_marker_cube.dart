@@ -8,7 +8,6 @@ import '../models/art_marker.dart';
 import '../utils/app_color_utils.dart';
 import '../utils/design_tokens.dart';
 import '../utils/kubus_color_roles.dart';
-import 'map_marker_style_config.dart';
 import 'rotatable_cube_painter.dart';
 
 // Re-export rotatable cube components for convenience.
@@ -356,6 +355,12 @@ class ArtMarkerCubeIconRenderer {
     return (pr * 100).round();
   }
 
+  static Color _iconForegroundForTheme({required bool isDark}) {
+    // User preference: marker glyphs should invert from the typical scheme:
+    // dark mode uses black glyphs, light mode uses white glyphs.
+    return isDark ? const Color(0xFF000000) : const Color(0xFFFFFFFF);
+  }
+
   /// Renders a marker as a flat top-down square (top face + shadow).
   static Future<Uint8List> renderMarkerPng({
     required Color baseColor,
@@ -422,10 +427,7 @@ class ArtMarkerCubeIconRenderer {
     // Flat marker is a square matching the previous isometric footprint.
     const double size = CubeMarkerTokens.pngWidth;
     const double height = CubeMarkerTokens.pngWidth;
-    final iconForeground = MapMarkerStyleConfig.bestForegroundOn(
-      baseColor,
-      isDark ? Brightness.dark : Brightness.light,
-    );
+    final iconForeground = _iconForegroundForTheme(isDark: isDark);
 
     return _renderPng(
       width: size,
@@ -614,10 +616,7 @@ class ArtMarkerCubeIconRenderer {
     );
     final showGlow = count >= 10;
     final label = count > 99 ? '99+' : '$count';
-    final iconForeground = MapMarkerStyleConfig.bestForegroundOn(
-      baseColor,
-      isDark ? Brightness.dark : Brightness.light,
-    );
+    final iconForeground = _iconForegroundForTheme(isDark: isDark);
 
     final key = _ClusterPngCacheKey(
       baseColorValue: baseColor.toARGB32(),
@@ -637,6 +636,7 @@ class ArtMarkerCubeIconRenderer {
       return _renderFlatClusterPng(
         label: label,
         labelStyle: labelStyle,
+        iconForeground: iconForeground,
         baseColor: baseColor,
         palette: palette,
         style: style,
@@ -649,6 +649,7 @@ class ArtMarkerCubeIconRenderer {
   static Future<Uint8List> _renderFlatClusterPng({
     required String label,
     required TextStyle labelStyle,
+    required Color iconForeground,
     required Color baseColor,
     required _CubePalette palette,
     required CubeMarkerStyle style,
@@ -666,10 +667,6 @@ class ArtMarkerCubeIconRenderer {
         final center = Offset(logicalSize.width / 2, logicalSize.height / 2);
         final squareSize = CubeMarkerTokens.staticSizeAtZoom15;
         final cornerRadius = math.min(KubusRadius.md, squareSize * 0.28);
-        final iconForeground = MapMarkerStyleConfig.bestForegroundOn(
-          baseColor,
-          ThemeData.estimateBrightnessForColor(baseColor),
-        );
 
         final shadowRect = Rect.fromCenter(
           center: center + const Offset(0, 3),
