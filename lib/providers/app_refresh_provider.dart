@@ -6,6 +6,7 @@ class AppRefreshProvider extends ChangeNotifier {
   static const String viewChat = 'chat';
   static const String viewNotifications = 'notifications';
   static const String viewProfile = 'profile';
+  static const String viewPortfolio = 'portfolio';
 
   static const Duration _viewGrace = Duration(minutes: 3);
   static const Duration _triggerCooldown = Duration(seconds: 3);
@@ -15,6 +16,7 @@ class AppRefreshProvider extends ChangeNotifier {
   int _profileVersion = 0;
   int _chatVersion = 0;
   int _communityVersion = 0;
+  int _portfolioVersion = 0;
 
   bool _isAppForeground = true;
   final Map<String, bool> _viewActive = <String, bool>{};
@@ -27,6 +29,7 @@ class AppRefreshProvider extends ChangeNotifier {
   int get profileVersion => _profileVersion;
   int get chatVersion => _chatVersion;
   int get communityVersion => _communityVersion;
+  int get portfolioVersion => _portfolioVersion;
   bool get isAppForeground => _isAppForeground;
   Map<String, int> get debugCounters => Map.unmodifiable(_debugCounters);
 
@@ -146,6 +149,19 @@ class AppRefreshProvider extends ChangeNotifier {
     }
     _communityVersion++;
     _bumpDebug('trigger_community');
+    notifyListeners();
+  }
+
+  void triggerPortfolio({bool onlyIfActive = false}) {
+    if (!_shouldTrigger(
+      'portfolio',
+      onlyIfActive: onlyIfActive,
+      viewKey: viewPortfolio,
+    )) {
+      return;
+    }
+    _portfolioVersion++;
+    _bumpDebug('trigger_portfolio');
     notifyListeners();
   }
 

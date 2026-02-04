@@ -406,7 +406,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           contentPadding: EdgeInsets.zero,
                           leading: AvatarWidget(wallet: user.walletAddress ?? user.userId, avatarUrl: user.avatarUrl, radius: 20, enableProfileNavigation: true),
                           title: Text(user.displayName.isNotEmpty ? user.displayName : l10n.commonUnnamed, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-                          subtitle: subtitleParts.isNotEmpty ? Text(subtitleParts.join(' â€¢ '), style: GoogleFonts.inter(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.6))) : null,
+                          subtitle: subtitleParts.isNotEmpty ? Text(subtitleParts.join(' • '), style: GoogleFonts.inter(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.6))) : null,
                         );
                       },
                     );
@@ -540,7 +540,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           ),
                           subtitle: subtitleParts.isNotEmpty
                               ? Text(
-                                    subtitleParts.join(' â€¢ '),
+                                    subtitleParts.join(' • '),
                                   style: GoogleFonts.inter(
                                     fontSize: 12,
                                     color: theme.colorScheme.onSurface

@@ -584,7 +584,7 @@ class WalletPromptScreen extends StatelessWidget {
                 children: [
                   Icon(Icons.check_circle, color: Colors.green, size: 16),
                   SizedBox(width: 8),
-                  Text('â€¢ Buy and sell NFTs'),
+                  Text('• Buy and sell NFTs'),
                 ],
               ),
               SizedBox(height: 4),
@@ -592,7 +592,7 @@ class WalletPromptScreen extends StatelessWidget {
                 children: [
                   Icon(Icons.check_circle, color: Colors.green, size: 16),
                   SizedBox(width: 8),
-                  Text('â€¢ Create your own artworks'),
+                  Text('• Create your own artworks'),
                 ],
               ),
               SizedBox(height: 4),
@@ -600,7 +600,7 @@ class WalletPromptScreen extends StatelessWidget {
                 children: [
                   Icon(Icons.check_circle, color: Colors.green, size: 16),
                   SizedBox(width: 8),
-                  Text('â€¢ Community interactions'),
+                  Text('• Community interactions'),
                 ],
               ),
             ],

@@ -370,7 +370,7 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
                         ),
                         if (entry.subtitle != null && entry.subtitle!.trim().isNotEmpty) ...[
                           Text(
-                            ' â€¢ ',
+                            ' • ',
                             style: GoogleFonts.inter(
                               fontSize: 12,
                               color: scheme.onSurface.withValues(alpha: 0.45),

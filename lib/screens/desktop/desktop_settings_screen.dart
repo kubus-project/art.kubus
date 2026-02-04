@@ -3057,7 +3057,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
           // Copyright
           Center(
             child: Text(
-              'Â© 2025 kubus â€¢ ${l10n.settingsAllRightsReserved}',
+              'Â© 2025 kubus • ${l10n.settingsAllRightsReserved}',
               style: GoogleFonts.inter(
                 fontSize: 12,
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),

@@ -3862,7 +3862,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                           ),
                           subtitle: subtitleParts.isNotEmpty
                               ? Text(
-                                  subtitleParts.join(' â€¢ '),
+                                  subtitleParts.join(' • '),
                                   style: GoogleFonts.inter(
                                     fontSize: 12,
                                     color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
@@ -4687,7 +4687,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     final title = (conversation.title ?? conversation.rawTitle ?? '').trim();
     final titlePreview = _matchField(title, queryVariants);
     if (titlePreview != null) {
-      register(4.0, 'Title match â€¢ $titlePreview');
+      register(4.0, 'Title match • $titlePreview');
     }
 
     final preloaded =
@@ -4737,7 +4737,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     for (final name in memberNames) {
       final snippet = _matchField(name, queryVariants);
       if (snippet != null) {
-        register(3.2, 'Member â€¢ $snippet');
+        register(3.2, 'Member • $snippet');
         break;
       }
     }
@@ -4753,7 +4753,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     final lastMessageSnippet =
         _matchField(conversation.lastMessage, queryVariants);
     if (lastMessageSnippet != null) {
-      register(2.6, 'Latest message â€¢ â€œ$lastMessageSnippetâ€');
+      register(2.6, 'Latest message • â€œ$lastMessageSnippetâ€');
     }
 
     final cachedMessages = chatProvider.messages[conversation.id];
@@ -4765,8 +4765,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   message.senderUsername ??
                   message.senderWallet)
               .trim();
-          final prefix = sender.isNotEmpty ? '$sender â€¢ ' : '';
-          register(2.4, 'Message â€¢ $prefixâ€œ$snippetâ€');
+          final prefix = sender.isNotEmpty ? '$sender • ' : '';
+          register(2.4, 'Message • $prefixâ€œ$snippetâ€');
           break;
         }
       }
@@ -4804,7 +4804,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     for (final variant in queryVariants) {
       if (variant.isEmpty) continue;
       if (lower.contains(variant)) {
-        return 'Wallet match â€¢ ${_shortenWallet(normalized)}';
+        return 'Wallet match • ${_shortenWallet(normalized)}';
       }
     }
     return null;

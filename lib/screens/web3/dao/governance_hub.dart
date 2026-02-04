@@ -990,7 +990,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '$totalVotes votes â€¢ ${supportPct.toStringAsFixed(1)}% support',
+                    '$totalVotes votes • ${supportPct.toStringAsFixed(1)}% support',
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       color: Colors.grey[500],
@@ -2136,7 +2136,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                                   ),
                                 ),
                                 Text(
-                                  '${delegate.delegatorCount} delegators â€¢ ${(delegate.participationRate * 100).toStringAsFixed(0)}% participation',
+                                  '${delegate.delegatorCount} delegators • ${(delegate.participationRate * 100).toStringAsFixed(0)}% participation',
                                   style: GoogleFonts.inter(
                                     fontSize: 12,
                                     color:
@@ -2397,7 +2397,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                                         ),
                                       ),
                                       Text(
-                                        '${delegate.delegatorCount} delegators â€¢ ${(delegate.participationRate * 100).toStringAsFixed(0)}% participation',
+                                        '${delegate.delegatorCount} delegators • ${(delegate.participationRate * 100).toStringAsFixed(0)}% participation',
                                         style: GoogleFonts.inter(
                                           fontSize: 12,
                                           color: Colors.grey[400],

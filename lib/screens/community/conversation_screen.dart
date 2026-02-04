@@ -809,7 +809,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                     if (readAtStr != null && readAtStr.isNotEmpty) {
                       try {
                         final dt = DateTime.parse(readAtStr);
-                        suffix = ' â€¢ ${_formatTimeAgo(dt)}';
+                        suffix = ' • ${_formatTimeAgo(dt)}';
                       } catch (_) {}
                     }
                     return Tooltip(

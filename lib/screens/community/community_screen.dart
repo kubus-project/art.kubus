@@ -2102,7 +2102,7 @@ class _CommunityScreenState extends State<CommunityScreen>
               style: KubusTypography.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
             ),
             subtitle: Text(
-              '${_getTimeAgo(post.timestamp)} â€¢ ${post.category}',
+              '${_getTimeAgo(post.timestamp)} • ${post.category}',
               style: KubusTypography.textTheme.labelSmall,
             ),
             trailing: IconButton(
@@ -2183,7 +2183,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                             post.distanceKm != null
                                 ? l10n.commonDistanceKmAway(post.distanceKm!.toStringAsFixed(1))
                                 : null,
-                          ].whereType<String>().join(' â€¢ '),
+                          ].whereType<String>().join(' • '),
                           style: KubusTypography.textTheme.labelSmall?.copyWith(
                             color: scheme.onSurface.withValues(alpha: 0.6),
                           ),
@@ -2640,7 +2640,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                       if (post.distanceKm != null) ...[
                                         const SizedBox(width: 8),
                                         Text(
-                                          'â€¢ ${post.distanceKm!.toStringAsFixed(1)} km',
+                                          '• ${post.distanceKm!.toStringAsFixed(1)} km',
                                           style: GoogleFonts.inter(
                                             fontSize: 11,
                                             color: Theme.of(context).colorScheme.onTertiaryContainer.withValues(alpha: 0.7),
@@ -5569,7 +5569,7 @@ class _CommunityScreenState extends State<CommunityScreen>
           overflow: TextOverflow.ellipsis,
         ),
         subtitle: Text(
-          [type, address].where((e) => e.toString().trim().isNotEmpty).join(' â€¢ '),
+          [type, address].where((e) => e.toString().trim().isNotEmpty).join(' • '),
           style: GoogleFonts.inter(
             fontSize: 12,
             color: scheme.onSurface.withValues(alpha: 0.6),
@@ -6232,7 +6232,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                           ),
                           subtitle: subtitleParts.isNotEmpty
                               ? Text(
-                                  subtitleParts.join(' â€¢ '),
+                                  subtitleParts.join(' • '),
                                   style: GoogleFonts.inter(
                                     fontSize: 12,
                                     color: theme.colorScheme.onSurface
