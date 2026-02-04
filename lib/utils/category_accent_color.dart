@@ -13,11 +13,11 @@ class CategoryAccentColor {
       case 'exploration':
         return roles.statGreen;
       case 'community':
-        return roles.statAmber;
+        return roles.statBlue;
       case 'collection':
-        return roles.positiveAction;
-      case 'web3':
         return roles.statCoral;
+      case 'web3':
+        return roles.statPurple;
       case 'special':
         return roles.achievementGold;
       default:
