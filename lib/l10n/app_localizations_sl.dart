@@ -6560,7 +6560,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get season0PointsTooltip => 'Izvenveržni žetoni napredka';
 
   @override
-  String get season0OnChainNote => 'Veržne funkcije so na voljo v Labs';
+  String get season0OnChainNote => 'Web3 funkcije so trenutno na voljo v dev-net omrežju.';
 
   @override
   String get mnemonicRevealTitle => 'Prikaži obnovitveno frazo';

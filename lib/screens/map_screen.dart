@@ -465,9 +465,15 @@ class _MapScreenState extends State<MapScreen>
     final selectedMarker = selected;
 
     // Support stacked marker navigation for truly overlapping markers.
+    // Respect current marker visibility/filters so we never page through hidden
+    // markers.
     const double sameCoordinateMeters = 0.75;
-    final stackedMarkers = <ArtMarker>[];
-    for (final marker in _artMarkers) {
+    final stackedMarkers = <ArtMarker>[selectedMarker];
+    final visibleMarkers = _artMarkers.where(
+      (m) => m.hasValidPosition && (_markerLayerVisibility[m.type] ?? true),
+    );
+    for (final marker in visibleMarkers) {
+      if (marker.id == selectedMarker.id) continue;
       final meters = _distanceCalculator.as(
         LengthUnit.Meter,
         selectedMarker.position,
@@ -4332,8 +4338,12 @@ class _MapScreenState extends State<MapScreen>
       // coordinates). Paging through nearby-but-not-identical markers causes
       // anchor jitter and confusing composition.
       const double sameCoordinateMeters = 0.75;
-      final stackedMarkers = <ArtMarker>[];
-      for (final marker in _artMarkers) {
+      final stackedMarkers = <ArtMarker>[selectedMarker];
+      final visibleMarkers = _artMarkers.where(
+        (m) => m.hasValidPosition && (_markerLayerVisibility[m.type] ?? true),
+      );
+      for (final marker in visibleMarkers) {
+        if (marker.id == selectedMarker.id) continue;
         final meters = _distanceCalculator.as(
           LengthUnit.Meter,
           selectedMarker.position,

@@ -36,7 +36,8 @@ class UserService {
       id: 'maya_3d',
       name: 'Maya Digital',
       username: 'maya_3d',
-      bio: 'AR artist exploring the intersection of digital and physical reality. Creating immersive experiences that transform everyday spaces.',
+      bio:
+          'AR artist exploring the intersection of digital and physical reality. Creating immersive experiences that transform everyday spaces.',
       followersCount: 1250,
       followingCount: 189,
       postsCount: 42,
@@ -45,17 +46,30 @@ class UserService {
       isArtist: true,
       joinedDate: 'Joined March 2024',
       achievementProgress: [
-        AchievementProgress(achievementId: 'first_ar_view', currentProgress: 1, isCompleted: true),
-        AchievementProgress(achievementId: 'ar_enthusiast', currentProgress: 10, isCompleted: false),
-        AchievementProgress(achievementId: 'community_builder', currentProgress: 12, isCompleted: false),
-        AchievementProgress(achievementId: 'early_adopter', currentProgress: 1, isCompleted: true),
+        AchievementProgress(
+            achievementId: 'first_ar_view',
+            currentProgress: 1,
+            isCompleted: true),
+        AchievementProgress(
+            achievementId: 'ar_enthusiast',
+            currentProgress: 10,
+            isCompleted: false),
+        AchievementProgress(
+            achievementId: 'community_builder',
+            currentProgress: 12,
+            isCompleted: false),
+        AchievementProgress(
+            achievementId: 'early_adopter',
+            currentProgress: 1,
+            isCompleted: true),
       ],
     ),
     const User(
       id: 'alex_nft',
       name: 'Alex Creator',
       username: 'alex_nft',
-      bio: 'NFT creator and blockchain enthusiast. Building the future of digital ownership through art and technology.',
+      bio:
+          'NFT creator and blockchain enthusiast. Building the future of digital ownership through art and technology.',
       followersCount: 892,
       followingCount: 341,
       postsCount: 67,
@@ -64,16 +78,26 @@ class UserService {
       isArtist: true,
       joinedDate: 'Joined January 2024',
       achievementProgress: [
-        AchievementProgress(achievementId: 'first_nft_mint', currentProgress: 1, isCompleted: true),
-        AchievementProgress(achievementId: 'nft_collector', currentProgress: 3, isCompleted: false),
-        AchievementProgress(achievementId: 'art_supporter', currentProgress: 1, isCompleted: false),
+        AchievementProgress(
+            achievementId: 'first_nft_mint',
+            currentProgress: 1,
+            isCompleted: true),
+        AchievementProgress(
+            achievementId: 'nft_collector',
+            currentProgress: 3,
+            isCompleted: false),
+        AchievementProgress(
+            achievementId: 'art_supporter',
+            currentProgress: 1,
+            isCompleted: false),
       ],
     ),
     const User(
       id: 'sam_ar',
       name: 'Sam Artist',
       username: 'sam_ar',
-      bio: 'Interactive AR sculptor. Passionate about collaborative art that responds to viewer interaction. Let\'s build the future together! 🚀',
+      bio:
+          'Interactive AR sculptor. Passionate about collaborative art that responds to viewer interaction. Let\'s build the future together! 🚀',
       followersCount: 2150,
       followingCount: 203,
       postsCount: 28,
@@ -82,17 +106,28 @@ class UserService {
       isArtist: true,
       joinedDate: 'Joined February 2024',
       achievementProgress: [
-        AchievementProgress(achievementId: 'first_ar_view', currentProgress: 1, isCompleted: true),
-        AchievementProgress(achievementId: 'ar_enthusiast', currentProgress: 8, isCompleted: false),
-        AchievementProgress(achievementId: 'first_post', currentProgress: 1, isCompleted: true),
-        AchievementProgress(achievementId: 'art_supporter', currentProgress: 5, isCompleted: false),
+        AchievementProgress(
+            achievementId: 'first_ar_view',
+            currentProgress: 1,
+            isCompleted: true),
+        AchievementProgress(
+            achievementId: 'ar_enthusiast',
+            currentProgress: 8,
+            isCompleted: false),
+        AchievementProgress(
+            achievementId: 'first_post', currentProgress: 1, isCompleted: true),
+        AchievementProgress(
+            achievementId: 'art_supporter',
+            currentProgress: 5,
+            isCompleted: false),
       ],
     ),
     const User(
       id: 'luna_viz',
       name: 'Luna Vision',
       username: 'luna_viz',
-      bio: 'Exploring the infinite possibilities at the intersection of blockchain and creativity. Every pixel tells a story.',
+      bio:
+          'Exploring the infinite possibilities at the intersection of blockchain and creativity. Every pixel tells a story.',
       followersCount: 743,
       followingCount: 156,
       postsCount: 91,
@@ -101,14 +136,48 @@ class UserService {
       isArtist: false,
       joinedDate: 'Joined April 2024',
       achievementProgress: [
-        AchievementProgress(achievementId: 'first_comment', currentProgress: 1, isCompleted: true),
-        AchievementProgress(achievementId: 'commentator', currentProgress: 7, isCompleted: false),
-        AchievementProgress(achievementId: 'gallery_visitor', currentProgress: 1, isCompleted: true),
+        AchievementProgress(
+            achievementId: 'first_comment',
+            currentProgress: 1,
+            isCompleted: true),
+        AchievementProgress(
+            achievementId: 'commentator',
+            currentProgress: 7,
+            isCompleted: false),
+        AchievementProgress(
+            achievementId: 'gallery_visitor',
+            currentProgress: 1,
+            isCompleted: true),
       ],
     ),
   ];
 
-  static Future<User?> getUserById(String userId, {bool forceRefresh = false}) async {
+  /// Whether [walletAddress] refers to the currently authenticated/active user.
+  ///
+  /// Some endpoints (like detailed achievements) are intentionally self-only on
+  /// the backend and return 403 for other wallets. Public profile viewing must
+  /// not call those endpoints.
+  static Future<bool> _isCurrentUserWallet(String walletAddress) async {
+    final normalizedTarget = WalletUtils.normalize(walletAddress);
+    if (normalizedTarget.isEmpty) return false;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final stored = (prefs.getString(PreferenceKeys.walletAddress) ??
+              prefs.getString('wallet_address') ??
+              prefs.getString('wallet') ??
+              prefs.getString('walletAddress') ??
+              '')
+          .trim();
+      if (stored.isEmpty) return false;
+      return WalletUtils.equals(stored, normalizedTarget);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<User?> getUserById(String userId,
+      {bool forceRefresh = false}) async {
     try {
       // Consult cache first (unless caller requests fresh data)
       if (!forceRefresh) {
@@ -116,7 +185,8 @@ class UserService {
           // Check TTL
           try {
             final ts = _cacheTimestamps[userId] ?? 0;
-            if (ts > 0 && DateTime.now().millisecondsSinceEpoch - ts > _ttlMillis) {
+            if (ts > 0 &&
+                DateTime.now().millisecondsSinceEpoch - ts > _ttlMillis) {
               // expired
               _cache.remove(userId);
               _cacheTimestamps.remove(userId);
@@ -148,27 +218,38 @@ class UserService {
 
       final followingList = await getFollowingUsers();
       final isFollowing = followingList.contains(userId);
-      final isArtist = (profile['isArtist'] == true) || (profile['is_artist'] == true);
-      final isInstitution = (profile['isInstitution'] == true) || (profile['is_institution'] == true);
+      final isArtist =
+          (profile['isArtist'] == true) || (profile['is_artist'] == true);
+      final isInstitution = (profile['isInstitution'] == true) ||
+          (profile['is_institution'] == true);
       final resolvedWallet = (profile['walletAddress'] ?? userId).toString();
       // Try to parse embedded stats if the profile payload contains them
       int followersFromProfile = 0;
       int followingFromProfile = 0;
       int postsFromProfile = 0;
       try {
-        final stats = profile['stats'] ?? profile['statistics'] ?? profile['meta'];
+        final stats =
+            profile['stats'] ?? profile['statistics'] ?? profile['meta'];
         if (stats is Map<String, dynamic>) {
-          followersFromProfile = _parseInt(stats['followers'] ?? stats['followersCount'] ?? stats['followers_count']);
-          followingFromProfile = _parseInt(stats['following'] ?? stats['followingCount'] ?? stats['following_count']);
-          postsFromProfile = _parseInt(stats['posts'] ?? stats['postsCount'] ?? stats['posts_count']);
+          followersFromProfile = _parseInt(stats['followers'] ??
+              stats['followersCount'] ??
+              stats['followers_count']);
+          followingFromProfile = _parseInt(stats['following'] ??
+              stats['followingCount'] ??
+              stats['following_count']);
+          postsFromProfile = _parseInt(
+              stats['posts'] ?? stats['postsCount'] ?? stats['posts_count']);
         }
       } catch (_) {}
       List<AchievementProgress> achievementProgress = const [];
       try {
-        achievementProgress = await loadAchievementProgress(resolvedWallet);
+        if (await _isCurrentUserWallet(resolvedWallet)) {
+          achievementProgress = await loadAchievementProgress(resolvedWallet);
+        }
       } catch (e) {
         if (kDebugMode) {
-          debugPrint('UserService.getUserById: failed to load achievements for $resolvedWallet: $e');
+          debugPrint(
+              'UserService.getUserById: failed to load achievements for $resolvedWallet: $e');
         }
       }
 
@@ -177,7 +258,9 @@ class UserService {
       try {
         final artistInfo = profile['artistInfo'] ?? profile['artist_info'];
         if (artistInfo is Map<String, dynamic>) {
-          final rawSpecialty = artistInfo['specialty'] ?? artistInfo['fieldOfWork'] ?? artistInfo['field_of_work'];
+          final rawSpecialty = artistInfo['specialty'] ??
+              artistInfo['fieldOfWork'] ??
+              artistInfo['field_of_work'];
           if (rawSpecialty is List) {
             fieldOfWork = rawSpecialty
                 .map((v) => (v ?? '').toString().trim())
@@ -190,7 +273,8 @@ class UserService {
                 .where((v) => v.isNotEmpty)
                 .toList(growable: false);
           }
-          yearsActive = _parseInt(artistInfo['yearsActive'] ?? artistInfo['years_active']);
+          yearsActive = _parseInt(
+              artistInfo['yearsActive'] ?? artistInfo['years_active']);
         } else {
           final raw = profile['fieldOfWork'] ?? profile['field_of_work'];
           if (raw is List) {
@@ -205,7 +289,8 @@ class UserService {
                 .where((v) => v.isNotEmpty)
                 .toList(growable: false);
           }
-          yearsActive = _parseInt(profile['yearsActive'] ?? profile['years_active']);
+          yearsActive =
+              _parseInt(profile['yearsActive'] ?? profile['years_active']);
         }
       } catch (_) {}
 
@@ -213,14 +298,19 @@ class UserService {
       // NOTE: Do not fabricate @handles from wallet addresses. Keep username
       // as the backend-provided handle (without leading '@') or empty.
       final rawUsername = (profile['username'] ?? '').toString().trim();
-      final normalizedUsername = rawUsername.replaceFirst(RegExp(r'^@+'), '').trim();
-      final safeUsername =
-          normalizedUsername.isNotEmpty && !WalletUtils.looksLikeWallet(normalizedUsername)
-              ? normalizedUsername
-              : '';
+      final normalizedUsername =
+          rawUsername.replaceFirst(RegExp(r'^@+'), '').trim();
+      final safeUsername = normalizedUsername.isNotEmpty &&
+              !WalletUtils.looksLikeWallet(normalizedUsername)
+          ? normalizedUsername
+          : '';
 
-      final rawDisplayName = (profile['displayName'] ?? profile['display_name'] ?? '').toString().trim();
-      final safeDisplayName = rawDisplayName.isNotEmpty && !WalletUtils.looksLikeWallet(rawDisplayName)
+      final rawDisplayName =
+          (profile['displayName'] ?? profile['display_name'] ?? '')
+              .toString()
+              .trim();
+      final safeDisplayName = rawDisplayName.isNotEmpty &&
+              !WalletUtils.looksLikeWallet(rawDisplayName)
           ? rawDisplayName
           : '';
 
@@ -241,7 +331,7 @@ class UserService {
         isInstitution: isInstitution,
         fieldOfWork: fieldOfWork,
         yearsActive: yearsActive,
-        joinedDate: profile['createdAt'] != null 
+        joinedDate: profile['createdAt'] != null
             ? 'Joined ${DateTime.parse(profile['createdAt']).month}/${DateTime.parse(profile['createdAt']).year}'
             : 'Joined recently',
         achievementProgress: achievementProgress,
@@ -258,7 +348,8 @@ class UserService {
       );
       if (kDebugMode) {
         try {
-          debugPrint('UserService.getUserById: built user: id=${user.id}, username=${user.username}, avatar=${user.profileImageUrl}');
+          debugPrint(
+              'UserService.getUserById: built user: id=${user.id}, username=${user.username}, avatar=${user.profileImageUrl}');
         } catch (_) {}
       }
       // populate cache & timestamp
@@ -277,12 +368,15 @@ class UserService {
       // non-blocking so callers of getUserById stay fast. The background fetch
       // will update the cached User when it completes.
       try {
-        Future(() async { await fetchAndUpdateUserStats(resolvedWallet); });
+        Future(() async {
+          await fetchAndUpdateUserStats(resolvedWallet);
+        });
       } catch (_) {}
       return user;
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('UserService.getUserById: failed to load profile for $userId: $e');
+        debugPrint(
+            'UserService.getUserById: failed to load profile for $userId: $e');
       }
       // Return null if profile not found
       return null;
@@ -297,13 +391,17 @@ class UserService {
       if (candidate is String) {
         url = candidate.isEmpty ? null : candidate;
       } else if (candidate is Map) {
-        if (candidate['url'] != null && candidate['url'].toString().isNotEmpty) {
+        if (candidate['url'] != null &&
+            candidate['url'].toString().isNotEmpty) {
           url = candidate['url'].toString();
-        } else if (candidate['httpUrl'] != null && candidate['httpUrl'].toString().isNotEmpty) {
+        } else if (candidate['httpUrl'] != null &&
+            candidate['httpUrl'].toString().isNotEmpty) {
           url = candidate['httpUrl'].toString();
-        } else if (candidate['ipfsUrl'] != null && candidate['ipfsUrl'].toString().isNotEmpty) {
+        } else if (candidate['ipfsUrl'] != null &&
+            candidate['ipfsUrl'].toString().isNotEmpty) {
           url = candidate['ipfsUrl'].toString();
-        } else if (candidate['path'] != null && candidate['path'].toString().isNotEmpty) {
+        } else if (candidate['path'] != null &&
+            candidate['path'].toString().isNotEmpty) {
           url = candidate['path'].toString();
         } else {
           url = candidate.toString();
@@ -371,7 +469,8 @@ class UserService {
     _setUsersInCache(users, allowNullMediaOverwrite: true);
   }
 
-  static void _setUsersInCache(List<User> users, {required bool allowNullMediaOverwrite}) {
+  static void _setUsersInCache(List<User> users,
+      {required bool allowNullMediaOverwrite}) {
     try {
       final now = DateTime.now().millisecondsSinceEpoch;
       for (final u in users) {
@@ -426,7 +525,9 @@ class UserService {
       final entries = _cache.keys.toList();
       // Enforce max entries by oldest-first eviction
       if (entries.length > _maxEntries) {
-        final sorted = entries..sort((a, b) => (_cacheTimestamps[a] ?? 0).compareTo(_cacheTimestamps[b] ?? 0));
+        final sorted = entries
+          ..sort((a, b) =>
+              (_cacheTimestamps[a] ?? 0).compareTo(_cacheTimestamps[b] ?? 0));
         final keep = sorted.reversed.take(_maxEntries).toList();
         for (final k in keep) {
           final u = _cache[k]!;
@@ -445,7 +546,8 @@ class UserService {
             'joinedDate': u.joinedDate,
             'profileImageUrl': u.profileImageUrl,
             'coverImageUrl': u.coverImageUrl,
-            'cachedAt': _cacheTimestamps[k] ?? DateTime.now().millisecondsSinceEpoch,
+            'cachedAt':
+                _cacheTimestamps[k] ?? DateTime.now().millisecondsSinceEpoch,
           };
         }
       } else {
@@ -466,7 +568,8 @@ class UserService {
             'joinedDate': u.joinedDate,
             'profileImageUrl': u.profileImageUrl,
             'coverImageUrl': u.coverImageUrl,
-            'cachedAt': _cacheTimestamps[k] ?? DateTime.now().millisecondsSinceEpoch,
+            'cachedAt':
+                _cacheTimestamps[k] ?? DateTime.now().millisecondsSinceEpoch,
           };
         }
       }
@@ -479,7 +582,8 @@ class UserService {
   }
 
   /// Initialize persistent cache into memory. Call once at app startup.
-  static Future<void> initialize({int maxEntries = 500, Duration ttl = const Duration(hours: 24)}) async {
+  static Future<void> initialize(
+      {int maxEntries = 500, Duration ttl = const Duration(hours: 24)}) async {
     try {
       _maxEntries = maxEntries;
       _ttlMillis = ttl.inMilliseconds;
@@ -493,7 +597,9 @@ class UserService {
       for (final k in map.keys) {
         try {
           final v = map[k] as Map<String, dynamic>;
-          final cachedAt = (v['cachedAt'] is int) ? v['cachedAt'] as int : int.tryParse((v['cachedAt'] ?? '').toString()) ?? 0;
+          final cachedAt = (v['cachedAt'] is int)
+              ? v['cachedAt'] as int
+              : int.tryParse((v['cachedAt'] ?? '').toString()) ?? 0;
           if (cachedAt == 0) continue;
           if (now - cachedAt > _ttlMillis) continue; // expired
           // Entries persisted before cover support did not include `coverImageUrl`.
@@ -504,11 +610,18 @@ class UserService {
           final user = User(
             id: v['id']?.toString() ?? k,
             name: v['name']?.toString() ?? 'Unknown creator',
-            username: (v['username']?.toString() ?? '').replaceFirst(RegExp(r'^@+'), ''),
+            username: (v['username']?.toString() ?? '')
+                .replaceFirst(RegExp(r'^@+'), ''),
             bio: v['bio']?.toString() ?? '',
-            followersCount: (v['followersCount'] is int) ? v['followersCount'] as int : int.tryParse((v['followersCount'] ?? '0').toString()) ?? 0,
-            followingCount: (v['followingCount'] is int) ? v['followingCount'] as int : int.tryParse((v['followingCount'] ?? '0').toString()) ?? 0,
-            postsCount: (v['postsCount'] is int) ? v['postsCount'] as int : int.tryParse((v['postsCount'] ?? '0').toString()) ?? 0,
+            followersCount: (v['followersCount'] is int)
+                ? v['followersCount'] as int
+                : int.tryParse((v['followersCount'] ?? '0').toString()) ?? 0,
+            followingCount: (v['followingCount'] is int)
+                ? v['followingCount'] as int
+                : int.tryParse((v['followingCount'] ?? '0').toString()) ?? 0,
+            postsCount: (v['postsCount'] is int)
+                ? v['postsCount'] as int
+                : int.tryParse((v['postsCount'] ?? '0').toString()) ?? 0,
             isFollowing: (v['isFollowing'] == true),
             isVerified: (v['isVerified'] == true),
             isArtist: (v['isArtist'] == true),
@@ -524,7 +637,8 @@ class UserService {
       }
       // If entries exceed max, evict oldest
       if (entries.length > _maxEntries) {
-        final sorted = timestamps.keys.toList()..sort((a, b) => (timestamps[a] ?? 0).compareTo(timestamps[b] ?? 0));
+        final sorted = timestamps.keys.toList()
+          ..sort((a, b) => (timestamps[a] ?? 0).compareTo(timestamps[b] ?? 0));
         final toKeep = sorted.reversed.take(_maxEntries).toSet();
         final newEntries = <String, User>{};
         final newTimestamps = <String, int>{};
@@ -555,7 +669,9 @@ class UserService {
           }
         }
         // Persist cleaned cache back to prefs (best-effort)
-        try { await _persistCache(); } catch (_) {}
+        try {
+          await _persistCache();
+        } catch (_) {}
       } catch (_) {}
     } catch (e) {
       if (kDebugMode) {
@@ -612,7 +728,8 @@ class UserService {
     // Check in-memory cache first for instant hits
     try {
       for (final entry in _cache.values) {
-        final cachedUsername = entry.username.replaceFirst(RegExp(r'^@+'), '').toLowerCase();
+        final cachedUsername =
+            entry.username.replaceFirst(RegExp(r'^@+'), '').toLowerCase();
         if (cachedUsername == lookup) {
           return entry;
         }
@@ -623,7 +740,10 @@ class UserService {
       final profile = await BackendApiService().findProfileByUsername(lookup);
       if (profile == null) return null;
 
-      final wallet = WalletUtils.normalize((profile['walletAddress'] ?? profile['wallet_address'] ?? profile['wallet'])?.toString());
+      final wallet = WalletUtils.normalize((profile['walletAddress'] ??
+              profile['wallet_address'] ??
+              profile['wallet'])
+          ?.toString());
       if (wallet.isEmpty) return null;
 
       final followingList = await getFollowingUsers();
@@ -631,8 +751,14 @@ class UserService {
       int followers = 0;
       int following = 0;
       if (stats is Map<String, dynamic>) {
-        followers = int.tryParse((stats['followers'] ?? stats['followersCount'] ?? 0).toString()) ?? 0;
-        following = int.tryParse((stats['following'] ?? stats['followingCount'] ?? 0).toString()) ?? 0;
+        followers = int.tryParse(
+                (stats['followers'] ?? stats['followersCount'] ?? 0)
+                    .toString()) ??
+            0;
+        following = int.tryParse(
+                (stats['following'] ?? stats['followingCount'] ?? 0)
+                    .toString()) ??
+            0;
       }
 
       String joinedDate = 'Joined recently';
@@ -644,29 +770,37 @@ class UserService {
         } catch (_) {}
       }
 
-      final resolvedUsername = (profile['username'] ?? lookup).toString().replaceAll('@', '');
-      final avatarCandidate = profile['avatar'] ?? profile['avatar_url'] ?? profile['avatarUrl'];
-      final isArtist = profile['isArtist'] == true || profile['is_artist'] == true;
-      final isInstitution = profile['isInstitution'] == true || profile['is_institution'] == true;
+      final resolvedUsername =
+          (profile['username'] ?? lookup).toString().replaceAll('@', '');
+      final avatarCandidate =
+          profile['avatar'] ?? profile['avatar_url'] ?? profile['avatarUrl'];
+      final isArtist =
+          profile['isArtist'] == true || profile['is_artist'] == true;
+      final isInstitution =
+          profile['isInstitution'] == true || profile['is_institution'] == true;
 
       List<AchievementProgress> achievementProgress = const [];
       try {
-        achievementProgress = await loadAchievementProgress(wallet);
+        if (await _isCurrentUserWallet(wallet)) {
+          achievementProgress = await loadAchievementProgress(wallet);
+        }
       } catch (e) {
         if (kDebugMode) {
-          debugPrint('UserService.getUserByUsername: failed to load achievements for $wallet: $e');
+          debugPrint(
+              'UserService.getUserByUsername: failed to load achievements for $wallet: $e');
         }
       }
 
       final user = User(
         id: wallet,
         name: ((profile['displayName'] ?? '').toString().trim().isNotEmpty &&
-          !WalletUtils.looksLikeWallet((profile['displayName'] ?? '').toString().trim()))
+                !WalletUtils.looksLikeWallet(
+                    (profile['displayName'] ?? '').toString().trim()))
             ? (profile['displayName'] ?? '').toString().trim()
             : ((resolvedUsername.trim().isNotEmpty &&
-              !WalletUtils.looksLikeWallet(resolvedUsername.trim()))
-          ? resolvedUsername.trim()
-          : 'Unknown creator'),
+                    !WalletUtils.looksLikeWallet(resolvedUsername.trim()))
+                ? resolvedUsername.trim()
+                : 'Unknown creator'),
         username: (!WalletUtils.looksLikeWallet(resolvedUsername.trim()))
             ? resolvedUsername.trim()
             : '',
@@ -771,20 +905,20 @@ class UserService {
   static Future<List<User>> getFollowingUsersList() async {
     final followingList = await getFollowingUsers();
     final followingUsers = <User>[];
-    
+
     for (String userId in followingList) {
       final user = await getUserById(userId);
       if (user != null) {
         followingUsers.add(user);
       }
     }
-    
+
     return followingUsers;
   }
 
   static Future<List<User>> getAllUsers() async {
     final followingList = await getFollowingUsers();
-    
+
     return _sampleUsers.map((user) {
       return user.copyWith(isFollowing: followingList.contains(user.id));
     }).toList();
@@ -795,8 +929,11 @@ class UserService {
   static String defaultAvatarUrl(String wallet) {
     final seed = wallet.isEmpty ? 'anon' : WalletUtils.identiconKey(wallet);
     final normalized = seed.trim().isEmpty ? 'anon' : seed.trim();
-    final sanitized = normalized.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '').toLowerCase();
-    final token = sanitized.isNotEmpty ? sanitized : normalized.hashCode.toRadixString(16);
+    final sanitized =
+        normalized.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '').toLowerCase();
+    final token = sanitized.isNotEmpty
+        ? sanitized
+        : normalized.hashCode.toRadixString(16);
     return '$_placeholderAvatarScheme$token';
   }
 
@@ -807,8 +944,12 @@ class UserService {
     final s = (seedOrWallet ?? '').toString();
     if (s.isEmpty) return defaultAvatarUrl('');
     // UUID-like or contains dashes/spaces -> treat as non-wallet
-    final uuidLike = RegExp(r'[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}');
-    if (uuidLike.hasMatch(s) || s.contains('-') || s.contains(' ') || s.contains('@')) {
+    final uuidLike = RegExp(
+        r'[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}');
+    if (uuidLike.hasMatch(s) ||
+        s.contains('-') ||
+        s.contains(' ') ||
+        s.contains('@')) {
       return defaultAvatarUrl('');
     }
     // Otherwise assume it's a wallet/seed and return identicon
@@ -829,19 +970,23 @@ class UserService {
   }
 
   /// Fetch detailed achievement progress for a given wallet from backend
-  static Future<List<AchievementProgress>> loadAchievementProgress(String walletAddress) async {
+  static Future<List<AchievementProgress>> loadAchievementProgress(
+      String walletAddress) async {
     if (walletAddress.isEmpty) return const [];
     try {
       final resp = await BackendApiService().getUserAchievements(walletAddress);
       final definitionsById = <String, achievement_svc.AchievementDefinition>{
-        for (final def in achievement_svc.AchievementService.achievementDefinitions.values)
+        for (final def
+            in achievement_svc.AchievementService.achievementDefinitions.values)
           def.id: def,
       };
       final progressEntries = <String, AchievementProgress>{};
 
-      void addOrUpdate(Map<String, dynamic>? item, {bool forceCompleted = false}) {
+      void addOrUpdate(Map<String, dynamic>? item,
+          {bool forceCompleted = false}) {
         if (item == null) return;
-        final idRaw = item['achievementId'] ?? item['achievement_id'] ?? item['id'];
+        final idRaw =
+            item['achievementId'] ?? item['achievement_id'] ?? item['id'];
         if (idRaw == null) return;
         final id = idRaw.toString();
         if (id.isEmpty) return;
@@ -849,14 +994,23 @@ class UserService {
         final def = definitionsById[id];
         final requiredProgress = (def?.requiredCount ?? 1).clamp(1, 1 << 30);
         final progressValue = _parseInt(
-          item['currentProgress'] ?? item['current_progress'] ?? item['progress'],
+          item['currentProgress'] ??
+              item['current_progress'] ??
+              item['progress'],
         ).clamp(0, requiredProgress);
-        final completedFlag = forceCompleted || item['isCompleted'] == true || item['is_completed'] == true ||
+        final completedFlag = forceCompleted ||
+            item['isCompleted'] == true ||
+            item['is_completed'] == true ||
             (item['status']?.toString().toLowerCase() == 'completed');
-        final currentProgress = completedFlag ? requiredProgress : (progressValue == 0 ? 0 : progressValue);
+        final currentProgress = completedFlag
+            ? requiredProgress
+            : (progressValue == 0 ? 0 : progressValue);
 
         DateTime? completedAt;
-        final completedRaw = item['completedAt'] ?? item['completed_at'] ?? item['unlockedAt'] ?? item['unlocked_at'];
+        final completedRaw = item['completedAt'] ??
+            item['completed_at'] ??
+            item['unlockedAt'] ??
+            item['unlocked_at'];
         if (completedRaw != null) {
           try {
             completedAt = DateTime.parse(completedRaw.toString());
@@ -865,7 +1019,9 @@ class UserService {
 
         progressEntries[id] = AchievementProgress(
           achievementId: id,
-          currentProgress: completedFlag && currentProgress < requiredProgress ? requiredProgress : currentProgress,
+          currentProgress: completedFlag && currentProgress < requiredProgress
+              ? requiredProgress
+              : currentProgress,
           isCompleted: completedFlag,
           completedDate: completedAt,
         );
@@ -962,7 +1118,8 @@ class UserService {
   /// Parameters:
   /// - `forceRefresh`: when true, try the backend batch endpoint first for freshest data.
   /// - `batchFirstThreshold`: if the number of wallets >= this threshold, call the batch endpoint first.
-  static Future<List<User>> getUsersByWallets(List<String> wallets, {bool forceRefresh = false, int batchFirstThreshold = 4}) async {
+  static Future<List<User>> getUsersByWallets(List<String> wallets,
+      {bool forceRefresh = false, int batchFirstThreshold = 4}) async {
     final results = <User>[];
     final clean = wallets.where((w) => w.isNotEmpty).toSet().toList();
     if (clean.isEmpty) return results;
@@ -977,20 +1134,42 @@ class UserService {
           for (final p in list) {
             try {
               final profile = p as Map<String, dynamic>;
-              final wallet = (profile['walletAddress'] ?? profile['id'] ?? '').toString();
+              final wallet =
+                  (profile['walletAddress'] ?? profile['id'] ?? '').toString();
               if (wallet.isEmpty) continue;
               final user = User(
                 id: wallet,
-                name: ((profile['displayName'] ?? '').toString().trim().isNotEmpty &&
-                  !WalletUtils.looksLikeWallet((profile['displayName'] ?? '').toString().trim()))
+                name: ((profile['displayName'] ?? '')
+                            .toString()
+                            .trim()
+                            .isNotEmpty &&
+                        !WalletUtils.looksLikeWallet(
+                            (profile['displayName'] ?? '').toString().trim()))
                     ? (profile['displayName'] ?? '').toString().trim()
-                    : (((profile['username'] ?? '').toString().replaceAll('@', '').trim().isNotEmpty &&
-                      !WalletUtils.looksLikeWallet((profile['username'] ?? '').toString().replaceAll('@', '').trim()))
-                  ? (profile['username'] ?? '').toString().replaceAll('@', '').trim()
-                  : 'Unknown creator'),
+                    : (((profile['username'] ?? '')
+                                .toString()
+                                .replaceAll('@', '')
+                                .trim()
+                                .isNotEmpty &&
+                            !WalletUtils.looksLikeWallet(
+                                (profile['username'] ?? '')
+                                    .toString()
+                                    .replaceAll('@', '')
+                                    .trim()))
+                        ? (profile['username'] ?? '')
+                            .toString()
+                            .replaceAll('@', '')
+                            .trim()
+                        : 'Unknown creator'),
                 username: (!WalletUtils.looksLikeWallet(
-                  (profile['username'] ?? '').toString().replaceAll('@', '').trim()))
-                    ? (profile['username'] ?? '').toString().replaceAll('@', '').trim()
+                        (profile['username'] ?? '')
+                            .toString()
+                            .replaceAll('@', '')
+                            .trim()))
+                    ? (profile['username'] ?? '')
+                        .toString()
+                        .replaceAll('@', '')
+                        .trim()
                     : '',
                 bio: profile['bio'] ?? '',
                 followersCount: 0,
@@ -998,11 +1177,16 @@ class UserService {
                 postsCount: 0,
                 isFollowing: false,
                 isVerified: profile['isVerified'] ?? false,
-                isArtist: profile['isArtist'] == true || profile['is_artist'] == true,
-                isInstitution: profile['isInstitution'] == true || profile['is_institution'] == true,
-                joinedDate: profile['createdAt'] != null ? 'Joined ${DateTime.parse(profile['createdAt']).month}/${DateTime.parse(profile['createdAt']).year}' : 'Joined recently',
+                isArtist:
+                    profile['isArtist'] == true || profile['is_artist'] == true,
+                isInstitution: profile['isInstitution'] == true ||
+                    profile['is_institution'] == true,
+                joinedDate: profile['createdAt'] != null
+                    ? 'Joined ${DateTime.parse(profile['createdAt']).month}/${DateTime.parse(profile['createdAt']).year}'
+                    : 'Joined recently',
                 achievementProgress: [],
-                profileImageUrl: _extractAvatarCandidate(profile['avatar'], wallet),
+                profileImageUrl:
+                    _extractAvatarCandidate(profile['avatar'], wallet),
                 coverImageUrl: _extractMediaCandidate(
                   profile['coverImage'] ??
                       profile['coverImageUrl'] ??
@@ -1018,16 +1202,19 @@ class UserService {
             } catch (e, st) {
               if (kDebugMode) {
                 try {
-                  debugPrint('UserService.getUsersByWallets (batch): failed to parse profile entry: $e');
+                  debugPrint(
+                      'UserService.getUsersByWallets (batch): failed to parse profile entry: $e');
                 } catch (_) {}
-                debugPrint('UserService.getUsersByWallets (batch): stack trace: $st');
+                debugPrint(
+                    'UserService.getUsersByWallets (batch): stack trace: $st');
               }
             }
           }
         }
 
         // Populate internal cache with found users
-        if (found.isNotEmpty) setUsersInCacheAuthoritative(found.values.toList());
+        if (found.isNotEmpty)
+          setUsersInCacheAuthoritative(found.values.toList());
 
         // Build ordered results using found when present, otherwise cached or fallback
         for (final w in wallets) {
@@ -1058,7 +1245,8 @@ class UserService {
         return results;
       } catch (e) {
         if (kDebugMode) {
-          debugPrint('UserService.getUsersByWallets: batch-first attempt failed: $e');
+          debugPrint(
+              'UserService.getUsersByWallets: batch-first attempt failed: $e');
         }
         // fall through to normal cached-first behavior
       }
@@ -1100,23 +1288,45 @@ class UserService {
       final found = <String, User>{};
       if (resp['success'] == true && resp['data'] != null) {
         final list = resp['data'] as List<dynamic>;
-          for (final p in list) {
+        for (final p in list) {
           try {
             final profile = p as Map<String, dynamic>;
-            final wallet = (profile['walletAddress'] ?? profile['id'] ?? '').toString();
+            final wallet =
+                (profile['walletAddress'] ?? profile['id'] ?? '').toString();
             if (wallet.isEmpty) continue;
-                final user = User(
-                id: wallet,
-                name: ((profile['displayName'] ?? '').toString().trim().isNotEmpty &&
-                    !WalletUtils.looksLikeWallet((profile['displayName'] ?? '').toString().trim()))
+            final user = User(
+              id: wallet,
+              name: ((profile['displayName'] ?? '')
+                          .toString()
+                          .trim()
+                          .isNotEmpty &&
+                      !WalletUtils.looksLikeWallet(
+                          (profile['displayName'] ?? '').toString().trim()))
                   ? (profile['displayName'] ?? '').toString().trim()
-                  : (((profile['username'] ?? '').toString().replaceAll('@', '').trim().isNotEmpty &&
-                      !WalletUtils.looksLikeWallet((profile['username'] ?? '').toString().replaceAll('@', '').trim()))
-                    ? (profile['username'] ?? '').toString().replaceAll('@', '').trim()
-                    : 'Unknown creator'),
-                username: (!WalletUtils.looksLikeWallet(
-                    (profile['username'] ?? '').toString().replaceAll('@', '').trim()))
-                  ? (profile['username'] ?? '').toString().replaceAll('@', '').trim()
+                  : (((profile['username'] ?? '')
+                              .toString()
+                              .replaceAll('@', '')
+                              .trim()
+                              .isNotEmpty &&
+                          !WalletUtils.looksLikeWallet(
+                              (profile['username'] ?? '')
+                                  .toString()
+                                  .replaceAll('@', '')
+                                  .trim()))
+                      ? (profile['username'] ?? '')
+                          .toString()
+                          .replaceAll('@', '')
+                          .trim()
+                      : 'Unknown creator'),
+              username: (!WalletUtils.looksLikeWallet(
+                      (profile['username'] ?? '')
+                          .toString()
+                          .replaceAll('@', '')
+                          .trim()))
+                  ? (profile['username'] ?? '')
+                      .toString()
+                      .replaceAll('@', '')
+                      .trim()
                   : '',
               bio: profile['bio'] ?? '',
               followersCount: 0,
@@ -1124,11 +1334,16 @@ class UserService {
               postsCount: 0,
               isFollowing: false,
               isVerified: profile['isVerified'] ?? false,
-              isArtist: profile['isArtist'] == true || profile['is_artist'] == true,
-              isInstitution: profile['isInstitution'] == true || profile['is_institution'] == true,
-              joinedDate: profile['createdAt'] != null ? 'Joined ${DateTime.parse(profile['createdAt']).month}/${DateTime.parse(profile['createdAt']).year}' : 'Joined recently',
+              isArtist:
+                  profile['isArtist'] == true || profile['is_artist'] == true,
+              isInstitution: profile['isInstitution'] == true ||
+                  profile['is_institution'] == true,
+              joinedDate: profile['createdAt'] != null
+                  ? 'Joined ${DateTime.parse(profile['createdAt']).month}/${DateTime.parse(profile['createdAt']).year}'
+                  : 'Joined recently',
               achievementProgress: [],
-              profileImageUrl: _extractAvatarCandidate(profile['avatar'], wallet),
+              profileImageUrl:
+                  _extractAvatarCandidate(profile['avatar'], wallet),
               coverImageUrl: _extractMediaCandidate(
                 profile['coverImage'] ??
                     profile['coverImageUrl'] ??
@@ -1141,13 +1356,15 @@ class UserService {
             );
             found[wallet] = user;
             _legacyCacheMissingCoverKey.remove(wallet);
-            } catch (e, st) {
-              if (kDebugMode) {
-                try {
-                  debugPrint('UserService.getUsersByWallets (batch fallback): failed to parse profile entry: $e');
-                } catch (_) {}
-                debugPrint('UserService.getUsersByWallets (batch fallback): stack trace: $st');
-              }
+          } catch (e, st) {
+            if (kDebugMode) {
+              try {
+                debugPrint(
+                    'UserService.getUsersByWallets (batch fallback): failed to parse profile entry: $e');
+              } catch (_) {}
+              debugPrint(
+                  'UserService.getUsersByWallets (batch fallback): stack trace: $st');
+            }
           }
         }
       }

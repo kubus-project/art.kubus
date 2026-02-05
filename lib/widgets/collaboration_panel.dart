@@ -43,6 +43,10 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
 
   Timer? _debounce;
   Timer? _memberProfileResolveDebounce;
+  bool _memberProfileResolutionQueued = false;
+  String _lastResolvedWalletsSignature = '';
+  List<String> _pendingResolveWallets = const <String>[];
+  bool _pendingResolveForceRefresh = false;
   int _requestSeq = 0;
 
   bool _loadingSuggestions = false;
@@ -76,26 +80,63 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
       await collab.loadCollaborators(widget.entityType, widget.entityId);
       if (!mounted) return;
       final members = collab.collaboratorsFor(widget.entityType, widget.entityId);
-      _scheduleMemberProfileResolution(members, forceRefresh: true);
+      _queueMemberProfileResolution(members, forceRefresh: true);
     } catch (_) {
       // provider handles error state
     }
   }
 
-  void _scheduleMemberProfileResolution(
+  void _queueMemberProfileResolution(
     List<CollabMember> members, {
     required bool forceRefresh,
   }) {
     if (members.isEmpty) return;
-    if (_memberProfileResolutionInFlight) return;
 
     final wallets = members
         .map((m) => WalletUtils.canonical(m.user?.walletAddress ?? m.userId))
         .where((w) => w.isNotEmpty && WalletUtils.looksLikeWallet(w))
         .toSet()
-        .toList(growable: false);
+        .toList(growable: false)
+      ..sort();
 
     if (wallets.isEmpty) return;
+
+    final signature = wallets.join('|');
+    if (!forceRefresh && signature == _lastResolvedWalletsSignature) {
+      return;
+    }
+    _lastResolvedWalletsSignature = signature;
+    _pendingResolveWallets = wallets;
+    _pendingResolveForceRefresh = forceRefresh;
+
+    if (_memberProfileResolutionQueued) return;
+    _memberProfileResolutionQueued = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _memberProfileResolutionQueued = false;
+      if (!mounted) return;
+      final pending = _pendingResolveWallets;
+      final pendingForceRefresh = _pendingResolveForceRefresh;
+      _pendingResolveWallets = const <String>[];
+      _pendingResolveForceRefresh = false;
+      _scheduleWalletProfileResolution(
+        pending,
+        forceRefresh: pendingForceRefresh,
+      );
+    });
+  }
+
+  void _scheduleWalletProfileResolution(
+    List<String> wallets, {
+    required bool forceRefresh,
+  }) {
+    if (wallets.isEmpty) return;
+    if (_memberProfileResolutionInFlight) {
+      // Avoid dropping updates while a previous resolve call is still in flight.
+      // Store the latest requested wallets and retry once the current call settles.
+      _pendingResolveWallets = wallets;
+      _pendingResolveForceRefresh = _pendingResolveForceRefresh || forceRefresh;
+      return;
+    }
 
     _memberProfileResolveDebounce?.cancel();
     _memberProfileResolveDebounce = Timer(const Duration(milliseconds: 120), () {
@@ -127,6 +168,16 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
       });
     } finally {
       _memberProfileResolutionInFlight = false;
+      if (!mounted) return;
+      final pending = _pendingResolveWallets;
+      if (pending.isEmpty) return;
+      final pendingForceRefresh = _pendingResolveForceRefresh;
+      _pendingResolveWallets = const <String>[];
+      _pendingResolveForceRefresh = false;
+      _scheduleWalletProfileResolution(
+        pending,
+        forceRefresh: pendingForceRefresh,
+      );
     }
   }
 
@@ -425,7 +476,7 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
     final canManageMembers = _canManageMembers(myRole);
 
     // Keep member identities fresh (e.g. username/displayName changes).
-    _scheduleMemberProfileResolution(members, forceRefresh: false);
+    _queueMemberProfileResolution(members, forceRefresh: false);
 
     return LiquidGlassCard(
       padding: const EdgeInsets.all(KubusSpacing.md),
