@@ -238,6 +238,11 @@ class _MapScreenState extends State<MapScreen>
       ValueNotifier<Offset?>(null);
   final Debouncer _overlayAnchorDebouncer = Debouncer();
   final Debouncer _cubeSyncDebouncer = Debouncer();
+    static const Duration _overlayAnchorRefreshThrottle =
+      Duration(milliseconds: 50);
+    int _lastOverlayAnchorRefreshMs = 0;
+    bool _overlayAnchorRefreshInFlight = false;
+    bool _overlayAnchorRefreshQueued = false;
   bool _didOpenInitialMarker = false;
   MapDeepLinkProvider? _mapDeepLinkProvider;
   MainTabProvider? _tabProvider;
@@ -1563,7 +1568,10 @@ class _MapScreenState extends State<MapScreen>
       _mobileLocation = Location();
     }
 
-    _getLocation();
+    // Do not block first entry with OS permission dialogs. We'll still resolve
+    // location immediately when already granted, and only prompt on explicit
+    // user action (e.g. tapping the location controls).
+    _getLocation(promptForPermission: false);
     _startLocationTimer();
 
     final supportsCompass = !kIsWeb &&
@@ -2782,13 +2790,22 @@ class _MapScreenState extends State<MapScreen>
     final baseColor =
         _resolveArtMarkerColor(marker, context.read<ThemeProvider>());
 
+    final double dpr = MediaQuery.of(context).devicePixelRatio;
+    final Size viewport = _mapViewportSize() ?? MediaQuery.sizeOf(context);
+
     try {
       final point = await controller.toScreenLocation(
         ml.LatLng(marker.position.latitude, marker.position.longitude),
       );
       if (!mounted) return;
+      final raw = Offset(point.x.toDouble(), point.y.toDouble());
+      final normalized = _normalizeMapScreenOffset(
+        raw,
+        viewport: viewport,
+        devicePixelRatio: dpr,
+      );
       setState(() {
-        _markerTapRippleOffset = Offset(point.x.toDouble(), point.y.toDouble());
+        _markerTapRippleOffset = normalized;
         _markerTapRippleAt = DateTime.now();
         _markerTapRippleColor = baseColor;
       });
@@ -2879,7 +2896,13 @@ class _MapScreenState extends State<MapScreen>
   // Isometric overlay removed - grid is now integrated in tile provider
 
   Future<void> _handleCurrentLocationTap() async {
-    if (_currentPosition == null) return;
+    if (_currentPosition == null) {
+      await _promptForLocationThenCenter(reason: 'create_marker');
+      if (!mounted) return;
+      if (_currentPosition == null) return;
+    }
+
+    final currentPosition = _currentPosition!;
 
     // Check if there's a nearby marker (within 30 meters)
     ArtMarker? nearbyMarker;
@@ -2888,7 +2911,7 @@ class _MapScreenState extends State<MapScreen>
     for (final marker in _artMarkers) {
       final distance = _distanceCalculator.as(
         LengthUnit.Meter,
-        _currentPosition!,
+        currentPosition,
         marker.position,
       );
 
@@ -2926,7 +2949,11 @@ class _MapScreenState extends State<MapScreen>
   }
 
   Future<void> _startMarkerCreationFlow() async {
-    if (_currentPosition == null) return;
+    if (_currentPosition == null) {
+      await _promptForLocationThenCenter(reason: 'marker_creation');
+      if (!mounted) return;
+      if (_currentPosition == null) return;
+    }
     final refreshed = await _refreshMarkerSubjectData(force: true);
     if (!mounted) return;
     final subjectData = refreshed ?? _snapshotMarkerSubjectData();
@@ -3490,12 +3517,62 @@ class _MapScreenState extends State<MapScreen>
     return null;
   }
 
-  void _queueOverlayAnchorRefresh() {
+  void _queueOverlayAnchorRefresh({bool force = false}) {
     if (_selectedMarkerData == null) return;
     if (!_styleInitialized) return;
-    _overlayAnchorDebouncer(const Duration(milliseconds: 66), () {
-      unawaited(_refreshSelectedMarkerAnchor());
-    });
+
+    if (_overlayAnchorRefreshInFlight) {
+      _overlayAnchorRefreshQueued = true;
+      return;
+    }
+
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    if (!force &&
+        nowMs - _lastOverlayAnchorRefreshMs <
+            _overlayAnchorRefreshThrottle.inMilliseconds) {
+      _overlayAnchorRefreshQueued = true;
+      return;
+    }
+
+    _overlayAnchorRefreshInFlight = true;
+    _lastOverlayAnchorRefreshMs = nowMs;
+    _overlayAnchorRefreshQueued = false;
+
+    unawaited(_refreshSelectedMarkerAnchor().whenComplete(() {
+      _overlayAnchorRefreshInFlight = false;
+      if (!_overlayAnchorRefreshQueued) return;
+      _overlayAnchorRefreshQueued = false;
+      if (!mounted) return;
+      _overlayAnchorDebouncer(_overlayAnchorRefreshThrottle, () {
+        if (!mounted) return;
+        _queueOverlayAnchorRefresh(force: true);
+      });
+    }));
+  }
+
+  Offset _normalizeMapScreenOffset(
+    Offset raw, {
+    required Size viewport,
+    required double devicePixelRatio,
+  }) {
+    if (kIsWeb) return raw;
+    if (devicePixelRatio <= 1.01) return raw;
+
+    final bool looksLikePhysicalPixels = raw.dx > viewport.width * 1.2 ||
+        raw.dy > viewport.height * 1.2 ||
+        raw.dx < -viewport.width * 0.2 ||
+        raw.dy < -viewport.height * 0.2;
+    if (!looksLikePhysicalPixels) return raw;
+
+    final scaled = Offset(
+      raw.dx / devicePixelRatio,
+      raw.dy / devicePixelRatio,
+    );
+    final bool scaledLooksReasonable = scaled.dx <= viewport.width * 1.2 &&
+        scaled.dy <= viewport.height * 1.2 &&
+        scaled.dx >= -viewport.width * 0.2 &&
+        scaled.dy >= -viewport.height * 0.2;
+    return scaledLooksReasonable ? scaled : raw;
   }
 
   Future<void> _refreshSelectedMarkerAnchor() async {
@@ -3504,16 +3581,87 @@ class _MapScreenState extends State<MapScreen>
     if (controller == null || marker == null) return;
     if (!_styleInitialized) return;
 
+    final double dpr = MediaQuery.of(context).devicePixelRatio;
+    final Size viewport = _mapViewportSize() ?? MediaQuery.sizeOf(context);
+
     try {
       final screen = await controller.toScreenLocation(
         ml.LatLng(marker.position.latitude, marker.position.longitude),
       );
       if (!mounted) return;
-      final next = Offset(screen.x.toDouble(), screen.y.toDouble());
+      final raw = Offset(screen.x.toDouble(), screen.y.toDouble());
+      final next = _normalizeMapScreenOffset(
+        raw,
+        viewport: viewport,
+        devicePixelRatio: dpr,
+      );
       if (_selectedMarkerAnchorNotifier.value == next) return;
       _selectedMarkerAnchorNotifier.value = next;
     } catch (_) {
       // Ignore projection failures during style transitions.
+    }
+  }
+
+  Future<void> _promptForLocationThenCenter({required String reason}) async {
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final l10n = AppLocalizations.of(context)!;
+
+    final bool previousAutoFollow = _autoFollow;
+
+    if (!_autoFollow) {
+      setState(() {
+        _autoFollow = true;
+      });
+    }
+
+    await _getLocation(promptForPermission: true);
+    if (!mounted) return;
+
+    if (_currentPosition == null) {
+      if (_autoFollow != previousAutoFollow) {
+        setState(() {
+          _autoFollow = previousAutoFollow;
+        });
+      }
+      messenger?.showKubusSnackBar(
+        SnackBar(content: Text(l10n.mapLocationUnavailableToast)),
+        tone: KubusSnackBarTone.warning,
+      );
+      if (kDebugMode) {
+        AppConfig.debugPrint(
+          'MapScreen: location unavailable after user request (reason=$reason)',
+        );
+      }
+      return;
+    }
+
+    // Best-effort: center immediately so UI doesn't feel "stuck" while waiting
+    // for a periodic timer/stream tick.
+    unawaited(
+      _animateMapTo(
+        _currentPosition!,
+        zoom: math.max(_lastZoom, 16),
+        rotation: _autoFollow ? _direction : null,
+      ),
+    );
+  }
+
+  Future<void> _handleCenterOnMeTap() async {
+    if (_currentPosition == null) {
+      await _promptForLocationThenCenter(reason: 'center_on_me');
+      return;
+    }
+
+    final enable = !_autoFollow;
+    setState(() => _autoFollow = enable);
+    if (enable) {
+      unawaited(
+        _animateMapTo(
+          _currentPosition!,
+          zoom: math.max(_lastZoom, 16),
+        ),
+      );
     }
   }
 
@@ -4056,6 +4204,10 @@ class _MapScreenState extends State<MapScreen>
     _cameraIsMoving = false;
     final wasProgrammatic = _programmaticCameraMove;
     _programmaticCameraMove = false;
+
+    if (_selectedMarkerData != null) {
+      _queueOverlayAnchorRefresh(force: true);
+    }
 
     _queueMarkerRefresh(fromGesture: !wasProgrammatic);
     if (_styleInitialized) {
@@ -5100,7 +5252,11 @@ class _MapScreenState extends State<MapScreen>
             ignoring: false,
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final anchor = anchorValue;
+                final Offset? anchor = (anchorValue != null &&
+                        anchorValue.dx.isFinite &&
+                        anchorValue.dy.isFinite)
+                    ? anchorValue
+                    : null;
                 const double cardWidth = 360;
                 final double maxWidth =
                     math.min(cardWidth, constraints.maxWidth - 32);
@@ -5138,9 +5294,16 @@ class _MapScreenState extends State<MapScreen>
 
                 final bool isCompact = constraints.maxWidth < 600;
 
+                final bool anchorLooksUsable = anchor != null &&
+                  anchor.dx >= -constraints.maxWidth * 0.5 &&
+                  anchor.dx <= constraints.maxWidth * 1.5 &&
+                  anchor.dy >= -constraints.maxHeight * 0.5 &&
+                  anchor.dy <= constraints.maxHeight * 1.5;
+                final Offset? safeAnchor = anchorLooksUsable ? anchor : null;
+
                 // Prefer anchoring above the marker. If the anchor isn't ready yet,
                 // fall back to a stable heuristic so the first frame looks good.
-                final markerY = anchor?.dy ??
+                final markerY = safeAnchor?.dy ??
                     (constraints.maxHeight * (isCompact ? 0.72 : 0.66));
                 double top = markerY - cardHeight - markerOffset;
                 if (top < topSafe) {
@@ -5150,7 +5313,7 @@ class _MapScreenState extends State<MapScreen>
 
                 if (kDebugMode) {
                   AppConfig.debugPrint(
-                    'MapScreen: card anchor=(${anchor?.dx.toStringAsFixed(0)}, ${anchor?.dy.toStringAsFixed(0)}) '
+                    'MapScreen: card anchor=(${safeAnchor?.dx.toStringAsFixed(0)}, ${safeAnchor?.dy.toStringAsFixed(0)}) '
                     'pos=(${left.toStringAsFixed(0)}, ${top.toStringAsFixed(0)}) '
                     'maxH=${maxCardHeight.toStringAsFixed(0)} estH=${estimatedHeight.toStringAsFixed(0)} cardH=${cardHeight.toStringAsFixed(0)}',
                   );
@@ -6532,20 +6695,7 @@ class _MapScreenState extends State<MapScreen>
               icon: Icons.my_location,
               tooltip: l10n.mapCenterOnMeTooltip,
               active: _autoFollow,
-              onTap: _currentPosition == null
-                  ? null
-                  : () {
-                      final enable = !_autoFollow;
-                      setState(() => _autoFollow = enable);
-                      if (enable) {
-                        unawaited(
-                          _animateMapTo(
-                            _currentPosition!,
-                            zoom: math.max(_lastZoom, 16),
-                          ),
-                        );
-                      }
-                    },
+              onTap: () => unawaited(_handleCenterOnMeTap()),
             ),
             const SizedBox(height: 10),
             Semantics(

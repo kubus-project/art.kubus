@@ -2496,6 +2496,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get mapMarkerCreateFailedToast => 'Označevalca ni bilo mogoče ustvariti. Poskusi znova.';
 
   @override
+  String get mapLocationUnavailableToast => 'Vaše lokacije ni mogoče določiti.';
+
+  @override
   String get mapMarkerCreateWalletRequired => 'Poveži denarnico in ustvari AR-pripravljeno umetnino, da lahko postaviš označevalec.';
 
   @override
