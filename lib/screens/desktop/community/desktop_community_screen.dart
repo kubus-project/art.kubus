@@ -1856,7 +1856,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
   void _handleSearchResultTap(Map<String, dynamic> profile) {
     final identity = UserIdentityDisplayUtils.fromProfileMap(profile);
-    final label = identity.name == 'Unknown creator' ? '' : identity.name;
+    final label = identity.name == 'Unknown artist' ? '' : identity.name;
     setState(() {
       if (label.isNotEmpty) {
         _communitySearchController.text = label;

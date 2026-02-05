@@ -58,7 +58,7 @@ class UserIdentityDisplayUtils {
       );
     }
 
-    return const UserIdentityDisplay(name: 'Unknown creator', username: null);
+    return const UserIdentityDisplay(name: 'Unknown artist', username: null);
   }
 
   static UserIdentityDisplay fromCreatorMap(Map<String, dynamic> raw) {

@@ -58,6 +58,19 @@ import '../../utils/creator_display_format.dart';
 import '../../utils/wallet_utils.dart';
 import '../../widgets/support/support_section.dart';
 
+@visibleForTesting
+int resolveArtworksDiscoveredCount({
+  required int statsCounterValue,
+  required int profileCounterValue,
+  required int localFallbackValue,
+}) {
+  final bestRemote = profileCounterValue > statsCounterValue
+      ? profileCounterValue
+      : statsCounterValue;
+  if (bestRemote > 0) return bestRemote;
+  return localFallbackValue;
+}
+
 /// Desktop home screen with spacious layout and proper grid systems
 /// Inspired by Twitter/X feed presentation and Google Maps panels
 class DesktopHomeScreen extends StatefulWidget {
@@ -66,7 +79,6 @@ class DesktopHomeScreen extends StatefulWidget {
   @override
   State<DesktopHomeScreen> createState() => _DesktopHomeScreenState();
 }
-
 
 class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     with TickerProviderStateMixin {
@@ -217,8 +229,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           'DesktopHomeScreen: resolving creator identities for ${targets.length} wallet(s)');
     }
 
-    final updates =
-        <String, ({String displayName, String? username})>{};
+    final updates = <String, ({String displayName, String? username})>{};
     try {
       final futures = targets.map((wallet) async {
         try {
@@ -463,8 +474,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                       borderRadius: BorderRadius.zero,
                       blurSigma: KubusGlassEffects.blurSigmaLight,
                       showBorder: false,
-                      backgroundColor:
-                          scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10),
+                      backgroundColor: scheme.surface
+                          .withValues(alpha: isDark ? 0.16 : 0.10),
                       child: _buildRightSidebar(themeProvider),
                     ),
                   ),
@@ -508,7 +519,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                 // Welcome card
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(DetailSpacing.xxl, 0, DetailSpacing.xxl, DetailSpacing.xl),
+                    padding: const EdgeInsets.fromLTRB(DetailSpacing.xxl, 0,
+                        DetailSpacing.xxl, DetailSpacing.xl),
                     child: _buildWelcomeCard(),
                   ),
                 ),
@@ -516,7 +528,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                 // Stats grid
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(DetailSpacing.xxl, 0, DetailSpacing.xxl, DetailSpacing.xxl),
+                    padding: const EdgeInsets.fromLTRB(DetailSpacing.xxl, 0,
+                        DetailSpacing.xxl, DetailSpacing.xxl),
                     child: _buildStatsGrid(),
                   ),
                 ),
@@ -524,7 +537,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                 // Quick actions
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(DetailSpacing.xxl, 0, DetailSpacing.xxl, DetailSpacing.xxl),
+                    padding: const EdgeInsets.fromLTRB(DetailSpacing.xxl, 0,
+                        DetailSpacing.xxl, DetailSpacing.xxl),
                     child: _buildQuickActions(),
                   ),
                 ),
@@ -532,7 +546,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                 // Featured artworks
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(DetailSpacing.xxl, 0, DetailSpacing.xxl, 56),
+                    padding: const EdgeInsets.fromLTRB(
+                        DetailSpacing.xxl, 0, DetailSpacing.xxl, 56),
                     child: _buildFeaturedArtworks(),
                   ),
                 ),
@@ -540,7 +555,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                 // Support / Donate
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(DetailSpacing.xxl, 0, DetailSpacing.xxl, DetailSpacing.xxl),
+                    padding: const EdgeInsets.fromLTRB(DetailSpacing.xxl, 0,
+                        DetailSpacing.xxl, DetailSpacing.xxl),
                     child: const SupportSectionCard(),
                   ),
                 ),
@@ -909,12 +925,24 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         discoveredSnapshot == null &&
         discoveredError == null;
 
-    final discoveredFromStats = discoveredSnapshot?.counters['artworksDiscovered'] ?? 0;
-    final discoveredCount = discoveredFromStats > 0
-        ? discoveredFromStats
-        : profileProvider.artworksCount > 0
-            ? profileProvider.artworksCount
-            : artworkProvider.artworks.where((a) => a.isDiscovered).length;
+    final discoveredFromStats =
+        discoveredSnapshot?.counters['artworksDiscovered'] ?? 0;
+    final discoveredFromProfile = profileProvider.artworksCount;
+    final discoveredFromLocal =
+        (discoveredFromStats == 0 && discoveredFromProfile == 0)
+            ? artworkProvider.artworks.where((a) => a.isDiscovered).length
+            : 0;
+
+    final discoveredCount = resolveArtworksDiscoveredCount(
+      statsCounterValue: discoveredFromStats,
+      profileCounterValue: discoveredFromProfile,
+      localFallbackValue: discoveredFromLocal,
+    );
+
+    final discoveredDisplayLoading = discoveredLoading &&
+        discoveredFromProfile == 0 &&
+        discoveredFromLocal == 0;
+
     final arSessions = activityProvider.activities
         .where((a) => a.category == ActivityCategory.ar)
         .length;
@@ -960,7 +988,9 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                   height: 160,
                   child: DesktopStatCard(
                     label: l10n.desktopHomeStatArtworksDiscovered,
-                    value: discoveredLoading ? '\u2026' : discoveredCount.toString(),
+                    value: discoveredDisplayLoading
+                        ? '\u2026'
+                        : discoveredCount.toString(),
                     icon: Icons.explore,
                     color: AppColorUtils.tealAccent,
                   ),
@@ -1009,7 +1039,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     final l10n = AppLocalizations.of(context)!;
     final quickScreens = navigationProvider.getQuickActionScreens(maxItems: 12);
     final persona = profileProvider.userPersona;
-    final suggestedKeys = _suggestedQuickActionKeys(persona, profileProvider.currentUser)
+    final suggestedKeys = _suggestedQuickActionKeys(
+            persona, profileProvider.currentUser)
         .where((key) => NavigationProvider.screenDefinitions.containsKey(key))
         .toList(growable: false);
 
@@ -1106,7 +1137,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     );
   }
 
-  List<String> _suggestedQuickActionKeys(UserPersona? persona, UserProfile? currentUser) {
+  List<String> _suggestedQuickActionKeys(
+      UserPersona? persona, UserProfile? currentUser) {
     // Base suggestions by persona
     List<String> suggestions;
     switch (persona) {
@@ -1131,13 +1163,15 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
 
     if (isArtist && isInstitution) {
       // Both badges are active - hide institution_hub, keep studio
-      suggestions = suggestions.where((key) => key != 'institution_hub').toList();
+      suggestions =
+          suggestions.where((key) => key != 'institution_hub').toList();
     } else if (isInstitution && !isArtist) {
       // Only institution badge is active - hide studio
       suggestions = suggestions.where((key) => key != 'studio').toList();
     } else if (isArtist && !isInstitution) {
       // Only artist badge is active - hide institution_hub
-      suggestions = suggestions.where((key) => key != 'institution_hub').toList();
+      suggestions =
+          suggestions.where((key) => key != 'institution_hub').toList();
     }
 
     return suggestions;
@@ -1504,8 +1538,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           SizedBox(
             height: 160,
             child: ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(DetailRadius.lg)),
+              borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(DetailRadius.lg)),
               child: _buildDesktopCardCover(artwork, themeProvider),
             ),
           ),
@@ -1750,17 +1784,20 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             onTap: onTitleTap,
             borderRadius: BorderRadius.circular(DetailRadius.sm),
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: DetailSpacing.xs, horizontal: 2),
+              padding: const EdgeInsets.symmetric(
+                  vertical: DetailSpacing.xs, horizontal: 2),
               child: Text(
                 title,
-                style: DetailTypography.sectionTitle(context).copyWith(fontSize: 17),
+                style: DetailTypography.sectionTitle(context)
+                    .copyWith(fontSize: 17),
               ),
             ),
           )
         else
           Text(
             title,
-            style: DetailTypography.sectionTitle(context).copyWith(fontSize: 17),
+            style:
+                DetailTypography.sectionTitle(context).copyWith(fontSize: 17),
           ),
         const Spacer(),
         IconButton(
@@ -1888,7 +1925,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     return DesktopCard(
       onTap: () {
         if (entry.artworkId != null && entry.artworkId!.isNotEmpty) {
-          openArtwork(context, entry.artworkId!, source: 'desktop_home_trending');
+          openArtwork(context, entry.artworkId!,
+              source: 'desktop_home_trending');
         }
       },
       padding: const EdgeInsets.all(DetailSpacing.md),
@@ -3188,8 +3226,10 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
               child: Builder(
                 builder: (context) {
                   final scheme = Theme.of(context).colorScheme;
-                  final isDark = Theme.of(context).brightness == Brightness.dark;
-                  final glassTint = scheme.surface.withValues(alpha: isDark ? 0.22 : 0.26);
+                  final isDark =
+                      Theme.of(context).brightness == Brightness.dark;
+                  final glassTint =
+                      scheme.surface.withValues(alpha: isDark ? 0.22 : 0.26);
 
                   return LiquidGlassPanel(
                     padding: EdgeInsets.zero,
@@ -3314,7 +3354,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       final resolved =
           wallet.isNotEmpty ? _resolvedCreatorIdentityByWallet[wallet] : null;
       final formatted = CreatorDisplayFormat.format(
-        fallbackLabel: AppLocalizations.of(context)!.desktopHomeCreatorFallbackName,
+        fallbackLabel:
+            AppLocalizations.of(context)!.desktopHomeCreatorFallbackName,
         displayName: resolved?.displayName ?? art.artist,
         username: resolved?.username,
         wallet: wallet,

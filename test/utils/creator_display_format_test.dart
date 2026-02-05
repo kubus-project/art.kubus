@@ -47,10 +47,10 @@ void main() {
       expect(r.secondary, isNull);
     });
 
-    test('treats "Unknown creator" as empty', () {
+    test('treats "Unknown artist" as empty', () {
       final r = CreatorDisplayFormat.format(
         fallbackLabel: 'Creator',
-        displayName: 'Unknown creator',
+        displayName: 'Unknown artist',
         username: null,
         wallet: null,
       );

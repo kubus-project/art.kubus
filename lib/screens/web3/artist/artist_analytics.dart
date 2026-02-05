@@ -23,12 +23,12 @@ class ArtistAnalytics extends StatefulWidget {
   State<ArtistAnalytics> createState() => _ArtistAnalyticsState();
 }
 
-class _ArtistAnalyticsState extends State<ArtistAnalytics> 
+class _ArtistAnalyticsState extends State<ArtistAnalytics>
     with TickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   bool _didPlayEntrance = false;
-  
+
   int _currentChartIndex = 0;
   int _nftsSold = 0;
   bool _loadingNFTs = true;
@@ -82,7 +82,8 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
     }
 
     try {
-      final collectiblesProvider = Provider.of<CollectiblesProvider>(context, listen: false);
+      final collectiblesProvider =
+          Provider.of<CollectiblesProvider>(context, listen: false);
       if (!collectiblesProvider.isLoading &&
           collectiblesProvider.allSeries.isEmpty &&
           collectiblesProvider.allCollectibles.isEmpty) {
@@ -159,7 +160,8 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
           'Track your artwork performance',
           style: GoogleFonts.inter(
             fontSize: 12,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
           ),
         ),
         const SizedBox(height: 12),
@@ -177,7 +179,9 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2)),
+        border: Border.all(
+            color:
+                Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2)),
       ),
       child: DropdownButton<String>(
         value: timeframe,
@@ -188,7 +192,8 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
           fontSize: 12,
           color: Theme.of(context).colorScheme.onSurface,
         ),
-        icon: Icon(Icons.arrow_drop_down, color: Theme.of(context).colorScheme.onSurface, size: 20),
+        icon: Icon(Icons.arrow_drop_down,
+            color: Theme.of(context).colorScheme.onSurface, size: 20),
         items: const <DropdownMenuItem<String>>[
           DropdownMenuItem(value: '7d', child: Text('Last 7 Days')),
           DropdownMenuItem(value: '30d', child: Text('Last 30 Days')),
@@ -228,7 +233,9 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
 
   DateTime _bucketStartUtc(DateTime dt, String bucket) {
     final utc = dt.toUtc();
-    if (bucket == 'hour') return DateTime.utc(utc.year, utc.month, utc.day, utc.hour);
+    if (bucket == 'hour') {
+      return DateTime.utc(utc.year, utc.month, utc.day, utc.hour);
+    }
     if (bucket == 'week') {
       final startOfDay = DateTime.utc(utc.year, utc.month, utc.day);
       return startOfDay.subtract(Duration(days: startOfDay.weekday - 1));
@@ -282,7 +289,9 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
 
     DateTime bucketStart(DateTime dt) {
       final utc = dt.toUtc();
-      if (bucket == 'hour') return DateTime.utc(utc.year, utc.month, utc.day, utc.hour);
+      if (bucket == 'hour') {
+        return DateTime.utc(utc.year, utc.month, utc.day, utc.hour);
+      }
       if (bucket == 'week') {
         final startOfDay = DateTime.utc(utc.year, utc.month, utc.day);
         return startOfDay.subtract(Duration(days: startOfDay.weekday - 1));
@@ -296,7 +305,8 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
             ? const Duration(days: 7)
             : const Duration(days: 1);
 
-    final endBucket = bucketStart(windowEnd.subtract(const Duration(microseconds: 1)));
+    final endBucket =
+        bucketStart(windowEnd.subtract(const Duration(microseconds: 1)));
     final startBucket = endBucket.subtract(step * (expected - 1));
 
     final valuesByBucket = <int, int>{};
@@ -323,7 +333,9 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
 
     DateTime bucketStart(DateTime dt) {
       final utc = dt.toUtc();
-      if (bucket == 'hour') return DateTime.utc(utc.year, utc.month, utc.day, utc.hour);
+      if (bucket == 'hour') {
+        return DateTime.utc(utc.year, utc.month, utc.day, utc.hour);
+      }
       if (bucket == 'week') {
         final startOfDay = DateTime.utc(utc.year, utc.month, utc.day);
         return startOfDay.subtract(Duration(days: startOfDay.weekday - 1));
@@ -337,7 +349,8 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
             ? const Duration(days: 7)
             : const Duration(days: 1);
 
-    final endBucket = bucketStart(windowEnd.subtract(const Duration(microseconds: 1)));
+    final endBucket =
+        bucketStart(windowEnd.subtract(const Duration(microseconds: 1)));
     final startBucket = endBucket.subtract(step * (count - 1));
 
     String labelFor(DateTime bucketStartUtc) {
@@ -393,16 +406,21 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
         final snapshotCounters = snapshot?.counters ?? const <String, int>{};
 
         final artworks = artworkProvider.userArtworks;
-        final estimatedRewards = artworks.fold<int>(0, (sum, a) => sum + a.actualRewards);
+        final estimatedRewards =
+            artworks.fold<int>(0, (sum, a) => sum + a.actualRewards);
         final kub8Balance = web3.kub8Balance;
         final totalRevenueKub8 = kub8Balance + estimatedRewards.toDouble();
 
-        final fallbackViews = artworks.fold<int>(0, (sum, a) => sum + a.viewsCount);
-        final totalVisitors = snapshotCounters['viewsReceived'] ?? fallbackViews;
+        final fallbackViews =
+            artworks.fold<int>(0, (sum, a) => sum + a.viewsCount);
+        final totalVisitors =
+            snapshotCounters['viewsReceived'] ?? fallbackViews;
         final fallbackMarkers = artworks.where((a) => a.arEnabled).length;
-        final activeMarkers = snapshotCounters['arEnabledArtworks'] ?? fallbackMarkers;
+        final activeMarkers =
+            snapshotCounters['arEnabledArtworks'] ?? fallbackMarkers;
 
-        final timeframe = context.watch<AnalyticsFiltersProvider>().artistTimeframe;
+        final timeframe =
+            context.watch<AnalyticsFiltersProvider>().artistTimeframe;
         final bucket = _bucketForTimeframe(timeframe);
         final duration = _durationForTimeframe(timeframe);
         final now = DateTime.now().toUtc();
@@ -505,19 +523,135 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                 scope: 'private',
               );
 
+        final canComputeSeriesChange =
+            walletAddress.isNotEmpty && statsProvider.analyticsEnabled;
+
+        final viewsLoading = canComputeSeriesChange &&
+            ((viewsSeries == null &&
+                    statsProvider.isSeriesLoading(
+                      entityType: 'user',
+                      entityId: walletAddress,
+                      metric: 'viewsReceived',
+                      bucket: bucket,
+                      timeframe: timeframe,
+                      from: currentFrom.toIso8601String(),
+                      to: currentTo.toIso8601String(),
+                      scope: 'private',
+                    )) ||
+                (prevViewsSeries == null &&
+                    statsProvider.isSeriesLoading(
+                      entityType: 'user',
+                      entityId: walletAddress,
+                      metric: 'viewsReceived',
+                      bucket: bucket,
+                      timeframe: timeframe,
+                      from: prevFrom.toIso8601String(),
+                      to: prevTo.toIso8601String(),
+                      scope: 'private',
+                    )));
+        final viewsError = canComputeSeriesChange &&
+            !viewsLoading &&
+            ((viewsSeries == null &&
+                    statsProvider.seriesError(
+                          entityType: 'user',
+                          entityId: walletAddress,
+                          metric: 'viewsReceived',
+                          bucket: bucket,
+                          timeframe: timeframe,
+                          from: currentFrom.toIso8601String(),
+                          to: currentTo.toIso8601String(),
+                          scope: 'private',
+                        ) !=
+                        null) ||
+                (prevViewsSeries == null &&
+                    statsProvider.seriesError(
+                          entityType: 'user',
+                          entityId: walletAddress,
+                          metric: 'viewsReceived',
+                          bucket: bucket,
+                          timeframe: timeframe,
+                          from: prevFrom.toIso8601String(),
+                          to: prevTo.toIso8601String(),
+                          scope: 'private',
+                        ) !=
+                        null));
+
+        final earningsLoading = canComputeSeriesChange &&
+            ((earningsSeries == null &&
+                    statsProvider.isSeriesLoading(
+                      entityType: 'user',
+                      entityId: walletAddress,
+                      metric: 'achievementTokensTotal',
+                      bucket: bucket,
+                      timeframe: timeframe,
+                      from: currentFrom.toIso8601String(),
+                      to: currentTo.toIso8601String(),
+                      scope: 'private',
+                    )) ||
+                (prevEarningsSeries == null &&
+                    statsProvider.isSeriesLoading(
+                      entityType: 'user',
+                      entityId: walletAddress,
+                      metric: 'achievementTokensTotal',
+                      bucket: bucket,
+                      timeframe: timeframe,
+                      from: prevFrom.toIso8601String(),
+                      to: prevTo.toIso8601String(),
+                      scope: 'private',
+                    )));
+        final earningsError = canComputeSeriesChange &&
+            !earningsLoading &&
+            ((earningsSeries == null &&
+                    statsProvider.seriesError(
+                          entityType: 'user',
+                          entityId: walletAddress,
+                          metric: 'achievementTokensTotal',
+                          bucket: bucket,
+                          timeframe: timeframe,
+                          from: currentFrom.toIso8601String(),
+                          to: currentTo.toIso8601String(),
+                          scope: 'private',
+                        ) !=
+                        null) ||
+                (prevEarningsSeries == null &&
+                    statsProvider.seriesError(
+                          entityType: 'user',
+                          entityId: walletAddress,
+                          metric: 'achievementTokensTotal',
+                          bucket: bucket,
+                          timeframe: timeframe,
+                          from: prevFrom.toIso8601String(),
+                          to: prevTo.toIso8601String(),
+                          scope: 'private',
+                        ) !=
+                        null));
+
         final viewsThis = _totalFromSeries(viewsSeries);
         final viewsPrev = _totalFromSeries(prevViewsSeries);
-        final viewsChange = statsProvider.analyticsEnabled
+        final canComputeViewsChange = canComputeSeriesChange &&
+            !viewsLoading &&
+            !viewsError &&
+            viewsSeries != null &&
+            prevViewsSeries != null;
+        final viewsChange = canComputeViewsChange
             ? _formatPercentChange(current: viewsThis, previous: viewsPrev)
             : '\u2014';
-        final viewsPositive = viewsThis >= viewsPrev;
+        final viewsPositive =
+            canComputeViewsChange ? (viewsThis >= viewsPrev) : true;
 
         final earningsThis = _totalFromSeries(earningsSeries);
         final earningsPrev = _totalFromSeries(prevEarningsSeries);
-        final earningsChange = statsProvider.analyticsEnabled
-            ? _formatPercentChange(current: earningsThis, previous: earningsPrev)
+        final canComputeEarningsChange = canComputeSeriesChange &&
+            !earningsLoading &&
+            !earningsError &&
+            earningsSeries != null &&
+            prevEarningsSeries != null;
+        final earningsChange = canComputeEarningsChange
+            ? _formatPercentChange(
+                current: earningsThis, previous: earningsPrev)
             : '\u2014';
-        final earningsPositive = earningsThis >= earningsPrev;
+        final earningsPositive =
+            canComputeEarningsChange ? (earningsThis >= earningsPrev) : true;
 
         final inactiveChange = '\u2014';
 
@@ -599,7 +733,9 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
+        border: Border.all(
+            color:
+                Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -649,7 +785,10 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
               title,
               style: GoogleFonts.inter(
                 fontSize: 10,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.7),
               ),
               overflow: TextOverflow.ellipsis,
             ),
@@ -660,7 +799,10 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
               subtitle,
               style: GoogleFonts.inter(
                 fontSize: 9,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.5),
               ),
               overflow: TextOverflow.ellipsis,
             ),
@@ -677,7 +819,8 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
         final themeProvider = context.watch<ThemeProvider>();
 
         final walletAddress = web3.walletAddress.trim();
-        final timeframe = context.watch<AnalyticsFiltersProvider>().artistTimeframe;
+        final timeframe =
+            context.watch<AnalyticsFiltersProvider>().artistTimeframe;
         final bucket = _bucketForTimeframe(timeframe);
         final duration = _durationForTimeframe(timeframe);
         final now = DateTime.now().toUtc();
@@ -753,10 +896,15 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
           bucket: bucket,
         );
 
-        final avg = values.isEmpty ? 0.0 : values.reduce((a, b) => a + b) / values.length;
-        final averageValues = values.isEmpty ? const <double>[] : List<double>.filled(values.length, avg);
+        final avg = values.isEmpty
+            ? 0.0
+            : values.reduce((a, b) => a + b) / values.length;
+        final averageValues = values.isEmpty
+            ? const <double>[]
+            : List<double>.filled(values.length, avg);
 
-        final hasSeries = values.any((v) => v > 0) || previousValues.any((v) => v > 0);
+        final hasSeries =
+            values.any((v) => v > 0) || previousValues.any((v) => v > 0);
         final currentError = walletAddress.isEmpty
             ? null
             : statsProvider.seriesError(
@@ -808,7 +956,8 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
         final hasError = walletAddress.isNotEmpty &&
             statsProvider.analyticsEnabled &&
             !isLoading &&
-            ((currentError != null && series == null) || (prevError != null && prevSeries == null));
+            ((currentError != null && series == null) ||
+                (prevError != null && prevSeries == null));
 
         final currentLineColor = themeProvider.accentColor;
         final previousLineColor = scheme.secondary;
@@ -817,9 +966,14 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
         return Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
+            color:
+                Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
+            border: Border.all(
+                color: Theme.of(context)
+                    .colorScheme
+                    .onPrimary
+                    .withValues(alpha: 0.1)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -827,7 +981,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
               LayoutBuilder(
                 builder: (context, constraints) {
                   final isSmallScreen = constraints.maxWidth < 400;
-                  
+
                   if (isSmallScreen) {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -899,101 +1053,108 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                                 ),
                               )
                             : hasError
-                            ? Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.error_outline,
-                                      color: scheme.error,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Unable to load analytics right now.',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 12,
-                                        color: scheme.onSurface.withValues(alpha: 0.7),
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    TextButton(
-                                      onPressed: () {
-                                        if (walletAddress.isEmpty) return;
-                                        unawaited(statsProvider.ensureSeries(
-                                          entityType: 'user',
-                                          entityId: walletAddress,
-                                          metric: metric,
-                                          bucket: bucket,
-                                          timeframe: timeframe,
-                                          from: currentFrom.toIso8601String(),
-                                          to: currentTo.toIso8601String(),
-                                          scope: 'private',
-                                          forceRefresh: true,
-                                        ));
-                                        unawaited(statsProvider.ensureSeries(
-                                          entityType: 'user',
-                                          entityId: walletAddress,
-                                          metric: metric,
-                                          bucket: bucket,
-                                          timeframe: timeframe,
-                                          from: prevFrom.toIso8601String(),
-                                          to: prevTo.toIso8601String(),
-                                          scope: 'private',
-                                          forceRefresh: true,
-                                        ));
-                                      },
-                                      child: Text(
-                                        'Retry',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: themeProvider.accentColor,
+                                ? Center(
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.error_outline,
+                                          color: scheme.error,
                                         ),
-                                      ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'Unable to load analytics right now.',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 12,
+                                            color: scheme.onSurface
+                                                .withValues(alpha: 0.7),
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                        const SizedBox(height: 8),
+                                        TextButton(
+                                          onPressed: () {
+                                            if (walletAddress.isEmpty) return;
+                                            unawaited(
+                                                statsProvider.ensureSeries(
+                                              entityType: 'user',
+                                              entityId: walletAddress,
+                                              metric: metric,
+                                              bucket: bucket,
+                                              timeframe: timeframe,
+                                              from:
+                                                  currentFrom.toIso8601String(),
+                                              to: currentTo.toIso8601String(),
+                                              scope: 'private',
+                                              forceRefresh: true,
+                                            ));
+                                            unawaited(
+                                                statsProvider.ensureSeries(
+                                              entityType: 'user',
+                                              entityId: walletAddress,
+                                              metric: metric,
+                                              bucket: bucket,
+                                              timeframe: timeframe,
+                                              from: prevFrom.toIso8601String(),
+                                              to: prevTo.toIso8601String(),
+                                              scope: 'private',
+                                              forceRefresh: true,
+                                            ));
+                                          },
+                                          child: Text(
+                                            'Retry',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: themeProvider.accentColor,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
-                              )
-                            : !hasSeries
-                            ? Center(
-                                child: Text(
-                                  'No analytics data yet.',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    color: scheme.onSurface.withValues(alpha: 0.7),
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              )
-                            : StatsInteractiveLineChart(
-                                height: 200,
-                                gridColor: scheme.onPrimary.withValues(alpha: 0.1),
-                                xLabels: _buildBucketLabels(
-                                  windowEnd: currentTo,
-                                  timeframe: timeframe,
-                                  bucket: bucket,
-                                  count: values.length,
-                                ),
-                                series: <StatsLineSeries>[
-                                  StatsLineSeries(
-                                    label: 'Current',
-                                    values: values,
-                                    color: currentLineColor,
-                                    showArea: true,
-                                  ),
-                                  StatsLineSeries(
-                                    label: 'Previous',
-                                    values: previousValues,
-                                    color: previousLineColor,
-                                  ),
-                                  StatsLineSeries(
-                                    label: 'Average',
-                                    values: averageValues,
-                                    color: averageLineColor,
-                                  ),
-                                ],
-                              ),
+                                  )
+                                : !hasSeries
+                                    ? Center(
+                                        child: Text(
+                                          'No analytics data yet.',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 12,
+                                            color: scheme.onSurface
+                                                .withValues(alpha: 0.7),
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      )
+                                    : StatsInteractiveLineChart(
+                                        height: 200,
+                                        gridColor: scheme.onPrimary
+                                            .withValues(alpha: 0.1),
+                                        xLabels: _buildBucketLabels(
+                                          windowEnd: currentTo,
+                                          timeframe: timeframe,
+                                          bucket: bucket,
+                                          count: values.length,
+                                        ),
+                                        series: <StatsLineSeries>[
+                                          StatsLineSeries(
+                                            label: 'Current',
+                                            values: values,
+                                            color: currentLineColor,
+                                            showArea: true,
+                                          ),
+                                          StatsLineSeries(
+                                            label: 'Previous',
+                                            values: previousValues,
+                                            color: previousLineColor,
+                                          ),
+                                          StatsLineSeries(
+                                            label: 'Average',
+                                            values: averageValues,
+                                            color: averageLineColor,
+                                          ),
+                                        ],
+                                      ),
               ),
               const SizedBox(height: 16),
               _buildChartLegend(
@@ -1010,11 +1171,11 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
 
   Widget _buildChartSelector() {
     final options = ['Revenue', 'Views', 'Engagement'];
-    
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final isSmallScreen = constraints.maxWidth < 400;
-        
+
         if (isSmallScreen) {
           // Use Wrap for small screens to prevent overflow
           return Wrap(
@@ -1024,27 +1185,36 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
               final index = entry.key;
               final option = entry.value;
               final isSelected = _currentChartIndex == index;
-              
+
               return GestureDetector(
                 onTap: () => setState(() => _currentChartIndex = index),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: isSelected 
-                        ? Provider.of<ThemeProvider>(context).accentColor 
+                    color: isSelected
+                        ? Provider.of<ThemeProvider>(context).accentColor
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: isSelected 
-                          ? Provider.of<ThemeProvider>(context).accentColor 
-                          : Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.3),
+                      color: isSelected
+                          ? Provider.of<ThemeProvider>(context).accentColor
+                          : Theme.of(context)
+                              .colorScheme
+                              .onPrimary
+                              .withValues(alpha: 0.3),
                     ),
                   ),
                   child: Text(
                     option,
                     style: GoogleFonts.inter(
                       fontSize: 11,
-                      color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                      color: isSelected
+                          ? Theme.of(context).colorScheme.onPrimary
+                          : Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.7),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -1059,29 +1229,38 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
               final index = entry.key;
               final option = entry.value;
               final isSelected = _currentChartIndex == index;
-              
+
               return Padding(
                 padding: const EdgeInsets.only(left: 8),
                 child: GestureDetector(
                   onTap: () => setState(() => _currentChartIndex = index),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: isSelected 
-                          ? Provider.of<ThemeProvider>(context).accentColor 
+                      color: isSelected
+                          ? Provider.of<ThemeProvider>(context).accentColor
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: isSelected 
-                            ? Provider.of<ThemeProvider>(context).accentColor 
-                            : Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.3),
+                        color: isSelected
+                            ? Provider.of<ThemeProvider>(context).accentColor
+                            : Theme.of(context)
+                                .colorScheme
+                                .onPrimary
+                                .withValues(alpha: 0.3),
                       ),
                     ),
                     child: Text(
                       option,
                       style: GoogleFonts.inter(
                         fontSize: 12,
-                        color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                        color: isSelected
+                            ? Theme.of(context).colorScheme.onPrimary
+                            : Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.7),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -1102,11 +1281,11 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
   }) {
     final colors = [currentColor, previousColor, averageColor];
     final labels = ['This Period', 'Previous Period', 'Average'];
-    
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final isSmallScreen = constraints.maxWidth < 350;
-        
+
         if (isSmallScreen) {
           // Use Wrap for very small screens to prevent overflow
           return Wrap(
@@ -1116,7 +1295,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
             children: labels.asMap().entries.map((entry) {
               final index = entry.key;
               final label = entry.value;
-              
+
               return Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -1133,7 +1312,10 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                     label,
                     style: GoogleFonts.inter(
                       fontSize: 9,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.7),
                     ),
                   ),
                 ],
@@ -1147,7 +1329,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
             children: labels.asMap().entries.map((entry) {
               final index = entry.key;
               final label = entry.value;
-              
+
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Row(
@@ -1165,7 +1347,10 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                       label,
                       style: GoogleFonts.inter(
                         fontSize: 10,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -1182,13 +1367,21 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
     return Consumer<ArtworkProvider>(
       builder: (context, artworkProvider, child) {
         final artworks = artworkProvider.userArtworks;
-        final totalViews = artworks.fold<int>(0, (sum, a) => sum + a.viewsCount);
-        final totalLikes = artworks.fold<int>(0, (sum, a) => sum + a.likesCount);
-        final totalComments = artworks.fold<int>(0, (sum, a) => sum + a.commentsCount);
-        final favoritesCount = artworks.where((a) => a.isFavorite || a.isFavoriteByCurrentUser).length;
+        final totalViews =
+            artworks.fold<int>(0, (sum, a) => sum + a.viewsCount);
+        final totalLikes =
+            artworks.fold<int>(0, (sum, a) => sum + a.likesCount);
+        final totalComments =
+            artworks.fold<int>(0, (sum, a) => sum + a.commentsCount);
+        final favoritesCount = artworks
+            .where((a) => a.isFavorite || a.isFavoriteByCurrentUser)
+            .length;
 
-        final engagementRate = totalViews > 0 ? ((totalLikes + totalComments) / totalViews * 100) : 0.0;
-        final conversionRate = totalViews > 0 ? (favoritesCount / totalViews * 100) : 0.0;
+        final engagementRate = totalViews > 0
+            ? ((totalLikes + totalComments) / totalViews * 100)
+            : 0.0;
+        final conversionRate =
+            totalViews > 0 ? (favoritesCount / totalViews * 100) : 0.0;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1202,19 +1395,31 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
               ),
             ),
             const SizedBox(height: 16),
-              Row(
-                children: [
-                Expanded(child: _buildMetricItem('Avg. View Time', '\u2014', Icons.schedule)),
+            Row(
+              children: [
+                Expanded(
+                    child: _buildMetricItem(
+                        'Avg. View Time', '\u2014', Icons.schedule)),
                 const SizedBox(width: 16),
-                Expanded(child: _buildMetricItem('Engagement Rate', '${engagementRate.toStringAsFixed(1)}%', Icons.thumb_up)),
+                Expanded(
+                    child: _buildMetricItem(
+                        'Engagement Rate',
+                        '${engagementRate.toStringAsFixed(1)}%',
+                        Icons.thumb_up)),
               ],
             ),
             const SizedBox(height: 12),
             Row(
               children: [
-                Expanded(child: _buildMetricItem('Conversion Rate', '${conversionRate.toStringAsFixed(1)}%', Icons.trending_up)),
+                Expanded(
+                    child: _buildMetricItem(
+                        'Conversion Rate',
+                        '${conversionRate.toStringAsFixed(1)}%',
+                        Icons.trending_up)),
                 const SizedBox(width: 16),
-                Expanded(child: _buildMetricItem('Return Visitors', '\u2014', Icons.refresh)),
+                Expanded(
+                    child: _buildMetricItem(
+                        'Return Visitors', '\u2014', Icons.refresh)),
               ],
             ),
           ],
@@ -1229,11 +1434,18 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
+        border: Border.all(
+            color:
+                Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
       ),
       child: Row(
         children: [
-          Icon(icon, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), size: 20),
+          Icon(icon,
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.7),
+              size: 20),
           const SizedBox(width: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1250,7 +1462,10 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                 label,
                 style: GoogleFonts.inter(
                   fontSize: 10,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.7),
                 ),
               ),
             ],
@@ -1293,14 +1508,21 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
             ...topArtworks.asMap().entries.map((entry) {
               final index = entry.key;
               final artworkData = entry.value;
-              
+
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onPrimary
+                      .withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
+                  border: Border.all(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onPrimary
+                          .withValues(alpha: 0.1)),
                 ),
                 child: Row(
                   children: [
@@ -1339,7 +1561,10 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                             '${artworkData['views']} views',
                             style: GoogleFonts.inter(
                               fontSize: 12,
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.7),
                             ),
                           ),
                         ],
@@ -1362,143 +1587,164 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
       },
     );
   }
-  }
+}
 
-  Widget _buildRecentActivity() {
-    return Consumer2<ArtworkProvider, ThemeProvider>(
-      builder: (context, artworkProvider, themeProvider, child) {
-        final activities = <Map<String, dynamic>>[];
-        final artworks = artworkProvider.artworks;
+Widget _buildRecentActivity() {
+  return Consumer2<ArtworkProvider, ThemeProvider>(
+    builder: (context, artworkProvider, themeProvider, child) {
+      final activities = <Map<String, dynamic>>[];
+      final artworks = artworkProvider.artworks;
 
-        for (final a in artworks) {
-          if (a.discoveredAt != null) {
-            activities.add({
-              'time': a.discoveredAt!,
-              'icon': Icons.visibility,
-              'action': 'Artwork "${a.title}" discovered',
-            });
-          }
-          // Creation event
+      for (final a in artworks) {
+        if (a.discoveredAt != null) {
           activities.add({
-            'time': a.createdAt,
-            'icon': Icons.add,
-            'action': 'New artwork "${a.title}" added',
+            'time': a.discoveredAt!,
+            'icon': Icons.visibility,
+            'action': 'Artwork "${a.title}" discovered',
           });
-          // Latest comment event if available
-          final comments = artworkProvider.getComments(a.id);
-          if (comments.isNotEmpty) {
-            final sortedComments = [...comments]..sort((c1, c2) => c2.createdAt.compareTo(c1.createdAt));
-            activities.add({
-              'time': sortedComments.first.createdAt,
-              'icon': Icons.comment,
-              'action': 'New comment on "${a.title}"',
-            });
-          }
         }
+        // Creation event
+        activities.add({
+          'time': a.createdAt,
+          'icon': Icons.add,
+          'action': 'New artwork "${a.title}" added',
+        });
+        // Latest comment event if available
+        final comments = artworkProvider.getComments(a.id);
+        if (comments.isNotEmpty) {
+          final sortedComments = [...comments]
+            ..sort((c1, c2) => c2.createdAt.compareTo(c1.createdAt));
+          activities.add({
+            'time': sortedComments.first.createdAt,
+            'icon': Icons.comment,
+            'action': 'New comment on "${a.title}"',
+          });
+        }
+      }
 
-        activities.sort((x, y) => (y['time'] as DateTime).compareTo(x['time'] as DateTime));
-        final recent = activities.take(8).toList();
+      activities.sort(
+          (x, y) => (y['time'] as DateTime).compareTo(x['time'] as DateTime));
+      final recent = activities.take(8).toList();
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Recent Activity',
-              style: GoogleFonts.inter(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Recent Activity',
+            style: GoogleFonts.inter(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
-            const SizedBox(height: 16),
-            Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
-              ),
-              child: Column(
-                children: recent.isEmpty
-                    ? [
-                        Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Text(
-                            'No recent activity',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context)
+                  .colorScheme
+                  .onPrimary
+                  .withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onPrimary
+                      .withValues(alpha: 0.1)),
+            ),
+            child: Column(
+              children: recent.isEmpty
+                  ? [
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Text(
+                          'No recent activity',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.7),
+                          ),
+                        ),
+                      )
+                    ]
+                  : recent.map((activity) {
+                      return Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onPrimary
+                                  .withValues(alpha: 0.1),
+                              width: 0.5,
                             ),
                           ),
-                        )
-                      ]
-                    : recent.map((activity) {
-                        return Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            border: Border(
-                              bottom: BorderSide(
-                                color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1),
-                                width: 0.5,
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: themeProvider.accentColor
+                                    .withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                activity['icon'] as IconData,
+                                color: themeProvider.accentColor,
+                                size: 16,
                               ),
                             ),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: themeProvider.accentColor.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Icon(
-                                  activity['icon'] as IconData,
-                                  color: themeProvider.accentColor,
-                                  size: 16,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      activity['action'] as String,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 14,
-                                        color: Theme.of(context).colorScheme.onSurface,
-                                      ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    activity['action'] as String,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface,
                                     ),
-                                    Text(
-                                      _relativeTime(activity['time'] as DateTime),
-                                      style: GoogleFonts.inter(
-                                        fontSize: 12,
-                                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                                      ),
+                                  ),
+                                  Text(
+                                    _relativeTime(activity['time'] as DateTime),
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: 0.6),
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
             ),
-          ],
-        );
-      },
-    );
-  }
+          ),
+        ],
+      );
+    },
+  );
+}
 
-  String _relativeTime(DateTime time) {
-    final diff = DateTime.now().difference(time);
-    if (diff.inSeconds < 60) return '${diff.inSeconds}s ago';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    if (diff.inDays < 7) return '${diff.inDays}d ago';
-    final weeks = (diff.inDays / 7).floor();
-    return weeks <= 1 ? '1w ago' : '${weeks}w ago';
-  }
+String _relativeTime(DateTime time) {
+  final diff = DateTime.now().difference(time);
+  if (diff.inSeconds < 60) return '${diff.inSeconds}s ago';
+  if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+  if (diff.inHours < 24) return '${diff.inHours}h ago';
+  if (diff.inDays < 7) return '${diff.inDays}d ago';
+  final weeks = (diff.inDays / 7).floor();
+  return weeks <= 1 ? '1w ago' : '${weeks}w ago';
+}
 
 class LineChartPainter extends CustomPainter {
   final List<double> current;
@@ -1606,6 +1852,3 @@ class LineChartPainter extends CustomPainter {
         oldDelegate.gridColor != gridColor;
   }
 }
-
-
-

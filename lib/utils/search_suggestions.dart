@@ -44,7 +44,58 @@ List<Map<String, dynamic>> normalizeSearchSuggestionsPayload(dynamic raw) {
       if (e is! Map) continue;
       final Map<String, dynamic> m = Map<String, dynamic>.from(e);
 
-      final type = (m['type'] ?? (m.containsKey('username') ? 'profile' : 'artwork')).toString();
+      String inferType() {
+        final rawType = (m['type'] ?? '').toString().trim();
+        if (rawType.isNotEmpty) return rawType;
+
+        // Heuristics: avoid treating embedded creator usernames on artworks as
+        // a profile suggestion.
+        final hasArtworkShape = m.containsKey('artworkId') ||
+            m.containsKey('artwork_id') ||
+            m.containsKey('arMarkerId') ||
+            m.containsKey('ar_marker_id') ||
+            m.containsKey('rewards') ||
+            m.containsKey('modelCID') ||
+            m.containsKey('model3DCID') ||
+            m.containsKey('model3dCID') ||
+            m.containsKey('category') ||
+            m.containsKey('tags');
+
+        final hasEventShape = m.containsKey('eventId') ||
+            m.containsKey('event_id') ||
+            m.containsKey('startsAt') ||
+            m.containsKey('endsAt') ||
+            m.containsKey('starts_at') ||
+            m.containsKey('ends_at');
+
+        final hasExhibitionShape = m.containsKey('exhibitionId') ||
+            m.containsKey('exhibition_id') ||
+            m.containsKey('exhibition');
+
+        final hasInstitutionShape = m.containsKey('institutionId') ||
+            m.containsKey('institution_id') ||
+            m.containsKey('institution');
+
+        final hasProfileShape = m.containsKey('walletAddress') ||
+            m.containsKey('wallet_address') ||
+            m.containsKey('wallet') ||
+            m.containsKey('displayName') ||
+            m.containsKey('display_name') ||
+            m.containsKey('bio');
+
+        if (hasArtworkShape) return 'artwork';
+        if (hasEventShape || hasExhibitionShape) return 'event';
+        if (hasInstitutionShape) return 'institution';
+        if (hasProfileShape || m.containsKey('username') || m.containsKey('handle')) {
+          return 'profile';
+        }
+
+        // If it has a title/name and coordinates, it's usually map content.
+        if ((m['title'] ?? m['name']) != null) return 'artwork';
+        return 'artwork';
+      }
+
+      final type = inferType();
 
       final rawDisplayName = (m['displayName'] ?? m['display_name'] ?? m['name'] ?? m['label'])?.toString();
       final rawUsername = (m['username'] ?? m['handle'])?.toString();
@@ -55,8 +106,11 @@ List<Map<String, dynamic>> normalizeSearchSuggestionsPayload(dynamic raw) {
       String? id;
 
       if (type == 'profile' || type == 'institution') {
+        final walletFallback = (wallet != null && wallet.trim().isNotEmpty)
+            ? maskWallet(wallet.trim())
+            : 'Unknown artist';
         final formatted = CreatorDisplayFormat.format(
-          fallbackLabel: 'Unknown creator',
+          fallbackLabel: walletFallback,
           displayName: rawDisplayName,
           username: rawUsername,
           wallet: wallet,
@@ -73,6 +127,46 @@ List<Map<String, dynamic>> normalizeSearchSuggestionsPayload(dynamic raw) {
                 '')
             .toString();
         id = (m['id'] ?? m['walletAddress'] ?? m['wallet'] ?? m['wallet_address'])?.toString();
+
+        // Prefer domain-specific subtitles so map search feels relevant.
+        if (m['subtitle'] != null && m['subtitle'].toString().trim().isNotEmpty) {
+          subtitle = m['subtitle'].toString();
+        } else if (type.toLowerCase() == 'artwork') {
+          final rawArtist = (m['artist'] ??
+                  m['artistName'] ??
+                  m['artist_name'] ??
+                  m['creatorName'] ??
+                  m['creator_name'] ??
+                  m['creator'] ??
+                  m['authorName'] ??
+                  m['author_name'])
+              ?.toString()
+              .trim();
+          if (rawArtist != null && rawArtist.isNotEmpty && !WalletUtils.looksLikeWallet(rawArtist)) {
+            subtitle = rawArtist;
+          }
+        } else if (type.toLowerCase() == 'event') {
+          final rawLocation = (m['locationName'] ??
+                  m['location_name'] ??
+                  m['venue'] ??
+                  m['city'])
+              ?.toString()
+              .trim();
+          if (rawLocation != null && rawLocation.isNotEmpty) {
+            subtitle = rawLocation;
+          }
+        } else if (type.toLowerCase() == 'marker') {
+          final rawMarkerType = (m['markerType'] ??
+                  m['marker_type'] ??
+                  m['subjectType'] ??
+                  m['subject_type'])
+              ?.toString()
+              .trim();
+          if (rawMarkerType != null && rawMarkerType.isNotEmpty) {
+            subtitle = rawMarkerType;
+          }
+        }
+
         var username = rawUsername;
         if (username != null) {
           username = username.trim();
@@ -81,12 +175,13 @@ List<Map<String, dynamic>> normalizeSearchSuggestionsPayload(dynamic raw) {
         final hasSafeUsername =
             username != null && username.isNotEmpty && !WalletUtils.looksLikeWallet(username);
 
-        if (hasSafeUsername) {
-          subtitle = '@$username';
-        } else if (wallet != null && wallet.isNotEmpty) {
-          subtitle = maskWallet(wallet);
-        } else if (m['subtitle'] != null) {
-          subtitle = m['subtitle'].toString();
+        // Only fall back to @username/wallet if we still have no useful subtitle.
+        if ((subtitle ?? '').trim().isEmpty) {
+          if (hasSafeUsername) {
+            subtitle = '@$username';
+          } else if (wallet != null && wallet.trim().isNotEmpty) {
+            subtitle = maskWallet(wallet.trim());
+          }
         }
       }
 

@@ -70,6 +70,175 @@ Key flows (keep single-source-of-truth):
 - Profiles: `User.id` is the wallet identifier; `UserProfile.walletAddress` is the profile identifier (do not invent a third variant)
 
 ---
+## 2.1) Map Layers Manager (Centralized MapLibre Logic)
+
+## Map System Architecture (Mobile + Desktop)
+
+This document describes the refactored map architecture for art.kubus.
+The primary goal is to eliminate duplication between mobile and desktop
+map implementations while preserving behavior and performance.
+
+---
+
+## Design Principles
+
+- **Single source of truth** for MapLibre sources, layers, and modes
+- **Screens are layout-only** (no business logic)
+- **Controllers own side-effects**
+- **Explicit lifecycle ownership** (no leaked listeners/timers)
+- **Mobile and desktop share logic, differ only in layout**
+
+---
+
+## Core Components
+
+### MapLayersManager
+Location:
+`lib/features/map/map_layers_manager.dart`
+
+Responsibilities:
+- Add/remove MapLibre sources and layers
+- Enforce canonical layer IDs and ordering
+- Toggle 2D / 3D modes
+- Apply theme-safe style updates
+- Guard against duplicate layer creation
+
+Notes:
+- Screens must never add layers directly
+- All layer mutations go through this manager
+
+---
+
+### KubusMapController
+Location:
+`lib/features/map/controller/kubus_map_controller.dart`
+
+Responsibilities:
+- Attach/detach MapLibre controller
+- Handle style epochs
+- Coordinate MapLayersManager lifecycle
+- Own marker selection state
+- Handle camera centering and composition offsets
+- Cancel auto-follow on user interaction
+- Open/close marker overlays
+- Own and dispose all listeners, timers, and streams
+
+Screens:
+- Instantiate controller
+- Pass MapLibre controller reference
+- Observe state only
+
+---
+
+### Marker Overlay System
+Location:
+`lib/features/map/map_overlay_stack.dart`
+
+Components:
+- `KubusMapPointerInterceptor`
+- `KubusMapMarkerOverlayLayer`
+
+Responsibilities:
+- Prevent pointer/scroll passthrough to map
+- Render marker info cards
+- Dismiss backdrop
+- Handle animated transitions
+- Desktop cursor behavior
+
+Shared by:
+- map_screen.dart
+- desktop_map_screen.dart
+
+---
+
+### Nearby Art System
+Locations:
+- Controller: `lib/features/map/nearby/nearby_art_controller.dart`
+- UI: `lib/widgets/map/nearby/kubus_nearby_art_panel.dart`
+
+Responsibilities:
+- Fetch and manage nearby art data
+- Block map gestures while interacting
+- Center map and open marker overlay on selection
+- Provide identical behavior across mobile/desktop
+
+---
+
+### Search System
+Locations:
+- Controller: `lib/features/map/search/map_search_controller.dart`
+- UI: `lib/widgets/search/kubus_search_bar.dart`
+
+Responsibilities:
+- Debounced search
+- Suggestion overlays
+- Routing selection to map controller
+- Unified cursor behavior (desktop)
+- Reused across map, home, community, messages
+
+---
+
+### Primary Map Controls
+Location:
+`lib/widgets/map/controls/kubus_map_primary_controls.dart`
+
+Responsibilities:
+- Zoom in/out
+- Create marker
+- Toggle 2D / 3D
+- Compass
+- Layout parametrized by platform
+
+---
+
+## Screens
+
+### map_screen.dart (Mobile)
+Responsibilities:
+- Layout composition
+- Mobile-only positioning
+- Wiring controllers to widgets
+
+### desktop_map_screen.dart (Desktop)
+Responsibilities:
+- Layout composition
+- Desktop-only positioning
+- Wiring controllers to widgets
+
+Both screens must:
+- Contain no MapLibre logic
+- Contain no timers/listeners
+- Delegate all behavior to controllers
+
+---
+
+## Technical Debt Policy
+
+If logic appears in both map screens:
+→ it MUST be extracted.
+
+If a widget handles:
+- gestures
+- state
+- side-effects
+→ it MUST live outside the screen file.
+
+Any new map feature must:
+- integrate via KubusMapController
+- use MapLayersManager for styling
+- be testable without a real MapLibre controller
+
+---
+
+## Exit Criteria for Refactors
+
+A refactor is considered complete only if:
+- Both map screens shrink significantly
+- flutter analyze passes
+- No behavior regressions
+- Leaving the map frees all resources
+
+---
 
 ## 3) UI Color Roles (No Colors In Models)
 

@@ -7,7 +7,7 @@ void main() {
       final identity = UserIdentityDisplayUtils.fromProfileMap({
         'displayName': '0x742d35Cc6634C0532925a3b844Bc9e7595f88941',
       });
-      expect(identity.name, 'Unknown creator');
+      expect(identity.name, 'Unknown artist');
       expect(identity.username, isNull);
       expect(identity.handle, isNull);
     });

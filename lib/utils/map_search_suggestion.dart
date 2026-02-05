@@ -53,8 +53,11 @@ class MapSearchSuggestion {
     String? subtitle = map['subtitle']?.toString();
 
     if (type == 'profile' || type == 'institution') {
+      final fallback = (wallet != null && wallet.trim().isNotEmpty)
+          ? maskWallet(wallet.trim())
+          : 'Unknown artist';
       final formatted = CreatorDisplayFormat.format(
-        fallbackLabel: 'Unknown creator',
+        fallbackLabel: fallback,
         displayName: rawDisplayName,
         username: rawUsername,
         wallet: wallet,

@@ -8,6 +8,7 @@ import '../models/artwork.dart';
 import '../models/user.dart';
 import '../services/event_bus.dart';
 import '../services/user_service.dart';
+import '../utils/user_identity_display.dart';
 import '../utils/wallet_utils.dart';
 import '../utils/user_profile_navigation.dart';
 
@@ -15,12 +16,18 @@ class ArtworkCreatorByline extends StatefulWidget {
   final Artwork artwork;
   final TextStyle? style;
   final int maxLines;
+  final bool includeByPrefix;
+  final bool showUsername;
+  final bool linkToProfile;
 
   const ArtworkCreatorByline({
     super.key,
     required this.artwork,
     this.style,
     this.maxLines = 1,
+    this.includeByPrefix = true,
+    this.showUsername = false,
+    this.linkToProfile = true,
   });
 
   @override
@@ -29,7 +36,8 @@ class ArtworkCreatorByline extends StatefulWidget {
 
 class _ArtworkCreatorBylineState extends State<ArtworkCreatorByline> {
   List<_CreatorRef> _creators = const <_CreatorRef>[];
-  final Map<String, String> _resolvedLabelsByUserId = <String, String>{};
+  final Map<String, UserIdentityDisplay> _resolvedIdentityByUserId =
+      <String, UserIdentityDisplay>{};
   StreamSubscription<Map<String, dynamic>>? _profileUpdatedSub;
 
   @override
@@ -94,8 +102,12 @@ class _ArtworkCreatorBylineState extends State<ArtworkCreatorByline> {
       try {
         final User? user = await UserService.getUserById(id, forceRefresh: forceRefresh);
         final name = (user?.name ?? '').trim();
-        if (name.isNotEmpty) {
-          _resolvedLabelsByUserId[id] = name;
+        final username = (user?.username ?? '').trim();
+        if (name.isNotEmpty || username.isNotEmpty) {
+          _resolvedIdentityByUserId[id] = UserIdentityDisplay(
+            name: name.isNotEmpty ? name : username,
+            username: username.isNotEmpty ? username : null,
+          );
         }
       } catch (_) {}
     });
@@ -116,7 +128,7 @@ class _ArtworkCreatorBylineState extends State<ArtworkCreatorByline> {
       final artist = widget.artwork.artist.trim();
       final safeArtist = artist.isNotEmpty && !WalletUtils.looksLikeWallet(artist)
           ? artist
-          : 'Unknown creator';
+          : (l10n?.commonUnknown ?? 'Unknown artist');
       return Text(
         safeArtist,
         style: baseStyle,
@@ -125,18 +137,22 @@ class _ArtworkCreatorBylineState extends State<ArtworkCreatorByline> {
       );
     }
 
-    // Keep localization order by splitting on a sentinel placeholder.
-    // Example: EN "by {artist}" -> ["by ", ""]
-    // Some locales might place the placeholder elsewhere.
-    final marker = '\u{FFFF}';
-    final template = (l10n != null) ? l10n.commonByArtist(marker) : 'by $marker';
-    final parts = template.split(marker);
-    final prefix = parts.isNotEmpty ? parts.first : '';
-    final suffix = parts.length > 1 ? parts.sublist(1).join(marker) : '';
+    String prefix = '';
+    String suffix = '';
+    if (widget.includeByPrefix) {
+      // Keep localization order by splitting on a sentinel placeholder.
+      // Example: EN "by {artist}" -> ["by ", ""]
+      // Some locales might place the placeholder elsewhere.
+      final marker = '\u{FFFF}';
+      final template = (l10n != null) ? l10n.commonByArtist(marker) : 'by $marker';
+      final parts = template.split(marker);
+      prefix = parts.isNotEmpty ? parts.first : '';
+      suffix = parts.length > 1 ? parts.sublist(1).join(marker) : '';
+    }
 
     final linkStyle = baseStyle.copyWith(
       color: colorScheme.primary,
-      decoration: TextDecoration.underline,
+      decoration: widget.linkToProfile ? TextDecoration.underline : TextDecoration.none,
       decorationColor: colorScheme.primary,
     );
 
@@ -152,10 +168,17 @@ class _ArtworkCreatorBylineState extends State<ArtworkCreatorByline> {
       }
 
       final userId = creator.userId;
-      final label = (userId != null && userId.isNotEmpty)
-          ? (_resolvedLabelsByUserId[userId] ?? creator.label)
-          : creator.label;
-      if (userId != null && userId.isNotEmpty) {
+      final resolved = (userId != null && userId.isNotEmpty)
+          ? _resolvedIdentityByUserId[userId]
+          : null;
+      final primaryLabel = (resolved?.name ?? creator.label).trim();
+      final rawUsername = (resolved?.username ?? creator.username);
+      final username = (widget.showUsername && rawUsername != null && rawUsername.trim().isNotEmpty)
+          ? rawUsername.trim()
+          : null;
+      final combinedLabel = username == null ? primaryLabel : '$primaryLabel @${username.startsWith('@') ? username.substring(1) : username}';
+
+      if (userId != null && userId.isNotEmpty && widget.linkToProfile) {
         spans.add(
           WidgetSpan(
             alignment: PlaceholderAlignment.baseline,
@@ -166,12 +189,12 @@ class _ArtworkCreatorBylineState extends State<ArtworkCreatorByline> {
                 userId: userId,
                 username: creator.username,
               ),
-              child: Text(label, style: linkStyle),
+              child: Text(combinedLabel, style: linkStyle),
             ),
           ),
         );
       } else {
-        spans.add(TextSpan(text: label, style: baseStyle));
+        spans.add(TextSpan(text: combinedLabel, style: baseStyle));
       }
     }
 
@@ -209,7 +232,7 @@ List<_CreatorRef> _extractCreators(Artwork artwork) {
 
     final display = (safeLabel.isNotEmpty && !WalletUtils.looksLikeWallet(safeLabel))
         ? safeLabel
-        : 'Unknown creator';
+        : 'Unknown artist';
 
     creators.add(
       _CreatorRef(
@@ -284,7 +307,7 @@ List<_CreatorRef> _extractCreators(Artwork artwork) {
         : (artistName != null && artistName.isNotEmpty ? artistName : '');
     final label = labelCandidate.isNotEmpty && !WalletUtils.looksLikeWallet(labelCandidate)
         ? labelCandidate
-        : 'Unknown creator';
+        : 'Unknown artist';
 
     add(userId: wallet, label: label);
   }

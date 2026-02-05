@@ -54,7 +54,8 @@ class _FakeProfileApi implements ProfileBackendApi {
   String get baseUrl => 'http://localhost';
 
   @override
-  Future<Map<String, dynamic>> registerWallet({required String walletAddress, String? username}) async {
+  Future<Map<String, dynamic>> registerWallet(
+      {required String walletAddress, String? username}) async {
     return {'success': true};
   }
 
@@ -64,12 +65,14 @@ class _FakeProfileApi implements ProfileBackendApi {
   }
 
   @override
-  Future<Map<String, dynamic>> saveProfile(Map<String, dynamic> profileData) async {
+  Future<Map<String, dynamic>> saveProfile(
+      Map<String, dynamic> profileData) async {
     return {};
   }
 
   @override
-  Future<Map<String, dynamic>> updateProfile(String walletAddress, Map<String, dynamic> updates) async {
+  Future<Map<String, dynamic>> updateProfile(
+      String walletAddress, Map<String, dynamic> updates) async {
     return {};
   }
 
@@ -93,7 +96,9 @@ class _FakeProfileApi implements ProfileBackendApi {
   Future<bool> isFollowing(String walletAddress) async => false;
 
   @override
-  Future<Map<String, dynamic>?> getDAOReview({required String idOrWallet}) async => null;
+  Future<Map<String, dynamic>?> getDAOReview(
+          {required String idOrWallet}) async =>
+      null;
 }
 
 void main() {
@@ -131,4 +136,65 @@ void main() {
       BackendApiService().setAuthTokenForTesting(null);
     });
   });
+
+  test('PresenceProvider avoids refetch loop for omitted wallets', () {
+    fakeAsync((async) {
+      final api = _FakePresenceApi();
+      api.batchCompleter = null;
+
+      // Override getPresenceBatch behavior by returning an empty success payload.
+      // We still want the provider to treat it as a successful fetch and avoid
+      // requesting the same wallet again immediately within the TTL.
+      final provider = PresenceProvider(
+        api: _OmittingPresenceApi(api),
+      );
+
+      unawaited(provider.initialize());
+
+      provider.prefetch(['wallet_1']);
+      async.elapse(const Duration(milliseconds: 80));
+      expect(api.batchCalls, 1);
+
+      // Touch again shortly after; should be considered fresh and not refetch.
+      provider.prefetch(['wallet_1']);
+      async.elapse(const Duration(milliseconds: 80));
+      expect(api.batchCalls, 1);
+    });
+  });
+}
+
+class _OmittingPresenceApi implements PresenceApi {
+  final _FakePresenceApi _inner;
+
+  _OmittingPresenceApi(this._inner);
+
+  @override
+  Future<Map<String, dynamic>> getPresenceBatch(List<String> wallets) {
+    _inner.batchCalls += 1;
+    _inner.requestedWallets.add(List<String>.from(wallets));
+    return Future.value({'success': true, 'data': <dynamic>[]});
+  }
+
+  @override
+  Future<void> ensureAuthLoaded({String? walletAddress}) {
+    return _inner.ensureAuthLoaded(walletAddress: walletAddress);
+  }
+
+  @override
+  Future<Map<String, dynamic>> pingPresence({String? walletAddress}) {
+    return _inner.pingPresence(walletAddress: walletAddress);
+  }
+
+  @override
+  Future<Map<String, dynamic>> recordPresenceVisit({
+    required String type,
+    required String id,
+    String? walletAddress,
+  }) {
+    return _inner.recordPresenceVisit(
+      type: type,
+      id: id,
+      walletAddress: walletAddress,
+    );
+  }
 }

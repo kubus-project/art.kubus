@@ -4,18 +4,20 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 
 import '../models/recent_activity.dart';
 import '../screens/community/post_detail_screen.dart';
-import '../screens/community/user_profile_screen.dart';
 import '../screens/activity/saved_items_screen.dart';
 import '../screens/web3/wallet/wallet_home.dart';
 import '../screens/web3/achievements/achievements_page.dart';
 import '../screens/web3/marketplace/marketplace.dart';
 import 'artwork_navigation.dart';
+import 'user_profile_navigation.dart';
+import '../screens/desktop/desktop_shell_scope.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class ActivityNavigation {
   ActivityNavigation._();
 
-  static Future<bool> open(BuildContext context, RecentActivity activity) async {
+  static Future<bool> open(
+      BuildContext context, RecentActivity activity) async {
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context)!;
@@ -66,7 +68,9 @@ class ActivityNavigation {
         break;
     }
 
-    final fallback = _extractUserId(metadata) ?? _extractPostId(metadata) ?? _extractArtworkId(metadata);
+    final fallback = _extractUserId(metadata) ??
+        _extractPostId(metadata) ??
+        _extractArtworkId(metadata);
     if (fallback != null) {
       if (fallback == _extractUserId(metadata)) {
         await _openUserProfile(navigator, fallback);
@@ -128,7 +132,8 @@ class ActivityNavigation {
     }
 
     final target = uri.host.toLowerCase();
-    final segments = uri.pathSegments.where((segment) => segment.isNotEmpty).toList();
+    final segments =
+        uri.pathSegments.where((segment) => segment.isNotEmpty).toList();
     final slug = segments.isNotEmpty ? segments.last : null;
 
     // Attempt to normalize to a relative path (e.g. app://community/posts/123 -> /community/posts/123)
@@ -197,7 +202,8 @@ class ActivityNavigation {
       return false;
     }
 
-    final segments = uri.pathSegments.where((segment) => segment.isNotEmpty).toList();
+    final segments =
+        uri.pathSegments.where((segment) => segment.isNotEmpty).toList();
     if (segments.isEmpty) {
       return false;
     }
@@ -215,13 +221,17 @@ class ActivityNavigation {
             return true;
           }
           if (section == 'comments' && segments.length >= 3) {
-            final postId = _extractPostId(metadata) ?? query['postId'] ?? query['post_id'];
+            final postId =
+                _extractPostId(metadata) ?? query['postId'] ?? query['post_id'];
             if (postId != null) {
               await _openPost(navigator, postId);
               return true;
             }
           }
-          if ((section == 'profile' || section == 'profiles' || section == 'users') && segments.length >= 3) {
+          if ((section == 'profile' ||
+                  section == 'profiles' ||
+                  section == 'users') &&
+              segments.length >= 3) {
             await _openUserProfile(navigator, segments[2]);
             return true;
           }
@@ -235,7 +245,8 @@ class ActivityNavigation {
         }
         break;
       case 'comments':
-        final postId = _extractPostId(metadata) ?? query['postId'] ?? query['post_id'];
+        final postId =
+            _extractPostId(metadata) ?? query['postId'] ?? query['post_id'];
         if (postId != null) {
           await _openPost(navigator, postId);
           return true;
@@ -278,43 +289,91 @@ class ActivityNavigation {
   }
 
   static Future<void> _openPost(NavigatorState navigator, String postId) async {
+    final context = navigator.context;
+    final l10n = AppLocalizations.of(context);
+
+    final shellScope = DesktopShellScope.of(context);
+    if (shellScope != null) {
+      shellScope.pushScreen(
+        DesktopSubScreen(
+          title: l10n?.commonPost ?? 'Post',
+          child: PostDetailScreen(postId: postId),
+        ),
+      );
+      return;
+    }
+
     await navigator.push(
-      MaterialPageRoute(builder: (_) => PostDetailScreen(postId: postId)),
-    );
+        MaterialPageRoute(builder: (_) => PostDetailScreen(postId: postId)));
   }
 
-  static Future<void> _openArtwork(NavigatorState navigator, String artworkId) async {
+  static Future<void> _openArtwork(
+      NavigatorState navigator, String artworkId) async {
     await openArtwork(navigator.context, artworkId, source: 'activity');
   }
 
-  static Future<void> _openUserProfile(NavigatorState navigator, String userId) async {
-    await navigator.push(
-      MaterialPageRoute(builder: (_) => UserProfileScreen(userId: userId)),
-    );
+  static Future<void> _openUserProfile(
+      NavigatorState navigator, String userId) async {
+    await UserProfileNavigation.open(navigator.context, userId: userId);
   }
 
   static Future<void> _openWallet(NavigatorState navigator) async {
-    await navigator.push(
-      MaterialPageRoute(builder: (_) => const WalletHome()),
-    );
+    final context = navigator.context;
+    final shellScope = DesktopShellScope.of(context);
+    if (shellScope != null) {
+      shellScope.navigateToRoute('/wallet');
+      return;
+    }
+
+    await navigator.push(MaterialPageRoute(builder: (_) => const WalletHome()));
   }
 
   static Future<void> _openCollections(NavigatorState navigator) async {
-    await navigator.push(
-      MaterialPageRoute(builder: (_) => const SavedItemsScreen()),
-    );
+    final context = navigator.context;
+    final l10n = AppLocalizations.of(context);
+    final shellScope = DesktopShellScope.of(context);
+    if (shellScope != null) {
+      shellScope.pushScreen(
+        DesktopSubScreen(
+          title: l10n?.commonDetails ?? 'Details',
+          child: const SavedItemsScreen(),
+        ),
+      );
+      return;
+    }
+
+    await navigator
+        .push(MaterialPageRoute(builder: (_) => const SavedItemsScreen()));
   }
 
   static Future<void> _openAchievements(NavigatorState navigator) async {
-    await navigator.push(
-      MaterialPageRoute(builder: (_) => const AchievementsPage()),
-    );
+    final context = navigator.context;
+    final l10n = AppLocalizations.of(context);
+    final shellScope = DesktopShellScope.of(context);
+    if (shellScope != null) {
+      shellScope.pushScreen(
+        DesktopSubScreen(
+          title: l10n?.userProfileAchievementsTitle ?? 'Achievements',
+          child: const AchievementsPage(),
+        ),
+      );
+      return;
+    }
+
+    await navigator
+        .push(MaterialPageRoute(builder: (_) => const AchievementsPage()));
   }
 
   static Future<void> _openMarketplace(NavigatorState navigator) async {
-    await navigator.push(
-      MaterialPageRoute(builder: (_) => const Marketplace()),
-    );
+    final context = navigator.context;
+    final shellScope = DesktopShellScope.of(context);
+    if (shellScope != null) {
+      shellScope.navigateToRoute('/marketplace');
+      return;
+    }
+
+    await navigator
+        .push(MaterialPageRoute(builder: (_) => const Marketplace()));
   }
 
   static String? _extractPostId(Map<String, dynamic> metadata) {
@@ -325,8 +384,13 @@ class ActivityNavigation {
       metadata['parentPostId'],
       metadata['targetPostId'],
       metadata['commentPostId'],
-      metadata['targetId'] != null && _string(metadata['targetType']) == 'post' ? metadata['targetId'] : null,
-      metadata['target_id'] != null && _string(metadata['target_type']) == 'post' ? metadata['target_id'] : null,
+      metadata['targetId'] != null && _string(metadata['targetType']) == 'post'
+          ? metadata['targetId']
+          : null,
+      metadata['target_id'] != null &&
+              _string(metadata['target_type']) == 'post'
+          ? metadata['target_id']
+          : null,
     ]);
   }
 
@@ -334,8 +398,14 @@ class ActivityNavigation {
     return _firstNonEmpty([
       metadata['artworkId'],
       metadata['artwork_id'],
-      metadata['targetId'] != null && _string(metadata['targetType']) == 'artwork' ? metadata['targetId'] : null,
-      metadata['target_id'] != null && _string(metadata['target_type']) == 'artwork' ? metadata['target_id'] : null,
+      metadata['targetId'] != null &&
+              _string(metadata['targetType']) == 'artwork'
+          ? metadata['targetId']
+          : null,
+      metadata['target_id'] != null &&
+              _string(metadata['target_type']) == 'artwork'
+          ? metadata['target_id']
+          : null,
     ]);
   }
 

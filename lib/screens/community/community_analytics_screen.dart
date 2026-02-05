@@ -15,7 +15,6 @@ import '../../utils/kubus_color_roles.dart';
 import '../../widgets/charts/stats_interactive_line_chart.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/glass_components.dart';
- 
 
 class CommunityAnalyticsScreen extends StatefulWidget {
   final String walletAddress;
@@ -28,7 +27,8 @@ class CommunityAnalyticsScreen extends StatefulWidget {
   });
 
   @override
-  State<CommunityAnalyticsScreen> createState() => _CommunityAnalyticsScreenState();
+  State<CommunityAnalyticsScreen> createState() =>
+      _CommunityAnalyticsScreenState();
 }
 
 class _CommunityAnalyticsScreenState extends State<CommunityAnalyticsScreen> {
@@ -42,10 +42,12 @@ class _CommunityAnalyticsScreenState extends State<CommunityAnalyticsScreen> {
 
     final web3Wallet = context.watch<Web3Provider>().walletAddress.trim();
     final targetWallet = widget.walletAddress.trim();
-    final isOwner = web3Wallet.isNotEmpty && web3Wallet.toLowerCase() == targetWallet.toLowerCase();
+    final isOwner = web3Wallet.isNotEmpty &&
+        web3Wallet.toLowerCase() == targetWallet.toLowerCase();
 
     final analyticsFeatureEnabled = AppConfig.isFeatureEnabled('analytics');
-    final analyticsPreferenceEnabled = context.watch<ConfigProvider>().enableAnalytics;
+    final analyticsPreferenceEnabled =
+        context.watch<ConfigProvider>().enableAnalytics;
 
     return AnimatedGradientBackground(
       child: Scaffold(
@@ -73,89 +75,55 @@ class _CommunityAnalyticsScreenState extends State<CommunityAnalyticsScreen> {
               )
             : Consumer<StatsProvider>(
                 builder: (context, statsProvider, child) {
-                final canFetch = StatsApiService.shouldFetchAnalytics(
-                  analyticsFeatureEnabled: analyticsFeatureEnabled,
-                  analyticsPreferenceEnabled: analyticsPreferenceEnabled,
-                );
-
-                if (targetWallet.isEmpty) {
-                  return const Center(
-                    child: EmptyStateCard(
-                      icon: Icons.person_outline,
-                      title: 'No profile selected',
-                      description: 'Missing wallet address.',
-                      showAction: false,
-                    ),
+                  final canFetch = StatsApiService.shouldFetchAnalytics(
+                    analyticsFeatureEnabled: analyticsFeatureEnabled,
+                    analyticsPreferenceEnabled: analyticsPreferenceEnabled,
                   );
-                }
 
-                final bucket = _bucketForTimeframe(_timeframe);
-                final duration = _durationForTimeframe(_timeframe);
-                final now = DateTime.now().toUtc();
-                final currentTo = _bucketStartUtc(now, bucket);
-                final currentFrom = currentTo.subtract(duration);
+                  if (targetWallet.isEmpty) {
+                    return const Center(
+                      child: EmptyStateCard(
+                        icon: Icons.person_outline,
+                        title: 'No profile selected',
+                        description: 'Missing wallet address.',
+                        showAction: false,
+                      ),
+                    );
+                  }
 
-                final postScope = 'public';
-                final likesScope = 'public';
-                final engagementScope = isOwner ? 'private' : 'public';
+                  final bucket = _bucketForTimeframe(_timeframe);
+                  final duration = _durationForTimeframe(_timeframe);
+                  final now = DateTime.now().toUtc();
+                  final currentTo = _bucketStartUtc(now, bucket);
+                  final currentFrom = currentTo.subtract(duration);
 
-                if (canFetch) {
-                  unawaited(statsProvider.ensureSeries(
-                    entityType: 'user',
-                    entityId: targetWallet,
-                    metric: 'posts',
-                    bucket: bucket,
-                    timeframe: _timeframe,
-                    from: currentFrom.toIso8601String(),
-                    to: currentTo.toIso8601String(),
-                    scope: postScope,
-                  ));
-                  unawaited(statsProvider.ensureSeries(
-                    entityType: 'user',
-                    entityId: targetWallet,
-                    metric: 'likesReceived',
-                    bucket: bucket,
-                    timeframe: _timeframe,
-                    from: currentFrom.toIso8601String(),
-                    to: currentTo.toIso8601String(),
-                    scope: likesScope,
-                  ));
-                  if (isOwner) {
+                  final postScope = 'public';
+                  final likesScope = 'public';
+                  final engagementScope = isOwner ? 'private' : 'public';
+
+                  if (canFetch) {
                     unawaited(statsProvider.ensureSeries(
                       entityType: 'user',
                       entityId: targetWallet,
-                      metric: 'engagement',
+                      metric: 'posts',
                       bucket: bucket,
                       timeframe: _timeframe,
                       from: currentFrom.toIso8601String(),
                       to: currentTo.toIso8601String(),
-                      scope: engagementScope,
+                      scope: postScope,
                     ));
-                  }
-                }
-
-                final postsSeries = statsProvider.getSeries(
-                  entityType: 'user',
-                  entityId: targetWallet,
-                  metric: 'posts',
-                  bucket: bucket,
-                  timeframe: _timeframe,
-                  from: currentFrom.toIso8601String(),
-                  to: currentTo.toIso8601String(),
-                  scope: postScope,
-                );
-                final likesSeries = statsProvider.getSeries(
-                  entityType: 'user',
-                  entityId: targetWallet,
-                  metric: 'likesReceived',
-                  bucket: bucket,
-                  timeframe: _timeframe,
-                  from: currentFrom.toIso8601String(),
-                  to: currentTo.toIso8601String(),
-                  scope: likesScope,
-                );
-                final engagementSeries = isOwner
-                    ? statsProvider.getSeries(
+                    unawaited(statsProvider.ensureSeries(
+                      entityType: 'user',
+                      entityId: targetWallet,
+                      metric: 'likesReceived',
+                      bucket: bucket,
+                      timeframe: _timeframe,
+                      from: currentFrom.toIso8601String(),
+                      to: currentTo.toIso8601String(),
+                      scope: likesScope,
+                    ));
+                    if (isOwner) {
+                      unawaited(statsProvider.ensureSeries(
                         entityType: 'user',
                         entityId: targetWallet,
                         metric: 'engagement',
@@ -164,64 +132,199 @@ class _CommunityAnalyticsScreenState extends State<CommunityAnalyticsScreen> {
                         from: currentFrom.toIso8601String(),
                         to: currentTo.toIso8601String(),
                         scope: engagementScope,
-                      )
-                    : null;
+                      ));
+                    }
+                  }
 
-                final postsValues = _filledValues(postsSeries, windowEnd: currentTo, timeframe: _timeframe, bucket: bucket);
-                final likesValues = _filledValues(likesSeries, windowEnd: currentTo, timeframe: _timeframe, bucket: bucket);
-                final engagementValues = isOwner
-                    ? _filledValues(engagementSeries, windowEnd: currentTo, timeframe: _timeframe, bucket: bucket)
-                    : const <double>[];
+                  final postsSeries = statsProvider.getSeries(
+                    entityType: 'user',
+                    entityId: targetWallet,
+                    metric: 'posts',
+                    bucket: bucket,
+                    timeframe: _timeframe,
+                    from: currentFrom.toIso8601String(),
+                    to: currentTo.toIso8601String(),
+                    scope: postScope,
+                  );
+                  final likesSeries = statsProvider.getSeries(
+                    entityType: 'user',
+                    entityId: targetWallet,
+                    metric: 'likesReceived',
+                    bucket: bucket,
+                    timeframe: _timeframe,
+                    from: currentFrom.toIso8601String(),
+                    to: currentTo.toIso8601String(),
+                    scope: likesScope,
+                  );
+                  final engagementSeries = isOwner
+                      ? statsProvider.getSeries(
+                          entityType: 'user',
+                          entityId: targetWallet,
+                          metric: 'engagement',
+                          bucket: bucket,
+                          timeframe: _timeframe,
+                          from: currentFrom.toIso8601String(),
+                          to: currentTo.toIso8601String(),
+                          scope: engagementScope,
+                        )
+                      : null;
 
-                final labels = _buildBucketLabels(
-                  windowEnd: currentTo,
-                  timeframe: _timeframe,
-                  bucket: bucket,
-                  count: postsValues.isNotEmpty ? postsValues.length : (likesValues.isNotEmpty ? likesValues.length : 0),
-                );
+                  final postsLoading = canFetch &&
+                      postsSeries == null &&
+                      statsProvider.isSeriesLoading(
+                        entityType: 'user',
+                        entityId: targetWallet,
+                        metric: 'posts',
+                        bucket: bucket,
+                        timeframe: _timeframe,
+                        from: currentFrom.toIso8601String(),
+                        to: currentTo.toIso8601String(),
+                        scope: postScope,
+                      );
+                  final likesLoading = canFetch &&
+                      likesSeries == null &&
+                      statsProvider.isSeriesLoading(
+                        entityType: 'user',
+                        entityId: targetWallet,
+                        metric: 'likesReceived',
+                        bucket: bucket,
+                        timeframe: _timeframe,
+                        from: currentFrom.toIso8601String(),
+                        to: currentTo.toIso8601String(),
+                        scope: likesScope,
+                      );
+                  final engagementLoading = canFetch &&
+                      isOwner &&
+                      engagementSeries == null &&
+                      statsProvider.isSeriesLoading(
+                        entityType: 'user',
+                        entityId: targetWallet,
+                        metric: 'engagement',
+                        bucket: bucket,
+                        timeframe: _timeframe,
+                        from: currentFrom.toIso8601String(),
+                        to: currentTo.toIso8601String(),
+                        scope: engagementScope,
+                      );
 
-                return ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    _timeframeSelector(context, roles: roles, scheme: scheme),
-                    const SizedBox(height: 16),
-                    _chartCard(
-                      context,
-                      title: 'Posts created',
-                      accent: themeProvider.accentColor,
-                      values: postsValues,
-                      labels: labels,
-                    ),
-                    const SizedBox(height: 16),
-                    _chartCard(
-                      context,
-                      title: 'Likes received',
-                      accent: scheme.secondary,
-                      values: likesValues,
-                      labels: labels,
-                    ),
-                    if (isOwner) ...[
+                  final postsError =
+                      (canFetch && !postsLoading && postsSeries == null)
+                          ? statsProvider.seriesError(
+                              entityType: 'user',
+                              entityId: targetWallet,
+                              metric: 'posts',
+                              bucket: bucket,
+                              timeframe: _timeframe,
+                              from: currentFrom.toIso8601String(),
+                              to: currentTo.toIso8601String(),
+                              scope: postScope,
+                            )
+                          : null;
+                  final likesError =
+                      (canFetch && !likesLoading && likesSeries == null)
+                          ? statsProvider.seriesError(
+                              entityType: 'user',
+                              entityId: targetWallet,
+                              metric: 'likesReceived',
+                              bucket: bucket,
+                              timeframe: _timeframe,
+                              from: currentFrom.toIso8601String(),
+                              to: currentTo.toIso8601String(),
+                              scope: likesScope,
+                            )
+                          : null;
+                  final engagementError = (canFetch &&
+                          isOwner &&
+                          !engagementLoading &&
+                          engagementSeries == null)
+                      ? statsProvider.seriesError(
+                          entityType: 'user',
+                          entityId: targetWallet,
+                          metric: 'engagement',
+                          bucket: bucket,
+                          timeframe: _timeframe,
+                          from: currentFrom.toIso8601String(),
+                          to: currentTo.toIso8601String(),
+                          scope: engagementScope,
+                        )
+                      : null;
+
+                  final postsValues = _filledValues(postsSeries,
+                      windowEnd: currentTo,
+                      timeframe: _timeframe,
+                      bucket: bucket);
+                  final likesValues = _filledValues(likesSeries,
+                      windowEnd: currentTo,
+                      timeframe: _timeframe,
+                      bucket: bucket);
+                  final engagementValues = isOwner
+                      ? _filledValues(engagementSeries,
+                          windowEnd: currentTo,
+                          timeframe: _timeframe,
+                          bucket: bucket)
+                      : const <double>[];
+
+                  final labels = _buildBucketLabels(
+                    windowEnd: currentTo,
+                    timeframe: _timeframe,
+                    bucket: bucket,
+                    count: postsValues.isNotEmpty
+                        ? postsValues.length
+                        : (likesValues.isNotEmpty ? likesValues.length : 0),
+                  );
+
+                  return ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      _timeframeSelector(context, roles: roles, scheme: scheme),
                       const SizedBox(height: 16),
                       _chartCard(
                         context,
-                        title: 'Engagement',
-                        accent: scheme.tertiary,
-                        values: engagementValues,
+                        title: 'Posts created',
+                        accent: themeProvider.accentColor,
+                        analyticsPaused: !canFetch,
+                        isLoading: postsLoading,
+                        error: postsError,
+                        values: postsValues,
                         labels: labels,
                       ),
-                    ],
-                    if (!analyticsPreferenceEnabled)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 16),
-                        child: EmptyStateCard(
-                          icon: Icons.privacy_tip_outlined,
-                          title: 'Analytics paused',
-                          description: 'Enable analytics in Settings to load charts.',
-                          showAction: false,
-                        ),
+                      const SizedBox(height: 16),
+                      _chartCard(
+                        context,
+                        title: 'Likes received',
+                        accent: scheme.secondary,
+                        analyticsPaused: !canFetch,
+                        isLoading: likesLoading,
+                        error: likesError,
+                        values: likesValues,
+                        labels: labels,
                       ),
-                  ],
-                );
+                      if (isOwner) ...[
+                        const SizedBox(height: 16),
+                        _chartCard(
+                          context,
+                          title: 'Engagement',
+                          accent: scheme.tertiary,
+                          analyticsPaused: !canFetch,
+                          isLoading: engagementLoading,
+                          error: engagementError,
+                          values: engagementValues,
+                          labels: labels,
+                        ),
+                      ],
+                      if (!analyticsPreferenceEnabled)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 16),
+                          child: EmptyStateCard(
+                            icon: Icons.privacy_tip_outlined,
+                            title: 'Analytics paused',
+                            description:
+                                'Enable analytics in Settings to load charts.',
+                            showAction: false,
+                          ),
+                        ),
+                    ],
+                  );
                 },
               ),
       ),
@@ -277,6 +380,9 @@ class _CommunityAnalyticsScreenState extends State<CommunityAnalyticsScreen> {
     BuildContext context, {
     required String title,
     required Color accent,
+    required bool analyticsPaused,
+    required bool isLoading,
+    required Object? error,
     required List<double> values,
     required List<String> labels,
   }) {
@@ -303,7 +409,45 @@ class _CommunityAnalyticsScreenState extends State<CommunityAnalyticsScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          if (!hasData)
+          if (analyticsPaused)
+            const SizedBox(
+              height: 200,
+              child: Center(
+                child: EmptyStateCard(
+                  icon: Icons.privacy_tip_outlined,
+                  title: 'Analytics paused',
+                  description: 'Enable analytics in Settings to load charts.',
+                  showAction: false,
+                ),
+              ),
+            )
+          else if (isLoading)
+            SizedBox(
+              height: 200,
+              child: Center(
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: accent,
+                  ),
+                ),
+              ),
+            )
+          else if (error != null && !hasData)
+            const SizedBox(
+              height: 200,
+              child: Center(
+                child: EmptyStateCard(
+                  icon: Icons.error_outline,
+                  title: 'Unable to load',
+                  description: 'Please try again later.',
+                  showAction: false,
+                ),
+              ),
+            )
+          else if (!hasData)
             const SizedBox(
               height: 200,
               child: Center(
@@ -365,7 +509,9 @@ class _CommunityAnalyticsScreenState extends State<CommunityAnalyticsScreen> {
 
   DateTime _bucketStartUtc(DateTime dt, String bucket) {
     final utc = dt.toUtc();
-    if (bucket == 'hour') return DateTime.utc(utc.year, utc.month, utc.day, utc.hour);
+    if (bucket == 'hour') {
+      return DateTime.utc(utc.year, utc.month, utc.day, utc.hour);
+    }
     if (bucket == 'week') {
       final startOfDay = DateTime.utc(utc.year, utc.month, utc.day);
       return startOfDay.subtract(Duration(days: startOfDay.weekday - 1));
@@ -405,7 +551,9 @@ class _CommunityAnalyticsScreenState extends State<CommunityAnalyticsScreen> {
 
     DateTime bucketStart(DateTime dt) {
       final utc = dt.toUtc();
-      if (bucket == 'hour') return DateTime.utc(utc.year, utc.month, utc.day, utc.hour);
+      if (bucket == 'hour') {
+        return DateTime.utc(utc.year, utc.month, utc.day, utc.hour);
+      }
       if (bucket == 'week') {
         final startOfDay = DateTime.utc(utc.year, utc.month, utc.day);
         return startOfDay.subtract(Duration(days: startOfDay.weekday - 1));
@@ -419,7 +567,8 @@ class _CommunityAnalyticsScreenState extends State<CommunityAnalyticsScreen> {
             ? const Duration(days: 7)
             : const Duration(days: 1);
 
-    final endBucket = bucketStart(windowEnd.subtract(const Duration(microseconds: 1)));
+    final endBucket =
+        bucketStart(windowEnd.subtract(const Duration(microseconds: 1)));
     final startBucket = endBucket.subtract(step * (expected - 1));
 
     final valuesByBucket = <int, int>{};
@@ -446,7 +595,9 @@ class _CommunityAnalyticsScreenState extends State<CommunityAnalyticsScreen> {
 
     DateTime bucketStart(DateTime dt) {
       final utc = dt.toUtc();
-      if (bucket == 'hour') return DateTime.utc(utc.year, utc.month, utc.day, utc.hour);
+      if (bucket == 'hour') {
+        return DateTime.utc(utc.year, utc.month, utc.day, utc.hour);
+      }
       if (bucket == 'week') {
         final startOfDay = DateTime.utc(utc.year, utc.month, utc.day);
         return startOfDay.subtract(Duration(days: startOfDay.weekday - 1));
@@ -460,7 +611,8 @@ class _CommunityAnalyticsScreenState extends State<CommunityAnalyticsScreen> {
             ? const Duration(days: 7)
             : const Duration(days: 1);
 
-    final endBucket = bucketStart(windowEnd.subtract(const Duration(microseconds: 1)));
+    final endBucket =
+        bucketStart(windowEnd.subtract(const Duration(microseconds: 1)));
     final startBucket = endBucket.subtract(step * (count - 1));
 
     String labelFor(DateTime bucketStartUtc) {
