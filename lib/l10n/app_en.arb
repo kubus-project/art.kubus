@@ -3117,7 +3117,7 @@
   "season0NewsletterSubtitle": "Get updates on progress and events",
   "season0PointsLabel": "KUB8 points",
   "season0PointsTooltip": "Off-chain progress tokens",
-  "season0OnChainNote": "On-chain features available in Labs",
+  "season0OnChainNote": "On-chain features available on dev-net for now",
 
   "mnemonicRevealTitle": "Reveal Recovery Phrase",
   "mnemonicRevealPrivacyWarning": "Your recovery phrase (keep it private)",

@@ -28,10 +28,10 @@ import 'http_client_factory.dart';
 import 'telemetry/kubus_client_context.dart';
 
 /// Backend API Service
-/// 
+///
 /// Provides a centralized interface for all backend API calls.
 /// Handles authentication, error handling, and data transformation.
-/// 
+///
 /// Endpoints:
 /// - User/Profile: Register, login, profile management
 /// - AR Markers: Geospatial queries, CRUD operations
@@ -55,7 +55,9 @@ class BackendApiRequestException implements Exception {
   @override
   String toString() {
     final trimmedBody = (body ?? '').trim();
-    if (trimmedBody.isEmpty) return 'BackendApiRequestException($statusCode $path)';
+    if (trimmedBody.isEmpty) {
+      return 'BackendApiRequestException($statusCode $path)';
+    }
     return 'BackendApiRequestException($statusCode $path): $trimmedBody';
   }
 }
@@ -75,7 +77,8 @@ abstract class ArtworkBackendApi {
   });
 
   Future<Artwork> getArtwork(String artworkId);
-  Future<Artwork?> updateArtwork(String artworkId, Map<String, dynamic> updates);
+  Future<Artwork?> updateArtwork(
+      String artworkId, Map<String, dynamic> updates);
   Future<Artwork?> publishArtwork(String artworkId);
   Future<Artwork?> unpublishArtwork(String artworkId);
   Future<int?> likeArtwork(String artworkId);
@@ -117,7 +120,8 @@ abstract class ProfileBackendApi {
   Future<Map<String, dynamic>> getProfileByWallet(String walletAddress);
   Future<Map<String, dynamic>> saveProfile(Map<String, dynamic> profileData);
 
-  Future<Map<String, dynamic>> updateProfile(String walletAddress, Map<String, dynamic> updates);
+  Future<Map<String, dynamic>> updateProfile(
+      String walletAddress, Map<String, dynamic> updates);
 
   Future<Map<String, dynamic>> uploadAvatarToProfile({
     required List<int> fileBytes,
@@ -138,11 +142,13 @@ abstract class MarkerBackendApi {
   String? getAuthToken();
   Future<List<ArtMarker>> getMyArtMarkers();
   Future<ArtMarker?> createArtMarkerRecord(Map<String, dynamic> payload);
-  Future<ArtMarker?> updateArtMarkerRecord(String markerId, Map<String, dynamic> updates);
+  Future<ArtMarker?> updateArtMarkerRecord(
+      String markerId, Map<String, dynamic> updates);
   Future<bool> deleteArtMarkerRecord(String markerId);
 }
 
-class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerBackendApi {
+class BackendApiService
+    implements ArtworkBackendApi, ProfileBackendApi, MarkerBackendApi {
   static final BackendApiService _instance = BackendApiService._internal();
   factory BackendApiService() => _instance;
   BackendApiService._internal() {
@@ -264,13 +270,16 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
 
   bool _isExhibitionsPath(Uri uri) {
     final path = uri.path;
-    return path.startsWith('/api/exhibitions') || path.contains('/api/exhibitions/');
+    return path.startsWith('/api/exhibitions') ||
+        path.contains('/api/exhibitions/');
   }
 
   bool _isExhibitionsRootPath(Uri uri) {
     final segments = uri.pathSegments;
     if (segments.length < 2) return false;
-    return segments[0] == 'api' && segments[1] == 'exhibitions' && segments.length == 2;
+    return segments[0] == 'api' &&
+        segments[1] == 'exhibitions' &&
+        segments.length == 2;
   }
 
   int? _tryParseRequestFailedStatus(Object error) {
@@ -281,7 +290,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     return int.tryParse(match.group(1) ?? '');
   }
 
-  String _rateLimitKey(String method, Uri uri) => '${method.toUpperCase()} ${uri.path}';
+  String _rateLimitKey(String method, Uri uri) =>
+      '${method.toUpperCase()} ${uri.path}';
 
   bool _isRateLimited(String key) {
     final resetAt = _rateLimitResets[key];
@@ -293,7 +303,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     return true;
   }
 
-  void _markRateLimited(String key, http.Response response, {int defaultWindowMs = 60000}) {
+  void _markRateLimited(String key, http.Response response,
+      {int defaultWindowMs = 60000}) {
     int windowMs = defaultWindowMs;
     try {
       if (response.headers['retry-after'] != null) {
@@ -305,7 +316,10 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       if (response.body.isNotEmpty) {
         final parsed = jsonDecode(response.body);
         if (parsed is Map<String, dynamic>) {
-          final fromBody = parsed['windowMs'] ?? parsed['window_ms'] ?? parsed['retryAfterMs'] ?? parsed['retry_after_ms'];
+          final fromBody = parsed['windowMs'] ??
+              parsed['window_ms'] ??
+              parsed['retryAfterMs'] ??
+              parsed['retry_after_ms'];
           if (fromBody is num) {
             windowMs = fromBody.toInt();
           }
@@ -325,7 +339,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     final resetAt = _rateLimitResets[key];
     if (resetAt == null) return 'Rate limit exceeded. Please retry shortly.';
     final remaining = resetAt.difference(DateTime.now());
-    if (remaining.isNegative) return 'Rate limit exceeded. Please retry shortly.';
+    if (remaining.isNegative) {
+      return 'Rate limit exceeded. Please retry shortly.';
+    }
     final mins = remaining.inMinutes;
     final secs = remaining.inSeconds % 60;
     final human = mins > 0 ? '${mins}m ${secs}s' : '${secs}s';
@@ -351,25 +367,31 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     await _authInitFuture;
   }
 
-  Future<void> _doAuthInit(String? walletAddress, {bool forceWalletIssuance = false}) async {
+  Future<void> _doAuthInit(String? walletAddress,
+      {bool forceWalletIssuance = false}) async {
     try {
       await loadAuthToken();
       final hasToken = (_authToken ?? '').isNotEmpty;
       final shouldIssueForWallet = (!hasToken) &&
-          (forceWalletIssuance || (walletAddress != null && walletAddress.isNotEmpty));
-      if (shouldIssueForWallet && walletAddress != null && walletAddress.isNotEmpty) {
+          (forceWalletIssuance ||
+              (walletAddress != null && walletAddress.isNotEmpty));
+      if (shouldIssueForWallet &&
+          walletAddress != null &&
+          walletAddress.isNotEmpty) {
         // Prefer the real auth flow.
         // NOTE: /api/profiles/issue-token is debug-only (API key/admin gated) and
         // should not be used for client auto-auth in production.
         try {
           await registerWallet(
             walletAddress: walletAddress,
-            username: 'user_${walletAddress.substring(0, walletAddress.length >= 8 ? 8 : walletAddress.length)}',
+            username:
+                'user_${walletAddress.substring(0, walletAddress.length >= 8 ? 8 : walletAddress.length)}',
           );
           await loadAuthToken();
         } catch (e) {
           if (kDebugMode) {
-            AppConfig.debugPrint('BackendApiService._doAuthInit: registerWallet failed: $e');
+            AppConfig.debugPrint(
+                'BackendApiService._doAuthInit: registerWallet failed: $e');
           }
         }
       }
@@ -394,7 +416,10 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       if (!AuthGatingService.hasLocalAccountSync(prefs: prefs)) {
         return;
       }
-      final storedWallet = prefs.getString('wallet_address') ?? prefs.getString('wallet') ?? prefs.getString('walletAddress') ?? prefs.getString('user_id');
+      final storedWallet = prefs.getString('wallet_address') ??
+          prefs.getString('wallet') ??
+          prefs.getString('walletAddress') ??
+          prefs.getString('user_id');
       if (storedWallet != null && storedWallet.isNotEmpty) {
         _preferredWalletCanonical = WalletUtils.canonical(storedWallet);
         // Attempt to obtain a real JWT for the wallet.
@@ -402,18 +427,21 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         try {
           await registerWallet(
             walletAddress: storedWallet,
-            username: 'user_${storedWallet.substring(0, storedWallet.length >= 8 ? 8 : storedWallet.length)}',
+            username:
+                'user_${storedWallet.substring(0, storedWallet.length >= 8 ? 8 : storedWallet.length)}',
           );
           await loadAuthToken();
         } catch (e) {
           if (kDebugMode) {
-            AppConfig.debugPrint('BackendApiService: registerWallet failed for stored wallet: $e');
+            AppConfig.debugPrint(
+                'BackendApiService: registerWallet failed for stored wallet: $e');
           }
         }
       }
     } catch (e) {
       if (kDebugMode) {
-        AppConfig.debugPrint('BackendApiService: _ensureAuthWithStoredWallet failed: $e');
+        AppConfig.debugPrint(
+            'BackendApiService: _ensureAuthWithStoredWallet failed: $e');
       }
     }
   }
@@ -434,10 +462,13 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     final preferredCanonical = (_preferredWalletCanonical ?? '').trim();
     final requestedCanonical = WalletUtils.canonical(walletAddress);
     final canHonorRequested = requestedCanonical.isNotEmpty &&
-        (preferredCanonical.isEmpty || requestedCanonical == preferredCanonical);
+        (preferredCanonical.isEmpty ||
+            requestedCanonical == preferredCanonical);
     final desiredCanonical = canHonorRequested
         ? requestedCanonical
-        : (preferredCanonical.isNotEmpty ? preferredCanonical : requestedCanonical);
+        : (preferredCanonical.isNotEmpty
+            ? preferredCanonical
+            : requestedCanonical);
 
     if (preferredCanonical.isNotEmpty &&
         requestedCanonical.isNotEmpty &&
@@ -464,7 +495,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         try {
           await registerWallet(
             walletAddress: walletAddress ?? desiredCanonical,
-            username: 'user_${(walletAddress ?? desiredCanonical).substring(0, (walletAddress ?? desiredCanonical).length >= 8 ? 8 : (walletAddress ?? desiredCanonical).length)}',
+            username:
+                'user_${(walletAddress ?? desiredCanonical).substring(0, (walletAddress ?? desiredCanonical).length >= 8 ? 8 : (walletAddress ?? desiredCanonical).length)}',
           );
           await loadAuthToken();
         } catch (e) {
@@ -483,7 +515,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       try {
         await ensureAuthLoaded(walletAddress: desiredRaw);
       } catch (e) {
-        AppConfig.debugPrint('BackendApiService: ensureAuthLoaded for $desiredRaw failed: $e');
+        AppConfig.debugPrint(
+            'BackendApiService: ensureAuthLoaded for $desiredRaw failed: $e');
       }
     }
   }
@@ -498,17 +531,21 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       await _secureStorage
           .write(key: 'jwt_token', value: token)
           .timeout(const Duration(milliseconds: 800));
-      AppConfig.debugPrint('BackendApiService: Auth token written to secure storage');
+      AppConfig.debugPrint(
+          'BackendApiService: Auth token written to secure storage');
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService: failed to write secure storage token: $e');
+      AppConfig.debugPrint(
+          'BackendApiService: failed to write secure storage token: $e');
     }
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('jwt_token', token);
       await prefs.setBool(PreferenceKeys.hasCompletedAuthOnboarding, true);
-      AppConfig.debugPrint('BackendApiService: Auth token written to SharedPreferences fallback');
+      AppConfig.debugPrint(
+          'BackendApiService: Auth token written to SharedPreferences fallback');
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService: failed to write prefs token: $e');
+      AppConfig.debugPrint(
+          'BackendApiService: failed to write prefs token: $e');
     }
   }
 
@@ -520,15 +557,18 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       await _secureStorage
           .write(key: 'refresh_token', value: trimmed)
           .timeout(const Duration(milliseconds: 800));
-      AppConfig.debugPrint('BackendApiService: Refresh token written to secure storage');
+      AppConfig.debugPrint(
+          'BackendApiService: Refresh token written to secure storage');
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService: failed to write refresh token: $e');
+      AppConfig.debugPrint(
+          'BackendApiService: failed to write refresh token: $e');
     }
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('refresh_token', trimmed);
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService: failed to write refresh token to prefs: $e');
+      AppConfig.debugPrint(
+          'BackendApiService: failed to write refresh token to prefs: $e');
     }
   }
 
@@ -539,7 +579,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
           .read(key: 'refresh_token')
           .timeout(const Duration(milliseconds: 800));
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService: refresh token secure storage read failed: $e');
+      AppConfig.debugPrint(
+          'BackendApiService: refresh token secure storage read failed: $e');
     }
 
     if (refreshToken == null || refreshToken.isEmpty) {
@@ -547,7 +588,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         final prefs = await SharedPreferences.getInstance();
         refreshToken = AuthGatingService.readStoredRefreshToken(prefs);
       } catch (e) {
-        AppConfig.debugPrint('BackendApiService: refresh token prefs read failed: $e');
+        AppConfig.debugPrint(
+            'BackendApiService: refresh token prefs read failed: $e');
       }
     }
 
@@ -579,7 +621,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         await clearAuth();
       }
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService: refreshAuthTokenFromStorage failed: $e');
+      AppConfig.debugPrint(
+          'BackendApiService: refreshAuthTokenFromStorage failed: $e');
     }
 
     return false;
@@ -594,7 +637,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
             .read(key: 'jwt_token')
             .timeout(const Duration(milliseconds: 800));
       } catch (e) {
-        AppConfig.debugPrint('BackendApiService: secure storage read failed: $e');
+        AppConfig.debugPrint(
+            'BackendApiService: secure storage read failed: $e');
       }
 
       // Fallback to SharedPreferences (useful for web builds where secure storage may not persist)
@@ -604,21 +648,25 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
           // Try known access token keys for backward compatibility
           token = AuthGatingService.readStoredAccessToken(prefs);
           if (token != null && token.isNotEmpty) {
-            AppConfig.debugPrint('BackendApiService: Auth token loaded from SharedPreferences fallback');
+            AppConfig.debugPrint(
+                'BackendApiService: Auth token loaded from SharedPreferences fallback');
           }
         } catch (e) {
-          AppConfig.debugPrint('BackendApiService: SharedPreferences fallback failed: $e');
+          AppConfig.debugPrint(
+              'BackendApiService: SharedPreferences fallback failed: $e');
         }
       }
       if (token != null && token.isNotEmpty) {
         if (AuthGatingService.isAccessTokenValid(token)) {
           _authToken = token;
           _authWalletCanonical = _tryExtractWalletFromToken(token);
-          AppConfig.debugPrint('BackendApiService: Auth token loaded (in-memory)');
+          AppConfig.debugPrint(
+              'BackendApiService: Auth token loaded (in-memory)');
         } else {
           _authToken = null;
           _authWalletCanonical = null;
-          AppConfig.debugPrint('BackendApiService: Stored auth token is expired; ignoring');
+          AppConfig.debugPrint(
+              'BackendApiService: Stored auth token is expired; ignoring');
         }
         // Attempt to decode exp field for debug information
         try {
@@ -631,11 +679,13 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
               final exp = (map['exp'] as num).toInt();
               final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
               final secsLeft = exp - now;
-              AppConfig.debugPrint('BackendApiService: token expiry in $secsLeft seconds');
+              AppConfig.debugPrint(
+                  'BackendApiService: token expiry in $secsLeft seconds');
             }
           }
         } catch (e) {
-          AppConfig.debugPrint('BackendApiService: failed to decode token expiry: $e');
+          AppConfig.debugPrint(
+              'BackendApiService: failed to decode token expiry: $e');
         }
       } else {
         AppConfig.debugPrint('BackendApiService: No stored auth token found');
@@ -660,7 +710,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       await _secureStorage
           .delete(key: 'refresh_token')
           .timeout(const Duration(milliseconds: 800));
-      AppConfig.debugPrint('BackendApiService: Auth cleared from secure storage');
+      AppConfig.debugPrint(
+          'BackendApiService: Auth cleared from secure storage');
     } catch (e) {
       AppConfig.debugPrint('BackendApiService: Error clearing auth token: $e');
     }
@@ -672,9 +723,11 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       for (final key in AuthGatingService.refreshTokenKeys) {
         await prefs.remove(key);
       }
-      AppConfig.debugPrint('BackendApiService: Auth cleared from SharedPreferences');
+      AppConfig.debugPrint(
+          'BackendApiService: Auth cleared from SharedPreferences');
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService: Error clearing prefs auth token: $e');
+      AppConfig.debugPrint(
+          'BackendApiService: Error clearing prefs auth token: $e');
     }
   }
 
@@ -738,17 +791,25 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     try {
       final decoded = jsonDecode(body);
       if (decoded is Map<String, dynamic>) {
-        final msg = (decoded['error'] ?? decoded['message'] ?? decoded['detail'] ?? '').toString();
+        final msg =
+            (decoded['error'] ?? decoded['message'] ?? decoded['detail'] ?? '')
+                .toString();
         if (msg.trim().isEmpty) return false;
-        return _looksLikeTokenErrorMessage(msg) || msg.toLowerCase().trim() == 'forbidden';
+        // IMPORTANT:
+        // 403 is commonly used for *authorization* (valid session but not allowed),
+        // such as "only view your own achievements" endpoints. Treating every
+        // "Forbidden" as an auth failure causes spurious re-auth prompts when
+        // browsing other users' public content.
+        //
+        // Only treat 403 as an auth failure when the body indicates a token/auth
+        // issue (or when the body is empty, handled above).
+        return _looksLikeTokenErrorMessage(msg);
       }
       if (decoded is String) {
-        final normalized = decoded.toLowerCase().trim();
-        return _looksLikeTokenErrorMessage(decoded) || normalized == 'forbidden';
+        return _looksLikeTokenErrorMessage(decoded);
       }
     } catch (_) {
-      final normalized = body.toLowerCase().trim();
-      return _looksLikeTokenErrorMessage(body) || normalized == 'forbidden';
+      return _looksLikeTokenErrorMessage(body);
     }
 
     return false;
@@ -765,7 +826,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     Duration timeout = AppConfig.requestTimeout,
     bool retriedAfterReauth = false,
   }) async {
-    if (includeAuth && _authCoordinator != null && _authCoordinator!.isResolving) {
+    if (includeAuth &&
+        _authCoordinator != null &&
+        _authCoordinator!.isResolving) {
       final settled = await _authCoordinator!.waitForResolution();
       if (settled != null && !settled.isSuccess) {
         throw BackendApiRequestException(
@@ -777,7 +840,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     }
 
     final resolvedHeaders = _applyAuthHeader(
-      Map<String, String>.from(headers ?? _getHeaders(includeAuth: includeAuth)),
+      Map<String, String>.from(
+          headers ?? _getHeaders(includeAuth: includeAuth)),
       includeAuth: includeAuth,
     );
 
@@ -786,10 +850,12 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     // to avoid noisy console output.
     final shouldTrace = AppConfig.enableNetworkLogging &&
         kDebugMode &&
-        (uri.path.startsWith('/api/art-markers') || uri.path.contains('/api/art-markers/'));
+        (uri.path.startsWith('/api/art-markers') ||
+            uri.path.contains('/api/art-markers/'));
     if (shouldTrace) {
       final hasAuthHeader = resolvedHeaders.containsKey('Authorization');
-      final authWallet = _authWalletCanonical ?? _tryExtractWalletFromToken(_authToken) ?? '';
+      final authWallet =
+          _authWalletCanonical ?? _tryExtractWalletFromToken(_authToken) ?? '';
       final preferredWallet = _preferredWalletCanonical ?? '';
       AppConfig.networkLog(method.toUpperCase(), uri.toString(), data: {
         'authHeader': hasAuthHeader,
@@ -803,26 +869,39 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     final http.Response response;
     switch (method.toUpperCase()) {
       case 'GET':
-        response = await _client.get(uri, headers: resolvedHeaders).timeout(timeout);
+        response =
+            await _client.get(uri, headers: resolvedHeaders).timeout(timeout);
         break;
       case 'POST':
-        response = await _client.post(uri, headers: resolvedHeaders, body: body, encoding: encoding).timeout(timeout);
+        response = await _client
+            .post(uri, headers: resolvedHeaders, body: body, encoding: encoding)
+            .timeout(timeout);
         break;
       case 'PUT':
-        response = await _client.put(uri, headers: resolvedHeaders, body: body, encoding: encoding).timeout(timeout);
+        response = await _client
+            .put(uri, headers: resolvedHeaders, body: body, encoding: encoding)
+            .timeout(timeout);
         break;
       case 'PATCH':
-        response = await _client.patch(uri, headers: resolvedHeaders, body: body, encoding: encoding).timeout(timeout);
+        response = await _client
+            .patch(uri,
+                headers: resolvedHeaders, body: body, encoding: encoding)
+            .timeout(timeout);
         break;
       case 'DELETE':
-        response = await _client.delete(uri, headers: resolvedHeaders, body: body, encoding: encoding).timeout(timeout);
+        response = await _client
+            .delete(uri,
+                headers: resolvedHeaders, body: body, encoding: encoding)
+            .timeout(timeout);
         break;
       default:
         throw ArgumentError('Unsupported method: $method');
     }
 
     if (shouldTrace) {
-      final snippet = response.body.length <= 240 ? response.body : response.body.substring(0, 240);
+      final snippet = response.body.length <= 240
+          ? response.body
+          : response.body.substring(0, 240);
       AppConfig.networkLog('RESP', uri.toString(), data: {
         'status': response.statusCode,
         'bodySnippet': snippet,
@@ -833,7 +912,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     final isAuthFailure = includeAuth &&
         coordinator != null &&
         AppConfig.isFeatureEnabled('rePromptLoginOnExpiry') &&
-        _isAuthFailureStatus(statusCode: response.statusCode, responseBody: response.body);
+        _isAuthFailureStatus(
+            statusCode: response.statusCode, responseBody: response.body);
 
     if (!isAuthFailure) return response;
 
@@ -979,7 +1059,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     Duration timeout = AppConfig.requestTimeout,
     bool retriedAfterReauth = false,
   }) async {
-    if (includeAuth && _authCoordinator != null && _authCoordinator!.isResolving) {
+    if (includeAuth &&
+        _authCoordinator != null &&
+        _authCoordinator!.isResolving) {
       final settled = await _authCoordinator!.waitForResolution();
       if (settled != null && !settled.isSuccess) {
         final request = requestFactory();
@@ -1007,7 +1089,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     final isAuthFailure = includeAuth &&
         coordinator != null &&
         AppConfig.isFeatureEnabled('rePromptLoginOnExpiry') &&
-        _isAuthFailureStatus(statusCode: response.statusCode, responseBody: response.body);
+        _isAuthFailureStatus(
+            statusCode: response.statusCode, responseBody: response.body);
 
     if (!isAuthFailure) return response;
     if (retriedAfterReauth) return response;
@@ -1056,7 +1139,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     }
   }
 
-  bool _isSuccessStatus(int statusCode) => statusCode >= 200 && statusCode < 300;
+  bool _isSuccessStatus(int statusCode) =>
+      statusCode >= 200 && statusCode < 300;
 
   Uri _withOrbitSource(Uri uri) {
     final qp = Map<String, String>.from(uri.queryParameters);
@@ -1216,7 +1300,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         await _persistTokenFromResponse(data);
         return data;
       } else {
-        throw Exception('Register failed: ${response.statusCode} ${response.body}');
+        throw Exception(
+            'Register failed: ${response.statusCode} ${response.body}');
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.registerWallet failed: $e');
@@ -1248,7 +1333,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         await _persistTokenFromResponse(data);
         return data;
       } else {
-        throw Exception('Login failed: ${response.statusCode} ${response.body}');
+        throw Exception(
+            'Login failed: ${response.statusCode} ${response.body}');
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.loginWithWallet failed: $e');
@@ -1274,7 +1360,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         'email': email,
         'password': password,
         if (username != null && username.isNotEmpty) 'username': username,
-        if (walletAddress != null && walletAddress.isNotEmpty) 'walletAddress': walletAddress,
+        if (walletAddress != null && walletAddress.isNotEmpty)
+          'walletAddress': walletAddress,
       };
       final response = await _post(
         uri,
@@ -1292,9 +1379,11 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         throw Exception(_rateLimitMessage(key));
       }
       if (response.statusCode == 404) {
-        throw Exception('Email registration endpoint not available on the backend (received 404). Ensure the server is updated and ENABLE_EMAIL_AUTH=true.');
+        throw Exception(
+            'Email registration endpoint not available on the backend (received 404). Ensure the server is updated and ENABLE_EMAIL_AUTH=true.');
       }
-      throw BackendApiRequestException(statusCode: response.statusCode, path: uri.path, body: response.body);
+      throw BackendApiRequestException(
+          statusCode: response.statusCode, path: uri.path, body: response.body);
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.registerWithEmail failed: $e');
       rethrow;
@@ -1328,7 +1417,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         _markRateLimited(key, response, defaultWindowMs: 900000);
         throw Exception(_rateLimitMessage(key));
       }
-      throw BackendApiRequestException(statusCode: response.statusCode, path: uri.path, body: response.body);
+      throw BackendApiRequestException(
+          statusCode: response.statusCode, path: uri.path, body: response.body);
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.loginWithEmail failed: $e');
       rethrow;
@@ -1337,7 +1427,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
 
   /// Resend email verification link
   /// POST /api/auth/resend-verification { email }
-  Future<Map<String, dynamic>> resendEmailVerification({required String email}) async {
+  Future<Map<String, dynamic>> resendEmailVerification(
+      {required String email}) async {
     try {
       final uri = Uri.parse('$baseUrl/api/auth/resend-verification');
       final key = _rateLimitKey('POST', uri);
@@ -1357,9 +1448,11 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         _markRateLimited(key, response, defaultWindowMs: 900000);
         throw Exception(_rateLimitMessage(key));
       }
-      throw BackendApiRequestException(statusCode: response.statusCode, path: uri.path, body: response.body);
+      throw BackendApiRequestException(
+          statusCode: response.statusCode, path: uri.path, body: response.body);
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService.resendEmailVerification failed: $e');
+      AppConfig.debugPrint(
+          'BackendApiService.resendEmailVerification failed: $e');
       rethrow;
     }
   }
@@ -1386,7 +1479,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         _markRateLimited(key, response, defaultWindowMs: 900000);
         throw Exception(_rateLimitMessage(key));
       }
-      throw BackendApiRequestException(statusCode: response.statusCode, path: uri.path, body: response.body);
+      throw BackendApiRequestException(
+          statusCode: response.statusCode, path: uri.path, body: response.body);
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.verifyEmail failed: $e');
       rethrow;
@@ -1415,7 +1509,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         _markRateLimited(key, response, defaultWindowMs: 900000);
         throw Exception(_rateLimitMessage(key));
       }
-      throw BackendApiRequestException(statusCode: response.statusCode, path: uri.path, body: response.body);
+      throw BackendApiRequestException(
+          statusCode: response.statusCode, path: uri.path, body: response.body);
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.forgotPassword failed: $e');
       rethrow;
@@ -1447,7 +1542,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         _markRateLimited(key, response, defaultWindowMs: 900000);
         throw Exception(_rateLimitMessage(key));
       }
-      throw BackendApiRequestException(statusCode: response.statusCode, path: uri.path, body: response.body);
+      throw BackendApiRequestException(
+          statusCode: response.statusCode, path: uri.path, body: response.body);
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.resetPassword failed: $e');
       rethrow;
@@ -1464,15 +1560,18 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     String? walletAddress,
   }) async {
     try {
-      if ((code == null || code.isEmpty) && (idToken == null || idToken.isEmpty)) {
-        throw Exception('Either auth code or idToken is required for Google login');
+      if ((code == null || code.isEmpty) &&
+          (idToken == null || idToken.isEmpty)) {
+        throw Exception(
+            'Either auth code or idToken is required for Google login');
       }
 
       final isCodeFlow = code != null && code.isNotEmpty;
-      final endpoint = isCodeFlow ? '/api/auth/login/google/code' : '/api/auth/login/google';
+      final endpoint =
+          isCodeFlow ? '/api/auth/login/google/code' : '/api/auth/login/google';
       final uri = Uri.parse('$baseUrl$endpoint');
       final key = _rateLimitKey('POST', uri);
-      
+
       if (_isRateLimited(key)) {
         throw Exception(_rateLimitMessage(key));
       }
@@ -1482,7 +1581,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         if (!isCodeFlow && idToken != null) 'idToken': idToken,
         if (email != null && email.isNotEmpty) 'email': email,
         if (username != null && username.isNotEmpty) 'username': username,
-        if (walletAddress != null && walletAddress.isNotEmpty) 'walletAddress': walletAddress,
+        if (walletAddress != null && walletAddress.isNotEmpty)
+          'walletAddress': walletAddress,
       };
 
       final response = await _post(
@@ -1503,15 +1603,18 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
           final prefs = await SharedPreferences.getInstance();
           final resetAt = _rateLimitResets[key];
           if (resetAt != null) {
-            await prefs.setInt('rate_limit_auth_google_until', resetAt.millisecondsSinceEpoch);
+            await prefs.setInt(
+                'rate_limit_auth_google_until', resetAt.millisecondsSinceEpoch);
           }
         } catch (_) {}
         throw Exception(_rateLimitMessage(key));
       }
       if (response.statusCode == 404) {
-        throw Exception('Google login endpoint not available on the backend (received 404). Ensure the server is updated and ENABLE_GOOGLE_AUTH=true with GOOGLE_CLIENT_ID configured.');
+        throw Exception(
+            'Google login endpoint not available on the backend (received 404). Ensure the server is updated and ENABLE_GOOGLE_AUTH=true with GOOGLE_CLIENT_ID configured.');
       }
-      throw Exception('Google login failed: ${response.statusCode} ${response.body}');
+      throw Exception(
+          'Google login failed: ${response.statusCode} ${response.body}');
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.loginWithGoogle failed: $e');
       rethrow;
@@ -1548,18 +1651,22 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         return jsonDecode(response.body) as Map<String, dynamic>;
       }
       if (response.statusCode == 404) {
-        throw Exception('Email preferences endpoint not available on the backend (received 404). Ensure the server is updated.');
+        throw Exception(
+            'Email preferences endpoint not available on the backend (received 404). Ensure the server is updated.');
       }
-      throw BackendApiRequestException(statusCode: response.statusCode, path: uri.path, body: response.body);
+      throw BackendApiRequestException(
+          statusCode: response.statusCode, path: uri.path, body: response.body);
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService.getMyEmailPreferences failed: $e');
+      AppConfig.debugPrint(
+          'BackendApiService.getMyEmailPreferences failed: $e');
       rethrow;
     }
   }
 
   /// Update authenticated user's email preferences
   /// PATCH /api/users/me/preferences
-  Future<Map<String, dynamic>> updateMyEmailPreferences(Map<String, dynamic> preferences) async {
+  Future<Map<String, dynamic>> updateMyEmailPreferences(
+      Map<String, dynamic> preferences) async {
     try {
       final uri = Uri.parse('$baseUrl/api/users/me/preferences');
       final response = await _patch(
@@ -1571,11 +1678,14 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         return jsonDecode(response.body) as Map<String, dynamic>;
       }
       if (response.statusCode == 404) {
-        throw Exception('Email preferences endpoint not available on the backend (received 404). Ensure the server is updated.');
+        throw Exception(
+            'Email preferences endpoint not available on the backend (received 404). Ensure the server is updated.');
       }
-      throw BackendApiRequestException(statusCode: response.statusCode, path: uri.path, body: response.body);
+      throw BackendApiRequestException(
+          statusCode: response.statusCode, path: uri.path, body: response.body);
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService.updateMyEmailPreferences failed: $e');
+      AppConfig.debugPrint(
+          'BackendApiService.updateMyEmailPreferences failed: $e');
       rethrow;
     }
   }
@@ -1615,18 +1725,23 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         headers: _getHeaders(includeAuth: false),
         body: jsonEncode({'walletAddress': walletAddress}),
       );
-      AppConfig.debugPrint('BackendApiService.issueTokenForWallet: status=${resp.statusCode}');
-      AppConfig.debugPrint('BackendApiService.issueTokenForWallet: bodyLen=${resp.body.length}');
+      AppConfig.debugPrint(
+          'BackendApiService.issueTokenForWallet: status=${resp.statusCode}');
+      AppConfig.debugPrint(
+          'BackendApiService.issueTokenForWallet: bodyLen=${resp.body.length}');
       if (resp.statusCode == 200 || resp.statusCode == 201) {
         final body = jsonDecode(resp.body) as Map<String, dynamic>;
-        final token = body['token'] as String? ?? body['data']?['token'] as String?;
-        AppConfig.debugPrint('BackendApiService.issueTokenForWallet: tokenPresent=${token != null && token.isNotEmpty}');
+        final token =
+            body['token'] as String? ?? body['data']?['token'] as String?;
+        AppConfig.debugPrint(
+            'BackendApiService.issueTokenForWallet: tokenPresent=${token != null && token.isNotEmpty}');
         if (token != null && token.isNotEmpty) {
           await setAuthToken(token);
           try {
             await _secureStorage.write(key: 'jwt_token', value: token);
           } catch (e) {
-            AppConfig.debugPrint('BackendApiService.issueTokenForWallet: failed to persist token: $e');
+            AppConfig.debugPrint(
+                'BackendApiService.issueTokenForWallet: failed to persist token: $e');
           }
           return true;
         }
@@ -1643,9 +1758,13 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
   Future<Map<String, dynamic>> fetchConversations() async {
     try {
       // Ensure we attempt to load persisted token before every protected call
-      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
-      AppConfig.debugPrint('BackendApiService.fetchConversations: authToken present=${_authToken != null && _authToken!.isNotEmpty}');
-      final response = await _get(Uri.parse('$baseUrl/api/messages'), headers: _getHeaders());
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
+      AppConfig.debugPrint(
+          'BackendApiService.fetchConversations: authToken present=${_authToken != null && _authToken!.isNotEmpty}');
+      final response = await _get(Uri.parse('$baseUrl/api/messages'),
+          headers: _getHeaders());
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as Map<String, dynamic>;
       }
@@ -1658,17 +1777,24 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
 
   /// Fetch messages for a conversation
   /// GET /api/messages/:conversationId/messages
-  Future<Map<String, dynamic>> fetchMessages(String conversationId, {int page = 1, int limit = 50}) async {
+  Future<Map<String, dynamic>> fetchMessages(String conversationId,
+      {int page = 1, int limit = 50}) async {
     try {
       // Ensure we attempt to load persisted token before every protected call (and attempt issuance for stored wallet if missing)
-      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
-      AppConfig.debugPrint('BackendApiService.fetchMessages: conversationId=$conversationId authToken present=${_authToken != null && _authToken!.isNotEmpty}');
-      final uri = Uri.parse('$baseUrl/api/messages/$conversationId/messages').replace(queryParameters: {
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
+      AppConfig.debugPrint(
+          'BackendApiService.fetchMessages: conversationId=$conversationId authToken present=${_authToken != null && _authToken!.isNotEmpty}');
+      final uri = Uri.parse('$baseUrl/api/messages/$conversationId/messages')
+          .replace(queryParameters: {
         'page': page.toString(),
         'limit': limit.toString(),
       });
       final response = await _get(uri, headers: _getHeaders());
-      if (response.statusCode == 200) return jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
       return {'success': false, 'status': response.statusCode};
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.fetchMessages failed: $e');
@@ -1678,7 +1804,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
 
   /// Send a message to a conversation (JSON)
   /// POST /api/messages/:conversationId/messages { message, data, replyToId }
-  Future<Map<String, dynamic>> sendMessage(String conversationId, String message, {Map<String, dynamic>? data, String? replyToId}) async {
+  Future<Map<String, dynamic>> sendMessage(
+      String conversationId, String message,
+      {Map<String, dynamic>? data, String? replyToId}) async {
     try {
       final body = <String, dynamic>{'message': message};
       if (data != null) body['data'] = data;
@@ -1693,7 +1821,11 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       if (response.statusCode == 200 || response.statusCode == 201) {
         return jsonDecode(response.body) as Map<String, dynamic>;
       }
-      return {'success': false, 'status': response.statusCode, 'body': response.body};
+      return {
+        'success': false,
+        'status': response.statusCode,
+        'body': response.body
+      };
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.sendMessage failed: $e');
       return {'success': false, 'error': e.toString()};
@@ -1702,28 +1834,44 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
 
   /// Fetch conversation members
   /// GET /api/messages/:conversationId/members
-  Future<Map<String, dynamic>> fetchConversationMembers(String conversationId) async {
+  Future<Map<String, dynamic>> fetchConversationMembers(
+      String conversationId) async {
     try {
       // Ensure persisted token is loaded and token issuance attempted once (use stored wallet fallback)
-      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
-      final response = await _get(Uri.parse('$baseUrl/api/messages/$conversationId/members'), headers: _getHeaders());
-      if (response.statusCode == 200) return jsonDecode(response.body) as Map<String, dynamic>;
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
+      final response = await _get(
+          Uri.parse('$baseUrl/api/messages/$conversationId/members'),
+          headers: _getHeaders());
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
       if (response.statusCode == 429) {
-        AppConfig.debugPrint('BackendApiService.fetchConversationMembers: 429 Too Many Requests for $conversationId');
-        return {'success': false, 'status': 429, 'retryAfter': response.headers['retry-after']};
+        AppConfig.debugPrint(
+            'BackendApiService.fetchConversationMembers: 429 Too Many Requests for $conversationId');
+        return {
+          'success': false,
+          'status': 429,
+          'retryAfter': response.headers['retry-after']
+        };
       }
       return {'success': false, 'status': response.statusCode};
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService.fetchConversationMembers failed: $e');
+      AppConfig.debugPrint(
+          'BackendApiService.fetchConversationMembers failed: $e');
       return {'success': false, 'error': e.toString()};
     }
   }
 
   /// Upload a message attachment by posting multipart to the messages endpoint
-  Future<Map<String, dynamic>> uploadMessageAttachment(String conversationId, List<int> bytes, String filename, String contentType) async {
+  Future<Map<String, dynamic>> uploadMessageAttachment(String conversationId,
+      List<int> bytes, String filename, String contentType) async {
     try {
       final uri = Uri.parse('$baseUrl/api/messages/$conversationId/messages');
-      final placeholder = filename.isNotEmpty ? 'Attachment • $filename' : 'Shared an attachment';
+      final placeholder = filename.isNotEmpty
+          ? 'Attachment • $filename'
+          : 'Shared an attachment';
       http.MultipartRequest buildRequest() {
         final request = http.MultipartRequest('POST', uri);
         request.headers.addAll({'Accept': 'application/json'});
@@ -1741,24 +1889,31 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       }
 
       final resp = await _sendMultipart(buildRequest, includeAuth: true);
-      if (resp.statusCode == 200 || resp.statusCode == 201) return jsonDecode(resp.body) as Map<String, dynamic>;
+      if (resp.statusCode == 200 || resp.statusCode == 201) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
       return {'success': false, 'status': resp.statusCode, 'body': resp.body};
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService.uploadMessageAttachment failed: $e');
+      AppConfig.debugPrint(
+          'BackendApiService.uploadMessageAttachment failed: $e');
       return {'success': false, 'error': e.toString()};
     }
   }
 
   /// Create a conversation
   /// POST /api/messages { title, members }
-  Future<Map<String, dynamic>> createConversation({String? title, bool isGroup = false, List<String>? members}) async {
+  Future<Map<String, dynamic>> createConversation(
+      {String? title, bool isGroup = false, List<String>? members}) async {
     try {
       final response = await _post(
         Uri.parse('$baseUrl/api/messages'),
         headers: _getHeaders(),
-        body: jsonEncode({'title': title, 'members': members ?? [], 'isGroup': isGroup}),
+        body: jsonEncode(
+            {'title': title, 'members': members ?? [], 'isGroup': isGroup}),
       );
-      if (response.statusCode == 200 || response.statusCode == 201) return jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
       return {'success': false, 'status': response.statusCode};
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.createConversation failed: $e');
@@ -1767,7 +1922,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
   }
 
   /// Upload conversation avatar (attempt common endpoints)
-  Future<Map<String, dynamic>> uploadConversationAvatar(String conversationId, List<int> bytes, String filename, String contentType) async {
+  Future<Map<String, dynamic>> uploadConversationAvatar(String conversationId,
+      List<int> bytes, String filename, String contentType) async {
     try {
       // Try conversation-specific avatar endpoint first
       var uri = Uri.parse('$baseUrl/api/conversations/$conversationId/avatar');
@@ -1786,7 +1942,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       }
 
       var resp = await _sendMultipart(buildPrimary, includeAuth: true);
-      if (resp.statusCode == 200 || resp.statusCode == 201) return jsonDecode(resp.body) as Map<String, dynamic>;
+      if (resp.statusCode == 200 || resp.statusCode == 201) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
 
       // Fallback to messages-based endpoint
       uri = Uri.parse('$baseUrl/api/messages/$conversationId/avatar');
@@ -1805,42 +1963,53 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       }
 
       resp = await _sendMultipart(buildFallback, includeAuth: true);
-      if (resp.statusCode == 200 || resp.statusCode == 201) return jsonDecode(resp.body) as Map<String, dynamic>;
+      if (resp.statusCode == 200 || resp.statusCode == 201) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
 
       return {'success': false, 'status': resp.statusCode, 'body': resp.body};
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService.uploadConversationAvatar failed: $e');
+      AppConfig.debugPrint(
+          'BackendApiService.uploadConversationAvatar failed: $e');
       return {'success': false, 'error': e.toString()};
     }
   }
 
   /// Add a member to conversation
-  Future<Map<String, dynamic>> addConversationMember(String conversationId, String walletAddress) async {
+  Future<Map<String, dynamic>> addConversationMember(
+      String conversationId, String walletAddress) async {
     try {
       final response = await _post(
         Uri.parse('$baseUrl/api/messages/$conversationId/members'),
         headers: _getHeaders(),
         body: jsonEncode({'walletAddress': walletAddress}),
       );
-      if (response.statusCode == 200 || response.statusCode == 201) return jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
       return {'success': false, 'status': response.statusCode};
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService.addConversationMember failed: $e');
+      AppConfig.debugPrint(
+          'BackendApiService.addConversationMember failed: $e');
       return {'success': false, 'error': e.toString()};
     }
   }
 
   /// Remove a member from conversation (best-effort)
-  Future<Map<String, dynamic>> removeConversationMember(String conversationId, String walletOrUsername) async {
+  Future<Map<String, dynamic>> removeConversationMember(
+      String conversationId, String walletOrUsername) async {
     try {
       // Try a DELETE endpoint first (may not exist on server)
       final uri = Uri.parse('$baseUrl/api/messages/$conversationId/members');
       final response = await _delete(
         uri,
         headers: _getHeaders(),
-        body: jsonEncode({'walletAddress': walletOrUsername, 'username': walletOrUsername}),
+        body: jsonEncode(
+            {'walletAddress': walletOrUsername, 'username': walletOrUsername}),
       );
-      if (response.statusCode == 200 || response.statusCode == 204) return {'success': true};
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        return {'success': true};
+      }
 
       // Fallback: call a removal helper endpoint (non-standard)
       final fallback = await _post(
@@ -1848,36 +2017,48 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         headers: _getHeaders(),
         body: jsonEncode({'walletAddress': walletOrUsername}),
       );
-      if (fallback.statusCode == 200 || fallback.statusCode == 201) return jsonDecode(fallback.body) as Map<String, dynamic>;
+      if (fallback.statusCode == 200 || fallback.statusCode == 201) {
+        return jsonDecode(fallback.body) as Map<String, dynamic>;
+      }
 
       return {'success': false, 'status': response.statusCode};
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService.removeConversationMember failed: $e');
+      AppConfig.debugPrint(
+          'BackendApiService.removeConversationMember failed: $e');
       return {'success': false, 'error': e.toString()};
     }
   }
 
   /// Transfer conversation ownership (best-effort)
-  Future<Map<String, dynamic>> transferConversationOwner(String conversationId, String newOwnerWallet) async {
+  Future<Map<String, dynamic>> transferConversationOwner(
+      String conversationId, String newOwnerWallet) async {
     try {
       final response = await _post(
         Uri.parse('$baseUrl/api/messages/$conversationId/transfer-owner'),
         headers: _getHeaders(),
         body: jsonEncode({'newOwnerWallet': newOwnerWallet}),
       );
-      if (response.statusCode == 200 || response.statusCode == 201) return jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
       return {'success': false, 'status': response.statusCode};
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService.transferConversationOwner failed: $e');
+      AppConfig.debugPrint(
+          'BackendApiService.transferConversationOwner failed: $e');
       return {'success': false, 'error': e.toString()};
     }
   }
 
   /// Mark conversation as read
-  Future<Map<String, dynamic>> markConversationRead(String conversationId) async {
+  Future<Map<String, dynamic>> markConversationRead(
+      String conversationId) async {
     try {
-      final response = await _put(Uri.parse('$baseUrl/api/messages/$conversationId/read'), headers: _getHeaders());
-      if (response.statusCode == 200) return jsonDecode(response.body) as Map<String, dynamic>;
+      final response = await _put(
+          Uri.parse('$baseUrl/api/messages/$conversationId/read'),
+          headers: _getHeaders());
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
       return {'success': false, 'status': response.statusCode};
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.markConversationRead failed: $e');
@@ -1886,10 +2067,16 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
   }
 
   /// Mark a specific message as read
-  Future<Map<String, dynamic>> markMessageRead(String conversationId, String messageId) async {
+  Future<Map<String, dynamic>> markMessageRead(
+      String conversationId, String messageId) async {
     try {
-      final response = await _put(Uri.parse('$baseUrl/api/messages/$conversationId/messages/$messageId/read'), headers: _getHeaders());
-      if (response.statusCode == 200) return jsonDecode(response.body) as Map<String, dynamic>;
+      final response = await _put(
+          Uri.parse(
+              '$baseUrl/api/messages/$conversationId/messages/$messageId/read'),
+          headers: _getHeaders());
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
       return {'success': false, 'status': response.statusCode};
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.markMessageRead failed: $e');
@@ -1897,7 +2084,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     }
   }
 
-  Future<Map<String, dynamic>> renameConversation(String conversationId, String newTitle) async {
+  Future<Map<String, dynamic>> renameConversation(
+      String conversationId, String newTitle) async {
     try {
       final response = await _patch(
         Uri.parse('$baseUrl/api/messages/$conversationId/rename'),
@@ -1954,21 +2142,26 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       // being viewed.
       // Avoid making pointless network calls when wallet is a known placeholder
       final normalized = WalletUtils.normalize(walletAddress);
-      if (normalized.isEmpty || ['unknown', 'anonymous', 'n/a', 'none'].contains(normalized.toLowerCase())) {
+      if (normalized.isEmpty ||
+          ['unknown', 'anonymous', 'n/a', 'none']
+              .contains(normalized.toLowerCase())) {
         throw Exception('Profile not found');
       }
       // Validate wallet format to prevent 404s from display names or malformed identifiers
       if (!WalletUtils.looksLikeWallet(normalized)) {
-        AppConfig.debugPrint('BackendApiService.getProfileByWallet: rejecting non-wallet identifier: $normalized');
+        AppConfig.debugPrint(
+            'BackendApiService.getProfileByWallet: rejecting non-wallet identifier: $normalized');
         throw Exception('Invalid wallet address format');
       }
       // URL-encode the wallet address for safe path segments
       final encodedWallet = Uri.encodeComponent(normalized);
       final uri = Uri.parse('$baseUrl/api/profiles/$encodedWallet');
-      final dynamic data = await _fetchJson(uri, includeAuth: false, allowOrbitFallback: true);
+      final dynamic data =
+          await _fetchJson(uri, includeAuth: false, allowOrbitFallback: true);
       final raw = data['data'] ?? data;
       if (raw is Map<String, dynamic>) {
-        AppConfig.debugPrint('BackendApiService.getProfileByWallet: parsed profile keys: ${raw.keys.toList()}');
+        AppConfig.debugPrint(
+            'BackendApiService.getProfileByWallet: parsed profile keys: ${raw.keys.toList()}');
         return raw;
       }
       throw Exception('Invalid profile payload');
@@ -1994,7 +2187,11 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         return {'success': true, 'data': data['data'] ?? data};
       }
-      return {'success': false, 'status': response.statusCode, 'body': response.body};
+      return {
+        'success': false,
+        'status': response.statusCode,
+        'body': response.body
+      };
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getProfilesBatch failed: $e');
       return {'success': false, 'error': e.toString()};
@@ -2018,7 +2215,11 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         return {'success': true, 'data': data['data'] ?? data};
       }
-      return {'success': false, 'status': response.statusCode, 'body': response.body};
+      return {
+        'success': false,
+        'status': response.statusCode,
+        'body': response.body
+      };
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getPresenceBatch failed: $e');
       return {'success': false, 'error': e.toString()};
@@ -2052,7 +2253,11 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
           'data': data['data'] ?? data,
         };
       }
-      return {'success': false, 'status': response.statusCode, 'body': response.body};
+      return {
+        'success': false,
+        'status': response.statusCode,
+        'body': response.body
+      };
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.recordPresenceVisit failed: $e');
       return {'success': false, 'error': e.toString()};
@@ -2077,7 +2282,11 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         return {'success': true, 'data': data['data'] ?? data};
       }
-      return {'success': false, 'status': response.statusCode, 'body': response.body};
+      return {
+        'success': false,
+        'status': response.statusCode,
+        'body': response.body
+      };
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.pingPresence failed: $e');
       return {'success': false, 'error': e.toString()};
@@ -2089,7 +2298,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     final sanitized = username.trim().replaceFirst(RegExp(r'^@+'), '');
     if (sanitized.isEmpty) return null;
     try {
-      final response = await search(query: sanitized, type: 'profiles', limit: 10, page: 1);
+      final response =
+          await search(query: sanitized, type: 'profiles', limit: 10, page: 1);
       if (response['success'] != true) return null;
       final normalizedTarget = sanitized.toLowerCase();
       final resultsPayload = response['results'];
@@ -2104,9 +2314,15 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       }
       for (final entry in profiles) {
         if (entry is! Map<String, dynamic>) continue;
-        final rawUsername = (entry['username'] ?? entry['walletAddress'] ?? entry['wallet_address'] ?? entry['wallet'])?.toString() ?? '';
+        final rawUsername = (entry['username'] ??
+                    entry['walletAddress'] ??
+                    entry['wallet_address'] ??
+                    entry['wallet'])
+                ?.toString() ??
+            '';
         if (rawUsername.isEmpty) continue;
-        final normalized = rawUsername.replaceFirst(RegExp(r'^@+'), '').toLowerCase();
+        final normalized =
+            rawUsername.replaceFirst(RegExp(r'^@+'), '').toLowerCase();
         if (normalized == normalizedTarget) {
           return entry;
         }
@@ -2116,7 +2332,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         return profiles.first as Map<String, dynamic>;
       }
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService.findProfileByUsername failed: $e');
+      AppConfig.debugPrint(
+          'BackendApiService.findProfileByUsername failed: $e');
     }
     return null;
   }
@@ -2124,10 +2341,13 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
   /// Create or update profile
   /// POST /api/profiles
   @override
-  Future<Map<String, dynamic>> saveProfile(Map<String, dynamic> profileData) async {
+  Future<Map<String, dynamic>> saveProfile(
+      Map<String, dynamic> profileData) async {
     // Backend requires authentication (verifyToken). Make sure we have a token
     // available before attempting to save.
-    final walletAddress = (profileData['walletAddress'] ?? profileData['wallet_address'])?.toString();
+    final walletAddress =
+        (profileData['walletAddress'] ?? profileData['wallet_address'])
+            ?.toString();
     await _ensureAuthBeforeRequest(walletAddress: walletAddress);
 
     const int maxRetries = 3;
@@ -2136,7 +2356,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       attempt++;
       try {
         if (kDebugMode) {
-          debugPrint('BackendApiService.saveProfile: POST /api/profiles payload: ${jsonEncode(profileData)}');
+          debugPrint(
+              'BackendApiService.saveProfile: POST /api/profiles payload: ${jsonEncode(profileData)}');
         }
         final uri = Uri.parse('$baseUrl/api/profiles');
         final response = await _post(
@@ -2151,7 +2372,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
           if (data['token'] is String && (data['token'] as String).isNotEmpty) {
             await setAuthToken(data['token'] as String);
             if (kDebugMode) {
-              debugPrint('BackendApiService.saveProfile: token received and stored from profile creation');
+              debugPrint(
+                  'BackendApiService.saveProfile: token received and stored from profile creation');
             }
           }
 
@@ -2166,13 +2388,16 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         if (response.statusCode == 429) {
           // Too many requests - check Retry-After header
           final retryAfter = response.headers['retry-after'];
-          final waitSeconds = int.tryParse(retryAfter ?? '') ?? (2 << (attempt - 1));
+          final waitSeconds =
+              int.tryParse(retryAfter ?? '') ?? (2 << (attempt - 1));
           if (attempt < maxRetries) {
-            AppConfig.debugPrint('BackendApiService.saveProfile: 429 retry in $waitSeconds seconds (attempt $attempt)');
+            AppConfig.debugPrint(
+                'BackendApiService.saveProfile: 429 retry in $waitSeconds seconds (attempt $attempt)');
             await Future.delayed(Duration(seconds: waitSeconds));
             continue;
           } else {
-            throw Exception('Too many requests (429). Please wait and try again later.');
+            throw Exception(
+                'Too many requests (429). Please wait and try again later.');
           }
         }
 
@@ -2182,18 +2407,21 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
           body: response.body,
         );
       } catch (e) {
-        if (e is BackendApiRequestException && (e.statusCode == 401 || e.statusCode == 403)) {
+        if (e is BackendApiRequestException &&
+            (e.statusCode == 401 || e.statusCode == 403)) {
           rethrow;
         }
         // If we've exhausted retries, rethrow
         if (attempt >= maxRetries) {
-          AppConfig.debugPrint('BackendApiService.saveProfile failed (final): $e');
+          AppConfig.debugPrint(
+              'BackendApiService.saveProfile failed (final): $e');
           rethrow;
         }
 
         // If this was a transient error, wait briefly and retry
         final backoff = 1 << (attempt - 1);
-        AppConfig.debugPrint('BackendApiService.saveProfile transient error, retrying in $backoff seconds: $e');
+        AppConfig.debugPrint(
+            'BackendApiService.saveProfile transient error, retrying in $backoff seconds: $e');
         await Future.delayed(Duration(seconds: backoff));
       }
     }
@@ -2215,8 +2443,10 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       if (verified != null) queryParams['verified'] = verified.toString();
       if (featured != null) queryParams['featured'] = featured.toString();
 
-      final uri = Uri.parse('$baseUrl/api/profiles/artists/list').replace(queryParameters: queryParams);
-      final response = await _get(uri, includeAuth: false, headers: _getHeaders(includeAuth: false));
+      final uri = Uri.parse('$baseUrl/api/profiles/artists/list')
+          .replace(queryParameters: queryParams);
+      final response = await _get(uri,
+          includeAuth: false, headers: _getHeaders(includeAuth: false));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -2245,14 +2475,17 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       };
       if (status != null) queryParams['status'] = status;
 
-      final uri = Uri.parse('$baseUrl/api/profiles/$walletAddress/artworks').replace(queryParameters: queryParams);
-      final response = await _get(uri, includeAuth: false, headers: _getHeaders(includeAuth: false));
+      final uri = Uri.parse('$baseUrl/api/profiles/$walletAddress/artworks')
+          .replace(queryParameters: queryParams);
+      final response = await _get(uri,
+          includeAuth: false, headers: _getHeaders(includeAuth: false));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         return List<Map<String, dynamic>>.from(data['data'] as List);
       } else {
-        throw Exception('Failed to get artist artworks: ${response.statusCode}');
+        throw Exception(
+            'Failed to get artist artworks: ${response.statusCode}');
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getArtistArtworks failed: $e');
@@ -2300,7 +2533,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       final queryParams = <String, String>{};
       if (metrics.isNotEmpty) queryParams['metrics'] = metrics.join(',');
       if (scope.trim().isNotEmpty) queryParams['scope'] = scope.trim();
-      if (groupBy != null && groupBy.trim().isNotEmpty) queryParams['groupBy'] = groupBy.trim();
+      if (groupBy != null && groupBy.trim().isNotEmpty) {
+        queryParams['groupBy'] = groupBy.trim();
+      }
 
       final encodedId = Uri.encodeComponent(entityId);
       final uri = Uri.parse('$baseUrl/api/stats/$entityType/$encodedId')
@@ -2351,10 +2586,16 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         'metric': metric,
         'bucket': bucket,
       };
-      if (timeframe.trim().isNotEmpty) queryParams['timeframe'] = timeframe.trim();
-      if (from != null && from.trim().isNotEmpty) queryParams['from'] = from.trim();
+      if (timeframe.trim().isNotEmpty) {
+        queryParams['timeframe'] = timeframe.trim();
+      }
+      if (from != null && from.trim().isNotEmpty) {
+        queryParams['from'] = from.trim();
+      }
       if (to != null && to.trim().isNotEmpty) queryParams['to'] = to.trim();
-      if (groupBy != null && groupBy.trim().isNotEmpty) queryParams['groupBy'] = groupBy.trim();
+      if (groupBy != null && groupBy.trim().isNotEmpty) {
+        queryParams['groupBy'] = groupBy.trim();
+      }
       if (scope.trim().isNotEmpty) queryParams['scope'] = scope.trim();
 
       final encodedId = Uri.encodeComponent(entityId);
@@ -2427,7 +2668,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         throw Exception('Failed to get mock posts: ${response.statusCode}');
       }
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService.getMockCommunityPosts failed: $e');
+      AppConfig.debugPrint(
+          'BackendApiService.getMockCommunityPosts failed: $e');
       rethrow;
     }
   }
@@ -2450,20 +2692,24 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         'radius': radiusKm.toString(),
         if (limit != null) 'limit': limit.toString(),
       };
-      final uri = Uri.parse('$baseUrl/api/art-markers').replace(queryParameters: qp);
+      final uri =
+          Uri.parse('$baseUrl/api/art-markers').replace(queryParameters: qp);
 
-      final dynamic data = await _fetchJson(uri, includeAuth: true, allowOrbitFallback: true);
+      final dynamic data =
+          await _fetchJson(uri, includeAuth: true, allowOrbitFallback: true);
       final List<dynamic> markerList;
       if (data is List) {
         markerList = data;
       } else if (data is Map<String, dynamic>) {
-        final dynamic maybeList = data['data'] ?? data['markers'] ?? data['artMarkers'];
+        final dynamic maybeList =
+            data['data'] ?? data['markers'] ?? data['artMarkers'];
         markerList = maybeList is List ? maybeList : const [];
       } else {
         markerList = const [];
       }
       return markerList
-          .map((json) => _artMarkerFromBackendJson(json as Map<String, dynamic>))
+          .map(
+              (json) => _artMarkerFromBackendJson(json as Map<String, dynamic>))
           .toList();
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getNearbyArtMarkers failed: $e');
@@ -2495,24 +2741,29 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         'maxLng': maxLng.toString(),
         if (limit != null) 'limit': limit.toString(),
       };
-      final uri = Uri.parse('$baseUrl/api/art-markers').replace(queryParameters: qp);
+      final uri =
+          Uri.parse('$baseUrl/api/art-markers').replace(queryParameters: qp);
 
-      final dynamic data = await _fetchJson(uri, includeAuth: true, allowOrbitFallback: true);
+      final dynamic data =
+          await _fetchJson(uri, includeAuth: true, allowOrbitFallback: true);
       final List<dynamic> markerList;
       if (data is List) {
         markerList = data;
       } else if (data is Map<String, dynamic>) {
-        final dynamic maybeList = data['data'] ?? data['markers'] ?? data['artMarkers'];
+        final dynamic maybeList =
+            data['data'] ?? data['markers'] ?? data['artMarkers'];
         markerList = maybeList is List ? maybeList : const [];
       } else {
         markerList = const [];
       }
 
       return markerList
-          .map((json) => _artMarkerFromBackendJson(json as Map<String, dynamic>))
+          .map(
+              (json) => _artMarkerFromBackendJson(json as Map<String, dynamic>))
           .toList();
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService.getArtMarkersInBounds failed: $e');
+      AppConfig.debugPrint(
+          'BackendApiService.getArtMarkersInBounds failed: $e');
       rethrow;
     }
   }
@@ -2566,16 +2817,21 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       );
 
       if (response.statusCode == 200) {
-        final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
-        final dynamic payload = decoded is Map<String, dynamic> ? (decoded['data'] ?? decoded['markers'] ?? decoded) : decoded;
-        final List<dynamic> markerList = payload is List ? payload : const <dynamic>[];
+        final decoded =
+            response.body.isNotEmpty ? jsonDecode(response.body) : null;
+        final dynamic payload = decoded is Map<String, dynamic>
+            ? (decoded['data'] ?? decoded['markers'] ?? decoded)
+            : decoded;
+        final List<dynamic> markerList =
+            payload is List ? payload : const <dynamic>[];
         return markerList
             .whereType<Map<String, dynamic>>()
             .map(_artMarkerFromBackendJson)
             .toList(growable: false);
       }
 
-      throw Exception('Failed to load markers: ${response.statusCode} ${response.body}');
+      throw Exception(
+          'Failed to load markers: ${response.statusCode} ${response.body}');
     } catch (e) {
       AppConfig.debugPrint('BackendeApiService.getMyArtMarkers failed: $e');
       rethrow;
@@ -2596,10 +2852,14 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         timeout: const Duration(seconds: 15),
       );
 
-      final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+      final decoded =
+          response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (response.statusCode == 201 || response.statusCode == 200) {
         if (decoded is Map<String, dynamic>) {
-          final marker = decoded['data'] ?? decoded['marker'] ?? decoded['artMarker'] ?? decoded;
+          final marker = decoded['data'] ??
+              decoded['marker'] ??
+              decoded['artMarker'] ??
+              decoded;
           if (marker is Map<String, dynamic>) {
             return _artMarkerFromBackendJson(marker);
           }
@@ -2613,7 +2873,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         body: response.body,
       );
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService.createArtMarkerRecord failed: $e');
+      AppConfig.debugPrint(
+          'BackendApiService.createArtMarkerRecord failed: $e');
       rethrow;
     }
   }
@@ -2621,7 +2882,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
   /// Update a marker record.
   /// PUT /api/art-markers/:id
   @override
-  Future<ArtMarker?> updateArtMarkerRecord(String markerId, Map<String, dynamic> updates) async {
+  Future<ArtMarker?> updateArtMarkerRecord(
+      String markerId, Map<String, dynamic> updates) async {
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/art-markers/$markerId');
@@ -2632,10 +2894,14 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         timeout: const Duration(seconds: 15),
       );
 
-      final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+      final decoded =
+          response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (response.statusCode == 200) {
         if (decoded is Map<String, dynamic>) {
-          final marker = decoded['data'] ?? decoded['marker'] ?? decoded['artMarker'] ?? decoded;
+          final marker = decoded['data'] ??
+              decoded['marker'] ??
+              decoded['artMarker'] ??
+              decoded;
           if (marker is Map<String, dynamic>) {
             return _artMarkerFromBackendJson(marker);
           }
@@ -2649,7 +2915,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         body: response.body,
       );
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService.updateArtMarkerRecord failed: $e');
+      AppConfig.debugPrint(
+          'BackendApiService.updateArtMarkerRecord failed: $e');
       rethrow;
     }
   }
@@ -2677,7 +2944,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         body: response.body,
       );
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService.deleteArtMarkerRecord failed: $e');
+      AppConfig.debugPrint(
+          'BackendApiService.deleteArtMarkerRecord failed: $e');
       rethrow;
     }
   }
@@ -2712,7 +2980,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
 
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final payload = (data['data'] ?? data['marker'] ?? data['artMarker']) as Map<String, dynamic>;
+        final payload = (data['data'] ?? data['marker'] ?? data['artMarker'])
+            as Map<String, dynamic>;
         return _artMarkerFromBackendJson(payload);
       } else {
         throw Exception('Failed to create marker: ${response.statusCode}');
@@ -2758,7 +3027,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         body: response.body,
       );
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService.getAttendanceChallenge failed: $e');
+      AppConfig.debugPrint(
+          'BackendApiService.getAttendanceChallenge failed: $e');
       rethrow;
     }
   }
@@ -2808,7 +3078,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         headers: _getHeaders(),
       );
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService.incrementMarkerInteractions failed: $e');
+      AppConfig.debugPrint(
+          'BackendApiService.incrementMarkerInteractions failed: $e');
     }
   }
 
@@ -2841,15 +3112,20 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         }
       }
 
-      final uri = Uri.parse('$baseUrl/api/artworks').replace(queryParameters: queryParams);
+      final uri = Uri.parse('$baseUrl/api/artworks')
+          .replace(queryParameters: queryParams);
       final data = await _fetchJson(
         uri,
         includeAuth: includePrivateForWallet && hasWalletFilter,
         allowOrbitFallback: true,
       );
-      final dynamic listCandidate = data['artworks'] ?? data['data'] ?? data['items'];
-      final List<dynamic> artworks = listCandidate is List ? listCandidate : <dynamic>[];
-      return artworks.map((json) => _artworkFromBackendJson(json as Map<String, dynamic>)).toList();
+      final dynamic listCandidate =
+          data['artworks'] ?? data['data'] ?? data['items'];
+      final List<dynamic> artworks =
+          listCandidate is List ? listCandidate : <dynamic>[];
+      return artworks
+          .map((json) => _artworkFromBackendJson(json as Map<String, dynamic>))
+          .toList();
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getArtworks failed: $e');
       rethrow;
@@ -2865,7 +3141,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         await _ensureAuthWithStoredWallet();
       } catch (_) {}
       final uri = Uri.parse('$baseUrl/api/artworks/$artworkId');
-      final data = await _fetchJson(uri, includeAuth: true, allowOrbitFallback: true);
+      final data =
+          await _fetchJson(uri, includeAuth: true, allowOrbitFallback: true);
       final payload = data['artwork'] ?? data['data'] ?? data;
       if (payload is Map<String, dynamic>) {
         return _artworkFromBackendJson(payload);
@@ -2880,12 +3157,15 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
   /// Update an artwork
   /// PUT /api/artworks/:id
   @override
-  Future<Artwork?> updateArtwork(String artworkId, Map<String, dynamic> updates) async {
+  Future<Artwork?> updateArtwork(
+      String artworkId, Map<String, dynamic> updates) async {
     try {
       await _ensureAuthWithStoredWallet();
       final uri = Uri.parse('$baseUrl/api/artworks/$artworkId');
-      final response = await _put(uri, headers: _getHeaders(), body: jsonEncode(updates));
-      final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+      final response =
+          await _put(uri, headers: _getHeaders(), body: jsonEncode(updates));
+      final decoded =
+          response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (response.statusCode == 200) {
         if (decoded is Map<String, dynamic>) {
           final payload = decoded['data'] ?? decoded['artwork'] ?? decoded;
@@ -2895,7 +3175,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         }
         return null;
       }
-      throw Exception('Failed to update artwork: ${response.statusCode} ${response.body}');
+      throw Exception(
+          'Failed to update artwork: ${response.statusCode} ${response.body}');
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.updateArtwork failed: $e');
       rethrow;
@@ -2910,7 +3191,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       await _ensureAuthWithStoredWallet();
       final uri = Uri.parse('$baseUrl/api/artworks/$artworkId/publish');
       final response = await _post(uri, headers: _getHeaders());
-      final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+      final decoded =
+          response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (response.statusCode == 200) {
         if (decoded is Map<String, dynamic>) {
           final payload = decoded['data'] ?? decoded['artwork'] ?? decoded;
@@ -2920,7 +3202,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         }
         return null;
       }
-      throw Exception('Failed to publish artwork: ${response.statusCode} ${response.body}');
+      throw Exception(
+          'Failed to publish artwork: ${response.statusCode} ${response.body}');
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.publishArtwork failed: $e');
       rethrow;
@@ -2935,7 +3218,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       await _ensureAuthWithStoredWallet();
       final uri = Uri.parse('$baseUrl/api/artworks/$artworkId/unpublish');
       final response = await _post(uri, headers: _getHeaders());
-      final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+      final decoded =
+          response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (response.statusCode == 200) {
         if (decoded is Map<String, dynamic>) {
           final payload = decoded['data'] ?? decoded['artwork'] ?? decoded;
@@ -2945,7 +3229,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         }
         return null;
       }
-      throw Exception('Failed to unpublish artwork: ${response.statusCode} ${response.body}');
+      throw Exception(
+          'Failed to unpublish artwork: ${response.statusCode} ${response.body}');
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.unpublishArtwork failed: $e');
       rethrow;
@@ -2960,9 +3245,13 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       final uri = Uri.parse('$baseUrl/api/artworks/$artworkId');
       final response = await _delete(uri, headers: _getHeaders());
       if (response.statusCode == 200 || response.statusCode == 204) return true;
-      final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
-      if (decoded is Map<String, dynamic> && decoded['success'] == true) return true;
-      throw Exception('Failed to delete artwork: ${response.statusCode} ${response.body}');
+      final decoded =
+          response.body.isNotEmpty ? jsonDecode(response.body) : null;
+      if (decoded is Map<String, dynamic> && decoded['success'] == true) {
+        return true;
+      }
+      throw Exception(
+          'Failed to delete artwork: ${response.statusCode} ${response.body}');
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.deleteArtwork failed: $e');
       rethrow;
@@ -2980,14 +3269,15 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     if (normalizedNetwork.isEmpty || normalizedAction.isEmpty) return null;
 
     try {
-      final uri = Uri.parse('$baseUrl/api/fees/estimate')
-          .replace(queryParameters: {
+      final uri =
+          Uri.parse('$baseUrl/api/fees/estimate').replace(queryParameters: {
         'network': normalizedNetwork,
         'action': normalizedAction,
       });
       final response = await _get(uri, headers: _getHeaders());
       if (response.statusCode != 200) return null;
-      final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+      final decoded =
+          response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (decoded is Map<String, dynamic> && decoded['success'] == true) {
         final data = decoded['data'];
         if (data is Map<String, dynamic>) {
@@ -3003,7 +3293,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
 
   /// Fetch AR config + linked artwork content (public when artwork is public).
   /// GET /api/ar/:arConfigId/content
-  Future<Map<String, dynamic>?> getArContent({required String arConfigId}) async {
+  Future<Map<String, dynamic>?> getArContent(
+      {required String arConfigId}) async {
     final id = arConfigId.trim();
     if (id.isEmpty) return null;
 
@@ -3014,7 +3305,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       final uri = Uri.parse('$baseUrl/api/ar/$id/content');
       final response = await _get(uri, headers: _getHeaders());
       if (response.statusCode != 200) return null;
-      final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+      final decoded =
+          response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (decoded is Map<String, dynamic> && decoded['success'] == true) {
         final data = decoded['data'];
         if (data is Map<String, dynamic>) return data;
@@ -3042,14 +3334,19 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       await _ensureAuthBeforeRequest(walletAddress: walletAddress);
       final uri = Uri.parse('$baseUrl/api/ar/$id/marker/autogenerate');
       final body = <String, dynamic>{
-        if (subjectColor != null && subjectColor.trim().isNotEmpty) 'subjectColor': subjectColor.trim(),
+        if (subjectColor != null && subjectColor.trim().isNotEmpty)
+          'subjectColor': subjectColor.trim(),
         if (markerSizePx != null) 'markerSizePx': markerSizePx,
         if (regenerate) 'regenerate': true,
       };
 
-      final response = await _post(uri, headers: _getHeaders(), body: jsonEncode(body), isIdempotent: !regenerate);
+      final response = await _post(uri,
+          headers: _getHeaders(),
+          body: jsonEncode(body),
+          isIdempotent: !regenerate);
       if (response.statusCode != 200) return null;
-      final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+      final decoded =
+          response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (decoded is Map<String, dynamic> && decoded['success'] == true) {
         final data = decoded['data'];
         if (data is Map<String, dynamic>) return data;
@@ -3090,7 +3387,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       final streamed = await request.send();
       final response = await http.Response.fromStream(streamed);
       if (response.statusCode != 200) return null;
-      final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+      final decoded =
+          response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (decoded is Map<String, dynamic> && decoded['success'] == true) {
         final data = decoded['data'];
         if (data is Map<String, dynamic>) return data;
@@ -3120,9 +3418,11 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         if (status != null && status.trim().isNotEmpty) 'status': status.trim(),
         if (markerMeta != null) 'markerMeta': markerMeta,
       };
-      final response = await _put(uri, headers: _getHeaders(), body: jsonEncode(body), isIdempotent: true);
+      final response = await _put(uri,
+          headers: _getHeaders(), body: jsonEncode(body), isIdempotent: true);
       if (response.statusCode != 200) return null;
-      final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+      final decoded =
+          response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (decoded is Map<String, dynamic> && decoded['success'] == true) {
         final data = decoded['data'];
         if (data is Map<String, dynamic>) return data;
@@ -3177,11 +3477,13 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         'description': description,
         'imageUrl': imageUrl,
         'walletAddress': walletAddress,
-        if (artistName != null && artistName.isNotEmpty) 'artistName': artistName,
+        if (artistName != null && artistName.isNotEmpty)
+          'artistName': artistName,
         'category': category,
         'tags': tags,
         if (galleryUrls.isNotEmpty) 'galleryUrls': galleryUrls,
-        if (galleryMeta != null && galleryMeta.isNotEmpty) 'galleryMeta': galleryMeta,
+        if (galleryMeta != null && galleryMeta.isNotEmpty)
+          'galleryMeta': galleryMeta,
         'isPublic': isPublic,
         'isAREnabled': enableAR,
         if (modelUrl != null) 'model3DURL': modelUrl,
@@ -3192,21 +3494,39 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         if (price != null) 'price': price,
         'currency': 'KUB8',
         if (poapMode != ArtworkPoapMode.none) 'poapMode': poapMode.apiValue,
-        if (poapMode != ArtworkPoapMode.none || poapEnabled) 'poapEnabled': (poapMode != ArtworkPoapMode.none) || poapEnabled,
-        if ((poapMode != ArtworkPoapMode.none || poapEnabled) && poapEventId != null && poapEventId.trim().isNotEmpty)
+        if (poapMode != ArtworkPoapMode.none || poapEnabled)
+          'poapEnabled': (poapMode != ArtworkPoapMode.none) || poapEnabled,
+        if ((poapMode != ArtworkPoapMode.none || poapEnabled) &&
+            poapEventId != null &&
+            poapEventId.trim().isNotEmpty)
           'poapEventId': poapEventId.trim(),
-        if ((poapMode != ArtworkPoapMode.none || poapEnabled) && poapClaimUrl != null && poapClaimUrl.trim().isNotEmpty)
+        if ((poapMode != ArtworkPoapMode.none || poapEnabled) &&
+            poapClaimUrl != null &&
+            poapClaimUrl.trim().isNotEmpty)
           'poapClaimUrl': poapClaimUrl.trim(),
-        if ((poapMode != ArtworkPoapMode.none || poapEnabled) && poapTitle != null && poapTitle.trim().isNotEmpty)
+        if ((poapMode != ArtworkPoapMode.none || poapEnabled) &&
+            poapTitle != null &&
+            poapTitle.trim().isNotEmpty)
           'poapTitle': poapTitle.trim(),
-        if ((poapMode != ArtworkPoapMode.none || poapEnabled) && poapDescription != null && poapDescription.trim().isNotEmpty)
+        if ((poapMode != ArtworkPoapMode.none || poapEnabled) &&
+            poapDescription != null &&
+            poapDescription.trim().isNotEmpty)
           'poapDescription': poapDescription.trim(),
-        if ((poapMode != ArtworkPoapMode.none || poapEnabled) && poapImageUrl != null && poapImageUrl.trim().isNotEmpty)
+        if ((poapMode != ArtworkPoapMode.none || poapEnabled) &&
+            poapImageUrl != null &&
+            poapImageUrl.trim().isNotEmpty)
           'poapImageUrl': poapImageUrl.trim(),
-        if ((poapMode != ArtworkPoapMode.none || poapEnabled) && poapRewardAmount > 0) 'poapRewardAmount': poapRewardAmount,
-        if ((poapMode != ArtworkPoapMode.none || poapEnabled) && poapValidFrom != null) 'poapValidFrom': poapValidFrom.toUtc().toIso8601String(),
-        if ((poapMode != ArtworkPoapMode.none || poapEnabled) && poapValidTo != null) 'poapValidTo': poapValidTo.toUtc().toIso8601String(),
-        if (locationName != null && locationName.isNotEmpty) 'locationName': locationName,
+        if ((poapMode != ArtworkPoapMode.none || poapEnabled) &&
+            poapRewardAmount > 0)
+          'poapRewardAmount': poapRewardAmount,
+        if ((poapMode != ArtworkPoapMode.none || poapEnabled) &&
+            poapValidFrom != null)
+          'poapValidFrom': poapValidFrom.toUtc().toIso8601String(),
+        if ((poapMode != ArtworkPoapMode.none || poapEnabled) &&
+            poapValidTo != null)
+          'poapValidTo': poapValidTo.toUtc().toIso8601String(),
+        if (locationName != null && locationName.isNotEmpty)
+          'locationName': locationName,
         if (latitude != null) 'latitude': latitude,
         if (longitude != null) 'longitude': longitude,
         if (metadata != null) 'metadata': metadata,
@@ -3242,7 +3562,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
   /// POST /api/artworks/:id/discover
   Future<void> discoverArtwork(String artworkId) async {
     try {
-      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
       await _post(
         Uri.parse('$baseUrl/api/artworks/$artworkId/discover'),
         headers: _getHeaders(),
@@ -3257,7 +3579,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
   @override
   Future<int?> likeArtwork(String artworkId) async {
     try {
-      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
       final response = await _post(
         Uri.parse('$baseUrl/api/artworks/$artworkId/like'),
         headers: _getHeaders(),
@@ -3283,7 +3607,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
   @override
   Future<int?> unlikeArtwork(String artworkId) async {
     try {
-      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
       final response = await _delete(
         Uri.parse('$baseUrl/api/artworks/$artworkId/like'),
         headers: _getHeaders(),
@@ -3310,7 +3636,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
   Future<int?> recordArtworkView(String artworkId) async {
     try {
       // Views are allowed anonymously, but include auth when available
-      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
       final response = await _post(
         Uri.parse('$baseUrl/api/artworks/$artworkId/view'),
         headers: _getHeaders(),
@@ -3347,7 +3675,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
             : null,
       );
 
-      final response = await _post(uri, headers: _getHeaders(includeAuth: true));
+      final response =
+          await _post(uri, headers: _getHeaders(includeAuth: true));
       if (response.statusCode == 200) return;
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.recordEventView failed: $e');
@@ -3356,20 +3685,23 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
 
   /// Record a view for an exhibition
   /// POST /api/exhibitions/:id/view
-  Future<void> recordExhibitionView(String exhibitionId, {String? source}) async {
+  Future<void> recordExhibitionView(String exhibitionId,
+      {String? source}) async {
     try {
       // Views are allowed anonymously, but include auth when available.
       try {
         await _ensureAuthWithStoredWallet();
       } catch (_) {}
 
-      final uri = Uri.parse('$baseUrl/api/exhibitions/$exhibitionId/view').replace(
+      final uri =
+          Uri.parse('$baseUrl/api/exhibitions/$exhibitionId/view').replace(
         queryParameters: (source != null && source.trim().isNotEmpty)
             ? <String, String>{'source': source.trim()}
             : null,
       );
 
-      final response = await _post(uri, headers: _getHeaders(includeAuth: true));
+      final response =
+          await _post(uri, headers: _getHeaders(includeAuth: true));
       if (response.statusCode == 200) return;
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.recordExhibitionView failed: $e');
@@ -3385,8 +3717,11 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     int limit = 50,
   }) async {
     // Public, but include auth if available so backend can return isLikedByCurrentUser.
-    try { await _ensureAuthWithStoredWallet(); } catch (_) {}
-    final uri = Uri.parse('$baseUrl/api/artworks/$artworkId/comments').replace(queryParameters: {
+    try {
+      await _ensureAuthWithStoredWallet();
+    } catch (_) {}
+    final uri = Uri.parse('$baseUrl/api/artworks/$artworkId/comments')
+        .replace(queryParameters: {
       'page': page.toString(),
       'limit': limit.toString(),
     });
@@ -3396,7 +3731,10 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       final payload = jsonDecode(response.body);
       if (payload is Map<String, dynamic>) {
         final raw = payload['data'] as List<dynamic>? ?? <dynamic>[];
-        return raw.whereType<Map<String, dynamic>>().map(ArtworkComment.fromMap).toList();
+        return raw
+            .whereType<Map<String, dynamic>>()
+            .map(ArtworkComment.fromMap)
+            .toList();
       }
       return <ArtworkComment>[];
     }
@@ -3434,7 +3772,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         final data = payload['data'] as Map<String, dynamic>? ?? payload;
         return ArtworkComment.fromMap(data);
       }
-      throw Exception('Unexpected createArtworkComment payload: ${response.body}');
+      throw Exception(
+          'Unexpected createArtworkComment payload: ${response.body}');
     }
 
     throw BackendApiRequestException(
@@ -3451,7 +3790,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     required String commentId,
     required String content,
   }) async {
-    try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+    try {
+      await _ensureAuthWithStoredWallet();
+    } catch (_) {}
     final uri = Uri.parse('$baseUrl/api/artworks/comments/$commentId');
     final response = await _patch(
       uri,
@@ -3465,7 +3806,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         final data = payload['data'] as Map<String, dynamic>? ?? payload;
         return ArtworkComment.fromMap(data);
       }
-      throw Exception('Unexpected editArtworkComment payload: ${response.body}');
+      throw Exception(
+          'Unexpected editArtworkComment payload: ${response.body}');
     }
 
     throw BackendApiRequestException(
@@ -3480,7 +3822,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
   /// Returns updated commentsCount when provided by backend.
   @override
   Future<int?> deleteArtworkComment(String commentId) async {
-    try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+    try {
+      await _ensureAuthWithStoredWallet();
+    } catch (_) {}
     final uri = Uri.parse('$baseUrl/api/artworks/comments/$commentId');
     final response = await _delete(uri, headers: _getHeaders());
     if (response.statusCode == 200) {
@@ -3502,7 +3846,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
   @override
   Future<int?> discoverArtworkWithCount(String artworkId) async {
     try {
-      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
       final response = await _post(
         Uri.parse('$baseUrl/api/artworks/$artworkId/discover'),
         headers: _getHeaders(),
@@ -3517,7 +3863,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       }
       return null;
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService.discoverArtworkWithCount failed: $e');
+      AppConfig.debugPrint(
+          'BackendApiService.discoverArtworkWithCount failed: $e');
       return null;
     }
   }
@@ -3536,7 +3883,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     String? sort,
   }) async {
     try {
-      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
       final queryParams = <String, String>{
         'page': page.toString(),
         'limit': limit.toString(),
@@ -3544,7 +3893,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
 
       if (arOnly != null) queryParams['arOnly'] = arOnly.toString();
       if (authorWallet != null) queryParams['authorWallet'] = authorWallet;
-      if (followingOnly != null) queryParams['followingOnly'] = followingOnly.toString();
+      if (followingOnly != null) {
+        queryParams['followingOnly'] = followingOnly.toString();
+      }
       if (tag != null && tag.trim().isNotEmpty) {
         final normalizedTag = tag.replaceFirst(RegExp(r'^#+'), '').trim();
         if (normalizedTag.isNotEmpty) {
@@ -3553,16 +3904,24 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       }
       if (sort != null && sort.trim().isNotEmpty) {
         final normalizedSort = sort.trim().toLowerCase();
-        if (normalizedSort == 'popularity' || normalizedSort == 'popular' || normalizedSort == 'recent') {
-          queryParams['sort'] = normalizedSort == 'popular' ? 'popularity' : normalizedSort;
+        if (normalizedSort == 'popularity' ||
+            normalizedSort == 'popular' ||
+            normalizedSort == 'recent') {
+          queryParams['sort'] =
+              normalizedSort == 'popular' ? 'popularity' : normalizedSort;
         }
       }
 
-      final uri = Uri.parse('$baseUrl/api/community/posts').replace(queryParameters: queryParams);
+      final uri = Uri.parse('$baseUrl/api/community/posts')
+          .replace(queryParameters: queryParams);
       final allowFallback = followingOnly != true;
-      final data = await _fetchJson(uri, includeAuth: true, allowOrbitFallback: allowFallback);
+      final data = await _fetchJson(uri,
+          includeAuth: true, allowOrbitFallback: allowFallback);
       final posts = data['data'] as List<dynamic>? ?? <dynamic>[];
-      return posts.map((json) => _communityPostFromBackendJson(json as Map<String, dynamic>)).toList();
+      return posts
+          .map((json) =>
+              _communityPostFromBackendJson(json as Map<String, dynamic>))
+          .toList();
     } catch (e) {
       _debugLogThrottled(
         'get_community_posts:error',
@@ -3590,8 +3949,10 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
 
       final uri = Uri.parse('$baseUrl/api/community/tags/trending')
           .replace(queryParameters: queryParams);
-      final data = await _fetchJson(uri, includeAuth: false, allowOrbitFallback: false);
-      final list = (data['data'] ?? data['tags'] ?? data['results']) as List<dynamic>?;
+      final data =
+          await _fetchJson(uri, includeAuth: false, allowOrbitFallback: false);
+      final list =
+          (data['data'] ?? data['tags'] ?? data['results']) as List<dynamic>?;
       if (list == null) return const [];
       return list.whereType<Map<String, dynamic>>().toList();
     } catch (e) {
@@ -3607,9 +3968,12 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
   /// GET /api/community/posts/:id
   Future<CommunityPost> getCommunityPostById(String postId) async {
     try {
-      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
       final uri = Uri.parse('$baseUrl/api/community/posts/$postId');
-      final data = await _fetchJson(uri, includeAuth: true, allowOrbitFallback: true);
+      final data =
+          await _fetchJson(uri, includeAuth: true, allowOrbitFallback: true);
       final payload = data['data'] ?? data;
       if (payload is Map<String, dynamic>) {
         return _communityPostFromBackendJson(payload);
@@ -3665,7 +4029,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         locationLat: locationLat,
         locationLng: locationLng,
       );
-      
+
       final response = await _post(
         Uri.parse('$baseUrl/api/community/posts'),
         headers: _getHeaders(),
@@ -3674,14 +4038,17 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
 
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final createdPost = _communityPostFromBackendJson(data['data'] as Map<String, dynamic>);
+        final createdPost =
+            _communityPostFromBackendJson(data['data'] as Map<String, dynamic>);
         try {
           await UserActionLogger.logPostCreated(
             postId: createdPost.id,
             content: createdPost.content,
             mediaUrls: aggregatedMedia.isNotEmpty
                 ? aggregatedMedia
-                : (createdPost.imageUrl != null ? <String>[createdPost.imageUrl!] : null),
+                : (createdPost.imageUrl != null
+                    ? <String>[createdPost.imageUrl!]
+                    : null),
           );
         } catch (e) {
           AppConfig.debugPrint('UserActionLogger.logPostCreated failed: $e');
@@ -3713,8 +4080,10 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         await _ensureAuthWithStoredWallet();
       } catch (_) {}
 
-      final shouldIncludeSubject =
-          includeSubject || subjectType != null || subjectId != null || artworkId != null;
+      final shouldIncludeSubject = includeSubject ||
+          subjectType != null ||
+          subjectId != null ||
+          artworkId != null;
 
       final response = await _put(
         Uri.parse('$baseUrl/api/community/posts/$postId'),
@@ -3766,7 +4135,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
   /// POST /api/community/posts/:id/like
   Future<int?> likePost(String postId) async {
     try {
-      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
       final response = await _post(
         Uri.parse('$baseUrl/api/community/posts/$postId/like'),
         headers: _getHeaders(),
@@ -3803,7 +4174,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     String? content,
   }) async {
     try {
-      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
       final response = await _post(
         Uri.parse('$baseUrl/api/community/posts/repost'),
         headers: _getHeaders(),
@@ -3815,9 +4188,11 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
 
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return _communityPostFromBackendJson(data['data'] as Map<String, dynamic>);
+        return _communityPostFromBackendJson(
+            data['data'] as Map<String, dynamic>);
       } else {
-        throw Exception('Failed to create repost: ${response.statusCode} - ${response.body}');
+        throw Exception(
+            'Failed to create repost: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.createRepost failed: $e');
@@ -3841,11 +4216,14 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         'limit': limit.toString(),
         'page': page.toString(),
       };
-      final uri = Uri.parse('$baseUrl/api/community/art-feed').replace(queryParameters: params);
-      final data = await _fetchJson(uri, includeAuth: true, allowOrbitFallback: false);
+      final uri = Uri.parse('$baseUrl/api/community/art-feed')
+          .replace(queryParameters: params);
+      final data =
+          await _fetchJson(uri, includeAuth: true, allowOrbitFallback: false);
       final posts = data['data'] as List<dynamic>? ?? <dynamic>[];
       return posts
-          .map((json) => _communityPostFromBackendJson(json as Map<String, dynamic>))
+          .map((json) =>
+              _communityPostFromBackendJson(json as Map<String, dynamic>))
           .toList();
     } catch (e) {
       final status = _tryParseRequestFailedStatus(e);
@@ -3872,15 +4250,20 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     String? search,
   }) async {
     try {
-      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
       final queryParams = <String, String>{
         'page': page.toString(),
         'limit': limit.toString(),
         if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
       };
-      final uri = Uri.parse('$baseUrl/api/groups').replace(queryParameters: queryParams);
-      final jsonData = await _fetchJson(uri, includeAuth: true, allowOrbitFallback: false);
-      final dynamic payload = jsonData['data'] ?? jsonData['groups'] ?? jsonData['results'];
+      final uri = Uri.parse('$baseUrl/api/groups')
+          .replace(queryParameters: queryParams);
+      final jsonData =
+          await _fetchJson(uri, includeAuth: true, allowOrbitFallback: false);
+      final dynamic payload =
+          jsonData['data'] ?? jsonData['groups'] ?? jsonData['results'];
       final List<dynamic> rows;
       if (payload is List) {
         rows = payload;
@@ -3899,7 +4282,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       // Treat as "feature unavailable" instead of surfacing as a hard error.
       if (status == 404 || status == 501 || status == 503) {
         if (kDebugMode) {
-          debugPrint('BackendApiService: community groups unavailable (HTTP $status)');
+          debugPrint(
+              'BackendApiService: community groups unavailable (HTTP $status)');
         }
         return <CommunityGroupSummary>[];
       }
@@ -3920,7 +4304,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         'name': name,
         if (description != null) 'description': description,
         'isPublic': isPublic,
-        if (coverImage != null && coverImage.isNotEmpty) 'coverImage': coverImage,
+        if (coverImage != null && coverImage.isNotEmpty)
+          'coverImage': coverImage,
       };
       final response = await _post(
         Uri.parse('$baseUrl/api/groups'),
@@ -3996,16 +4381,21 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
   }) async {
     try {
       // Public-ish, but include auth when available for personalized fields (likes, follows).
-      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
       final qp = {
         'page': page.toString(),
         'limit': limit.toString(),
       };
-      final uri = Uri.parse('$baseUrl/api/groups/$groupId/posts').replace(queryParameters: qp);
-      final data = await _fetchJson(uri, includeAuth: true, allowOrbitFallback: false);
+      final uri = Uri.parse('$baseUrl/api/groups/$groupId/posts')
+          .replace(queryParameters: qp);
+      final data =
+          await _fetchJson(uri, includeAuth: true, allowOrbitFallback: false);
       final posts = data['data'] as List<dynamic>? ?? <dynamic>[];
       return posts
-          .map((json) => _communityPostFromBackendJson(json as Map<String, dynamic>))
+          .map((json) =>
+              _communityPostFromBackendJson(json as Map<String, dynamic>))
           .toList();
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getGroupPosts failed: $e');
@@ -4033,7 +4423,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     double? locationLng,
   }) async {
     try {
-      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
       final aggregatedMedia = <String>[];
       if (imageUrl != null && imageUrl.isNotEmpty) {
         aggregatedMedia.add(imageUrl);
@@ -4076,16 +4468,20 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
               content: created.content,
               mediaUrls: aggregatedMedia.isNotEmpty
                   ? aggregatedMedia
-                  : (created.imageUrl != null ? <String>[created.imageUrl!] : null),
+                  : (created.imageUrl != null
+                      ? <String>[created.imageUrl!]
+                      : null),
             );
           } catch (e) {
-            AppConfig.debugPrint('BackendApiService.createGroupPost: UserActionLogger failed: $e');
+            AppConfig.debugPrint(
+                'BackendApiService.createGroupPost: UserActionLogger failed: $e');
           }
           return created;
         }
         throw Exception('Unexpected group post payload');
       }
-      throw Exception('Failed to create group post: ${response.statusCode} - ${response.body}');
+      throw Exception(
+          'Failed to create group post: ${response.statusCode} - ${response.body}');
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.createGroupPost failed: $e');
       rethrow;
@@ -4108,13 +4504,12 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final list = (data['data'] ?? data['subjects'] ?? []) as List<dynamic>;
-        return list
-            .whereType<Map<String, dynamic>>()
-            .toList(growable: false);
+        return list.whereType<Map<String, dynamic>>().toList(growable: false);
       }
       throw Exception('Failed to resolve subjects: ${response.statusCode}');
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService.resolveCommunitySubjects failed: $e');
+      AppConfig.debugPrint(
+          'BackendApiService.resolveCommunitySubjects failed: $e');
       return const <Map<String, dynamic>>[];
     }
   }
@@ -4127,7 +4522,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     String? message,
   }) async {
     try {
-      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
       final response = await _post(
         Uri.parse('$baseUrl/api/community/messages/share'),
         headers: _getHeaders(),
@@ -4139,7 +4536,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       );
 
       if (response.statusCode != 201 && response.statusCode != 200) {
-        throw Exception('Failed to share post via DM: ${response.statusCode} - ${response.body}');
+        throw Exception(
+            'Failed to share post via DM: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.sharePostViaDM failed: $e');
@@ -4167,7 +4565,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     }
 
     try {
-      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
       final response = await _post(
         Uri.parse('$baseUrl/api/community/messages/share'),
         headers: _getHeaders(),
@@ -4184,7 +4584,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       );
 
       if (response.statusCode != 201 && response.statusCode != 200) {
-        throw Exception('Failed to share via DM: ${response.statusCode} - ${response.body}');
+        throw Exception(
+            'Failed to share via DM: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.shareEntityViaDM failed: $e');
@@ -4201,7 +4602,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
   }) async {
     try {
       final response = await _get(
-        Uri.parse('$baseUrl/api/community/posts/$postId/reposts?page=$page&limit=$limit'),
+        Uri.parse(
+            '$baseUrl/api/community/posts/$postId/reposts?page=$page&limit=$limit'),
         headers: _getHeaders(),
       );
 
@@ -4222,7 +4624,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
   /// DELETE /api/community/posts/:id/repost
   Future<void> deleteRepost(String repostId) async {
     try {
-      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
       final response = await _delete(
         Uri.parse('$baseUrl/api/community/posts/$repostId/repost'),
         headers: _getHeaders(),
@@ -4230,7 +4634,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       );
 
       if (response.statusCode != 200) {
-        throw Exception('Failed to delete repost: ${response.statusCode} - ${response.body}');
+        throw Exception(
+            'Failed to delete repost: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.deleteRepost failed: $e');
@@ -4249,7 +4654,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     Map<String, dynamic>? metadata,
   }) async {
     try {
-      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
       final response = await _post(
         Uri.parse('$baseUrl/api/community/analytics/event'),
         headers: _getHeaders(),
@@ -4264,7 +4671,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       );
 
       if (response.statusCode != 200 && response.statusCode != 201) {
-        AppConfig.debugPrint('BackendApiService.trackAnalyticsEvent failed (${response.statusCode})');
+        AppConfig.debugPrint(
+            'BackendApiService.trackAnalyticsEvent failed (${response.statusCode})');
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.trackAnalyticsEvent failed: $e');
@@ -4276,7 +4684,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
   /// DELETE /api/community/posts/:id/like
   Future<int?> unlikePost(String postId) async {
     try {
-      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
       final response = await _delete(
         Uri.parse('$baseUrl/api/community/posts/$postId/like'),
         headers: _getHeaders(),
@@ -4302,7 +4712,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     String? parentCommentId,
   }) async {
     try {
-      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
       final response = await _post(
         Uri.parse('$baseUrl/api/community/posts/$postId/comments'),
         headers: _getHeaders(),
@@ -4315,7 +4727,10 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       if (response.statusCode == 201) {
         final parsed = jsonDecode(response.body);
         if (parsed is Map<String, dynamic>) {
-          final commentJson = parsed['comment'] ?? parsed['data'] ?? parsed['result'] ?? parsed['payload'];
+          final commentJson = parsed['comment'] ??
+              parsed['data'] ??
+              parsed['result'] ??
+              parsed['payload'];
           if (commentJson is Map<String, dynamic>) {
             return _commentFromBackendJson(commentJson);
           }
@@ -4324,7 +4739,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
             return _commentFromBackendJson(parsed);
           }
         }
-        throw Exception('Unexpected response when creating comment: ${response.body}');
+        throw Exception(
+            'Unexpected response when creating comment: ${response.body}');
       } else {
         throw Exception('Failed to create comment: ${response.statusCode}');
       }
@@ -4343,7 +4759,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     required String content,
   }) async {
     try {
-      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
       final uri = Uri.parse('$baseUrl/api/community/comments/$commentId');
       final response = await _patch(
         uri,
@@ -4354,7 +4772,10 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       if (response.statusCode == 200) {
         final parsed = jsonDecode(response.body);
         if (parsed is Map<String, dynamic>) {
-          final commentJson = parsed['comment'] ?? parsed['data'] ?? parsed['result'] ?? parsed['payload'];
+          final commentJson = parsed['comment'] ??
+              parsed['data'] ??
+              parsed['result'] ??
+              parsed['payload'];
           if (commentJson is Map<String, dynamic>) {
             return _commentFromBackendJson(commentJson);
           }
@@ -4362,7 +4783,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
             return _commentFromBackendJson(parsed);
           }
         }
-        throw Exception('Unexpected response when editing comment: ${response.body}');
+        throw Exception(
+            'Unexpected response when editing comment: ${response.body}');
       }
 
       throw BackendApiRequestException(
@@ -4385,7 +4807,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
   }) async {
     try {
       // Ensure auth loaded once (safe for public endpoints)
-      try { await ensureAuthLoaded(); } catch (_) {}
+      try {
+        await ensureAuthLoaded();
+      } catch (_) {}
       final queryParams = <String, String>{
         'page': page.toString(),
         'limit': limit.toString(),
@@ -4398,7 +4822,11 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       if (response.statusCode == 200) {
         final parsed = jsonDecode(response.body);
         if (parsed is Map<String, dynamic>) {
-          final raw = parsed['comments'] ?? parsed['data'] ?? parsed['result'] ?? parsed['payload'] ?? [];
+          final raw = parsed['comments'] ??
+              parsed['data'] ??
+              parsed['result'] ??
+              parsed['payload'] ??
+              [];
           if (raw is List) {
             final flat = raw
                 .whereType<Map<String, dynamic>>()
@@ -4413,29 +4841,52 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
                 if (candidate.isEmpty) continue;
                 final normalized = WalletUtils.canonical(candidate);
                 if (normalized.isEmpty) continue;
-                if (['unknown', 'anonymous', 'n/a', 'none'].contains(normalized)) continue;
+                if (['unknown', 'anonymous', 'n/a', 'none']
+                    .contains(normalized)) {
+                  continue;
+                }
                 wallets.add(normalized);
               }
 
               if (wallets.isNotEmpty) {
                 final profilesResp = await getProfilesBatch(wallets.toList());
                 final Map<String, Map<String, dynamic>> profilesByWallet = {};
-                if (profilesResp['success'] == true && profilesResp['data'] is List) {
+                if (profilesResp['success'] == true &&
+                    profilesResp['data'] is List) {
                   final profilesList = profilesResp['data'] as List<dynamic>;
-                  for (final p in profilesList.whereType<Map<String, dynamic>>()) {
-                    final walletKey = WalletUtils.canonical((p['walletAddress'] ?? p['wallet'] ?? p['wallet_address'] ?? p['publicKey'] ?? p['public_key'])?.toString() ?? '');
+                  for (final p
+                      in profilesList.whereType<Map<String, dynamic>>()) {
+                    final walletKey = WalletUtils.canonical(
+                        (p['walletAddress'] ??
+                                    p['wallet'] ??
+                                    p['wallet_address'] ??
+                                    p['publicKey'] ??
+                                    p['public_key'])
+                                ?.toString() ??
+                            '');
                     if (walletKey.isNotEmpty) profilesByWallet[walletKey] = p;
                   }
                 }
 
                 // For any remaining candidates not found by wallet batch, try GET /api/users/:userId
-                final missing = wallets.where((w) => !profilesByWallet.containsKey(w)).toList();
+                final missing = wallets
+                    .where((w) => !profilesByWallet.containsKey(w))
+                    .toList();
                 for (final candidate in missing) {
                   try {
                     final profileResp = await getUserProfile(candidate);
                     if (profileResp.isNotEmpty) {
-                      final walletKey = WalletUtils.canonical((profileResp['walletAddress'] ?? profileResp['wallet'] ?? profileResp['wallet_address'] ?? profileResp['publicKey'] ?? profileResp['public_key'])?.toString() ?? '');
-                      final key = walletKey.isNotEmpty ? walletKey : WalletUtils.canonical(candidate);
+                      final walletKey = WalletUtils.canonical(
+                          (profileResp['walletAddress'] ??
+                                      profileResp['wallet'] ??
+                                      profileResp['wallet_address'] ??
+                                      profileResp['publicKey'] ??
+                                      profileResp['public_key'])
+                                  ?.toString() ??
+                              '');
+                      final key = walletKey.isNotEmpty
+                          ? walletKey
+                          : WalletUtils.canonical(candidate);
                       profilesByWallet[key] = profileResp;
                     }
                   } catch (e) {
@@ -4445,29 +4896,51 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
 
                 for (int i = 0; i < flat.length; i++) {
                   final c = flat[i];
-                  final walletKey = WalletUtils.canonical(c.authorWallet ?? c.authorId);
+                  final walletKey =
+                      WalletUtils.canonical(c.authorWallet ?? c.authorId);
                   if (walletKey.isEmpty) continue;
                   final profile = profilesByWallet[walletKey];
                   if (profile == null) continue;
                   try {
-                    final profileDisplayName = profile['displayName'] as String? ?? profile['display_name'] as String?;
-                    final profileUsername = profile['username'] as String? ?? profile['walletAddress'] as String? ?? profile['wallet'] as String?;
-                    final avatarCandidate = profile['avatar'] as String? ?? profile['profileImage'] as String? ?? profile['profile_image'] as String? ?? profile['avatarUrl'] as String? ?? profile['avatar_url'] as String?;
-                    final normalizedAvatar = MediaUrlResolver.resolve(avatarCandidate);
-                    
+                    final profileDisplayName =
+                        profile['displayName'] as String? ??
+                            profile['display_name'] as String?;
+                    final profileUsername = profile['username'] as String? ??
+                        profile['walletAddress'] as String? ??
+                        profile['wallet'] as String?;
+                    final avatarCandidate = profile['avatar'] as String? ??
+                        profile['profileImage'] as String? ??
+                        profile['profile_image'] as String? ??
+                        profile['avatarUrl'] as String? ??
+                        profile['avatar_url'] as String?;
+                    final normalizedAvatar =
+                        MediaUrlResolver.resolve(avatarCandidate);
+
                     // Determine best display name: prioritize displayName, then username, then fallback to existing
-                    final bestDisplayName = (profileDisplayName != null && profileDisplayName.trim().isNotEmpty)
+                    final bestDisplayName = (profileDisplayName != null &&
+                            profileDisplayName.trim().isNotEmpty)
                         ? profileDisplayName.trim()
-                        : ((profileUsername != null && profileUsername.trim().isNotEmpty) 
-                            ? profileUsername.trim() 
+                        : ((profileUsername != null &&
+                                profileUsername.trim().isNotEmpty)
+                            ? profileUsername.trim()
                             : c.authorName);
-                    
+
                     final updated = c.copyWith(
                       authorAvatar: normalizedAvatar,
                       authorUsername: profileUsername ?? c.authorUsername,
                       authorName: bestDisplayName,
-                      authorId: (profile['walletAddress'] ?? profile['wallet'] ?? profile['id'] ?? profile['userId'] ?? c.authorId)?.toString(),
-                      authorWallet: (profile['walletAddress'] ?? profile['wallet'] ?? profile['wallet_address'] ?? profile['publicKey'] ?? profile['public_key'])?.toString(),
+                      authorId: (profile['walletAddress'] ??
+                              profile['wallet'] ??
+                              profile['id'] ??
+                              profile['userId'] ??
+                              c.authorId)
+                          ?.toString(),
+                      authorWallet: (profile['walletAddress'] ??
+                              profile['wallet'] ??
+                              profile['wallet_address'] ??
+                              profile['publicKey'] ??
+                              profile['public_key'])
+                          ?.toString(),
                     );
                     flat[i] = updated;
                   } catch (e) {
@@ -4496,7 +4969,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
   /// DELETE /api/community/comments/:id
   Future<void> deleteComment(String commentId) async {
     try {
-      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
       await _delete(
         Uri.parse('$baseUrl/api/community/comments/$commentId'),
         headers: _getHeaders(),
@@ -4513,7 +4988,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
   @override
   Future<int?> likeComment(String commentId) async {
     try {
-      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
       final response = await _post(
         Uri.parse('$baseUrl/api/community/comments/$commentId/like'),
         headers: _getHeaders(),
@@ -4536,7 +5013,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
   @override
   Future<int?> unlikeComment(String commentId) async {
     try {
-      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
       final response = await _delete(
         Uri.parse('$baseUrl/api/community/comments/$commentId/like'),
         headers: _getHeaders(),
@@ -4554,10 +5033,14 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
   }
 
   /// Get users who liked a post
-  Future<List<CommunityLikeUser>> getPostLikes(String postId, {int limit = 50, int offset = 0}) async {
+  Future<List<CommunityLikeUser>> getPostLikes(String postId,
+      {int limit = 50, int offset = 0}) async {
     try {
-      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
-      final uri = Uri.parse('$baseUrl/api/community/posts/$postId/likes').replace(queryParameters: {
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
+      final uri = Uri.parse('$baseUrl/api/community/posts/$postId/likes')
+          .replace(queryParameters: {
         'limit': limit.toString(),
         'offset': offset.toString(),
       });
@@ -4582,10 +5065,14 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
   }
 
   /// Get users who liked a comment
-  Future<List<CommunityLikeUser>> getCommentLikes(String commentId, {int limit = 50, int offset = 0}) async {
+  Future<List<CommunityLikeUser>> getCommentLikes(String commentId,
+      {int limit = 50, int offset = 0}) async {
     try {
-      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
-      final uri = Uri.parse('$baseUrl/api/community/comments/$commentId/likes').replace(queryParameters: {
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
+      final uri = Uri.parse('$baseUrl/api/community/comments/$commentId/likes')
+          .replace(queryParameters: {
         'limit': limit.toString(),
         'offset': offset.toString(),
       });
@@ -4619,11 +5106,14 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/community/follow/$encoded');
-      final response = await _post(uri, headers: _getHeaders(), isIdempotent: true);
+      final response =
+          await _post(uri, headers: _getHeaders(), isIdempotent: true);
 
       if (!_isSuccessStatus(response.statusCode)) {
-        final body = response.body.isNotEmpty ? response.body : 'No response body';
-        throw Exception('Failed to follow user (${response.statusCode}): $body');
+        final body =
+            response.body.isNotEmpty ? response.body : 'No response body';
+        throw Exception(
+            'Failed to follow user (${response.statusCode}): $body');
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.followUser failed: $e');
@@ -4639,11 +5129,14 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/community/follow/$encoded');
-      final response = await _delete(uri, headers: _getHeaders(), isIdempotent: true);
+      final response =
+          await _delete(uri, headers: _getHeaders(), isIdempotent: true);
 
       if (!_isSuccessStatus(response.statusCode)) {
-        final body = response.body.isNotEmpty ? response.body : 'No response body';
-        throw Exception('Failed to unfollow user (${response.statusCode}): $body');
+        final body =
+            response.body.isNotEmpty ? response.body : 'No response body';
+        throw Exception(
+            'Failed to unfollow user (${response.statusCode}): $body');
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.unfollowUser failed: $e');
@@ -4676,7 +5169,11 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       if (response.statusCode == 200) {
         final payload = jsonDecode(response.body);
         if (payload is Map<String, dynamic>) {
-          final raw = payload['data'] ?? payload['followers'] ?? payload['result'] ?? payload['payload'] ?? [];
+          final raw = payload['data'] ??
+              payload['followers'] ??
+              payload['result'] ??
+              payload['payload'] ??
+              [];
           if (raw is List) {
             return raw.whereType<Map<String, dynamic>>().toList();
           }
@@ -4716,7 +5213,11 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       if (response.statusCode == 200) {
         final payload = jsonDecode(response.body);
         if (payload is Map<String, dynamic>) {
-          final raw = payload['data'] ?? payload['following'] ?? payload['result'] ?? payload['payload'] ?? [];
+          final raw = payload['data'] ??
+              payload['following'] ??
+              payload['result'] ??
+              payload['payload'] ??
+              [];
           if (raw is List) {
             return raw.whereType<Map<String, dynamic>>().toList();
           }
@@ -4810,8 +5311,10 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         return <String, dynamic>{};
       }
 
-      final body = response.body.isNotEmpty ? response.body : 'No response body';
-      throw Exception('Failed to submit report (${response.statusCode}): $body');
+      final body =
+          response.body.isNotEmpty ? response.body : 'No response body';
+      throw Exception(
+          'Failed to submit report (${response.statusCode}): $body');
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.submitReport failed: $e');
       rethrow;
@@ -4853,8 +5356,10 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         return <String, dynamic>{};
       }
 
-      final body = response.body.isNotEmpty ? response.body : 'No response body';
-      throw Exception('Failed to create support ticket (${response.statusCode}): $body');
+      final body =
+          response.body.isNotEmpty ? response.body : 'No response body';
+      throw Exception(
+          'Failed to create support ticket (${response.statusCode}): $body');
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.createSupportTicket failed: $e');
       rethrow;
@@ -4902,7 +5407,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       if (response.statusCode == 201) {
         return jsonDecode(response.body) as Map<String, dynamic>;
       } else {
-        throw Exception('Failed to create NFT series: ${response.statusCode} ${response.body}');
+        throw Exception(
+            'Failed to create NFT series: ${response.statusCode} ${response.body}');
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.createNFTSeries failed: $e');
@@ -4931,7 +5437,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       if (response.statusCode == 201) {
         return jsonDecode(response.body) as Map<String, dynamic>;
       } else {
-        throw Exception('Failed to mint NFT: ${response.statusCode} ${response.body}');
+        throw Exception(
+            'Failed to mint NFT: ${response.statusCode} ${response.body}');
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.mintNFT failed: $e');
@@ -4957,7 +5464,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         throw Exception('Failed to get NFT series: ${response.statusCode}');
       }
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService.getNFTSeriesByArtwork failed: $e');
+      AppConfig.debugPrint(
+          'BackendApiService.getNFTSeriesByArtwork failed: $e');
       return null;
     }
   }
@@ -5035,7 +5543,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as Map<String, dynamic>;
       } else {
-        throw Exception('Failed to buy NFT: ${response.statusCode} ${response.body}');
+        throw Exception(
+            'Failed to buy NFT: ${response.statusCode} ${response.body}');
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.buyNFT failed: $e');
@@ -5070,7 +5579,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
             .map((json) => json as Map<String, dynamic>)
             .toList();
       } else {
-        throw Exception('Failed to get marketplace NFTs: ${response.statusCode}');
+        throw Exception(
+            'Failed to get marketplace NFTs: ${response.statusCode}');
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getMarketplaceNFTs failed: $e');
@@ -5094,7 +5604,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as Map<String, dynamic>;
       } else {
-        throw Exception('Failed to get user achievements: ${response.statusCode}');
+        throw Exception(
+            'Failed to get user achievements: ${response.statusCode}');
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getUserAchievements failed: $e');
@@ -5138,7 +5649,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
 
   /// List DAO proposals
   /// GET /api/dao/proposals
-  Future<List<Map<String, dynamic>>> getDAOProposals({int limit = 50, int offset = 0, String? status}) async {
+  Future<List<Map<String, dynamic>>> getDAOProposals(
+      {int limit = 50, int offset = 0, String? status}) async {
     try {
       final uri = Uri.parse('$baseUrl/api/dao/proposals').replace(
         queryParameters: <String, String>{
@@ -5147,7 +5659,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
           if (status != null && status.isNotEmpty) 'status': status,
         },
       );
-      final response = await _get(uri, includeAuth: false, headers: _getHeaders(includeAuth: false));
+      final response = await _get(uri,
+          includeAuth: false, headers: _getHeaders(includeAuth: false));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -5189,7 +5702,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
           'votingPeriodDays': votingPeriodDays,
           'supportRequired': supportRequired,
           'quorumRequired': quorumRequired,
-          if (supportingDocuments != null) 'supportingDocuments': supportingDocuments,
+          if (supportingDocuments != null)
+            'supportingDocuments': supportingDocuments,
           if (metadata != null) 'metadata': metadata,
         }),
       );
@@ -5199,7 +5713,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         final payload = data['data'] ?? data['proposal'] ?? data;
         return payload is Map<String, dynamic> ? payload : null;
       } else {
-        throw Exception('Failed to create proposal: ${response.statusCode} ${response.body}');
+        throw Exception(
+            'Failed to create proposal: ${response.statusCode} ${response.body}');
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.createDAOProposal failed: $e');
@@ -5209,18 +5724,21 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
 
   /// List votes for a proposal or all votes
   /// GET /api/dao/proposals/:id/votes or /api/dao/votes
-  Future<List<Map<String, dynamic>>> getDAOVotes({String? proposalId, int limit = 100, int offset = 0}) async {
+  Future<List<Map<String, dynamic>>> getDAOVotes(
+      {String? proposalId, int limit = 100, int offset = 0}) async {
     try {
       final uri = proposalId == null
           ? Uri.parse('$baseUrl/api/dao/votes').replace(queryParameters: {
               'limit': '$limit',
               'offset': '$offset',
             })
-          : Uri.parse('$baseUrl/api/dao/proposals/$proposalId/votes').replace(queryParameters: {
+          : Uri.parse('$baseUrl/api/dao/proposals/$proposalId/votes')
+              .replace(queryParameters: {
               'limit': '$limit',
               'offset': '$offset',
             });
-      final response = await _get(uri, includeAuth: false, headers: _getHeaders(includeAuth: false));
+      final response = await _get(uri,
+          includeAuth: false, headers: _getHeaders(includeAuth: false));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -5321,7 +5839,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         return data['data'] as Map<String, dynamic>? ?? data;
       } else {
-        throw Exception('Failed to delegate voting power: ${response.statusCode}');
+        throw Exception(
+            'Failed to delegate voting power: ${response.statusCode}');
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.delegateVotingPower failed: $e');
@@ -5346,7 +5865,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       } else if (response.statusCode == 404) {
         return [];
       } else {
-        throw Exception('Failed to get DAO transactions: ${response.statusCode}');
+        throw Exception(
+            'Failed to get DAO transactions: ${response.statusCode}');
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getDAOTransactions failed: $e');
@@ -5395,7 +5915,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
 
   /// List DAO reviews
   /// GET /api/dao/reviews
-  Future<List<Map<String, dynamic>>> getDAOReviews({int limit = 50, int offset = 0}) async {
+  Future<List<Map<String, dynamic>>> getDAOReviews(
+      {int limit = 50, int offset = 0}) async {
     try {
       final uri = Uri.parse('$baseUrl/api/dao/reviews')
           .replace(queryParameters: {'limit': '$limit', 'offset': '$offset'});
@@ -5403,12 +5924,14 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final list = (data['data'] ?? data['reviews'] ?? data['items'] ?? []) as List;
+        final list =
+            (data['data'] ?? data['reviews'] ?? data['items'] ?? []) as List;
         return List<Map<String, dynamic>>.from(list);
       } else if (response.statusCode == 404) {
         return [];
       } else if (response.statusCode >= 500) {
-        AppConfig.debugPrint('BackendApiService.getDAOReviews: backend returned ${response.statusCode}, returning empty list');
+        AppConfig.debugPrint(
+            'BackendApiService.getDAOReviews: backend returned ${response.statusCode}, returning empty list');
         return [];
       } else {
         throw Exception('Failed to get DAO reviews: ${response.statusCode}');
@@ -5422,7 +5945,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
   /// Get a single DAO review by id or wallet address
   /// GET /api/dao/reviews/:id
   @override
-  Future<Map<String, dynamic>?> getDAOReview({required String idOrWallet}) async {
+  Future<Map<String, dynamic>?> getDAOReview(
+      {required String idOrWallet}) async {
     try {
       final uri = Uri.parse('$baseUrl/api/dao/reviews/$idOrWallet');
       final response = await _get(uri, headers: _getHeaders());
@@ -5482,14 +6006,17 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
 
   /// List institutions
   /// GET /api/institutions
-  Future<List<Map<String, dynamic>>> listInstitutions({int limit = 50, int offset = 0}) async {
+  Future<List<Map<String, dynamic>>> listInstitutions(
+      {int limit = 50, int offset = 0}) async {
     try {
       if (_institutionsApiAvailable == false) return [];
-      final uri = Uri.parse('$baseUrl/api/institutions').replace(queryParameters: {
+      final uri =
+          Uri.parse('$baseUrl/api/institutions').replace(queryParameters: {
         'limit': '$limit',
         'offset': '$offset',
       });
-      final response = await _get(uri, includeAuth: false, headers: _getHeaders(includeAuth: false));
+      final response = await _get(uri,
+          includeAuth: false, headers: _getHeaders(includeAuth: false));
 
       if (response.statusCode == 200) {
         _institutionsApiAvailable = true;
@@ -5568,7 +6095,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       if (lat != null) query['lat'] = lat.toString();
       if (lng != null) query['lng'] = lng.toString();
       if (radiusKm != null) query['radiusKm'] = radiusKm.toString();
-      if (hostUserId != null && hostUserId.trim().isNotEmpty) query['hostUserId'] = hostUserId.trim();
+      if (hostUserId != null && hostUserId.trim().isNotEmpty) {
+        query['hostUserId'] = hostUserId.trim();
+      }
       final uri = Uri.parse(base).replace(queryParameters: query);
       // Optional auth: include token when present so backend can return `myRole`.
       try {
@@ -5583,11 +6112,15 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
           final dynamic data = decoded['data'] ?? decoded;
           // New envelope: { success: true, data: { events: [...] } }
           if (data is Map<String, dynamic>) {
-            final list = (data['events'] ?? data['items'] ?? data['results'] ?? const []) as dynamic;
+            final list = (data['events'] ??
+                data['items'] ??
+                data['results'] ??
+                const []) as dynamic;
             if (list is List) return List<Map<String, dynamic>>.from(list);
           }
           // Legacy: { events: [...] } or { data: [...] }
-          final list = decoded['events'] ?? (decoded['data'] is List ? decoded['data'] : null);
+          final list = decoded['events'] ??
+              (decoded['data'] is List ? decoded['data'] : null);
           if (list is List) return List<Map<String, dynamic>>.from(list);
         }
         return [];
@@ -5602,24 +6135,34 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
           'page': '$page',
         };
         if (upcoming != null) retryQuery['upcoming'] = '$upcoming';
-        if (from != null && from.trim().isNotEmpty) retryQuery['from'] = from.trim();
+        if (from != null && from.trim().isNotEmpty) {
+          retryQuery['from'] = from.trim();
+        }
         if (to != null && to.trim().isNotEmpty) retryQuery['to'] = to.trim();
         if (lat != null) retryQuery['lat'] = lat.toString();
         if (lng != null) retryQuery['lng'] = lng.toString();
         if (radiusKm != null) retryQuery['radiusKm'] = radiusKm.toString();
-        if (hostUserId != null && hostUserId.trim().isNotEmpty) retryQuery['hostUserId'] = hostUserId.trim();
-        final retryUri = Uri.parse('$baseUrl/api/events').replace(queryParameters: retryQuery);
-        final retryRes = await _get(retryUri, headers: _getHeaders(includeAuth: true));
+        if (hostUserId != null && hostUserId.trim().isNotEmpty) {
+          retryQuery['hostUserId'] = hostUserId.trim();
+        }
+        final retryUri = Uri.parse('$baseUrl/api/events')
+            .replace(queryParameters: retryQuery);
+        final retryRes =
+            await _get(retryUri, headers: _getHeaders(includeAuth: true));
         if (retryRes.statusCode == 200) {
           _eventsApiAvailable = true;
           final decoded = jsonDecode(retryRes.body);
           if (decoded is Map<String, dynamic>) {
             final dynamic data = decoded['data'] ?? decoded;
             if (data is Map<String, dynamic>) {
-              final list = (data['events'] ?? data['items'] ?? data['results'] ?? const []) as dynamic;
+              final list = (data['events'] ??
+                  data['items'] ??
+                  data['results'] ??
+                  const []) as dynamic;
               if (list is List) return List<Map<String, dynamic>>.from(list);
             }
-            final list = decoded['events'] ?? (decoded['data'] is List ? decoded['data'] : null);
+            final list = decoded['events'] ??
+                (decoded['data'] is List ? decoded['data'] : null);
             if (list is List) return List<Map<String, dynamic>>.from(list);
           }
           return [];
@@ -5645,9 +6188,12 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         await _ensureAuthWithStoredWallet();
       } catch (_) {}
       final uri = Uri.parse('$baseUrl/api/events/$id');
-      final decoded = await _fetchJson(uri, includeAuth: true, allowOrbitFallback: false);
+      final decoded =
+          await _fetchJson(uri, includeAuth: true, allowOrbitFallback: false);
       final payload = decoded['data'] ?? decoded;
-      final eventRaw = (payload is Map<String, dynamic>) ? (payload['event'] ?? payload['data'] ?? payload) : null;
+      final eventRaw = (payload is Map<String, dynamic>)
+          ? (payload['event'] ?? payload['data'] ?? payload)
+          : null;
       if (eventRaw is Map<String, dynamic>) {
         return KubusEvent.fromJson(eventRaw);
       }
@@ -5664,17 +6210,23 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/events');
-      final response = await _post(uri, headers: _getHeaders(), body: jsonEncode(payload));
-      final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+      final response =
+          await _post(uri, headers: _getHeaders(), body: jsonEncode(payload));
+      final decoded =
+          response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (response.statusCode == 200 || response.statusCode == 201) {
         if (decoded is Map<String, dynamic>) {
           final data = decoded['data'] ?? decoded;
-          final eventRaw = data is Map<String, dynamic> ? (data['event'] ?? data) : null;
-          if (eventRaw is Map<String, dynamic>) return KubusEvent.fromJson(eventRaw);
+          final eventRaw =
+              data is Map<String, dynamic> ? (data['event'] ?? data) : null;
+          if (eventRaw is Map<String, dynamic>) {
+            return KubusEvent.fromJson(eventRaw);
+          }
         }
         return null;
       }
-      throw Exception('Failed to create event: ${response.statusCode} ${response.body}');
+      throw Exception(
+          'Failed to create event: ${response.statusCode} ${response.body}');
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.createEvent failed: $e');
       rethrow;
@@ -5683,21 +6235,30 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
 
   /// Update an event
   /// PUT /api/events/:id
-  Future<KubusEvent?> updateEvent(String id, Map<String, dynamic> updates) async {
+  Future<KubusEvent?> updateEvent(
+      String id, Map<String, dynamic> updates) async {
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/events/$id');
-      final response = await _put(uri, headers: _getHeaders(), body: jsonEncode(updates), isIdempotent: true);
-      final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+      final response = await _put(uri,
+          headers: _getHeaders(),
+          body: jsonEncode(updates),
+          isIdempotent: true);
+      final decoded =
+          response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (response.statusCode == 200) {
         if (decoded is Map<String, dynamic>) {
           final data = decoded['data'] ?? decoded;
-          final eventRaw = data is Map<String, dynamic> ? (data['event'] ?? data) : null;
-          if (eventRaw is Map<String, dynamic>) return KubusEvent.fromJson(eventRaw);
+          final eventRaw =
+              data is Map<String, dynamic> ? (data['event'] ?? data) : null;
+          if (eventRaw is Map<String, dynamic>) {
+            return KubusEvent.fromJson(eventRaw);
+          }
         }
         return null;
       }
-      throw Exception('Failed to update event: ${response.statusCode} ${response.body}');
+      throw Exception(
+          'Failed to update event: ${response.statusCode} ${response.body}');
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.updateEvent failed: $e');
       rethrow;
@@ -5710,11 +6271,16 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/events/$id');
-      final response = await _delete(uri, headers: _getHeaders(), isIdempotent: true);
+      final response =
+          await _delete(uri, headers: _getHeaders(), isIdempotent: true);
       if (response.statusCode == 200 || response.statusCode == 204) return true;
-      final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
-      if (decoded is Map<String, dynamic> && decoded['success'] == true) return true;
-      throw Exception('Failed to delete event: ${response.statusCode} ${response.body}');
+      final decoded =
+          response.body.isNotEmpty ? jsonDecode(response.body) : null;
+      if (decoded is Map<String, dynamic> && decoded['success'] == true) {
+        return true;
+      }
+      throw Exception(
+          'Failed to delete event: ${response.statusCode} ${response.body}');
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.deleteEvent failed: $e');
       rethrow;
@@ -5723,16 +6289,19 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
 
   /// List exhibitions for an event
   /// GET /api/events/:id/exhibitions
-  Future<List<Exhibition>> listEventExhibitions(String eventId, {int limit = 50, int offset = 0}) async {
+  Future<List<Exhibition>> listEventExhibitions(String eventId,
+      {int limit = 50, int offset = 0}) async {
     try {
       try {
         await _ensureAuthWithStoredWallet();
       } catch (_) {}
-      final uri = Uri.parse('$baseUrl/api/events/$eventId/exhibitions').replace(queryParameters: {
+      final uri = Uri.parse('$baseUrl/api/events/$eventId/exhibitions')
+          .replace(queryParameters: {
         'limit': '$limit',
         'offset': '$offset',
       });
-      final decoded = await _fetchJson(uri, includeAuth: true, allowOrbitFallback: false);
+      final decoded =
+          await _fetchJson(uri, includeAuth: true, allowOrbitFallback: false);
       final payload = decoded['data'] ?? decoded;
       if (payload is Map<String, dynamic>) {
         final list = payload['exhibitions'];
@@ -5773,15 +6342,19 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         'limit': '$limit',
         'offset': '$offset',
       };
-      if (eventId != null && eventId.trim().isNotEmpty) qp['eventId'] = eventId.trim();
+      if (eventId != null && eventId.trim().isNotEmpty) {
+        qp['eventId'] = eventId.trim();
+      }
       if (mine == true) qp['mine'] = 'true';
       if (from != null && from.trim().isNotEmpty) qp['from'] = from.trim();
       if (to != null && to.trim().isNotEmpty) qp['to'] = to.trim();
       if (lat != null) qp['lat'] = lat.toString();
       if (lng != null) qp['lng'] = lng.toString();
       if (radiusKm != null) qp['radiusKm'] = radiusKm.toString();
-      final uri = Uri.parse('$baseUrl/api/exhibitions').replace(queryParameters: qp);
-      final decoded = await _fetchJson(uri, includeAuth: true, allowOrbitFallback: false);
+      final uri =
+          Uri.parse('$baseUrl/api/exhibitions').replace(queryParameters: qp);
+      final decoded =
+          await _fetchJson(uri, includeAuth: true, allowOrbitFallback: false);
       final payload = decoded['data'] ?? decoded;
       if (payload is Map<String, dynamic>) {
         final list = payload['exhibitions'] ?? payload['items'];
@@ -5807,9 +6380,12 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         await _ensureAuthWithStoredWallet();
       } catch (_) {}
       final uri = Uri.parse('$baseUrl/api/exhibitions/$id');
-      final decoded = await _fetchJson(uri, includeAuth: true, allowOrbitFallback: false);
+      final decoded =
+          await _fetchJson(uri, includeAuth: true, allowOrbitFallback: false);
       final payload = decoded['data'] ?? decoded;
-      final exhibitionRaw = (payload is Map<String, dynamic>) ? (payload['exhibition'] ?? payload['data'] ?? payload) : null;
+      final exhibitionRaw = (payload is Map<String, dynamic>)
+          ? (payload['exhibition'] ?? payload['data'] ?? payload)
+          : null;
       if (exhibitionRaw is Map<String, dynamic>) {
         return Exhibition.fromJson(exhibitionRaw);
       }
@@ -5826,17 +6402,24 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/exhibitions');
-      final response = await _post(uri, headers: _getHeaders(), body: jsonEncode(payload));
-      final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+      final response =
+          await _post(uri, headers: _getHeaders(), body: jsonEncode(payload));
+      final decoded =
+          response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (response.statusCode == 200 || response.statusCode == 201) {
         if (decoded is Map<String, dynamic>) {
           final data = decoded['data'] ?? decoded;
-          final exhibitionRaw = data is Map<String, dynamic> ? (data['exhibition'] ?? data) : null;
-          if (exhibitionRaw is Map<String, dynamic>) return Exhibition.fromJson(exhibitionRaw);
+          final exhibitionRaw = data is Map<String, dynamic>
+              ? (data['exhibition'] ?? data)
+              : null;
+          if (exhibitionRaw is Map<String, dynamic>) {
+            return Exhibition.fromJson(exhibitionRaw);
+          }
         }
         return null;
       }
-      throw Exception('Failed to create exhibition: ${response.statusCode} ${response.body}');
+      throw Exception(
+          'Failed to create exhibition: ${response.statusCode} ${response.body}');
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.createExhibition failed: $e');
       rethrow;
@@ -5845,13 +6428,16 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
 
   /// Update exhibition
   /// PUT /api/exhibitions/:id
-  Future<Exhibition?> updateExhibition(String id, Map<String, dynamic> updates) async {
+  Future<Exhibition?> updateExhibition(
+      String id, Map<String, dynamic> updates) async {
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/exhibitions/$id');
       if (kDebugMode && AppConfig.enableNetworkLogging) {
-        final cover =
-            updates['coverUrl'] ?? updates['cover_url'] ?? updates['coverImageUrl'] ?? updates['cover_image_url'];
+        final cover = updates['coverUrl'] ??
+            updates['cover_url'] ??
+            updates['coverImageUrl'] ??
+            updates['cover_image_url'];
         if (cover != null) {
           AppConfig.networkLog(
             'PUT',
@@ -5862,17 +6448,26 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
           );
         }
       }
-      final response = await _put(uri, headers: _getHeaders(), body: jsonEncode(updates), isIdempotent: true);
-      final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+      final response = await _put(uri,
+          headers: _getHeaders(),
+          body: jsonEncode(updates),
+          isIdempotent: true);
+      final decoded =
+          response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (response.statusCode == 200) {
         if (decoded is Map<String, dynamic>) {
           final data = decoded['data'] ?? decoded;
-          final exhibitionRaw = data is Map<String, dynamic> ? (data['exhibition'] ?? data) : null;
-          if (exhibitionRaw is Map<String, dynamic>) return Exhibition.fromJson(exhibitionRaw);
+          final exhibitionRaw = data is Map<String, dynamic>
+              ? (data['exhibition'] ?? data)
+              : null;
+          if (exhibitionRaw is Map<String, dynamic>) {
+            return Exhibition.fromJson(exhibitionRaw);
+          }
         }
         return null;
       }
-      throw Exception('Failed to update exhibition: ${response.statusCode} ${response.body}');
+      throw Exception(
+          'Failed to update exhibition: ${response.statusCode} ${response.body}');
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.updateExhibition failed: $e');
       rethrow;
@@ -5885,11 +6480,16 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/exhibitions/$id');
-      final response = await _delete(uri, headers: _getHeaders(), isIdempotent: true);
+      final response =
+          await _delete(uri, headers: _getHeaders(), isIdempotent: true);
       if (response.statusCode == 200 || response.statusCode == 204) return true;
-      final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
-      if (decoded is Map<String, dynamic> && decoded['success'] == true) return true;
-      throw Exception('Failed to delete exhibition: ${response.statusCode} ${response.body}');
+      final decoded =
+          response.body.isNotEmpty ? jsonDecode(response.body) : null;
+      if (decoded is Map<String, dynamic> && decoded['success'] == true) {
+        return true;
+      }
+      throw Exception(
+          'Failed to delete exhibition: ${response.statusCode} ${response.body}');
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.deleteExhibition failed: $e');
       rethrow;
@@ -5898,7 +6498,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
 
   /// Link artworks to an exhibition
   /// POST /api/exhibitions/:id/artworks { artworkIds: [...] }
-  Future<Map<String, dynamic>> linkExhibitionArtworks(String exhibitionId, List<String> artworkIds) async {
+  Future<Map<String, dynamic>> linkExhibitionArtworks(
+      String exhibitionId, List<String> artworkIds) async {
     await _ensureAuthBeforeRequest();
     final uri = Uri.parse('$baseUrl/api/exhibitions/$exhibitionId/artworks');
     final response = await _post(
@@ -5908,26 +6509,36 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       isIdempotent: true,
     );
     if (_isSuccessStatus(response.statusCode)) {
-      return response.body.isNotEmpty ? (jsonDecode(response.body) as Map<String, dynamic>) : {'success': true};
+      return response.body.isNotEmpty
+          ? (jsonDecode(response.body) as Map<String, dynamic>)
+          : {'success': true};
     }
-    throw Exception('Failed to link exhibition artworks: ${response.statusCode} ${response.body}');
+    throw Exception(
+        'Failed to link exhibition artworks: ${response.statusCode} ${response.body}');
   }
 
   /// Unlink a single artwork from an exhibition
   /// DELETE /api/exhibitions/:id/artworks/:artworkId
-  Future<Map<String, dynamic>> unlinkExhibitionArtwork(String exhibitionId, String artworkId) async {
+  Future<Map<String, dynamic>> unlinkExhibitionArtwork(
+      String exhibitionId, String artworkId) async {
     await _ensureAuthBeforeRequest();
-    final uri = Uri.parse('$baseUrl/api/exhibitions/$exhibitionId/artworks/$artworkId');
-    final response = await _delete(uri, headers: _getHeaders(), isIdempotent: true);
+    final uri =
+        Uri.parse('$baseUrl/api/exhibitions/$exhibitionId/artworks/$artworkId');
+    final response =
+        await _delete(uri, headers: _getHeaders(), isIdempotent: true);
     if (_isSuccessStatus(response.statusCode)) {
-      return response.body.isNotEmpty ? (jsonDecode(response.body) as Map<String, dynamic>) : {'success': true};
+      return response.body.isNotEmpty
+          ? (jsonDecode(response.body) as Map<String, dynamic>)
+          : {'success': true};
     }
-    throw Exception('Failed to unlink exhibition artwork: ${response.statusCode} ${response.body}');
+    throw Exception(
+        'Failed to unlink exhibition artwork: ${response.statusCode} ${response.body}');
   }
 
   /// Link markers to an exhibition
   /// POST /api/exhibitions/:id/markers { markerIds: [...] }
-  Future<Map<String, dynamic>> linkExhibitionMarkers(String exhibitionId, List<String> markerIds) async {
+  Future<Map<String, dynamic>> linkExhibitionMarkers(
+      String exhibitionId, List<String> markerIds) async {
     await _ensureAuthBeforeRequest();
     final uri = Uri.parse('$baseUrl/api/exhibitions/$exhibitionId/markers');
     final response = await _post(
@@ -5937,21 +6548,30 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       isIdempotent: true,
     );
     if (_isSuccessStatus(response.statusCode)) {
-      return response.body.isNotEmpty ? (jsonDecode(response.body) as Map<String, dynamic>) : {'success': true};
+      return response.body.isNotEmpty
+          ? (jsonDecode(response.body) as Map<String, dynamic>)
+          : {'success': true};
     }
-    throw Exception('Failed to link exhibition markers: ${response.statusCode} ${response.body}');
+    throw Exception(
+        'Failed to link exhibition markers: ${response.statusCode} ${response.body}');
   }
 
   /// Unlink a single marker from an exhibition
   /// DELETE /api/exhibitions/:id/markers/:markerId
-  Future<Map<String, dynamic>> unlinkExhibitionMarker(String exhibitionId, String markerId) async {
+  Future<Map<String, dynamic>> unlinkExhibitionMarker(
+      String exhibitionId, String markerId) async {
     await _ensureAuthBeforeRequest();
-    final uri = Uri.parse('$baseUrl/api/exhibitions/$exhibitionId/markers/$markerId');
-    final response = await _delete(uri, headers: _getHeaders(), isIdempotent: true);
+    final uri =
+        Uri.parse('$baseUrl/api/exhibitions/$exhibitionId/markers/$markerId');
+    final response =
+        await _delete(uri, headers: _getHeaders(), isIdempotent: true);
     if (_isSuccessStatus(response.statusCode)) {
-      return response.body.isNotEmpty ? (jsonDecode(response.body) as Map<String, dynamic>) : {'success': true};
+      return response.body.isNotEmpty
+          ? (jsonDecode(response.body) as Map<String, dynamic>)
+          : {'success': true};
     }
-    throw Exception('Failed to unlink exhibition marker: ${response.statusCode} ${response.body}');
+    throw Exception(
+        'Failed to unlink exhibition marker: ${response.statusCode} ${response.body}');
   }
 
   /// Fetch exhibition POAP status
@@ -5962,7 +6582,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         await _ensureAuthWithStoredWallet();
       } catch (_) {}
       final uri = Uri.parse('$baseUrl/api/exhibitions/$exhibitionId/poap');
-      final decoded = await _fetchJson(uri, includeAuth: true, allowOrbitFallback: false);
+      final decoded =
+          await _fetchJson(uri, includeAuth: true, allowOrbitFallback: false);
       final payload = decoded['data'] ?? decoded;
       if (payload is Map<String, dynamic>) {
         return ExhibitionPoapStatus.fromJson(payload);
@@ -5979,9 +6600,11 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
   Future<ExhibitionPoapStatus?> claimExhibitionPoap(String exhibitionId) async {
     try {
       await _ensureAuthBeforeRequest();
-      final uri = Uri.parse('$baseUrl/api/exhibitions/$exhibitionId/poap/claim');
+      final uri =
+          Uri.parse('$baseUrl/api/exhibitions/$exhibitionId/poap/claim');
       final response = await _post(uri, headers: _getHeaders());
-      final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+      final decoded =
+          response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (_isSuccessStatus(response.statusCode)) {
         if (decoded is Map<String, dynamic>) {
           final payload = decoded['data'] ?? decoded;
@@ -5991,7 +6614,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         }
         return null;
       }
-      throw Exception('Failed to claim exhibition POAP: ${response.statusCode} ${response.body}');
+      throw Exception(
+          'Failed to claim exhibition POAP: ${response.statusCode} ${response.body}');
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.claimExhibitionPoap failed: $e');
       rethrow;
@@ -6010,22 +6634,29 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
   ) async {
     try {
       await _ensureAuthBeforeRequest();
-      final uri = Uri.parse('$baseUrl/api/collab/$entityType/$entityId/invites');
+      final uri =
+          Uri.parse('$baseUrl/api/collab/$entityType/$entityId/invites');
       final response = await _post(
         uri,
         headers: _getHeaders(),
         body: jsonEncode({'invited': invitedIdentifier, 'role': role}),
       );
-      final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+      final decoded =
+          response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (_isSuccessStatus(response.statusCode)) {
         if (decoded is Map<String, dynamic>) {
           final payload = decoded['data'] ?? decoded;
-          final inviteRaw = payload is Map<String, dynamic> ? (payload['invite'] ?? payload) : null;
-          if (inviteRaw is Map<String, dynamic>) return CollabInvite.fromJson(inviteRaw);
+          final inviteRaw = payload is Map<String, dynamic>
+              ? (payload['invite'] ?? payload)
+              : null;
+          if (inviteRaw is Map<String, dynamic>) {
+            return CollabInvite.fromJson(inviteRaw);
+          }
         }
         return null;
       }
-      throw Exception('Failed to invite collaborator: ${response.statusCode} ${response.body}');
+      throw Exception(
+          'Failed to invite collaborator: ${response.statusCode} ${response.body}');
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.inviteCollaborator failed: $e');
       rethrow;
@@ -6034,14 +6665,17 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
 
   /// List collaborators for an entity
   /// GET /api/collab/:entityType/:entityId/members
-  Future<List<CollabMember>> listCollaborators(String entityType, String entityId) async {
+  Future<List<CollabMember>> listCollaborators(
+      String entityType, String entityId) async {
     try {
       // optional auth
       try {
         await _ensureAuthWithStoredWallet();
       } catch (_) {}
-      final uri = Uri.parse('$baseUrl/api/collab/$entityType/$entityId/members');
-      final decoded = await _fetchJson(uri, includeAuth: true, allowOrbitFallback: false);
+      final uri =
+          Uri.parse('$baseUrl/api/collab/$entityType/$entityId/members');
+      final decoded =
+          await _fetchJson(uri, includeAuth: true, allowOrbitFallback: false);
       final payload = decoded['data'] ?? decoded;
       if (payload is Map<String, dynamic>) {
         final list = payload['members'] ?? payload['data'];
@@ -6067,8 +6701,12 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       final uri = Uri.parse('$baseUrl/api/collab/invites');
       final response = await _get(uri, headers: _getHeaders(includeAuth: true));
       if (_isSuccessStatus(response.statusCode)) {
-        final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : const <String, dynamic>{};
-        final payload = decoded is Map<String, dynamic> ? (decoded['data'] ?? decoded) : null;
+        final decoded = response.body.isNotEmpty
+            ? jsonDecode(response.body)
+            : const <String, dynamic>{};
+        final payload = decoded is Map<String, dynamic>
+            ? (decoded['data'] ?? decoded)
+            : null;
         if (payload is Map<String, dynamic>) {
           final list = payload['invites'] ?? payload['data'];
           if (list is List) {
@@ -6096,9 +6734,11 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/collab/invites/$inviteId/accept');
-      final response = await _post(uri, headers: _getHeaders(), isIdempotent: true);
+      final response =
+          await _post(uri, headers: _getHeaders(), isIdempotent: true);
       if (_isSuccessStatus(response.statusCode)) return true;
-      throw Exception('Failed to accept invite: ${response.statusCode} ${response.body}');
+      throw Exception(
+          'Failed to accept invite: ${response.statusCode} ${response.body}');
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.acceptInvite failed: $e');
       rethrow;
@@ -6111,9 +6751,11 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/collab/invites/$inviteId/decline');
-      final response = await _post(uri, headers: _getHeaders(), isIdempotent: true);
+      final response =
+          await _post(uri, headers: _getHeaders(), isIdempotent: true);
       if (_isSuccessStatus(response.statusCode)) return true;
-      throw Exception('Failed to decline invite: ${response.statusCode} ${response.body}');
+      throw Exception(
+          'Failed to decline invite: ${response.statusCode} ${response.body}');
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.declineInvite failed: $e');
       rethrow;
@@ -6122,10 +6764,12 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
 
   /// Update collaborator role
   /// PATCH /api/collab/:entityType/:entityId/members/:memberUserId
-  Future<bool> updateCollaboratorRole(String entityType, String entityId, String memberUserId, String role) async {
+  Future<bool> updateCollaboratorRole(String entityType, String entityId,
+      String memberUserId, String role) async {
     try {
       await _ensureAuthBeforeRequest();
-      final uri = Uri.parse('$baseUrl/api/collab/$entityType/$entityId/members/$memberUserId');
+      final uri = Uri.parse(
+          '$baseUrl/api/collab/$entityType/$entityId/members/$memberUserId');
       final response = await _patch(
         uri,
         headers: _getHeaders(),
@@ -6133,22 +6777,28 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         isIdempotent: true,
       );
       if (_isSuccessStatus(response.statusCode)) return true;
-      throw Exception('Failed to update collaborator role: ${response.statusCode} ${response.body}');
+      throw Exception(
+          'Failed to update collaborator role: ${response.statusCode} ${response.body}');
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService.updateCollaboratorRole failed: $e');
+      AppConfig.debugPrint(
+          'BackendApiService.updateCollaboratorRole failed: $e');
       rethrow;
     }
   }
 
   /// Remove a collaborator
   /// DELETE /api/collab/:entityType/:entityId/members/:memberUserId
-  Future<bool> removeCollaborator(String entityType, String entityId, String memberUserId) async {
+  Future<bool> removeCollaborator(
+      String entityType, String entityId, String memberUserId) async {
     try {
       await _ensureAuthBeforeRequest();
-      final uri = Uri.parse('$baseUrl/api/collab/$entityType/$entityId/members/$memberUserId');
-      final response = await _delete(uri, headers: _getHeaders(), isIdempotent: true);
+      final uri = Uri.parse(
+          '$baseUrl/api/collab/$entityType/$entityId/members/$memberUserId');
+      final response =
+          await _delete(uri, headers: _getHeaders(), isIdempotent: true);
       if (_isSuccessStatus(response.statusCode)) return true;
-      throw Exception('Failed to remove collaborator: ${response.statusCode} ${response.body}');
+      throw Exception(
+          'Failed to remove collaborator: ${response.statusCode} ${response.body}');
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.removeCollaborator failed: $e');
       rethrow;
@@ -6196,10 +6846,12 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       if (response.statusCode == 200 || response.statusCode == 201) {
         return jsonDecode(response.body) as Map<String, dynamic>;
       } else {
-        throw Exception('Failed to update achievement progress: ${response.statusCode}');
+        throw Exception(
+            'Failed to update achievement progress: ${response.statusCode}');
       }
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService.updateAchievementProgress failed: $e');
+      AppConfig.debugPrint(
+          'BackendApiService.updateAchievementProgress failed: $e');
       rethrow;
     }
   }
@@ -6217,7 +6869,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         return data['stats'] as Map<String, dynamic>;
       } else {
-        throw Exception('Failed to get achievement stats: ${response.statusCode}');
+        throw Exception(
+            'Failed to get achievement stats: ${response.statusCode}');
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getAchievementStats failed: $e');
@@ -6239,7 +6892,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
   }) async {
     try {
       final response = await _get(
-        Uri.parse('$baseUrl/api/achievements/leaderboard?limit=$limit&type=$type'),
+        Uri.parse(
+            '$baseUrl/api/achievements/leaderboard?limit=$limit&type=$type'),
         headers: _getHeaders(),
       );
 
@@ -6250,7 +6904,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         throw Exception('Failed to get leaderboard: ${response.statusCode}');
       }
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService.getAchievementLeaderboard failed: $e');
+      AppConfig.debugPrint(
+          'BackendApiService.getAchievementLeaderboard failed: $e');
       return [];
     }
   }
@@ -6270,50 +6925,51 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
     await _ensureAuthBeforeRequest(walletAddress: walletAddress);
     const int maxRetries = 3;
     int attempt = 0;
-      while (true) {
-        attempt++;
-        try {
-          http.MultipartRequest buildRequest() {
-            final request = http.MultipartRequest(
-              'POST',
-              Uri.parse('$baseUrl/api/upload'),
-            );
+    while (true) {
+      attempt++;
+      try {
+        http.MultipartRequest buildRequest() {
+          final request = http.MultipartRequest(
+            'POST',
+            Uri.parse('$baseUrl/api/upload'),
+          );
 
-            request.headers.addAll(_getHeaders());
-            request.files.add(
-              http.MultipartFile.fromBytes(
-                'file',
-                fileBytes,
-                filename: fileName,
-              ),
-            );
+          request.headers.addAll(_getHeaders());
+          request.files.add(
+            http.MultipartFile.fromBytes(
+              'file',
+              fileBytes,
+              filename: fileName,
+            ),
+          );
 
-            request.fields['fileType'] = fileType;
-            request.fields['targetStorage'] = 'http'; // Use HTTP storage instead of hybrid/IPFS
-            if (metadata != null) {
-              request.fields['metadata'] = jsonEncode(metadata);
-            }
-
-            if (kDebugMode && AppConfig.enableNetworkLogging) {
-              AppConfig.networkLog(
-                'UPLOAD',
-                request.url.toString(),
-                data: <String, dynamic>{
-                  'attempt': attempt,
-                  'contentType': 'multipart/form-data',
-                  'fileField': 'file',
-                  'fileName': fileName,
-                  'bytes': fileBytes.length,
-                  'fileType': fileType,
-                  'targetStorage': 'http',
-                  if (metadata != null) 'metadata': metadata,
-                },
-              );
-            }
-            return request;
+          request.fields['fileType'] = fileType;
+          request.fields['targetStorage'] =
+              'http'; // Use HTTP storage instead of hybrid/IPFS
+          if (metadata != null) {
+            request.fields['metadata'] = jsonEncode(metadata);
           }
 
-          final response = await _sendMultipart(buildRequest, includeAuth: true);
+          if (kDebugMode && AppConfig.enableNetworkLogging) {
+            AppConfig.networkLog(
+              'UPLOAD',
+              request.url.toString(),
+              data: <String, dynamic>{
+                'attempt': attempt,
+                'contentType': 'multipart/form-data',
+                'fileField': 'file',
+                'fileName': fileName,
+                'bytes': fileBytes.length,
+                'fileType': fileType,
+                'targetStorage': 'http',
+                if (metadata != null) 'metadata': metadata,
+              },
+            );
+          }
+          return request;
+        }
+
+        final response = await _sendMultipart(buildRequest, includeAuth: true);
 
         if (response.statusCode == 200) {
           final body = jsonDecode(response.body) as Map<String, dynamic>;
@@ -6321,40 +6977,55 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
           // Backend returns { success:true, message:'', data: { filename, size, mimetype, ...result } }
           final Map<String, dynamic> data = body['data'] is Map<String, dynamic>
               ? Map<String, dynamic>.from(body['data'] as Map<String, dynamic>)
-              : (body['data'] != null ? Map<String, dynamic>.from(body['data']) : {});
+              : (body['data'] != null
+                  ? Map<String, dynamic>.from(body['data'])
+                  : {});
 
           // Try to determine the best URL for the uploaded file
           String? uploadedUrl;
           try {
             // Prefer backend-stable relative URLs so entities can persist a canonical
             // storage ref (backend cover fields expect `/uploads/...`-style paths).
-            if (data.containsKey('relativeUrl') && (data['relativeUrl'] as String).isNotEmpty) {
+            if (data.containsKey('relativeUrl') &&
+                (data['relativeUrl'] as String).isNotEmpty) {
               uploadedUrl = data['relativeUrl'] as String;
-            } else if (data.containsKey('relative_url') && (data['relative_url'] as String).isNotEmpty) {
+            } else if (data.containsKey('relative_url') &&
+                (data['relative_url'] as String).isNotEmpty) {
               uploadedUrl = data['relative_url'] as String;
-            } else if (data.containsKey('publicPath') && (data['publicPath'] as String).isNotEmpty) {
+            } else if (data.containsKey('publicPath') &&
+                (data['publicPath'] as String).isNotEmpty) {
               final publicPath = (data['publicPath'] as String).trim();
-              if (publicPath.startsWith('/uploads/') || publicPath.startsWith('uploads/')) {
-                uploadedUrl = publicPath.startsWith('/') ? publicPath : '/$publicPath';
+              if (publicPath.startsWith('/uploads/') ||
+                  publicPath.startsWith('uploads/')) {
+                uploadedUrl =
+                    publicPath.startsWith('/') ? publicPath : '/$publicPath';
               } else if (publicPath.isNotEmpty) {
                 uploadedUrl = '/uploads/$publicPath';
               }
-            } else if (data.containsKey('public_path') && (data['public_path'] as String).isNotEmpty) {
+            } else if (data.containsKey('public_path') &&
+                (data['public_path'] as String).isNotEmpty) {
               final publicPath = (data['public_path'] as String).trim();
-              if (publicPath.startsWith('/uploads/') || publicPath.startsWith('uploads/')) {
-                uploadedUrl = publicPath.startsWith('/') ? publicPath : '/$publicPath';
+              if (publicPath.startsWith('/uploads/') ||
+                  publicPath.startsWith('uploads/')) {
+                uploadedUrl =
+                    publicPath.startsWith('/') ? publicPath : '/$publicPath';
               } else if (publicPath.isNotEmpty) {
                 uploadedUrl = '/uploads/$publicPath';
               }
-            } else if (data.containsKey('url') && (data['url'] as String).isNotEmpty) {
+            } else if (data.containsKey('url') &&
+                (data['url'] as String).isNotEmpty) {
               uploadedUrl = data['url'] as String;
-            } else if (data.containsKey('ipfsUrl') && (data['ipfsUrl'] as String).isNotEmpty) {
+            } else if (data.containsKey('ipfsUrl') &&
+                (data['ipfsUrl'] as String).isNotEmpty) {
               uploadedUrl = data['ipfsUrl'] as String;
-            } else if (data.containsKey('httpUrl') && (data['httpUrl'] as String).isNotEmpty) {
+            } else if (data.containsKey('httpUrl') &&
+                (data['httpUrl'] as String).isNotEmpty) {
               uploadedUrl = data['httpUrl'] as String;
-            } else if (data.containsKey('fileUrl') && (data['fileUrl'] as String).isNotEmpty) {
+            } else if (data.containsKey('fileUrl') &&
+                (data['fileUrl'] as String).isNotEmpty) {
               uploadedUrl = data['fileUrl'] as String;
-            } else if (data.containsKey('path') && (data['path'] as String).isNotEmpty) {
+            } else if (data.containsKey('path') &&
+                (data['path'] as String).isNotEmpty) {
               uploadedUrl = data['path'] as String;
             }
           } catch (_) {
@@ -6395,7 +7066,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         }
         if (response.statusCode == 429) {
           final retryAfter = response.headers['retry-after'];
-          final waitSeconds = int.tryParse(retryAfter ?? '') ?? (2 << (attempt - 1));
+          final waitSeconds =
+              int.tryParse(retryAfter ?? '') ?? (2 << (attempt - 1));
           if (attempt < maxRetries) {
             _debugLogThrottled(
               'uploadFile:429',
@@ -6440,7 +7112,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       'uploadAvatarToProfile:start',
       'BackendApiService.uploadAvatarToProfile: starting upload (fileName=$fileName, fileType=$fileType, bytes=${fileBytes.length})',
     );
-    
+
     const int maxRetries = 3;
     int attempt = 0;
     while (true) {
@@ -6451,8 +7123,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       );
       try {
         final uri = Uri.parse('$baseUrl/api/profiles/avatars');
-        _debugLogThrottled('uploadAvatarToProfile:url', 'BackendApiService.uploadAvatarToProfile: POST $uri');
-        
+        _debugLogThrottled('uploadAvatarToProfile:url',
+            'BackendApiService.uploadAvatarToProfile: POST $uri');
+
         http.MultipartRequest buildRequest() {
           final request = http.MultipartRequest('POST', uri);
 
@@ -6468,7 +7141,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
           );
 
           request.fields['fileType'] = fileType;
-          if (metadata != null) request.fields['metadata'] = jsonEncode(metadata);
+          if (metadata != null) {
+            request.fields['metadata'] = jsonEncode(metadata);
+          }
           return request;
         }
 
@@ -6482,22 +7157,31 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
           final body = jsonDecode(response.body) as Map<String, dynamic>;
           final Map<String, dynamic> data = body['data'] is Map<String, dynamic>
               ? Map<String, dynamic>.from(body['data'] as Map<String, dynamic>)
-              : (body['data'] != null ? Map<String, dynamic>.from(body['data']) : {});
+              : (body['data'] != null
+                  ? Map<String, dynamic>.from(body['data'])
+                  : {});
 
           String? uploadedUrl;
           try {
             // Backend returns avatar URL in data.avatar field
-            if (data.containsKey('avatar') && data['avatar'] != null && (data['avatar'] as String).isNotEmpty) {
+            if (data.containsKey('avatar') &&
+                data['avatar'] != null &&
+                (data['avatar'] as String).isNotEmpty) {
               uploadedUrl = data['avatar'] as String;
-            } else if (data.containsKey('url') && (data['url'] as String).isNotEmpty) {
+            } else if (data.containsKey('url') &&
+                (data['url'] as String).isNotEmpty) {
               uploadedUrl = data['url'] as String;
-            } else if (data.containsKey('ipfsUrl') && (data['ipfsUrl'] as String).isNotEmpty) {
+            } else if (data.containsKey('ipfsUrl') &&
+                (data['ipfsUrl'] as String).isNotEmpty) {
               uploadedUrl = data['ipfsUrl'] as String;
-            } else if (data.containsKey('httpUrl') && (data['httpUrl'] as String).isNotEmpty) {
+            } else if (data.containsKey('httpUrl') &&
+                (data['httpUrl'] as String).isNotEmpty) {
               uploadedUrl = data['httpUrl'] as String;
-            } else if (data.containsKey('fileUrl') && (data['fileUrl'] as String).isNotEmpty) {
+            } else if (data.containsKey('fileUrl') &&
+                (data['fileUrl'] as String).isNotEmpty) {
               uploadedUrl = data['fileUrl'] as String;
-            } else if (data.containsKey('path') && (data['path'] as String).isNotEmpty) {
+            } else if (data.containsKey('path') &&
+                (data['path'] as String).isNotEmpty) {
               uploadedUrl = data['path'] as String;
             }
           } catch (_) {
@@ -6517,7 +7201,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
 
         if (response.statusCode == 429) {
           final retryAfter = response.headers['retry-after'];
-          final waitSeconds = int.tryParse(retryAfter ?? '') ?? (2 << (attempt - 1));
+          final waitSeconds =
+              int.tryParse(retryAfter ?? '') ?? (2 << (attempt - 1));
           if (attempt < maxRetries) {
             _debugLogThrottled(
               'uploadAvatarToProfile:429',
@@ -6530,7 +7215,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
           }
         }
 
-        throw Exception('Failed to upload avatar: ${response.statusCode} ${response.body}');
+        throw Exception(
+            'Failed to upload avatar: ${response.statusCode} ${response.body}');
       } catch (e, stackTrace) {
         if (attempt >= maxRetries) {
           _debugLogThrottled(
@@ -6554,7 +7240,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
 
   /// Send telemetry/analytics event to backend
   /// POST /api/telemetry (best-effort; backend may ignore)
-  Future<void> sendTelemetryEvent(String eventName, Map<String, dynamic>? params) async {
+  Future<void> sendTelemetryEvent(
+      String eventName, Map<String, dynamic>? params) async {
     try {
       final uri = Uri.parse('$baseUrl/api/telemetry');
       final body = jsonEncode({'event': eventName, 'params': params ?? {}});
@@ -6567,7 +7254,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       );
       if (response.statusCode >= 200 && response.statusCode < 300) return;
       // Non-fatal: ignore telemetry failures
-      AppConfig.debugPrint('BackendApiService.sendTelemetryEvent: status ${response.statusCode}');
+      AppConfig.debugPrint(
+          'BackendApiService.sendTelemetryEvent: status ${response.statusCode}');
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.sendTelemetryEvent failed: $e');
     }
@@ -6627,9 +7315,10 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       // Collections are generally public for other users. Only include auth
       // when the request is for the currently signed-in wallet (or when the
       // caller is implicitly requesting "my collections" by omitting a wallet).
-        final requestedCanonical = WalletUtils.canonical(requestedWallet);
-        final preferredCanonical = WalletUtils.canonical(_preferredWalletCanonical ?? '');
-        final isForPreferredWallet = requestedCanonical.isNotEmpty &&
+      final requestedCanonical = WalletUtils.canonical(requestedWallet);
+      final preferredCanonical =
+          WalletUtils.canonical(_preferredWalletCanonical ?? '');
+      final isForPreferredWallet = requestedCanonical.isNotEmpty &&
           preferredCanonical.isNotEmpty &&
           requestedCanonical == preferredCanonical;
       final isImplicitSelfRequest = requestedWallet.isEmpty;
@@ -6651,12 +7340,13 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         'page': page.toString(),
         'limit': limit.toString(),
       };
-      
+
       if (requestedWallet.isNotEmpty) {
         queryParams['walletAddress'] = requestedWallet;
       }
 
-      final uri = Uri.parse('$baseUrl/api/collections').replace(queryParameters: queryParams);
+      final uri = Uri.parse('$baseUrl/api/collections')
+          .replace(queryParameters: queryParams);
       final jsonData = await _fetchJson(
         uri,
         includeAuth: includeAuth,
@@ -6752,7 +7442,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         if (thumbnailUrl != null) 'thumbnailUrl': thumbnailUrl,
       };
 
-      if (kDebugMode && AppConfig.enableNetworkLogging && payload.containsKey('thumbnailUrl')) {
+      if (kDebugMode &&
+          AppConfig.enableNetworkLogging &&
+          payload.containsKey('thumbnailUrl')) {
         AppConfig.networkLog(
           'PUT',
           '$baseUrl/api/collections/$collectionId',
@@ -6770,7 +7462,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       );
 
       if (response.statusCode == 200) {
-        final jsonData = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+        final jsonData =
+            response.body.isNotEmpty ? jsonDecode(response.body) : null;
         if (jsonData is Map<String, dynamic>) {
           final data = jsonData['data'];
           if (data is Map<String, dynamic>) {
@@ -6780,7 +7473,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         }
         return const <String, dynamic>{};
       }
-      throw Exception('Failed to update collection: ${response.statusCode} ${response.body}');
+      throw Exception(
+          'Failed to update collection: ${response.statusCode} ${response.body}');
     } catch (e) {
       rethrow;
     }
@@ -6824,10 +7518,12 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       );
 
       if (response.statusCode != 200) {
-        throw Exception('Failed to add artwork to collection: ${response.statusCode}');
+        throw Exception(
+            'Failed to add artwork to collection: ${response.statusCode}');
       }
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService.addArtworkToCollection failed: $e');
+      AppConfig.debugPrint(
+          'BackendApiService.addArtworkToCollection failed: $e');
       rethrow;
     }
   }
@@ -6846,10 +7542,12 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       );
 
       if (response.statusCode != 200) {
-        throw Exception('Failed to remove artwork from collection: ${response.statusCode}');
+        throw Exception(
+            'Failed to remove artwork from collection: ${response.statusCode}');
       }
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService.removeArtworkFromCollection failed: $e');
+      AppConfig.debugPrint(
+          'BackendApiService.removeArtworkFromCollection failed: $e');
       rethrow;
     }
   }
@@ -6870,12 +7568,13 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         'limit': limit.toString(),
         'unreadOnly': unreadOnly.toString(),
       };
-      
+
       if (type != null) {
         queryParams['type'] = type;
       }
 
-      final uri = Uri.parse('$baseUrl/api/notifications').replace(queryParameters: queryParams);
+      final uri = Uri.parse('$baseUrl/api/notifications')
+          .replace(queryParameters: queryParams);
       final response = await _get(uri, headers: _getHeaders());
 
       if (response.statusCode == 200) {
@@ -6883,7 +7582,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         final notifications = jsonData['data'] as List<dynamic>;
         return notifications.map((e) => e as Map<String, dynamic>).toList();
       } else {
-        throw Exception('Failed to fetch notifications: ${response.statusCode}');
+        throw Exception(
+            'Failed to fetch notifications: ${response.statusCode}');
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getNotifications failed: $e');
@@ -6907,7 +7607,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         return 0;
       }
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService.getUnreadNotificationCount failed: $e');
+      AppConfig.debugPrint(
+          'BackendApiService.getUnreadNotificationCount failed: $e');
       return 0;
     }
   }
@@ -6923,10 +7624,12 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       );
 
       if (response.statusCode != 200) {
-        throw Exception('Failed to mark notification as read: ${response.statusCode}');
+        throw Exception(
+            'Failed to mark notification as read: ${response.statusCode}');
       }
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService.markNotificationAsRead failed: $e');
+      AppConfig.debugPrint(
+          'BackendApiService.markNotificationAsRead failed: $e');
       rethrow;
     }
   }
@@ -6942,10 +7645,12 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       );
 
       if (response.statusCode != 200) {
-        throw Exception('Failed to mark all notifications as read: ${response.statusCode}');
+        throw Exception(
+            'Failed to mark all notifications as read: ${response.statusCode}');
       }
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService.markAllNotificationsAsRead failed: $e');
+      AppConfig.debugPrint(
+          'BackendApiService.markAllNotificationsAsRead failed: $e');
       rethrow;
     }
   }
@@ -6961,7 +7666,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       );
 
       if (response.statusCode != 200) {
-        throw Exception('Failed to delete notification: ${response.statusCode}');
+        throw Exception(
+            'Failed to delete notification: ${response.statusCode}');
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.deleteNotification failed: $e');
@@ -6980,7 +7686,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         isIdempotent: true,
       );
       if (response.statusCode != 200 && response.statusCode != 204) {
-        throw Exception('Failed to delete account data: ${response.statusCode}');
+        throw Exception(
+            'Failed to delete account data: ${response.statusCode}');
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.deleteMyAccountData failed: $e');
@@ -6994,7 +7701,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
   /// GET /api/search?q=xxx&type=all
   Future<Map<String, dynamic>> search({
     required String query,
-    String type = 'all', // all, profiles, artworks, institutions, collections, posts
+    String type =
+        'all', // all, profiles, artworks, institutions, collections, posts
     int limit = 20,
     int page = 1,
   }) async {
@@ -7006,8 +7714,10 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         'page': page.toString(),
       };
 
-      final uri = Uri.parse('$baseUrl/api/search').replace(queryParameters: queryParams);
-      final response = await _get(uri, includeAuth: false, headers: _getHeaders(includeAuth: false));
+      final uri = Uri.parse('$baseUrl/api/search')
+          .replace(queryParameters: queryParams);
+      final response = await _get(uri,
+          includeAuth: false, headers: _getHeaders(includeAuth: false));
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as Map<String, dynamic>;
@@ -7037,7 +7747,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         'limit': limit.toString(),
       };
 
-      final uri = Uri.parse('$baseUrl/api/search/suggestions').replace(queryParameters: queryParams);
+      final uri = Uri.parse('$baseUrl/api/search/suggestions')
+          .replace(queryParameters: queryParams);
       final key = _rateLimitKey('GET', uri);
       if (_isRateLimited(key)) {
         throw Exception(_rateLimitMessage(key));
@@ -7047,7 +7758,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       dynamic data;
 
       Future<dynamic> tryFetch(Uri target) async {
-        final response = await _get(target, headers: headers, includeAuth: true);
+        final response =
+            await _get(target, headers: headers, includeAuth: true);
         if (_isSuccessStatus(response.statusCode)) {
           return jsonDecode(response.body);
         }
@@ -7071,29 +7783,35 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         return data.whereType<Map<String, dynamic>>().toList();
       }
       if (data is Map<String, dynamic>) {
-        final dynamic suggestions = data['suggestions'] ?? data['data'] ?? data['results'];
+        final dynamic suggestions =
+            data['suggestions'] ?? data['data'] ?? data['results'];
         if (suggestions is List) {
           return suggestions.whereType<Map<String, dynamic>>().toList();
         }
       }
-      AppConfig.debugPrint('BackendApiService.getSearchSuggestions: unexpected payload for "$query"');
+      AppConfig.debugPrint(
+          'BackendApiService.getSearchSuggestions: unexpected payload for "$query"');
       return const [];
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService.getSearchSuggestions failed for "$query": $e');
+      AppConfig.debugPrint(
+          'BackendApiService.getSearchSuggestions failed for "$query": $e');
       return const [];
     }
   }
 
   /// Get trending search terms
   /// GET /api/search/trending
-  Future<List<Map<String, dynamic>>> getTrendingSearches({int limit = 10}) async {
+  Future<List<Map<String, dynamic>>> getTrendingSearches(
+      {int limit = 10}) async {
     try {
       final queryParams = <String, String>{
         'limit': limit.toString(),
       };
 
-      final uri = Uri.parse('$baseUrl/api/search/trending').replace(queryParameters: queryParams);
-      final response = await _get(uri, includeAuth: false, headers: _getHeaders(includeAuth: false));
+      final uri = Uri.parse('$baseUrl/api/search/trending')
+          .replace(queryParameters: queryParams);
+      final response = await _get(uri,
+          includeAuth: false, headers: _getHeaders(includeAuth: false));
 
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
@@ -7112,10 +7830,12 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
 
   /// Add a reaction to a message
   /// POST /api/conversations/:conversationId/messages/:messageId/reactions
-  Future<void> addMessageReaction(String conversationId, String messageId, String emoji) async {
+  Future<void> addMessageReaction(
+      String conversationId, String messageId, String emoji) async {
     try {
       final response = await _post(
-        Uri.parse('$baseUrl/api/conversations/$conversationId/messages/$messageId/reactions'),
+        Uri.parse(
+            '$baseUrl/api/conversations/$conversationId/messages/$messageId/reactions'),
         headers: _getHeaders(),
         isIdempotent: true,
         body: jsonEncode({'emoji': emoji}),
@@ -7132,10 +7852,12 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
 
   /// Remove a reaction from a message
   /// DELETE /api/conversations/:conversationId/messages/:messageId/reactions
-  Future<void> removeMessageReaction(String conversationId, String messageId, String emoji) async {
+  Future<void> removeMessageReaction(
+      String conversationId, String messageId, String emoji) async {
     try {
       final response = await _delete(
-        Uri.parse('$baseUrl/api/conversations/$conversationId/messages/$messageId/reactions'),
+        Uri.parse(
+            '$baseUrl/api/conversations/$conversationId/messages/$messageId/reactions'),
         headers: _getHeaders(),
         body: jsonEncode({'emoji': emoji}),
         isIdempotent: true,
@@ -7145,7 +7867,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         throw Exception('Failed to remove reaction: ${response.statusCode}');
       }
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService.removeMessageReaction failed: $e');
+      AppConfig.debugPrint(
+          'BackendApiService.removeMessageReaction failed: $e');
       rethrow;
     }
   }
@@ -7214,7 +7937,8 @@ ArtMarker _artMarkerFromBackendJson(Map<String, dynamic> json) {
   if ((artworkId == null || artworkId.isEmpty) && allowSubjectIdAsArtworkId) {
     artworkId = subjectId;
   }
-  if ((artworkId == null || artworkId.isEmpty) && json['artwork'] is Map<String, dynamic>) {
+  if ((artworkId == null || artworkId.isEmpty) &&
+      json['artwork'] is Map<String, dynamic>) {
     artworkId = stringVal((json['artwork'] as Map<String, dynamic>)['id']);
   }
 
@@ -7227,7 +7951,8 @@ ArtMarker _artMarkerFromBackendJson(Map<String, dynamic> json) {
     'artworkId': artworkId,
     'modelCID': json['modelCID'] ?? json['model_cid'],
     'modelURL': json['modelURL'] ?? json['model_url'],
-    'storageProvider': json['storageProvider'] ?? json['storage_provider'] ?? 'hybrid',
+    'storageProvider':
+        json['storageProvider'] ?? json['storage_provider'] ?? 'hybrid',
     'scale': doubleVal(json['scale'], 1.0),
     'rotation': json['rotation'],
     'enableAnimation': json['enableAnimation'] ?? json['animate'] ?? false,
@@ -7236,15 +7961,20 @@ ArtMarker _artMarkerFromBackendJson(Map<String, dynamic> json) {
     'enableInteraction': json['enableInteraction'] ?? true,
     'metadata': mergedMeta,
     'tags': json['tags'],
-    'category': json['category'] ?? json['markerType'] ?? json['type'] ?? 'General',
-    'createdAt': json['createdAt'] ?? json['created_at'] ?? DateTime.now().toIso8601String(),
+    'category':
+        json['category'] ?? json['markerType'] ?? json['type'] ?? 'General',
+    'createdAt': json['createdAt'] ??
+        json['created_at'] ??
+        DateTime.now().toIso8601String(),
     'updatedAt': json['updatedAt'] ?? json['updated_at'],
     'createdBy': json['createdBy'] ?? json['created_by'] ?? 'system',
     'viewCount': intVal(json['viewCount'] ?? json['views'], 0),
-    'interactionCount': intVal(json['interactionCount'] ?? json['interactions'], 0),
+    'interactionCount':
+        intVal(json['interactionCount'] ?? json['interactions'], 0),
     'activationRadius':
         doubleVal(json['activationRadius'] ?? json['activation_radius'], 50.0),
-    'requiresProximity': json['requiresProximity'] ?? json['requires_proximity'] ?? true,
+    'requiresProximity':
+        json['requiresProximity'] ?? json['requires_proximity'] ?? true,
     'isPublic': json['isPublic'] ?? json['is_public'] ?? true,
     'isActive': json['isActive'] ?? json['is_active'] ?? true,
     'markerType': json['markerType'] ?? json['type'],
@@ -7372,7 +8102,9 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
       return convert(raw);
     }
     if (raw is Map) {
-      return convert(raw.cast<dynamic, dynamic>().map((key, value) => MapEntry(key.toString(), value)));
+      return convert(raw
+          .cast<dynamic, dynamic>()
+          .map((key, value) => MapEntry(key.toString(), value)));
     }
     return null;
   }
@@ -7390,10 +8122,18 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
 
     addMeta('walletAddress', json['walletAddress'] ?? json['wallet_address']);
     addMeta('creatorId', json['creatorId'] ?? json['creator_id']);
-    addMeta('creators', json['creators'] ?? json['artists'] ?? json['collaborators'] ?? json['contributors']);
+    addMeta(
+        'creators',
+        json['creators'] ??
+            json['artists'] ??
+            json['collaborators'] ??
+            json['contributors']);
     addMeta(
       'creatorWallets',
-      json['creatorWallets'] ?? json['creatorWalletAddresses'] ?? json['walletAddresses'] ?? json['wallets'],
+      json['creatorWallets'] ??
+          json['creatorWalletAddresses'] ??
+          json['walletAddresses'] ??
+          json['wallets'],
     );
     addMeta('locationName', json['locationName']);
     addMeta('nft', json['nft']);
@@ -7421,11 +8161,11 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
   final title = stringVal(json['title'] ?? json['name'] ?? '');
   final artist = stringVal(
     json['artist'] ??
-    json['artistName'] ??
-    json['artist_name'] ??
-    json['walletAddress'] ??
-    json['wallet_address'] ??
-    'Unknown Artist',
+        json['artistName'] ??
+        json['artist_name'] ??
+        json['walletAddress'] ??
+        json['wallet_address'] ??
+        'Unknown Artist',
   );
 
   final rawImage = pickString([
@@ -7443,7 +8183,8 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
     json['media_url'],
   ]);
 
-  final arAsset = (json['arAsset'] ?? json['ar_asset']) as Map<String, dynamic>?;
+  final arAsset =
+      (json['arAsset'] ?? json['ar_asset']) as Map<String, dynamic>?;
   final rawModelUrl = pickString([
     json['model3DURL'],
     json['model3dURL'],
@@ -7472,8 +8213,8 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
   final locationLng = locationJson != null
       ? doubleVal(locationJson['lng'] ?? locationJson['longitude'])
       : null;
-  final hasLocation =
-      (latCandidate != null && lngCandidate != null) || (locationLat != null && locationLng != null);
+  final hasLocation = (latCandidate != null && lngCandidate != null) ||
+      (locationLat != null && locationLng != null);
   double lat = latCandidate ?? locationLat ?? 0.0;
   double lng = lngCandidate ?? locationLng ?? 0.0;
 
@@ -7527,8 +8268,10 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
     metadata['image_cid'],
     json['cid'],
   ]);
-  final normalizedImageUrl = MediaUrlResolver.resolve(rawImage) ?? StorageConfig.resolveUrl(imageCid);
-  final arScale = doubleVal(json['arScale'] ?? json['ar_scale'] ?? arAsset?['scale']);
+  final normalizedImageUrl =
+      MediaUrlResolver.resolve(rawImage) ?? StorageConfig.resolveUrl(imageCid);
+  final arScale =
+      doubleVal(json['arScale'] ?? json['ar_scale'] ?? arAsset?['scale']);
   final arRotation = normalizeRotation(
     json['arRotation'] ??
         json['ar_rotation'] ??
@@ -7543,8 +8286,12 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
   final arConfigId = nullableString(
     json['arConfigId'] ??
         json['ar_config_id'] ??
-        (json['arConfig'] is Map<String, dynamic> ? (json['arConfig'] as Map<String, dynamic>)['id'] : null) ??
-        (json['ar_config'] is Map<String, dynamic> ? (json['ar_config'] as Map<String, dynamic>)['id'] : null),
+        (json['arConfig'] is Map<String, dynamic>
+            ? (json['arConfig'] as Map<String, dynamic>)['id']
+            : null) ??
+        (json['ar_config'] is Map<String, dynamic>
+            ? (json['ar_config'] as Map<String, dynamic>)['id']
+            : null),
   );
 
   final arStatusRaw = nullableString(json['arStatus'] ?? json['ar_status']);
@@ -7552,7 +8299,10 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
 
   List<String> parseStringList(dynamic raw) {
     if (raw is List) {
-      return raw.map((e) => e.toString().trim()).where((e) => e.isNotEmpty).toList();
+      return raw
+          .map((e) => e.toString().trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
     }
     if (raw is String) {
       final trimmed = raw.trim();
@@ -7561,17 +8311,27 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
         try {
           final parsed = jsonDecode(trimmed);
           if (parsed is List) {
-            return parsed.map((e) => e.toString().trim()).where((e) => e.isNotEmpty).toList();
+            return parsed
+                .map((e) => e.toString().trim())
+                .where((e) => e.isNotEmpty)
+                .toList();
           }
         } catch (_) {}
       }
-      return trimmed.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+      return trimmed
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
     }
     return <String>[];
   }
 
   final galleryUrls = parseStringList(
-    json['galleryUrls'] ?? json['gallery_urls'] ?? json['gallery'] ?? json['mediaGallery'],
+    json['galleryUrls'] ??
+        json['gallery_urls'] ??
+        json['gallery'] ??
+        json['mediaGallery'],
   ).map((u) => MediaUrlResolver.resolve(u) ?? u).toList();
 
   List<Map<String, dynamic>> parseGalleryMeta(dynamic raw) {
@@ -7599,11 +8359,14 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
     return const <Map<String, dynamic>>[];
   }
 
-  final galleryMeta = parseGalleryMeta(json['galleryMeta'] ?? json['gallery_meta']);
+  final galleryMeta =
+      parseGalleryMeta(json['galleryMeta'] ?? json['gallery_meta']);
 
   final poapJson = json['poap'] is Map<String, dynamic>
       ? (json['poap'] as Map<String, dynamic>)
-      : (json['poap'] is Map ? Map<String, dynamic>.from(json['poap'] as Map) : null);
+      : (json['poap'] is Map
+          ? Map<String, dynamic>.from(json['poap'] as Map)
+          : null);
   final poapModeRaw = pickString([
     json['poapMode'],
     json['poap_mode'],
@@ -7611,7 +8374,10 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
     poapJson?['poapMode'],
   ]);
   final poapMode = ArtworkPoapModeApi.fromApiValue(poapModeRaw);
-  final poapEnabled = boolVal(poapJson?['enabled'] ?? json['poapEnabled'] ?? json['poap_enabled']) ?? (poapMode != ArtworkPoapMode.none);
+  final poapEnabled = boolVal(poapJson?['enabled'] ??
+          json['poapEnabled'] ??
+          json['poap_enabled']) ??
+      (poapMode != ArtworkPoapMode.none);
   final poapEventId = pickString([
     poapJson?['eventId'],
     poapJson?['event_id'],
@@ -7624,9 +8390,18 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
     json['poapClaimUrl'],
     json['poap_claim_url'],
   ]);
-  final poapValidFrom = parseDate(poapJson?['validFrom'] ?? poapJson?['valid_from'] ?? json['poapValidFrom'] ?? json['poap_valid_from']);
-  final poapValidTo = parseDate(poapJson?['validTo'] ?? poapJson?['valid_to'] ?? json['poapValidTo'] ?? json['poap_valid_to']);
-  final poapRewardAmount = intVal(poapJson?['rewardAmount'] ?? poapJson?['reward_amount'] ?? json['poapRewardAmount'] ?? json['poap_reward_amount']);
+  final poapValidFrom = parseDate(poapJson?['validFrom'] ??
+      poapJson?['valid_from'] ??
+      json['poapValidFrom'] ??
+      json['poap_valid_from']);
+  final poapValidTo = parseDate(poapJson?['validTo'] ??
+      poapJson?['valid_to'] ??
+      json['poapValidTo'] ??
+      json['poap_valid_to']);
+  final poapRewardAmount = intVal(poapJson?['rewardAmount'] ??
+      poapJson?['reward_amount'] ??
+      json['poapRewardAmount'] ??
+      json['poap_reward_amount']);
   final poapTitle = pickString([
     poapJson?['title'],
     poapJson?['poapTitle'],
@@ -7646,9 +8421,12 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
     json['poapImageUrl'],
     json['poap_image_url'],
   ]);
-  final poapImageUrl = poapImageRaw != null ? (MediaUrlResolver.resolve(poapImageRaw) ?? poapImageRaw) : null;
+  final poapImageUrl = poapImageRaw != null
+      ? (MediaUrlResolver.resolve(poapImageRaw) ?? poapImageRaw)
+      : null;
 
-  final walletAddress = nullableString(json['walletAddress'] ?? json['wallet_address']);
+  final walletAddress =
+      nullableString(json['walletAddress'] ?? json['wallet_address']);
   final isPublic = boolVal(json['isPublic'] ?? json['is_public']) ?? true;
   final isActive = boolVal(json['isActive'] ?? json['is_active']) ?? true;
   final isForSale = boolVal(json['isForSale'] ?? json['is_for_sale']) ?? false;
@@ -7658,7 +8436,8 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
       parseDate(json['createdAt'] ?? json['created_at']) ?? DateTime.now();
   final updatedAt = parseDate(json['updatedAt'] ?? json['updated_at']);
   final discoveredAt = parseDate(json['discoveredAt'] ?? json['discovered_at']);
-  final discoveryUserId = nullableString(json['discoveryUserId'] ?? json['discovery_user_id']);
+  final discoveryUserId =
+      nullableString(json['discoveryUserId'] ?? json['discovery_user_id']);
   final isFavoriteByCurrentUser =
       boolVal(json['isFavoriteByCurrentUser'] ?? json['isFavorited']) ?? false;
   final discoveredFlag = boolVal(
@@ -7671,10 +8450,8 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
     json['status'] ?? json['artworkStatus'] ?? json['artwork_status'],
   );
   if (statusRaw != null) {
-    final normalized = statusRaw
-        .toLowerCase()
-        .trim()
-        .replaceAll(RegExp(r'[^a-z]'), '');
+    final normalized =
+        statusRaw.toLowerCase().trim().replaceAll(RegExp(r'[^a-z]'), '');
 
     if (normalized == 'favorite' || normalized == 'favourite') {
       status = ArtworkStatus.favorite;
@@ -7684,7 +8461,8 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
       status = ArtworkStatus.discovered;
     } else if (normalized.contains('favorite')) {
       status = ArtworkStatus.favorite;
-    } else if (normalized.contains('undiscover') || normalized.contains('notdiscover')) {
+    } else if (normalized.contains('undiscover') ||
+        normalized.contains('notdiscover')) {
       status = ArtworkStatus.undiscovered;
     } else if (normalized.contains('discover')) {
       status = ArtworkStatus.discovered;
@@ -7692,7 +8470,8 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
   }
   if (isFavoriteByCurrentUser) {
     status = ArtworkStatus.favorite;
-  } else if (status != ArtworkStatus.favorite && (discoveredFlag || discoveredAt != null)) {
+  } else if (status != ArtworkStatus.favorite &&
+      (discoveredFlag || discoveredAt != null)) {
     status = ArtworkStatus.discovered;
   }
 
@@ -7728,9 +8507,7 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
           arAsset?['enableAnimation'],
     ),
     arAnimationName: nullableString(
-      json['arAnimationName'] ??
-          json['animationName'] ??
-          arAsset?['animation'],
+      json['arAnimationName'] ?? json['animationName'] ?? arAsset?['animation'],
     ),
     isPublic: isPublic,
     isActive: isActive,
@@ -7746,7 +8523,8 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
     commentsCount: commentsCount,
     viewsCount: viewsCount,
     discoveryCount: discoveryCount,
-    isLikedByCurrentUser: boolVal(json['isLikedByCurrentUser'] ?? json['isLiked']) ?? false,
+    isLikedByCurrentUser:
+        boolVal(json['isLikedByCurrentUser'] ?? json['isLiked']) ?? false,
     isFavoriteByCurrentUser: isFavoriteByCurrentUser,
     poapMode: poapMode,
     poapEnabled: poapEnabled,
@@ -7762,19 +8540,18 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
   );
 }
 
-
-
 CommunityLikeUser _communityLikeUserFromBackendJson(Map<String, dynamic> json) {
-  final wallet = json['walletAddress'] as String? ?? json['wallet_address'] as String?;
+  final wallet =
+      json['walletAddress'] as String? ?? json['wallet_address'] as String?;
 
   final username = json['username'] as String?;
-  final displayName = json['displayName'] as String?
-      ?? json['display_name'] as String?
-      ?? username
-      ?? (wallet != null && wallet.length >= 8 ? wallet.substring(0, 8) : 'User');
-  final avatarCandidate = json['avatar'] as String?
-      ?? json['avatarUrl'] as String?
-      ?? json['avatar_url'] as String?;
+  final displayName = json['displayName'] as String? ??
+      json['display_name'] as String? ??
+      username ??
+      (wallet != null && wallet.length >= 8 ? wallet.substring(0, 8) : 'User');
+  final avatarCandidate = json['avatar'] as String? ??
+      json['avatarUrl'] as String? ??
+      json['avatar_url'] as String?;
 
   DateTime? likedAt;
   final likedAtRaw = json['likedAt'] ?? json['liked_at'];
@@ -7783,7 +8560,8 @@ CommunityLikeUser _communityLikeUserFromBackendJson(Map<String, dynamic> json) {
   }
 
   return CommunityLikeUser(
-    userId: (json['userId'] ?? json['user_id'] ?? json['id'] ?? 'unknown').toString(),
+    userId: (json['userId'] ?? json['user_id'] ?? json['id'] ?? 'unknown')
+        .toString(),
     walletAddress: wallet,
     displayName: displayName,
     username: username,
@@ -7791,7 +8569,6 @@ CommunityLikeUser _communityLikeUserFromBackendJson(Map<String, dynamic> json) {
     likedAt: likedAt,
   );
 }
-
 
 Map<String, dynamic> _buildCommunityPostPayload({
   required String content,
@@ -7815,8 +8592,10 @@ Map<String, dynamic> _buildCommunityPostPayload({
     if (mediaUrls != null && mediaUrls.isNotEmpty) 'mediaUrls': mediaUrls,
     if (mediaCids != null && mediaCids.isNotEmpty) 'mediaCids': mediaCids,
     if (artworkId != null) 'artworkId': artworkId,
-    if (subjectType != null && subjectType.trim().isNotEmpty) 'subjectType': subjectType.trim(),
-    if (subjectId != null && subjectId.trim().isNotEmpty) 'subjectId': subjectId.trim(),
+    if (subjectType != null && subjectType.trim().isNotEmpty)
+      'subjectType': subjectType.trim(),
+    if (subjectId != null && subjectId.trim().isNotEmpty)
+      'subjectId': subjectId.trim(),
     if (postType != null) 'postType': postType,
     if (tags != null && tags.isNotEmpty) 'tags': tags,
     if (mentions != null && mentions.isNotEmpty) 'mentions': mentions,
@@ -7863,6 +8642,7 @@ Map<String, dynamic> _buildCommunityPostPayload({
 
   return payload;
 }
+
 CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
   // Extract nested author object if present - can be a map or a string (wallet address)
   final authorRaw = json['author'];
@@ -7870,22 +8650,29 @@ CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
   final normalizedAuthor = author ?? <String, dynamic>{};
   // Extract nested stats object if present
   final stats = json['stats'] as Map<String, dynamic>?;
-  final authorDisplayName = author?['displayName'] as String? ?? author?['display_name'] as String? ?? json['displayName'] as String?;
-  final rawUsername = author?['username'] as String? ?? json['authorUsername'] as String? ?? json['username'] as String?;
-  final resolvedAuthorName = (authorDisplayName != null && authorDisplayName.trim().isNotEmpty)
-      ? authorDisplayName.trim()
-      : ((rawUsername != null && rawUsername.trim().isNotEmpty) ? rawUsername.trim() : (json['authorName'] as String?) ?? 'Anonymous');
-  final avatarCandidate = author?['avatar'] as String?
-      ?? author?['profileImage'] as String?
-      ?? json['authorAvatar'] as String?;
-  
+  final authorDisplayName = author?['displayName'] as String? ??
+      author?['display_name'] as String? ??
+      json['displayName'] as String?;
+  final rawUsername = author?['username'] as String? ??
+      json['authorUsername'] as String? ??
+      json['username'] as String?;
+  final resolvedAuthorName =
+      (authorDisplayName != null && authorDisplayName.trim().isNotEmpty)
+          ? authorDisplayName.trim()
+          : ((rawUsername != null && rawUsername.trim().isNotEmpty)
+              ? rawUsername.trim()
+              : (json['authorName'] as String?) ?? 'Anonymous');
+  final avatarCandidate = author?['avatar'] as String? ??
+      author?['profileImage'] as String? ??
+      json['authorAvatar'] as String?;
+
   // Determine author wallet (if available separately from authorId)
-  final authorWalletCandidate = normalizedAuthor['walletAddress'] as String?
-      ?? normalizedAuthor['wallet_address'] as String?
-      ?? normalizedAuthor['wallet'] as String?
-      ?? json['walletAddress'] as String?
-      ?? json['wallet'] as String?
-      ?? (authorRaw is String ? authorRaw : null);
+  final authorWalletCandidate = normalizedAuthor['walletAddress'] as String? ??
+      normalizedAuthor['wallet_address'] as String? ??
+      normalizedAuthor['wallet'] as String? ??
+      json['walletAddress'] as String? ??
+      json['wallet'] as String? ??
+      (authorRaw is String ? authorRaw : null);
 
   bool authorIsArtistFlag = communityBool(
     normalizedAuthor['isArtist'] ??
@@ -7901,7 +8688,8 @@ CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
   );
   final roleHint = (normalizedAuthor['role'] ??
           normalizedAuthor['type'] ??
-          json['authorRole'] ?? '')
+          json['authorRole'] ??
+          '')
       .toString()
       .toLowerCase();
   if (roleHint.contains('institution') ||
@@ -7924,44 +8712,66 @@ CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
 
   final mentionsPayload = json['mentions'] ?? json['mentionHandles'];
   final List<String> mentions = mentionsPayload is List
-      ? mentionsPayload.map((entry) => entry?.toString()).whereType<String>().toList()
+      ? mentionsPayload
+          .map((entry) => entry?.toString())
+          .whereType<String>()
+          .toList()
       : <String>[];
 
-  final String resolvedCategory = (json['category'] as String?)?.toLowerCase() ?? 'post';
+  final String resolvedCategory =
+      (json['category'] as String?)?.toLowerCase() ?? 'post';
 
   CommunityLocation? locationMeta;
   final locationJson = json['location'];
   if (locationJson is Map<String, dynamic>) {
     final latCandidate = locationJson['lat'] ?? locationJson['latitude'];
     final lngCandidate = locationJson['lng'] ?? locationJson['longitude'];
-    if (locationJson['name'] != null || latCandidate != null || lngCandidate != null) {
+    if (locationJson['name'] != null ||
+        latCandidate != null ||
+        lngCandidate != null) {
       locationMeta = CommunityLocation(
         name: locationJson['name']?.toString(),
-        lat: (latCandidate is num) ? latCandidate.toDouble() : double.tryParse(latCandidate?.toString() ?? ''),
-        lng: (lngCandidate is num) ? lngCandidate.toDouble() : double.tryParse(lngCandidate?.toString() ?? ''),
+        lat: (latCandidate is num)
+            ? latCandidate.toDouble()
+            : double.tryParse(latCandidate?.toString() ?? ''),
+        lng: (lngCandidate is num)
+            ? lngCandidate.toDouble()
+            : double.tryParse(lngCandidate?.toString() ?? ''),
       );
     }
-  } else if (json['locationName'] != null || json['location_name'] != null || json['location_lat'] != null || json['locationLng'] != null) {
+  } else if (json['locationName'] != null ||
+      json['location_name'] != null ||
+      json['location_lat'] != null ||
+      json['locationLng'] != null) {
     final latCandidate = json['locationLat'] ?? json['location_lat'];
     final lngCandidate = json['locationLng'] ?? json['location_lng'];
     locationMeta = CommunityLocation(
       name: (json['locationName'] ?? json['location_name'])?.toString(),
-      lat: (latCandidate is num) ? latCandidate.toDouble() : double.tryParse(latCandidate?.toString() ?? ''),
-      lng: (lngCandidate is num) ? lngCandidate.toDouble() : double.tryParse(lngCandidate?.toString() ?? ''),
+      lat: (latCandidate is num)
+          ? latCandidate.toDouble()
+          : double.tryParse(latCandidate?.toString() ?? ''),
+      lng: (lngCandidate is num)
+          ? lngCandidate.toDouble()
+          : double.tryParse(lngCandidate?.toString() ?? ''),
     );
   }
 
   CommunityGroupReference? groupRef;
   final groupJson = json['group'];
   if (groupJson is Map<String, dynamic>) {
-    final groupId = (groupJson['id'] ?? groupJson['groupId'] ?? groupJson['group_id'])?.toString();
+    final groupId =
+        (groupJson['id'] ?? groupJson['groupId'] ?? groupJson['group_id'])
+            ?.toString();
     if (groupId != null && groupId.isNotEmpty) {
-      final groupName = (groupJson['name'] ?? groupJson['groupName'])?.toString() ?? 'Community Group';
+      final groupName =
+          (groupJson['name'] ?? groupJson['groupName'])?.toString() ??
+              'Community Group';
       groupRef = CommunityGroupReference(
         id: groupId,
         name: groupName,
         slug: groupJson['slug']?.toString(),
-        coverImage: groupJson['coverImage']?.toString() ?? groupJson['cover_image']?.toString(),
+        coverImage: groupJson['coverImage']?.toString() ??
+            groupJson['cover_image']?.toString(),
         description: groupJson['description']?.toString(),
       );
     }
@@ -7970,10 +8780,13 @@ CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
     if (fallbackGroupId != null && fallbackGroupId.isNotEmpty) {
       groupRef = CommunityGroupReference(
         id: fallbackGroupId,
-        name: (json['groupName'] ?? json['group_name'] ?? 'Community Group').toString(),
+        name: (json['groupName'] ?? json['group_name'] ?? 'Community Group')
+            .toString(),
         slug: json['groupSlug']?.toString() ?? json['group_slug']?.toString(),
-        coverImage: json['groupCover']?.toString() ?? json['group_cover']?.toString(),
-        description: json['groupDescription']?.toString() ?? json['group_description']?.toString(),
+        coverImage:
+            json['groupCover']?.toString() ?? json['group_cover']?.toString(),
+        description: json['groupDescription']?.toString() ??
+            json['group_description']?.toString(),
       );
     }
   }
@@ -7981,9 +8794,10 @@ CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
   CommunityArtworkReference? artworkRef;
   final artworkJson = json['artwork'];
   if (artworkJson is Map<String, dynamic>) {
-    final artworkId =
-        (artworkJson['id'] ?? artworkJson['artworkId'] ?? artworkJson['artwork_id'])
-            ?.toString();
+    final artworkId = (artworkJson['id'] ??
+            artworkJson['artworkId'] ??
+            artworkJson['artwork_id'])
+        ?.toString();
     if (artworkId != null && artworkId.isNotEmpty) {
       final artworkImage = artworkJson['imageUrl']?.toString() ??
           artworkJson['image_url']?.toString() ??
@@ -8008,8 +8822,8 @@ CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
     if (fallbackArtworkId != null && fallbackArtworkId.isNotEmpty) {
       artworkRef = CommunityArtworkReference(
         id: fallbackArtworkId,
-        title:
-            (json['artworkTitle'] ?? json['artwork_title'] ?? 'Artwork').toString(),
+        title: (json['artworkTitle'] ?? json['artwork_title'] ?? 'Artwork')
+            .toString(),
         imageUrl: json['artworkImage']?.toString() ??
             json['artwork_image']?.toString() ??
             json['artworkImageUrl']?.toString() ??
@@ -8020,8 +8834,7 @@ CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
 
   final rawSubjectType =
       (json['subjectType'] ?? json['subject_type'])?.toString();
-  final rawSubjectId =
-      (json['subjectId'] ?? json['subject_id'])?.toString();
+  final rawSubjectId = (json['subjectId'] ?? json['subject_id'])?.toString();
   String? resolvedSubjectType = rawSubjectType?.trim();
   String? resolvedSubjectId = rawSubjectId?.trim();
   if ((resolvedSubjectType == null || resolvedSubjectType.isEmpty) &&
@@ -8039,8 +8852,7 @@ CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
 
   // Parse original post for reposts
   CommunityPost? originalPost;
-  final originalPostPayload =
-      json['originalPost'] ?? json['original_post'];
+  final originalPostPayload = json['originalPost'] ?? json['original_post'];
   if (originalPostPayload is Map) {
     final nested = Map<String, dynamic>.from(originalPostPayload);
     nested.remove('originalPost');
@@ -8048,7 +8860,8 @@ CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
     try {
       originalPost = _communityPostFromBackendJson(nested);
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService: Failed to parse nested original post: $e');
+      AppConfig.debugPrint(
+          'BackendApiService: Failed to parse nested original post: $e');
     }
   }
 
@@ -8059,38 +8872,57 @@ CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
 
   return CommunityPost(
     id: json['id'] as String,
-    authorId: json['authorId'] as String? ?? json['walletAddress'] as String? ?? json['userId'] as String? ?? 'unknown',
+    authorId: json['authorId'] as String? ??
+        json['walletAddress'] as String? ??
+        json['userId'] as String? ??
+        'unknown',
     authorWallet: authorWalletCandidate,
     authorName: resolvedAuthorName,
     authorAvatar: MediaUrlResolver.resolve(avatarCandidate),
     authorUsername: rawUsername,
     content: json['content'] as String,
-    imageUrl: json['imageUrl'] as String? ?? (mediaUrls.isNotEmpty ? mediaUrls.first : null),
+    imageUrl: json['imageUrl'] as String? ??
+        (mediaUrls.isNotEmpty ? mediaUrls.first : null),
     mediaUrls: mediaUrls,
-    timestamp: json['createdAt'] != null 
-      ? DateTime.parse(json['createdAt'] as String)
-      : (json['timestamp'] != null 
-        ? DateTime.parse(json['timestamp'] as String)
-        : DateTime.now()),
-    tags: json['tags'] != null 
-      ? (json['tags'] as List<dynamic>).map((e) => e.toString()).toList()
-      : [],
+    timestamp: json['createdAt'] != null
+        ? DateTime.parse(json['createdAt'] as String)
+        : (json['timestamp'] != null
+            ? DateTime.parse(json['timestamp'] as String)
+            : DateTime.now()),
+    tags: json['tags'] != null
+        ? (json['tags'] as List<dynamic>).map((e) => e.toString()).toList()
+        : [],
     mentions: mentions,
     category: resolvedCategory,
     location: locationMeta,
     group: groupRef,
-    groupId: (json['groupId'] as String?) ?? (json['group_id'] as String?) ?? groupRef?.id,
+    groupId: (json['groupId'] as String?) ??
+        (json['group_id'] as String?) ??
+        groupRef?.id,
     artwork: artworkRef,
     subjectType: resolvedSubjectType,
     subjectId: resolvedSubjectId,
-    distanceKm: (json['distanceKm'] as num?)?.toDouble() ?? (json['distance_km'] as num?)?.toDouble(),
+    distanceKm: (json['distanceKm'] as num?)?.toDouble() ??
+        (json['distance_km'] as num?)?.toDouble(),
     postType: postTypeValue,
     originalPostId: originalPostId,
     originalPost: originalPost,
-    likeCount: stats?['likes'] as int? ?? json['likes'] as int? ?? json['likeCount'] as int? ?? 0,
-    shareCount: stats?['shares'] as int? ?? json['shares'] as int? ?? json['shareCount'] as int? ?? 0,
-    commentCount: stats?['comments'] as int? ?? json['comments'] as int? ?? json['commentCount'] as int? ?? 0,
-    viewCount: stats?['views'] as int? ?? json['views'] as int? ?? json['viewCount'] as int? ?? 0,
+    likeCount: stats?['likes'] as int? ??
+        json['likes'] as int? ??
+        json['likeCount'] as int? ??
+        0,
+    shareCount: stats?['shares'] as int? ??
+        json['shares'] as int? ??
+        json['shareCount'] as int? ??
+        0,
+    commentCount: stats?['comments'] as int? ??
+        json['comments'] as int? ??
+        json['commentCount'] as int? ??
+        0,
+    viewCount: stats?['views'] as int? ??
+        json['views'] as int? ??
+        json['viewCount'] as int? ??
+        0,
     isLiked: json['isLiked'] as bool? ?? false,
     isBookmarked: json['isBookmarked'] as bool? ?? false,
     isFollowing: json['isFollowing'] as bool? ?? false,
@@ -8119,7 +8951,8 @@ GroupPostPreview? _groupPostPreviewFromJson(dynamic raw) {
   );
 }
 
-CommunityGroupSummary _communityGroupSummaryFromJson(Map<String, dynamic> json) {
+CommunityGroupSummary _communityGroupSummaryFromJson(
+    Map<String, dynamic> json) {
   final id = (json['id'] ?? json['groupId'] ?? json['group_id'])?.toString();
   if (id == null || id.isEmpty) {
     throw Exception('Invalid group payload: missing id');
@@ -8162,61 +8995,79 @@ Comment _commentFromBackendJson(Map<String, dynamic> json) {
   final normalizedAuthor = author ?? <String, dynamic>{};
 
   // Try common wallet field names in the author object
-  final authorWallet = normalizedAuthor['walletAddress'] as String?
-      ?? normalizedAuthor['wallet_address'] as String?
-      ?? normalizedAuthor['wallet'] as String?;
+  final authorWallet = normalizedAuthor['walletAddress'] as String? ??
+      normalizedAuthor['wallet_address'] as String? ??
+      normalizedAuthor['wallet'] as String?;
   // Fallback when the author is a raw string (like a wallet address)
   String? authorRawWalletFallback;
-  if (authorRaw is String && authorRaw.isNotEmpty) authorRawWalletFallback = authorRaw;
-  final rootAuthorWallet = json['authorWallet'] as String? ?? json['author_wallet'] as String? ?? json['createdByWallet'] as String? ?? json['created_by_wallet'] as String?;
-  final resolvedAuthorWallet = authorWallet ?? rootAuthorWallet ?? authorRawWalletFallback;
+  if (authorRaw is String && authorRaw.isNotEmpty) {
+    authorRawWalletFallback = authorRaw;
+  }
+  final rootAuthorWallet = json['authorWallet'] as String? ??
+      json['author_wallet'] as String? ??
+      json['createdByWallet'] as String? ??
+      json['created_by_wallet'] as String?;
+  final resolvedAuthorWallet =
+      authorWallet ?? rootAuthorWallet ?? authorRawWalletFallback;
 
   // Expand the fallback set for author id similar to community posts
-    final authorId = json['authorId'] as String?
-      ?? json['author_id']?.toString()
-      ?? normalizedAuthor['id'] as String?
-      ?? normalizedAuthor['walletAddress'] as String?
-      ?? json['walletAddress'] as String?
-      ?? json['wallet_address'] as String?
-      ?? json['wallet'] as String?
-      ?? json['userId'] as String?
-      ?? json['user_id']?.toString()
-      ?? resolvedAuthorWallet
-      ?? 'unknown';
+  final authorId = json['authorId'] as String? ??
+      json['author_id']?.toString() ??
+      normalizedAuthor['id'] as String? ??
+      normalizedAuthor['walletAddress'] as String? ??
+      json['walletAddress'] as String? ??
+      json['wallet_address'] as String? ??
+      json['wallet'] as String? ??
+      json['userId'] as String? ??
+      json['user_id']?.toString() ??
+      resolvedAuthorWallet ??
+      'unknown';
 
   // Display name and username fallbacks
-  final authorDisplayName = normalizedAuthor['displayName'] as String?
-      ?? normalizedAuthor['display_name'] as String?
-      ?? json['displayName'] as String?
-      ?? json['authorDisplayName'] as String?;
-  final rootAuthorDisplayName = json['userDisplayName'] as String? ?? json['display_name'] as String? ?? json['author_name'] as String?;
+  final authorDisplayName = normalizedAuthor['displayName'] as String? ??
+      normalizedAuthor['display_name'] as String? ??
+      json['displayName'] as String? ??
+      json['authorDisplayName'] as String?;
+  final rootAuthorDisplayName = json['userDisplayName'] as String? ??
+      json['display_name'] as String? ??
+      json['author_name'] as String?;
 
-  final rawUsername = normalizedAuthor['username'] as String?
-      ?? json['authorUsername'] as String?
-      ?? json['authorName'] as String?
-      ?? json['username'] as String?;
+  final rawUsername = normalizedAuthor['username'] as String? ??
+      json['authorUsername'] as String? ??
+      json['authorName'] as String? ??
+      json['username'] as String?;
 
-    final authorName = (authorDisplayName != null && authorDisplayName.trim().isNotEmpty)
-      ? authorDisplayName.trim()
-      : ((rawUsername != null && rawUsername.trim().isNotEmpty) ? rawUsername.trim() : (json['authorName'] as String?) ?? 'Anonymous');
-    final resolvedAuthorName = (authorName != 'Anonymous' && authorName.trim().isNotEmpty) ? authorName : (rootAuthorDisplayName?.trim() ?? authorName);
+  final authorName =
+      (authorDisplayName != null && authorDisplayName.trim().isNotEmpty)
+          ? authorDisplayName.trim()
+          : ((rawUsername != null && rawUsername.trim().isNotEmpty)
+              ? rawUsername.trim()
+              : (json['authorName'] as String?) ?? 'Anonymous');
+  final resolvedAuthorName =
+      (authorName != 'Anonymous' && authorName.trim().isNotEmpty)
+          ? authorName
+          : (rootAuthorDisplayName?.trim() ?? authorName);
 
   // Avatar candidate: check common fields used by the backend
-    final avatarCandidate = normalizedAuthor['avatar'] as String?
-      ?? normalizedAuthor['avatarUrl'] as String?
-      ?? normalizedAuthor['avatar_url'] as String?
-      ?? normalizedAuthor['profile_image'] as String?
-      ?? normalizedAuthor['profileImage'] as String?
-      ?? json['authorAvatar'] as String?
-      ?? json['avatar'] as String?;
+  final avatarCandidate = normalizedAuthor['avatar'] as String? ??
+      normalizedAuthor['avatarUrl'] as String? ??
+      normalizedAuthor['avatar_url'] as String? ??
+      normalizedAuthor['profile_image'] as String? ??
+      normalizedAuthor['profileImage'] as String? ??
+      json['authorAvatar'] as String? ??
+      json['avatar'] as String?;
 
-  final authorUsername = json['authorUsername'] as String?
-      ?? normalizedAuthor['username'] as String?
-      ?? rawUsername;
+  final authorUsername = json['authorUsername'] as String? ??
+      normalizedAuthor['username'] as String? ??
+      rawUsername;
 
-  final originalContent = (json['originalText'] ?? json['original_content'] ?? json['originalContent'])?.toString();
+  final originalContent = (json['originalText'] ??
+          json['original_content'] ??
+          json['originalContent'])
+      ?.toString();
   DateTime? editedAt;
-  final editedRaw = json['editedAt'] ?? json['edited_at'] ?? json['editedAtUtc'];
+  final editedRaw =
+      json['editedAt'] ?? json['edited_at'] ?? json['editedAtUtc'];
   if (editedRaw != null) {
     try {
       editedAt = DateTime.parse(editedRaw.toString());
@@ -8226,22 +9077,29 @@ Comment _commentFromBackendJson(Map<String, dynamic> json) {
   }
 
   return Comment(
-  id: (json['id'] ?? '').toString(),
-  authorId: authorId,
-  authorName: resolvedAuthorName,
-  authorAvatar: MediaUrlResolver.resolve(avatarCandidate),
-  authorUsername: authorUsername,
-  authorWallet: resolvedAuthorWallet ?? authorId,
-  parentCommentId: json['parentCommentId'] as String? ?? json['parent_comment_id']?.toString(),
-  originalContent: (originalContent != null && originalContent.trim().isNotEmpty) ? originalContent : null,
-  editedAt: editedAt,
-  content: json['content'] as String,
-    timestamp: json['createdAt'] != null 
-      ? DateTime.parse(json['createdAt'] as String)
-      : (json['timestamp'] != null 
-        ? DateTime.parse(json['timestamp'] as String)
-        : DateTime.now()),
-    likeCount: json['likes'] as int? ?? json['likeCount'] as int? ?? json['likesCount'] as int? ?? 0,
+    id: (json['id'] ?? '').toString(),
+    authorId: authorId,
+    authorName: resolvedAuthorName,
+    authorAvatar: MediaUrlResolver.resolve(avatarCandidate),
+    authorUsername: authorUsername,
+    authorWallet: resolvedAuthorWallet ?? authorId,
+    parentCommentId: json['parentCommentId'] as String? ??
+        json['parent_comment_id']?.toString(),
+    originalContent:
+        (originalContent != null && originalContent.trim().isNotEmpty)
+            ? originalContent
+            : null,
+    editedAt: editedAt,
+    content: json['content'] as String,
+    timestamp: json['createdAt'] != null
+        ? DateTime.parse(json['createdAt'] as String)
+        : (json['timestamp'] != null
+            ? DateTime.parse(json['timestamp'] as String)
+            : DateTime.now()),
+    likeCount: json['likes'] as int? ??
+        json['likeCount'] as int? ??
+        json['likesCount'] as int? ??
+        0,
     isLiked: json['isLiked'] as bool? ?? false,
     replies: <Comment>[],
   );

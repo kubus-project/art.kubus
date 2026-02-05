@@ -2400,8 +2400,10 @@ class _AddMemberDialogState extends State<_AddMemberDialog> {
                                   ),
                             onTap: () {
                               final ret = wallet.isNotEmpty ? wallet : rawUsername;
-                              debugPrint(
-                                  'AddMemberDialog: tapped suggestion -> username="$rawUsername" wallet="$wallet" returning="$ret"');
+                              if (kDebugMode) {
+                                debugPrint(
+                                    'AddMemberDialog: tapped suggestion -> username="$rawUsername" wallet="$wallet" returning="$ret"');
+                              }
                               Navigator.of(dialogCtx).pop(ret);
                             },
                           );

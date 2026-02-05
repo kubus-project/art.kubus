@@ -6538,7 +6538,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get season0PointsTooltip => 'Off-chain progress tokens';
 
   @override
-  String get season0OnChainNote => 'On-chain features available in Labs';
+  String get season0OnChainNote => 'On-chain features available on dev-net for now';
 
   @override
   String get mnemonicRevealTitle => 'Reveal Recovery Phrase';
