@@ -2496,6 +2496,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapMarkerCreateFailedToast => 'Failed to create marker. Please try again.';
 
   @override
+  String get mapLocationUnavailableToast => 'Unable to determine your location.';
+
+  @override
   String get mapMarkerCreateWalletRequired => 'Connect your wallet and create an AR-ready artwork to place a marker.';
 
   @override

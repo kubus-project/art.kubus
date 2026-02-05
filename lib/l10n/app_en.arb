@@ -997,6 +997,7 @@
   "mapFailedToLaunchAr": "Failed to launch AR.",
   "mapMarkerCreatedToast": "Marker created successfully!",
   "mapMarkerCreateFailedToast": "Failed to create marker. Please try again.",
+  "mapLocationUnavailableToast": "Unable to determine your location.",
   "mapMarkerCreateWalletRequired": "Connect your wallet and create an AR-ready artwork to place a marker.",
   "mapMarkerCreateNoArArtworks": "No AR-ready artworks found for your wallet. Create one first to place a marker.",
   "mapMarkerDialogTitle": "Create marker",

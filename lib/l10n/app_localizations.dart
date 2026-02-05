@@ -4949,6 +4949,12 @@ abstract class AppLocalizations {
   /// **'Failed to create marker. Please try again.'**
   String get mapMarkerCreateFailedToast;
 
+  /// No description provided for @mapLocationUnavailableToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to determine your location.'**
+  String get mapLocationUnavailableToast;
+
   /// No description provided for @mapMarkerCreateWalletRequired.
   ///
   /// In en, this message translates to:

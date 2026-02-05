@@ -1213,8 +1213,9 @@ class UserService {
         }
 
         // Populate internal cache with found users
-        if (found.isNotEmpty)
+        if (found.isNotEmpty) {
           setUsersInCacheAuthoritative(found.values.toList());
+        }
 
         // Build ordered results using found when present, otherwise cached or fallback
         for (final w in wallets) {

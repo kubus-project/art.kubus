@@ -979,6 +979,7 @@
   "mapFailedToLaunchAr": "AR ni bilo mogoče zagnati.",
   "mapMarkerCreatedToast": "Označevalec je ustvarjen.",
   "mapMarkerCreateFailedToast": "Označevalca ni bilo mogoče ustvariti. Poskusi znova.",
+  "mapLocationUnavailableToast": "Vaše lokacije ni mogoče določiti.",
   "mapMarkerCreateWalletRequired": "Poveži denarnico in ustvari AR-pripravljeno umetnino, da lahko postaviš označevalec.",
   "mapMarkerCreateNoArArtworks": "Za tvojo denarnico ni AR-pripravljenih umetnin. Najprej ustvari eno, nato lahko postaviš označevalec.",
   "mapMarkerDialogTitle": "Ustvari označevalec",

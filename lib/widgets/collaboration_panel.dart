@@ -79,7 +79,8 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
     try {
       await collab.loadCollaborators(widget.entityType, widget.entityId);
       if (!mounted) return;
-      final members = collab.collaboratorsFor(widget.entityType, widget.entityId);
+      final members =
+          collab.collaboratorsFor(widget.entityType, widget.entityId);
       _queueMemberProfileResolution(members, forceRefresh: true);
     } catch (_) {
       // provider handles error state
@@ -139,7 +140,8 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
     }
 
     _memberProfileResolveDebounce?.cancel();
-    _memberProfileResolveDebounce = Timer(const Duration(milliseconds: 120), () {
+    _memberProfileResolveDebounce =
+        Timer(const Duration(milliseconds: 120), () {
       if (!mounted) return;
       unawaited(_resolveMemberProfiles(wallets, forceRefresh: forceRefresh));
     });
@@ -152,6 +154,9 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
     if (wallets.isEmpty) return;
     if (_memberProfileResolutionInFlight) return;
     _memberProfileResolutionInFlight = true;
+
+    List<String> scheduleWallets = const <String>[];
+    bool scheduleForceRefresh = false;
     try {
       final users = await UserService.getUsersByWallets(
         wallets,
@@ -168,17 +173,24 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
       });
     } finally {
       _memberProfileResolutionInFlight = false;
-      if (!mounted) return;
-      final pending = _pendingResolveWallets;
-      if (pending.isEmpty) return;
-      final pendingForceRefresh = _pendingResolveForceRefresh;
-      _pendingResolveWallets = const <String>[];
-      _pendingResolveForceRefresh = false;
-      _scheduleWalletProfileResolution(
-        pending,
-        forceRefresh: pendingForceRefresh,
-      );
+
+      if (mounted) {
+        final pending = _pendingResolveWallets;
+        if (pending.isNotEmpty) {
+          scheduleWallets = pending;
+          scheduleForceRefresh = _pendingResolveForceRefresh;
+          _pendingResolveWallets = const <String>[];
+          _pendingResolveForceRefresh = false;
+        }
+      }
     }
+
+    if (!mounted) return;
+    if (scheduleWallets.isEmpty) return;
+    _scheduleWalletProfileResolution(
+      scheduleWallets,
+      forceRefresh: scheduleForceRefresh,
+    );
   }
 
   int? _rank(String? role) {
@@ -253,22 +265,30 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
 
       try {
         // Prefer lightweight autocomplete endpoint; fall back to full profile search.
-        final suggestions = await _api.getSearchSuggestions(query: query, limit: 10);
+        final suggestions =
+            await _api.getSearchSuggestions(query: query, limit: 10);
         if (!mounted || seq != _requestSeq) return;
 
         final profiles = <_ProfileSuggestion>[];
         for (final s in suggestions) {
           final type = (s['type'] ?? '').toString().toLowerCase();
-          if (type.isNotEmpty && type != 'profile' && type != 'profiles') continue;
+          if (type.isNotEmpty && type != 'profile' && type != 'profiles') {
+            continue;
+          }
 
           final username = (s['text'] ?? '').toString();
           if (username.isEmpty) continue;
           profiles.add(_ProfileSuggestion(
             username: username,
-            displayName: (s['secondaryText'] ?? s['secondary_text'] ?? '').toString().trim().isEmpty
+            displayName: (s['secondaryText'] ?? s['secondary_text'] ?? '')
+                    .toString()
+                    .trim()
+                    .isEmpty
                 ? null
                 : (s['secondaryText'] ?? s['secondary_text']).toString(),
-            avatarUrl: (s['icon'] ?? '').toString().trim().isEmpty ? null : (s['icon']).toString(),
+            avatarUrl: (s['icon'] ?? '').toString().trim().isEmpty
+                ? null
+                : (s['icon']).toString(),
           ));
         }
 
@@ -281,13 +301,16 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
         }
 
         // Fallback: full search endpoint.
-        final resp = await _api.search(query: query, type: 'profiles', limit: 8);
+        final resp =
+            await _api.search(query: query, type: 'profiles', limit: 8);
         if (!mounted || seq != _requestSeq) return;
 
         final results = <_ProfileSuggestion>[];
         if (resp['success'] == true) {
           final resultsNode = resp['results'];
-          final list = (resultsNode is Map<String, dynamic>) ? (resultsNode['profiles'] as List<dynamic>? ?? const []) : const [];
+          final list = (resultsNode is Map<String, dynamic>)
+              ? (resultsNode['profiles'] as List<dynamic>? ?? const [])
+              : const [];
           for (final item in list) {
             if (item is! Map) continue;
             final m = item.map((k, v) => MapEntry(k.toString(), v));
@@ -296,7 +319,8 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
             results.add(_ProfileSuggestion(
               username: username,
               displayName: (m['displayName'] ?? m['display_name'])?.toString(),
-              avatarUrl: (m['avatarUrl'] ?? m['avatar_url'] ?? m['avatar'])?.toString(),
+              avatarUrl: (m['avatarUrl'] ?? m['avatar_url'] ?? m['avatar'])
+                  ?.toString(),
             ));
           }
         }
@@ -332,7 +356,8 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
     if (!_canManageMembers(myRole)) {
       messenger.showKubusSnackBar(
         SnackBar(
-          content: const Text('You do not have permission to invite collaborators.'),
+          content:
+              const Text('You do not have permission to invite collaborators.'),
           backgroundColor: scheme.surface,
         ),
       );
@@ -354,7 +379,8 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
 
     // Enforce the UX rule: username/email only.
     // If it looks like a wallet address, nudge the user to use a username/email.
-    final looksLikeWallet = identifier.length >= 32 && !identifier.contains('@');
+    final looksLikeWallet =
+        identifier.length >= 32 && !identifier.contains('@');
     if (looksLikeWallet) {
       messenger.showKubusSnackBar(
         SnackBar(
@@ -415,9 +441,11 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
         role: newRole,
       );
       if (!mounted) return;
-      messenger.showKubusSnackBar(const SnackBar(content: Text('Role updated.')));
+      messenger
+          .showKubusSnackBar(const SnackBar(content: Text('Role updated.')));
     } catch (_) {
-      messenger.showKubusSnackBar(const SnackBar(content: Text('Could not update role.')));
+      messenger.showKubusSnackBar(
+          const SnackBar(content: Text('Could not update role.')));
     }
   }
 
@@ -437,10 +465,15 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
         final l10n = AppLocalizations.of(ctx)!;
         return KubusAlertDialog(
           title: const Text('Remove collaborator?'),
-          content: Text('This will revoke access for ${member.user?.displayName ?? member.user?.username ?? 'this person'}.'),
+          content: Text(
+              'This will revoke access for ${member.user?.displayName ?? member.user?.username ?? 'this person'}.'),
           actions: [
-            TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(l10n.commonCancel)),
-            ElevatedButton(onPressed: () => Navigator.of(ctx).pop(true), child: Text(l10n.commonRemove)),
+            TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: Text(l10n.commonCancel)),
+            ElevatedButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: Text(l10n.commonRemove)),
           ],
         );
       },
@@ -456,7 +489,8 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
       );
       messenger.showKubusSnackBar(const SnackBar(content: Text('Removed.')));
     } catch (_) {
-      messenger.showKubusSnackBar(const SnackBar(content: Text('Could not remove collaborator.')));
+      messenger.showKubusSnackBar(
+          const SnackBar(content: Text('Could not remove collaborator.')));
     }
   }
 
@@ -586,10 +620,13 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
                                 KubusSpacing.sm + KubusSpacing.xs,
                               ),
                               child: SizedBox(
-                                width: KubusSizes.trailingChevron - KubusSpacing.xxs,
-                                height: KubusSizes.trailingChevron - KubusSpacing.xxs,
+                                width: KubusSizes.trailingChevron -
+                                    KubusSpacing.xxs,
+                                height: KubusSizes.trailingChevron -
+                                    KubusSpacing.xxs,
                                 child: CircularProgressIndicator(
-                                  strokeWidth: KubusSizes.hairline + KubusSizes.hairline,
+                                  strokeWidth:
+                                      KubusSizes.hairline + KubusSizes.hairline,
                                   color: scheme.primary,
                                 ),
                               ),
@@ -607,7 +644,8 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
                                 )
                               : null),
                       filled: true,
-                      fillColor: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                      fillColor: scheme.surfaceContainerHighest
+                          .withValues(alpha: 0.35),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(
                           KubusRadius.md + KubusSpacing.xxs,
@@ -624,18 +662,26 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
                     Container(
                       margin: const EdgeInsets.only(top: KubusSpacing.sm),
                       decoration: BoxDecoration(
-                        color: scheme.surfaceContainerHighest.withValues(alpha: 0.25),
+                        color: scheme.surfaceContainerHighest
+                            .withValues(alpha: 0.25),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
+                        border: Border.all(
+                            color:
+                                scheme.outlineVariant.withValues(alpha: 0.6)),
                       ),
                       child: ListView.separated(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: _suggestions.length,
-                        separatorBuilder: (_, __) => Divider(height: 1, color: scheme.outlineVariant.withValues(alpha: 0.5)),
+                        separatorBuilder: (_, __) => Divider(
+                            height: 1,
+                            color:
+                                scheme.outlineVariant.withValues(alpha: 0.5)),
                         itemBuilder: (ctx, i) {
                           final s = _suggestions[i];
-                          final seed = s.username.isNotEmpty ? s.username : (s.displayName ?? 'user');
+                          final seed = s.username.isNotEmpty
+                              ? s.username
+                              : (s.displayName ?? 'user');
                           return ListTile(
                             dense: true,
                             leading: AvatarWidget(
@@ -647,15 +693,18 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
                             ),
                             title: Text(
                               s.displayName ?? '@${s.username}',
-                              style: Theme.of(ctx).textTheme.labelLarge?.copyWith(
-                                    color: scheme.onSurface,
-                                  ),
+                              style:
+                                  Theme.of(ctx).textTheme.labelLarge?.copyWith(
+                                        color: scheme.onSurface,
+                                      ),
                             ),
                             subtitle: Text(
                               '@${s.username}',
-                              style: Theme.of(ctx).textTheme.labelMedium?.copyWith(
-                                    color: scheme.onSurface.withValues(alpha: 0.65),
-                                  ),
+                              style:
+                                  Theme.of(ctx).textTheme.labelMedium?.copyWith(
+                                        color: scheme.onSurface
+                                            .withValues(alpha: 0.65),
+                                      ),
                             ),
                             onTap: () {
                               setState(() {
@@ -681,10 +730,14 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
                       key: ValueKey<String>('inviteRole:$_inviteRole'),
                       initialValue: _inviteRole,
                       items: const [
-                        DropdownMenuItem(value: 'viewer', child: Text('Viewer')),
-                        DropdownMenuItem(value: 'curator', child: Text('Curator')),
-                        DropdownMenuItem(value: 'editor', child: Text('Editor')),
-                        DropdownMenuItem(value: 'publisher', child: Text('Publisher')),
+                        DropdownMenuItem(
+                            value: 'viewer', child: Text('Viewer')),
+                        DropdownMenuItem(
+                            value: 'curator', child: Text('Curator')),
+                        DropdownMenuItem(
+                            value: 'editor', child: Text('Editor')),
+                        DropdownMenuItem(
+                            value: 'publisher', child: Text('Publisher')),
                         DropdownMenuItem(value: 'admin', child: Text('Admin')),
                       ],
                       onChanged: (v) {
@@ -695,8 +748,11 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
                       decoration: InputDecoration(
                         labelText: 'Role',
                         filled: true,
-                        fillColor: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                        fillColor: scheme.surfaceContainerHighest
+                            .withValues(alpha: 0.35),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide.none),
                       ),
                     ),
                   if (canPickRole) const SizedBox(height: 10),
@@ -705,8 +761,10 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
                     icon: const Icon(Icons.send),
                     label: Text(AppLocalizations.of(context)!.commonSend),
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 14, horizontal: 14),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
                     ),
                   ),
                 ],
@@ -798,7 +856,10 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
                         children: [
                           Text(
                             title,
-                            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelLarge
+                                ?.copyWith(
                                   color: scheme.onSurface,
                                 ),
                             overflow: TextOverflow.ellipsis,
@@ -806,8 +867,12 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
                           if (subtitle != null)
                             Text(
                               subtitle,
-                              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                    color: scheme.onSurface.withValues(alpha: 0.65),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelMedium
+                                  ?.copyWith(
+                                    color: scheme.onSurface
+                                        .withValues(alpha: 0.65),
                                   ),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -824,13 +889,15 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
             SizedBox(
               width: 150,
               child: DropdownButtonFormField<String>(
-                key: ValueKey<String>('memberRole:${member.userId}:${member.role}'),
+                key: ValueKey<String>(
+                    'memberRole:${member.userId}:${member.role}'),
                 initialValue: member.role,
                 items: const [
                   DropdownMenuItem(value: 'viewer', child: Text('Viewer')),
                   DropdownMenuItem(value: 'curator', child: Text('Curator')),
                   DropdownMenuItem(value: 'editor', child: Text('Editor')),
-                  DropdownMenuItem(value: 'publisher', child: Text('Publisher')),
+                  DropdownMenuItem(
+                      value: 'publisher', child: Text('Publisher')),
                   DropdownMenuItem(value: 'admin', child: Text('Admin')),
                 ],
                 onChanged: (v) {
