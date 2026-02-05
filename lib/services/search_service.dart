@@ -6,6 +6,7 @@ import '../providers/artwork_provider.dart';
 import '../providers/community_hub_provider.dart';
 import '../services/backend_api_service.dart';
 import '../utils/map_search_suggestion.dart';
+import '../utils/wallet_utils.dart';
 
 enum SearchScope {
   home,
@@ -114,7 +115,9 @@ class SearchService {
               art.category.toLowerCase().contains(normalizedQuery)) {
             results.add(MapSearchSuggestion(
               label: art.title,
-              subtitle: art.artist,
+              subtitle: (!WalletUtils.looksLikeWallet(art.artist))
+                  ? art.artist
+                  : null,
               id: art.id,
               type: 'artwork',
               position: art.hasValidLocation ? art.position : null,

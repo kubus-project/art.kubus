@@ -48,7 +48,10 @@ class CreatorDisplayFormat {
     final s = (value ?? '').toString().trim();
     if (s.isEmpty) return '';
     final lower = s.toLowerCase();
-    if (lower == 'unknown creator' || lower == 'unknown' || lower == 'anonymous') {
+    if (lower == 'unknown creator' ||
+        lower == 'unknown artist' ||
+        lower == 'unknown' ||
+        lower == 'anonymous') {
       return '';
     }
     if (WalletUtils.looksLikeWallet(s)) return '';

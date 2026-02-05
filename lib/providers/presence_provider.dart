@@ -37,7 +37,8 @@ class PresenceProvider extends ChangeNotifier {
   bool _batchInFlight = false;
   final Set<String> _pendingWalletsLower = <String>{};
   final Set<String> _watchedWalletsLower = <String>{};
-  final Map<String, DateTime> _watchedWalletLastRequestedAt = <String, DateTime>{};
+  final Map<String, DateTime> _watchedWalletLastRequestedAt =
+      <String, DateTime>{};
   Timer? _autoRefreshTimer;
   Duration? _autoRefreshIntervalCurrent;
 
@@ -60,7 +61,8 @@ class PresenceProvider extends ChangeNotifier {
   int _debugAutoRefreshSkipped = 0;
   int _debugHeartbeats = 0;
 
-  final Map<String, _PresenceCacheEntry> _cacheByWalletLower = <String, _PresenceCacheEntry>{};
+  final Map<String, _PresenceCacheEntry> _cacheByWalletLower =
+      <String, _PresenceCacheEntry>{};
 
   PresenceProvider({PresenceApi? api}) : _api = api ?? BackendPresenceApi();
 
@@ -135,14 +137,17 @@ class PresenceProvider extends ChangeNotifier {
     final wallet = (profile.currentUser?.walletAddress ?? '').trim();
     final signedIn = profile.isSignedIn == true;
     final allowVisible = profile.preferences.showActivityStatus == true;
-    final tokenPresent = (BackendApiService().getAuthToken() ?? '').trim().isNotEmpty;
+    final tokenPresent =
+        (BackendApiService().getAuthToken() ?? '').trim().isNotEmpty;
 
-    final signature = '${signedIn ? '1' : '0'}:${allowVisible ? '1' : '0'}:${tokenPresent ? '1' : '0'}:${wallet.toLowerCase()}';
+    final signature =
+        '${signedIn ? '1' : '0'}:${allowVisible ? '1' : '0'}:${tokenPresent ? '1' : '0'}:${wallet.toLowerCase()}';
     if (signature == _lastAuthSignature) return;
 
     final hadAuth = _hasAuthSession;
     _lastAuthSignature = signature;
-    _hasAuthSession = signedIn && allowVisible && wallet.isNotEmpty && tokenPresent;
+    _hasAuthSession =
+        signedIn && allowVisible && wallet.isNotEmpty && tokenPresent;
 
     if (!_initialized) {
       unawaited(initialize());
@@ -330,8 +335,10 @@ class PresenceProvider extends ChangeNotifier {
   void _pruneWatchedWallets(DateTime now) {
     // Drop stale wallets first.
     final cutoff = now.subtract(_watchedWalletTtl);
-    _watchedWalletLastRequestedAt.removeWhere((key, last) => last.isBefore(cutoff));
-    _watchedWalletsLower.removeWhere((key) => !_watchedWalletLastRequestedAt.containsKey(key));
+    _watchedWalletLastRequestedAt
+        .removeWhere((key, last) => last.isBefore(cutoff));
+    _watchedWalletsLower
+        .removeWhere((key) => !_watchedWalletLastRequestedAt.containsKey(key));
 
     if (_watchedWalletsLower.length <= _maxWatchedWallets) return;
 
@@ -401,7 +408,9 @@ class PresenceProvider extends ChangeNotifier {
     if (prefs?.showActivityStatus != true) return;
 
     final last = _lastHeartbeatAt;
-    if (!force && last != null && DateTime.now().difference(last) < _heartbeatInterval) {
+    if (!force &&
+        last != null &&
+        DateTime.now().difference(last) < _heartbeatInterval) {
       return;
     }
 
@@ -451,7 +460,8 @@ class PresenceProvider extends ChangeNotifier {
 
     final visitKey = '$normalizedType:$normalizedId';
     final lastSent = _lastVisitSentAt[visitKey];
-    if (lastSent != null && DateTime.now().difference(lastSent) < _visitDedupeWindow) {
+    if (lastSent != null &&
+        DateTime.now().difference(lastSent) < _visitDedupeWindow) {
       return;
     }
 
@@ -477,7 +487,8 @@ class PresenceProvider extends ChangeNotifier {
     final toRequest = <String>[];
     for (final key in _pendingWalletsLower) {
       final cached = _cacheByWalletLower[key];
-      final isFresh = cached != null && now.difference(cached.fetchedAt) <= _cacheTtl;
+      final isFresh =
+          cached != null && now.difference(cached.fetchedAt) <= _cacheTtl;
       if (!isFresh) {
         toRequest.add(key);
       }
@@ -491,21 +502,56 @@ class PresenceProvider extends ChangeNotifier {
       final resp = await _api.getPresenceBatch(toRequest);
       if (resp['success'] == true) {
         final raw = resp['data'];
-        final list = raw is List ? raw : (raw is Map<String, dynamic> && raw['data'] is List ? raw['data'] as List : const []);
+        final list = raw is List
+            ? raw
+            : (raw is Map<String, dynamic> && raw['data'] is List
+                ? raw['data'] as List
+                : const []);
+
+        final returnedWalletsLower = <String>{};
 
         var didChange = false;
         for (final entry in list) {
           if (entry is! Map) continue;
-          final parsed = UserPresenceEntry.fromJson(Map<String, dynamic>.from(entry));
+          final parsed =
+              UserPresenceEntry.fromJson(Map<String, dynamic>.from(entry));
           final walletKey = _walletLowerOrNull(parsed.walletAddress);
           if (walletKey == null) continue;
+          returnedWalletsLower.add(walletKey);
           final existing = _cacheByWalletLower[walletKey];
           if (existing == null || existing.presence != parsed) {
             didChange = true;
           }
 
           _cacheByWalletLower[walletKey] = _PresenceCacheEntry(
-            presence: existing?.presence == parsed ? existing!.presence : parsed,
+            presence:
+                existing?.presence == parsed ? existing!.presence : parsed,
+            fetchedAt: now,
+          );
+        }
+
+        // If the backend omits some requested wallets from the response, mark
+        // them as fetched to avoid repeated immediate re-requests for unknown
+        // wallets. Keep existing presence values if we already had them.
+        for (final walletKey in toRequest) {
+          if (returnedWalletsLower.contains(walletKey)) continue;
+
+          final existing = _cacheByWalletLower[walletKey];
+          if (existing != null) {
+            _cacheByWalletLower[walletKey] = existing.copyWith(fetchedAt: now);
+            continue;
+          }
+
+          _cacheByWalletLower[walletKey] = _PresenceCacheEntry(
+            presence: UserPresenceEntry(
+              walletAddress: walletKey,
+              exists: false,
+              visible: false,
+              isOnline: null,
+              lastSeenAt: null,
+              lastVisited: null,
+              lastVisitedTitle: null,
+            ),
             fetchedAt: now,
           );
         }
@@ -590,7 +636,8 @@ class _PresenceCacheEntry {
     required this.fetchedAt,
   });
 
-  _PresenceCacheEntry copyWith({UserPresenceEntry? presence, DateTime? fetchedAt}) {
+  _PresenceCacheEntry copyWith(
+      {UserPresenceEntry? presence, DateTime? fetchedAt}) {
     return _PresenceCacheEntry(
       presence: presence ?? this.presence,
       fetchedAt: fetchedAt ?? this.fetchedAt,

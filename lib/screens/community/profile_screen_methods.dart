@@ -211,7 +211,7 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
         final avatarUrl = (follower['profileImageUrl'] ?? follower['avatar'] ?? follower['avatarUrl'] ?? follower['avatar_url']) as String?;
 
         final formatted = CreatorDisplayFormat.format(
-          fallbackLabel: walletAddress.isNotEmpty ? maskWallet(walletAddress) : 'Unknown creator',
+          fallbackLabel: walletAddress.isNotEmpty ? maskWallet(walletAddress) : 'Unknown artist',
           displayName: displayName,
           username: username,
           wallet: walletAddress,
@@ -488,7 +488,7 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
         final avatarUrl = (user['profileImageUrl'] ?? user['avatar'] ?? user['avatarUrl'] ?? user['avatar_url']) as String?;
 
         final formatted = CreatorDisplayFormat.format(
-          fallbackLabel: walletAddress.isNotEmpty ? maskWallet(walletAddress) : 'Unknown creator',
+          fallbackLabel: walletAddress.isNotEmpty ? maskWallet(walletAddress) : 'Unknown artist',
           displayName: displayName,
           username: username,
           wallet: walletAddress,

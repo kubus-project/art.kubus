@@ -316,7 +316,7 @@ class UserService {
 
       final effectiveName = safeDisplayName.isNotEmpty
           ? safeDisplayName
-          : (safeUsername.isNotEmpty ? safeUsername : 'Unknown creator');
+          : (safeUsername.isNotEmpty ? safeUsername : 'Unknown artist');
       final user = User(
         id: resolvedWallet,
         name: effectiveName,
@@ -609,7 +609,7 @@ class UserService {
           }
           final user = User(
             id: v['id']?.toString() ?? k,
-            name: v['name']?.toString() ?? 'Unknown creator',
+            name: v['name']?.toString() ?? 'Unknown artist',
             username: (v['username']?.toString() ?? '')
                 .replaceFirst(RegExp(r'^@+'), ''),
             bio: v['bio']?.toString() ?? '',
@@ -800,7 +800,7 @@ class UserService {
             : ((resolvedUsername.trim().isNotEmpty &&
                     !WalletUtils.looksLikeWallet(resolvedUsername.trim()))
                 ? resolvedUsername.trim()
-                : 'Unknown creator'),
+                : 'Unknown artist'),
         username: (!WalletUtils.looksLikeWallet(resolvedUsername.trim()))
             ? resolvedUsername.trim()
             : '',
@@ -1090,7 +1090,7 @@ class UserService {
             )
           : User(
               id: walletAddress,
-              name: 'Unknown creator',
+              name: 'Unknown artist',
               username: '',
               bio: '',
               followersCount: followers,
@@ -1160,7 +1160,7 @@ class UserService {
                             .toString()
                             .replaceAll('@', '')
                             .trim()
-                        : 'Unknown creator'),
+                        : 'Unknown artist'),
                 username: (!WalletUtils.looksLikeWallet(
                         (profile['username'] ?? '')
                             .toString()
@@ -1227,7 +1227,7 @@ class UserService {
           } else {
             results.add(User(
               id: w,
-              name: 'Unknown creator',
+              name: 'Unknown artist',
               username: '',
               bio: '',
               followersCount: 0,
@@ -1318,7 +1318,7 @@ class UserService {
                           .toString()
                           .replaceAll('@', '')
                           .trim()
-                      : 'Unknown creator'),
+                      : 'Unknown artist'),
               username: (!WalletUtils.looksLikeWallet(
                       (profile['username'] ?? '')
                           .toString()
@@ -1383,7 +1383,7 @@ class UserService {
         } else {
           results.add(User(
             id: w,
-            name: 'Unknown creator',
+            name: 'Unknown artist',
             username: '',
             bio: '',
             followersCount: 0,
@@ -1416,7 +1416,7 @@ class UserService {
         } else {
           results.add(User(
             id: w,
-            name: 'Unknown creator',
+            name: 'Unknown artist',
             username: '',
             bio: '',
             followersCount: 0,
@@ -1432,7 +1432,7 @@ class UserService {
       } catch (_) {
         results.add(User(
           id: w,
-          name: 'Unknown creator',
+          name: 'Unknown artist',
           username: '',
           bio: '',
           followersCount: 0,

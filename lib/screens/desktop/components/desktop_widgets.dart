@@ -5,6 +5,7 @@ import '../../../providers/themeprovider.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../widgets/glass_components.dart';
+import '../../../widgets/search/kubus_search_bar.dart';
 
 /// Desktop content card with hover effects and animations
 class DesktopCard extends StatefulWidget {
@@ -60,9 +61,8 @@ class _DesktopCardState extends State<DesktopCard> {
       width: widget.width,
       height: widget.height,
       margin: widget.margin,
-      transform: _isHovered 
-          ? Matrix4.translationValues(0, -2, 0)
-          : Matrix4.identity(),
+      transform:
+          _isHovered ? Matrix4.translationValues(0, -2, 0) : Matrix4.identity(),
       decoration: BoxDecoration(
         borderRadius: radius,
         border: widget.showBorder
@@ -108,8 +108,10 @@ class _DesktopCardState extends State<DesktopCard> {
     );
 
     return MouseRegion(
-      onEnter: widget.enableHover ? (_) => setState(() => _isHovered = true) : null,
-      onExit: widget.enableHover ? (_) => setState(() => _isHovered = false) : null,
+      onEnter:
+          widget.enableHover ? (_) => setState(() => _isHovered = true) : null,
+      onExit:
+          widget.enableHover ? (_) => setState(() => _isHovered = false) : null,
       child: content,
     );
   }
@@ -176,7 +178,10 @@ class DesktopSectionHeader extends StatelessWidget {
                     subtitle!,
                     style: GoogleFonts.inter(
                       fontSize: 13,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.6),
                     ),
                   ),
                 ],
@@ -424,7 +429,7 @@ class _DesktopActionButtonState extends State<DesktopActionButton> {
     final radius = BorderRadius.circular(12);
     // Buttons should stay more opaque (retain their color), but still get blur/edge treatment.
     final glassTint = widget.isPrimary
-      ? themeProvider.accentColor.withValues(alpha: isDark ? 0.82 : 0.88)
+        ? themeProvider.accentColor.withValues(alpha: isDark ? 0.82 : 0.88)
         : scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
 
     final outlineColor = widget.isPrimary
@@ -510,8 +515,12 @@ class _DesktopActionButtonState extends State<DesktopActionButton> {
   }
 }
 
-/// Desktop search bar
-class DesktopSearchBar extends StatefulWidget {
+/// Desktop search bar.
+///
+/// Note: this is now a thin wrapper around the shared [KubusSearchBar] so all
+/// search inputs can share a single implementation while keeping existing
+/// call sites stable.
+class DesktopSearchBar extends StatelessWidget {
   final String hintText;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
@@ -530,40 +539,6 @@ class DesktopSearchBar extends StatefulWidget {
   });
 
   @override
-  State<DesktopSearchBar> createState() => _DesktopSearchBarState();
-}
-
-class _DesktopSearchBarState extends State<DesktopSearchBar> {
-  bool _isFocused = false;
-  late TextEditingController _controller;
-  late FocusNode _focusNode;
-  late bool _ownsFocusNode;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = widget.controller ?? TextEditingController();
-    _ownsFocusNode = widget.focusNode == null;
-    _focusNode = widget.focusNode ?? FocusNode();
-    _focusNode.addListener(() => setState(() => _isFocused = _focusNode.hasFocus));
-    _controller.addListener(() {
-      // Rebuild to refresh clear icon visibility when text changes.
-      if (mounted) setState(() {});
-    });
-  }
-
-  @override
-  void dispose() {
-    if (widget.controller == null) {
-      _controller.dispose();
-    }
-    if (_ownsFocusNode) {
-      _focusNode.dispose();
-    }
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final animationTheme = context.animationTheme;
@@ -574,72 +549,39 @@ class _DesktopSearchBarState extends State<DesktopSearchBar> {
     final radius = BorderRadius.circular(12);
     final glassTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
 
-    return AnimatedContainer(
-      duration: animationTheme.short,
-      curve: animationTheme.defaultCurve,
-      decoration: BoxDecoration(
+    return KubusSearchBar(
+      hintText: hintText,
+      controller: controller,
+      focusNode: focusNode,
+      autofocus: autofocus,
+      onChanged: onChanged,
+      onSubmitted: onSubmitted,
+      style: KubusSearchBarStyle(
         borderRadius: radius,
-        border: Border.all(
-          color: _isFocused
-              ? themeProvider.accentColor
-              : scheme.outline.withValues(alpha: 0.18),
-          width: _isFocused ? 2 : 1,
-        ),
-        boxShadow: _isFocused
-            ? [
-                BoxShadow(
-                  color: themeProvider.accentColor.withValues(alpha: 0.1),
-                  blurRadius: 8,
-                ),
-              ]
-            : null,
-      ),
-      child: LiquidGlassPanel(
-        padding: EdgeInsets.zero,
-        margin: EdgeInsets.zero,
-        borderRadius: radius,
-        showBorder: false,
         backgroundColor: glassTint,
-        child: TextField(
-          controller: _controller,
-          focusNode: _focusNode,
-          autofocus: widget.autofocus,
-          onChanged: widget.onChanged,
-          onSubmitted: widget.onSubmitted,
-          style: GoogleFonts.inter(
-            color: scheme.onSurface,
+        borderColor: scheme.outline.withValues(alpha: 0.18),
+        focusedBorderColor: themeProvider.accentColor,
+        borderWidth: 1,
+        focusedBorderWidth: 2,
+        blurSigma: null,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        boxShadow: null,
+        focusedBoxShadow: [
+          BoxShadow(
+            color: themeProvider.accentColor.withValues(alpha: 0.1),
+            blurRadius: 8,
           ),
-          decoration: InputDecoration(
-            hintText: widget.hintText,
-            hintStyle: GoogleFonts.inter(
-              color: scheme.onSurface.withValues(alpha: 0.5),
-            ),
-            prefixIcon: Icon(
-              Icons.search,
-              color: _isFocused
-                  ? themeProvider.accentColor
-                  : scheme.onSurface.withValues(alpha: 0.5),
-            ),
-            suffixIcon: _controller.text.isNotEmpty
-                ? IconButton(
-                    icon: Icon(
-                      Icons.clear,
-                      color: scheme.onSurface.withValues(alpha: 0.5),
-                    ),
-                    onPressed: () {
-                      _controller.clear();
-                      widget.onChanged?.call('');
-                    },
-                  )
-                : null,
-            border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 14,
-            ),
-          ),
+        ],
+        prefixIconConstraints: null,
+        suffixIconConstraints: null,
+        textStyle: GoogleFonts.inter(color: scheme.onSurface),
+        hintStyle: GoogleFonts.inter(
+          color: scheme.onSurface.withValues(alpha: 0.5),
         ),
       ),
+      animationDuration: animationTheme.short,
+      animationCurve: animationTheme.defaultCurve,
     );
   }
 }
