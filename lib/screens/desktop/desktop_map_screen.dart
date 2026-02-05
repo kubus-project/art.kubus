@@ -730,10 +730,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     final shellScope = DesktopShellScope.of(context);
     if (shellScope == null) {
-      _nearbyPanelAutoloadAttempts += 1;
-      if (_nearbyPanelAutoloadAttempts <= _maxNearbyPanelAutoloadAttempts) {
-        _ensureNearbyPanelAutoloadScheduled();
-      }
+      // DesktopMapScreen can be opened outside of DesktopShell (e.g. via
+      // MapNavigation). In that case there is no functions sidebar; render the
+      // nearby panel locally inside this screen.
+      _pendingInitialNearbyPanelOpen = false;
+      _openNearbyArtPanel();
       return;
     }
 
@@ -741,27 +742,64 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _openNearbyArtPanel();
   }
 
+  Widget _buildNearbyFunctionsPanelContent(
+    List<Artwork> filteredArtworks, {
+    LatLng? basePosition,
+  }) {
+    // Keep the subtree key stable so rapid updates (like radius changes)
+    // update in-place instead of remounting the whole sidebar.
+    return KeyedSubtree(
+      key: const ValueKey<String>('nearby_sidebar'),
+      child: Builder(
+        builder: (context) {
+          final themeProvider = context.watch<ThemeProvider>();
+          final isLoadingArtworks =
+              context.watch<ArtworkProvider>().isLoading('load_artworks');
+          return _buildNearbyArtSidebar(
+            themeProvider,
+            filteredArtworks,
+            basePosition: basePosition,
+            isLoading: isLoadingArtworks,
+          );
+        },
+      ),
+    );
+  }
+
   void _openNearbyArtPanel() {
     final shellScope = DesktopShellScope.of(context);
-    if (shellScope == null) return;
+
+    final anchor = _userLocation ?? _effectiveCenter;
+    final artworkProvider = context.read<ArtworkProvider>();
+    final filteredArtworks = _getFilteredArtworks(
+      artworkProvider.artworks,
+      basePositionOverride: anchor,
+    );
 
     _safeSetState(() {
       _isNearbyPanelOpen = true;
       _nearbySidebarSignature = null;
       _nearbySidebarSyncScheduled = false;
-      _nearbySidebarAnchor = _userLocation ?? _effectiveCenter;
+      _nearbySidebarAnchor = anchor;
       _nearbySidebarLastSyncAt = null;
       _selectedArtwork = null;
       _selectedExhibition = null;
       _showFiltersPanel = false;
     });
 
-    shellScope.openFunctionsPanel(DesktopFunctionsPanel.exploreNearby);
+    // If inside DesktopShell, render in its functions sidebar.
+    // If not, build() will show a local right sidebar fallback.
+    shellScope?.openFunctionsPanel(
+      DesktopFunctionsPanel.exploreNearby,
+      content: _buildNearbyFunctionsPanelContent(
+        filteredArtworks,
+        basePosition: anchor,
+      ),
+    );
   }
 
   void _closeNearbyArtPanel() {
     final shellScope = DesktopShellScope.of(context);
-    if (shellScope == null) return;
     _safeSetState(() {
       _isNearbyPanelOpen = false;
       _nearbySidebarSyncScheduled = false;
@@ -769,7 +807,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _nearbySidebarLastSyncAt = null;
     });
     _nearbySidebarSignature = null;
-    shellScope.closeFunctionsPanel();
+    shellScope?.closeFunctionsPanel();
   }
 
   void _safeSetState(VoidCallback fn) {
@@ -945,23 +983,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     // NOTE: This method is now always called from a post-frame callback,
     // so we can directly update the shell content without another deferral.
     shellScope.setFunctionsPanelContent(
-      KeyedSubtree(
-        // Keep the subtree key stable so rapid updates (like radius changes)
-        // update in-place instead of remounting the whole sidebar.
-        key: const ValueKey<String>('nearby_sidebar'),
-        child: Builder(
-          builder: (context) {
-            final themeProvider = context.watch<ThemeProvider>();
-            final isLoadingArtworks =
-                context.watch<ArtworkProvider>().isLoading('load_artworks');
-            return _buildNearbyArtSidebar(
-              themeProvider,
-              filteredArtworks,
-              basePosition: basePosition,
-              isLoading: isLoadingArtworks,
-            );
-          },
-        ),
+      _buildNearbyFunctionsPanelContent(
+        filteredArtworks,
+        basePosition: basePosition,
       ),
     );
   }
@@ -1530,6 +1554,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _maybeScheduleThemeResync(themeProvider);
     final animationTheme = context.animationTheme;
 
+    final hasShellScope = DesktopShellScope.of(context) != null;
+    final showLocalNearbyPanel = _isNearbyPanelOpen && !hasShellScope;
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: ValueListenableBuilder<MapUiStateSnapshot>(
@@ -1610,12 +1637,53 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 ),
               ),
 
+              // Local nearby sidebar (only when DesktopMapScreen is opened
+              // outside of DesktopShellScope).
+              AnimatedPositioned(
+                duration: animationTheme.medium,
+                curve: animationTheme.defaultCurve,
+                right: showLocalNearbyPanel ? 0 : -420,
+                top: 80,
+                bottom: 24,
+                width: 360,
+                child: _wrapPointerInterceptor(
+                  child: MapOverlayBlocker(
+                    child: Consumer<ArtworkProvider>(
+                      builder: (context, artworkProvider, _) {
+                        final nearbyBasePosition =
+                            _nearbySidebarAnchor ?? _userLocation ?? _effectiveCenter;
+                        final filteredArtworks = _getFilteredArtworks(
+                          artworkProvider.artworks,
+                          basePositionOverride: nearbyBasePosition,
+                        );
+                        final isLoadingArtworks =
+                            artworkProvider.isLoading('load_artworks');
+                        return Semantics(
+                          label: 'nearby_sidebar_panel',
+                          container: true,
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () {},
+                            child: _buildNearbyArtSidebar(
+                              themeProvider,
+                              filteredArtworks,
+                              basePosition: nearbyBasePosition,
+                              isLoading: isLoadingArtworks,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+
               // Map controls (bottom-right) - absorb pointer events
               Positioned(
                 left: _selectedArtwork != null || _selectedExhibition != null
                     ? 400
                     : 24,
-                right: 24,
+                right: showLocalNearbyPanel ? (24 + 360) : 24,
                 bottom: 24,
                 child: Align(
                   alignment: Alignment.bottomRight,
