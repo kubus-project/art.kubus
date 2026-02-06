@@ -252,11 +252,15 @@ class _AppInitializerState extends State<AppInitializer> {
 
     // Prime all data providers before the main UI renders so users see fresh
     // content without needing manual refreshes on first interaction.
+    //
+    // IMPORTANT: Do not start warm-up during first-run onboarding. It can
+    // trigger expensive polling / socket setup while the user isn't in the
+    // shell yet (and increases perceived startup jank).
     final bootstrapper = AppBootstrapService();
-    final warmupFuture = bootstrapper.warmUp(
-      context: context,
-      walletAddress: walletAddress,
-    );
+    Future<void> startWarmUp() => bootstrapper.warmUp(
+          context: context,
+          walletAddress: walletAddress,
+        );
 
     final pendingAuthLink = (() {
       try {
@@ -266,7 +270,6 @@ class _AppInitializerState extends State<AppInitializer> {
       }
     })();
     if (pendingAuthLink != null) {
-      unawaited(warmupFuture);
       if (!mounted) return;
       _didNavigate = true;
       switch (pendingAuthLink.type) {
@@ -314,7 +317,7 @@ class _AppInitializerState extends State<AppInitializer> {
       } catch (_) {}
 
       try {
-        await warmupFuture.timeout(const Duration(seconds: 15));
+        await startWarmUp().timeout(const Duration(seconds: 15));
       } catch (_) {}
       if (!mounted) return;
       _didNavigate = true;
@@ -334,8 +337,8 @@ class _AppInitializerState extends State<AppInitializer> {
       }
       // Ensure welcome/first-launch flags are consistent for returning users.
       await OnboardingStateService.markWelcomeSeen(prefs: prefs);
-      
-      unawaited(warmupFuture);
+
+      unawaited(startWarmUp());
       if (!mounted) return;
       if (shouldShowSignIn) {
         _didNavigate = true;
@@ -351,7 +354,6 @@ class _AppInitializerState extends State<AppInitializer> {
         if (kDebugMode) {
           debugPrint('AppInitializer: route -> DesktopOnboardingScreen');
         }
-        unawaited(warmupFuture);
         _didNavigate = true;
         navigator.pushReplacement(
           MaterialPageRoute(
@@ -363,7 +365,6 @@ class _AppInitializerState extends State<AppInitializer> {
         if (kDebugMode) {
           debugPrint('AppInitializer: route -> OnboardingScreen');
         }
-        unawaited(warmupFuture);
         _didNavigate = true;
         navigator.pushReplacement(
           MaterialPageRoute(
@@ -377,7 +378,7 @@ class _AppInitializerState extends State<AppInitializer> {
       if (kDebugMode) {
         debugPrint('AppInitializer: route -> MainApp');
       }
-      unawaited(warmupFuture);
+      unawaited(startWarmUp());
       if (!mounted) return;
       _didNavigate = true;
       navigator.pushReplacementNamed(shouldShowSignIn ? '/sign-in' : '/main');

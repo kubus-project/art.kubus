@@ -11,8 +11,9 @@ import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+
+import '../../features/map/shared/map_screen_shared_helpers.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/artwork_provider.dart';
 import '../../providers/exhibitions_provider.dart';
@@ -62,27 +63,25 @@ import 'desktop_shell.dart';
 import 'art/desktop_artwork_detail_screen.dart';
 import '../events/exhibition_detail_screen.dart';
 import 'community/desktop_user_profile_screen.dart';
-import '../../services/task_service.dart';
 import '../../features/map/map_view_mode_prefs.dart';
 import '../../features/map/map_layers_manager.dart';
 import '../../features/map/map_overlay_stack.dart';
 import '../../features/map/controller/kubus_map_controller.dart';
 import '../../features/map/search/map_search_controller.dart';
 import '../../utils/design_tokens.dart';
-import '../../utils/category_accent_color.dart';
 import '../../utils/kubus_color_roles.dart';
-import '../../utils/maplibre_style_utils.dart';
 import '../../utils/marker_cube_geometry.dart';
 import '../../widgets/search/kubus_search_bar.dart';
 import '../../widgets/glass_components.dart';
 import '../../widgets/kubus_snackbar.dart';
 import '../../widgets/tutorial/interactive_tutorial_overlay.dart';
-import '../../widgets/inline_progress.dart';
 import '../../widgets/marker_overlay_card.dart';
 import '../../widgets/map/kubus_map_marker_geojson_builder.dart';
 import '../../widgets/map/kubus_map_marker_rendering.dart';
 import '../../widgets/map/kubus_map_marker_features.dart';
 import '../../widgets/map/controls/kubus_map_primary_controls.dart';
+import '../../widgets/map/discovery/kubus_discovery_path_card.dart';
+import '../../widgets/map/filters/kubus_map_marker_layer_chips.dart';
 import '../../features/map/nearby/nearby_art_controller.dart';
 import '../../widgets/map/nearby/kubus_nearby_art_panel.dart';
 import '../map_core/map_marker_interaction_controller.dart';
@@ -615,28 +614,28 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   void _dismissMapTutorial() {
-    if (!mounted) return;
-    final idx = _mapUiStateCoordinator.value.tutorial.index;
-    _mapUiStateCoordinator.setTutorial(show: false, index: idx);
-    unawaited(_setMapTutorialSeen());
+    KubusMapTutorialNav.dismiss(
+      mounted: mounted,
+      coordinator: _mapUiStateCoordinator,
+      persistSeen: _setMapTutorialSeen,
+    );
   }
 
   void _tutorialNext() {
-    if (!mounted) return;
     final steps = _buildMapTutorialSteps(AppLocalizations.of(context)!);
-    final current = _mapUiStateCoordinator.value.tutorial;
-    if (current.index >= steps.length - 1) {
-      _dismissMapTutorial();
-      return;
-    }
-    _mapUiStateCoordinator.setTutorial(show: true, index: current.index + 1);
+    KubusMapTutorialNav.next(
+      mounted: mounted,
+      coordinator: _mapUiStateCoordinator,
+      stepsLength: steps.length,
+      onDismiss: _dismissMapTutorial,
+    );
   }
 
   void _tutorialBack() {
-    if (!mounted) return;
-    final current = _mapUiStateCoordinator.value.tutorial;
-    if (current.index <= 0) return;
-    _mapUiStateCoordinator.setTutorial(show: true, index: current.index - 1);
+    KubusMapTutorialNav.back(
+      mounted: mounted,
+      coordinator: _mapUiStateCoordinator,
+    );
   }
 
   List<TutorialStepDefinition> _buildMapTutorialSteps(AppLocalizations l10n) {
@@ -911,10 +910,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     required Widget child,
     bool enabled = true,
   }) {
-    // On web, MapLibre is a platform view; PointerInterceptor prevents
-    // pointer events from leaking through overlays to the map DOM element.
-    if (!kIsWeb || !enabled) return child;
-    return PointerInterceptor(child: child);
+    return KubusMapWebPointerInterceptor.wrap(child: child, enabled: enabled);
   }
 
   String _nearbySidebarSignatureFor(
@@ -1131,12 +1127,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   @override
   void didPushNext() {
-    _setRouteVisible(false);
+    KubusMapRouteAwareHelpers.didPushNext(setRouteVisible: _setRouteVisible);
   }
 
   @override
   void didPopNext() {
-    _setRouteVisible(true);
+    KubusMapRouteAwareHelpers.didPopNext(setRouteVisible: _setRouteVisible);
   }
 
   void _queuePendingMarkerRefresh({bool force = false}) {
@@ -1169,7 +1165,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   String _hexRgb(Color color) {
-    return MapLibreStyleUtils.hexRgb(color);
+    return KubusMapMarkerHelpers.hexRgb(color);
   }
 
   double _markerPixelRatio() {
@@ -3203,28 +3199,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                             ),
                       ),
                       const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: ArtMarkerType.values.map((type) {
-                          final selected = _markerLayerVisibility[type] ?? true;
-                          final roles = KubusColorRoles.of(context);
-                          final layerAccent = AppColorUtils.markerSubjectColor(
-                            markerType: type.name,
-                            metadata: null,
-                            scheme: scheme,
-                            roles: roles,
+                      KubusMapMarkerLayerChips(
+                        l10n: l10n,
+                        visibility: _markerLayerVisibility,
+                        onToggle: (type, nextSelected) {
+                          setState(
+                            () => _markerLayerVisibility[type] = nextSelected,
                           );
-                          return _buildLayerChip(
-                            label: _markerTypeLabel(l10n, type),
-                            icon: _resolveArtMarkerIcon(type),
-                            selected: selected,
-                            accent: layerAccent,
-                            themeProvider: themeProvider,
-                            onTap: () => setState(
-                                () => _markerLayerVisibility[type] = !selected),
-                          );
-                        }).toList(),
+                        },
                       ),
                       const SizedBox(height: 24),
 
@@ -3331,84 +3313,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     );
   }
 
-  /// Layer chip with icon and accent color - matches mobile's _glassChip style
-  Widget _buildLayerChip({
-    required String label,
-    required IconData icon,
-    required bool selected,
-    required Color accent,
-    required ThemeProvider themeProvider,
-    required VoidCallback onTap,
-  }) {
-    final scheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = selected
-        ? accent.withValues(alpha: isDark ? 0.24 : 0.18)
-        : scheme.surface.withValues(alpha: isDark ? 0.34 : 0.42);
-    final border = selected
-        ? accent.withValues(alpha: 0.35)
-        : scheme.outlineVariant.withValues(alpha: 0.30);
-    final fg = selected ? accent : scheme.onSurfaceVariant;
-
-    return MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(999),
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: border),
-              ),
-              child: LiquidGlassPanel(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                margin: EdgeInsets.zero,
-                borderRadius: BorderRadius.circular(999),
-                showBorder: false,
-                backgroundColor: bg,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(icon, size: 14, color: fg),
-                    const SizedBox(width: 6),
-                    Text(
-                      label,
-                      style: KubusTypography.textTheme.labelSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: fg,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ));
-  }
-
   /// Returns human-readable label for marker type - same as mobile
-  String _markerTypeLabel(AppLocalizations l10n, ArtMarkerType type) {
-    switch (type) {
-      case ArtMarkerType.artwork:
-        return l10n.mapMarkerTypeArtworks;
-      case ArtMarkerType.institution:
-        return l10n.mapMarkerTypeInstitutions;
-      case ArtMarkerType.event:
-        return l10n.mapMarkerTypeEvents;
-      case ArtMarkerType.residency:
-        return l10n.mapMarkerTypeResidencies;
-      case ArtMarkerType.drop:
-        return l10n.mapMarkerTypeDrops;
-      case ArtMarkerType.experience:
-        return l10n.mapMarkerTypeExperiences;
-      case ArtMarkerType.other:
-        return l10n.mapMarkerTypeMisc;
-    }
-  }
-
   Widget _buildSortOption({
     required String label,
     required String sortKey,
@@ -3554,185 +3459,40 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final overall = taskProvider.getOverallProgress();
-    final roles = KubusColorRoles.of(context);
-    final badgeGradient = LinearGradient(
-      colors: [
-        roles.statTeal,
-        roles.statAmber,
-        roles.statCoral,
+
+    return KubusDiscoveryPathCard(
+      overallProgress: overall,
+      expanded: _isDiscoveryExpanded,
+      taskRows: [
+        for (final progress in tasksToRender) _buildTaskProgressRow(progress),
       ],
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-    );
-
-    final isDark = theme.brightness == Brightness.dark;
-    final radius = BorderRadius.circular(18);
-    final glassTint = scheme.surface.withValues(alpha: isDark ? 0.40 : 0.52);
-
-    return Semantics(
-      label: 'discovery_path',
-      container: true,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.basic,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          constraints: const BoxConstraints(maxWidth: 340),
-          decoration: BoxDecoration(
-            borderRadius: radius,
-            border: Border.all(
-                color: scheme.outlineVariant.withValues(alpha: 0.30)),
-            boxShadow: [
-              BoxShadow(
-                color: scheme.shadow.withValues(alpha: isDark ? 0.16 : 0.10),
-                blurRadius: 18,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: LiquidGlassPanel(
-            padding: const EdgeInsets.all(16),
-            margin: EdgeInsets.zero,
-            borderRadius: radius,
-            showBorder: false,
-            backgroundColor: glassTint,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    ShaderMask(
-                      shaderCallback: (rect) =>
-                          badgeGradient.createShader(rect),
-                      blendMode: BlendMode.srcIn,
-                      child: InlineProgress(
-                        progress: overall,
-                        rows: 3,
-                        cols: 5,
-                        color: scheme.onSurface,
-                        backgroundColor: scheme.surfaceContainerHighest
-                            .withValues(alpha: 0.35),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            l10n.mapDiscoveryPathTitle,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  color: scheme.onSurface,
-                                ),
-                          ),
-                          Text(
-                            l10n.commonPercentComplete((overall * 100).round()),
-                            style:
-                                KubusTypography.textTheme.bodySmall?.copyWith(
-                              color: scheme.onSurface.withValues(alpha: 0.75),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    _buildGlassIconButton(
-                      icon: _isDiscoveryExpanded
-                          ? Icons.keyboard_arrow_up
-                          : Icons.keyboard_arrow_down,
-                      themeProvider: themeProvider,
-                      tooltip: _isDiscoveryExpanded
-                          ? l10n.commonCollapse
-                          : l10n.commonExpand,
-                      onTap: () => setState(
-                          () => _isDiscoveryExpanded = !_isDiscoveryExpanded),
-                    ),
-                  ],
-                ),
-                AnimatedCrossFade(
-                  crossFadeState: showTasks
-                      ? CrossFadeState.showFirst
-                      : CrossFadeState.showSecond,
-                  duration: const Duration(milliseconds: 200),
-                  firstChild: Column(
-                    children: [
-                      const SizedBox(height: 12),
-                      for (final progress in tasksToRender)
-                        _buildTaskProgressRow(progress),
-                    ],
-                  ),
-                  secondChild: const SizedBox.shrink(),
-                ),
-              ],
-            ),
-          ),
-        ),
+      toggleButton: _buildGlassIconButton(
+        icon: _isDiscoveryExpanded
+            ? Icons.keyboard_arrow_up
+            : Icons.keyboard_arrow_down,
+        themeProvider: themeProvider,
+        tooltip: _isDiscoveryExpanded ? l10n.commonCollapse : l10n.commonExpand,
+        onTap: () =>
+            setState(() => _isDiscoveryExpanded = !_isDiscoveryExpanded),
       ),
+      titleStyle: theme.textTheme.bodyMedium?.copyWith(
+        fontWeight: FontWeight.w700,
+        color: scheme.onSurface,
+      ),
+      percentStyle: KubusTypography.textTheme.bodySmall?.copyWith(
+        color: scheme.onSurface.withValues(alpha: 0.75),
+      ),
+      glassPadding: const EdgeInsets.all(16),
+      constraints: const BoxConstraints(maxWidth: 340),
+      enableMouseRegion: true,
+      mouseCursor: SystemMouseCursors.basic,
+      badgeGap: 12,
+      tasksTopGap: 12,
     );
   }
 
   Widget _buildTaskProgressRow(TaskProgress progress) {
-    final task = TaskService().getTaskById(progress.taskId);
-    if (task == null) return const SizedBox.shrink();
-    final scheme = Theme.of(context).colorScheme;
-    final pct = progress.progressPercentage;
-    final accent = CategoryAccentColor.resolve(context, task.category);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: accent.withValues(alpha: 0.22),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: accent.withValues(alpha: 0.40),
-                width: 1.5,
-              ),
-            ),
-            child: Icon(task.icon, color: accent, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  task.name,
-                  style: KubusTypography.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: scheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: pct,
-                    minHeight: 6,
-                    backgroundColor: scheme.surfaceContainerHighest,
-                    valueColor: AlwaysStoppedAnimation<Color>(accent),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Text(
-            '${(pct * 100).round()}%',
-            style: KubusTypography.textTheme.labelMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: scheme.onSurface,
-            ),
-          ),
-        ],
-      ),
-    );
+    return KubusMapTaskProgressRow.build(context: context, progress: progress);
   }
 
   Widget _buildNearbyArtSidebar(
@@ -4084,23 +3844,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   bool _markersEquivalent(List<ArtMarker> current, List<ArtMarker> next) {
-    if (identical(current, next)) return true;
-    if (current.length != next.length) return false;
-    final byId = <String, ArtMarker>{
-      for (final marker in current) marker.id: marker,
-    };
-    if (byId.length != current.length) return false;
-    for (final marker in next) {
-      final existing = byId[marker.id];
-      if (existing == null) return false;
-      if (existing.type != marker.type) return false;
-      if (existing.artworkId != marker.artworkId) return false;
-      if (existing.position.latitude != marker.position.latitude) return false;
-      if (existing.position.longitude != marker.position.longitude) {
-        return false;
-      }
-    }
-    return true;
+    return KubusMapMarkerHelpers.markersEquivalent(current, next);
   }
 
   Color _resolveArtMarkerColor(ArtMarker marker, ThemeProvider themeProvider) {
@@ -4116,22 +3860,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   IconData _resolveArtMarkerIcon(ArtMarkerType type) {
-    switch (type) {
-      case ArtMarkerType.artwork:
-        return Icons.auto_awesome;
-      case ArtMarkerType.institution:
-        return Icons.museum_outlined;
-      case ArtMarkerType.event:
-        return Icons.event_available;
-      case ArtMarkerType.residency:
-        return Icons.apartment;
-      case ArtMarkerType.drop:
-        return Icons.wallet_giftcard;
-      case ArtMarkerType.experience:
-        return Icons.view_in_ar;
-      case ArtMarkerType.other:
-        return Icons.location_on_outlined;
-    }
+    return KubusMapMarkerHelpers.resolveArtMarkerIcon(type);
   }
 
   Future<void> _loadMarkersForCurrentView({bool force = false}) async {
@@ -4458,9 +4187,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   void _startSelectionPopAnimation() {
-    if (!_styleInitialized) return;
-    _animationController.forward(from: 0.0);
-    _requestMarkerLayerStyleUpdate();
+    KubusMarkerLayerAnimationHelpers.startSelectionPopAnimation(
+      styleInitialized: _styleInitialized,
+      animationController: _animationController,
+      requestMarkerLayerStyleUpdate: _requestMarkerLayerStyleUpdate,
+    );
   }
 
   void _updateCubeSpinTicker() {
@@ -4469,34 +4200,31 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         _mapController != null &&
         _cubeLayerVisible &&
         _is3DMarkerModeActive;
-    if (shouldSpin) {
-      if (!_cubeIconSpinController.isAnimating) {
-        _cubeIconSpinController.repeat();
-      }
-      return;
-    }
 
-    if (_cubeIconSpinController.isAnimating) {
-      _cubeIconSpinController.stop();
-    }
+    KubusMarkerLayerAnimationHelpers.updateCubeSpinTicker(
+      shouldSpin: shouldSpin,
+      cubeIconSpinController: _cubeIconSpinController,
+    );
   }
 
   void _handleMarkerLayerAnimationTick() {
-    if (!mounted) return;
-    if (!_styleInitialized) return;
-
     final shouldSpin = _cubeLayerVisible && _is3DMarkerModeActive;
     final shouldPop = _animationController.isAnimating;
-    if (!shouldSpin && !shouldPop) return;
 
-    if (shouldSpin) {
-      _cubeIconSpinDegrees = _cubeIconSpinController.value * 360.0;
-      final bobMs = MapMarkerStyleConfig.cubeIconBobPeriod.inMilliseconds;
-      final t = (DateTime.now().millisecondsSinceEpoch % bobMs) / bobMs;
-      _cubeIconBobOffsetEm = math.sin(t * 2 * math.pi) *
-          MapMarkerStyleConfig.cubeIconBobAmplitudeEm;
-    }
-    _requestMarkerLayerStyleUpdate();
+    KubusMarkerLayerAnimationHelpers.handleMarkerLayerAnimationTick(
+      mounted: mounted,
+      styleInitialized: _styleInitialized,
+      shouldSpin: shouldSpin,
+      shouldPop: shouldPop,
+      cubeIconSpinController: _cubeIconSpinController,
+      setCubeIconSpinDegrees: (value) {
+        _cubeIconSpinDegrees = value;
+      },
+      setCubeIconBobOffsetEm: (value) {
+        _cubeIconBobOffsetEm = value;
+      },
+      requestMarkerLayerStyleUpdate: _requestMarkerLayerStyleUpdate,
+    );
   }
 
   void _requestMarkerLayerStyleUpdate({bool force = false}) {
@@ -5018,30 +4746,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   Widget _markerImageFallback(
-      Color baseColor, ColorScheme scheme, ArtMarker marker) {
-    // Determine the appropriate icon - use exhibition icon if marker has exhibitions
-    final hasExhibitions =
-        marker.isExhibitionMarker || marker.exhibitionSummaries.isNotEmpty;
-    final icon = hasExhibitions
-        ? AppColorUtils.exhibitionIcon
-        : _resolveArtMarkerIcon(marker.type);
-
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            baseColor.withValues(alpha: 0.25),
-            baseColor.withValues(alpha: 0.55),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Icon(
-        icon,
-        color: scheme.onPrimary,
-        size: 42,
-      ),
+    Color baseColor,
+    ColorScheme scheme,
+    ArtMarker marker,
+  ) {
+    return KubusMapMarkerHelpers.markerImageFallback(
+      baseColor: baseColor,
+      scheme: scheme,
+      marker: marker,
     );
   }
 

@@ -97,6 +97,18 @@ class _ArtMapViewState extends State<ArtMapView> {
   ml.MapLibreMapController? _controller;
   Size? _lastWebLayoutSize;
   Timer? _webResizeDebounce;
+
+  // Web: repeated layout changes (side panels, route transitions) can trigger a
+  // storm of resize calls. This is costly across browsers; on some engines it
+  // can cause noticeable startup jank. We adapt the debounce based on how
+  // quickly layout sizes are changing.
+  int _lastWebLayoutChangeMs = 0;
+  int _webResizeDebounceMs = 16;
+
+  // Web: force-resize is heavier than resize; throttle to avoid double-calls
+  // across lifecycle hooks (map created + style loaded).
+  int _lastWebForceResizeMs = 0;
+
   int _styleRequestId = 0;
   bool _pendingStyleApply = false;
   bool _mapCreated = false;
@@ -112,6 +124,7 @@ class _ArtMapViewState extends State<ArtMapView> {
   @override
   void initState() {
     super.initState();
+
     assert(() {
       _debugLiveInstances += 1;
       AppConfig.debugPrint(
@@ -178,11 +191,22 @@ class _ArtMapViewState extends State<ArtMapView> {
     if (_lastWebLayoutSize == size) return;
     _lastWebLayoutSize = size;
 
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    final deltaMs = _lastWebLayoutChangeMs == 0
+      ? 999999
+      : (nowMs - _lastWebLayoutChangeMs);
+    _lastWebLayoutChangeMs = nowMs;
+
+    // If layout is churning rapidly, back off from 60fps resizing.
+    // Keep it discrete so we don't oscillate.
+    _webResizeDebounceMs = deltaMs < 120 ? 66 : 16;
+
     // Debounce: this can be called repeatedly during animated layout changes
     // (e.g., opening the desktop sidebar). MapLibre GL JS requires an explicit
     // resize to correctly re-measure its canvas within the container.
     _webResizeDebounce?.cancel();
-    _webResizeDebounce = Timer(const Duration(milliseconds: 16), () {
+    final debounce = Duration(milliseconds: _webResizeDebounceMs);
+    _webResizeDebounce = Timer(debounce, () {
       if (!mounted) return;
       final controller = _controller;
       if (controller == null) return;
@@ -195,6 +219,22 @@ class _ArtMapViewState extends State<ArtMapView> {
         }
       }
     });
+  }
+
+  void _forceResizeWebMapThrottled(ml.MapLibreMapController controller) {
+    if (!kIsWeb) return;
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    if (nowMs - _lastWebForceResizeMs < 250) return;
+    _lastWebForceResizeMs = nowMs;
+
+    try {
+      controller.forceResizeWebMap();
+    } catch (e, st) {
+      AppConfig.debugPrint('ArtMapView: forceResizeWebMap failed: $e');
+      if (kDebugMode) {
+        AppConfig.debugPrint('ArtMapView: forceResizeWebMap stack: $st');
+      }
+    }
   }
 
   void _refreshStyleFuture() {
@@ -361,9 +401,10 @@ class _ArtMapViewState extends State<ArtMapView> {
                   zoom: widget.initialZoom,
                 ),
                 // Preserve the WebGL drawing buffer to improve context stability
-                // on Firefox, which is prone to context loss under memory pressure.
-                // This trades some performance for crash resilience.
-                webPreserveDrawingBuffer: kIsWeb,
+                // in some environments, but can significantly hurt performance.
+                // Keep it off by default and enable only when needed.
+                webPreserveDrawingBuffer: kIsWeb &&
+                    AppConfig.isFeatureEnabled('mapWebPreserveDrawingBuffer'),
                 // We don't use the plugin's annotation managers (we manage sources/layers
                 // directly). Disabling them avoids plugin-managed sources being added
                 // during style swaps, which can cause platform errors.
@@ -411,16 +452,7 @@ class _ArtMapViewState extends State<ArtMapView> {
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       if (!mounted) return;
                       if (_controller != controller) return;
-                      try {
-                        controller.forceResizeWebMap();
-                      } catch (e, st) {
-                        AppConfig.debugPrint(
-                            'ArtMapView: forceResizeWebMap failed: $e');
-                        if (kDebugMode) {
-                          AppConfig.debugPrint(
-                              'ArtMapView: forceResizeWebMap stack: $st');
-                        }
-                      }
+                      _forceResizeWebMapThrottled(controller);
                     });
                   }
                 },
@@ -437,16 +469,7 @@ class _ArtMapViewState extends State<ArtMapView> {
                   if (kIsWeb) {
                     final controller = _controller;
                     if (controller != null && mounted) {
-                      try {
-                        controller.forceResizeWebMap();
-                      } catch (e, st) {
-                        AppConfig.debugPrint(
-                            'ArtMapView: forceResizeWebMap after style load failed: $e');
-                        if (kDebugMode) {
-                          AppConfig.debugPrint(
-                              'ArtMapView: resize-after-style stack: $st');
-                        }
-                      }
+                      _forceResizeWebMapThrottled(controller);
                     }
                   }
                   if (_pendingStyleApply) {
