@@ -76,6 +76,16 @@ class AppConfig {
   /// Map: optional isometric-like perspective on the map canvas.
   static const bool enableMapIsometricView = true;
 
+  /// Web map performance: preserve the WebGL drawing buffer.
+  ///
+  /// This can improve stability in some environments (historically Firefox),
+  /// but can significantly hurt performance. Keep it **off by default** and
+  /// enable only when diagnosing WebGL context issues.
+  static const bool enableMapWebPreserveDrawingBuffer = bool.fromEnvironment(
+    'MAP_WEB_PRESERVE_DRAWING_BUFFER',
+    defaultValue: false,
+  );
+
   /// MapLibre map style assets (theme-specific).
   ///
   /// Keep these configurable via build-time defines so production can switch
@@ -311,6 +321,8 @@ class AppConfig {
       case 'rePromptLoginOnExpiry': return enableRePromptLoginOnExpiry;
       case 'mapTravelMode': return enableMapTravelMode;
       case 'mapIsometricView': return enableMapIsometricView;
+      case 'mapWebPreserveDrawingBuffer':
+        return enableMapWebPreserveDrawingBuffer;
       default: return false;
     }
   }

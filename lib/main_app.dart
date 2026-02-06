@@ -37,6 +37,13 @@ class _MainAppState extends State<MainApp> {
   int _lastTelemetryIndex = -1;
   bool _didConsumeInitialDeepLink = false;
 
+  // Lazy-mount tabs to avoid initializing heavy surfaces (MapLibre, marker
+  // polling, etc.) before the user actually visits them.
+  //
+  // NOTE: AR is handled separately and is intentionally NOT kept alive when
+  // inactive so camera resources are released.
+  final Set<int> _mountedTabs = <int>{};
+
   @override
   void initState() {
     super.initState();
@@ -88,6 +95,10 @@ class _MainAppState extends State<MainApp> {
     final index = _tabProvider?.currentIndex ?? 0;
     if (index == _lastTelemetryIndex) return;
     _lastTelemetryIndex = index;
+
+    // Track that this tab has been visited so the widget can be mounted.
+    _mountedTabs.add(index);
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _syncRefreshVisibility(index);
@@ -116,6 +127,9 @@ class _MainAppState extends State<MainApp> {
     MobileShellRegistry.instance.register(context);
 
     final currentIndex = context.watch<MainTabProvider>().currentIndex;
+
+    // Ensure the currently visible tab is mounted.
+    _mountedTabs.add(currentIndex);
 
     final mapNeedsPlatformViewBackgroundPassthrough = kIsWeb && currentIndex == 0;
 
@@ -151,20 +165,28 @@ class _MainAppState extends State<MainApp> {
   }
 
   List<Widget> _buildScreens(int currentIndex) {
-    return const [
+    const screens = <Widget>[
       MapScreen(),
-      // Only build AR when selected so the camera is released when not in use.
       ARScreen(),
       CommunityScreen(),
       HomeScreen(),
       ProfileScreenWrapper(),
-    ].asMap().entries.map((entry) {
-      if (entry.key == 1 && currentIndex != 1) {
-        return const SizedBox
-            .shrink(key: ValueKey('ar-placeholder')); // frees camera resources
+    ];
+
+    return List<Widget>.generate(screens.length, (tabIndex) {
+      // Only build AR when selected so the camera is released when not in use.
+      if (tabIndex == 1 && currentIndex != 1) {
+        return const SizedBox.shrink(key: ValueKey('ar-placeholder'));
       }
-      return entry.value;
-    }).toList();
+
+      // For all other tabs: mount lazily to avoid expensive init work at app
+      // startup.
+      if (!_mountedTabs.contains(tabIndex)) {
+        return SizedBox.shrink(key: ValueKey<String>('tab-$tabIndex-placeholder'));
+      }
+
+      return screens[tabIndex];
+    });
   }
 
   Widget _buildBottomNavigationBar() {

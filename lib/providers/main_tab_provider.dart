@@ -5,6 +5,10 @@ import 'package:flutter/foundation.dart';
 /// Keeping this in a provider allows deep links (and other non-UI entry points)
 /// to select the correct tab without bypassing the shell.
 class MainTabProvider extends ChangeNotifier {
+  // Default to the Map tab on mobile.
+  //
+  // Note: we still avoid activating map work during first-run onboarding by
+  // deferring warm-up and by only mounting the shell after onboarding.
   int _index = 0;
 
   int get index => _index;

@@ -18,7 +18,7 @@ void initWebGLContextHelper() {
   // Disable BackdropFilter preemptively on Firefox to keep rendering stable.
   try {
     final ua = web.window.navigator.userAgent;
-    if (_isFirefoxUserAgent(ua)) {
+    if (isFirefoxBrowser(userAgentOverride: ua)) {
       kubusDisableBackdropFilter = true;
       if (kDebugMode) {
         // Intentionally quiet in release; this is an environment workaround.
@@ -43,6 +43,18 @@ void initWebGLContextHelper() {
     'kubus:webgl-restored',
     _onWebGLRestored.toJS,
   );
+}
+
+/// Returns true when the app is running in Firefox.
+///
+/// Note: this is a best-effort heuristic based on the user agent.
+bool isFirefoxBrowser({String? userAgentOverride}) {
+  try {
+    final ua = userAgentOverride ?? web.window.navigator.userAgent;
+    return _isFirefoxUserAgent(ua);
+  } catch (_) {
+    return false;
+  }
 }
 
 bool _isFirefoxUserAgent(String? userAgent) {
