@@ -1,28 +1,6 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:pointer_interceptor/pointer_interceptor.dart';
 
-/// Prevents pointer events from leaking through Flutter overlays to the
-/// underlying MapLibre platform view on web.
-///
-/// This is a common footgun when building map overlays: without interception,
-/// taps/scrolls can "touch through" to the map canvas.
-class KubusMapPointerInterceptor extends StatelessWidget {
-  const KubusMapPointerInterceptor({
-    required this.child,
-    this.enabled = true,
-    super.key,
-  });
-
-  final Widget child;
-  final bool enabled;
-
-  @override
-  Widget build(BuildContext context) {
-    if (!kIsWeb || !enabled) return child;
-    return PointerInterceptor(child: child);
-  }
-}
+import '../../widgets/map_overlay_blocker.dart';
 
 /// Shared overlay layer shell for marker selection overlays.
 ///
@@ -38,6 +16,9 @@ class KubusMapMarkerOverlayLayer extends StatelessWidget {
     required this.onDismiss,
     this.underlay,
     this.cursor,
+    this.blockMapGestures = true,
+    this.dismissOnBackdropTap = true,
+    this.interceptPlatformViews = true,
     super.key,
   });
 
@@ -57,6 +38,25 @@ class KubusMapMarkerOverlayLayer extends StatelessWidget {
   /// Desktop uses a basic cursor over the overlay layer.
   final MouseCursor? cursor;
 
+  /// When true, a full-screen backdrop is inserted above the map.
+  ///
+  /// This was the legacy behavior, but it can feel like the map "freezes" on
+  /// marker tap because all map gestures are blocked.
+  ///
+  /// Most screens now prefer leaving map gestures enabled and only blocking
+  /// interaction within the actual overlay card (via [MapOverlayBlocker]).
+  final bool blockMapGestures;
+
+  /// Whether tapping the backdrop dismisses the overlay.
+  ///
+  /// Only applies when [blockMapGestures] is true.
+  final bool dismissOnBackdropTap;
+
+  /// Whether to intercept events over platform views (web MapLibre DOM).
+  ///
+  /// Only applies when [blockMapGestures] is true.
+  final bool interceptPlatformViews;
+
   @override
   Widget build(BuildContext context) {
     final isVisible = content != null;
@@ -64,17 +64,15 @@ class KubusMapMarkerOverlayLayer extends StatelessWidget {
     Widget layer = Stack(
       fit: StackFit.expand,
       children: [
-        if (isVisible)
+        if (isVisible && blockMapGestures)
           Positioned.fill(
-            child: Listener(
-              behavior: HitTestBehavior.opaque,
-              onPointerDown: (_) {},
-              onPointerMove: (_) {},
-              onPointerUp: (_) {},
-              onPointerSignal: (_) {},
+            child: MapOverlayBlocker(
+              enabled: true,
+              cursor: cursor ?? SystemMouseCursors.basic,
+              interceptPlatformViews: interceptPlatformViews,
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
-                onTap: onDismiss,
+                onTap: dismissOnBackdropTap ? onDismiss : null,
                 child: const SizedBox.expand(),
               ),
             ),
@@ -125,11 +123,6 @@ class KubusMapMarkerOverlayLayer extends StatelessWidget {
       layer = MouseRegion(cursor: cursor!, child: layer);
     }
 
-    return Positioned.fill(
-      child: KubusMapPointerInterceptor(
-        enabled: isVisible,
-        child: layer,
-      ),
-    );
+    return Positioned.fill(child: layer);
   }
 }

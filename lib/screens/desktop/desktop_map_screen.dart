@@ -64,6 +64,7 @@ import 'art/desktop_artwork_detail_screen.dart';
 import '../events/exhibition_detail_screen.dart';
 import 'community/desktop_user_profile_screen.dart';
 import '../../features/map/map_view_mode_prefs.dart';
+import '../../features/map/shared/map_screen_constants.dart';
 import '../../features/map/map_layers_manager.dart';
 import '../../features/map/map_overlay_stack.dart';
 import '../../features/map/controller/kubus_map_controller.dart';
@@ -89,6 +90,7 @@ import '../map_core/marker_visual_sync_coordinator.dart';
 import '../map_core/map_camera_controller.dart';
 import '../map_core/map_data_coordinator.dart';
 import '../map_core/map_ui_state_coordinator.dart';
+import '../map_core/map_marker_render_coordinator.dart';
 import '../../providers/task_provider.dart';
 import '../../models/task.dart';
 
@@ -128,6 +130,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   late final MapDataCoordinator _mapDataCoordinator;
   late final NearbyArtController _nearbyArtController;
   late final MapUiStateCoordinator _mapUiStateCoordinator;
+  late final MapMarkerRenderCoordinator _renderCoordinator;
 
   ml.MapLibreMapController? _mapController;
   MapLayersManager? _layersManager;
@@ -202,7 +205,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   double _lastPitch = 0.0;
   DateTime _lastCameraUpdateTime = DateTime.now();
   static const Duration _cameraUpdateThrottle =
-      Duration(milliseconds: 16); // ~60fps
+      MapScreenConstants.cameraUpdateThrottle; // ~60fps
   bool _styleInitialized = false;
   bool _styleInitializationInProgress = false;
   int _styleEpoch = 0;
@@ -212,37 +215,31 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   final LayerLink _markerOverlayLink = LayerLink();
   final Debouncer _cubeSyncDebouncer = Debouncer();
   late final ValueNotifier<Offset?> _selectedMarkerAnchorNotifier;
-  static const String _markerSourceId = 'kubus_markers';
-  static const String _markerLayerId = 'kubus_marker_layer';
-  static const String _markerHitboxLayerId = 'kubus_marker_hitbox_layer';
-  static const String _markerHitboxImageId = 'kubus_hitbox_square_transparent';
-  static const String _cubeSourceId = 'kubus_marker_cubes';
-  static const String _cubeLayerId = 'kubus_marker_cubes_layer';
-  static const String _cubeIconLayerId = 'kubus_marker_cubes_icon_layer';
-  static const String _locationSourceId = 'kubus_user_location';
-  static const String _locationLayerId = 'kubus_user_location_layer';
-  static const String _pendingSourceId = 'kubus_pending_marker';
-  static const String _pendingLayerId = 'kubus_pending_marker_layer';
-  static const double _cubePitchThreshold = 5.0;
-  bool _cubeLayerVisible = false;
-  static const double _markerRefreshDistanceMeters = 1200;
-  static const Duration _markerRefreshInterval = Duration(minutes: 5);
+  // Shared constants – canonical values live in MapScreenConstants.
+  static const String _markerSourceId = MapScreenConstants.markerSourceId;
+  static const String _markerLayerId = MapScreenConstants.markerLayerId;
+  static const String _cubeSourceId = MapScreenConstants.cubeSourceId;
+  static const String _cubeLayerId = MapScreenConstants.cubeLayerId;
+  static const String _cubeIconLayerId = MapScreenConstants.cubeIconLayerId;
+  static const String _locationSourceId = MapScreenConstants.locationSourceId;
+  static const String _locationLayerId = MapScreenConstants.locationLayerId;
+  static const String _pendingSourceId = MapScreenConstants.pendingSourceId;
+  static const double _markerRefreshDistanceMeters =
+      MapScreenConstants.markerRefreshDistanceMeters;
+  static const Duration _markerRefreshInterval = MapScreenConstants.markerRefreshInterval;
 
   late final MapSearchController _mapSearchController;
   bool _pendingSafeSetState = false;
   int _debugMarkerTapCount = 0;
 
   late AnimationController _cubeIconSpinController;
-  double _cubeIconSpinDegrees = 0.0;
-  double _cubeIconBobOffsetEm = 0.0;
-  final KubusMarkerLayerStyler _markerLayerStyler = KubusMarkerLayerStyler();
 
   final GlobalKey _mapViewKey = GlobalKey();
   bool? _lastAppliedMapThemeDark;
   bool _themeResyncScheduled = false;
 
-  static const double _clusterMaxZoom = 12.0;
-  static const int _markerVisualSyncThrottleMs = 60;
+  static const double _clusterMaxZoom = MapScreenConstants.clusterMaxZoom;
+  static const int _markerVisualSyncThrottleMs = MapScreenConstants.markerVisualSyncThrottleMs;
   int _lastClusterGridLevel = -1;
   bool _lastClusterEnabled = false;
 
@@ -296,19 +293,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     _kubusMapController = KubusMapController(
       ids: const KubusMapControllerIds(
-        layers: MapLayersIds(
-          markerSourceId: _markerSourceId,
-          cubeSourceId: _cubeSourceId,
-          locationSourceId: _locationSourceId,
-          markerLayerId: _markerLayerId,
-          markerHitboxLayerId: _markerHitboxLayerId,
-          cubeLayerId: _cubeLayerId,
-          cubeIconLayerId: _cubeIconLayerId,
-          locationLayerId: _locationLayerId,
-          markerHitboxImageId: _markerHitboxImageId,
-          pendingSourceId: _pendingSourceId,
-          pendingLayerId: _pendingLayerId,
-        ),
+        layers: MapScreenConstants.desktopLayerIds,
       ),
       debugTracing: kDebugMode && MapPerformanceDebug.isEnabled,
       tapConfig: const KubusMapTapConfig(
@@ -350,7 +335,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         if (marker != null) {
           // Run selection-only side effects once per selection token.
           if (tokenChanged) {
-            _startSelectionPopAnimation();
+            _renderCoordinator.startSelectionPopAnimation();
             _maybeRecordPresenceVisitForMarker(marker);
           }
           unawaited(_ensureLinkedArtworkLoaded(marker, allowAutoSelect: false));
@@ -388,7 +373,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         });
       },
       onRequestMarkerLayerStyleUpdate: () {
-        _requestMarkerLayerStyleUpdate(force: true);
+        _renderCoordinator.requestStyleUpdate(force: true);
       },
     );
     _selectedMarkerAnchorNotifier = _kubusMapController.selectedMarkerAnchor;
@@ -445,11 +430,37 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       distance: _distance,
     );
 
+    _renderCoordinator = MapMarkerRenderCoordinator(
+      screenName: 'DesktopMapScreen',
+      markerLayerId: _markerLayerId,
+      cubeLayerId: _cubeLayerId,
+      cubeIconLayerId: _cubeIconLayerId,
+      cubeSourceId: _cubeSourceId,
+      isMounted: () => mounted,
+      isStyleInitialized: () => _styleInitialized,
+      isStyleInitInProgress: () => _styleInitializationInProgress,
+      isCameraMoving: () => _kubusMapController.cameraIsMoving,
+      getLastPitch: () => _lastPitch,
+      getKubusMapController: () => _kubusMapController,
+      getMapController: () => _mapController,
+      getLayersManager: () => _layersManager,
+      getSelectionController: () => _animationController,
+      getCubeSpinController: () => _cubeIconSpinController,
+      getManagedLayerIds: () => _managedLayerIds,
+      getManagedSourceIds: () => _managedSourceIds,
+      isPollingEnabled: () => _pollingEnabled,
+      syncMarkerCubes: () async {
+        if (!mounted) return;
+        final themeProvider = context.read<ThemeProvider>();
+        await _syncMarkerCubes(themeProvider: themeProvider);
+      },
+    );
+
     _animationController = AnimationController(
       duration: MapMarkerStyleConfig.selectionPopDuration,
       vsync: this,
     );
-    _animationController.addListener(_handleMarkerLayerAnimationTick);
+    _animationController.addListener(_renderCoordinator.handleAnimationTick);
     _panelController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -457,7 +468,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _cubeIconSpinController = AnimationController(
       duration: MapMarkerStyleConfig.cubeIconSpinPeriod,
       vsync: this,
-    )..addListener(_handleMarkerLayerAnimationTick);
+    )..addListener(_renderCoordinator.handleAnimationTick);
     _perf.controllerCreated('selection_pop');
     _perf.controllerCreated('panel');
     _perf.controllerCreated('cube_spin');
@@ -876,10 +887,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         _locationLayerId,
         ml.CircleLayerProperties(
           circleRadius: 6,
-          circleColor: _hexRgb(scheme.secondary),
+          circleColor: KubusMapMarkerHelpers.hexRgb(scheme.secondary),
           circleOpacity: 1.0,
           circleStrokeWidth: 2,
-          circleStrokeColor: _hexRgb(scheme.surface),
+          circleStrokeColor: KubusMapMarkerHelpers.hexRgb(scheme.surface),
         ),
       );
     } catch (_) {
@@ -887,7 +898,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
 
     if (!mounted) return;
-    _requestMarkerLayerStyleUpdate(force: true);
+    _renderCoordinator.requestStyleUpdate(force: true);
   }
 
   void _maybeScheduleThemeResync(ThemeProvider themeProvider) {
@@ -904,13 +915,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       unawaited(_applyThemeToMapStyle(themeProvider: themeProvider));
       unawaited(_syncMapMarkersSafe(themeProvider: themeProvider));
     });
-  }
-
-  Widget _wrapPointerInterceptor({
-    required Widget child,
-    bool enabled = true,
-  }) {
-    return KubusMapWebPointerInterceptor.wrap(child: child, enabled: enabled);
   }
 
   String _nearbySidebarSignatureFor(
@@ -1081,7 +1085,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     } else {
       _pausePolling();
     }
-    _updateCubeSpinTicker();
+    _renderCoordinator.updateCubeSpinTicker();
   }
 
   void _pausePolling() {
@@ -1164,10 +1168,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _perf.logEvent('mapCreated');
   }
 
-  String _hexRgb(Color color) {
-    return KubusMapMarkerHelpers.hexRgb(color);
-  }
-
   double _markerPixelRatio() {
     if (kIsWeb) return 1.0;
     final dpr = WidgetsBinding
@@ -1215,7 +1215,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         await _syncUserLocation(themeProvider: themeProvider);
         await _syncPendingMarker(themeProvider: themeProvider);
         await _syncMapMarkers(themeProvider: themeProvider);
-        await _updateMarkerRenderMode();
+        await _renderCoordinator.updateRenderMode();
       }
 
       stopwatch.stop();
@@ -1359,7 +1359,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       // Best-effort: style swaps can temporarily invalidate sources.
     }
 
-    if (_is3DMarkerModeActive) {
+    if (_renderCoordinator.is3DModeActive) {
       await _syncMarkerCubes(themeProvider: themeProvider);
     }
   }
@@ -1389,7 +1389,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       scheme: scheme,
       roles: roles,
       pixelRatio: _markerPixelRatio(),
-      resolveMarkerIcon: _resolveArtMarkerIcon,
+      resolveMarkerIcon: KubusMapMarkerHelpers.resolveArtMarkerIcon,
       resolveMarkerBaseColor: (marker) =>
           _resolveArtMarkerColor(marker, themeProvider),
     );
@@ -1414,7 +1414,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       roles: roles,
       pixelRatio: _markerPixelRatio(),
       shouldAbort: () => !mounted,
-      resolveMarkerIcon: _resolveArtMarkerIcon,
+      resolveMarkerIcon: KubusMapMarkerHelpers.resolveArtMarkerIcon,
       resolveMarkerBaseColor: (m) => _resolveArtMarkerColor(m, themeProvider),
     );
   }
@@ -1472,7 +1472,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _cameraZoom = nextZoom;
     }
     if (!mounted) return;
-    unawaited(_updateMarkerRenderMode());
+    unawaited(_renderCoordinator.updateRenderMode());
   }
 
   Future<void> _moveCamera(LatLng target, double zoom) async {
@@ -1544,8 +1544,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   Widget build(BuildContext context) {
     _perf.recordBuild();
     _ensureNearbyPanelAutoloadScheduled();
-    assert(_assertMarkerModeInvariant());
-    assert(_assertMarkerRenderModeInvariant());
+    assert(_renderCoordinator.assertMarkerModeInvariant());
+    assert(_renderCoordinator.assertRenderModeInvariant());
     final themeProvider = Provider.of<ThemeProvider>(context);
     _maybeScheduleThemeResync(themeProvider);
     final animationTheme = context.animationTheme;
@@ -1642,7 +1642,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 top: 80,
                 bottom: 24,
                 width: 360,
-                child: _wrapPointerInterceptor(
+                child: KubusMapWebPointerInterceptor.wrap(
                   child: MapOverlayBlocker(
                     child: Consumer<ArtworkProvider>(
                       builder: (context, artworkProvider, _) {
@@ -1719,7 +1719,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
               if (showMapTutorial)
                 Positioned.fill(
-                  child: _wrapPointerInterceptor(
+                  child: KubusMapWebPointerInterceptor.wrap(
                     child: const ModalBarrier(
                       dismissible: false,
                       color: Colors.transparent,
@@ -1729,7 +1729,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
               if (showMapTutorial)
                 Positioned.fill(
-                  child: _wrapPointerInterceptor(
+                  child: KubusMapWebPointerInterceptor.wrap(
                     child: Builder(
                       builder: (context) {
                         final l10n = AppLocalizations.of(context)!;
@@ -1848,9 +1848,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   _queueMarkerVisualRefreshForZoom(position.zoom);
                 }
 
-                final shouldShowCubes = _is3DMarkerModeActive;
-                if (shouldShowCubes != _cubeLayerVisible) {
-                  unawaited(_updateMarkerRenderMode());
+                final shouldShowCubes = _renderCoordinator.is3DModeActive;
+                if (shouldShowCubes != _renderCoordinator.cubeLayerVisible) {
+                  unawaited(_renderCoordinator.updateRenderMode());
                 }
 
                 final bucket = MapViewportUtils.zoomBucket(position.zoom);
@@ -1864,7 +1864,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   _lastCameraUpdateTime = now;
                   _safeSetState(() => _renderZoomBucket = bucket);
                 }
-                if (bucketChanged && _is3DMarkerModeActive) {
+                if (bucketChanged && _renderCoordinator.is3DModeActive) {
                   _cubeSyncDebouncer(const Duration(milliseconds: 60), () {
                     unawaited(_syncMarkerCubes(themeProvider: themeProvider));
                   });
@@ -1881,7 +1881,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 );
                 if (_styleInitialized) {
                   _queueMarkerVisualRefreshForZoom(_cameraZoom);
-                  unawaited(_updateMarkerRenderMode());
+                  unawaited(_renderCoordinator.updateRenderMode());
                 }
                 _queueMarkerRefresh(fromGesture: false);
               },
@@ -3859,10 +3859,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     );
   }
 
-  IconData _resolveArtMarkerIcon(ArtMarkerType type) {
-    return KubusMapMarkerHelpers.resolveArtMarkerIcon(type);
-  }
-
   Future<void> _loadMarkersForCurrentView({bool force = false}) async {
     if (!_pollingEnabled) {
       _queuePendingMarkerRefresh(force: force);
@@ -4178,150 +4174,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
 
     _kubusMapController.setMarkers(_artMarkers);
-    _requestMarkerLayerStyleUpdate(force: true);
+    _renderCoordinator.requestStyleUpdate(force: true);
     unawaited(_syncMapMarkers(themeProvider: context.read<ThemeProvider>()));
-  }
-
-  void _dismissSelectedMarkerOverlay() {
-    _kubusMapController.dismissSelection();
-  }
-
-  void _startSelectionPopAnimation() {
-    KubusMarkerLayerAnimationHelpers.startSelectionPopAnimation(
-      styleInitialized: _styleInitialized,
-      animationController: _animationController,
-      requestMarkerLayerStyleUpdate: _requestMarkerLayerStyleUpdate,
-    );
-  }
-
-  void _updateCubeSpinTicker() {
-    final shouldSpin = _pollingEnabled &&
-        _styleInitialized &&
-        _mapController != null &&
-        _cubeLayerVisible &&
-        _is3DMarkerModeActive;
-
-    KubusMarkerLayerAnimationHelpers.updateCubeSpinTicker(
-      shouldSpin: shouldSpin,
-      cubeIconSpinController: _cubeIconSpinController,
-    );
-  }
-
-  void _handleMarkerLayerAnimationTick() {
-    final shouldSpin = _cubeLayerVisible && _is3DMarkerModeActive;
-    final shouldPop = _animationController.isAnimating;
-
-    KubusMarkerLayerAnimationHelpers.handleMarkerLayerAnimationTick(
-      mounted: mounted,
-      styleInitialized: _styleInitialized,
-      shouldSpin: shouldSpin,
-      shouldPop: shouldPop,
-      cubeIconSpinController: _cubeIconSpinController,
-      setCubeIconSpinDegrees: (value) {
-        _cubeIconSpinDegrees = value;
-      },
-      setCubeIconBobOffsetEm: (value) {
-        _cubeIconBobOffsetEm = value;
-      },
-      requestMarkerLayerStyleUpdate: _requestMarkerLayerStyleUpdate,
-    );
-  }
-
-  void _requestMarkerLayerStyleUpdate({bool force = false}) {
-    final controllerStyleEpoch = _kubusMapController.styleEpoch;
-    final controllerStyleInitialized = _kubusMapController.styleInitialized;
-    _markerLayerStyler.requestUpdate(
-      controller: _mapController,
-      styleInitialized: controllerStyleInitialized && _styleInitialized,
-      styleEpoch: controllerStyleEpoch,
-      getCurrentStyleEpoch: () => _kubusMapController.styleEpoch,
-      managedLayerIds: _managedLayerIds,
-      markerLayerId: _markerLayerId,
-      cubeIconLayerId: _cubeIconLayerId,
-      state: KubusMarkerLayerStyleState(
-        pressedMarkerId: _kubusMapController.pressedMarkerId,
-        hoveredMarkerId: _kubusMapController.hoveredMarkerId,
-        selectedMarkerId: _kubusMapController.selectedMarkerId,
-        selectionPopAnimationValue: _animationController.value,
-        cubeLayerVisible: _cubeLayerVisible,
-        cubeIconSpinDegrees: _cubeIconSpinDegrees,
-        cubeIconBobOffsetEm: _cubeIconBobOffsetEm,
-      ),
-      force: force,
-    );
-  }
-
-  bool _assertMarkerModeInvariant() {
-    final selectedId = _kubusMapController.selectedMarkerId;
-    final selectedMarker = _kubusMapController.selectedMarkerData;
-    if (selectedId == null && selectedMarker != null) return false;
-    if (selectedId != null && selectedMarker == null) return false;
-    return true;
-  }
-
-  bool get _is3DMarkerModeActive {
-    if (!AppConfig.isFeatureEnabled('mapIsometricView')) return false;
-    return _lastPitch > _cubePitchThreshold;
-  }
-
-  bool _assertMarkerRenderModeInvariant() {
-    if (!_styleInitialized) return true;
-    if (_styleInitializationInProgress) return true;
-    if (_kubusMapController.cameraIsMoving) return true;
-    if (_cubeLayerVisible && !_is3DMarkerModeActive) return false;
-    if (!_cubeLayerVisible && _is3DMarkerModeActive) return false;
-    return true;
-  }
-
-  Future<void> _updateMarkerRenderMode() async {
-    final controller = _mapController;
-    if (controller == null) return;
-    if (!_styleInitialized) return;
-
-    final shouldShowCubes = _is3DMarkerModeActive;
-    if (shouldShowCubes == _cubeLayerVisible) return;
-
-    _cubeLayerVisible = shouldShowCubes;
-
-    if (kDebugMode) {
-      AppConfig.debugPrint(
-        'DesktopMapScreen: marker render mode -> cubes=$shouldShowCubes '
-        'layers(marker=${_managedLayerIds.contains(_markerLayerId)} '
-        'cubeIcon=${_managedLayerIds.contains(_cubeIconLayerId)} '
-        'cube=${_managedLayerIds.contains(_cubeLayerId)})',
-      );
-    }
-
-    try {
-      await _layersManager?.setMode(
-        shouldShowCubes ? MapRenderMode.threeD : MapRenderMode.twoD,
-      );
-    } catch (_) {
-      // Best-effort: layer visibility may fail during style swaps.
-    }
-
-    if (!mounted) return;
-    _requestMarkerLayerStyleUpdate(force: true);
-    if (shouldShowCubes) {
-      final themeProvider = context.read<ThemeProvider>();
-      await _syncMarkerCubes(themeProvider: themeProvider);
-    } else {
-      try {
-        if (_managedSourceIds.contains(_cubeSourceId)) {
-          await controller.setGeoJsonSource(
-            _cubeSourceId,
-            const <String, dynamic>{
-              'type': 'FeatureCollection',
-              'features': <dynamic>[],
-            },
-          );
-        }
-      } catch (_) {
-        // Ignore source update failures during transitions.
-      }
-
-      _updateCubeSpinTicker();
-    }
   }
 
   Future<void> _syncMarkerCubes({required ThemeProvider themeProvider}) async {
@@ -4330,7 +4184,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (!_styleInitialized) return;
     if (!_managedSourceIds.contains(_cubeSourceId)) return;
     if (!mounted) return;
-    if (!_is3DMarkerModeActive) return;
+    if (!_renderCoordinator.is3DModeActive) return;
 
     final scheme = Theme.of(context).colorScheme;
     final roles = KubusColorRoles.of(context);
@@ -4481,7 +4335,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             canPresentExhibition: canPresentExhibition,
             distanceText: distanceText,
             description: rawDescription,
-            onClose: _dismissSelectedMarkerOverlay,
+            onClose: _kubusMapController.dismissSelection,
             onPrimaryAction: canPresentExhibition
                 ? () => _openExhibitionFromMarker(
                       marker,
@@ -4528,8 +4382,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               ),
             ),
       contentKey: animationKey,
-      onDismiss: _dismissSelectedMarkerOverlay,
+      onDismiss: _kubusMapController.dismissSelection,
       cursor: SystemMouseCursors.basic,
+      // Keep map interactions live while a marker is selected; only the card
+      // itself should intercept input.
+      blockMapGestures: false,
+      dismissOnBackdropTap: false,
     );
   }
 
@@ -4602,14 +4460,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       );
     }
 
-    // Wrap card in a Listener to absorb pointer events and prevent them
-    // from passing through to the map underneath (gesture conflict resolution).
-    final wrappedCard = Listener(
-      behavior: HitTestBehavior.opaque,
-      onPointerDown: (_) {},
-      onPointerMove: (_) {},
-      onPointerUp: (_) {},
-      onPointerSignal: (_) {},
+    // Absorb pointer events within the card so they don't leak through to the
+    // map platform view (especially on web). Do not block the full screen.
+    final wrappedCard = MapOverlayBlocker(
+      enabled: true,
+      cursor: SystemMouseCursors.basic,
+      interceptPlatformViews: true,
       child: card,
     );
 
@@ -4742,18 +4598,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               )
             : fallback,
       ),
-    );
-  }
-
-  Widget _markerImageFallback(
-    Color baseColor,
-    ColorScheme scheme,
-    ArtMarker marker,
-  ) {
-    return KubusMapMarkerHelpers.markerImageFallback(
-      baseColor: baseColor,
-      scheme: scheme,
-      marker: marker,
     );
   }
 
@@ -4922,11 +4766,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   width: double.infinity,
                   height: 160,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => _markerImageFallback(
-                      _resolveArtMarkerColor(
-                          marker, context.read<ThemeProvider>()),
-                      scheme,
-                      marker),
+                  errorBuilder: (_, __, ___) =>
+                      KubusMapMarkerHelpers.markerImageFallback(
+                    baseColor: _resolveArtMarkerColor(
+                        marker, context.read<ThemeProvider>()),
+                    scheme: scheme,
+                    marker: marker,
+                  ),
                 ),
               ),
             const SizedBox(height: 12),
