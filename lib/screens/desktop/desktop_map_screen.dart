@@ -778,14 +778,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   void _openNearbyArtPanel() {
-    final shellScope = DesktopShellScope.of(context);
-
     final anchor = _userLocation ?? _effectiveCenter;
-    final artworkProvider = context.read<ArtworkProvider>();
-    final filteredArtworks = _getFilteredArtworks(
-      artworkProvider.artworks,
-      basePositionOverride: anchor,
-    );
 
     _safeSetState(() {
       _isNearbyPanelOpen = true;
@@ -797,20 +790,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _selectedExhibition = null;
       _showFiltersPanel = false;
     });
-
-    // If inside DesktopShell, render in its functions sidebar.
-    // If not, build() will show a local right sidebar fallback.
-    shellScope?.openFunctionsPanel(
-      DesktopFunctionsPanel.exploreNearby,
-      content: _buildNearbyFunctionsPanelContent(
-        filteredArtworks,
-        basePosition: anchor,
-      ),
-    );
+    // The nearby panel is always rendered as a local glass overlay inside
+    // the map Stack (see build → AnimatedPositioned). We no longer push it
+    // into the DesktopShell's functions sidebar so the map stays full width.
   }
 
   void _closeNearbyArtPanel() {
-    final shellScope = DesktopShellScope.of(context);
     _safeSetState(() {
       _isNearbyPanelOpen = false;
       _nearbySidebarSyncScheduled = false;
@@ -818,7 +803,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _nearbySidebarLastSyncAt = null;
     });
     _nearbySidebarSignature = null;
-    shellScope?.closeFunctionsPanel();
+    // Close the shell panel too in case it was still open from a previous
+    // session (defensive).
+    DesktopShellScope.of(context)?.closeFunctionsPanel();
   }
 
   void _safeSetState(VoidCallback fn) {
@@ -930,7 +917,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final baseSig = base == null
         ? 'none'
         : '${base.latitude.toStringAsFixed(4)},${base.longitude.toStringAsFixed(4)}';
-    return '$modeSig|$baseSig|${filteredArtworks.length}|${ids.join(',')}';
+    return '$modeSig|$baseSig|$_selectedFilter|${filteredArtworks.length}|${ids.join(',')}';
   }
 
   void _syncNearbySidebarIfNeeded(
@@ -989,6 +976,31 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         basePosition: basePosition,
       ),
     );
+  }
+
+  /// Forces an immediate sidebar sync after user actions like filter or radius
+  /// changes. Invalidates the cached signature so the next sync detects a
+  /// change, then schedules the update for the next frame.
+  void _forceNearbySidebarSync() {
+    if (!_isNearbyPanelOpen || !mounted) return;
+    // Invalidate signature so _syncNearbySidebarIfNeeded sees a change.
+    _nearbySidebarSignature = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_isNearbyPanelOpen) return;
+      final themeProvider = context.read<ThemeProvider>();
+      final artworkProvider = context.read<ArtworkProvider>();
+      final anchor =
+          _nearbySidebarAnchor ?? _userLocation ?? _effectiveCenter;
+      final filteredArtworks = _getFilteredArtworks(
+        artworkProvider.artworks,
+        basePositionOverride: anchor,
+      );
+      _syncNearbySidebarIfNeeded(
+        themeProvider,
+        filteredArtworks,
+        basePosition: anchor,
+      );
+    });
   }
 
   Future<void> _maybeOpenInitialMarker() async {
@@ -1552,8 +1564,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _maybeScheduleThemeResync(themeProvider);
     final animationTheme = context.animationTheme;
 
-    final hasShellScope = DesktopShellScope.of(context) != null;
-    final showLocalNearbyPanel = _isNearbyPanelOpen && !hasShellScope;
+    // Always show the nearby panel as a local overlay on top of the map
+    // (glass panel with blur). This keeps the map at full width; only the
+    // UI chrome (controls, search bar) shifts to avoid overlap.
+    final showLocalNearbyPanel = _isNearbyPanelOpen;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -1772,39 +1786,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           basePositionOverride: nearbyBasePosition,
         );
 
-        // FIX: Move sidebar sync out of the build phase to avoid infinite
-        // recursion. The shell's setFunctionsPanelContent triggers setState,
-        // which rebuilds this Consumer, which was calling _syncNearbySidebarIfNeeded
-        // again, creating a loop when the signature changed.
-        if (_isNearbyPanelOpen) {
-          final sig = _nearbySidebarSignatureFor(
-            filteredArtworks,
-            basePosition: nearbyBasePosition,
-          );
-          if (sig != _nearbySidebarSignature && !_nearbySidebarSyncScheduled) {
-            final now = DateTime.now();
-            if (_nearbySidebarLastSyncAt != null &&
-                now.difference(_nearbySidebarLastSyncAt!) <
-                    _nearbySidebarSyncCooldown) {
-              // Cooldown active: skip scheduling, but keep map layer built.
-              // Returning an empty widget here can cause platform view
-              // layout churn and map freezes on web.
-              // Intentionally do nothing.
-            }
-            _nearbySidebarLastSyncAt = now;
-            _nearbySidebarSyncScheduled = true;
-            // Schedule the sync AFTER the current build completes.
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              _nearbySidebarSyncScheduled = false;
-              if (!mounted) return;
-              _syncNearbySidebarIfNeeded(
-                themeProvider,
-                filteredArtworks,
-                basePosition: nearbyBasePosition,
-              );
-            });
-          }
-        }
+        // The nearby art panel is rendered as a local overlay in the map's
+        // Stack (not via DesktopShell functions panel), so it auto-updates
+        // through the normal build cycle. No explicit sync needed here.
 
         final isDark = themeProvider.isDarkMode;
         final tileProviders =
@@ -2253,6 +2237,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                                 unawaited(
                                   _loadMarkersForCurrentView(force: true),
                                 );
+                                // Force immediate sidebar sync for the
+                                // shell-scope nearby panel (the local panel
+                                // updates through build, but the shell panel
+                                // needs an explicit push).
+                                _forceNearbySidebarSync();
                               },
                             ),
                           );
@@ -3175,6 +3164,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                                                 force: true,
                                               ),
                                             );
+                                            _forceNearbySidebarSync();
                                           }
                                         },
                                       );
@@ -3293,6 +3283,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                             }
                           });
                           _loadMarkersForCurrentView(force: true);
+                          _kubusMapController
+                              .setMarkerTypeVisibility(_markerLayerVisibility);
+                          _renderCoordinator.requestStyleUpdate(force: true);
+                          _forceNearbySidebarSync();
                         },
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
@@ -3309,6 +3303,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                         onPressed: () {
                           setState(() => _showFiltersPanel = false);
                           _loadMarkersForCurrentView(force: true);
+                          _forceNearbySidebarSync();
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: themeProvider.accentColor,
