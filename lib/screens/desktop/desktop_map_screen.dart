@@ -1779,13 +1779,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }) {
     return Consumer<ArtworkProvider>(
       builder: (context, artworkProvider, _) {
-        final nearbyBasePosition =
-            _nearbySidebarAnchor ?? _userLocation ?? _effectiveCenter;
-        final filteredArtworks = _getFilteredArtworks(
-          artworkProvider.artworks,
-          basePositionOverride: nearbyBasePosition,
-        );
-
         // The nearby art panel is rendered as a local overlay in the map's
         // Stack (not via DesktopShell functions panel), so it auto-updates
         // through the normal build cycle. No explicit sync needed here.
