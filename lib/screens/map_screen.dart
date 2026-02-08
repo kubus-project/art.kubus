@@ -3943,16 +3943,18 @@ class _MapScreenState extends State<MapScreen>
                   );
                 }
 
-                final Widget cardDeck = stack.length <= 1
-                    ? buildCardForMarker(marker)
-                    : PageView.builder(
-                        controller: _markerStackPageController,
-                        itemCount: stack.length,
-                        onPageChanged: _handleMarkerStackPageChanged,
-                        itemBuilder: (context, index) {
-                          return buildCardForMarker(stack[index]);
-                        },
-                      );
+                final Widget cardDeck = RepaintBoundary(
+                  child: stack.length <= 1
+                      ? buildCardForMarker(marker)
+                      : PageView.builder(
+                          controller: _markerStackPageController,
+                          itemCount: stack.length,
+                          onPageChanged: _handleMarkerStackPageChanged,
+                          itemBuilder: (context, index) {
+                            return buildCardForMarker(stack[index]);
+                          },
+                        ),
+                );
 
                 return Stack(
                   children: [
@@ -4637,7 +4639,14 @@ class _MapScreenState extends State<MapScreen>
                   icon: Icons.filter_alt_outlined,
                   selected: selected,
                   accent: filterAccent(key),
-                  onTap: () => setState(() => _artworkFilter = key),
+                  onTap: () {
+                    setState(() => _artworkFilter = key);
+                    // Reload markers so the nearby panel reflects
+                    // the new filter immediately.
+                    unawaited(
+                      _loadMarkersForCurrentView(force: true),
+                    );
+                  },
                 );
               }).toList(),
             ),

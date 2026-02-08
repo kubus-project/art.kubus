@@ -182,41 +182,75 @@ Future<void> kubusPreregisterMarkerIcons({
       }
     }
   } else {
-    for (final marker in markers) {
-      final typeName = marker.type.name;
-      final tier = marker.signalTier;
-      final baseIconId = MapMarkerIconIds.markerBase(
-        typeName: typeName,
-        tierName: tier.name,
-        isDark: isDark,
-      );
-      final selectedIconId = MapMarkerIconIds.markerSelected(
-        typeName: typeName,
-        tierName: tier.name,
-        isDark: isDark,
-      );
+    // Even without zoom-based clustering, group markers at the exact same
+    // position so cluster icons are pre-registered for them.
+    final groups = _groupByExactPosition(markers);
 
-      if (!registeredMapImages.contains(baseIconId)) {
-        toRender.add(
-          KubusIconRenderTask(
-            iconId: baseIconId,
-            marker: marker,
-            cluster: null,
-            isCluster: false,
-            selected: false,
-          ),
+    for (final group in groups) {
+      if (group.length == 1) {
+        final marker = group.first;
+        final typeName = marker.type.name;
+        final tier = marker.signalTier;
+        final baseIconId = MapMarkerIconIds.markerBase(
+          typeName: typeName,
+          tierName: tier.name,
+          isDark: isDark,
         );
-      }
-      if (!registeredMapImages.contains(selectedIconId)) {
-        toRender.add(
-          KubusIconRenderTask(
-            iconId: selectedIconId,
-            marker: marker,
-            cluster: null,
-            isCluster: false,
-            selected: true,
-          ),
+        final selectedIconId = MapMarkerIconIds.markerSelected(
+          typeName: typeName,
+          tierName: tier.name,
+          isDark: isDark,
         );
+
+        if (!registeredMapImages.contains(baseIconId)) {
+          toRender.add(
+            KubusIconRenderTask(
+              iconId: baseIconId,
+              marker: marker,
+              cluster: null,
+              isCluster: false,
+              selected: false,
+            ),
+          );
+        }
+        if (!registeredMapImages.contains(selectedIconId)) {
+          toRender.add(
+            KubusIconRenderTask(
+              iconId: selectedIconId,
+              marker: marker,
+              cluster: null,
+              isCluster: false,
+              selected: true,
+            ),
+          );
+        }
+      } else {
+        final first = group.first;
+        final typeName = first.type.name;
+        final label = group.length > 99 ? '99+' : '${group.length}';
+        final iconId = MapMarkerIconIds.cluster(
+          typeName: typeName,
+          label: label,
+          isDark: isDark,
+        );
+
+        if (!registeredMapImages.contains(iconId)) {
+          final centroid = first.position;
+          final bucket = KubusClusterBucket(
+            cell: GridUtils.gridCellForLevel(centroid, 20),
+            markers: List<ArtMarker>.unmodifiable(group),
+            centroid: centroid,
+          );
+          toRender.add(
+            KubusIconRenderTask(
+              iconId: iconId,
+              marker: null,
+              cluster: bucket,
+              isCluster: true,
+              selected: false,
+            ),
+          );
+        }
       }
     }
   }
@@ -280,4 +314,18 @@ Future<void> kubusPreregisterMarkerIcons({
       }
     }));
   }
+}
+
+/// Groups markers that share the exact same latitude and longitude.
+///
+/// Used by icon pre-registration to render cluster icons for same-position
+/// markers even when zoom-based clustering is disabled.
+List<List<ArtMarker>> _groupByExactPosition(List<ArtMarker> markers) {
+  final Map<String, List<ArtMarker>> grouped = <String, List<ArtMarker>>{};
+  for (final marker in markers) {
+    final key =
+        '${marker.position.latitude.toStringAsFixed(7)},${marker.position.longitude.toStringAsFixed(7)}';
+    (grouped[key] ??= <ArtMarker>[]).add(marker);
+  }
+  return grouped.values.toList();
 }

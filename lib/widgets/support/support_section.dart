@@ -133,7 +133,6 @@ class SupportSectionCard extends StatelessWidget {
       builder: (ctx) {
         final theme = Theme.of(ctx);
         final scheme = theme.colorScheme;
-        final isDark = theme.brightness == Brightness.dark;
         final maxHeight = MediaQuery.of(ctx).size.height * 0.80;
 
         final title = l10n?.supportDialogTitle ?? 'What your support enables';
@@ -201,7 +200,7 @@ class SupportSectionCard extends StatelessWidget {
                         amount: l10n?.supportTier15Amount ?? '€15',
                         body: l10n?.supportTier15Body ??
                             'Supports steady weekly improvements.',
-                        accent: KubusColors.primaryVariantDark,
+                        accent: KubusColors.primary,
                       ),
                       const SizedBox(height: KubusSpacing.sm),
                       _TierCard(

@@ -29,16 +29,16 @@ The app follows a **provider-first** architecture with clear separation between 
           │                │                     │
           ▼                ▼                     ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    State Management                          │
+│                    State Management                         │
 │  ┌─────────────────────────────────────────────────────┐    │
-│  │               Providers (ChangeNotifier)             │    │
-│  │  ProfileProvider, WalletProvider, MapProvider, etc.  │    │
+│  │               Providers (ChangeNotifier)            │    │
+│  │  ProfileProvider, WalletProvider, MapProvider, etc. │    │
 │  └────────────────────────┬────────────────────────────┘    │
 └───────────────────────────┼─────────────────────────────────┘
                             │
                             ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    Business Logic                            │
+│                    Business Logic                           │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐   │
 │  │   Services   │  │   Helpers    │  │     Utilities    │   │
 │  │ (API, AR,    │  │ (resolution, │  │  (formatting,    │   │
@@ -48,7 +48,7 @@ The app follows a **provider-first** architecture with clear separation between 
           │
           ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    Data Layer                                │
+│                    Data Layer                               │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐   │
 │  │    Models    │  │  Storage     │  │   Backend API    │   │
 │  │ (Artwork,    │  │ (local       │  │   (REST/WS)      │   │

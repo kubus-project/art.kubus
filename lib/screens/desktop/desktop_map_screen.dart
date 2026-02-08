@@ -214,6 +214,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   final Set<String> _managedSourceIds = <String>{};
   final LayerLink _markerOverlayLink = LayerLink();
   final Debouncer _cubeSyncDebouncer = Debouncer();
+  final Debouncer _radiusChangeDebouncer = Debouncer();
   late final ValueNotifier<Offset?> _selectedMarkerAnchorNotifier;
   // Shared constants – canonical values live in MapScreenConstants.
   static const String _markerSourceId = MapScreenConstants.markerSourceId;
@@ -1517,6 +1518,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _panelController.dispose();
     _perf.controllerDisposed('panel');
     _cubeSyncDebouncer.dispose();
+    _radiusChangeDebouncer.dispose();
     _markerStreamSub?.cancel();
     _perf.subscriptionStopped('marker_socket_created');
     _markerDeletedSub?.cancel();
@@ -1639,8 +1641,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 duration: animationTheme.medium,
                 curve: animationTheme.defaultCurve,
                 right: showLocalNearbyPanel ? 0 : -420,
-                top: 80,
-                bottom: 24,
+                top: 72,
+                bottom: 16,
                 width: 360,
                 child: KubusMapWebPointerInterceptor.wrap(
                   child: MapOverlayBlocker(
@@ -2246,6 +2248,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                               themeProvider: themeProvider,
                               onTap: () {
                                 setState(() => _selectedFilter = filter);
+                                // Reload markers so the nearby panel and
+                                // sidebar reflect the new filter immediately.
+                                unawaited(
+                                  _loadMarkersForCurrentView(force: true),
+                                );
                               },
                             ),
                           );
@@ -3159,6 +3166,18 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                                   ? null
                                   : (value) {
                                       setState(() => _searchRadius = value);
+                                      _radiusChangeDebouncer(
+                                        const Duration(milliseconds: 400),
+                                        () {
+                                          if (mounted) {
+                                            unawaited(
+                                              _loadMarkersForCurrentView(
+                                                force: true,
+                                              ),
+                                            );
+                                          }
+                                        },
+                                      );
                                     },
                               activeColor: themeProvider.accentColor,
                             ),
@@ -3206,6 +3225,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                           setState(
                             () => _markerLayerVisibility[type] = nextSelected,
                           );
+                          _kubusMapController
+                              .setMarkerTypeVisibility(_markerLayerVisibility);
+                          _renderCoordinator.requestStyleUpdate(force: true);
                         },
                       ),
                       const SizedBox(height: 24),
@@ -4443,17 +4465,19 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 ? () => unawaited(_animateMarkerStackToIndex(index + 1))
                 : null;
 
-            return _buildMarkerOverlayCard(
-              stackedMarker,
-              artwork,
-              themeProvider,
-              stackCount: count,
-              stackIndex: index,
-              onPreviousStacked: onPrev,
-              onNextStacked: onNext,
-              onSelectStackIndex: (i) {
-                unawaited(_animateMarkerStackToIndex(i));
-              },
+            return RepaintBoundary(
+              child: _buildMarkerOverlayCard(
+                stackedMarker,
+                artwork,
+                themeProvider,
+                stackCount: count,
+                stackIndex: index,
+                onPreviousStacked: onPrev,
+                onNextStacked: onNext,
+                onSelectStackIndex: (i) {
+                  unawaited(_animateMarkerStackToIndex(i));
+                },
+              ),
             );
           },
         ),

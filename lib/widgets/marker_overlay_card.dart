@@ -710,7 +710,7 @@ class _OverlayPager extends StatelessWidget {
               width: isActive ? 12 : 6,
               height: 6,
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
+                borderRadius: BorderRadius.circular(3),
                 color: isActive ? accent : inactiveColor,
               ),
             );

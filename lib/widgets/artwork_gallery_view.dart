@@ -18,9 +18,13 @@ class ArtworkGalleryView extends StatefulWidget {
   State<ArtworkGalleryView> createState() => _ArtworkGalleryViewState();
 }
 
-class _ArtworkGalleryViewState extends State<ArtworkGalleryView> {
+class _ArtworkGalleryViewState extends State<ArtworkGalleryView>
+    with AutomaticKeepAliveClientMixin {
   late final PageController _pageController;
   int _index = 0;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -29,6 +33,17 @@ class _ArtworkGalleryViewState extends State<ArtworkGalleryView> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _prefetchAround(_index);
     });
+  }
+
+  @override
+  void didUpdateWidget(ArtworkGalleryView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Clamp the selected index when the image list changes (e.g. async load).
+    final urls =
+        widget.imageUrls.where((u) => u.trim().isNotEmpty).toList(growable: false);
+    if (urls.isNotEmpty && _index >= urls.length) {
+      _index = urls.length - 1;
+    }
   }
 
   @override
@@ -98,6 +113,7 @@ class _ArtworkGalleryViewState extends State<ArtworkGalleryView> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Required by AutomaticKeepAliveClientMixin
     final urls = widget.imageUrls.where((u) => u.trim().isNotEmpty).toList(growable: false);
     if (urls.isEmpty) return const SizedBox.shrink();
 
