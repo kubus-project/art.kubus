@@ -18,16 +18,7 @@ class SupportLinks {
   /// button ID.
   ///
   /// Recipient: theraxig@gmail.com
-  static final Uri paypalDonateUri = Uri.https(
-    'www.paypal.com',
-    '/cgi-bin/webscr',
-    <String, String>{
-      'cmd': '_donations',
-      'business': 'theraxig@gmail.com',
-      'currency_code': 'EUR',
-      'item_name': 'Support Kubus',
-    },
-  );
+  static const String paypalDonateUri = 'https://www.paypal.com/donate/?hosted_button_id=RP46AX9XJ8VMN';
 
   static String get paypalDonateUrl => paypalDonateUri.toString();
 
