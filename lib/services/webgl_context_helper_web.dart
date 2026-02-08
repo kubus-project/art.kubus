@@ -2,34 +2,28 @@ import 'dart:js_interop';
 import 'package:flutter/foundation.dart';
 import 'package:web/web.dart' as web;
 
-import '../widgets/glass_components.dart';
+/// Whether the WebGL/CanvasKit context is currently healthy.
+///
+/// Updated by JS interop event listeners. The [GlassCapabilitiesProvider]
+/// listens to this notifier to decide whether blur effects are safe.
+final ValueNotifier<bool> webGLContextHealthy = ValueNotifier<bool>(true);
+
+/// Returns `true` when the platform signals `prefers-reduced-motion: reduce`.
+bool prefersReducedMotion() {
+  try {
+    final mql = web.window.matchMedia('(prefers-reduced-motion: reduce)');
+    return mql.matches;
+  } catch (_) {
+    return false;
+  }
+}
 
 /// Initializes event listeners for WebGL context loss detection.
 ///
-/// When the JS layer dispatches 'kubus:webgl-critical' or 'kubus:canvaskit-crash',
-/// this helper sets [kubusDisableBackdropFilter] to true, causing all
-/// [LiquidGlassPanel] and [showKubusDialog] calls to skip BackdropFilter
-/// (which requires a healthy WebGL context).
+/// When the JS layer dispatches `kubus:webgl-critical` or
+/// `kubus:canvaskit-crash`, this helper sets [webGLContextHealthy] to false
+/// so that glass surfaces can switch to a tinted fallback.
 void initWebGLContextHelper() {
-  // Firefox (especially on Android) is prone to WebGL/CanvasKit composition
-  // quirks when BackdropFilter is layered above other WebGL content (MapLibre).
-  // This can manifest as “burned-in”/ghosted UI on the map surface.
-  //
-  // Disable BackdropFilter preemptively on Firefox to keep rendering stable.
-  try {
-    final ua = web.window.navigator.userAgent;
-    if (isFirefoxBrowser(userAgentOverride: ua)) {
-      kubusDisableBackdropFilter = true;
-      if (kDebugMode) {
-        // Intentionally quiet in release; this is an environment workaround.
-        // ignore: avoid_print
-        print('webgl_context_helper: Firefox detected; disabling BackdropFilter');
-      }
-    }
-  } catch (_) {
-    // Best-effort: userAgent access can fail in some hardened contexts.
-  }
-
   // Listen for the custom events dispatched by webgl_context_handler.js
   web.window.addEventListener(
     'kubus:webgl-critical',
@@ -43,40 +37,20 @@ void initWebGLContextHelper() {
     'kubus:webgl-restored',
     _onWebGLRestored.toJS,
   );
-}
 
-/// Returns true when the app is running in Firefox.
-///
-/// Note: this is a best-effort heuristic based on the user agent.
-bool isFirefoxBrowser({String? userAgentOverride}) {
-  try {
-    final ua = userAgentOverride ?? web.window.navigator.userAgent;
-    return _isFirefoxUserAgent(ua);
-  } catch (_) {
-    return false;
+  if (kDebugMode) {
+    print('webgl_context_helper: initialized (context-loss listeners active)');
   }
 }
 
-bool _isFirefoxUserAgent(String? userAgent) {
-  final ua = (userAgent ?? '').toLowerCase();
-  if (ua.isEmpty) return false;
-  // Android: contains "Firefox/.."
-  // iOS: contains "FxiOS/.."
-  return ua.contains('firefox') || ua.contains('fxios');
-}
-
 void _onWebGLCritical(web.Event event) {
-  // Disable BackdropFilter to prevent further crashes
-  kubusDisableBackdropFilter = true;
+  webGLContextHealthy.value = false;
 }
 
 void _onCanvasKitCrash(web.Event event) {
-  // Disable BackdropFilter to prevent further crashes
-  kubusDisableBackdropFilter = true;
+  webGLContextHealthy.value = false;
 }
 
 void _onWebGLRestored(web.Event event) {
-  // Re-enable BackdropFilter if context is restored successfully
-  // Note: we leave it disabled for now to be safe; can be changed if needed
-  // kubusDisableBackdropFilter = false;
+  webGLContextHealthy.value = true;
 }

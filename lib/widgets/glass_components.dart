@@ -1,11 +1,10 @@
-﻿import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'dart:ui';
+import '../providers/glass_capabilities_provider.dart';
 import '../utils/design_tokens.dart';
+import 'glass/glass_surface.dart';
 
-/// Global flag to disable BackdropFilter effects on web when WebGL context is unstable.
-/// This is set by the JS interop layer when repeated context losses are detected.
-bool kubusDisableBackdropFilter = false;
+export 'glass/glass_surface.dart';
 
 Future<T?> showKubusDialog<T>({
   required BuildContext context,
@@ -25,8 +24,8 @@ Future<T?> showKubusDialog<T>({
   final resolvedBarrierLabel =
       barrierLabel ?? MaterialLocalizations.of(context).modalBarrierDismissLabel;
 
-  // On web, BackdropFilter can crash when WebGL context is lost (Firefox).
-  final useBackdropFilter = !kIsWeb || !kubusDisableBackdropFilter;
+  // Determine blur state from the provider (falls back to true if unavailable).
+  final useBackdropFilter = GlassCapabilitiesProvider.blurEnabled(context);
 
   return showGeneralDialog<T>(
     context: context,
@@ -85,13 +84,13 @@ Future<T?> showKubusDialog<T>({
 /// movement and life to screens. Supports both dark and light modes.
 class AnimatedGradientBackground extends StatefulWidget {
   final Widget child;
-  
+
   /// Duration of one full animation cycle
   final Duration duration;
-  
+
   /// Whether to animate the gradient (set to false for static)
   final bool animate;
-  
+
   /// Optional custom colors (defaults to theme-appropriate colors)
   final List<Color>? colors;
 
@@ -101,10 +100,10 @@ class AnimatedGradientBackground extends StatefulWidget {
 
   /// Optional hue shift in degrees applied subtly over time.
   ///
-  /// This helps gradients feel more â€œaliveâ€ without requiring hardcoded
+  /// This helps gradients feel more "alive" without requiring hardcoded
   /// multi-palette animations.
   final double hueShiftDegrees;
-  
+
   /// Intensity of the animation (0.0 - 1.0)
   final double intensity;
 
@@ -139,7 +138,7 @@ class _AnimatedGradientBackgroundState extends State<AnimatedGradientBackground>
       duration: widget.duration,
       vsync: this,
     );
-    
+
     _motion = CurvedAnimation(
       parent: _motionController,
       curve: Curves.easeInOut,
@@ -149,7 +148,7 @@ class _AnimatedGradientBackgroundState extends State<AnimatedGradientBackground>
       duration: widget.paletteTransitionDuration,
       vsync: this,
     )..value = 1.0;
-    
+
     if (widget.animate) {
       _motionController.repeat(reverse: true);
     }
@@ -198,7 +197,7 @@ class _AnimatedGradientBackgroundState extends State<AnimatedGradientBackground>
       builder: (context, child) {
         final motionT = _motion.value;
         final progress = motionT * widget.intensity;
-        
+
         // Animate alignment for subtle movement
         final beginOffset = Alignment(
           -1.0 + (progress * 0.5),
@@ -344,25 +343,25 @@ class _AnimatedGradientBackgroundState extends State<AnimatedGradientBackground>
 /// Perfect for cards, sidebars, and content containers that need depth.
 class LiquidGlassPanel extends StatelessWidget {
   final Widget child;
-  
+
   /// Padding inside the glass panel
   final EdgeInsetsGeometry? padding;
-  
+
   /// Margin around the glass panel
   final EdgeInsetsGeometry? margin;
-  
+
   /// Border radius of the panel
   final BorderRadius? borderRadius;
-  
+
   /// Blur intensity (defaults to standard)
   final double blurSigma;
-  
+
   /// Whether to show the border
   final bool showBorder;
-  
+
   /// Custom background color (overrides theme-based)
   final Color? backgroundColor;
-  
+
   /// Callback when tapped
   final VoidCallback? onTap;
 
@@ -380,57 +379,19 @@ class LiquidGlassPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
     final effectiveRadius = borderRadius ?? BorderRadius.circular(KubusRadius.lg);
-    
-    final bgColor = backgroundColor ??
-        (isDark
-            ? KubusColors.surfaceDark.withValues(alpha: KubusGlassEffects.glassOpacityDark)
-            : KubusColors.surfaceLight.withValues(alpha: KubusGlassEffects.glassOpacityLight));
-    
-    final borderColor = isDark
-        ? KubusColors.glassBorderDark
-        : KubusColors.glassBorderLight;
-
-    // On web, BackdropFilter can crash when WebGL context is lost (Firefox).
-    // Use a solid fallback background instead to prevent UI crashes.
-    final useBackdropFilter = !kIsWeb || !kubusDisableBackdropFilter;
-
-    final innerContainer = Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            bgColor,
-            bgColor.withValues(alpha: (bgColor.a * 0.8)),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: effectiveRadius,
-        border: showBorder
-            ? Border.all(
-                color: borderColor,
-                width: KubusSizes.hairline,
-              )
-            : null,
-      ),
-      child: Padding(
-        padding: padding ?? const EdgeInsets.all(KubusSpacing.md),
-        child: child,
-      ),
-    );
 
     Widget panel = Container(
       margin: margin,
-      child: ClipRRect(
+      child: GlassSurface(
         borderRadius: effectiveRadius,
-        child: useBackdropFilter
-            ? BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
-                child: innerContainer,
-              )
-            : innerContainer,
+        blurSigma: blurSigma,
+        showBorder: showBorder,
+        tintColor: backgroundColor,
+        child: Padding(
+          padding: padding ?? const EdgeInsets.all(KubusSpacing.md),
+          child: child,
+        ),
       ),
     );
 
@@ -597,16 +558,16 @@ class BackdropGlassSheet extends StatelessWidget {
 /// A frosted glass modal wrapper for dialogs and overlays
 class FrostedModal extends StatelessWidget {
   final Widget child;
-  
+
   /// Maximum width of the modal content
   final double? maxWidth;
-  
+
   /// Padding inside the modal
   final EdgeInsetsGeometry? padding;
-  
+
   /// Whether to close on tap outside
   final bool barrierDismissible;
-  
+
   /// Callback when barrier is tapped
   final VoidCallback? onBarrierTap;
 
@@ -622,8 +583,7 @@ class FrostedModal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    // On web, BackdropFilter can crash when WebGL context is lost (Firefox).
-    final useBackdropFilter = !kIsWeb || !kubusDisableBackdropFilter;
+    final useBackdropFilter = GlassCapabilitiesProvider.blurEnabled(context);
 
     Widget content = Center(
       child: GestureDetector(
@@ -689,7 +649,7 @@ class _GlassShimmerState extends State<GlassShimmer>
       duration: widget.duration,
       vsync: this,
     );
-    
+
     if (widget.enabled) {
       _controller.repeat();
     }

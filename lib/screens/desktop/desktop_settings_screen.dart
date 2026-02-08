@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/themeprovider.dart';
+import '../../providers/glass_capabilities_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/stats_provider.dart';
 import '../../providers/web3provider.dart';
@@ -2104,6 +2105,79 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                 ),
               ],
             ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // Reduce effects
+          Builder(
+            builder: (context) {
+              final glassProv = context.watch<GlassCapabilitiesProvider>();
+              final isOn = glassProv.reduceEffects;
+              final autoDetected = glassProv.heuristicTriggered &&
+                  !glassProv.reduceEffectsUserOverride;
+
+              return DesktopCard(
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.blur_off,
+                      color: Theme.of(context).colorScheme.tertiary,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Reduce effects',
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color:
+                                  Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            autoDetected
+                                ? 'Automatically enabled for this device'
+                                : 'Disable blur, animations and other effects',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.6),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: isOn,
+                      onChanged: (value) {
+                        glassProv.setReduceEffects(value);
+                      },
+                      activeTrackColor:
+                          Provider.of<ThemeProvider>(context, listen: false)
+                              .accentColor
+                              .withValues(alpha: 0.5),
+                      thumbColor:
+                          WidgetStateProperty.resolveWith((states) {
+                        if (states.contains(WidgetState.selected)) {
+                          return Provider.of<ThemeProvider>(context,
+                                  listen: false)
+                              .accentColor;
+                        }
+                        return null;
+                      }),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
         ],
       ),

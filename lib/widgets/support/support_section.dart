@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
@@ -147,25 +145,11 @@ class SupportSectionCard extends StatelessWidget {
             maxWidth: KubusSizes.dialogWidthMd,
             maxHeight: maxHeight,
           ),
-          child: ClipRRect(
+          child: LiquidGlassPanel(
             borderRadius: BorderRadius.circular(KubusRadius.xl),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(
-                sigmaX: KubusGlassEffects.blurSigmaHeavy,
-                sigmaY: KubusGlassEffects.blurSigmaHeavy,
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: KubusGradients.glass(theme.brightness),
-                  borderRadius: BorderRadius.circular(KubusRadius.xl),
-                  border: Border.all(
-                    color: isDark
-                        ? KubusColors.glassBorderDark
-                        : KubusColors.glassBorderLight,
-                    width: KubusSizes.hairline,
-                  ),
-                ),
-                child: SingleChildScrollView(
+            blurSigma: KubusGlassEffects.blurSigmaHeavy,
+            padding: EdgeInsets.zero,
+            child: SingleChildScrollView(
                   padding: const EdgeInsets.all(KubusSpacing.lg),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -239,8 +223,6 @@ class SupportSectionCard extends StatelessWidget {
                     ],
                   ),
                 ),
-              ),
-            ),
           ),
         );
       },
