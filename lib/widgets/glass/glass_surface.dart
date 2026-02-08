@@ -74,10 +74,20 @@ class GlassSurface extends StatelessWidget {
     final baseTint =
         tintColor ?? (isDark ? KubusColors.surfaceDark : KubusColors.surfaceLight);
 
-    final nominalOpacity = tintOpacity ??
-        (isDark
-            ? KubusGlassEffects.glassOpacityDark
-            : KubusGlassEffects.glassOpacityLight);
+    // Determine opacity:
+    // 1. Explicit tintOpacity always wins.
+    // 2. If tintColor was provided with an alpha, honour that alpha.
+    // 3. Otherwise fall back to the design-token defaults.
+    final double nominalOpacity;
+    if (tintOpacity != null) {
+      nominalOpacity = tintOpacity!;
+    } else if (tintColor != null) {
+      nominalOpacity = tintColor!.a;
+    } else {
+      nominalOpacity = isDark
+          ? KubusGlassEffects.glassOpacityDark
+          : KubusGlassEffects.glassOpacityLight;
+    }
 
     // In fallback mode, ensure the tint is at least `_fallbackMinOpacity`
     // so text stays readable even without the backdrop blur.

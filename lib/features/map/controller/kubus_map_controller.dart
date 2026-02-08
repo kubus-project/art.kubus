@@ -764,12 +764,20 @@ class KubusMapController {
         : (index >= stack.length ? math.max(0, stack.length - 1) : index);
     if (desired == _selectedMarkerStackIndex) return;
 
-    _selectedMarkerStackIndex = desired;
+    // Check if the previous and next marker share the same position.
+    // If so, keep the current anchor to avoid a layout flash in the overlay.
+    final prev = stack[_selectedMarkerStackIndex];
     final next = stack[desired];
+    final samePosition = prev.position.latitude == next.position.latitude &&
+        prev.position.longitude == next.position.longitude;
+
+    _selectedMarkerStackIndex = desired;
     _selectedMarkerId = next.id;
     _selectedMarkerData = next;
 
-    selectedMarkerAnchor.value = null;
+    if (!samePosition) {
+      selectedMarkerAnchor.value = null;
+    }
 
     onSelectionChanged?.call(selectionState);
     onRequestMarkerLayerStyleUpdate?.call();

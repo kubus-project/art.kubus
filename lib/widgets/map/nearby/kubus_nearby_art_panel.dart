@@ -704,7 +704,10 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
         widget.layout == KubusNearbyArtPanelLayout.mobileBottomSheet;
     final radius = isMobile
         ? const BorderRadius.vertical(top: Radius.circular(KubusRadius.xl))
-        : BorderRadius.zero;
+        : const BorderRadius.only(
+            topLeft: Radius.circular(KubusRadius.lg),
+            bottomLeft: Radius.circular(KubusRadius.lg),
+          );
 
     final glassTint = scheme.surface.withValues(alpha: isDark ? 0.46 : 0.56);
 
@@ -792,8 +795,21 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
     content = Container(
       decoration: BoxDecoration(
         borderRadius: radius,
-        border:
-            Border.all(color: scheme.outlineVariant.withValues(alpha: 0.25)),
+        border: isMobile
+            ? Border.all(
+                color: scheme.outlineVariant.withValues(alpha: 0.25),
+              )
+            : Border(
+                left: BorderSide(
+                  color: scheme.outlineVariant.withValues(alpha: 0.30),
+                ),
+                top: BorderSide(
+                  color: scheme.outlineVariant.withValues(alpha: 0.30),
+                ),
+                bottom: BorderSide(
+                  color: scheme.outlineVariant.withValues(alpha: 0.30),
+                ),
+              ),
         boxShadow: isMobile
             ? [
                 BoxShadow(
@@ -802,7 +818,13 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
                   offset: const Offset(0, -6),
                 ),
               ]
-            : null,
+            : [
+                BoxShadow(
+                  color: scheme.shadow.withValues(alpha: 0.10),
+                  blurRadius: 16,
+                  offset: const Offset(-4, 0),
+                ),
+              ],
       ),
       child: ClipRRect(
         borderRadius: radius,

@@ -1,4 +1,6 @@
+
 import '../../models/art_marker.dart';
+import '../../utils/grid_utils.dart';
 import 'kubus_map_marker_rendering.dart';
 
 /// Shared helper to build GeoJSON feature lists for map markers.
@@ -10,6 +12,10 @@ import 'kubus_map_marker_rendering.dart';
 /// This function keeps the screens in control of how individual features are
 /// built (properties, icon IDs, selection state, etc.), while unifying the
 /// higher-level iteration and clustering behavior.
+///
+/// Even when zoom-based clustering is disabled, markers at the exact same
+/// position are always collapsed into a single cluster feature with a count
+/// badge so that only one icon is shown per location.
 Future<List<Map<String, dynamic>>> kubusBuildMarkerFeatureList({
   required List<ArtMarker> markers,
   required bool useClustering,
@@ -48,14 +54,46 @@ Future<List<Map<String, dynamic>>> kubusBuildMarkerFeatureList({
       }
     }
   } else {
-    for (final marker in markers) {
+    // Even without zoom-based clustering, group markers that occupy the
+    // exact same coordinates so the map shows one icon with a count badge
+    // instead of overlapping icons.
+    final groups = _groupByExactPosition(markers);
+
+    for (final group in groups) {
       if (shouldAbort()) return const <Map<String, dynamic>>[];
-      final feature = await buildMarkerFeature(marker);
-      if (shouldAbort()) return const <Map<String, dynamic>>[];
-      if (feature.isNotEmpty) features.add(feature);
+
+      if (group.length == 1) {
+        final feature = await buildMarkerFeature(group.first);
+        if (shouldAbort()) return const <Map<String, dynamic>>[];
+        if (feature.isNotEmpty) features.add(feature);
+      } else {
+        final centroid = group.first.position;
+        final bucket = KubusClusterBucket(
+          cell: GridUtils.gridCellForLevel(centroid, 20),
+          markers: List<ArtMarker>.unmodifiable(group),
+          centroid: centroid,
+        );
+        final feature = await buildClusterFeature(bucket);
+        if (shouldAbort()) return const <Map<String, dynamic>>[];
+        if (feature.isNotEmpty) features.add(feature);
+      }
     }
   }
 
   // Defensive: ensure the list is not modified from the outside.
   return List<Map<String, dynamic>>.unmodifiable(features);
+}
+
+/// Groups markers that share the exact same latitude and longitude.
+///
+/// Returns a list of groups; each group contains one or more markers.
+List<List<ArtMarker>> _groupByExactPosition(List<ArtMarker> markers) {
+  // Use a string key for fast grouping; 7 decimal places ≈ 1 cm precision.
+  final Map<String, List<ArtMarker>> grouped = <String, List<ArtMarker>>{};
+  for (final marker in markers) {
+    final key =
+        '${marker.position.latitude.toStringAsFixed(7)},${marker.position.longitude.toStringAsFixed(7)}';
+    (grouped[key] ??= <ArtMarker>[]).add(marker);
+  }
+  return grouped.values.toList();
 }
