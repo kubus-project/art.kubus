@@ -11,6 +11,7 @@ import 'package:logger/logger.dart';
 import 'config/config.dart';
 import 'providers/connection_provider.dart';
 import 'providers/chat_provider.dart';
+import 'providers/glass_capabilities_provider.dart';
 import 'providers/profile_provider.dart';
 import 'providers/web3provider.dart';
 import 'providers/themeprovider.dart';
@@ -308,6 +309,8 @@ class _AppLauncherState extends State<AppLauncher> {
       providers: [
         ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
         ChangeNotifierProvider<LocaleProvider>(create: (_) => LocaleProvider()),
+        ChangeNotifierProvider<GlassCapabilitiesProvider>(
+            create: (_) => GlassCapabilitiesProvider()),
       ],
       child: Consumer2<ThemeProvider, LocaleProvider>(
         builder: (context, themeProvider, localeProvider, _) {

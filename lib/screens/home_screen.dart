@@ -1,5 +1,4 @@
 ﻿import 'package:flutter/foundation.dart';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -186,27 +185,21 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         builder: (context, constraints) {
           final isSmallScreen = constraints.maxWidth < 375;
 
-          return ClipRect(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(
-                sigmaX: KubusGlassEffects.blurSigmaLight,
-                sigmaY: KubusGlassEffects.blurSigmaLight,
+          return GlassSurface(
+            borderRadius: BorderRadius.zero,
+            blurSigma: KubusGlassEffects.blurSigmaLight,
+            showBorder: false,
+            border: Border(
+              bottom: BorderSide(
+                color: scheme.outline.withValues(alpha: isDark ? 0.16 : 0.12),
+                width: 1,
               ),
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: KubusGradients.glass(theme.brightness),
-                  border: Border(
-                    bottom: BorderSide(
-                      color: scheme.outline.withValues(alpha: isDark ? 0.16 : 0.12),
-                      width: 1,
-                    ),
-                  ),
-                ),
-                child: Container(
-                  // Add an extra tint layer to keep the bar readable over bright
-                  // parts of the gradient.
-                  color: glassTint,
-                  child: SafeArea(
+            ),
+            child: Container(
+              // Add an extra tint layer to keep the bar readable over bright
+              // parts of the gradient.
+              color: glassTint,
+              child: SafeArea(
                     bottom: false,
                     child: Padding(
                       padding: EdgeInsets.fromLTRB(
@@ -292,8 +285,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ),
                   ),
                 ),
-              ),
-            ),
           );
         },
       ),
