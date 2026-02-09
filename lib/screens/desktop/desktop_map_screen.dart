@@ -64,6 +64,7 @@ import 'art/desktop_artwork_detail_screen.dart';
 import '../events/exhibition_detail_screen.dart';
 import 'community/desktop_user_profile_screen.dart';
 import '../../features/map/map_view_mode_prefs.dart';
+import '../../features/map/shared/map_marker_collision_config.dart';
 import '../../features/map/shared/map_screen_constants.dart';
 import '../../features/map/map_layers_manager.dart';
 import '../../features/map/map_overlay_stack.dart';
@@ -375,6 +376,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       },
       onRequestMarkerLayerStyleUpdate: () {
         _renderCoordinator.requestStyleUpdate(force: true);
+      },
+      onRequestMarkerDataSync: () {
+        _requestMarkerVisualSync();
       },
     );
     _selectedMarkerAnchorNotifier = _kubusMapController.selectedMarkerAnchor;
@@ -1319,12 +1323,18 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final isDark = themeProvider.isDarkMode;
 
     final zoom = _cameraZoom;
-    // Filter markers by position validity AND layer visibility (same as mobile)
-    final visibleMarkers = _artMarkers
-        .where((m) => m.hasValidPosition)
-        .where((m) => _markerLayerVisibility[m.type] ?? true)
+    final useClustering =
+        zoom < _clusterMaxZoom && !_kubusMapController.hasExpandedSameLocation;
+    final renderedMarkers = _kubusMapController.buildRenderedMarkers();
+    final visibleMarkers = renderedMarkers
+        .map((m) => m.marker)
         .toList(growable: false);
-    final useClustering = zoom < _clusterMaxZoom;
+    final renderById = <String, KubusRenderedMarker>{
+      for (final marker in renderedMarkers) marker.marker.id: marker,
+    };
+    final geoMarkers = renderedMarkers
+        .map((m) => m.marker.copyWith(position: m.position))
+        .toList(growable: false);
 
     // Pre-register all needed icons in parallel to avoid waterfall.
     await _preregisterMarkerIcons(
@@ -1339,7 +1349,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (!mounted) return;
 
     final features = await kubusBuildMarkerFeatureList(
-      markers: visibleMarkers,
+      markers: geoMarkers,
       useClustering: useClustering,
       zoom: zoom,
       clusterGridLevelForZoom: _clusterGridLevelForZoom,
@@ -1347,6 +1357,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       shouldAbort: () => !mounted,
       buildMarkerFeature: (marker) => _markerFeatureFor(
         marker: marker,
+        renderMarker: renderById[marker.id],
         themeProvider: themeProvider,
         scheme: scheme,
         roles: roles,
@@ -1410,6 +1421,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   Future<Map<String, dynamic>> _markerFeatureFor({
     required ArtMarker marker,
+    required KubusRenderedMarker? renderMarker,
     required ThemeProvider themeProvider,
     required ColorScheme scheme,
     required KubusColorRoles roles,
@@ -1429,6 +1441,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       shouldAbort: () => !mounted,
       resolveMarkerIcon: KubusMapMarkerHelpers.resolveArtMarkerIcon,
       resolveMarkerBaseColor: (m) => _resolveArtMarkerColor(m, themeProvider),
+      entryScale: renderMarker?.entryScale ?? 1.0,
+      entryOpacity: renderMarker?.entryOpacity ?? 1.0,
+      spiderfied: renderMarker?.isSpiderfied ?? false,
+      coordinateKey: renderMarker?.sameCoordinateKey,
+      entrySerial: renderMarker?.entrySerial ?? 0,
     );
   }
 
@@ -1864,6 +1881,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 if (_styleInitialized) {
                   _queueMarkerVisualRefreshForZoom(_cameraZoom);
                   unawaited(_renderCoordinator.updateRenderMode());
+                }
+                if (_isNearbyPanelOpen && _userLocation == null) {
+                  _nearbySidebarAnchor = _effectiveCenter;
+                  _forceNearbySidebarSync();
                 }
                 _queueMarkerRefresh(fromGesture: false);
               },
@@ -3155,7 +3176,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                                   : (value) {
                                       setState(() => _searchRadius = value);
                                       _radiusChangeDebouncer(
-                                        const Duration(milliseconds: 400),
+                                        const Duration(
+                                          milliseconds: MapMarkerCollisionConfig
+                                              .nearbyRadiusDebounceMs,
+                                        ),
                                         () {
                                           if (mounted) {
                                             unawaited(
@@ -3182,7 +3206,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                             showBorder: true,
                             child: Text(
                               l10n.commonDistanceKm(
-                                  _searchRadius.toInt().toString()),
+                                _searchRadius.toStringAsFixed(1),
+                              ),
                               style: Theme.of(context)
                                   .textTheme
                                   .bodyMedium
@@ -3747,6 +3772,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
   }
 
+  String _markerQueryFiltersKey() {
+    final query = _mapSearchController.state.query.trim().toLowerCase();
+    return 'filter=$_selectedFilter|sort=$_selectedSort|query=$query|travel=${_travelModeEnabled ? 1 : 0}';
+  }
+
   List<Artwork> _getFilteredArtworks(
     List<Artwork> artworks, {
     LatLng? basePositionOverride,
@@ -3966,6 +3996,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               limit: travelLimit,
               forceRefresh: force,
               zoomBucket: bucket,
+              filtersKey: _markerQueryFiltersKey(),
             )
           : await MapMarkerHelper.loadAndHydrateMarkers(
               artworkProvider: artworkProvider,
@@ -3975,6 +4006,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               limit: _travelModeEnabled ? travelLimit : null,
               forceRefresh: force,
               zoomBucket: bucket,
+              filtersKey: _markerQueryFiltersKey(),
             );
       if (!mounted) return;
       if (requestId != _markerRequestId) return;
@@ -4205,8 +4237,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final scheme = Theme.of(context).colorScheme;
     final roles = KubusColorRoles.of(context);
     final zoom = _cameraZoom;
-    final visibleMarkers =
-        _artMarkers.where((m) => m.hasValidPosition).toList(growable: false);
+    final renderedMarkers = _kubusMapController.buildRenderedMarkers();
+    final visibleMarkers = renderedMarkers
+        .map((m) => m.marker.copyWith(position: m.position))
+        .toList(growable: false);
 
     final cubeFeatures = <Map<String, dynamic>>[];
     for (final marker in visibleMarkers) {

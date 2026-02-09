@@ -80,5 +80,28 @@ void main() {
       expect(key15, contains('lat=12.123'));
       expect(key15, contains('lng=34.123'));
     });
+
+    test('includes filters key to avoid stale cache collisions', () {
+      final center = const LatLng(46.056946, 14.505751);
+
+      final keyA = MapMarkerService.buildRadiusQueryKey(
+        center: center,
+        radiusKm: 5.0,
+        limit: 100,
+        zoomBucket: 13,
+        filtersKey: 'filter=nearby|query=city',
+      );
+      final keyB = MapMarkerService.buildRadiusQueryKey(
+        center: center,
+        radiusKm: 5.0,
+        limit: 100,
+        zoomBucket: 13,
+        filtersKey: 'filter=all|query=city',
+      );
+
+      expect(keyA, contains('f=filter=nearby|query=city'));
+      expect(keyB, contains('f=filter=all|query=city'));
+      expect(keyA, isNot(equals(keyB)));
+    });
   });
 }

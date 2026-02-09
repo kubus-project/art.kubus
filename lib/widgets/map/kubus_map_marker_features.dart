@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' as ml;
 
 import '../../models/art_marker.dart';
+import '../../features/map/shared/map_marker_collision_config.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/map_marker_icon_ids.dart';
@@ -24,6 +26,12 @@ Future<Map<String, dynamic>> kubusMarkerFeatureFor({
   required bool Function() shouldAbort,
   required IconData Function(ArtMarkerType type) resolveMarkerIcon,
   required Color Function(ArtMarker marker) resolveMarkerBaseColor,
+  LatLng? positionOverride,
+  double entryScale = 1.0,
+  double entryOpacity = 1.0,
+  bool spiderfied = false,
+  String? coordinateKey,
+  int entrySerial = 0,
 }) async {
   if (shouldAbort()) return const <String, dynamic>{};
 
@@ -65,6 +73,8 @@ Future<Map<String, dynamic>> kubusMarkerFeatureFor({
     }
   }
 
+  final position = positionOverride ?? marker.position;
+
   return <String, dynamic>{
     'type': 'Feature',
     'id': marker.id,
@@ -75,10 +85,18 @@ Future<Map<String, dynamic>> kubusMarkerFeatureFor({
       'icon': iconId,
       'iconSelected': selectedIconId,
       'markerType': typeName,
+      'entryScale': entryScale.clamp(
+        MapMarkerCollisionConfig.entryStartScale,
+        1.2,
+      ),
+      'entryOpacity': entryOpacity.clamp(0.0, 1.0),
+      'isSpiderfied': spiderfied,
+      'coordinateKey': coordinateKey,
+      'entrySerial': entrySerial,
     },
     'geometry': <String, dynamic>{
       'type': 'Point',
-      'coordinates': <double>[marker.position.longitude, marker.position.latitude],
+      'coordinates': <double>[position.longitude, position.latitude],
     },
   };
 }
@@ -133,7 +151,11 @@ Future<Map<String, dynamic>> kubusClusterFeatureFor({
   }
 
   final center = cluster.centroid;
-  final id = 'cluster:${cluster.cell.anchorKey}';
+  final isSameCoordinateCluster =
+      cluster.sameCoordinateKey != null && cluster.markers.length > 1;
+  final id = isSameCoordinateCluster
+      ? 'cluster_same:${cluster.sameCoordinateKey}'
+      : 'cluster:${cluster.cell.anchorKey}';
   return <String, dynamic>{
     'type': 'Feature',
     'id': id,
@@ -144,6 +166,8 @@ Future<Map<String, dynamic>> kubusClusterFeatureFor({
       'lat': center.latitude,
       'lng': center.longitude,
       'renderMode': 'cluster',
+      'sameCoordinateKey': cluster.sameCoordinateKey,
+      'clusterCount': cluster.markers.length,
     },
     'geometry': <String, dynamic>{
       'type': 'Point',

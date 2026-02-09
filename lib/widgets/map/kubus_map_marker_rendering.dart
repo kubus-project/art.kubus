@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' as ml;
 
 import '../../models/art_marker.dart';
+import '../../features/map/shared/map_marker_collision_utils.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/grid_utils.dart';
 import '../../utils/kubus_color_roles.dart';
@@ -20,11 +21,16 @@ class KubusClusterBucket {
     required this.cell,
     required this.markers,
     required this.centroid,
+    this.sameCoordinateKey,
   });
 
   final GridCell cell;
   final List<ArtMarker> markers;
   final LatLng centroid;
+
+  /// Non-null when all markers in this bucket share the same rounded
+  /// coordinate key (same-location collision group).
+  final String? sameCoordinateKey;
 }
 
 /// Helper for batched icon pre-registration.
@@ -83,6 +89,7 @@ List<KubusClusterBucket> kubusClusterMarkersByGridLevel(
         cell: cellsByKey[key]!,
         markers: List<ArtMarker>.unmodifiable(bucketMarkers),
         centroid: centroid,
+        sameCoordinateKey: sharedCoordinateKeyIfSameLocation(bucketMarkers),
       ),
     );
   }
@@ -240,6 +247,7 @@ Future<void> kubusPreregisterMarkerIcons({
             cell: GridUtils.gridCellForLevel(centroid, 20),
             markers: List<ArtMarker>.unmodifiable(group),
             centroid: centroid,
+            sameCoordinateKey: mapMarkerCoordinateKey(centroid),
           );
           toRender.add(
             KubusIconRenderTask(
@@ -321,11 +329,5 @@ Future<void> kubusPreregisterMarkerIcons({
 /// Used by icon pre-registration to render cluster icons for same-position
 /// markers even when zoom-based clustering is disabled.
 List<List<ArtMarker>> _groupByExactPosition(List<ArtMarker> markers) {
-  final Map<String, List<ArtMarker>> grouped = <String, List<ArtMarker>>{};
-  for (final marker in markers) {
-    final key =
-        '${marker.position.latitude.toStringAsFixed(7)},${marker.position.longitude.toStringAsFixed(7)}';
-    (grouped[key] ??= <ArtMarker>[]).add(marker);
-  }
-  return grouped.values.toList();
+  return groupMarkersByCoordinateKey(markers).values.toList();
 }

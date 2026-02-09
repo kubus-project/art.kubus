@@ -57,7 +57,16 @@ void main() {
       final expr = KubusMarkerLayerStyler.interactiveIconSizeExpression(state);
       expect(
         expr,
-        equals(MapMarkerStyleConfig.iconSizeExpression(constantScale: 1.0)),
+        equals(
+          MapMarkerStyleConfig.iconSizeExpression(
+            constantScale: 1.0,
+            multiplier: <Object>[
+              'coalesce',
+              <Object>['get', 'entryScale'],
+              1.0,
+            ],
+          ),
+        ),
       );
     });
 
@@ -91,14 +100,22 @@ void main() {
       expect(
         multiplier,
         equals(<Object>[
-          'case',
-          <Object>['==', <Object>['id'], 'p'],
-          MapMarkerStyleConfig.pressedScaleFactor,
-          <Object>['==', <Object>['id'], 's'],
-          1.0,
-          <Object>['==', <Object>['id'], 'h'],
-          MapMarkerStyleConfig.hoverScaleFactor,
-          1.0,
+          '*',
+          <Object>[
+            'case',
+            <Object>['==', <Object>['id'], 'p'],
+            MapMarkerStyleConfig.pressedScaleFactor,
+            <Object>['==', <Object>['id'], 's'],
+            1.0,
+            <Object>['==', <Object>['id'], 'h'],
+            MapMarkerStyleConfig.hoverScaleFactor,
+            1.0,
+          ],
+          <Object>[
+            'coalesce',
+            <Object>['get', 'entryScale'],
+            1.0,
+          ],
         ]),
       );
     });

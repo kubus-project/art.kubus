@@ -1,0 +1,37 @@
+/// Shared tuning constants for same-location marker behavior and marker
+/// entrance animation. Centralized here so mobile and desktop stay in sync.
+abstract final class MapMarkerCollisionConfig {
+  /// Number of decimal places used to build a stable same-coordinate key.
+  /// 6 decimals ~= 0.11m precision at the equator.
+  static const int coordinateKeyDecimals = 6;
+
+  /// Auto-expand same-location markers when zoom reaches this threshold.
+  static const double spiderfyAutoExpandZoom = 17.0;
+
+  /// Base spiderfy ring radius in screen pixels.
+  static const double spiderfyBaseRadiusPx = 34.0;
+
+  /// Additional radius per ring in screen pixels.
+  static const double spiderfyRadiusStepPx = 24.0;
+
+  /// Minimum desired marker separation in screen pixels.
+  static const double spiderfyMinSeparationPx = 24.0;
+
+  /// Minimum capacity for the first spiderfy ring.
+  static const int spiderfyMinFirstRingCount = 6;
+
+  /// Marker entrance animation starting scale.
+  static const double entryStartScale = 0.78;
+
+  /// Marker entrance animation duration in milliseconds.
+  static const int entryDurationMs = 220;
+
+  /// Additional stagger per marker for sequential pop-in.
+  static const int entryStaggerMs = 36;
+
+  /// Debounce for viewport visibility checks while moving/zooming.
+  static const int viewportVisibilityDebounceMs = 120;
+
+  /// Debounce for nearby radius slider fetches.
+  static const int nearbyRadiusDebounceMs = 400;
+}

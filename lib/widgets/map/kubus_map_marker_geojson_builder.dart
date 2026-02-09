@@ -1,4 +1,4 @@
-
+import '../../features/map/shared/map_marker_collision_utils.dart';
 import '../../models/art_marker.dart';
 import '../../utils/grid_utils.dart';
 import 'kubus_map_marker_rendering.dart';
@@ -72,6 +72,7 @@ Future<List<Map<String, dynamic>>> kubusBuildMarkerFeatureList({
           cell: GridUtils.gridCellForLevel(centroid, 20),
           markers: List<ArtMarker>.unmodifiable(group),
           centroid: centroid,
+          sameCoordinateKey: mapMarkerCoordinateKey(centroid),
         );
         final feature = await buildClusterFeature(bucket);
         if (shouldAbort()) return const <Map<String, dynamic>>[];
@@ -88,12 +89,5 @@ Future<List<Map<String, dynamic>>> kubusBuildMarkerFeatureList({
 ///
 /// Returns a list of groups; each group contains one or more markers.
 List<List<ArtMarker>> _groupByExactPosition(List<ArtMarker> markers) {
-  // Use a string key for fast grouping; 7 decimal places ≈ 1 cm precision.
-  final Map<String, List<ArtMarker>> grouped = <String, List<ArtMarker>>{};
-  for (final marker in markers) {
-    final key =
-        '${marker.position.latitude.toStringAsFixed(7)},${marker.position.longitude.toStringAsFixed(7)}';
-    (grouped[key] ??= <ArtMarker>[]).add(marker);
-  }
-  return grouped.values.toList();
+  return groupMarkersByCoordinateKey(markers).values.toList();
 }

@@ -10,6 +10,8 @@ import '../../../config/config.dart';
 import '../../../models/art_marker.dart';
 import '../../../utils/debouncer.dart';
 import '../../../utils/map_tap_gating.dart';
+import '../shared/map_marker_collision_config.dart';
+import '../shared/map_marker_collision_utils.dart';
 import '../map_layers_manager.dart';
 
 @immutable
@@ -63,13 +65,36 @@ class KubusMarkerSelectionState {
 }
 
 @immutable
+class KubusRenderedMarker {
+  const KubusRenderedMarker({
+    required this.marker,
+    required this.position,
+    required this.entryScale,
+    required this.entryOpacity,
+    required this.entrySerial,
+    required this.sameCoordinateKey,
+    required this.isSpiderfied,
+  });
+
+  final ArtMarker marker;
+  final LatLng position;
+  final double entryScale;
+  final double entryOpacity;
+  final int entrySerial;
+  final String sameCoordinateKey;
+  final bool isSpiderfied;
+}
+
+@immutable
 class KubusMapTapConfig {
   const KubusMapTapConfig({
     this.sameCoordinateMeters = 0.75,
     this.tapTolerancePx = 6.0,
     this.clusterIdPrefix = 'cluster:',
+    this.sameLocationClusterIdPrefix = 'cluster_same:',
     this.clusterTapZoomDelta = 1.5,
     this.clusterTapMaxZoom = 18.0,
+    this.spiderfyAutoExpandZoom = MapMarkerCollisionConfig.spiderfyAutoExpandZoom,
   });
 
   /// Distance threshold for considering two markers as "stacked".
@@ -81,11 +106,17 @@ class KubusMapTapConfig {
   /// Prefix used by web feature-tap events for clusters.
   final String clusterIdPrefix;
 
+  /// Prefix used by web feature-tap events for same-location clusters.
+  final String sameLocationClusterIdPrefix;
+
   /// How much to zoom in when tapping a cluster.
   final double clusterTapZoomDelta;
 
   /// Upper bound for cluster-tap zoom.
   final double clusterTapMaxZoom;
+
+  /// Zoom threshold where stacked same-location marker selections auto-spiderfy.
+  final double spiderfyAutoExpandZoom;
 }
 
 /// Shared controller for MapLibre-based map screens.
@@ -122,6 +153,7 @@ class KubusMapController {
     this.onAutoFollowChanged,
     this.onBackgroundTap,
     this.onRequestMarkerLayerStyleUpdate,
+    this.onRequestMarkerDataSync,
   })  : _distance = distance,
         managedLayerIds = managedLayerIdsOut ?? <String>{},
         managedSourceIds = managedSourceIdsOut ?? <String>{},
@@ -154,6 +186,10 @@ class KubusMapController {
 
   /// Called when pressed/hover/selection changes and the screen should restyle marker layers.
   final VoidCallback? onRequestMarkerLayerStyleUpdate;
+
+  /// Called when marker feature payload should be rebuilt (spiderfy or
+  /// viewport entry animation state changed).
+  final VoidCallback? onRequestMarkerDataSync;
 
   ml.MapLibreMapController? _mapController;
   MapLayersManager? _layersManager;
@@ -234,6 +270,17 @@ class KubusMapController {
   final ValueNotifier<Offset?> selectedMarkerAnchor = ValueNotifier<Offset?>(null);
 
   final Debouncer _overlayAnchorDebouncer = Debouncer();
+  final Debouncer _viewportVisibilityDebouncer = Debouncer();
+
+  Timer? _entryAnimationTicker;
+  bool _viewportStateInitialized = false;
+  Set<String> _visibleMarkerIds = <String>{};
+  final Map<String, _MarkerEntryAnimationState> _entryAnimationByMarkerId =
+      <String, _MarkerEntryAnimationState>{};
+
+  String? _expandedCoordinateKey;
+  final Map<String, LatLng> _spiderfiedPositionByMarkerId = <String, LatLng>{};
+  int _entrySerialCounter = 0;
 
   KubusMapCameraState get camera => _camera;
   bool get autoFollow => _autoFollow;
@@ -248,6 +295,8 @@ class KubusMapController {
   List<ArtMarker> get selectedMarkerStack => _selectedMarkerStack;
   int get selectedMarkerStackIndex => _selectedMarkerStackIndex;
   DateTime? get selectedMarkerAt => _selectedMarkerAt;
+  String? get expandedCoordinateKey => _expandedCoordinateKey;
+  bool get hasExpandedSameLocation => _expandedCoordinateKey != null;
 
   String? get hoveredMarkerId => _hoveredMarkerId;
   String? get pressedMarkerId => _pressedMarkerId;
@@ -269,10 +318,12 @@ class KubusMapController {
 
   void setMarkers(List<ArtMarker> markers) {
     _markers = markers;
+    _pruneSpiderfyStateIfNeeded();
 
     // Keep selection data fresh when marker instances are replaced during
     // polling/refresh.
     _refreshSelectionFromLatestMarkers();
+    _queueViewportVisibilityRefresh(force: true);
   }
 
   void _refreshSelectionFromLatestMarkers() {
@@ -303,6 +354,7 @@ class KubusMapController {
     if (dataChanged || stackChanged || indexChanged) {
       onSelectionChanged?.call(selectionState);
       queueOverlayAnchorRefresh(force: true);
+      _maybeAutoExpandSelectedSameLocation();
     }
   }
 
@@ -317,6 +369,8 @@ class KubusMapController {
 
   void setMarkerTypeVisibility(Map<ArtMarkerType, bool> visibility) {
     _markerTypeVisibility = visibility;
+    _pruneSpiderfyStateIfNeeded();
+    _queueViewportVisibilityRefresh(force: true);
   }
 
   void attachMapController(ml.MapLibreMapController controller) {
@@ -388,11 +442,19 @@ class KubusMapController {
 
     // Clear anchor.
     selectedMarkerAnchor.value = null;
+
+    _collapseSpiderfy(requestSync: false);
+    _entryAnimationTicker?.cancel();
+    _entryAnimationTicker = null;
+    _entryAnimationByMarkerId.clear();
+    _visibleMarkerIds.clear();
+    _viewportStateInitialized = false;
   }
 
   void dispose() {
     detachMapController();
     _overlayAnchorDebouncer.dispose();
+    _viewportVisibilityDebouncer.dispose();
     bearingDegrees.dispose();
     selectedMarkerAnchor.dispose();
   }
@@ -464,6 +526,7 @@ class KubusMapController {
 
       // Refresh overlay anchor (if any selection exists).
       queueOverlayAnchorRefresh(force: true);
+      _queueViewportVisibilityRefresh(force: true);
     } catch (e, st) {
       _styleInitialized = false;
       if (kDebugMode) {
@@ -502,6 +565,14 @@ class KubusMapController {
       bearingDegrees.value = nextBearing;
     }
 
+    if (_expandedCoordinateKey != null) {
+      if (hasGesture) {
+        _collapseSpiderfy();
+      } else if (nextZoom < tapConfig.spiderfyAutoExpandZoom) {
+        _collapseSpiderfy();
+      }
+    }
+
     // If the user is panning while an overlay is open, close it.
     // This keeps selection + composition stable.
     if (dismissSelectionOnUserGesture && hasGesture && _selectedMarkerId != null) {
@@ -511,6 +582,8 @@ class KubusMapController {
     if (_selectedMarkerData != null) {
       queueOverlayAnchorRefresh();
     }
+
+    _queueViewportVisibilityRefresh();
   }
 
   void handleCameraIdle({required bool fromProgrammaticMove}) {
@@ -520,6 +593,9 @@ class KubusMapController {
     if (_selectedMarkerData != null) {
       queueOverlayAnchorRefresh(force: true);
     }
+    unawaited(_maybeAutoExpandSameLocationAtHighZoom());
+
+    _queueViewportVisibilityRefresh(force: true);
 
     // Screen handles marker refresh scheduling; controller does not fetch.
     // This is intentionally a hook rather than embedded side effects.
@@ -541,7 +617,20 @@ class KubusMapController {
     _lastFeatureTapAt = DateTime.now();
     _lastFeatureTapPoint = point;
 
+    if (id.startsWith(tapConfig.sameLocationClusterIdPrefix)) {
+      final coordinateKey = id.substring(tapConfig.sameLocationClusterIdPrefix.length);
+      unawaited(
+        expandSpiderfyForCoordinateKey(
+          coordinateKey,
+          anchor: LatLng(coordinates.latitude, coordinates.longitude),
+          triggerSelection: true,
+        ),
+      );
+      return;
+    }
+
     if (id.startsWith(tapConfig.clusterIdPrefix)) {
+      _collapseSpiderfy();
       final nextZoom = math.min(_camera.zoom + tapConfig.clusterTapZoomDelta, tapConfig.clusterTapMaxZoom);
       unawaited(
         animateTo(
@@ -569,7 +658,8 @@ class KubusMapController {
   ) {
     if (!kIsWeb) return;
 
-    if (id.startsWith(tapConfig.clusterIdPrefix)) {
+    if (id.startsWith(tapConfig.clusterIdPrefix) ||
+        id.startsWith(tapConfig.sameLocationClusterIdPrefix)) {
       if (_hoveredMarkerId != null) {
         _hoveredMarkerId = null;
         onRequestMarkerLayerStyleUpdate?.call();
@@ -594,6 +684,7 @@ class KubusMapController {
     if (isWeb) {
       // On web, feature hits are delivered via onFeatureTapped; treat this
       // callback as "background" tap.
+      _collapseSpiderfy();
       onBackgroundTap?.call();
       dismissSelection();
       return;
@@ -641,6 +732,7 @@ class KubusMapController {
       );
 
       if (features.isEmpty) {
+        _collapseSpiderfy();
         onBackgroundTap?.call();
         dismissSelection();
         return;
@@ -652,9 +744,23 @@ class KubusMapController {
       final kind = props['kind']?.toString();
 
       if (kind == 'cluster') {
+        final coordinateKey = props['sameCoordinateKey']?.toString();
+        if (coordinateKey != null && coordinateKey.isNotEmpty) {
+          await expandSpiderfyForCoordinateKey(
+            coordinateKey,
+            anchor: LatLng(
+              (props['lat'] as num?)?.toDouble() ?? _camera.center.latitude,
+              (props['lng'] as num?)?.toDouble() ?? _camera.center.longitude,
+            ),
+            triggerSelection: true,
+          );
+          return;
+        }
+
         final lng = (props['lng'] as num?)?.toDouble();
         final lat = (props['lat'] as num?)?.toDouble();
         if (lat == null || lng == null) return;
+        _collapseSpiderfy();
         final nextZoom = math.min(
           _camera.zoom + tapConfig.clusterTapZoomDelta,
           tapConfig.clusterTapMaxZoom,
@@ -679,6 +785,7 @@ class KubusMapController {
       _hitboxLayerEpoch = -1;
 
       // Treat failures as a background tap (but still try fallback picking).
+      _collapseSpiderfy();
       onBackgroundTap?.call();
 
       final fallback = await _fallbackPickMarkerAtPoint(point);
@@ -730,6 +837,7 @@ class KubusMapController {
     onRequestMarkerLayerStyleUpdate?.call();
 
     queueOverlayAnchorRefresh(force: true);
+    _maybeAutoExpandSelectedSameLocation();
   }
 
   void dismissSelection() {
@@ -749,6 +857,7 @@ class KubusMapController {
 
     onSelectionChanged?.call(selectionState);
     onRequestMarkerLayerStyleUpdate?.call();
+    _collapseSpiderfy();
   }
 
   /// Update the active marker within the current stacked selection without
@@ -782,6 +891,7 @@ class KubusMapController {
     onSelectionChanged?.call(selectionState);
     onRequestMarkerLayerStyleUpdate?.call();
     queueOverlayAnchorRefresh(force: true);
+    _maybeAutoExpandSelectedSameLocation();
   }
 
   void _startPressedMarkerFeedback(String markerId) {
@@ -861,6 +971,387 @@ class KubusMapController {
     }
 
     return stacked;
+  }
+
+  List<KubusRenderedMarker> buildRenderedMarkers() {
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    final visibleMarkers = _markers
+        .where((m) => m.hasValidPosition && (_markerTypeVisibility[m.type] ?? true))
+        .toList(growable: false);
+
+    final rendered = <KubusRenderedMarker>[];
+    for (final marker in visibleMarkers) {
+      final coordinateKey = mapMarkerCoordinateKey(marker.position);
+      final isSpiderfied = _expandedCoordinateKey == coordinateKey &&
+          _spiderfiedPositionByMarkerId.containsKey(marker.id);
+      final overridePosition = _spiderfiedPositionByMarkerId[marker.id];
+      final entry = _entryValuesForMarker(marker.id, nowMs: nowMs);
+
+      rendered.add(
+        KubusRenderedMarker(
+          marker: marker,
+          position: overridePosition ?? marker.position,
+          entryScale: entry.scale,
+          entryOpacity: entry.opacity,
+          entrySerial: entry.serial,
+          sameCoordinateKey: coordinateKey,
+          isSpiderfied: isSpiderfied,
+        ),
+      );
+    }
+
+    return List<KubusRenderedMarker>.unmodifiable(rendered);
+  }
+
+  Future<void> expandSpiderfyForCoordinateKey(
+    String coordinateKey, {
+    LatLng? anchor,
+    bool triggerSelection = false,
+  }) async {
+    final key = coordinateKey.trim();
+    if (key.isEmpty) return;
+
+    final grouped = _markersForCoordinateKey(key);
+    if (grouped.length <= 1) {
+      _collapseSpiderfy();
+      return;
+    }
+
+    if (triggerSelection) {
+      final selected = _selectedMarkerData;
+      if (selected == null || !grouped.any((m) => m.id == selected.id)) {
+        selectMarker(grouped.first, stackedMarkers: grouped);
+      }
+    }
+
+    final applied = await _applySpiderfyLayout(
+      coordinateKey: key,
+      markers: grouped,
+      anchor: anchor,
+    );
+    if (!applied) return;
+
+    _scheduleEntryAnimations(
+      grouped.map((m) => m.id).toList(growable: false),
+      staggered: true,
+    );
+    onRequestMarkerDataSync?.call();
+  }
+
+  void _maybeAutoExpandSelectedSameLocation() {
+    final selected = _selectedMarkerData;
+    if (selected == null) {
+      _collapseSpiderfy();
+      return;
+    }
+
+    if (_camera.zoom < tapConfig.spiderfyAutoExpandZoom) {
+      _collapseSpiderfy();
+      return;
+    }
+
+    final key = mapMarkerCoordinateKey(selected.position);
+    final grouped = _markersForCoordinateKey(key);
+    if (grouped.length <= 1) {
+      _collapseSpiderfy();
+      return;
+    }
+
+    if (_expandedCoordinateKey == key) return;
+    unawaited(
+      expandSpiderfyForCoordinateKey(
+        key,
+        anchor: selected.position,
+        triggerSelection: false,
+      ),
+    );
+  }
+
+  Future<void> _maybeAutoExpandSameLocationAtHighZoom() async {
+    if (_camera.zoom < tapConfig.spiderfyAutoExpandZoom) {
+      _collapseSpiderfy();
+      return;
+    }
+
+    // Prefer the active selection when present.
+    _maybeAutoExpandSelectedSameLocation();
+    if (_expandedCoordinateKey != null) return;
+
+    final controller = _mapController;
+    if (controller == null) return;
+
+    try {
+      final bounds = await controller.getVisibleRegion();
+      final visibleMarkers = _markers.where(
+        (m) =>
+            m.hasValidPosition &&
+            (_markerTypeVisibility[m.type] ?? true) &&
+            _isMarkerWithinBounds(m.position, bounds),
+      );
+      final grouped = groupMarkersByCoordinateKey(visibleMarkers);
+
+      String? bestKey;
+      LatLng? bestAnchor;
+      double? bestDistance;
+      for (final entry in grouped.entries) {
+        final markers = entry.value;
+        if (markers.length <= 1) continue;
+        final anchor = markers.first.position;
+        final meters = _distance.as(LengthUnit.Meter, _camera.center, anchor);
+        if (bestDistance == null || meters < bestDistance) {
+          bestDistance = meters;
+          bestKey = entry.key;
+          bestAnchor = anchor;
+        }
+      }
+
+      if (bestKey != null && bestAnchor != null) {
+        await expandSpiderfyForCoordinateKey(
+          bestKey,
+          anchor: bestAnchor,
+          triggerSelection: false,
+        );
+      }
+    } catch (_) {
+      // Best effort only during style/camera transitions.
+    }
+  }
+
+  Future<bool> _applySpiderfyLayout({
+    required String coordinateKey,
+    required List<ArtMarker> markers,
+    LatLng? anchor,
+  }) async {
+    final controller = _mapController;
+    if (controller == null) return false;
+
+    final sorted = List<ArtMarker>.of(markers)
+      ..sort((a, b) => a.id.compareTo(b.id));
+
+    final resolvedAnchor = anchor ?? sorted.first.position;
+    try {
+      final anchorScreen = await controller.toScreenLocation(
+        ml.LatLng(resolvedAnchor.latitude, resolvedAnchor.longitude),
+      );
+      final offsets = buildSpiderfyOffsets(sorted.length);
+      if (offsets.length != sorted.length) return false;
+
+      final nextPositions = <String, LatLng>{};
+      for (var i = 0; i < sorted.length; i++) {
+        final offset = offsets[i];
+        final point = math.Point<double>(
+          anchorScreen.x.toDouble() + offset.dx,
+          anchorScreen.y.toDouble() + offset.dy,
+        );
+        final latLng = await controller.toLatLng(point);
+        nextPositions[sorted[i].id] = LatLng(latLng.latitude, latLng.longitude);
+      }
+
+      _expandedCoordinateKey = coordinateKey;
+      _spiderfiedPositionByMarkerId
+        ..clear()
+        ..addAll(nextPositions);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  void _collapseSpiderfy({bool requestSync = true}) {
+    if (_expandedCoordinateKey == null && _spiderfiedPositionByMarkerId.isEmpty) {
+      return;
+    }
+    _expandedCoordinateKey = null;
+    _spiderfiedPositionByMarkerId.clear();
+    if (requestSync) {
+      onRequestMarkerDataSync?.call();
+    }
+  }
+
+  void _pruneSpiderfyStateIfNeeded() {
+    final key = _expandedCoordinateKey;
+    if (key == null) return;
+    final grouped = _markersForCoordinateKey(key);
+    if (grouped.length <= 1) {
+      _collapseSpiderfy();
+      return;
+    }
+
+    final ids = grouped.map((m) => m.id).toSet();
+    final removedAny =
+        _spiderfiedPositionByMarkerId.keys.any((id) => !ids.contains(id));
+    if (removedAny || _spiderfiedPositionByMarkerId.length != ids.length) {
+      _collapseSpiderfy();
+    }
+  }
+
+  List<ArtMarker> _markersForCoordinateKey(String coordinateKey) {
+    final visible = _markers
+        .where((m) => m.hasValidPosition && (_markerTypeVisibility[m.type] ?? true))
+        .toList(growable: false);
+    final grouped = groupMarkersByCoordinateKey(visible);
+    final markers = grouped[coordinateKey] ?? const <ArtMarker>[];
+    final sorted = List<ArtMarker>.of(markers)
+      ..sort((a, b) => a.id.compareTo(b.id));
+    return sorted;
+  }
+
+  void _queueViewportVisibilityRefresh({bool force = false}) {
+    if (!_styleInitialized) return;
+    if (_mapController == null) return;
+
+    final delay = force
+        ? Duration.zero
+        : const Duration(
+            milliseconds: MapMarkerCollisionConfig.viewportVisibilityDebounceMs,
+          );
+    _viewportVisibilityDebouncer(delay, () {
+      unawaited(_refreshViewportVisibility());
+    });
+  }
+
+  Future<void> _refreshViewportVisibility() async {
+    final controller = _mapController;
+    if (controller == null) return;
+    if (!_styleInitialized) return;
+
+    try {
+      final bounds = await controller.getVisibleRegion();
+      final visibleMarkers = _markers.where(
+        (m) =>
+            m.hasValidPosition &&
+            (_markerTypeVisibility[m.type] ?? true) &&
+            _isMarkerWithinBounds(m.position, bounds),
+      );
+      final nextVisible = visibleMarkers.map((m) => m.id).toSet();
+
+      if (!_viewportStateInitialized) {
+        _viewportStateInitialized = true;
+        _visibleMarkerIds = nextVisible;
+        if (nextVisible.isNotEmpty) {
+          _scheduleEntryAnimations(
+            nextVisible.toList(growable: false),
+            staggered: true,
+          );
+        }
+        return;
+      }
+
+      final entered = nextVisible.difference(_visibleMarkerIds);
+      final exited = _visibleMarkerIds.difference(nextVisible);
+      for (final id in exited) {
+        _entryAnimationByMarkerId.remove(id);
+      }
+      _visibleMarkerIds = nextVisible;
+
+      if (entered.isNotEmpty) {
+        _scheduleEntryAnimations(entered.toList(growable: false), staggered: true);
+      }
+    } catch (_) {
+      // Best effort: viewport checks can fail during style transitions.
+    }
+  }
+
+  bool _isMarkerWithinBounds(LatLng point, ml.LatLngBounds bounds) {
+    final south = bounds.southwest.latitude;
+    final north = bounds.northeast.latitude;
+    if (point.latitude < south || point.latitude > north) return false;
+
+    final west = bounds.southwest.longitude;
+    final east = bounds.northeast.longitude;
+    if (west <= east) {
+      return point.longitude >= west && point.longitude <= east;
+    }
+    return point.longitude >= west || point.longitude <= east;
+  }
+
+  void _scheduleEntryAnimations(
+    List<String> markerIds, {
+    required bool staggered,
+  }) {
+    if (markerIds.isEmpty) return;
+
+    final sorted = List<String>.of(markerIds)..sort();
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    final step = staggered ? MapMarkerCollisionConfig.entryStaggerMs : 0;
+
+    for (var i = 0; i < sorted.length; i++) {
+      final id = sorted[i];
+      _entrySerialCounter += 1;
+      _entryAnimationByMarkerId[id] = _MarkerEntryAnimationState(
+        revealAtMs: nowMs + (i * step),
+        serial: _entrySerialCounter,
+      );
+    }
+
+    onRequestMarkerDataSync?.call();
+    _startEntryAnimationTicker();
+  }
+
+  _MarkerEntryValues _entryValuesForMarker(
+    String markerId, {
+    required int nowMs,
+  }) {
+    final state = _entryAnimationByMarkerId[markerId];
+    if (state == null) {
+      return const _MarkerEntryValues(scale: 1.0, opacity: 1.0, serial: 0);
+    }
+
+    final durationMs = MapMarkerCollisionConfig.entryDurationMs;
+    final elapsed = nowMs - state.revealAtMs;
+    if (elapsed <= 0) {
+      return _MarkerEntryValues(
+        scale: MapMarkerCollisionConfig.entryStartScale,
+        opacity: 0.0,
+        serial: state.serial,
+      );
+    }
+    if (elapsed >= durationMs) {
+      return _MarkerEntryValues(scale: 1.0, opacity: 1.0, serial: state.serial);
+    }
+
+    final t = (elapsed / durationMs).clamp(0.0, 1.0);
+    final scaleT = Curves.easeOutBack.transform(t);
+    final opacityT = Curves.easeOutCubic.transform(t);
+    final scale = MapMarkerCollisionConfig.entryStartScale +
+        (1.0 - MapMarkerCollisionConfig.entryStartScale) * scaleT;
+
+    return _MarkerEntryValues(
+      scale: scale
+          .clamp(MapMarkerCollisionConfig.entryStartScale, 1.2)
+          .toDouble(),
+      opacity: opacityT.clamp(0.0, 1.0).toDouble(),
+      serial: state.serial,
+    );
+  }
+
+  void _startEntryAnimationTicker() {
+    if (_entryAnimationTicker?.isActive ?? false) return;
+    _entryAnimationTicker = Timer.periodic(
+      const Duration(milliseconds: 16),
+      _handleEntryAnimationTick,
+    );
+  }
+
+  void _handleEntryAnimationTick(Timer timer) {
+    if (_entryAnimationByMarkerId.isEmpty) {
+      timer.cancel();
+      _entryAnimationTicker = null;
+      return;
+    }
+
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    final expireAfter = MapMarkerCollisionConfig.entryDurationMs + 120;
+    _entryAnimationByMarkerId.removeWhere(
+      (_, state) => nowMs - state.revealAtMs > expireAfter,
+    );
+
+    if (_entryAnimationByMarkerId.isEmpty) {
+      timer.cancel();
+      _entryAnimationTicker = null;
+    }
+
+    onRequestMarkerDataSync?.call();
   }
 
   ArtMarker? _findMarkerById(String id) {
@@ -1031,4 +1522,28 @@ class KubusMapController {
       tilt: _camera.pitch,
     );
   }
+}
+
+@immutable
+class _MarkerEntryAnimationState {
+  const _MarkerEntryAnimationState({
+    required this.revealAtMs,
+    required this.serial,
+  });
+
+  final int revealAtMs;
+  final int serial;
+}
+
+@immutable
+class _MarkerEntryValues {
+  const _MarkerEntryValues({
+    required this.scale,
+    required this.opacity,
+    required this.serial,
+  });
+
+  final double scale;
+  final double opacity;
+  final int serial;
 }
