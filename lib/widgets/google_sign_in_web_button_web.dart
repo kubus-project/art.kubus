@@ -29,6 +29,8 @@ class GoogleSignInWebButton extends StatefulWidget {
 class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
   StreamSubscription<GoogleSignInAuthenticationEvent>? _sub;
   bool _ready = false;
+  bool _processingAuth = false;
+  String? _lastProcessedUid;
 
   @override
   void initState() {
@@ -52,13 +54,23 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
       (GoogleSignInAuthenticationEvent event) async {
         if (event is GoogleSignInAuthenticationEventSignIn) {
           if (!mounted) return;
-          if (widget.isLoading) return;
+          if (widget.isLoading || _processingAuth) return;
+
+          // Prevent reprocessing the same authentication event
+          final uid = event.user.id;
+          if (_lastProcessedUid == uid) return;
 
           try {
+            _processingAuth = true;
+            _lastProcessedUid = uid;
             final result = GoogleAuthService().resultFromAccount(event.user);
             await widget.onAuthResult(result);
           } catch (e) {
             widget.onAuthError?.call(e);
+          } finally {
+            if (mounted) {
+              _processingAuth = false;
+            }
           }
         }
       },
@@ -76,9 +88,22 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
         final account =
             await GoogleSignIn.instance.attemptLightweightAuthentication();
         if (!mounted) return;
-        if (account != null && !widget.isLoading) {
-          final result = GoogleAuthService().resultFromAccount(account);
-          await widget.onAuthResult(result);
+        if (account != null && !widget.isLoading && !_processingAuth) {
+          final uid = account.id;
+          if (_lastProcessedUid != uid) {
+            _processingAuth = true;
+            _lastProcessedUid = uid;
+            try {
+              final result = GoogleAuthService().resultFromAccount(account);
+              await widget.onAuthResult(result);
+            } catch (e) {
+              widget.onAuthError?.call(e);
+            } finally {
+              if (mounted) {
+                _processingAuth = false;
+              }
+            }
+          }
         }
       } catch (_) {
         // Best-effort only; One Tap / silent auth may be blocked by browser policies.
@@ -90,7 +115,18 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
   }
 
   @override
+  void didUpdateWidget(GoogleSignInWebButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reset the processing flag if isLoading changed back to false
+    if (oldWidget.isLoading && !widget.isLoading) {
+      _processingAuth = false;
+    }
+  }
+
+  @override
   void dispose() {
+    _processingAuth = false;
+    _lastProcessedUid = null;
     unawaited(_sub?.cancel());
     super.dispose();
   }

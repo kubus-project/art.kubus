@@ -1593,7 +1593,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               ),
 
               // Top bar - absorb pointer events to prevent map interaction
-              _buildTopBar(themeProvider, animationTheme),
+              _buildTopBar(themeProvider, animationTheme,
+                  nearbyPanelOpen: showLocalNearbyPanel),
 
               // Search suggestions overlay - absorb pointer events
               ListenableBuilder(
@@ -1655,8 +1656,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 duration: animationTheme.medium,
                 curve: animationTheme.defaultCurve,
                 right: showLocalNearbyPanel ? 0 : -420,
-                top: 72,
-                bottom: 16,
+                top: 0,
+                bottom: 0,
                 width: 360,
                 child: KubusMapWebPointerInterceptor.wrap(
                   child: MapOverlayBlocker(
@@ -1800,6 +1801,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               maxZoom: 24.0,
               isDarkMode: isDark,
               styleAsset: styleAsset,
+              attributionButtonPosition:
+                  ml.AttributionButtonPosition.bottomLeft,
               onMapCreated: _handleMapCreated,
               onStyleLoaded: () {
                 AppConfig.debugPrint(
@@ -2122,15 +2125,18 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   Widget _buildTopBar(
-      ThemeProvider themeProvider, AppAnimationTheme animationTheme) {
+      ThemeProvider themeProvider, AppAnimationTheme animationTheme,
+      {required bool nearbyPanelOpen}) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    return Positioned(
+    return AnimatedPositioned(
+      duration: animationTheme.medium,
+      curve: animationTheme.defaultCurve,
       top: 0,
       left: 0,
-      right: 0,
+      right: nearbyPanelOpen ? 360 : 0,
       child: MapOverlayBlocker(
           cursor: SystemMouseCursors.basic,
           child: SafeArea(
