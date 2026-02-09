@@ -10,6 +10,7 @@ import '../../../services/telemetry/telemetry_service.dart';
 import '../../../widgets/app_logo.dart';
 import '../../../widgets/gradient_icon_card.dart';
 import '../../../providers/themeprovider.dart';
+import '../../../providers/locale_provider.dart';
 import '../../../utils/app_animations.dart';
 import '../../../widgets/glass_components.dart';
 import 'desktop_permissions_screen.dart';
@@ -242,6 +243,10 @@ class _DesktopOnboardingScreenState extends State<DesktopOnboardingScreen>
   Widget _buildHeader(Color accentColor) {
     final l10n = AppLocalizations.of(context)!;
     final pages = _pages(l10n);
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final localeProvider = Provider.of<LocaleProvider>(context);
+    final scheme = Theme.of(context).colorScheme;
+    
     return Padding(
       padding: const EdgeInsets.all(32),
       child: Row(
@@ -262,24 +267,89 @@ class _DesktopOnboardingScreenState extends State<DesktopOnboardingScreen>
               ),
             ],
           ),
-          // Skip button
-          if (_currentPage < pages.length - 1)
-            TextButton(
-              onPressed: _skipToEnd,
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              ),
-              child: Text(
-                l10n.commonSkip,
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.6),
+          // Controls: Language, Theme, and Skip
+          Row(
+            children: [
+              // Language selector
+              PopupMenuButton<String>(
+                onSelected: (value) {
+                  unawaited(localeProvider.setLanguageCode(value));
+                },
+                itemBuilder: (BuildContext context) => [
+                  PopupMenuItem(
+                    value: 'sl',
+                    child: Row(
+                      children: [
+                        if (localeProvider.languageCode == 'sl')
+                          Icon(Icons.check, size: 18, color: scheme.primary)
+                        else
+                          const SizedBox(width: 18),
+                        const SizedBox(width: 8),
+                        Text(l10n.languageSlovenian),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'en',
+                    child: Row(
+                      children: [
+                        if (localeProvider.languageCode == 'en')
+                          Icon(Icons.check, size: 18, color: scheme.primary)
+                        else
+                          const SizedBox(width: 18),
+                        const SizedBox(width: 8),
+                        Text(l10n.languageEnglish),
+                      ],
+                    ),
+                  ),
+                ],
+                tooltip: l10n.settingsLanguageTitle,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Icon(
+                    Icons.language,
+                    size: 24,
+                    color: scheme.onSurface.withValues(alpha: 0.7),
+                  ),
                 ),
               ),
-            ),
+              // Theme toggle
+              IconButton(
+                icon: Icon(
+                  themeProvider.isDarkMode ? Icons.brightness_7 : Icons.brightness_4,
+                  size: 24,
+                ),
+                tooltip: themeProvider.isDarkMode ? l10n.settingsThemeModeLight : l10n.settingsThemeModeDark,
+                color: scheme.onSurface.withValues(alpha: 0.7),
+                onPressed: () {
+                  final currentMode = themeProvider.themeMode;
+                  final newMode = currentMode == ThemeMode.dark
+                      ? ThemeMode.light
+                      : ThemeMode.dark;
+                  unawaited(themeProvider.setThemeMode(newMode));
+                },
+              ),
+              const SizedBox(width: 16),
+              // Skip button
+              if (_currentPage < pages.length - 1)
+                TextButton(
+                  onPressed: _skipToEnd,
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  ),
+                  child: Text(
+                    l10n.commonSkip,
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.6),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ],
       ),
     );

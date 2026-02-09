@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
 import '../../services/onboarding_state_service.dart';
 import '../../services/telemetry/telemetry_service.dart';
 import '../../widgets/app_logo.dart';
@@ -14,6 +15,8 @@ import 'permissions_screen.dart';
 import '../../utils/design_tokens.dart';
 import '../../widgets/kubus_button.dart';
 import '../../widgets/glass_components.dart';
+import '../../providers/themeprovider.dart';
+import '../../providers/locale_provider.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -173,6 +176,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
 
   Widget _buildHeader([bool isSmallScreen = false]) {
     final l10n = AppLocalizations.of(context)!;
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final localeProvider = Provider.of<LocaleProvider>(context);
+    final scheme = Theme.of(context).colorScheme;
+    
     return Padding(
       padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
       child: Row(
@@ -196,18 +203,82 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
               ),
             ],
           ),
-          // Skip button
-          if (_currentPage < _pages.length - 1)
-            TextButton(
-              onPressed: _skipToEnd,
-              child: Text(
-                l10n.commonSkip,
-                style: GoogleFonts.inter(
-                  fontSize: isSmallScreen ? 14 : 16,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+          // Controls: Language, Theme, and Skip
+          Row(
+            children: [
+              // Language selector
+              PopupMenuButton<String>(
+                onSelected: (value) {
+                  unawaited(localeProvider.setLanguageCode(value));
+                },
+                itemBuilder: (BuildContext context) => [
+                  PopupMenuItem(
+                    value: 'sl',
+                    child: Row(
+                      children: [
+                        if (localeProvider.languageCode == 'sl')
+                          Icon(Icons.check, size: 18, color: scheme.primary)
+                        else
+                          const SizedBox(width: 18),
+                        const SizedBox(width: 8),
+                        Text(l10n.languageSlovenian),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'en',
+                    child: Row(
+                      children: [
+                        if (localeProvider.languageCode == 'en')
+                          Icon(Icons.check, size: 18, color: scheme.primary)
+                        else
+                          const SizedBox(width: 18),
+                        const SizedBox(width: 8),
+                        Text(l10n.languageEnglish),
+                      ],
+                    ),
+                  ),
+                ],
+                tooltip: l10n.settingsLanguageTitle,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 4 : 8),
+                  child: Icon(
+                    Icons.language,
+                    size: isSmallScreen ? 20 : 24,
+                    color: scheme.onSurface.withValues(alpha: 0.7),
+                  ),
                 ),
               ),
-            ),
+              // Theme toggle
+              IconButton(
+                icon: Icon(
+                  themeProvider.isDarkMode ? Icons.brightness_7 : Icons.brightness_4,
+                  size: isSmallScreen ? 20 : 24,
+                ),
+                tooltip: themeProvider.isDarkMode ? l10n.settingsThemeModeLight : l10n.settingsThemeModeDark,
+                color: scheme.onSurface.withValues(alpha: 0.7),
+                onPressed: () {
+                  final currentMode = themeProvider.themeMode;
+                  final newMode = currentMode == ThemeMode.dark
+                      ? ThemeMode.light
+                      : ThemeMode.dark;
+                  unawaited(themeProvider.setThemeMode(newMode));
+                },
+              ),
+              // Skip button
+              if (_currentPage < _pages.length - 1)
+                TextButton(
+                  onPressed: _skipToEnd,
+                  child: Text(
+                    l10n.commonSkip,
+                    style: GoogleFonts.inter(
+                      fontSize: isSmallScreen ? 12 : 14,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ],
       ),
     );

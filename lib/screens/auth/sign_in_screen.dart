@@ -13,6 +13,8 @@ import '../../providers/profile_provider.dart';
 import '../../providers/security_gate_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../providers/web3provider.dart';
+import '../../providers/themeprovider.dart';
+import '../../providers/locale_provider.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/google_auth_service.dart';
 import '../../services/onboarding_state_service.dart';
@@ -643,6 +645,7 @@ class _SignInScreenState extends State<SignInScreen> {
             ),
           ),
         ),
+        showHeaderControls: true,
       );
     }
 
@@ -663,6 +666,70 @@ class _SignInScreenState extends State<SignInScreen> {
         titleSpacing: 16,
         title: const AppLogo(width: 36, height: 36),
         actions: [
+          // Language selector
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              final localeProvider = Provider.of<LocaleProvider>(context, listen: false);
+              unawaited(localeProvider.setLanguageCode(value));
+            },
+            itemBuilder: (BuildContext context) {
+              final localeProvider = Provider.of<LocaleProvider>(context, listen: false);
+              return [
+                PopupMenuItem(
+                  value: 'sl',
+                  child: Row(
+                    children: [
+                      if (localeProvider.languageCode == 'sl')
+                        Icon(Icons.check, size: 18, color: colorScheme.primary)
+                      else
+                        const SizedBox(width: 18),
+                      const SizedBox(width: 8),
+                      Text(l10n.languageSlovenian),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'en',
+                  child: Row(
+                    children: [
+                      if (localeProvider.languageCode == 'en')
+                        Icon(Icons.check, size: 18, color: colorScheme.primary)
+                      else
+                        const SizedBox(width: 18),
+                      const SizedBox(width: 8),
+                      Text(l10n.languageEnglish),
+                    ],
+                  ),
+                ),
+              ];
+            },
+            tooltip: l10n.settingsLanguageTitle,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Icon(
+                Icons.language,
+                size: 24,
+                color: colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
+          ),
+          // Theme toggle
+          IconButton(
+            icon: Icon(
+              Provider.of<ThemeProvider>(context).isDarkMode ? Icons.brightness_7 : Icons.brightness_4,
+              size: 24,
+            ),
+            tooltip: Provider.of<ThemeProvider>(context).isDarkMode ? l10n.settingsThemeModeLight : l10n.settingsThemeModeDark,
+            color: colorScheme.onSurface.withValues(alpha: 0.7),
+            onPressed: () {
+              final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+              final currentMode = themeProvider.themeMode;
+              final newMode = currentMode == ThemeMode.dark
+                  ? ThemeMode.light
+                  : ThemeMode.dark;
+              unawaited(themeProvider.setThemeMode(newMode));
+            },
+          ),
           TextButton(
             onPressed: () {
               unawaited(

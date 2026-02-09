@@ -1,8 +1,11 @@
+import 'dart:async';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/themeprovider.dart';
+import '../../../providers/locale_provider.dart';
 import '../../../widgets/glass_components.dart';
 
 class DesktopAuthShell extends StatelessWidget {
@@ -14,6 +17,7 @@ class DesktopAuthShell extends StatelessWidget {
   final Widget? icon;
   final Color? gradientStart;
   final Color? gradientEnd;
+  final bool showHeaderControls;
 
   const DesktopAuthShell({
     super.key,
@@ -25,6 +29,7 @@ class DesktopAuthShell extends StatelessWidget {
     this.icon,
     this.gradientStart,
     this.gradientEnd,
+    this.showHeaderControls = false,
   });
 
   @override
@@ -65,6 +70,7 @@ class DesktopAuthShell extends StatelessWidget {
       colors: bgColors,
       child: Scaffold(
         backgroundColor: Colors.transparent,
+        appBar: showHeaderControls ? _buildHeaderAppBar(context) : null,
         body: Padding(
           padding: const EdgeInsets.all(32),
           child: Align(
@@ -187,6 +193,84 @@ class DesktopAuthShell extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  AppBar _buildHeaderAppBar(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final localeProvider = Provider.of<LocaleProvider>(context);
+    final scheme = Theme.of(context).colorScheme;
+
+    return AppBar(
+      backgroundColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      titleSpacing: 32,
+      title: const SizedBox.shrink(),
+      actions: [
+        // Language selector
+        PopupMenuButton<String>(
+          onSelected: (value) {
+            unawaited(localeProvider.setLanguageCode(value));
+          },
+          itemBuilder: (BuildContext context) => [
+            PopupMenuItem(
+              value: 'sl',
+              child: Row(
+                children: [
+                  if (localeProvider.languageCode == 'sl')
+                    Icon(Icons.check, size: 18, color: scheme.primary)
+                  else
+                    const SizedBox(width: 18),
+                  const SizedBox(width: 8),
+                  Text(l10n.languageSlovenian),
+                ],
+              ),
+            ),
+            PopupMenuItem(
+              value: 'en',
+              child: Row(
+                children: [
+                  if (localeProvider.languageCode == 'en')
+                    Icon(Icons.check, size: 18, color: scheme.primary)
+                  else
+                    const SizedBox(width: 18),
+                  const SizedBox(width: 8),
+                  Text(l10n.languageEnglish),
+                ],
+              ),
+            ),
+          ],
+          tooltip: l10n.settingsLanguageTitle,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Icon(
+              Icons.language,
+              size: 24,
+              color: scheme.onSurface.withValues(alpha: 0.7),
+            ),
+          ),
+        ),
+        // Theme toggle
+        IconButton(
+          icon: Icon(
+            themeProvider.isDarkMode ? Icons.brightness_7 : Icons.brightness_4,
+            size: 24,
+          ),
+          tooltip: themeProvider.isDarkMode ? l10n.settingsThemeModeLight : l10n.settingsThemeModeDark,
+          color: scheme.onSurface.withValues(alpha: 0.7),
+          onPressed: () {
+            final currentMode = themeProvider.themeMode;
+            final newMode = currentMode == ThemeMode.dark
+                ? ThemeMode.light
+                : ThemeMode.dark;
+            unawaited(themeProvider.setThemeMode(newMode));
+          },
+        ),
+        const SizedBox(width: 32),
+      ],
     );
   }
 }
