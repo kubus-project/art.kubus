@@ -298,16 +298,16 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     final l10n = AppLocalizations.of(context)!;
     final errorColor = Theme.of(context).colorScheme.error;
     final settingsItems = [
-      _SettingsItem(l10n.settingsWalletSectionTitle, Icons.account_balance_wallet_outlined, 1),
-      _SettingsItem(l10n.settingsAppearanceSectionTitle, Icons.palette_outlined, 2),
-      _SettingsItem(l10n.permissionsNotificationsTitle, Icons.notifications_outlined, 3),
-      _SettingsItem(l10n.settingsPrivacySettingsTileTitle, Icons.lock_outline, 4),
-      _SettingsItem(l10n.settingsSecuritySettingsTileTitle, Icons.security, 5),
-      _SettingsItem(l10n.userProfileAchievementsTitle, Icons.emoji_events_outlined, 6),
-      _SettingsItem(l10n.settingsPlatformFeaturesSectionTitle, Icons.phone_android_outlined, 7),
-      _SettingsItem(l10n.settingsSupportDialogTitle, Icons.help_outline, 8),
-      _SettingsItem(l10n.settingsAboutSectionTitle, Icons.info_outline, 9),
-      _SettingsItem(l10n.settingsDangerZoneSectionTitle, Icons.warning_outlined, 10),
+      _SettingsItem(l10n.settingsWalletSectionTitle, Icons.account_balance_wallet_outlined, 0),
+      _SettingsItem(l10n.settingsAppearanceSectionTitle, Icons.palette_outlined, 1),
+      _SettingsItem(l10n.permissionsNotificationsTitle, Icons.notifications_outlined, 2),
+      _SettingsItem(l10n.settingsPrivacySettingsTileTitle, Icons.lock_outline, 3),
+      _SettingsItem(l10n.settingsSecuritySettingsTileTitle, Icons.security, 4),
+      _SettingsItem(l10n.userProfileAchievementsTitle, Icons.emoji_events_outlined, 5),
+      _SettingsItem(l10n.settingsPlatformFeaturesSectionTitle, Icons.phone_android_outlined, 6),
+      _SettingsItem(l10n.settingsSupportDialogTitle, Icons.help_outline, 7),
+      _SettingsItem(l10n.settingsAboutSectionTitle, Icons.info_outline, 8),
+      _SettingsItem(l10n.settingsDangerZoneSectionTitle, Icons.warning_outlined, 9),
     ];
 
     return ListView(
@@ -381,25 +381,23 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
   /// Returns semantic color based on settings section index
   Color _getSectionColor(int index, ColorScheme scheme) {
     switch (index) {
-      case 0: // Profile
-        return scheme.secondary;
-      case 1: // Wallet
+      case 0: // Wallet
         return AppColorUtils.amberAccent;
-      case 2: // Appearance
+      case 1: // Appearance
         return scheme.tertiary;
-      case 3: // Notifications
+      case 2: // Notifications
         return AppColorUtils.amberAccent;
-      case 4: // Privacy
-      case 5: // Security
+      case 3: // Privacy
+      case 4: // Security
         return AppColorUtils.indigoAccent;
-      case 6: // Achievements
+      case 5: // Achievements
         return Colors.amber;
-      case 7: // Platform
+      case 6: // Platform
         return scheme.secondary;
-      case 8: // Help
-      case 9: // About
+      case 7: // Help
+      case 8: // About
         return scheme.secondary;
-      case 10: // Danger Zone
+      case 9: // Danger Zone
         return scheme.error;
       default:
         return scheme.secondary;

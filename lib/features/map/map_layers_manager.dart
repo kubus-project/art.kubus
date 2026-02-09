@@ -253,6 +253,12 @@ class KubusMarkerLayerStyler {
     KubusMarkerLayerStyleState state, {
     double constantScale = 1.0,
   }) {
+    final entryScale = <Object>[
+      'coalesce',
+      <Object>['get', 'entryScale'],
+      1.0,
+    ];
+
     final pressedId = state.pressedMarkerId;
     final hoveredId = state.hoveredMarkerId;
     final selectedId = state.selectedMarkerId;
@@ -260,6 +266,7 @@ class KubusMarkerLayerStyler {
     if (!any) {
       return MapMarkerStyleConfig.iconSizeExpression(
         constantScale: constantScale,
+        multiplier: entryScale,
       );
     }
 
@@ -295,7 +302,7 @@ class KubusMarkerLayerStyler {
 
     return MapMarkerStyleConfig.iconSizeExpression(
       constantScale: constantScale,
-      multiplier: multiplier,
+      multiplier: <Object>['*', multiplier, entryScale],
     );
   }
 
@@ -339,7 +346,7 @@ class KubusMarkerLayerStyler {
       'case',
       <Object>['==', <Object>['get', 'kind'], 'cluster'],
       1.0,
-      1.0,
+      <Object>['coalesce', <Object>['get', 'entryOpacity'], 1.0],
     ];
 
     final markerVisible = !state.cubeLayerVisible;
@@ -795,47 +802,60 @@ class MapLayersManager {
     _layerIds.add(_ids.cubeLayerId);
 
     await _controller.addSymbolLayer(
-      _ids.markerSourceId,
-      _ids.markerLayerId,
-      ml.SymbolLayerProperties(
-        iconImage: const <Object>['get', 'icon'],
-        iconSize: MapMarkerStyleConfig.iconSizeExpression(),
-        iconOpacity: <Object>[
-          'case',
-          <Object>['==', <Object>['get', 'kind'], 'cluster'],
-          1.0,
-          1.0,
-        ],
-        iconAllowOverlap: true,
-        iconIgnorePlacement: true,
-        iconAnchor: 'center',
-        iconPitchAlignment: 'map',
-        iconRotationAlignment: 'map',
-      ),
+        _ids.markerSourceId,
+        _ids.markerLayerId,
+        ml.SymbolLayerProperties(
+          iconImage: const <Object>['get', 'icon'],
+          iconSize: MapMarkerStyleConfig.iconSizeExpression(
+            multiplier: <Object>[
+              'coalesce',
+              <Object>['get', 'entryScale'],
+              1.0,
+            ],
+          ),
+          iconOpacity: <Object>[
+            'case',
+            <Object>['==', <Object>['get', 'kind'], 'cluster'],
+            1.0,
+            <Object>['coalesce', <Object>['get', 'entryOpacity'], 1.0],
+          ],
+          iconAllowOverlap: true,
+          iconIgnorePlacement: true,
+          iconAnchor: 'center',
+          iconPitchAlignment: 'map',
+          iconRotationAlignment: 'map',
+        ),
     );
     _addLayerCalls += 1;
     _layerIds.add(_ids.markerLayerId);
 
     await _controller.addSymbolLayer(
-      _ids.markerSourceId,
-      _ids.cubeIconLayerId,
-      ml.SymbolLayerProperties(
-        iconImage: const <Object>['get', 'icon'],
-        iconSize: MapMarkerStyleConfig.iconSizeExpression(constantScale: 0.92),
-        iconOpacity: <Object>[
-          'case',
-          <Object>['==', <Object>['get', 'kind'], 'cluster'],
-          1.0,
-          1.0,
-        ],
-        iconAllowOverlap: true,
-        iconIgnorePlacement: true,
-        iconAnchor: 'center',
-        iconPitchAlignment: 'viewport',
-        iconRotationAlignment: 'viewport',
-        iconOffset: MapMarkerStyleConfig.cubeFloatingIconOffsetEm,
-        visibility: 'none',
-      ),
+        _ids.markerSourceId,
+        _ids.cubeIconLayerId,
+        ml.SymbolLayerProperties(
+          iconImage: const <Object>['get', 'icon'],
+          iconSize: MapMarkerStyleConfig.iconSizeExpression(
+            constantScale: 0.92,
+            multiplier: <Object>[
+              'coalesce',
+              <Object>['get', 'entryScale'],
+              1.0,
+            ],
+          ),
+          iconOpacity: <Object>[
+            'case',
+            <Object>['==', <Object>['get', 'kind'], 'cluster'],
+            1.0,
+            <Object>['coalesce', <Object>['get', 'entryOpacity'], 1.0],
+          ],
+          iconAllowOverlap: true,
+          iconIgnorePlacement: true,
+          iconAnchor: 'center',
+          iconPitchAlignment: 'viewport',
+          iconRotationAlignment: 'viewport',
+          iconOffset: MapMarkerStyleConfig.cubeFloatingIconOffsetEm,
+          visibility: 'none',
+        ),
     );
     _addLayerCalls += 1;
     _layerIds.add(_ids.cubeIconLayerId);

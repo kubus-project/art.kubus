@@ -536,6 +536,9 @@ class _MapScreenState extends State<MapScreen>
       onRequestMarkerLayerStyleUpdate: () {
         _renderCoordinator.requestStyleUpdate(force: true);
       },
+      onRequestMarkerDataSync: () {
+        _requestMarkerVisualSync();
+      },
     );
 
     _mapCameraController = MapCameraController(
@@ -1523,6 +1526,7 @@ class _MapScreenState extends State<MapScreen>
               limit: travelLimit,
               forceRefresh: force,
               zoomBucket: bucket,
+              filtersKey: _markerQueryFiltersKey(),
             )
           : await MapMarkerHelper.loadAndHydrateMarkers(
               artworkProvider: artworkProvider,
@@ -1532,6 +1536,7 @@ class _MapScreenState extends State<MapScreen>
               limit: _travelModeEnabled ? travelLimit : null,
               forceRefresh: force,
               zoomBucket: bucket,
+              filtersKey: _markerQueryFiltersKey(),
             );
 
       if (!mounted) return;
@@ -2914,7 +2919,10 @@ class _MapScreenState extends State<MapScreen>
     final taskProvider = Provider.of<TaskProvider>(context);
 
     final artworks = artworkProvider.artworks;
-    final filteredArtworks = _filterArtworks(artworks);
+    final filteredArtworks = _filterArtworks(
+      artworks,
+      basePosition: _currentPosition ?? _cameraCenter,
+    );
     final discoveryProgress = taskProvider.getOverallProgress();
     final isLoadingArtworks = artworkProvider.isLoading('load_artworks');
 
@@ -3243,6 +3251,10 @@ class _MapScreenState extends State<MapScreen>
       _queueMarkerVisualRefreshForZoom(_lastZoom);
       unawaited(_renderCoordinator.updateRenderMode());
     }
+
+    // Nearby list filtering may depend on camera center when precise user
+    // location is unavailable.
+    _safeSetState(() {});
   }
 
   int _clusterGridLevelForZoom(double zoom) {
@@ -3444,9 +3456,17 @@ class _MapScreenState extends State<MapScreen>
       final isDark = themeProvider.isDarkMode;
 
       final zoom = _lastZoom;
-      final shouldCluster = zoom < _clusterMaxZoom;
-      final visibleMarkers = _artMarkers
-          .where((m) => (_markerLayerVisibility[m.type] ?? true))
+      final shouldCluster =
+          zoom < _clusterMaxZoom && !_kubusMapController.hasExpandedSameLocation;
+      final renderedMarkers = _kubusMapController.buildRenderedMarkers();
+      final visibleMarkers = renderedMarkers
+          .map((m) => m.marker)
+          .toList(growable: false);
+      final renderById = <String, KubusRenderedMarker>{
+        for (final marker in renderedMarkers) marker.marker.id: marker,
+      };
+      final geoMarkers = renderedMarkers
+          .map((m) => m.marker.copyWith(position: m.position))
           .toList(growable: false);
 
       // Pre-register all needed icons in parallel to avoid waterfall.
@@ -3463,7 +3483,7 @@ class _MapScreenState extends State<MapScreen>
       if (!mounted) return;
 
       final features = await kubusBuildMarkerFeatureList(
-        markers: visibleMarkers,
+        markers: geoMarkers,
         useClustering: shouldCluster,
         zoom: zoom,
         clusterGridLevelForZoom: _clusterGridLevelForZoom,
@@ -3471,6 +3491,7 @@ class _MapScreenState extends State<MapScreen>
         shouldAbort: () => !mounted,
         buildMarkerFeature: (marker) => _markerFeatureFor(
           marker: marker,
+          renderMarker: renderById[marker.id],
           themeProvider: themeProvider,
           scheme: scheme,
           roles: roles,
@@ -3548,9 +3569,9 @@ class _MapScreenState extends State<MapScreen>
     final scheme = Theme.of(context).colorScheme;
     final roles = KubusColorRoles.of(context);
     final zoom = _lastZoom;
-    final visibleMarkers = _artMarkers
-        .where((m) => (_markerLayerVisibility[m.type] ?? true))
-        .where((m) => m.hasValidPosition)
+    final renderedMarkers = _kubusMapController.buildRenderedMarkers();
+    final visibleMarkers = renderedMarkers
+        .map((m) => m.marker.copyWith(position: m.position))
         .toList(growable: false);
 
     final cubeFeatures = <Map<String, dynamic>>[];
@@ -3592,6 +3613,7 @@ class _MapScreenState extends State<MapScreen>
 
   Future<Map<String, dynamic>> _markerFeatureFor({
     required ArtMarker marker,
+    required KubusRenderedMarker? renderMarker,
     required ThemeProvider themeProvider,
     required ColorScheme scheme,
     required KubusColorRoles roles,
@@ -3611,6 +3633,11 @@ class _MapScreenState extends State<MapScreen>
       shouldAbort: () => !mounted,
       resolveMarkerIcon: KubusMapMarkerHelpers.resolveArtMarkerIcon,
       resolveMarkerBaseColor: (m) => _resolveArtMarkerColor(m, themeProvider),
+      entryScale: renderMarker?.entryScale ?? 1.0,
+      entryOpacity: renderMarker?.entryOpacity ?? 1.0,
+      spiderfied: renderMarker?.isSpiderfied ?? false,
+      coordinateKey: renderMarker?.sameCoordinateKey,
+      entrySerial: renderMarker?.entrySerial ?? 0,
     );
   }
 
@@ -4806,7 +4833,15 @@ class _MapScreenState extends State<MapScreen>
     return sheet;
   }
 
-  List<Artwork> _filterArtworks(List<Artwork> artworks) {
+  String _markerQueryFiltersKey() {
+    final query = _mapSearchController.state.query.trim().toLowerCase();
+    return 'filter=$_artworkFilter|query=$query|travel=${_travelModeEnabled ? 1 : 0}';
+  }
+
+  List<Artwork> _filterArtworks(
+    List<Artwork> artworks, {
+    LatLng? basePosition,
+  }) {
     var filtered = artworks.where((a) => a.hasValidLocation).toList();
     final query = _mapSearchController.state.query.trim().toLowerCase();
 
@@ -4821,10 +4856,10 @@ class _MapScreenState extends State<MapScreen>
 
     switch (_artworkFilter) {
       case 'nearby':
-        if (_currentPosition != null) {
+        if (basePosition != null) {
           filtered = filtered
               .where((artwork) =>
-                  artwork.getDistanceFrom(_currentPosition!) <=
+                  artwork.getDistanceFrom(basePosition) <=
                   _markerRadiusKm * 1000)
               .toList();
         }
