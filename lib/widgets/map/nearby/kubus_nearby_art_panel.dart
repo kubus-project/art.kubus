@@ -702,12 +702,11 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
 
     final isMobile =
         widget.layout == KubusNearbyArtPanelLayout.mobileBottomSheet;
+    // Desktop panel spans the full height of the viewport, so no top/bottom
+    // rounding is needed.  Only the left edge gets a subtle radius.
     final radius = isMobile
         ? const BorderRadius.vertical(top: Radius.circular(KubusRadius.xl))
-        : const BorderRadius.only(
-            topLeft: Radius.circular(KubusRadius.lg),
-            bottomLeft: Radius.circular(KubusRadius.lg),
-          );
+        : BorderRadius.zero;
 
     final glassTint = scheme.surface.withValues(alpha: isDark ? 0.46 : 0.56);
 

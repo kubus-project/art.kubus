@@ -298,7 +298,6 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     final l10n = AppLocalizations.of(context)!;
     final errorColor = Theme.of(context).colorScheme.error;
     final settingsItems = [
-      _SettingsItem(l10n.userProfileTitle, Icons.person_outline, 0),
       _SettingsItem(l10n.settingsWalletSectionTitle, Icons.account_balance_wallet_outlined, 1),
       _SettingsItem(l10n.settingsAppearanceSectionTitle, Icons.palette_outlined, 2),
       _SettingsItem(l10n.permissionsNotificationsTitle, Icons.notifications_outlined, 3),
@@ -623,146 +622,28 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
   Widget _buildSelectedContent(ThemeProvider themeProvider) {
     switch (_selectedSettingsIndex) {
       case 0:
-        return _buildProfileSettings(themeProvider);
-      case 1:
         return _buildWalletSettings(themeProvider);
-      case 2:
+      case 1:
         return _buildAppearanceSettings(themeProvider);
-      case 3:
+      case 2:
         return _buildNotificationSettings(themeProvider);
-      case 4:
+      case 3:
         return _buildPrivacySettings(themeProvider);
-      case 5:
+      case 4:
         return _buildSecuritySettings(themeProvider);
-      case 6:
+      case 5:
         return _buildAchievementsSettings();
-      case 7:
+      case 6:
         return _buildPlatformCapabilitiesSection();
-      case 8:
+      case 7:
         return _buildHelpSettings();
-      case 9:
+      case 8:
         return _buildAboutSettings();
-      case 10:
+      case 9:
         return _buildDangerZoneSettings();
       default:
-        return _buildProfileSettings(themeProvider);
+        return _buildWalletSettings(themeProvider);
     }
-  }
-
-  Widget _buildProfileSettings(ThemeProvider themeProvider) {
-    final l10n = AppLocalizations.of(context)!;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l10n.settingsProfileSectionTitle,
-            style: GoogleFonts.inter(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            l10n.desktopSettingsProfileSectionSubtitle,
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
-          ),
-          const SizedBox(height: 24),
-          
-          DesktopCard(
-            child: Column(
-              children: [
-                _buildTextField(l10n.desktopSettingsDisplayNameLabel, l10n.desktopSettingsDisplayNameHint),
-                const SizedBox(height: 20),
-                _buildTextField(l10n.desktopSettingsUsernameLabel, l10n.desktopSettingsUsernameHint),
-                const SizedBox(height: 20),
-                _buildTextField(l10n.desktopSettingsBioLabel, l10n.desktopSettingsBioHint, maxLines: 3),
-                const SizedBox(height: 20),
-                _buildTextField(l10n.desktopSettingsWebsiteLabel, l10n.desktopSettingsWebsiteHint),
-                const SizedBox(height: 20),
-                _buildTextField(l10n.desktopSettingsLocationLabel, l10n.desktopSettingsLocationHint),
-              ],
-            ),
-          ),
-          
-          const SizedBox(height: 24),
-          
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              OutlinedButton(
-                onPressed: () {
-                  _loadSettings();
-                },
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: Text(l10n.commonCancel),
-              ),
-              const SizedBox(width: 12),
-              ElevatedButton(
-                onPressed: () async {
-                  await _saveSettings();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.secondary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: Text(l10n.commonSave),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTextField(String label, String hint, {int maxLines = 1}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          maxLines: maxLines,
-          decoration: InputDecoration(
-            hintText: hint,
-            filled: true,
-            fillColor: Theme.of(context).colorScheme.primaryContainer,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                color: Theme.of(context).colorScheme.secondary,
-                width: 2,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
   }
 
   Widget _buildWalletSettings(ThemeProvider themeProvider) {
