@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:ui' show Offset;
 
 import 'package:art_kubus/features/map/shared/map_marker_collision_config.dart';
 import 'package:art_kubus/features/map/shared/map_marker_collision_utils.dart';

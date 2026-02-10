@@ -47,6 +47,15 @@ abstract final class MapMarkerCollisionConfig {
   /// Debounce for viewport visibility checks while moving/zooming.
   static const int viewportVisibilityDebounceMs = 120;
 
+  /// Retry delay for first viewport visibility bootstrap on web.
+  ///
+  /// On first route entry, MapLibre can briefly report an empty visible region
+  /// before layout settles. We retry a few times before falling back.
+  static const int viewportInitRetryDelayMs = 140;
+
+  /// Maximum retries for initial viewport visibility bootstrap.
+  static const int viewportInitMaxRetries = 6;
+
   /// Debounce for nearby radius slider fetches.
   static const int nearbyRadiusDebounceMs = 400;
 }
