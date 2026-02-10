@@ -20,6 +20,21 @@ abstract final class MapMarkerCollisionConfig {
   /// Minimum capacity for the first spiderfy ring.
   static const int spiderfyMinFirstRingCount = 6;
 
+  /// Enable adaptive spiderfy spacing once stacked markers exceed this count.
+  static const int spiderfyAdaptiveSpacingStartCount = 10;
+
+  /// Additional spiderfy radius scale applied per marker above the threshold.
+  static const double spiderfyRadiusScalePerExtraMarker = 0.015;
+
+  /// Upper bound for additive radius scale boost (e.g. 0.65 => up to 1.65x).
+  static const double spiderfyRadiusScaleMaxBoost = 0.65;
+
+  /// Additional min-separation scale per marker above the threshold.
+  static const double spiderfySeparationScalePerExtraMarker = 0.01;
+
+  /// Upper bound for additive min-separation scale boost.
+  static const double spiderfySeparationScaleMaxBoost = 0.35;
+
   /// Marker entrance animation starting scale.
   static const double entryStartScale = 0.78;
 

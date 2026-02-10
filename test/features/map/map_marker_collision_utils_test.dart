@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' show Offset;
 
 import 'package:art_kubus/features/map/shared/map_marker_collision_config.dart';
 import 'package:art_kubus/features/map/shared/map_marker_collision_utils.dart';
@@ -87,6 +88,27 @@ void main() {
           .map((o) => math.sqrt(o.dx * o.dx + o.dy * o.dy).round())
           .toSet();
       expect(radii.length, greaterThan(1));
+    });
+
+    test('increases ring radius for dense same-location groups', () {
+      final threshold = MapMarkerCollisionConfig.spiderfyAdaptiveSpacingStartCount;
+      final thresholdOffsets = buildSpiderfyOffsets(threshold);
+      final denseOffsets = buildSpiderfyOffsets(52);
+
+      final thresholdRadius = math.sqrt(
+        thresholdOffsets.first.dx * thresholdOffsets.first.dx +
+            thresholdOffsets.first.dy * thresholdOffsets.first.dy,
+      );
+      final denseRadius = math.sqrt(
+        denseOffsets.first.dx * denseOffsets.first.dx +
+            denseOffsets.first.dy * denseOffsets.first.dy,
+      );
+
+      expect(
+        thresholdRadius,
+        closeTo(MapMarkerCollisionConfig.spiderfyBaseRadiusPx, 0.001),
+      );
+      expect(denseRadius, greaterThan(thresholdRadius + 10.0));
     });
   });
 }

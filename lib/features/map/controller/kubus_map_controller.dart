@@ -1227,13 +1227,13 @@ class KubusMapController {
 
       if (!_viewportStateInitialized) {
         _viewportStateInitialized = true;
-        _visibleMarkerIds = nextVisible;
         if (nextVisible.isNotEmpty) {
           _scheduleEntryAnimations(
             nextVisible.toList(growable: false),
             staggered: true,
           );
         }
+        _visibleMarkerIds = nextVisible;
         return;
       }
 
@@ -1242,11 +1242,10 @@ class KubusMapController {
       for (final id in exited) {
         _entryAnimationByMarkerId.remove(id);
       }
-      _visibleMarkerIds = nextVisible;
-
       if (entered.isNotEmpty) {
         _scheduleEntryAnimations(entered.toList(growable: false), staggered: true);
       }
+      _visibleMarkerIds = nextVisible;
     } catch (_) {
       // Best effort: viewport checks can fail during style transitions.
     }
@@ -1292,9 +1291,21 @@ class KubusMapController {
     String markerId, {
     required int nowMs,
   }) {
+    const hidden = _MarkerEntryValues(
+      scale: MapMarkerCollisionConfig.entryStartScale,
+      opacity: 0.0,
+      serial: 0,
+    );
     final state = _entryAnimationByMarkerId[markerId];
     if (state == null) {
-      return const _MarkerEntryValues(scale: 1.0, opacity: 1.0, serial: 0);
+      if (!_viewportStateInitialized) return hidden;
+      if (_spiderfiedPositionByMarkerId.containsKey(markerId)) {
+        return const _MarkerEntryValues(scale: 1.0, opacity: 1.0, serial: 0);
+      }
+      if (_visibleMarkerIds.contains(markerId)) {
+        return const _MarkerEntryValues(scale: 1.0, opacity: 1.0, serial: 0);
+      }
+      return hidden;
     }
 
     final durationMs = MapMarkerCollisionConfig.entryDurationMs;
