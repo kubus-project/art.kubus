@@ -328,6 +328,7 @@ class KubusMapController {
     // Keep selection data fresh when marker instances are replaced during
     // polling/refresh.
     _refreshSelectionFromLatestMarkers();
+    _primeInitialViewportVisibilityIfNeeded();
     _queueViewportVisibilityRefresh(force: true);
   }
 
@@ -375,6 +376,7 @@ class KubusMapController {
   void setMarkerTypeVisibility(Map<ArtMarkerType, bool> visibility) {
     _markerTypeVisibility = visibility;
     _pruneSpiderfyStateIfNeeded();
+    _primeInitialViewportVisibilityIfNeeded();
     _queueViewportVisibilityRefresh(force: true);
   }
 
@@ -536,6 +538,7 @@ class KubusMapController {
 
       // Refresh overlay anchor (if any selection exists).
       queueOverlayAnchorRefresh(force: true);
+      _primeInitialViewportVisibilityIfNeeded();
       _queueViewportVisibilityRefresh(force: true);
     } catch (e, st) {
       _styleInitialized = false;
@@ -1229,6 +1232,30 @@ class KubusMapController {
     _viewportVisibilityDebouncer(delay, () {
       unawaited(_refreshViewportVisibility());
     });
+  }
+
+  void _primeInitialViewportVisibilityIfNeeded() {
+    if (_viewportStateInitialized) return;
+    if (!_styleInitialized) return;
+
+    final initialVisible = _markers
+        .where((m) =>
+            m.hasValidPosition && (_markerTypeVisibility[m.type] ?? true))
+        .map((m) => m.id)
+        .toSet();
+
+    _viewportStateInitialized = true;
+    _visibleMarkerIds = initialVisible;
+    _viewportInitAttemptCount = 0;
+    _viewportInitRetryTimer?.cancel();
+    _viewportInitRetryTimer = null;
+
+    if (initialVisible.isNotEmpty) {
+      _scheduleEntryAnimations(
+        initialVisible.toList(growable: false),
+        staggered: true,
+      );
+    }
   }
 
   Future<void> _refreshViewportVisibility() async {
