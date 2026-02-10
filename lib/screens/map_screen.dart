@@ -78,15 +78,20 @@ import '../widgets/kubus_snackbar.dart';
 import '../widgets/map_overlay_blocker.dart';
 import '../widgets/search/kubus_search_bar.dart';
 import '../widgets/map/nearby/kubus_nearby_art_panel.dart';
-import '../widgets/map/controls/kubus_map_primary_controls.dart';
 import '../widgets/tutorial/interactive_tutorial_overlay.dart';
-import '../widgets/marker_overlay_card.dart';
 import '../widgets/map/kubus_map_marker_rendering.dart';
 import '../widgets/map/kubus_map_marker_geojson_builder.dart';
 import '../widgets/map/kubus_map_marker_features.dart';
 import '../widgets/map/discovery/kubus_discovery_path_card.dart';
-import '../widgets/map/filters/kubus_map_glass_chip.dart';
 import '../widgets/map/filters/kubus_map_marker_layer_chips.dart';
+import '../widgets/map/controls/kubus_map_primary_controls.dart'
+    show KubusMapPrimaryControlsLayout;
+import '../widgets/common/kubus_filter_panel.dart';
+import '../widgets/common/kubus_glass_chip.dart';
+import '../widgets/common/kubus_glass_icon_button.dart';
+import '../widgets/common/kubus_map_controls.dart';
+import '../widgets/common/kubus_marker_overlay_card.dart';
+import '../widgets/common/kubus_search_overlay_scaffold.dart';
 import 'map_core/map_marker_interaction_controller.dart';
 import 'map_core/map_camera_controller.dart';
 import 'map_core/marker_visual_sync_coordinator.dart';
@@ -2976,7 +2981,6 @@ class _MapScreenState extends State<MapScreen>
                       child: SizedBox.expand(),
                     ),
                   ),
-                _buildTopOverlays(theme, taskProvider),
                 _buildPrimaryControls(),
                 _buildBottomSheet(
                   // This will likely be refactored into _buildDraggablePanel()
@@ -2986,31 +2990,7 @@ class _MapScreenState extends State<MapScreen>
                   isLoadingArtworks,
                 ),
                 _buildMarkerOverlay(themeProvider, ui.markerSelection),
-                ListenableBuilder(
-                  listenable: _mapSearchController,
-                  builder: (context, _) {
-                    final s = _mapSearchController.state;
-                    if (!s.isOverlayVisible) return const SizedBox.shrink();
-
-                    final l10n = AppLocalizations.of(context)!;
-                    final accent = context.read<ThemeProvider>().accentColor;
-
-                    return KubusSearchSuggestionsOverlay(
-                      link: _mapSearchController.fieldLink,
-                      query: s.query,
-                      isFetching: s.isFetching,
-                      suggestions: s.suggestions,
-                      accentColor: accent,
-                      minCharsHint: l10n.mapSearchMinCharsHint,
-                      // Preserve mobile copy for parity.
-                      noResultsText: l10n.mapNoSuggestions,
-                      onDismiss: () => _mapSearchController.dismissOverlay(),
-                      onSuggestionTap: (suggestion) {
-                        unawaited(_handleSuggestionTap(suggestion));
-                      },
-                    );
-                  },
-                ),
+                _buildTopOverlays(theme, themeProvider, taskProvider),
                 if (showMapTutorial)
                   Positioned.fill(
                     child: KubusMapWebPointerInterceptor.wrap(
@@ -3894,7 +3874,7 @@ class _MapScreenState extends State<MapScreen>
                   _handleMarkerStackPageChanged(index);
                 }
 
-                MarkerOverlayCard buildCardForMarker(ArtMarker pageMarker) {
+                KubusMarkerOverlayCard buildCardForMarker(ArtMarker pageMarker) {
                   final pageArtwork = pageMarker.isExhibitionMarker
                       ? null
                       : context
@@ -3938,7 +3918,7 @@ class _MapScreenState extends State<MapScreen>
                   final pageBaseColor =
                       _resolveArtMarkerColor(pageMarker, themeProvider);
 
-                  return MarkerOverlayCard(
+                  return KubusMarkerOverlayCard(
                     marker: pageMarker,
                     artwork: pageArtwork,
                     baseColor: pageBaseColor,
@@ -4014,82 +3994,49 @@ class _MapScreenState extends State<MapScreen>
     );
   }
 
-  Widget _glassIconButton({
-    required IconData icon,
-    required String tooltip,
-    required VoidCallback? onTap,
-  }) {
-    final scheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = scheme.surface.withValues(alpha: isDark ? 0.46 : 0.52);
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          mouseCursor: onTap == null
-              ? SystemMouseCursors.basic
-              : SystemMouseCursors.click,
-          borderRadius: BorderRadius.circular(999),
-          onTap: onTap,
-          child: Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(
-                color: scheme.outlineVariant.withValues(alpha: 0.35),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: scheme.shadow.withValues(alpha: isDark ? 0.22 : 0.12),
-                  blurRadius: 14,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: LiquidGlassPanel(
-              padding: EdgeInsets.zero,
-              margin: EdgeInsets.zero,
-              borderRadius: BorderRadius.circular(999),
-              showBorder: false,
-              backgroundColor: bg,
-              child: Center(
-                child: Icon(icon, size: 18, color: scheme.onSurface),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget _buildTopOverlays(
+    ThemeData theme,
+    ThemeProvider themeProvider,
+    TaskProvider? taskProvider,
+  ) {
+    final l10n = AppLocalizations.of(context)!;
 
-  Widget _buildTopOverlays(ThemeData theme, TaskProvider? taskProvider) {
-    final topPadding = MediaQuery.of(context).padding.top + 10;
-    return Positioned(
-      top: topPadding,
-      left: 12,
-      right: 12,
-      child: MapOverlayBlocker(
-        child: Align(
-          alignment: Alignment.topLeft,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildSearchCard(theme),
-                const SizedBox(height: 10),
-                if (_filtersExpanded) ...[
-                  _buildFilterPanel(theme),
-                  const SizedBox(height: 10),
-                ],
-                _buildDiscoveryCard(theme, taskProvider),
-              ],
-            ),
-          ),
-        ),
-      ),
+    return ListenableBuilder(
+      listenable: _mapSearchController,
+      builder: (context, _) {
+        final state = _mapSearchController.state;
+        final hasDiscovery =
+            taskProvider != null && taskProvider.getActiveTaskProgress().isNotEmpty;
+        final hasExtraContent = _filtersExpanded || hasDiscovery;
+        return KubusSearchOverlayScaffold(
+          layout: KubusSearchOverlayLayout.topOverlay,
+          searchField: _buildSearchCard(theme),
+          searchFieldLink: _mapSearchController.fieldLink,
+          showSuggestions: state.isOverlayVisible,
+          query: state.query,
+          isFetching: state.isFetching,
+          suggestions: state.suggestions,
+          accentColor: themeProvider.accentColor,
+          minCharsHint: l10n.mapSearchMinCharsHint,
+          noResultsText: l10n.mapNoSuggestions,
+          onDismissSuggestions: () => _mapSearchController.dismissOverlay(),
+          onSuggestionTap: (suggestion) {
+            unawaited(_handleSuggestionTap(suggestion));
+          },
+          extraContent: hasExtraContent
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (_filtersExpanded) ...[
+                      _buildFilterPanel(theme),
+                      const SizedBox(height: 10),
+                    ],
+                    _buildDiscoveryCard(theme, taskProvider),
+                  ],
+                )
+              : null,
+        );
+      },
     );
   }
 
@@ -4595,9 +4542,6 @@ class _MapScreenState extends State<MapScreen>
     final l10n = AppLocalizations.of(context)!;
     final scheme = theme.colorScheme;
     final roles = KubusColorRoles.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final radius = BorderRadius.circular(18);
-    final glassTint = scheme.surface.withValues(alpha: isDark ? 0.40 : 0.52);
     final filters = <Map<String, String>>[
       {'key': 'all', 'label': l10n.mapFilterAllNearby},
       {'key': 'nearby', 'label': l10n.mapFilterWithin1Km},
@@ -4625,79 +4569,61 @@ class _MapScreenState extends State<MapScreen>
       }
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: radius,
-        border:
-            Border.all(color: scheme.outlineVariant.withValues(alpha: 0.30)),
-        boxShadow: [
-          BoxShadow(
-            color: scheme.shadow.withValues(alpha: isDark ? 0.18 : 0.12),
-            blurRadius: 18,
-            offset: const Offset(0, 10),
+    return KubusFilterPanel(
+      title: l10n.mapFiltersTitle,
+      margin: EdgeInsets.zero,
+      contentPadding: const EdgeInsets.all(14),
+      headerPadding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
+      borderRadius: 18,
+      showHeaderDivider: false,
+      titleStyle: KubusTypography.textTheme.titleMedium?.copyWith(
+        fontWeight: FontWeight.w700,
+        color: scheme.onSurface,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: filters.map((filter) {
+              final key = filter['key']!;
+              final selected = _artworkFilter == key;
+              return KubusGlassChip(
+                label: filter['label']!,
+                icon: Icons.filter_alt_outlined,
+                active: selected,
+                accentColor: filterAccent(key),
+                onPressed: () {
+                  setState(() => _artworkFilter = key);
+                  // Reload markers so the nearby panel reflects
+                  // the new filter immediately.
+                  unawaited(
+                    _loadMarkersForCurrentView(force: true),
+                  );
+                },
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            l10n.mapLayersTitle,
+            style: KubusTypography.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: scheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 10),
+          KubusMapMarkerLayerChips(
+            l10n: l10n,
+            visibility: _markerLayerVisibility,
+            onToggle: (type, nextSelected) {
+              setState(() => _markerLayerVisibility[type] = nextSelected);
+              _kubusMapController.setMarkerTypeVisibility(_markerLayerVisibility);
+              _renderCoordinator.requestStyleUpdate(force: true);
+            },
           ),
         ],
-      ),
-      child: LiquidGlassPanel(
-        padding: const EdgeInsets.all(14),
-        margin: EdgeInsets.zero,
-        borderRadius: radius,
-        showBorder: false,
-        backgroundColor: glassTint,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.mapFiltersTitle,
-              style: KubusTypography.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: scheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: filters.map((filter) {
-                final key = filter['key']!;
-                final selected = _artworkFilter == key;
-                return KubusMapGlassChip(
-                  label: filter['label']!,
-                  icon: Icons.filter_alt_outlined,
-                  selected: selected,
-                  accent: filterAccent(key),
-                  onTap: () {
-                    setState(() => _artworkFilter = key);
-                    // Reload markers so the nearby panel reflects
-                    // the new filter immediately.
-                    unawaited(
-                      _loadMarkersForCurrentView(force: true),
-                    );
-                  },
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              l10n.mapLayersTitle,
-              style: KubusTypography.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: scheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 10),
-            KubusMapMarkerLayerChips(
-              l10n: l10n,
-              visibility: _markerLayerVisibility,
-              onToggle: (type, nextSelected) {
-                setState(() => _markerLayerVisibility[type] = nextSelected);
-                _kubusMapController
-                    .setMarkerTypeVisibility(_markerLayerVisibility);
-                _renderCoordinator.requestStyleUpdate(force: true);
-              },
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -4718,12 +4644,13 @@ class _MapScreenState extends State<MapScreen>
       taskRows: [
         for (final progress in tasksToRender) _buildTaskProgressRow(progress),
       ],
-      toggleButton: _glassIconButton(
+      toggleButton: KubusGlassIconButton(
         icon: _isDiscoveryExpanded
             ? Icons.keyboard_arrow_up
             : Icons.keyboard_arrow_down,
         tooltip: _isDiscoveryExpanded ? l10n.commonCollapse : l10n.commonExpand,
-        onTap: () =>
+        size: 36,
+        onPressed: () =>
             setState(() => _isDiscoveryExpanded = !_isDiscoveryExpanded),
       ),
       titleStyle: KubusTypography.textTheme.titleSmall?.copyWith(
@@ -4752,7 +4679,7 @@ class _MapScreenState extends State<MapScreen>
       right: 12,
       bottom: bottomOffset,
       child: MapOverlayBlocker(
-        child: KubusMapPrimaryControls(
+        child: KubusMapControls(
           controller: _kubusMapController,
           layout: KubusMapPrimaryControlsLayout.mobileRightRail,
           onCenterOnMe: () => unawaited(_handleCenterOnMeTap()),

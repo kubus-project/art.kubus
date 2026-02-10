@@ -73,17 +73,23 @@ import '../../features/map/search/map_search_controller.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/marker_cube_geometry.dart';
-import '../../widgets/search/kubus_search_bar.dart';
 import '../../widgets/glass_components.dart';
 import '../../widgets/kubus_snackbar.dart';
 import '../../widgets/tutorial/interactive_tutorial_overlay.dart';
-import '../../widgets/marker_overlay_card.dart';
 import '../../widgets/map/kubus_map_marker_geojson_builder.dart';
 import '../../widgets/map/kubus_map_marker_rendering.dart';
 import '../../widgets/map/kubus_map_marker_features.dart';
-import '../../widgets/map/controls/kubus_map_primary_controls.dart';
+import '../../widgets/map/controls/kubus_map_primary_controls.dart'
+    show KubusMapPrimaryControlsLayout;
 import '../../widgets/map/discovery/kubus_discovery_path_card.dart';
 import '../../widgets/map/filters/kubus_map_marker_layer_chips.dart';
+import '../../widgets/common/kubus_filter_panel.dart';
+import '../../widgets/common/kubus_glass_chip.dart';
+import '../../widgets/common/kubus_glass_icon_button.dart';
+import '../../widgets/common/kubus_map_controls.dart';
+import '../../widgets/common/kubus_marker_overlay_card.dart';
+import '../../widgets/common/kubus_search_overlay_scaffold.dart';
+import '../../widgets/common/kubus_sort_option.dart';
 import '../../features/map/nearby/nearby_art_controller.dart';
 import '../../widgets/map/nearby/kubus_nearby_art_panel.dart';
 import '../map_core/map_marker_interaction_controller.dart';
@@ -1609,23 +1615,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 ),
               ),
 
-              // Top bar - absorb pointer events to prevent map interaction
-              _buildTopBar(themeProvider, animationTheme,
-                  nearbyPanelOpen: showLocalNearbyPanel),
-
-              // Search suggestions overlay - absorb pointer events
-              ListenableBuilder(
-                listenable: _mapSearchController,
-                builder: (context, _) {
-                  final state = _mapSearchController.state;
-                  final trimmed = state.query.trim();
-                  final shouldShow = state.isOverlayVisible &&
-                      (state.isFetching ||
-                          state.suggestions.isNotEmpty ||
-                          trimmed.length >= _mapSearchController.minChars);
-                  if (!shouldShow) return const SizedBox.shrink();
-                  return _buildSearchOverlay(themeProvider);
-                },
+              _buildSearchOverlayScaffold(
+                themeProvider,
+                animationTheme,
+                nearbyPanelOpen: showLocalNearbyPanel,
               ),
 
               // Left side panel (artwork/exhibition details or filters)
@@ -1744,7 +1737,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                       child: GestureDetector(
                         behavior: HitTestBehavior.opaque,
                         onTap: () {}, // absorb taps
-                        child: _buildDiscoveryCard(themeProvider, taskProvider),
+                        child: _buildDiscoveryCard(taskProvider),
                       ),
                     ),
                   );
@@ -1995,336 +1988,146 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
   }
 
-  Widget _buildGlassChip({
-    required String label,
-    required bool isSelected,
-    required VoidCallback onTap,
-    required ThemeProvider themeProvider,
+  Widget _buildSearchOverlayScaffold(
+    ThemeProvider themeProvider,
+    AppAnimationTheme animationTheme, {
+    required bool nearbyPanelOpen,
   }) {
-    final animationTheme = context.animationTheme;
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-    final accent = themeProvider.accentColor;
-
-    final radius = BorderRadius.circular(20);
-    final idleTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.12);
-    final selectedTint = accent.withValues(alpha: isDark ? 0.14 : 0.16);
-
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: AnimatedContainer(
-        duration: animationTheme.short,
-        curve: animationTheme.defaultCurve,
-        decoration: BoxDecoration(
-          borderRadius: radius,
-          border: Border.all(
-            color: isSelected
-                ? accent.withValues(alpha: 0.85)
-                : scheme.outline.withValues(alpha: 0.18),
-            width: isSelected ? 1.25 : 1,
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: accent.withValues(alpha: 0.12),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : null,
-        ),
-        child: LiquidGlassPanel(
-          padding: const EdgeInsets.symmetric(
-            horizontal: KubusSpacing.sm + KubusSpacing.xs,
-            vertical: KubusSpacing.sm + KubusSpacing.xxs,
-          ),
-          margin: EdgeInsets.zero,
-          borderRadius: radius,
-          blurSigma: KubusGlassEffects.blurSigmaLight,
-          showBorder: false,
-          backgroundColor: isSelected ? selectedTint : idleTint,
-          onTap: onTap,
-          child: Text(
-            label,
-            style: (isSelected
-                    ? theme.textTheme.labelLarge
-                    : theme.textTheme.labelMedium)
-                ?.copyWith(color: isSelected ? accent : scheme.onSurface),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGlassIconButton({
-    required IconData icon,
-    required VoidCallback onTap,
-    required ThemeProvider themeProvider,
-    bool isActive = false,
-    String? tooltip,
-    EdgeInsets? tooltipMargin,
-    bool? tooltipPreferBelow,
-    double? tooltipVerticalOffset,
-    bool tooltipAlignRightEdge = false,
-    double size = 42,
-    BorderRadius? borderRadius,
-    Color? activeTint,
-    Color? iconColor,
-    Color? activeIconColor,
-  }) {
-    final animationTheme = context.animationTheme;
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-    final accent = themeProvider.accentColor;
-
-    final radius = borderRadius ?? BorderRadius.circular(12);
-    final idleTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.12);
-    final selectedTint =
-        activeTint ?? accent.withValues(alpha: isDark ? 0.14 : 0.16);
-
-    final resolvedIconColor = isActive
-        ? (activeIconColor ?? accent)
-        : (iconColor ?? scheme.onSurface);
-
-    final child = SizedBox(
-      width: size,
-      height: size,
-      child: Center(
-        child: Icon(
-          icon,
-          size: 20,
-          color: resolvedIconColor,
-        ),
-      ),
-    );
-
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: AnimatedContainer(
-        duration: animationTheme.short,
-        curve: animationTheme.defaultCurve,
-        decoration: BoxDecoration(
-          borderRadius: radius,
-          border: Border.all(
-            color: isActive
-                ? accent.withValues(alpha: 0.85)
-                : scheme.outline.withValues(alpha: 0.18),
-            width: isActive ? 1.25 : 1,
-          ),
-          boxShadow: isActive
-              ? [
-                  BoxShadow(
-                    color: accent.withValues(alpha: 0.12),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : null,
-        ),
-        child: LiquidGlassPanel(
-          padding: EdgeInsets.zero,
-          margin: EdgeInsets.zero,
-          borderRadius: radius,
-          blurSigma: KubusGlassEffects.blurSigmaLight,
-          showBorder: false,
-          backgroundColor: isActive ? selectedTint : idleTint,
-          onTap: onTap,
-          child: tooltip == null
-              ? child
-              : Tooltip(
-                  message: tooltip,
-                  margin: tooltipMargin,
-                  preferBelow: tooltipPreferBelow,
-                  verticalOffset: tooltipVerticalOffset ?? 0,
-                  child: child,
-                ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTopBar(
-      ThemeProvider themeProvider, AppAnimationTheme animationTheme,
-      {required bool nearbyPanelOpen}) {
     final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-    return AnimatedPositioned(
-      duration: animationTheme.medium,
-      curve: animationTheme.defaultCurve,
-      top: 0,
-      left: 0,
-      right: nearbyPanelOpen ? 360 : 0,
-      child: MapOverlayBlocker(
-          cursor: SystemMouseCursors.basic,
-          child: SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                KubusSpacing.lg,
-                KubusSpacing.sm + KubusSpacing.xs,
-                KubusSpacing.lg,
-                KubusSpacing.sm + KubusSpacing.xs,
+    return ListenableBuilder(
+      listenable: _mapSearchController,
+      builder: (context, _) {
+        final state = _mapSearchController.state;
+        final trimmed = state.query.trim();
+        final shouldShow = state.isOverlayVisible &&
+            (state.isFetching ||
+                state.suggestions.isNotEmpty ||
+                trimmed.length >= _mapSearchController.minChars);
+
+        return KubusSearchOverlayScaffold(
+          layout: KubusSearchOverlayLayout.sidePanel,
+          sidePanelAnimated: true,
+          positionAnimationDuration: animationTheme.medium,
+          positionAnimationCurve: animationTheme.defaultCurve,
+          panelInsets: const EdgeInsets.fromLTRB(
+            KubusSpacing.lg,
+            KubusSpacing.sm + KubusSpacing.xs,
+            KubusSpacing.lg,
+            0,
+          ),
+          rightInset: nearbyPanelOpen ? 360 : 0,
+          leading: Row(
+            children: [
+              const AppLogo(
+                width: KubusSpacing.xl + KubusSpacing.xs,
+                height: KubusSpacing.xl + KubusSpacing.xs,
               ),
-              child: LiquidGlassPanel(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: KubusSpacing.md + KubusSpacing.xs,
-                  vertical: KubusSpacing.md,
-                ),
-                margin: EdgeInsets.zero,
-                borderRadius: BorderRadius.circular(KubusRadius.lg),
-                blurSigma: KubusGlassEffects.blurSigmaLight,
-                backgroundColor:
-                    scheme.surface.withValues(alpha: isDark ? 0.20 : 0.14),
-                showBorder: true,
-                child: Row(
-                  children: [
-                    // Logo and title
-                    Row(
-                      children: [
-                        const AppLogo(
-                          width: KubusSpacing.xl + KubusSpacing.xs,
-                          height: KubusSpacing.xl + KubusSpacing.xs,
-                        ),
-                        const SizedBox(
-                            width: KubusSpacing.sm + KubusSpacing.xs),
-                        Text(
-                          l10n.desktopMapTitleDiscover,
-                          style: theme.textTheme.headlineSmall?.copyWith(
-                            color: scheme.onSurface,
-                          ),
-                        ),
-                      ],
+              const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
+              Text(
+                l10n.desktopMapTitleDiscover,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
+              ),
+            ],
+          ),
+          searchField: _buildDesktopSearchField(l10n),
+          searchFieldLink: _mapSearchController.fieldLink,
+          filterChips: _buildDesktopFilterChipRow(themeProvider),
+          mapToggle: KeyedSubtree(
+            key: _tutorialFiltersButtonKey,
+            child: KubusGlassIconButton(
+              icon: _showFiltersPanel ? Icons.close : Icons.tune,
+              tooltip:
+                  _showFiltersPanel ? l10n.commonClose : l10n.mapFiltersTitle,
+              active: _showFiltersPanel,
+              accentColor: themeProvider.accentColor,
+              onPressed: () {
+                setState(() {
+                  _showFiltersPanel = !_showFiltersPanel;
+                  _selectedArtwork = null;
+                  _selectedExhibition = null;
+                });
+              },
+              tooltipPreferBelow: true,
+              tooltipVerticalOffset: 18,
+              tooltipMargin: const EdgeInsets.symmetric(horizontal: 24),
+            ),
+          ),
+          showSuggestions: shouldShow,
+          query: state.query,
+          isFetching: state.isFetching,
+          suggestions: state.suggestions,
+          accentColor: themeProvider.accentColor,
+          minCharsHint: l10n.mapSearchMinCharsHint,
+          noResultsText: l10n.commonNoResultsFound,
+          onDismissSuggestions: () {
+            _mapSearchController.dismissOverlay(unfocus: false);
+          },
+          onSuggestionTap: _handleSuggestionTap,
+        );
+      },
+    );
+  }
 
-                    const SizedBox(width: KubusSpacing.xl + KubusSpacing.sm),
-
-                    // Search bar
-                    Expanded(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 480),
-                        child: CompositedTransformTarget(
-                          link: _mapSearchController.fieldLink,
-                          child: KeyedSubtree(
-                            key: _tutorialSearchKey,
-                            child: Semantics(
-                              label: 'map_search_input',
-                              textField: true,
-                              child: MouseRegion(
-                                cursor: SystemMouseCursors.text,
-                                child: DesktopSearchBar(
-                                  controller:
-                                      _mapSearchController.textController,
-                                  focusNode: _mapSearchController.focusNode,
-                                  hintText: l10n.mapSearchHint,
-                                  onChanged: (value) {
-                                    _mapSearchController.onQueryChanged(
-                                      context,
-                                      value,
-                                    );
-                                  },
-                                  onSubmitted: _handleSearchSubmit,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(width: KubusSpacing.md + KubusSpacing.xs),
-
-                    // Filter chips
-                    KeyedSubtree(
-                      key: _tutorialFilterChipsKey,
-                      child: Row(
-                        children: _filterOptions.map((filter) {
-                          final isActive = _selectedFilter == filter;
-                          return Padding(
-                            padding:
-                                const EdgeInsets.only(left: KubusSpacing.sm),
-                            child: _buildGlassChip(
-                              label: _getFilterLabel(filter),
-                              isSelected: isActive,
-                              themeProvider: themeProvider,
-                              onTap: () {
-                                setState(() => _selectedFilter = filter);
-                                // Reload markers so the nearby panel and
-                                // sidebar reflect the new filter immediately.
-                                unawaited(
-                                  _loadMarkersForCurrentView(force: true),
-                                );
-                                // Force immediate sidebar sync for the
-                                // shell-scope nearby panel (the local panel
-                                // updates through build, but the shell panel
-                                // needs an explicit push).
-                                _forceNearbySidebarSync();
-                              },
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-
-                    const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
-
-                    // Filters button
-                    KeyedSubtree(
-                      key: _tutorialFiltersButtonKey,
-                      child: _buildGlassIconButton(
-                        icon: _showFiltersPanel ? Icons.close : Icons.tune,
-                        themeProvider: themeProvider,
-                        isActive: _showFiltersPanel,
-                        tooltip: _showFiltersPanel
-                            ? l10n.commonClose
-                            : l10n.mapFiltersTitle,
-                        // Filters sits on the top-right edge; prefer below so the
-                        // tooltip never renders off-screen above the window.
-                        tooltipPreferBelow: true,
-                        tooltipVerticalOffset: 18,
-                        // Anchor tooltip to the icon's right edge so the card expands
-                        // leftwards (avoids the Nearby sidebar, and aligns the right edge
-                        // of the tooltip with the icon).
-                        tooltipAlignRightEdge: true,
-                        tooltipMargin:
-                            const EdgeInsets.symmetric(horizontal: 24),
-                        onTap: () {
-                          setState(() {
-                            _showFiltersPanel = !_showFiltersPanel;
-                            _selectedArtwork = null;
-                            _selectedExhibition = null;
-                          });
-                        },
-                      ),
-                    ),
-                  ],
-                ),
+  Widget _buildDesktopSearchField(AppLocalizations l10n) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 480),
+      child: CompositedTransformTarget(
+        link: _mapSearchController.fieldLink,
+        child: KeyedSubtree(
+          key: _tutorialSearchKey,
+          child: Semantics(
+            label: 'map_search_input',
+            textField: true,
+            child: MouseRegion(
+              cursor: SystemMouseCursors.text,
+              child: DesktopSearchBar(
+                controller: _mapSearchController.textController,
+                focusNode: _mapSearchController.focusNode,
+                hintText: l10n.mapSearchHint,
+                onChanged: (value) {
+                  _mapSearchController.onQueryChanged(
+                    context,
+                    value,
+                  );
+                },
+                onSubmitted: _handleSearchSubmit,
               ),
             ),
-          )),
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _buildSearchOverlay(ThemeProvider themeProvider) {
-    final l10n = AppLocalizations.of(context)!;
-    final state = _mapSearchController.state;
-
-    return KubusSearchSuggestionsOverlay(
-      link: _mapSearchController.fieldLink,
-      query: state.query,
-      isFetching: state.isFetching,
-      suggestions: state.suggestions,
-      accentColor: themeProvider.accentColor,
-      minCharsHint: l10n.mapSearchMinCharsHint,
-      noResultsText: l10n.commonNoResultsFound,
-      onDismiss: () {
-        // Match previous desktop behavior: hide overlay but keep focus.
-        _mapSearchController.dismissOverlay(unfocus: false);
-      },
-      onSuggestionTap: _handleSuggestionTap,
+  Widget _buildDesktopFilterChipRow(ThemeProvider themeProvider) {
+    return KeyedSubtree(
+      key: _tutorialFilterChipsKey,
+      child: Row(
+        children: _filterOptions.map((filter) {
+          final isActive = _selectedFilter == filter;
+          return Padding(
+            padding: const EdgeInsets.only(left: KubusSpacing.sm),
+            child: KubusGlassChip(
+              label: _getFilterLabel(filter),
+              icon: Icons.filter_alt_outlined,
+              active: isActive,
+              accentColor: themeProvider.accentColor,
+              onPressed: () {
+                setState(() => _selectedFilter = filter);
+                // Reload markers so the nearby panel and
+                // sidebar reflect the new filter immediately.
+                unawaited(
+                  _loadMarkersForCurrentView(force: true),
+                );
+                // Force immediate sidebar sync for the shell-scope nearby panel.
+                _forceNearbySidebarSync();
+              },
+            ),
+          );
+        }).toList(),
+      ),
     );
   }
 
@@ -2428,12 +2231,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   Positioned(
                     top: 12,
                     right: 12,
-                    child: _buildGlassIconButton(
+                    child: KubusGlassIconButton(
                       icon: Icons.close,
-                      themeProvider: themeProvider,
+                      accentColor: themeProvider.accentColor,
                       iconColor: KubusColors.textPrimaryDark,
                       tooltip: AppLocalizations.of(context)!.commonClose,
-                      onTap: () {
+                      onPressed: () {
                         setState(() => _selectedArtwork = null);
                       },
                     ),
@@ -2669,25 +2472,25 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                           ),
                         ),
                       ),
-                      _buildGlassIconButton(
+                      KubusGlassIconButton(
                         icon: artwork.isLikedByCurrentUser
                             ? Icons.favorite
                             : Icons.favorite_border,
-                        themeProvider: themeProvider,
                         tooltip:
                             '${artwork.likesCount} ${artwork.isLikedByCurrentUser ? AppLocalizations.of(context)!.artworkDetailLiked : AppLocalizations.of(context)!.artworkDetailLike}',
-                        isActive: artwork.isLikedByCurrentUser,
+                        active: artwork.isLikedByCurrentUser,
+                        accentColor: themeProvider.accentColor,
                         activeTint: scheme.error.withValues(alpha: 0.18),
                         activeIconColor: scheme.error,
-                        onTap: () {
+                        onPressed: () {
                           unawaited(artworkProvider.toggleLike(artwork.id));
                         },
                       ),
-                      _buildGlassIconButton(
+                      KubusGlassIconButton(
                         icon: Icons.share,
-                        themeProvider: themeProvider,
+                        accentColor: themeProvider.accentColor,
                         tooltip: AppLocalizations.of(context)!.commonShare,
-                        onTap: () {
+                        onPressed: () {
                           ShareService().showShareSheet(
                             context,
                             target: ShareTarget.artwork(
@@ -2863,12 +2666,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   Positioned(
                     top: 12,
                     right: 12,
-                    child: _buildGlassIconButton(
+                    child: KubusGlassIconButton(
                       icon: Icons.close,
-                      themeProvider: themeProvider,
+                      accentColor: themeProvider.accentColor,
                       iconColor: KubusColors.textPrimaryDark,
                       tooltip: l10n.commonClose,
-                      onTap: () {
+                      onPressed: () {
                         setState(() => _selectedExhibition = null);
                       },
                     ),
@@ -3092,352 +2895,198 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-
-    // Wrap filters panel in a Listener to absorb pointer events and prevent them
-    // from passing through to the map underneath (gesture conflict resolution).
-    return MouseRegion(
-      cursor: SystemMouseCursors.basic,
-      child: Listener(
-        behavior: HitTestBehavior.opaque,
-        onPointerDown: (_) {},
-        onPointerMove: (_) {},
-        onPointerUp: (_) {},
-        onPointerSignal: (_) {}, // Absorb mouse wheel / trackpad scroll
-        child: LiquidGlassPanel(
-          margin: const EdgeInsets.only(left: 24),
-          padding: EdgeInsets.zero,
-          borderRadius: BorderRadius.circular(20),
-          blurSigma: KubusGlassEffects.blurSigmaLight,
-          backgroundColor:
-              scheme.surface.withValues(alpha: isDark ? 0.20 : 0.14),
-          showBorder: true,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 16, 16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        l10n.mapFiltersTitle,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: scheme.onSurface,
-                            ),
-                      ),
-                    ),
-                    _buildGlassIconButton(
-                      icon: Icons.close,
-                      themeProvider: themeProvider,
-                      tooltip: l10n.commonClose,
-                      onTap: () {
-                        setState(() => _showFiltersPanel = false);
-                      },
-                    ),
-                  ],
-                ),
-              ),
-
-              Divider(
-                height: 1,
-                color: scheme.outline.withValues(alpha: 0.14),
-              ),
-
-              // Filter options
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Search radius
-                      Text(
-                        l10n.mapNearbyRadiusTitle,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Slider(
-                              value: _searchRadius,
-                              min: 1,
-                              max: 200,
-                              divisions: 199,
-                              onChanged: _travelModeEnabled
-                                  ? null
-                                  : (value) {
-                                      setState(() => _searchRadius = value);
-                                      _radiusChangeDebouncer(
-                                        const Duration(
-                                          milliseconds: MapMarkerCollisionConfig
-                                              .nearbyRadiusDebounceMs,
-                                        ),
-                                        () {
-                                          if (mounted) {
-                                            unawaited(
-                                              _loadMarkersForCurrentView(
-                                                force: true,
-                                              ),
-                                            );
-                                            _forceNearbySidebarSync();
-                                          }
-                                        },
-                                      );
-                                    },
-                              activeColor: themeProvider.accentColor,
-                            ),
-                          ),
-                          LiquidGlassPanel(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 6),
-                            margin: EdgeInsets.zero,
-                            borderRadius: BorderRadius.circular(10),
-                            blurSigma: KubusGlassEffects.blurSigmaLight,
-                            backgroundColor: scheme.surface
-                                .withValues(alpha: isDark ? 0.16 : 0.12),
-                            showBorder: true,
-                            child: Text(
-                              l10n.commonDistanceKm(
-                                _searchRadius.toStringAsFixed(1),
-                              ),
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: scheme.onSurface,
-                                  ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Marker type layers (matches mobile's "Layers" section)
-                      Text(
-                        l10n.mapLayersTitle,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                      ),
-                      const SizedBox(height: 12),
-                      KubusMapMarkerLayerChips(
-                        l10n: l10n,
-                        visibility: _markerLayerVisibility,
-                        onToggle: (type, nextSelected) {
-                          setState(
-                            () => _markerLayerVisibility[type] = nextSelected,
-                          );
-                          _kubusMapController
-                              .setMarkerTypeVisibility(_markerLayerVisibility);
-                          _renderCoordinator.requestStyleUpdate(force: true);
-                        },
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Sort by
-                      Text(
-                        l10n.desktopMapSortByTitle,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                      ),
-                      const SizedBox(height: 12),
-                      _buildSortOption(
-                        label: l10n.desktopMapSortDistance,
-                        sortKey: 'distance',
-                        icon: Icons.near_me,
-                        themeProvider: themeProvider,
-                      ),
-                      _buildSortOption(
-                        label: l10n.desktopMapSortPopularity,
-                        sortKey: 'popularity',
-                        icon: Icons.trending_up,
-                        themeProvider: themeProvider,
-                      ),
-                      _buildSortOption(
-                        label: l10n.desktopMapSortNewest,
-                        sortKey: 'newest',
-                        icon: Icons.schedule,
-                        themeProvider: themeProvider,
-                      ),
-                      _buildSortOption(
-                        label: l10n.desktopMapSortRating,
-                        sortKey: 'rating',
-                        icon: Icons.star,
-                        themeProvider: themeProvider,
-                      ),
-                    ],
+    return KubusFilterPanel(
+      title: l10n.mapFiltersTitle,
+      onClose: () => setState(() => _showFiltersPanel = false),
+      closeTooltip: l10n.commonClose,
+      margin: const EdgeInsets.only(left: 24),
+      contentPadding: const EdgeInsets.all(24),
+      expandContent: true,
+      absorbPointer: true,
+      showFooterDivider: true,
+      footer: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () {
+                  setState(() {
+                    _searchRadius = 5.0;
+                    _selectedFilter = 'nearby';
+                    _selectedSort = 'distance';
+                    // Reset layer visibility to all visible
+                    for (final type in ArtMarkerType.values) {
+                      _markerLayerVisibility[type] = true;
+                    }
+                  });
+                  _loadMarkersForCurrentView(force: true);
+                  _kubusMapController
+                      .setMarkerTypeVisibility(_markerLayerVisibility);
+                  _renderCoordinator.requestStyleUpdate(force: true);
+                  _forceNearbySidebarSync();
+                },
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
+                child: Text(l10n.commonReset),
               ),
-
-              // Apply button
-              Divider(
-                height: 1,
-                color: scheme.outline.withValues(alpha: 0.14),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ElevatedButton(
+                onPressed: () {
+                  setState(() => _showFiltersPanel = false);
+                  _loadMarkersForCurrentView(force: true);
+                  _forceNearbySidebarSync();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: themeProvider.accentColor,
+                  foregroundColor: ThemeData.estimateBrightnessForColor(
+                              themeProvider.accentColor) ==
+                          Brightness.dark
+                      ? KubusColors.textPrimaryDark
+                      : KubusColors.textPrimaryLight,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(l10n.commonApply),
               ),
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () {
-                          setState(() {
-                            _searchRadius = 5.0;
-                            _selectedFilter = 'nearby';
-                            _selectedSort = 'distance';
-                            // Reset layer visibility to all visible
-                            for (final type in ArtMarkerType.values) {
-                              _markerLayerVisibility[type] = true;
-                            }
-                          });
-                          _loadMarkersForCurrentView(force: true);
-                          _kubusMapController
-                              .setMarkerTypeVisibility(_markerLayerVisibility);
-                          _renderCoordinator.requestStyleUpdate(force: true);
-                          _forceNearbySidebarSync();
+            ),
+          ],
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.mapNearbyRadiusTitle,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: scheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Slider(
+                  value: _searchRadius,
+                  min: 1,
+                  max: 200,
+                  divisions: 199,
+                  onChanged: _travelModeEnabled
+                      ? null
+                      : (value) {
+                          setState(() => _searchRadius = value);
+                          _radiusChangeDebouncer(
+                            const Duration(
+                              milliseconds:
+                                  MapMarkerCollisionConfig.nearbyRadiusDebounceMs,
+                            ),
+                            () {
+                              if (mounted) {
+                                unawaited(
+                                  _loadMarkersForCurrentView(
+                                    force: true,
+                                  ),
+                                );
+                                _forceNearbySidebarSync();
+                              }
+                            },
+                          );
                         },
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Text(l10n.commonReset),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          setState(() => _showFiltersPanel = false);
-                          _loadMarkersForCurrentView(force: true);
-                          _forceNearbySidebarSync();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: themeProvider.accentColor,
-                          foregroundColor: ThemeData.estimateBrightnessForColor(
-                                      themeProvider.accentColor) ==
-                                  Brightness.dark
-                              ? KubusColors.textPrimaryDark
-                              : KubusColors.textPrimaryLight,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Text(l10n.commonApply),
-                      ),
-                    ),
-                  ],
+                  activeColor: themeProvider.accentColor,
+                ),
+              ),
+              LiquidGlassPanel(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                margin: EdgeInsets.zero,
+                borderRadius: BorderRadius.circular(10),
+                blurSigma: KubusGlassEffects.blurSigmaLight,
+                backgroundColor:
+                    scheme.surface.withValues(alpha: isDark ? 0.16 : 0.12),
+                showBorder: true,
+                child: Text(
+                  l10n.commonDistanceKm(
+                    _searchRadius.toStringAsFixed(1),
+                  ),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurface,
+                  ),
                 ),
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  /// Returns human-readable label for marker type - same as mobile
-  Widget _buildSortOption({
-    required String label,
-    required String sortKey,
-    required IconData icon,
-    required ThemeProvider themeProvider,
-  }) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-    final accent = themeProvider.accentColor;
-    final isSelected = _selectedSort == sortKey;
-
-    final radius = BorderRadius.circular(12);
-    final idleTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.12);
-    final selectedTint = accent.withValues(alpha: isDark ? 0.12 : 0.14);
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: AnimatedContainer(
-        duration: context.animationTheme.short,
-        curve: context.animationTheme.defaultCurve,
-        decoration: BoxDecoration(
-          borderRadius: radius,
-          border: Border.all(
-            color: isSelected
-                ? accent.withValues(alpha: 0.85)
-                : scheme.outline.withValues(alpha: 0.18),
-            width: isSelected ? 1.25 : 1,
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: accent.withValues(alpha: 0.12),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : null,
-        ),
-        child: LiquidGlassPanel(
-          padding: EdgeInsets.zero,
-          margin: EdgeInsets.zero,
-          borderRadius: radius,
-          blurSigma: KubusGlassEffects.blurSigmaLight,
-          showBorder: false,
-          backgroundColor: isSelected ? selectedTint : idleTint,
-          onTap: () {
-            setState(() {
-              _selectedSort = sortKey;
-            });
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Icon(
-                  icon,
-                  size: 20,
-                  color: isSelected
-                      ? accent
-                      : scheme.onSurface.withValues(alpha: 0.6),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontSize: 14,
-                        fontWeight:
-                            isSelected ? FontWeight.w600 : FontWeight.normal,
-                        color: isSelected ? accent : scheme.onSurface,
-                      ),
-                ),
-                const Spacer(),
-                if (isSelected)
-                  Icon(
-                    Icons.check_circle,
-                    size: 20,
-                    color: accent,
-                  ),
-              ],
+          const SizedBox(height: 24),
+          Text(
+            l10n.mapLayersTitle,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: scheme.onSurface,
             ),
           ),
-        ),
+          const SizedBox(height: 12),
+          KubusMapMarkerLayerChips(
+            l10n: l10n,
+            visibility: _markerLayerVisibility,
+            onToggle: (type, nextSelected) {
+              setState(
+                () => _markerLayerVisibility[type] = nextSelected,
+              );
+              _kubusMapController.setMarkerTypeVisibility(_markerLayerVisibility);
+              _renderCoordinator.requestStyleUpdate(force: true);
+            },
+          ),
+          const SizedBox(height: 24),
+          Text(
+            l10n.desktopMapSortByTitle,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: scheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 12),
+          KubusSortOption(
+            label: l10n.desktopMapSortDistance,
+            icon: Icons.near_me,
+            selected: _selectedSort == 'distance',
+            accentColor: themeProvider.accentColor,
+            onPressed: () => setState(() => _selectedSort = 'distance'),
+          ),
+          KubusSortOption(
+            label: l10n.desktopMapSortPopularity,
+            icon: Icons.trending_up,
+            selected: _selectedSort == 'popularity',
+            accentColor: themeProvider.accentColor,
+            onPressed: () => setState(() => _selectedSort = 'popularity'),
+          ),
+          KubusSortOption(
+            label: l10n.desktopMapSortNewest,
+            icon: Icons.schedule,
+            selected: _selectedSort == 'newest',
+            accentColor: themeProvider.accentColor,
+            onPressed: () => setState(() => _selectedSort = 'newest'),
+          ),
+          KubusSortOption(
+            label: l10n.desktopMapSortRating,
+            icon: Icons.star,
+            selected: _selectedSort == 'rating',
+            accentColor: themeProvider.accentColor,
+            onPressed: () => setState(() => _selectedSort = 'rating'),
+          ),
+        ],
       ),
     );
   }
@@ -3445,7 +3094,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   Widget _buildMapControls(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
 
-    return KubusMapPrimaryControls(
+    return KubusMapControls(
       controller: _kubusMapController,
       layout: KubusMapPrimaryControlsLayout.desktopToolbar,
       accentColor: themeProvider.accentColor,
@@ -3489,8 +3138,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     );
   }
 
-  Widget _buildDiscoveryCard(
-      ThemeProvider themeProvider, TaskProvider taskProvider) {
+  Widget _buildDiscoveryCard(TaskProvider taskProvider) {
     final l10n = AppLocalizations.of(context)!;
     final activeProgress = taskProvider.getActiveTaskProgress();
     if (activeProgress.isEmpty) return const SizedBox.shrink();
@@ -3507,13 +3155,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       taskRows: [
         for (final progress in tasksToRender) _buildTaskProgressRow(progress),
       ],
-      toggleButton: _buildGlassIconButton(
+      toggleButton: KubusGlassIconButton(
         icon: _isDiscoveryExpanded
             ? Icons.keyboard_arrow_up
             : Icons.keyboard_arrow_down,
-        themeProvider: themeProvider,
         tooltip: _isDiscoveryExpanded ? l10n.commonCollapse : l10n.commonExpand,
-        onTap: () =>
+        onPressed: () =>
             setState(() => _isDiscoveryExpanded = !_isDiscoveryExpanded),
       ),
       titleStyle: theme.textTheme.bodyMedium?.copyWith(
@@ -4377,7 +4024,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         alignment: Alignment.topCenter,
         child: SizedBox(
           height: estimatedCardHeight,
-          child: MarkerOverlayCard(
+          child: KubusMarkerOverlayCard(
             marker: marker,
             artwork: artwork,
             baseColor: baseColor,
