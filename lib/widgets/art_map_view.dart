@@ -192,9 +192,8 @@ class _ArtMapViewState extends State<ArtMapView> {
     _lastWebLayoutSize = size;
 
     final nowMs = DateTime.now().millisecondsSinceEpoch;
-    final deltaMs = _lastWebLayoutChangeMs == 0
-      ? 999999
-      : (nowMs - _lastWebLayoutChangeMs);
+    final deltaMs =
+        _lastWebLayoutChangeMs == 0 ? 999999 : (nowMs - _lastWebLayoutChangeMs);
     _lastWebLayoutChangeMs = nowMs;
 
     // If layout is churning rapidly, back off from 60fps resizing.
@@ -429,9 +428,8 @@ class _ArtMapViewState extends State<ArtMapView> {
                   assert(() {
                     if (_mapCreated) {
                       AppConfig.debugPrint(
-                        'ArtMapView: map created more than once for same State',
+                        'ArtMapView: duplicate onMapCreated for same State; replacing controller reference',
                       );
-                      return false;
                     }
                     _mapCreated = true;
                     _debugMapId = ++_debugMapCreateSeq;

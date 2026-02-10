@@ -94,7 +94,8 @@ class KubusMapTapConfig {
     this.sameLocationClusterIdPrefix = 'cluster_same:',
     this.clusterTapZoomDelta = 1.5,
     this.clusterTapMaxZoom = 18.0,
-    this.spiderfyAutoExpandZoom = MapMarkerCollisionConfig.spiderfyAutoExpandZoom,
+    this.spiderfyAutoExpandZoom =
+        MapMarkerCollisionConfig.spiderfyAutoExpandZoom,
   });
 
   /// Distance threshold for considering two markers as "stacked".
@@ -250,7 +251,8 @@ class KubusMapController {
 
   // Marker data.
   List<ArtMarker> _markers = const <ArtMarker>[];
-  Map<ArtMarkerType, bool> _markerTypeVisibility = const <ArtMarkerType, bool>{};
+  Map<ArtMarkerType, bool> _markerTypeVisibility =
+      const <ArtMarkerType, bool>{};
 
   // Selection / interaction.
   int _markerSelectionToken = 0;
@@ -267,10 +269,13 @@ class KubusMapController {
   final ValueNotifier<double> bearingDegrees = ValueNotifier<double>(0.0);
 
   /// Screen-space anchor for the selected marker. Used by both mobile and desktop overlays.
-  final ValueNotifier<Offset?> selectedMarkerAnchor = ValueNotifier<Offset?>(null);
+  final ValueNotifier<Offset?> selectedMarkerAnchor =
+      ValueNotifier<Offset?>(null);
 
   final Debouncer _overlayAnchorDebouncer = Debouncer();
   final Debouncer _viewportVisibilityDebouncer = Debouncer();
+  Timer? _viewportInitRetryTimer;
+  int _viewportInitAttemptCount = 0;
 
   Timer? _entryAnimationTicker;
   bool _viewportStateInitialized = false;
@@ -449,6 +454,9 @@ class KubusMapController {
     _entryAnimationByMarkerId.clear();
     _visibleMarkerIds.clear();
     _viewportStateInitialized = false;
+    _viewportInitRetryTimer?.cancel();
+    _viewportInitRetryTimer = null;
+    _viewportInitAttemptCount = 0;
   }
 
   void dispose() {
@@ -463,7 +471,8 @@ class KubusMapController {
     if (_featureTapBoundController == controller) return;
 
     if (_featureTapBoundController != null) {
-      _featureTapBoundController?.onFeatureTapped.remove(_handleMapFeatureTapped);
+      _featureTapBoundController?.onFeatureTapped
+          .remove(_handleMapFeatureTapped);
     }
 
     _featureTapBoundController = controller;
@@ -477,7 +486,8 @@ class KubusMapController {
     if (_featureHoverBoundController == controller) return;
 
     if (_featureHoverBoundController != null) {
-      _featureHoverBoundController?.onFeatureHover.remove(_handleMapFeatureHover);
+      _featureHoverBoundController?.onFeatureHover
+          .remove(_handleMapFeatureHover);
     }
 
     _featureHoverBoundController = controller;
@@ -547,7 +557,8 @@ class KubusMapController {
       onAutoFollowChanged?.call(_autoFollow);
     }
 
-    final nextCenter = LatLng(position.target.latitude, position.target.longitude);
+    final nextCenter =
+        LatLng(position.target.latitude, position.target.longitude);
     final nextZoom = position.zoom;
     final nextBearing = position.bearing;
     final nextPitch = position.tilt;
@@ -575,7 +586,9 @@ class KubusMapController {
 
     // If the user is panning while an overlay is open, close it.
     // This keeps selection + composition stable.
-    if (dismissSelectionOnUserGesture && hasGesture && _selectedMarkerId != null) {
+    if (dismissSelectionOnUserGesture &&
+        hasGesture &&
+        _selectedMarkerId != null) {
       dismissSelection();
     }
 
@@ -618,7 +631,8 @@ class KubusMapController {
     _lastFeatureTapPoint = point;
 
     if (id.startsWith(tapConfig.sameLocationClusterIdPrefix)) {
-      final coordinateKey = id.substring(tapConfig.sameLocationClusterIdPrefix.length);
+      final coordinateKey =
+          id.substring(tapConfig.sameLocationClusterIdPrefix.length);
       unawaited(
         expandSpiderfyForCoordinateKey(
           coordinateKey,
@@ -631,7 +645,8 @@ class KubusMapController {
 
     if (id.startsWith(tapConfig.clusterIdPrefix)) {
       _collapseSpiderfy();
-      final nextZoom = math.min(_camera.zoom + tapConfig.clusterTapZoomDelta, tapConfig.clusterTapMaxZoom);
+      final nextZoom = math.min(_camera.zoom + tapConfig.clusterTapZoomDelta,
+          tapConfig.clusterTapMaxZoom);
       unawaited(
         animateTo(
           LatLng(coordinates.latitude, coordinates.longitude),
@@ -779,7 +794,8 @@ class KubusMapController {
       selectMarker(stack.first, stackedMarkers: stack);
     } catch (e) {
       if (kDebugMode) {
-        AppConfig.debugPrint('KubusMapController: queryRenderedFeatures failed: $e');
+        AppConfig.debugPrint(
+            'KubusMapController: queryRenderedFeatures failed: $e');
       }
       _hitboxLayerReady = false;
       _hitboxLayerEpoch = -1;
@@ -806,7 +822,8 @@ class KubusMapController {
       if (elapsed.inMilliseconds < 300) return;
     }
 
-    final stack = stackedMarkers ?? _computeMarkerStack(marker, pinSelectedFirst: true);
+    final stack =
+        stackedMarkers ?? _computeMarkerStack(marker, pinSelectedFirst: true);
     final int nextIndex;
     if (stackIndex != null) {
       nextIndex = stackIndex.clamp(0, math.max(0, stack.length - 1));
@@ -943,7 +960,8 @@ class KubusMapController {
     if (!marker.hasValidPosition) return <ArtMarker>[marker];
 
     final visibleMarkers = _markers
-        .where((m) => m.hasValidPosition && (_markerTypeVisibility[m.type] ?? true))
+        .where((m) =>
+            m.hasValidPosition && (_markerTypeVisibility[m.type] ?? true))
         .toList(growable: false);
 
     final stacked = <ArtMarker>[];
@@ -976,7 +994,8 @@ class KubusMapController {
   List<KubusRenderedMarker> buildRenderedMarkers() {
     final nowMs = DateTime.now().millisecondsSinceEpoch;
     final visibleMarkers = _markers
-        .where((m) => m.hasValidPosition && (_markerTypeVisibility[m.type] ?? true))
+        .where((m) =>
+            m.hasValidPosition && (_markerTypeVisibility[m.type] ?? true))
         .toList(growable: false);
 
     final rendered = <KubusRenderedMarker>[];
@@ -1158,7 +1177,8 @@ class KubusMapController {
   }
 
   void _collapseSpiderfy({bool requestSync = true}) {
-    if (_expandedCoordinateKey == null && _spiderfiedPositionByMarkerId.isEmpty) {
+    if (_expandedCoordinateKey == null &&
+        _spiderfiedPositionByMarkerId.isEmpty) {
       return;
     }
     _expandedCoordinateKey = null;
@@ -1187,7 +1207,8 @@ class KubusMapController {
 
   List<ArtMarker> _markersForCoordinateKey(String coordinateKey) {
     final visible = _markers
-        .where((m) => m.hasValidPosition && (_markerTypeVisibility[m.type] ?? true))
+        .where((m) =>
+            m.hasValidPosition && (_markerTypeVisibility[m.type] ?? true))
         .toList(growable: false);
     final grouped = groupMarkersByCoordinateKey(visible);
     final markers = grouped[coordinateKey] ?? const <ArtMarker>[];
@@ -1224,16 +1245,36 @@ class KubusMapController {
             _isMarkerWithinBounds(m.position, bounds),
       );
       final nextVisible = visibleMarkers.map((m) => m.id).toSet();
+      final eligibleMarkerIds = _markers
+          .where((m) =>
+              m.hasValidPosition && (_markerTypeVisibility[m.type] ?? true))
+          .map((m) => m.id)
+          .toSet();
 
       if (!_viewportStateInitialized) {
+        if (nextVisible.isEmpty &&
+            eligibleMarkerIds.isNotEmpty &&
+            _viewportInitAttemptCount <
+                MapMarkerCollisionConfig.viewportInitMaxRetries) {
+          _viewportInitAttemptCount += 1;
+          _scheduleViewportInitRetry();
+          return;
+        }
+
         _viewportStateInitialized = true;
-        if (nextVisible.isNotEmpty) {
+        _viewportInitAttemptCount = 0;
+        _viewportInitRetryTimer?.cancel();
+        _viewportInitRetryTimer = null;
+
+        final initialVisible =
+            nextVisible.isNotEmpty ? nextVisible : eligibleMarkerIds;
+        if (initialVisible.isNotEmpty) {
           _scheduleEntryAnimations(
-            nextVisible.toList(growable: false),
+            initialVisible.toList(growable: false),
             staggered: true,
           );
         }
-        _visibleMarkerIds = nextVisible;
+        _visibleMarkerIds = initialVisible;
         return;
       }
 
@@ -1243,12 +1284,47 @@ class KubusMapController {
         _entryAnimationByMarkerId.remove(id);
       }
       if (entered.isNotEmpty) {
-        _scheduleEntryAnimations(entered.toList(growable: false), staggered: true);
+        _scheduleEntryAnimations(entered.toList(growable: false),
+            staggered: true);
       }
       _visibleMarkerIds = nextVisible;
     } catch (_) {
-      // Best effort: viewport checks can fail during style transitions.
+      // Best effort: viewport checks can fail during style transitions,
+      // especially on first web navigation into the map route.
+      if (!_viewportStateInitialized) {
+        final fallbackVisible = _markers
+            .where((m) =>
+                m.hasValidPosition && (_markerTypeVisibility[m.type] ?? true))
+            .map((m) => m.id)
+            .toSet();
+        _viewportStateInitialized = true;
+        _viewportInitAttemptCount = 0;
+        _viewportInitRetryTimer?.cancel();
+        _viewportInitRetryTimer = null;
+        if (fallbackVisible.isNotEmpty) {
+          _scheduleEntryAnimations(
+            fallbackVisible.toList(growable: false),
+            staggered: true,
+          );
+        }
+        _visibleMarkerIds = fallbackVisible;
+      }
     }
+  }
+
+  void _scheduleViewportInitRetry() {
+    _viewportInitRetryTimer?.cancel();
+    _viewportInitRetryTimer = Timer(
+      const Duration(
+          milliseconds: MapMarkerCollisionConfig.viewportInitRetryDelayMs),
+      () {
+        _viewportInitRetryTimer = null;
+        if (_viewportStateInitialized) return;
+        if (!_styleInitialized) return;
+        if (_mapController == null) return;
+        unawaited(_refreshViewportVisibility());
+      },
+    );
   }
 
   bool _isMarkerWithinBounds(LatLng point, ml.LatLngBounds bounds) {
@@ -1328,9 +1404,8 @@ class KubusMapController {
         (1.0 - MapMarkerCollisionConfig.entryStartScale) * scaleT;
 
     return _MarkerEntryValues(
-      scale: scale
-          .clamp(MapMarkerCollisionConfig.entryStartScale, 1.2)
-          .toDouble(),
+      scale:
+          scale.clamp(MapMarkerCollisionConfig.entryStartScale, 1.2).toDouble(),
       opacity: opacityT.clamp(0.0, 1.0).toDouble(),
       serial: state.serial,
     );
@@ -1377,7 +1452,9 @@ class KubusMapController {
     if (controller == null) return false;
     if (!_styleInitialized) return false;
 
-    if (!forceRefresh && _hitboxLayerReady && _hitboxLayerEpoch == _styleEpoch) {
+    if (!forceRefresh &&
+        _hitboxLayerReady &&
+        _hitboxLayerEpoch == _styleEpoch) {
       return true;
     }
 
@@ -1407,7 +1484,8 @@ class KubusMapController {
     return false;
   }
 
-  Future<ArtMarker?> _fallbackPickMarkerAtPoint(math.Point<double> point) async {
+  Future<ArtMarker?> _fallbackPickMarkerAtPoint(
+      math.Point<double> point) async {
     final controller = _mapController;
     if (controller == null) return null;
 
@@ -1502,7 +1580,8 @@ class KubusMapController {
     final controller = _mapController;
     if (controller == null) return;
 
-    final shouldEnable = enabled && AppConfig.isFeatureEnabled('mapIsometricView');
+    final shouldEnable =
+        enabled && AppConfig.isFeatureEnabled('mapIsometricView');
     final targetPitch = shouldEnable ? 54.736 : 0.0;
     final targetBearing = shouldEnable
         ? (_camera.bearing.abs() < 1.0 ? 18.0 : _camera.bearing)
@@ -1512,7 +1591,8 @@ class KubusMapController {
     if (adjustZoomForScale) {
       const scale = 1.2;
       final delta = math.log(scale) / math.ln2;
-      targetZoom = shouldEnable ? (_camera.zoom + delta) : (_camera.zoom - delta);
+      targetZoom =
+          shouldEnable ? (_camera.zoom + delta) : (_camera.zoom - delta);
       targetZoom = targetZoom.clamp(3.0, 24.0).toDouble();
     }
 
