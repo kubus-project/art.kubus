@@ -72,16 +72,22 @@ List<Offset> buildSpiderfyOffsets(
   if (count <= 0) return const <Offset>[];
   if (count == 1) return const <Offset>[Offset.zero];
 
+  final adaptiveConfig = _adaptiveSpiderfyLayoutConfig(
+    count: count,
+    base: config,
+  );
+
   final offsets = <Offset>[];
   var remaining = count;
   var ring = 0;
 
   while (remaining > 0) {
-    final radius = config.baseRadiusPx + (ring * config.radiusStepPx);
+    final radius =
+        adaptiveConfig.baseRadiusPx + (ring * adaptiveConfig.radiusStepPx);
     final circumference = 2 * math.pi * radius;
     final ringCapacity = math.max(
-      ring == 0 ? config.minFirstRingCount : 1,
-      (circumference / config.minSeparationPx).floor(),
+      ring == 0 ? adaptiveConfig.minFirstRingCount : 1,
+      (circumference / adaptiveConfig.minSeparationPx).floor(),
     );
 
     final take = math.min(remaining, ringCapacity);
@@ -97,4 +103,31 @@ List<Offset> buildSpiderfyOffsets(
   }
 
   return List<Offset>.unmodifiable(offsets);
+}
+
+SpiderfyLayoutConfig _adaptiveSpiderfyLayoutConfig({
+  required int count,
+  required SpiderfyLayoutConfig base,
+}) {
+  final threshold = MapMarkerCollisionConfig.spiderfyAdaptiveSpacingStartCount;
+  if (count <= threshold) return base;
+
+  final overflow = count - threshold;
+  final radiusBoost = (overflow *
+          MapMarkerCollisionConfig.spiderfyRadiusScalePerExtraMarker)
+      .clamp(0.0, MapMarkerCollisionConfig.spiderfyRadiusScaleMaxBoost)
+      .toDouble();
+  final separationBoost = (overflow *
+          MapMarkerCollisionConfig.spiderfySeparationScalePerExtraMarker)
+      .clamp(0.0, MapMarkerCollisionConfig.spiderfySeparationScaleMaxBoost)
+      .toDouble();
+
+  final radiusScale = 1.0 + radiusBoost;
+  final separationScale = 1.0 + separationBoost;
+  return SpiderfyLayoutConfig(
+    baseRadiusPx: base.baseRadiusPx * radiusScale,
+    radiusStepPx: base.radiusStepPx * radiusScale,
+    minSeparationPx: base.minSeparationPx * separationScale,
+    minFirstRingCount: base.minFirstRingCount,
+  );
 }
