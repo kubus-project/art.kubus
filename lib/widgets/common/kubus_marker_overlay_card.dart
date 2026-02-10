@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
-import '../l10n/app_localizations.dart';
-import '../models/art_marker.dart';
-import '../models/artwork.dart';
-import '../utils/app_color_utils.dart';
-import '../utils/artwork_media_resolver.dart';
-import '../utils/design_tokens.dart';
-import 'glass_components.dart';
+import '../../l10n/app_localizations.dart';
+import '../../models/art_marker.dart';
+import '../../models/artwork.dart';
+import '../../utils/app_color_utils.dart';
+import '../../utils/artwork_media_resolver.dart';
+import '../../utils/design_tokens.dart';
+import '../glass_components.dart';
 
 class MarkerOverlayActionSpec {
   const MarkerOverlayActionSpec({
@@ -34,8 +34,8 @@ class MarkerOverlayActionSpec {
 /// - Does not position itself; it is intended to be placed inside a `Positioned`.
 /// - Uses design tokens (`KubusSpacing`, `KubusRadius`, `KubusSizes`) and theme
 ///   colors, avoiding hardcoded UI colors.
-class MarkerOverlayCard extends StatelessWidget {
-  const MarkerOverlayCard({
+class KubusMarkerOverlayCard extends StatelessWidget {
+  const KubusMarkerOverlayCard({
     super.key,
     required this.marker,
     required this.baseColor,
@@ -749,3 +749,4 @@ class _OverlayPager extends StatelessWidget {
     );
   }
 }
+

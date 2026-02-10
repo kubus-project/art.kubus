@@ -5,7 +5,7 @@ import '../../../models/art_marker.dart';
 import '../../../utils/app_color_utils.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../features/map/shared/map_screen_shared_helpers.dart';
-import 'kubus_map_glass_chip.dart';
+import '../../common/kubus_glass_chip.dart';
 
 /// Shared builder for the "Layers" marker type chips.
 ///
@@ -54,12 +54,12 @@ class KubusMapMarkerLayerChips extends StatelessWidget {
           roles: roles,
         );
 
-        return KubusMapGlassChip(
+        return KubusGlassChip(
           label: KubusMapMarkerHelpers.markerTypeLabel(l10n, type),
           icon: KubusMapMarkerHelpers.resolveArtMarkerIcon(type),
-          selected: selected,
-          accent: accent,
-          onTap: () => onToggle(type, !selected),
+          active: selected,
+          accentColor: accent,
+          onPressed: () => onToggle(type, !selected),
         );
       }).toList(),
     );
