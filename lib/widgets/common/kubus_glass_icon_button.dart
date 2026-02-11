@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../utils/design_tokens.dart';
 import '../glass_components.dart';
 
-/// Reusable circular glass icon button used across map UIs.
+/// Reusable glass icon button used across map UIs.
 class KubusGlassIconButton extends StatelessWidget {
   const KubusGlassIconButton({
     super.key,
@@ -19,6 +19,7 @@ class KubusGlassIconButton extends StatelessWidget {
     this.tooltipMargin,
     this.tooltipPreferBelow,
     this.tooltipVerticalOffset,
+    this.borderRadius = 999,
   });
 
   final IconData icon;
@@ -33,6 +34,7 @@ class KubusGlassIconButton extends StatelessWidget {
   final EdgeInsetsGeometry? tooltipMargin;
   final bool? tooltipPreferBelow;
   final double? tooltipVerticalOffset;
+  final double borderRadius;
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +42,8 @@ class KubusGlassIconButton extends StatelessWidget {
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
     final accent = accentColor ?? scheme.primary;
-    final radius = BorderRadius.circular(999);
+    final resolvedRadius = borderRadius.clamp(0.0, 999.0).toDouble();
+    final radius = BorderRadius.circular(resolvedRadius);
     final idleTint = scheme.surface.withValues(alpha: isDark ? 0.46 : 0.52);
     final selectedTint =
         activeTint ?? accent.withValues(alpha: isDark ? 0.14 : 0.16);
