@@ -248,9 +248,8 @@
    */
   function setupCanvasWatcher() {
     // Handle any existing MapLibre canvases
-    document.querySelectorAll('canvas').forEach(function (canvas) {
-      var isMapLibre = canvas.classList && canvas.classList.contains('maplibregl-canvas');
-      addCanvasHandlers(canvas, isMapLibre ? 'maplibre' : 'generic');
+    document.querySelectorAll('.maplibregl-canvas').forEach(function (canvas) {
+      addCanvasHandlers(canvas, 'maplibre');
     });
 
     logCanvasSnapshot('Canvas watcher initial scan');
@@ -266,11 +265,10 @@
             addCanvasHandlers(node, 'maplibre');
           }
 
-          // Canvas within added subtree
+          // MapLibre canvas within added subtree
           if (node.querySelectorAll) {
-            node.querySelectorAll('canvas').forEach(function (canvas) {
-              var isMapLibre = canvas.classList && canvas.classList.contains('maplibregl-canvas');
-              addCanvasHandlers(canvas, isMapLibre ? 'maplibre' : 'generic');
+            node.querySelectorAll('.maplibregl-canvas').forEach(function (canvas) {
+              addCanvasHandlers(canvas, 'maplibre');
             });
           }
         });
@@ -533,7 +531,6 @@
       userAgent: navigator.userAgent
     });
 
-    installGlobalErrorHandler();
     setupFirefoxOptimizations();
 
     // Setup canvas watcher once DOM is ready

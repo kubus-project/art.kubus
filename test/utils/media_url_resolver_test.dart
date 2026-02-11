@@ -40,6 +40,15 @@ void main() {
       );
     });
 
+    test('shouldProxyDisplayUrl forces proxy for Wikimedia Special:FilePath redirects', () {
+      expect(
+        MediaUrlResolver.shouldProxyDisplayUrl(
+          'https://commons.wikimedia.org/wiki/Special:FilePath/Ljubljana%20087.JPG?width=1600',
+        ),
+        isTrue,
+      );
+    });
+
     test('rate limiting marker does not break plain resolution', () {
       const raw = 'https://www.hikuk.com/media/example.jpg';
       MediaUrlResolver.markProxyRateLimited();
@@ -87,6 +96,14 @@ void main() {
       expect(resolved, isNotNull);
       expect(resolved!, contains('path%20with%20space'));
       expect(resolved, contains('image%20(1).jpg'));
+    });
+
+    test('resolveDisplayUrl clamps oversized width query for display use', () {
+      const raw =
+          'https://commons.wikimedia.org/wiki/Special:FilePath/Ljubljana%20087.JPG?width=4000';
+      final resolved = MediaUrlResolver.resolveDisplayUrl(raw);
+      expect(resolved, isNotNull);
+      expect(resolved!, contains('width%3D1600'));
     });
 
     test('resolves backend-relative uploads via StorageConfig', () {

@@ -877,7 +877,6 @@ class _ArtworkThumbnail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final resolved = MediaUrlResolver.resolveDisplayUrl(url) ?? (url ?? '').trim();
     final dpr = MediaQuery.maybeOf(context)?.devicePixelRatio ?? 1.0;
     final cacheWidth = width.isFinite && width > 0
         ? (width * dpr).clamp(64.0, 1024.0).round()
@@ -885,6 +884,11 @@ class _ArtworkThumbnail extends StatelessWidget {
     final cacheHeight = height.isFinite && height > 0
         ? (height * dpr).clamp(64.0, 1024.0).round()
         : null;
+    final resolved = MediaUrlResolver.resolveDisplayUrl(
+          url,
+          maxWidth: cacheWidth,
+        ) ??
+        (url ?? '').trim();
 
     Widget child;
     if (resolved.isEmpty) {

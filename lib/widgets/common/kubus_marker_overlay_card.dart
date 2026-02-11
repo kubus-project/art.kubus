@@ -6,6 +6,7 @@ import '../../models/artwork.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/media_url_resolver.dart';
 import '../glass_components.dart';
 
 class MarkerOverlayActionSpec {
@@ -109,10 +110,17 @@ class KubusMarkerOverlayCard extends StatelessWidget {
             ? rawDescription
             : '${rawDescription.substring(0, maxPreviewChars)}...');
 
-    final imageUrl = ArtworkMediaResolver.resolveCover(
+    final rawImageUrl = ArtworkMediaResolver.resolveCover(
       artwork: artwork,
       metadata: marker.metadata,
     );
+    final imageUrl = MediaUrlResolver.resolveDisplayUrl(
+      rawImageUrl,
+      maxWidth: 960,
+    );
+    final dpr = MediaQuery.maybeOf(context)?.devicePixelRatio ?? 1.0;
+    final cacheWidth = (320 * dpr).clamp(128.0, 960.0).round();
+    final cacheHeight = (120 * dpr).clamp(96.0, 720.0).round();
 
     final showChips = _hasChips(marker: marker, artwork: artwork) ||
         canPresentExhibition;
@@ -226,6 +234,9 @@ class KubusMarkerOverlayCard extends StatelessWidget {
                         ? Image.network(
                             imageUrl,
                             fit: BoxFit.cover,
+                            filterQuality: FilterQuality.low,
+                            cacheWidth: cacheWidth,
+                            cacheHeight: cacheHeight,
                             errorBuilder: (_, __, ___) => _imageFallback(
                               baseColor,
                               scheme,
