@@ -4205,43 +4205,52 @@ class _MapScreenState extends State<MapScreen>
         backgroundColor: scheme.surface,
         title: Text(
           marker.name,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
           style: GoogleFonts.outfit(
             fontWeight: FontWeight.w700,
             color: scheme.onSurface,
           ),
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (coverUrl != null && coverUrl.isNotEmpty)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: Image.network(
-                  coverUrl,
-                  width: double.infinity,
-                  height: 160,
-                  fit: BoxFit.cover,
-                  filterQuality: FilterQuality.low,
-                  cacheWidth: cacheWidth,
-                  cacheHeight: cacheHeight,
-                  errorBuilder: (_, __, ___) =>
-                      KubusMapMarkerHelpers.markerImageFallback(
-                    baseColor: _resolveArtMarkerColor(
-                        marker, context.read<ThemeProvider>()),
-                    scheme: scheme,
-                    marker: marker,
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (coverUrl != null && coverUrl.isNotEmpty)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.network(
+                    coverUrl,
+                    width: double.infinity,
+                    height: 160,
+                    fit: BoxFit.cover,
+                    filterQuality: FilterQuality.low,
+                    cacheWidth: cacheWidth,
+                    cacheHeight: cacheHeight,
+                    errorBuilder: (_, __, ___) =>
+                        KubusMapMarkerHelpers.markerImageFallback(
+                      baseColor: _resolveArtMarkerColor(
+                          marker, context.read<ThemeProvider>()),
+                      scheme: scheme,
+                      marker: marker,
+                    ),
                   ),
                 ),
+              const SizedBox(height: 12),
+              Flexible(
+                child: Text(
+                  marker.description.isNotEmpty
+                      ? marker.description
+                      : l10n.mapNoLinkedArtworkForMarker,
+                  maxLines: 12,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.outfit(color: scheme.onSurfaceVariant),
+                ),
               ),
-            const SizedBox(height: 12),
-            Text(
-              marker.description.isNotEmpty
-                  ? marker.description
-                  : l10n.mapNoLinkedArtworkForMarker,
-              style: GoogleFonts.outfit(color: scheme.onSurfaceVariant),
-            ),
-          ],
+            ],
+          ),
         ),
         actions: [
           TextButton(

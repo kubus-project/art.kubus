@@ -73,7 +73,7 @@ class _ManageMarkersScreenState extends State<ManageMarkersScreen> {
     final scheme = Theme.of(context).colorScheme;
     final provider = context.watch<MarkerManagementProvider>();
 
-    final isWide = MediaQuery.of(context).size.width >= 980;
+    final isWide = widget.embedded || MediaQuery.of(context).size.width >= 980;
     final query = _searchController.text.trim();
     final markers = provider.markers.where((m) => _matchesQuery(m, query)).toList(growable: false);
 
