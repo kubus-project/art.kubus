@@ -3999,15 +3999,27 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       ),
     );
 
+    final resolvedImageUrl = MediaUrlResolver.resolveDisplayUrl(imageUrl);
+    final dpr = MediaQuery.maybeOf(context)?.devicePixelRatio ?? 1.0;
+    final cacheWidth = width.isFinite && width > 0
+        ? (width * dpr).clamp(64.0, 1024.0).round()
+        : null;
+    final cacheHeight = height.isFinite && height > 0
+        ? (height * dpr).clamp(64.0, 1024.0).round()
+        : null;
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(borderRadius),
       child: SizedBox(
         width: width,
         height: height,
-        child: imageUrl != null
+        child: resolvedImageUrl != null
             ? Image.network(
-                imageUrl,
+                resolvedImageUrl,
                 fit: BoxFit.cover,
+                filterQuality: FilterQuality.low,
+                cacheWidth: cacheWidth,
+                cacheHeight: cacheHeight,
                 errorBuilder: (_, __, ___) => fallback,
               )
             : fallback,
@@ -4153,9 +4165,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   Future<void> _showMarkerInfoFallback(ArtMarker marker) async {
     final scheme = Theme.of(context).colorScheme;
-    final coverUrl = ArtworkMediaResolver.resolveCover(
+    final coverUrl = MediaUrlResolver.resolveDisplayUrl(
+      ArtworkMediaResolver.resolveCover(
       metadata: marker.metadata,
+      ),
     );
+    final dpr = MediaQuery.maybeOf(context)?.devicePixelRatio ?? 1.0;
+    final cacheWidth = (640 * dpr).clamp(256.0, 1600.0).round();
+    final cacheHeight = (360 * dpr).clamp(144.0, 1200.0).round();
 
     await showKubusDialog<void>(
       context: context,
@@ -4180,6 +4197,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   width: double.infinity,
                   height: 160,
                   fit: BoxFit.cover,
+                  filterQuality: FilterQuality.low,
+                  cacheWidth: cacheWidth,
+                  cacheHeight: cacheHeight,
                   errorBuilder: (_, __, ___) =>
                       KubusMapMarkerHelpers.markerImageFallback(
                     baseColor: _resolveArtMarkerColor(

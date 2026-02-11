@@ -8269,7 +8269,9 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
     json['cid'],
   ]);
   final normalizedImageUrl =
-      MediaUrlResolver.resolve(rawImage) ?? StorageConfig.resolveUrl(imageCid);
+      MediaUrlResolver.resolveDisplayUrl(rawImage) ??
+          MediaUrlResolver.resolveDisplayUrl(imageCid) ??
+          StorageConfig.resolveUrl(imageCid);
   final arScale =
       doubleVal(json['arScale'] ?? json['ar_scale'] ?? arAsset?['scale']);
   final arRotation = normalizeRotation(
@@ -8332,7 +8334,7 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
         json['gallery_urls'] ??
         json['gallery'] ??
         json['mediaGallery'],
-  ).map((u) => MediaUrlResolver.resolve(u) ?? u).toList();
+  ).map((u) => MediaUrlResolver.resolveDisplayUrl(u) ?? u).toList();
 
   List<Map<String, dynamic>> parseGalleryMeta(dynamic raw) {
     if (raw is List) {
@@ -8422,7 +8424,7 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
     json['poap_image_url'],
   ]);
   final poapImageUrl = poapImageRaw != null
-      ? (MediaUrlResolver.resolve(poapImageRaw) ?? poapImageRaw)
+      ? (MediaUrlResolver.resolveDisplayUrl(poapImageRaw) ?? poapImageRaw)
       : null;
 
   final walletAddress =

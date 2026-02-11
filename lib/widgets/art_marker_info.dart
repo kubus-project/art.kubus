@@ -7,6 +7,7 @@ import '../utils/app_color_utils.dart';
 import '../utils/artwork_media_resolver.dart';
 import '../utils/design_tokens.dart';
 import '../utils/kubus_color_roles.dart';
+import '../utils/media_url_resolver.dart';
 import 'glass_components.dart';
 
 Future<void> showArtMarkerInfoDialog({
@@ -32,6 +33,10 @@ Future<void> showArtMarkerInfoDialog({
     artwork: artwork,
     metadata: marker.metadata,
   );
+  final resolvedCoverUrl = MediaUrlResolver.resolveDisplayUrl(coverUrl);
+  final dpr = MediaQuery.maybeOf(context)?.devicePixelRatio ?? 1.0;
+  final cacheWidth = (640 * dpr).clamp(256.0, 1400.0).round();
+  final cacheHeight = (360 * dpr).clamp(144.0, 1000.0).round();
 
   final distanceText = () {
     if (userPosition == null) return null;
@@ -93,14 +98,17 @@ Future<void> showArtMarkerInfoDialog({
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (coverUrl != null && coverUrl.isNotEmpty)
+            if (resolvedCoverUrl != null && resolvedCoverUrl.isNotEmpty)
               ClipRRect(
                 borderRadius: BorderRadius.circular(KubusRadius.md),
                 child: AspectRatio(
                   aspectRatio: 16 / 9,
                   child: Image.network(
-                    coverUrl,
+                    resolvedCoverUrl,
                     fit: BoxFit.cover,
+                    filterQuality: FilterQuality.low,
+                    cacheWidth: cacheWidth,
+                    cacheHeight: cacheHeight,
                     errorBuilder: (_, __, ___) => _imageFallback(baseColor, scheme, marker),
                   ),
                 ),

@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -344,10 +345,34 @@ class ArtMarkerCubeIconRenderer {
   /// @deprecated Use [CubeMarkerTokens.pngHeight] instead.
   static const double markerHeightAtZoom15 = CubeMarkerTokens.pngHeight;
 
-  static final Map<_MarkerPngCacheKey, Future<Uint8List>> _markerPngCache =
-      <_MarkerPngCacheKey, Future<Uint8List>>{};
-  static final Map<_ClusterPngCacheKey, Future<Uint8List>> _clusterPngCache =
-      <_ClusterPngCacheKey, Future<Uint8List>>{};
+  static const int _maxMarkerCacheEntries = 320;
+  static const int _maxClusterCacheEntries = 180;
+
+  static final LinkedHashMap<_MarkerPngCacheKey, Future<Uint8List>>
+      _markerPngCache = LinkedHashMap<_MarkerPngCacheKey, Future<Uint8List>>();
+  static final LinkedHashMap<_ClusterPngCacheKey, Future<Uint8List>>
+      _clusterPngCache =
+      LinkedHashMap<_ClusterPngCacheKey, Future<Uint8List>>();
+
+  static Future<Uint8List> _cachedFuture<K>({
+    required LinkedHashMap<K, Future<Uint8List>> cache,
+    required K key,
+    required int maxEntries,
+    required Future<Uint8List> Function() render,
+  }) {
+    final existing = cache.remove(key);
+    if (existing != null) {
+      cache[key] = existing;
+      return existing;
+    }
+
+    final created = render();
+    cache[key] = created;
+    if (cache.length > maxEntries) {
+      cache.remove(cache.keys.first);
+    }
+    return created;
+  }
 
   static int _pixelRatioKey(double pixelRatio) {
     final pr =
@@ -392,7 +417,11 @@ class ArtMarkerCubeIconRenderer {
       pixelRatioKey: _pixelRatioKey(pixelRatio),
     );
 
-    return _markerPngCache.putIfAbsent(key, () async {
+    return _cachedFuture<_MarkerPngCacheKey>(
+      cache: _markerPngCache,
+      key: key,
+      maxEntries: _maxMarkerCacheEntries,
+      render: () async {
       final showGlow = forceGlow ||
           tier == ArtMarkerSignal.featured ||
           tier == ArtMarkerSignal.legendary;
@@ -408,7 +437,8 @@ class ArtMarkerCubeIconRenderer {
         isDark: isDark,
         pixelRatio: pixelRatio,
       );
-    });
+    },
+    );
   }
 
   /// Renders a flat (top-down) marker showing only the top face with shadow.
@@ -626,7 +656,11 @@ class ArtMarkerCubeIconRenderer {
       pixelRatioKey: _pixelRatioKey(pixelRatio),
     );
 
-    return _clusterPngCache.putIfAbsent(key, () async {
+    return _cachedFuture<_ClusterPngCacheKey>(
+      cache: _clusterPngCache,
+      key: key,
+      maxEntries: _maxClusterCacheEntries,
+      render: () async {
       final palette =
           _CubePalette.fromBase(baseColor, edgeColor: style.edgeColor);
       final labelStyle = KubusTextStyles.badgeCount.copyWith(
@@ -643,7 +677,8 @@ class ArtMarkerCubeIconRenderer {
         showGlow: showGlow,
         pixelRatio: pixelRatio,
       );
-    });
+    },
+    );
   }
 
   static Future<Uint8List> _renderFlatClusterPng({

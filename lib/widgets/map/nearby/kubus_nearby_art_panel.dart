@@ -13,6 +13,7 @@ import '../../../utils/app_color_utils.dart';
 import '../../../utils/artwork_media_resolver.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
+import '../../../utils/media_url_resolver.dart';
 import '../../artwork_creator_byline.dart';
 import '../../glass_components.dart';
 import '../../map_overlay_blocker.dart';
@@ -876,7 +877,14 @@ class _ArtworkThumbnail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final resolved = (url ?? '').trim();
+    final resolved = MediaUrlResolver.resolveDisplayUrl(url) ?? (url ?? '').trim();
+    final dpr = MediaQuery.maybeOf(context)?.devicePixelRatio ?? 1.0;
+    final cacheWidth = width.isFinite && width > 0
+        ? (width * dpr).clamp(64.0, 1024.0).round()
+        : null;
+    final cacheHeight = height.isFinite && height > 0
+        ? (height * dpr).clamp(64.0, 1024.0).round()
+        : null;
 
     Widget child;
     if (resolved.isEmpty) {
@@ -896,6 +904,9 @@ class _ArtworkThumbnail extends StatelessWidget {
         width: width,
         height: height,
         fit: BoxFit.cover,
+        filterQuality: FilterQuality.low,
+        cacheWidth: cacheWidth,
+        cacheHeight: cacheHeight,
         errorBuilder: (context, error, stackTrace) {
           return ColoredBox(
             color: scheme.surfaceContainerHighest.withValues(alpha: 0.55),

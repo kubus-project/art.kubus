@@ -1,5 +1,5 @@
 import '../models/artwork.dart';
-import '../services/storage_config.dart';
+import 'media_url_resolver.dart';
 
 /// Centralizes artwork media URL resolution so every screen shows the same
 /// cover image with IPFS/HTTP fallbacks applied consistently.
@@ -22,7 +22,7 @@ class ArtworkMediaResolver {
     ];
 
     for (final raw in candidates) {
-      final resolved = StorageConfig.resolveUrl(_asString(raw));
+      final resolved = MediaUrlResolver.resolveDisplayUrl(_asString(raw));
       if (resolved != null && resolved.isNotEmpty) {
         return resolved;
       }

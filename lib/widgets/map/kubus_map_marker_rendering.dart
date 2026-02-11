@@ -271,7 +271,7 @@ Future<void> kubusPreregisterMarkerIcons({
     uniqueTasks.putIfAbsent(task.iconId, () => task);
   }
 
-  const batchSize = 8;
+  final batchSize = kIsWeb ? 3 : 8;
   final tasks = uniqueTasks.values.toList(growable: false);
   for (var i = 0; i < tasks.length; i += batchSize) {
     final batch = tasks.skip(i).take(batchSize).toList(growable: false);
