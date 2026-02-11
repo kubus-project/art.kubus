@@ -236,10 +236,18 @@ class InteractiveTutorialOverlay extends StatelessWidget {
               if (!_isInside(highlightRect, globalPosition)) return;
 
               final onTargetTap = step.onTargetTap;
-              if (onTargetTap != null) onTargetTap();
-              if (step.advanceOnTargetTap && !isLast) {
-                onNext();
-              }
+              final shouldAdvance = step.advanceOnTargetTap && !isLast;
+              if (onTargetTap == null && !shouldAdvance) return;
+
+              // Web pointer dispatch can become unstable if tutorial callbacks
+              // mutate layout synchronously during the active tap sequence.
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!context.mounted) return;
+                onTargetTap?.call();
+                if (shouldAdvance) {
+                  onNext();
+                }
+              });
             },
             child: CustomPaint(
               painter: _CoachMarkPainter(
