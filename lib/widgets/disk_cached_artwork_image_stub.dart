@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../utils/media_url_resolver.dart';
+
 Future<void> prefetchDiskCachedArtworkImage(String url) async {}
 
 class DiskCachedArtworkImage extends StatelessWidget {
@@ -21,8 +23,11 @@ class DiskCachedArtworkImage extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final errorColor =
         errorIconColor ?? scheme.outline.withValues(alpha: 0.8);
+    final resolvedUrl = MediaUrlResolver.resolveDisplayUrl(url) ??
+        MediaUrlResolver.resolve(url) ??
+        url;
     return Image.network(
-      url,
+      resolvedUrl,
       fit: fit,
       errorBuilder: (_, __, ___) => Center(
         child: Icon(Icons.image_not_supported, color: errorColor),

@@ -1861,7 +1861,8 @@ class _ProfileScreenState extends State<ProfileScreen>
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Image.network(
-                  post.imageUrl!,
+                  MediaUrlResolver.resolveDisplayUrl(post.imageUrl) ??
+                      post.imageUrl!,
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                 ),

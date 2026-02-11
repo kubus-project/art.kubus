@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/media_url_resolver.dart';
 import '../glass_components.dart';
 
 /// Design system spacing constants for detail screens
@@ -568,8 +569,12 @@ class DetailHeader extends StatelessWidget {
       return gradientBackground;
     }
 
+    final resolvedCoverUrl = MediaUrlResolver.resolveDisplayUrl(coverUrl) ??
+        MediaUrlResolver.resolve(coverUrl) ??
+        coverUrl!;
+
     final imageWidget = Image.network(
-      coverUrl!,
+      resolvedCoverUrl,
       fit: BoxFit.cover,
       errorBuilder: (_, __, ___) => gradientBackground,
       loadingBuilder: (context, child, loadingProgress) {
@@ -1002,7 +1007,9 @@ class CollaboratorsRow extends StatelessWidget {
         child: ClipOval(
           child: collab.avatarUrl != null && collab.avatarUrl!.isNotEmpty
               ? Image.network(
-                  collab.avatarUrl!,
+                  MediaUrlResolver.resolveDisplayUrl(collab.avatarUrl) ??
+                      MediaUrlResolver.resolve(collab.avatarUrl) ??
+                      collab.avatarUrl!,
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => _buildInitials(context, collab),
                 )
@@ -1295,7 +1302,9 @@ class DetailArtworkCard extends StatelessWidget {
                   ),
                   child: imageUrl != null && imageUrl!.isNotEmpty
                       ? Image.network(
-                          imageUrl!,
+                          MediaUrlResolver.resolveDisplayUrl(imageUrl) ??
+                              MediaUrlResolver.resolve(imageUrl) ??
+                              imageUrl!,
                           fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) =>
                               _buildPlaceholder(context, effectiveAccent),

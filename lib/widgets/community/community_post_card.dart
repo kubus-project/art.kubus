@@ -378,9 +378,11 @@ bool _hasPrimaryImage(CommunityPost post) {
 }
 
 String _primaryImageUrl(CommunityPost post) {
-  return (post.postType == 'repost' && post.originalPost != null)
-      ? post.originalPost!.imageUrl!
-      : post.imageUrl!;
+  final raw = (post.postType == 'repost' && post.originalPost != null)
+      ? post.originalPost!.imageUrl
+      : post.imageUrl;
+  final resolved = MediaUrlResolver.resolveDisplayUrl(raw);
+  return resolved ?? raw!;
 }
 
 CommunityPost _primaryImagePost(CommunityPost post) {
@@ -682,7 +684,8 @@ class _RepostInnerCard extends StatelessWidget {
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: Image.network(
-                  post.imageUrl!,
+                  MediaUrlResolver.resolveDisplayUrl(post.imageUrl) ??
+                      post.imageUrl!,
                   height: 140,
                   width: double.infinity,
                   fit: BoxFit.cover,
@@ -883,7 +886,10 @@ class _PostMetadataSection extends StatelessWidget {
                           ? ClipRRect(
                               borderRadius: BorderRadius.circular(10),
                               child: Image.network(
-                                resolvedPreview.imageUrl!,
+                                MediaUrlResolver.resolveDisplayUrl(
+                                      resolvedPreview.imageUrl,
+                                    ) ??
+                                    resolvedPreview.imageUrl!,
                                 fit: BoxFit.cover,
                                 errorBuilder: (_, __, ___) => Icon(
                                   _subjectTypeIcon(resolvedPreview.ref.normalizedType),

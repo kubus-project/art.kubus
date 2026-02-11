@@ -2092,9 +2092,6 @@
   "arMarkerScannerProcessingQrLabel": "Processing QR code…",
   "arMarkerScannerPointCameraLabel": "Point camera at QR code to discover AR artwork",
   "arMarkerScannerLaunchingViewerLabel": "Launching AR viewer…",
-  "arArtworkCardLaunchFailedToast": "Failed to launch AR. Please try again.",
-  "arArtworkCardUnavailableLabel": "AR unavailable",
-  "arArtworkCardGetCloserLabel": "Get closer",
   "artistGalleryTitle": "Your gallery",
   "artistGalleryArtworkCount": "{count, plural, =1{1 artwork} other{{count} artworks}}",
   "@artistGalleryArtworkCount": {

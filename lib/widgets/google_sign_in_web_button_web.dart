@@ -145,40 +145,56 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
       );
     } else {
       final platform = GoogleSignInPlatform.instance;
-      if (platform is gweb.GoogleSignInPlugin) {
-        child = LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) {
-            final double maxWidth =
-                constraints.maxWidth.isFinite ? constraints.maxWidth : 400;
-            // Match the surrounding auth buttons: take the full available width.
-            // Keep GIS unscaled so logo/text match Google's sizing.
-            final double buttonWidth = maxWidth;
+      child = LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          final double maxWidth =
+              constraints.maxWidth.isFinite ? constraints.maxWidth : 400;
+          // Match the surrounding auth buttons: take the full available width.
+          // Keep GIS unscaled so logo/text match Google's sizing.
+          final double buttonWidth = maxWidth;
 
-            // Use only the GIS button (no custom visible wrappers).
-            // Keep the GIS button unscaled so its typography matches Google specs.
-            // We still match the surrounding layout by centering it inside the
-            // 56px auth row height.
-            return SizedBox(
-              width: buttonWidth,
-              child: platform.renderButton(
-                configuration: gweb.GSIButtonConfiguration(
-                  type: gweb.GSIButtonType.standard,
-                  theme: isDark
-                      ? gweb.GSIButtonTheme.filledBlack
-                      : gweb.GSIButtonTheme.outline,
-                  size: gweb.GSIButtonSize.large,
-                  text: gweb.GSIButtonText.continueWith,
-                  shape: gweb.GSIButtonShape.rectangular,
-                  logoAlignment: gweb.GSIButtonLogoAlignment.left,
-                  minimumWidth: buttonWidth,
-                ),
-              ),
-            );
-          },
-        );
-      } else {
-        child = const SizedBox.shrink();
-      }
+          final config = gweb.GSIButtonConfiguration(
+            type: gweb.GSIButtonType.standard,
+            theme: isDark
+                ? gweb.GSIButtonTheme.filledBlack
+                : gweb.GSIButtonTheme.outline,
+            size: gweb.GSIButtonSize.large,
+            text: gweb.GSIButtonText.continueWith,
+            shape: gweb.GSIButtonShape.rectangular,
+            logoAlignment: gweb.GSIButtonLogoAlignment.left,
+            minimumWidth: buttonWidth,
+          );
+
+          Widget? gisButton;
+          try {
+            if (platform is gweb.GoogleSignInPlugin) {
+              gisButton = platform.renderButton(configuration: config);
+            } else {
+              // Capability-based fallback: some runtimes may not expose the web
+              // plugin type directly even though `renderButton` is available.
+              final dynamic dyn = platform;
+              final dynamic rendered = dyn.renderButton(configuration: config);
+              if (rendered is Widget) gisButton = rendered;
+            }
+          } catch (e) {
+            // Never crash the auth screen due to a GIS rendering failure.
+            // Surface the issue only when the user clicks the fallback button.
+          }
+
+          if (gisButton == null) {
+            return _googleAuthUnavailableFallback(theme);
+          }
+
+          // Use only the GIS button (no custom visible wrappers).
+          // Keep the GIS button unscaled so its typography matches Google specs.
+          // We still match the surrounding layout by centering it inside the
+          // 56px auth row height.
+          return SizedBox(
+            width: buttonWidth,
+            child: gisButton,
+          );
+        },
+      );
     }
 
     // Same size as other auth buttons.
@@ -214,6 +230,39 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _googleAuthUnavailableFallback(ThemeData theme) {
+    final scheme = widget.colorScheme;
+    final textStyle = theme.textTheme.labelLarge?.copyWith(
+      color: scheme.onSurface,
+      fontWeight: FontWeight.w600,
+    );
+
+    return OutlinedButton.icon(
+      onPressed: widget.isLoading
+          ? null
+          : () {
+              widget.onAuthError?.call(
+                StateError(
+                  'Google sign-in is unavailable in this browser session.',
+                ),
+              );
+            },
+      icon: Icon(Icons.login, color: scheme.onSurface),
+      label: Text(
+        'Continue with Google',
+        style: textStyle,
+        overflow: TextOverflow.ellipsis,
+      ),
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size.fromHeight(56),
+        side: BorderSide(
+          color: scheme.outline.withValues(alpha: 0.35),
+        ),
+        foregroundColor: scheme.onSurface,
       ),
     );
   }

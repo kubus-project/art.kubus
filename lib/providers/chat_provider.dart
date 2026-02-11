@@ -409,8 +409,6 @@ class ChatProvider extends ChangeNotifier {
   String? _openConversationId;
   Timer? _pollTimer;
   Timer? _subscriptionMonitorTimer;
-  // Removed cache listener: we fetch profiles directly from the API to avoid cache notification loops
-  // VoidCallback? _userServiceListener;
 
   bool _initialized = false;
   AppRefreshProvider? _boundRefreshProvider;

@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
+import '../utils/media_url_resolver.dart';
+
 class _KubusArtworkCacheManager {
   const _KubusArtworkCacheManager._();
 
@@ -17,10 +19,18 @@ class _KubusArtworkCacheManager {
   );
 }
 
+String _resolveArtworkImageUrl(String raw) {
+  final trimmed = raw.trim();
+  if (trimmed.isEmpty) return trimmed;
+  return MediaUrlResolver.resolveDisplayUrl(trimmed) ??
+      MediaUrlResolver.resolve(trimmed) ??
+      trimmed;
+}
+
 Future<void> prefetchDiskCachedArtworkImage(String url) async {
-  final trimmed = url.trim();
-  if (trimmed.isEmpty) return;
-  await _KubusArtworkCacheManager.instance.downloadFile(trimmed);
+  final resolved = _resolveArtworkImageUrl(url);
+  if (resolved.isEmpty) return;
+  await _KubusArtworkCacheManager.instance.downloadFile(resolved);
 }
 
 class DiskCachedArtworkImage extends StatefulWidget {
@@ -43,19 +53,21 @@ class DiskCachedArtworkImage extends StatefulWidget {
 
 class _DiskCachedArtworkImageState extends State<DiskCachedArtworkImage> {
   Future<File?>? _fileFuture;
+  String _resolvedUrl = '';
 
   @override
   void initState() {
     super.initState();
-    _fileFuture = _KubusArtworkCacheManager.instance.getSingleFile(widget.url);
+    _resolvedUrl = _resolveArtworkImageUrl(widget.url);
+    _fileFuture = _KubusArtworkCacheManager.instance.getSingleFile(_resolvedUrl);
   }
 
   @override
   void didUpdateWidget(covariant DiskCachedArtworkImage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.url != widget.url) {
-      _fileFuture =
-          _KubusArtworkCacheManager.instance.getSingleFile(widget.url);
+      _resolvedUrl = _resolveArtworkImageUrl(widget.url);
+      _fileFuture = _KubusArtworkCacheManager.instance.getSingleFile(_resolvedUrl);
     }
   }
 
@@ -88,7 +100,7 @@ class _DiskCachedArtworkImageState extends State<DiskCachedArtworkImage> {
           );
         }
         return Image.network(
-          widget.url,
+          _resolvedUrl.isNotEmpty ? _resolvedUrl : widget.url,
           fit: widget.fit,
           errorBuilder: (_, __, ___) => Center(
             child: Icon(Icons.image_not_supported, color: errorColor),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/media_url_resolver.dart';
 import '../../utils/wallet_utils.dart';
 import 'detail_shell_components.dart';
 
@@ -88,6 +89,11 @@ class ProfileHeaderShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final effectiveAccent = accentColor ?? scheme.primary;
+    final resolvedCoverUrl = coverUrl == null
+        ? null
+        : (MediaUrlResolver.resolveDisplayUrl(coverUrl) ??
+            MediaUrlResolver.resolve(coverUrl) ??
+            coverUrl);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -114,12 +120,12 @@ class ProfileHeaderShell extends StatelessWidget {
                     stops: const [0.0, 0.6, 1.0],
                   ),
                 ),
-                child: coverUrl != null && coverUrl!.isNotEmpty
+                child: resolvedCoverUrl != null && resolvedCoverUrl.isNotEmpty
                     ? Stack(
                         fit: StackFit.expand,
                         children: [
                           Image.network(
-                            coverUrl!,
+                            resolvedCoverUrl,
                             fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                           ),
@@ -171,6 +177,11 @@ class ProfileHeaderShell extends StatelessWidget {
 
   Widget _buildAvatar(BuildContext context, Color accentColor) {
     final scheme = Theme.of(context).colorScheme;
+    final resolvedAvatarUrl = avatarUrl == null
+        ? null
+        : (MediaUrlResolver.resolveDisplayUrl(avatarUrl) ??
+            MediaUrlResolver.resolve(avatarUrl) ??
+            avatarUrl);
 
     final avatarWidget = Container(
       width: avatarSize,
@@ -190,9 +201,9 @@ class ProfileHeaderShell extends StatelessWidget {
         ],
       ),
       child: ClipOval(
-        child: avatarUrl != null && avatarUrl!.isNotEmpty
+        child: resolvedAvatarUrl != null && resolvedAvatarUrl.isNotEmpty
             ? Image.network(
-                avatarUrl!,
+                resolvedAvatarUrl,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => _buildInitials(context, accentColor),
               )

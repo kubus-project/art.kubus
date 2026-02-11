@@ -2612,7 +2612,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                           ? ClipRRect(
                               borderRadius: BorderRadius.circular(12),
                               child: Image.network(
-                                group.coverImage!,
+                                MediaUrlResolver.resolveDisplayUrl(group.coverImage) ??
+                                    group.coverImage!,
                                 fit: BoxFit.cover,
                                 errorBuilder: (_, __, ___) => Icon(
                                   Icons.groups,
@@ -6548,7 +6549,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(12),
                         child: Image.network(
-                          group.coverImage!,
+                          MediaUrlResolver.resolveDisplayUrl(group.coverImage) ??
+                              group.coverImage!,
                           fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) => Icon(
                             Icons.group,
@@ -7351,7 +7353,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: Image.network(
-                    imageUrl,
+                    MediaUrlResolver.resolveDisplayUrl(imageUrl) ?? imageUrl,
                     width: 48,
                     height: 48,
                     fit: BoxFit.cover,

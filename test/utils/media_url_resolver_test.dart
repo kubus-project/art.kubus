@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:art_kubus/utils/media_url_resolver.dart';
 import 'package:art_kubus/services/storage_config.dart';
 
@@ -95,7 +96,11 @@ void main() {
       final resolved = MediaUrlResolver.resolveDisplayUrl(raw);
       expect(resolved, isNotNull);
       expect(resolved!, contains('path%20with%20space'));
-      expect(resolved, contains('image%20(1).jpg'));
+      if (kIsWeb) {
+        expect(resolved, contains('image%20%281%29.jpg'));
+      } else {
+        expect(resolved, contains('image%20(1).jpg'));
+      }
     });
 
     test('resolveDisplayUrl clamps oversized width query for display use', () {
@@ -103,7 +108,11 @@ void main() {
           'https://commons.wikimedia.org/wiki/Special:FilePath/Ljubljana%20087.JPG?width=4000';
       final resolved = MediaUrlResolver.resolveDisplayUrl(raw);
       expect(resolved, isNotNull);
-      expect(resolved!, contains('width%3D1600'));
+      if (kIsWeb) {
+        expect(resolved!, contains('width%3D1600'));
+      } else {
+        expect(resolved!, contains('width=1600'));
+      }
     });
 
     test('resolves backend-relative uploads via StorageConfig', () {

@@ -971,7 +971,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                 ClipRRect(
                                   borderRadius: BorderRadius.circular(10),
                                   child: Image.network(
-                                    preview.imageUrl!,
+                                    MediaUrlResolver.resolveDisplayUrl(preview.imageUrl) ??
+                                        preview.imageUrl!,
                                     width: 44,
                                     height: 44,
                                     fit: BoxFit.cover,
@@ -1410,7 +1411,26 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                               const SizedBox(height: 8),
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(8),
-                                child: Image.network(_post!.imageUrl!, fit: BoxFit.cover, height: 120, width: double.infinity),
+                                child: Image.network(
+                                  MediaUrlResolver.resolveDisplayUrl(_post!.imageUrl) ??
+                                      _post!.imageUrl!,
+                                  fit: BoxFit.cover,
+                                  height: 120,
+                                  width: double.infinity,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    final scheme = Theme.of(context).colorScheme;
+                                    return Container(
+                                      height: 120,
+                                      width: double.infinity,
+                                      color: scheme.surfaceContainerHighest,
+                                      alignment: Alignment.center,
+                                      child: Icon(
+                                        Icons.image_not_supported_outlined,
+                                        color: scheme.onSurfaceVariant,
+                                      ),
+                                    );
+                                  },
+                                ),
                               ),
                             ],
                           ],

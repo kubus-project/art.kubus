@@ -25,6 +25,7 @@ import '../../../utils/maplibre_style_utils.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../../widgets/art_map_view.dart';
 import '../../../widgets/inline_loading.dart';
+import '../../../widgets/creator/creator_kit.dart';
 import '../../desktop/desktop_shell.dart';
 import 'artwork_ar_manager_screen.dart';
 
@@ -33,11 +34,16 @@ class ArtworkCreatorScreen extends StatefulWidget {
   final VoidCallback? onCreated;
   final bool showAppBar;
 
+  /// When `true` the screen omits its own Scaffold / AppBar because the
+  /// surrounding shell (e.g. [DesktopSubScreen]) already provides one.
+  final bool embedded;
+
   const ArtworkCreatorScreen({
     super.key,
     required this.draftId,
     this.onCreated,
     this.showAppBar = true,
+    this.embedded = false,
   });
 
   @override
@@ -48,12 +54,16 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
   static const _locationSourceId = 'artwork_creator_location_source';
   static const _locationLayerId = 'artwork_creator_location_layer';
 
-  final _basicsFormKey = GlobalKey<FormState>();
-  final _locationFormKey = GlobalKey<FormState>();
+  final _formKey = GlobalKey<FormState>();
 
+  late final TextEditingController _titleController;
+  late final TextEditingController _descriptionController;
+  late final TextEditingController _tagsController;
   late final TextEditingController _latController;
   late final TextEditingController _lngController;
   late final TextEditingController _locationNameController;
+  late final TextEditingController _poapEventIdController;
+  late final TextEditingController _poapClaimUrlController;
   late final TextEditingController _poapRewardAmountController;
   late final TextEditingController _poapTitleController;
   late final TextEditingController _poapDescriptionController;
@@ -79,9 +89,14 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
   @override
   void initState() {
     super.initState();
+    _titleController = TextEditingController();
+    _descriptionController = TextEditingController();
+    _tagsController = TextEditingController();
     _latController = TextEditingController();
     _lngController = TextEditingController();
     _locationNameController = TextEditingController();
+    _poapEventIdController = TextEditingController();
+    _poapClaimUrlController = TextEditingController();
     _poapRewardAmountController = TextEditingController(text: '1');
     _poapTitleController = TextEditingController();
     _poapDescriptionController = TextEditingController();
@@ -95,9 +110,14 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
 
   @override
   void dispose() {
+    _titleController.dispose();
+    _descriptionController.dispose();
+    _tagsController.dispose();
     _latController.dispose();
     _lngController.dispose();
     _locationNameController.dispose();
+    _poapEventIdController.dispose();
+    _poapClaimUrlController.dispose();
     _poapRewardAmountController.dispose();
     _poapTitleController.dispose();
     _poapDescriptionController.dispose();
@@ -109,6 +129,10 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     _nftRoyaltyController.dispose();
     super.dispose();
   }
+
+  // ---------------------------------------------------------------------------
+  // Helpers
+  // ---------------------------------------------------------------------------
 
   bool _validateLatLng(double lat, double lng) =>
       lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
@@ -150,6 +174,9 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
   }
 
   void _applyDraftToControllers(ArtworkDraftState draft) {
+    _titleController.text = draft.title;
+    _descriptionController.text = draft.description;
+    _tagsController.text = draft.tagsCsv;
     if (!draft.locationEnabled) {
       _locationNameController.text = '';
       _latController.text = '';
@@ -167,6 +194,8 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     _poapRewardAmountController.text = draft.poapRewardAmount.toString();
     _poapTitleController.text = draft.poapTitle;
     _poapDescriptionController.text = draft.poapDescription;
+    _poapEventIdController.text = draft.poapEventId;
+    _poapClaimUrlController.text = draft.poapClaimUrl;
     _poapClaimDaysController.text = draft.poapClaimDurationDays.toString();
     _nftSeriesNameController.text = draft.nftSeriesName;
     _nftSeriesDescriptionController.text = draft.nftSeriesDescription;
@@ -189,6 +218,17 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     _lastFeeMode = mode;
     _feeFuture = drafts.estimatePoapFees(mode);
   }
+
+  bool _isLocationEnabled(ArtworkDraftState draft) {
+    if (draft.locationEnabled) return true;
+    if (draft.latitude != null || draft.longitude != null) return true;
+    if ((draft.locationName ?? '').trim().isNotEmpty) return true;
+    return false;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Map helpers
+  // ---------------------------------------------------------------------------
 
   Future<void> _handleMapStyleLoaded(BuildContext context) async {
     final controller = _mapController;
@@ -284,6 +324,10 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
       duration: const Duration(milliseconds: 240),
     );
   }
+
+  // ---------------------------------------------------------------------------
+  // File pickers
+  // ---------------------------------------------------------------------------
 
   Future<void> _pickCover(ArtworkDraftsProvider drafts) async {
     final messenger = ScaffoldMessenger.of(context);
@@ -416,20 +460,11 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     drafts.addGalleryItems(widget.draftId, items);
   }
 
-  bool _validateAndSaveBasics(ArtworkDraftState draft) {
-    final ok = _basicsFormKey.currentState?.validate() == true;
-    if (!ok) return false;
-    return draft.title.trim().isNotEmpty && draft.description.trim().isNotEmpty;
-  }
+  // ---------------------------------------------------------------------------
+  // Validation
+  // ---------------------------------------------------------------------------
 
-  bool _isLocationEnabled(ArtworkDraftState draft) {
-    if (draft.locationEnabled) return true;
-    if (draft.latitude != null || draft.longitude != null) return true;
-    if ((draft.locationName ?? '').trim().isNotEmpty) return true;
-    return false;
-  }
-
-  bool _validateAndSaveLocation({
+  bool _validateLocation({
     required ArtworkDraftsProvider drafts,
     required ArtworkDraftState draft,
   }) {
@@ -443,7 +478,6 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     final lngText = _lngController.text.trim();
     final nameText = _locationNameController.text.trim();
 
-    // If the user enabled location but left everything empty, treat as disabled.
     if (latText.isEmpty && lngText.isEmpty && nameText.isEmpty) {
       drafts.updateLocation(draftId: widget.draftId, enabled: false);
       return true;
@@ -476,9 +510,28 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     return true;
   }
 
+  // ---------------------------------------------------------------------------
+  // Publish / Mint
+  // ---------------------------------------------------------------------------
+
   Future<void> _publishDraft(ArtworkDraftsProvider drafts) async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
+
+    if (!_formKey.currentState!.validate()) return;
+
+    final draft = drafts.getDraft(widget.draftId);
+    if (draft == null) return;
+
+    if (draft.coverBytes == null) {
+      messenger.showKubusSnackBar(
+        const SnackBar(content: Text('Cover image is required.')),
+      );
+      return;
+    }
+
+    if (!_validateLocation(drafts: drafts, draft: draft)) return;
+
     final wallet = _resolveWalletAddress(context);
     if (wallet.isEmpty) {
       messenger.showKubusSnackBar(SnackBar(content: Text(l10n.communityCommentAuthRequiredToast)));
@@ -496,13 +549,10 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     }
     setState(() => _createdArtwork = created);
 
-    // Trigger portfolio refresh so gallery auto-updates
     if (mounted) {
       try {
         context.read<AppRefreshProvider>().triggerPortfolio();
-      } catch (_) {
-        // Silently fail if AppRefreshProvider is not available
-      }
+      } catch (_) {}
     }
   }
 
@@ -572,7 +622,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
       );
 
       if (!mounted) return;
-      Navigator.of(context).pop(); // progress dialog
+      Navigator.of(context).pop();
 
       if (result.success) {
         messenger.showKubusSnackBar(
@@ -585,80 +635,615 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
       }
     } catch (_) {
       if (!mounted) return;
-      Navigator.of(context).pop(); // progress dialog
+      Navigator.of(context).pop();
       messenger.showKubusSnackBar(
         const SnackBar(content: Text('Failed to mint NFT. Please try again.')),
       );
     }
   }
 
-  Widget _stepHeader(String title, {String? subtitle}) {
-    final scheme = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  // ---------------------------------------------------------------------------
+  // Section builders
+  // ---------------------------------------------------------------------------
+
+  Widget _buildBasicsSection({
+    required ArtworkDraftsProvider drafts,
+    required ArtworkDraftState draft,
+    required Color accent,
+  }) {
+    return CreatorSection(
+      title: 'Basics',
       children: [
-        Text(
-          title,
-          style: KubusTextStyles.detailSectionTitle.copyWith(
-            color: scheme.onSurface,
-          ),
+        CreatorTextField(
+          label: 'Title',
+          hint: 'e.g. Mural at the river walk',
+          accentColor: accent,
+          controller: _titleController,
+          onChanged: (v) => drafts.updateBasics(draftId: widget.draftId, title: v),
+          validator: (value) => (value ?? '').trim().isEmpty ? 'Title is required.' : null,
         ),
-        if (subtitle != null && subtitle.trim().isNotEmpty) ...[
-          const SizedBox(height: KubusSpacing.xs),
-          Text(
-            subtitle,
-            style: KubusTextStyles.detailLabel.copyWith(
-              color: scheme.onSurface.withValues(alpha: 0.7),
+        const CreatorFieldSpacing(),
+        CreatorTextField(
+          label: 'Description',
+          hint: 'What should people notice, feel, or learn?',
+          maxLines: 4,
+          accentColor: accent,
+          controller: _descriptionController,
+          onChanged: (v) => drafts.updateBasics(draftId: widget.draftId, description: v),
+          validator: (value) => (value ?? '').trim().isEmpty ? 'Description is required.' : null,
+        ),
+        const CreatorFieldSpacing(),
+        CreatorDropdown<String>(
+          label: 'Category',
+          value: draft.category,
+          accentColor: accent,
+          items: const [
+            DropdownMenuItem(value: 'Digital Art', child: Text('Digital Art')),
+            DropdownMenuItem(value: 'Street Art', child: Text('Street Art')),
+            DropdownMenuItem(value: 'Sculpture', child: Text('Sculpture')),
+            DropdownMenuItem(value: 'Photography', child: Text('Photography')),
+            DropdownMenuItem(value: 'General', child: Text('General')),
+          ],
+          onChanged: (value) {
+            if (value == null) return;
+            drafts.updateBasics(draftId: widget.draftId, category: value);
+          },
+        ),
+        const CreatorFieldSpacing(),
+        CreatorTextField(
+          label: 'Tags (optional)',
+          hint: 'comma-separated (e.g. community, mural, river)',
+          accentColor: accent,
+          controller: _tagsController,
+          onChanged: (v) => drafts.updateBasics(draftId: widget.draftId, tagsCsv: v),
+        ),
+        const CreatorFieldSpacing(),
+        CreatorSwitchTile(
+          title: 'Public',
+          subtitle: 'Public artworks appear on the map for everyone.',
+          value: draft.isPublic,
+          onChanged: draft.isSubmitting ? null : (v) => drafts.updateBasics(draftId: widget.draftId, isPublic: v),
+          activeColor: accent,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLocationSection({
+    required ArtworkDraftsProvider drafts,
+    required ArtworkDraftState draft,
+    required Color accent,
+  }) {
+    final locationEnabled = _isLocationEnabled(draft);
+
+    return CreatorSection(
+      title: 'Location',
+      children: [
+        CreatorSwitchTile(
+          title: 'Add location now',
+          subtitle: 'You can turn this on later and pin it to the map.',
+          value: locationEnabled,
+          onChanged: draft.isSubmitting
+              ? null
+              : (v) {
+                  drafts.updateLocation(draftId: widget.draftId, enabled: v);
+                  if (!v) {
+                    setState(() {
+                      _latController.text = '';
+                      _lngController.text = '';
+                      _locationNameController.text = '';
+                    });
+                  }
+                },
+          activeColor: accent,
+        ),
+        if (locationEnabled) ...[
+          const CreatorFieldSpacing(),
+          SizedBox(
+            height: 220,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(KubusRadius.lg),
+              child: Builder(
+                builder: (context) {
+                  final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+                  final tileProviders = context.read<TileProviders>();
+                  return ArtMapView(
+                    initialCenter: _location,
+                    initialZoom: 15,
+                    minZoom: 3,
+                    maxZoom: 24,
+                    isDarkMode: isDarkMode,
+                    styleAsset: tileProviders.mapStyleAsset(isDarkMode: isDarkMode),
+                    onMapCreated: (controller) {
+                      _mapController = controller;
+                      _styleReady = false;
+                    },
+                    onStyleLoaded: () {
+                      unawaited(_handleMapStyleLoaded(context).then((_) => _syncLocationOnMap()));
+                    },
+                    onMapClick: (_, point) {
+                      setState(() {
+                        _location = point;
+                        _latController.text = point.latitude.toStringAsFixed(6);
+                        _lngController.text = point.longitude.toStringAsFixed(6);
+                      });
+                      drafts.updateLocation(
+                        draftId: widget.draftId,
+                        enabled: true,
+                        locationName: _locationNameController.text.trim().isEmpty ? null : _locationNameController.text.trim(),
+                        latitude: point.latitude,
+                        longitude: point.longitude,
+                      );
+                      unawaited(_syncLocationOnMap());
+                    },
+                    rotateGesturesEnabled: false,
+                    compassEnabled: false,
+                  );
+                },
+              ),
             ),
+          ),
+          const CreatorFieldSpacing(),
+          CreatorTextField(
+            controller: _locationNameController,
+            label: 'Place name (optional)',
+            hint: 'e.g. River Walk, Downtown',
+            accentColor: accent,
+            onChanged: (v) => drafts.updateLocation(
+              draftId: widget.draftId,
+              enabled: true,
+              locationName: v.trim().isEmpty ? null : v.trim(),
+              latitude: double.tryParse(_latController.text.trim()),
+              longitude: double.tryParse(_lngController.text.trim()),
+            ),
+          ),
+          const CreatorFieldSpacing(),
+          Row(
+            children: [
+              Expanded(
+                child: CreatorTextField(
+                  controller: _latController,
+                  label: 'Latitude',
+                  accentColor: accent,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                  onChanged: (_) => _updateLocationFromFields(drafts),
+                ),
+              ),
+              const SizedBox(width: KubusSpacing.md),
+              Expanded(
+                child: CreatorTextField(
+                  controller: _lngController,
+                  label: 'Longitude',
+                  accentColor: accent,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                  onChanged: (_) => _updateLocationFromFields(drafts),
+                ),
+              ),
+            ],
           ),
         ],
       ],
     );
   }
 
-  Widget _infoIcon(String message) {
-    final scheme = Theme.of(context).colorScheme;
-    return Tooltip(
-      message: message,
-      triggerMode: TooltipTriggerMode.tap,
-      child: Icon(
-        Icons.help_outline,
-        size: 18,
-        color: scheme.onSurface.withValues(alpha: 0.6),
-      ),
-    );
-  }
-
-  InputDecoration _kubusInputDecoration({
-    String? labelText,
-    String? hintText,
-    Widget? suffixIcon,
-    BoxConstraints? suffixIconConstraints,
+  Widget _buildMediaSection({
+    required ArtworkDraftsProvider drafts,
+    required ArtworkDraftState draft,
+    required Color accent,
   }) {
     final scheme = Theme.of(context).colorScheme;
-    return InputDecoration(
-      labelText: labelText,
-      hintText: hintText,
-      suffixIcon: suffixIcon,
-      suffixIconConstraints: suffixIconConstraints,
-      filled: true,
-      fillColor: scheme.onSurface.withValues(alpha: 0.04),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(KubusRadius.md),
-        borderSide: BorderSide(color: scheme.outline.withValues(alpha: 0.25)),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(KubusRadius.md),
-        borderSide: BorderSide(color: scheme.outline.withValues(alpha: 0.25)),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(KubusRadius.md),
-        borderSide: BorderSide(color: scheme.primary),
-      ),
+    final l10n = AppLocalizations.of(context)!;
+
+    return CreatorSection(
+      title: 'Media',
+      children: [
+        CreatorCoverImagePicker(
+          imageBytes: draft.coverBytes,
+          uploadLabel: 'Upload cover',
+          changeLabel: 'Change cover',
+          removeTooltip: l10n.commonRemove,
+          onPick: () => _pickCover(drafts),
+          onRemove: () => drafts.clearCover(widget.draftId),
+          enabled: !draft.isSubmitting,
+        ),
+        const CreatorFieldSpacing(),
+        OutlinedButton.icon(
+          onPressed: draft.isSubmitting ? null : () => _pickGallery(drafts),
+          icon: const Icon(Icons.collections_outlined),
+          style: OutlinedButton.styleFrom(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(KubusRadius.md),
+            ),
+          ),
+          label: Text(
+            draft.gallery.isEmpty ? 'Add gallery images' : 'Add more',
+            style: KubusTextStyles.detailButton,
+          ),
+        ),
+        if (draft.gallery.isNotEmpty) ...[
+          const CreatorFieldSpacing(),
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: draft.gallery.length,
+            separatorBuilder: (_, __) => const SizedBox(height: KubusSpacing.sm),
+            itemBuilder: (context, index) {
+              final item = draft.gallery[index];
+              return Container(
+                padding: const EdgeInsets.all(KubusSpacing.sm),
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
+                  border: Border.all(color: scheme.outline.withValues(alpha: 0.18)),
+                ),
+                child: Row(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(KubusRadius.sm),
+                      child: SizedBox(
+                        width: 56,
+                        height: 56,
+                        child: Image.memory(item.bytes, fit: BoxFit.cover),
+                      ),
+                    ),
+                    const SizedBox(width: KubusSpacing.md),
+                    Expanded(
+                      child: Text(
+                        item.fileName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: KubusTextStyles.detailCardTitle,
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Move up',
+                      onPressed: index == 0 || draft.isSubmitting
+                          ? null
+                          : () => drafts.reorderGallery(widget.draftId, index, index - 1),
+                      icon: const Icon(Icons.keyboard_arrow_up),
+                    ),
+                    IconButton(
+                      tooltip: 'Move down',
+                      onPressed: index == draft.gallery.length - 1 || draft.isSubmitting
+                          ? null
+                          : () => drafts.reorderGallery(widget.draftId, index, index + 2),
+                      icon: const Icon(Icons.keyboard_arrow_down),
+                    ),
+                    IconButton(
+                      tooltip: l10n.commonRemove,
+                      onPressed: draft.isSubmitting ? null : () => drafts.removeGalleryItem(widget.draftId, index),
+                      icon: const Icon(Icons.delete_outline),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ],
     );
   }
 
-  Widget _feeEstimateCard(ArtworkDraftsProvider drafts, ArtworkDraftState draft) {
+  Widget _buildOptionalSection({
+    required ArtworkDraftsProvider drafts,
+    required ArtworkDraftState draft,
+    required Color accent,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return CreatorSection(
+      title: 'Optional features',
+      children: [
+        CreatorInfoBox(
+          text: 'Web3 and AR are optional. Your artwork can be published without them.',
+          accentColor: accent,
+        ),
+        const CreatorFieldSpacing(),
+
+        // --- NFT minting toggle ---
+        CreatorSwitchTile(
+          title: 'Mint as NFT',
+          subtitle: (AppConfig.isFeatureEnabled('web3') && AppConfig.isFeatureEnabled('nftMinting'))
+              ? 'You can mint after publishing (wallet required).'
+              : 'NFT minting is currently unavailable.',
+          value: draft.mintNftAfterPublish,
+          onChanged: (AppConfig.isFeatureEnabled('web3') &&
+                  AppConfig.isFeatureEnabled('nftMinting') &&
+                  !draft.isSubmitting)
+              ? (v) => drafts.updateOptionalFeatures(
+                    draftId: widget.draftId,
+                    mintNftAfterPublish: v,
+                  )
+              : null,
+          activeColor: accent,
+        ),
+
+        if (draft.mintNftAfterPublish) ...[
+          const CreatorFieldSpacing(),
+          CreatorTextField(
+            controller: _nftSeriesNameController,
+            label: 'Series name',
+            hint: draft.title.trim().isEmpty ? 'Defaults to artwork title' : draft.title.trim(),
+            accentColor: accent,
+            onChanged: (v) => drafts.updateOptionalFeatures(draftId: widget.draftId, nftSeriesName: v),
+          ),
+          const CreatorFieldSpacing(),
+          CreatorTextField(
+            controller: _nftSeriesDescriptionController,
+            label: 'Series description',
+            hint: 'Defaults to artwork description',
+            maxLines: 3,
+            accentColor: accent,
+            onChanged: (v) => drafts.updateOptionalFeatures(draftId: widget.draftId, nftSeriesDescription: v),
+          ),
+          const CreatorFieldSpacing(),
+          Row(
+            children: [
+              Expanded(
+                child: CreatorTextField(
+                  controller: _nftSupplyController,
+                  label: 'Supply',
+                  accentColor: accent,
+                  keyboardType: TextInputType.number,
+                  onChanged: (v) {
+                    final parsed = int.tryParse(v.trim());
+                    if (parsed != null) {
+                      drafts.updateOptionalFeatures(draftId: widget.draftId, nftTotalSupply: parsed);
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(width: KubusSpacing.md),
+              Expanded(
+                child: CreatorTextField(
+                  controller: _nftMintPriceController,
+                  label: 'Mint price (KUB8)',
+                  accentColor: accent,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  onChanged: (v) {
+                    final parsed = double.tryParse(v.trim());
+                    if (parsed != null) {
+                      drafts.updateOptionalFeatures(draftId: widget.draftId, nftMintPrice: parsed);
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+          const CreatorFieldSpacing(),
+          CreatorTextField(
+            controller: _nftRoyaltyController,
+            label: 'Artist fee (royalty %)',
+            accentColor: accent,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            onChanged: (v) {
+              final parsed = double.tryParse(v.trim());
+              if (parsed != null) {
+                drafts.updateOptionalFeatures(draftId: widget.draftId, nftRoyaltyPercent: parsed);
+              }
+            },
+          ),
+        ],
+
+        // --- Attendance badge section ---
+        if (AppConfig.isFeatureEnabled('attendance')) ...[
+          const CreatorFieldSpacing(height: KubusSpacing.lg),
+          Padding(
+            padding: const EdgeInsets.only(left: KubusSpacing.xs, bottom: KubusSpacing.sm),
+            child: Text(
+              'Attendance badge',
+              style: KubusTextStyles.detailSectionTitle.copyWith(
+                color: scheme.onSurface,
+              ),
+            ),
+          ),
+          RadioListTile<ArtworkPoapMode>(
+            value: ArtworkPoapMode.none,
+            groupValue: draft.poapMode,
+            onChanged: draft.isSubmitting
+                ? null
+                : (v) {
+                    if (v == null) return;
+                    drafts.updateOptionalFeatures(draftId: widget.draftId, poapMode: v);
+                  },
+            title: const Text('No badge'),
+            subtitle: const Text('Publish without attendance rewards.'),
+          ),
+          RadioListTile<ArtworkPoapMode>(
+            value: ArtworkPoapMode.existingPoap,
+            groupValue: draft.poapMode,
+            onChanged: draft.isSubmitting
+                ? null
+                : (v) {
+                    if (v == null) return;
+                    drafts.updateOptionalFeatures(draftId: widget.draftId, poapMode: v);
+                  },
+            title: const Text('Use existing POAP'),
+            subtitle: const Text('Paste an Event ID or claim link from an existing POAP drop.'),
+          ),
+          RadioListTile<ArtworkPoapMode>(
+            value: ArtworkPoapMode.kubusPoap,
+            groupValue: draft.poapMode,
+            onChanged: draft.isSubmitting
+                ? null
+                : (v) {
+                    if (v == null) return;
+                    drafts.updateOptionalFeatures(draftId: widget.draftId, poapMode: v);
+                  },
+            title: const Text('Create with kubus'),
+            subtitle: const Text('kubus generates a simple claim link automatically (no POAP setup required).'),
+          ),
+          if (draft.poapMode == ArtworkPoapMode.existingPoap) ...[
+            const CreatorFieldSpacing(),
+            CreatorTextField(
+              label: 'POAP Event ID (optional)',
+              hint: 'If you have an Event ID, paste it here.',
+              accentColor: accent,
+              controller: _poapEventIdController,
+              onChanged: (v) => drafts.updateOptionalFeatures(draftId: widget.draftId, poapEventId: v),
+            ),
+            const CreatorFieldSpacing(),
+            CreatorTextField(
+              label: 'POAP Claim URL (optional)',
+              hint: 'A link people can open to claim the badge.',
+              accentColor: accent,
+              controller: _poapClaimUrlController,
+              onChanged: (v) => drafts.updateOptionalFeatures(draftId: widget.draftId, poapClaimUrl: v),
+            ),
+          ],
+          if (draft.poapMode == ArtworkPoapMode.kubusPoap) ...[
+            const CreatorFieldSpacing(),
+            CreatorTextField(
+              controller: _poapRewardAmountController,
+              label: 'Reward amount (KUB8)',
+              accentColor: accent,
+              keyboardType: TextInputType.number,
+              onChanged: (v) {
+                final parsed = int.tryParse(v.trim());
+                if (parsed != null) {
+                  drafts.updateOptionalFeatures(draftId: widget.draftId, poapRewardAmount: parsed);
+                }
+              },
+            ),
+            const CreatorFieldSpacing(),
+            CreatorTextField(
+              controller: _poapClaimDaysController,
+              label: 'Claim window (days)',
+              accentColor: accent,
+              keyboardType: TextInputType.number,
+              onChanged: (v) {
+                final parsed = int.tryParse(v.trim());
+                if (parsed != null) {
+                  drafts.updateOptionalFeatures(draftId: widget.draftId, poapClaimDurationDays: parsed);
+                }
+              },
+            ),
+            const CreatorFieldSpacing(),
+            CreatorTextField(
+              controller: _poapTitleController,
+              label: 'Badge title',
+              hint: draft.title.trim().isEmpty ? 'Defaults to your artwork title' : 'Defaults to: ${draft.title.trim()}',
+              accentColor: accent,
+              onChanged: (v) => drafts.updateOptionalFeatures(draftId: widget.draftId, poapTitle: v),
+            ),
+            const CreatorFieldSpacing(),
+            CreatorTextField(
+              controller: _poapDescriptionController,
+              label: 'Badge description',
+              hint: 'Defaults to your artwork description',
+              maxLines: 3,
+              accentColor: accent,
+              onChanged: (v) => drafts.updateOptionalFeatures(draftId: widget.draftId, poapDescription: v),
+            ),
+            const CreatorFieldSpacing(),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(KubusRadius.md),
+                    border: Border.all(color: scheme.outline.withValues(alpha: 0.25)),
+                    color: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(KubusRadius.md),
+                    child: (draft.poapImageBytes != null && draft.poapImageBytes!.isNotEmpty)
+                        ? Image.memory(draft.poapImageBytes!, fit: BoxFit.cover)
+                        : Icon(Icons.badge_outlined, color: scheme.onSurfaceVariant),
+                  ),
+                ),
+                const SizedBox(width: KubusSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Badge image', style: KubusTextStyles.detailSectionTitle),
+                      const SizedBox(height: KubusSpacing.xs),
+                      Text(
+                        draft.poapImageBytes == null
+                            ? 'Uses your artwork cover by default.'
+                            : (draft.poapImageFileName ?? 'Custom image'),
+                        style: KubusTextStyles.detailLabel.copyWith(
+                          color: scheme.onSurface.withValues(alpha: 0.75),
+                        ),
+                      ),
+                      const SizedBox(height: KubusSpacing.sm),
+                      Wrap(
+                        spacing: KubusSpacing.sm,
+                        runSpacing: KubusSpacing.sm,
+                        children: [
+                          OutlinedButton.icon(
+                            onPressed: draft.isSubmitting ? null : () => unawaited(_pickPoapImage(drafts)),
+                            icon: const Icon(Icons.upload_file_outlined, size: 18),
+                            label: const Text('Upload'),
+                          ),
+                          if (draft.poapImageBytes != null)
+                            TextButton(
+                              onPressed: draft.isSubmitting ? null : () => drafts.clearPoapImage(widget.draftId),
+                              child: const Text('Use cover instead'),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const CreatorFieldSpacing(),
+            Text(
+              'Your claim link will be generated when you publish.',
+              style: KubusTextStyles.detailLabel.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
+          ],
+          _buildFeeEstimateCard(drafts, draft),
+        ] else ...[
+          const CreatorFieldSpacing(),
+          Text(
+            'Attendance rewards are currently unavailable.',
+            style: KubusTextStyles.detailBody.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.7),
+            ),
+          ),
+        ],
+
+        // --- AR toggle ---
+        const CreatorFieldSpacing(height: KubusSpacing.lg),
+        CreatorSwitchTile(
+          title: 'Enable AR',
+          subtitle: AppConfig.isFeatureEnabled('ar')
+              ? 'You can generate or upload a marker after publishing.'
+              : 'AR is currently unavailable on this platform.',
+          value: draft.arEnabled,
+          onChanged: AppConfig.isFeatureEnabled('ar') && !draft.isSubmitting
+              ? (v) => drafts.updateOptionalFeatures(draftId: widget.draftId, arEnabled: v)
+              : null,
+          activeColor: accent,
+        ),
+        if (_createdArtwork != null && draft.arEnabled) ...[
+          const CreatorFieldSpacing(),
+          OutlinedButton.icon(
+            onPressed: () async {
+              final artworkId = _createdArtwork?.id;
+              if (artworkId == null || artworkId.isEmpty) return;
+              await Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ArtworkArManagerScreen(artworkId: artworkId),
+                ),
+              );
+            },
+            icon: const Icon(Icons.qr_code_2),
+            label: const Text('Create / Manage AR'),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildFeeEstimateCard(ArtworkDraftsProvider drafts, ArtworkDraftState draft) {
     if (draft.poapMode == ArtworkPoapMode.none) return const SizedBox.shrink();
 
     _updateFeeEstimateIfNeeded(drafts, draft);
@@ -666,966 +1251,28 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     if (future == null) return const SizedBox.shrink();
 
     final scheme = Theme.of(context).colorScheme;
-    return FutureBuilder<Map<String, dynamic>?>(
-      future: future,
-      builder: (context, snapshot) {
-        final data = snapshot.data;
-        final minCost = data?['minCost'];
-        final maxCost = data?['maxCost'];
-        final explanation = (data?['explanation'] ?? '').toString().trim();
+    return Padding(
+      padding: const EdgeInsets.only(top: KubusSpacing.md),
+      child: FutureBuilder<Map<String, dynamic>?>(
+        future: future,
+        builder: (context, snapshot) {
+          final data = snapshot.data;
+          final minCost = data?['minCost'];
+          final maxCost = data?['maxCost'];
+          final explanation = (data?['explanation'] ?? '').toString().trim();
 
-        String headline;
-        if (minCost == null || maxCost == null) {
-          headline = 'Unavailable';
-        } else if (minCost == 0 && maxCost == 0) {
-          headline = '0';
-        } else if (minCost == maxCost) {
-          headline = '$minCost';
-        } else {
-          headline = '$minCost \u2013 $maxCost';
-        }
+          String headline;
+          if (minCost == null || maxCost == null) {
+            headline = 'Unavailable';
+          } else if (minCost == 0 && maxCost == 0) {
+            headline = '0';
+          } else if (minCost == maxCost) {
+            headline = '$minCost';
+          } else {
+            headline = '$minCost \u2013 $maxCost';
+          }
 
-        return Container(
-          margin: const EdgeInsets.only(top: KubusSpacing.md),
-          padding: const EdgeInsets.all(KubusSpacing.md),
-          decoration: BoxDecoration(
-            color: scheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(KubusRadius.md),
-            border: Border.all(color: scheme.outline.withValues(alpha: 0.18)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    'Approx. network fees',
-                    style: KubusTextStyles.detailSectionTitle.copyWith(
-                      color: scheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(width: KubusSpacing.sm),
-                  _infoIcon('If no wallet/network transaction is performed, the fee is 0.'),
-                ],
-              ),
-              const SizedBox(height: KubusSpacing.sm),
-              Text(
-                headline,
-                style: KubusTextStyles.detailScreenTitle.copyWith(
-                  color: scheme.onSurface,
-                ),
-              ),
-              if (explanation.isNotEmpty) ...[
-                const SizedBox(height: KubusSpacing.sm),
-                Text(
-                  explanation,
-                  style: KubusTextStyles.detailLabel.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.7),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Step _buildBasicsStep({
-    required ArtworkDraftsProvider drafts,
-    required ArtworkDraftState draft,
-    required int currentStep,
-    required Color accent,
-  }) {
-    return Step(
-      title: Text('Basics', style: KubusTextStyles.detailCardTitle),
-      isActive: currentStep >= 0,
-      state: currentStep > 0 ? StepState.complete : StepState.indexed,
-      content: Form(
-        key: _basicsFormKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _stepHeader(
-              'Tell the story',
-              subtitle: 'Add a title and a short description. Web3 and AR are optional and come later.',
-            ),
-            const SizedBox(height: KubusSpacing.md),
-            TextFormField(
-              initialValue: draft.title,
-              decoration: _kubusInputDecoration(
-                labelText: 'Title',
-                hintText: 'e.g. Mural at the river walk',
-              ),
-              textInputAction: TextInputAction.next,
-              onChanged: (v) => drafts.updateBasics(draftId: widget.draftId, title: v),
-              validator: (value) => (value ?? '').trim().isEmpty ? 'Title is required.' : null,
-            ),
-            const SizedBox(height: KubusSpacing.md),
-            TextFormField(
-              initialValue: draft.description,
-              decoration: _kubusInputDecoration(
-                labelText: 'Description',
-                hintText: 'What should people notice, feel, or learn?',
-              ),
-              minLines: 3,
-              maxLines: 6,
-              textInputAction: TextInputAction.newline,
-              onChanged: (v) => drafts.updateBasics(draftId: widget.draftId, description: v),
-              validator: (value) => (value ?? '').trim().isEmpty ? 'Description is required.' : null,
-            ),
-            const SizedBox(height: KubusSpacing.md),
-            DropdownButtonFormField<String>(
-              initialValue: draft.category,
-              decoration: _kubusInputDecoration(labelText: 'Category'),
-              items: const [
-                DropdownMenuItem(value: 'Digital Art', child: Text('Digital Art')),
-                DropdownMenuItem(value: 'Street Art', child: Text('Street Art')),
-                DropdownMenuItem(value: 'Sculpture', child: Text('Sculpture')),
-                DropdownMenuItem(value: 'Photography', child: Text('Photography')),
-                DropdownMenuItem(value: 'General', child: Text('General')),
-              ],
-              onChanged: (value) {
-                if (value == null) return;
-                drafts.updateBasics(draftId: widget.draftId, category: value);
-              },
-            ),
-            const SizedBox(height: KubusSpacing.md),
-            TextFormField(
-              initialValue: draft.tagsCsv,
-              decoration: _kubusInputDecoration(
-                labelText: 'Tags (optional)',
-                hintText: 'comma-separated (e.g. community, mural, river)',
-              ),
-              textInputAction: TextInputAction.done,
-              onChanged: (v) => drafts.updateBasics(draftId: widget.draftId, tagsCsv: v),
-            ),
-            const SizedBox(height: KubusSpacing.md),
-            SwitchListTile.adaptive(
-              value: draft.isPublic,
-              onChanged: (v) => drafts.updateBasics(draftId: widget.draftId, isPublic: v),
-              title: const Text('Public'),
-              subtitle: const Text('Public artworks appear on the map for everyone.'),
-              activeThumbColor: accent,
-              activeTrackColor: accent.withValues(alpha: 0.35),
-              contentPadding: EdgeInsets.zero,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Step _buildLocationStep({
-    required ArtworkDraftsProvider drafts,
-    required ArtworkDraftState draft,
-    required int currentStep,
-  }) {
-    final locationEnabled = _isLocationEnabled(draft);
-    return Step(
-      title: Text('Location', style: KubusTextStyles.detailCardTitle),
-      isActive: currentStep >= 1,
-      state: currentStep > 1 ? StepState.complete : StepState.indexed,
-      content: Form(
-        key: _locationFormKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _stepHeader(
-              'Pin it on the map',
-              subtitle: 'Location is optional. You can publish now and add a location later from the map.',
-            ),
-            const SizedBox(height: KubusSpacing.md),
-            SwitchListTile.adaptive(
-              value: locationEnabled,
-              onChanged: (v) {
-                drafts.updateLocation(draftId: widget.draftId, enabled: v);
-                if (!v) {
-                  setState(() {
-                    _latController.text = '';
-                    _lngController.text = '';
-                    _locationNameController.text = '';
-                  });
-                }
-              },
-              title: const Text('Add location now'),
-              subtitle: const Text('You can turn this on later and pin it to the map.'),
-              activeThumbColor: Theme.of(context).colorScheme.primary,
-              activeTrackColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.35),
-              contentPadding: EdgeInsets.zero,
-            ),
-            if (locationEnabled) ...[
-              const SizedBox(height: KubusSpacing.md),
-            SizedBox(
-              height: 220,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(KubusRadius.lg),
-                child: Builder(
-                  builder: (context) {
-                    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-                    final tileProviders = context.read<TileProviders>();
-                    return ArtMapView(
-                      initialCenter: _location,
-                      initialZoom: 15,
-                      minZoom: 3,
-                      maxZoom: 24,
-                      isDarkMode: isDarkMode,
-                      styleAsset: tileProviders.mapStyleAsset(isDarkMode: isDarkMode),
-                      onMapCreated: (controller) {
-                        _mapController = controller;
-                        _styleReady = false;
-                      },
-                      onStyleLoaded: () {
-                        unawaited(_handleMapStyleLoaded(context).then((_) => _syncLocationOnMap()));
-                      },
-                      onMapClick: (_, point) {
-                        setState(() {
-                          _location = point;
-                          _latController.text = point.latitude.toStringAsFixed(6);
-                          _lngController.text = point.longitude.toStringAsFixed(6);
-                        });
-                        drafts.updateLocation(
-                          draftId: widget.draftId,
-                          enabled: true,
-                          locationName: _locationNameController.text.trim().isEmpty ? null : _locationNameController.text.trim(),
-                          latitude: point.latitude,
-                          longitude: point.longitude,
-                        );
-                        unawaited(_syncLocationOnMap());
-                      },
-                      rotateGesturesEnabled: false,
-                      compassEnabled: false,
-                    );
-                  },
-                ),
-              ),
-            ),
-              const SizedBox(height: KubusSpacing.md),
-              TextFormField(
-                controller: _locationNameController,
-                decoration: _kubusInputDecoration(
-                  labelText: 'Place name (optional)',
-                  hintText: 'e.g. River Walk, Downtown',
-                ),
-                textInputAction: TextInputAction.next,
-                onChanged: (v) => drafts.updateLocation(
-                  draftId: widget.draftId,
-                  enabled: true,
-                  locationName: v.trim().isEmpty ? null : v.trim(),
-                  latitude: double.tryParse(_latController.text.trim()),
-                  longitude: double.tryParse(_lngController.text.trim()),
-                ),
-              ),
-              const SizedBox(height: KubusSpacing.md),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _latController,
-                      decoration: _kubusInputDecoration(labelText: 'Latitude'),
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                      textInputAction: TextInputAction.next,
-                      onChanged: (_) => _updateLocationFromFields(drafts),
-                    ),
-                  ),
-                  const SizedBox(width: KubusSpacing.md),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _lngController,
-                      decoration: _kubusInputDecoration(labelText: 'Longitude'),
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                      textInputAction: TextInputAction.done,
-                      onChanged: (_) => _updateLocationFromFields(drafts),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Step _buildMediaStep({
-    required ArtworkDraftsProvider drafts,
-    required ArtworkDraftState draft,
-    required int currentStep,
-  }) {
-    final scheme = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context)!;
-
-    return Step(
-      title: Text('Media', style: KubusTextStyles.detailCardTitle),
-      isActive: currentStep >= 2,
-      state: currentStep > 2 ? StepState.complete : StepState.indexed,
-      content: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _stepHeader(
-            'Add visuals',
-            subtitle: 'Upload a cover image and an optional gallery. Recommended: 4:3 cover, 1024px+.',
-          ),
-          const SizedBox(height: KubusSpacing.md),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: draft.isSubmitting ? null : () => _pickCover(drafts),
-                  icon: const Icon(Icons.image_outlined),
-                  label: Text(draft.coverBytes == null ? 'Upload cover' : 'Change cover'),
-                ),
-              ),
-              const SizedBox(width: KubusSpacing.sm),
-              IconButton(
-                tooltip: l10n.commonRemove,
-                onPressed: (draft.isSubmitting || draft.coverBytes == null) ? null : () => drafts.clearCover(widget.draftId),
-                icon: const Icon(Icons.delete_outline),
-              ),
-            ],
-          ),
-          if (draft.coverBytes != null) ...[
-            const SizedBox(height: KubusSpacing.sm),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-              child: Container(
-                height: 180,
-                width: double.infinity,
-                color: scheme.surfaceContainerHighest,
-                child: Image.memory(draft.coverBytes!, fit: BoxFit.cover),
-              ),
-            ),
-          ],
-          const SizedBox(height: KubusSpacing.md),
-          OutlinedButton.icon(
-            onPressed: draft.isSubmitting ? null : () => _pickGallery(drafts),
-            icon: const Icon(Icons.collections_outlined),
-            label: Text(draft.gallery.isEmpty ? 'Add gallery images' : 'Add more'),
-          ),
-          if (draft.gallery.isNotEmpty) ...[
-            const SizedBox(height: KubusSpacing.sm),
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: draft.gallery.length,
-              separatorBuilder: (_, __) => const SizedBox(height: KubusSpacing.sm),
-              itemBuilder: (context, index) {
-                final item = draft.gallery[index];
-                return Container(
-                  padding: const EdgeInsets.all(KubusSpacing.sm),
-                  decoration: BoxDecoration(
-                    color: scheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(KubusRadius.md),
-                    border: Border.all(color: scheme.outline.withValues(alpha: 0.18)),
-                  ),
-                  child: Row(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(KubusRadius.sm),
-                        child: SizedBox(
-                          width: 56,
-                          height: 56,
-                          child: Image.memory(item.bytes, fit: BoxFit.cover),
-                        ),
-                      ),
-                      const SizedBox(width: KubusSpacing.md),
-                      Expanded(
-                        child: Text(
-                          item.fileName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: KubusTextStyles.detailCardTitle,
-                        ),
-                      ),
-                      IconButton(
-                        tooltip: 'Move up',
-                        onPressed: index == 0 || draft.isSubmitting
-                            ? null
-                            : () => drafts.reorderGallery(widget.draftId, index, index - 1),
-                        icon: const Icon(Icons.keyboard_arrow_up),
-                      ),
-                      IconButton(
-                        tooltip: 'Move down',
-                        onPressed: index == draft.gallery.length - 1 || draft.isSubmitting
-                            ? null
-                            : () => drafts.reorderGallery(widget.draftId, index, index + 2),
-                        icon: const Icon(Icons.keyboard_arrow_down),
-                      ),
-                      IconButton(
-                        tooltip: l10n.commonRemove,
-                        onPressed: draft.isSubmitting ? null : () => drafts.removeGalleryItem(widget.draftId, index),
-                        icon: const Icon(Icons.delete_outline),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Step _buildOptionalStep({
-    required ArtworkDraftsProvider drafts,
-    required ArtworkDraftState draft,
-    required int currentStep,
-    required Color accent,
-  }) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return Step(
-      title: Text('Optional', style: KubusTextStyles.detailCardTitle),
-      isActive: currentStep >= 3,
-      state: currentStep > 3 ? StepState.complete : StepState.indexed,
-      content: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _stepHeader(
-            'Optional features',
-            subtitle: 'Web3 and AR are optional. Your artwork can be published without them.',
-          ),
-          const SizedBox(height: KubusSpacing.md),
-          ExpansionTile(
-            initiallyExpanded: false,
-            title: Row(
-              children: [
-                const Expanded(child: Text('Web3 / Attendance badge')),
-                _infoIcon('A POAP is a badge people can claim to prove they visited. kubus can host a simple claim link for you.'),
-              ],
-            ),
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(KubusSpacing.md, KubusSpacing.none, KubusSpacing.md, KubusSpacing.md),
-                child: SwitchListTile.adaptive(
-                  value: draft.mintNftAfterPublish,
-                  onChanged: (AppConfig.isFeatureEnabled('web3') &&
-                          AppConfig.isFeatureEnabled('nftMinting') &&
-                          !draft.isSubmitting)
-                      ? (v) => drafts.updateOptionalFeatures(
-                            draftId: widget.draftId,
-                            mintNftAfterPublish: v,
-                          )
-                      : null,
-                  title: Row(
-                    children: [
-                      const Expanded(child: Text('Mint as NFT')),
-                      _infoIcon('Optional. Create an NFT series for collectors after publishing.'),
-                    ],
-                  ),
-                  subtitle: Text(
-                    (AppConfig.isFeatureEnabled('web3') && AppConfig.isFeatureEnabled('nftMinting'))
-                        ? 'You can mint after publishing (wallet required).'
-                        : 'NFT minting is currently unavailable.',
-                  ),
-                  contentPadding: EdgeInsets.zero,
-                  activeThumbColor: accent,
-                  activeTrackColor: accent.withValues(alpha: 0.35),
-                ),
-              ),
-              if (draft.mintNftAfterPublish)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(KubusSpacing.md, KubusSpacing.none, KubusSpacing.md, KubusSpacing.md),
-                  child: Column(
-                    children: [
-                      TextFormField(
-                        controller: _nftSeriesNameController,
-                        decoration: _kubusInputDecoration(
-                          labelText: 'Series name',
-                          hintText: draft.title.trim().isEmpty ? 'Defaults to artwork title' : draft.title.trim(),
-                        ),
-                        onChanged: (v) => drafts.updateOptionalFeatures(draftId: widget.draftId, nftSeriesName: v),
-                      ),
-                      const SizedBox(height: KubusSpacing.md),
-                      TextFormField(
-                        controller: _nftSeriesDescriptionController,
-                        decoration: _kubusInputDecoration(
-                          labelText: 'Series description',
-                          hintText: 'Defaults to artwork description',
-                        ),
-                        maxLines: 3,
-                        onChanged: (v) => drafts.updateOptionalFeatures(draftId: widget.draftId, nftSeriesDescription: v),
-                      ),
-                      const SizedBox(height: KubusSpacing.md),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: _nftSupplyController,
-                              decoration: _kubusInputDecoration(
-                                labelText: 'Supply',
-                                suffixIcon: Padding(
-                                  padding: const EdgeInsets.only(right: KubusSpacing.md),
-                                  child: _infoIcon('Total number of collectibles in the series.'),
-                                ),
-                                suffixIconConstraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-                              ),
-                              keyboardType: TextInputType.number,
-                              onChanged: (v) {
-                                final parsed = int.tryParse(v.trim());
-                                if (parsed != null) {
-                                  drafts.updateOptionalFeatures(draftId: widget.draftId, nftTotalSupply: parsed);
-                                }
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: KubusSpacing.md),
-                          Expanded(
-                            child: TextFormField(
-                              controller: _nftMintPriceController,
-                              decoration: _kubusInputDecoration(
-                                labelText: 'Mint price (KUB8)',
-                                suffixIcon: Padding(
-                                  padding: const EdgeInsets.only(right: KubusSpacing.md),
-                                  child: _infoIcon('Price to mint one collectible from the series.'),
-                                ),
-                                suffixIconConstraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-                              ),
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              onChanged: (v) {
-                                final parsed = double.tryParse(v.trim());
-                                if (parsed != null) {
-                                  drafts.updateOptionalFeatures(draftId: widget.draftId, nftMintPrice: parsed);
-                                }
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: KubusSpacing.md),
-                      TextFormField(
-                        controller: _nftRoyaltyController,
-                        decoration: _kubusInputDecoration(
-                          labelText: 'Artist fee (royalty %)',
-                          suffixIcon: Padding(
-                            padding: const EdgeInsets.only(right: KubusSpacing.md),
-                            child: _infoIcon('Royalty on secondary sales (0\u2013100%).'),
-                          ),
-                          suffixIconConstraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-                        ),
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        onChanged: (v) {
-                          final parsed = double.tryParse(v.trim());
-                          if (parsed != null) {
-                            drafts.updateOptionalFeatures(draftId: widget.draftId, nftRoyaltyPercent: parsed);
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              const Divider(height: 1),
-              if (!AppConfig.isFeatureEnabled('attendance'))
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(KubusSpacing.md, KubusSpacing.none, KubusSpacing.md, KubusSpacing.md),
-                  child: Text(
-                    'Attendance rewards are currently unavailable.',
-                    style: KubusTextStyles.detailBody.copyWith(
-                      color: scheme.onSurface.withValues(alpha: 0.7),
-                    ),
-                  ),
-                )
-              else ...[
-                RadioGroup<ArtworkPoapMode>(
-                  groupValue: draft.poapMode,
-                  onChanged: (value) {
-                    if (draft.isSubmitting) return;
-                    if (value == null) return;
-                    drafts.updateOptionalFeatures(draftId: widget.draftId, poapMode: value);
-                  },
-                  child: const Column(
-                    children: [
-                      RadioListTile<ArtworkPoapMode>(
-                        value: ArtworkPoapMode.none,
-                        title: Text('No badge'),
-                        subtitle: Text('Publish without attendance rewards.'),
-                      ),
-                      RadioListTile<ArtworkPoapMode>(
-                        value: ArtworkPoapMode.existingPoap,
-                        title: Text('Use existing POAP'),
-                        subtitle: Text('Paste an Event ID or claim link from an existing POAP drop.'),
-                      ),
-                      RadioListTile<ArtworkPoapMode>(
-                        value: ArtworkPoapMode.kubusPoap,
-                        title: Text('Create with kubus'),
-                        subtitle: Text('kubus generates a simple claim link automatically (no POAP setup required).'),
-                      ),
-                    ],
-                  ),
-                ),
-                if (draft.poapMode == ArtworkPoapMode.existingPoap) ...[
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(KubusSpacing.md, KubusSpacing.none, KubusSpacing.md, KubusSpacing.md),
-                    child: Column(
-                      children: [
-                        TextFormField(
-                          initialValue: draft.poapEventId,
-                          decoration: _kubusInputDecoration(
-                            labelText: 'POAP Event ID (optional)',
-                            suffixIcon: Padding(
-                              padding: const EdgeInsets.only(right: KubusSpacing.md),
-                              child: _infoIcon('If you have an Event ID, paste it here. If not, you can paste a claim link instead.'),
-                            ),
-                            suffixIconConstraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-                          ),
-                          onChanged: (v) => drafts.updateOptionalFeatures(draftId: widget.draftId, poapEventId: v),
-                        ),
-                        const SizedBox(height: KubusSpacing.md),
-                        TextFormField(
-                          initialValue: draft.poapClaimUrl,
-                          decoration: _kubusInputDecoration(
-                            labelText: 'POAP Claim URL (optional)',
-                            suffixIcon: Padding(
-                              padding: const EdgeInsets.only(right: KubusSpacing.md),
-                              child: _infoIcon('A link people can open to claim the badge.'),
-                            ),
-                            suffixIconConstraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-                          ),
-                          onChanged: (v) => drafts.updateOptionalFeatures(draftId: widget.draftId, poapClaimUrl: v),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-                if (draft.poapMode == ArtworkPoapMode.kubusPoap) ...[
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(KubusSpacing.md, KubusSpacing.none, KubusSpacing.md, KubusSpacing.md),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        TextFormField(
-                          controller: _poapRewardAmountController,
-                          decoration: _kubusInputDecoration(
-                            labelText: 'Reward amount (KUB8)',
-                            suffixIcon: Padding(
-                              padding: const EdgeInsets.only(right: KubusSpacing.md),
-                              child: _infoIcon('Optional. How many KUB8 tokens to reward for confirmed attendance.'),
-                            ),
-                            suffixIconConstraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-                          ),
-                          keyboardType: TextInputType.number,
-                          onChanged: (v) {
-                            final parsed = int.tryParse(v.trim());
-                            if (parsed != null) {
-                              drafts.updateOptionalFeatures(draftId: widget.draftId, poapRewardAmount: parsed);
-                            }
-                          },
-                        ),
-                        const SizedBox(height: KubusSpacing.md),
-                        TextFormField(
-                          controller: _poapClaimDaysController,
-                          decoration: _kubusInputDecoration(
-                            labelText: 'Claim window (days)',
-                            suffixIcon: Padding(
-                              padding: const EdgeInsets.only(right: KubusSpacing.md),
-                              child: _infoIcon('How long the claim link stays active after publishing.'),
-                            ),
-                            suffixIconConstraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-                          ),
-                          keyboardType: TextInputType.number,
-                          onChanged: (v) {
-                            final parsed = int.tryParse(v.trim());
-                            if (parsed != null) {
-                              drafts.updateOptionalFeatures(
-                                draftId: widget.draftId,
-                                poapClaimDurationDays: parsed,
-                              );
-                            }
-                          },
-                        ),
-                        const SizedBox(height: KubusSpacing.md),
-                        TextFormField(
-                          controller: _poapTitleController,
-                          decoration: _kubusInputDecoration(
-                            labelText: 'Badge title',
-                            hintText: draft.title.trim().isEmpty ? 'Defaults to your artwork title' : 'Defaults to: ${draft.title.trim()}',
-                            suffixIcon: Padding(
-                              padding: const EdgeInsets.only(right: KubusSpacing.md),
-                              child: _infoIcon('Shown on the badge and claim page. Leave empty to use your artwork title.'),
-                            ),
-                            suffixIconConstraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-                          ),
-                          onChanged: (v) => drafts.updateOptionalFeatures(draftId: widget.draftId, poapTitle: v),
-                        ),
-                        const SizedBox(height: KubusSpacing.md),
-                        TextFormField(
-                          controller: _poapDescriptionController,
-                          decoration: _kubusInputDecoration(
-                            labelText: 'Badge description',
-                            hintText: 'Defaults to your artwork description',
-                            suffixIcon: Padding(
-                              padding: const EdgeInsets.only(right: KubusSpacing.md),
-                              child: _infoIcon('A short explanation for visitors. Leave empty to use your artwork description.'),
-                            ),
-                            suffixIconConstraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-                          ),
-                          maxLines: 3,
-                          onChanged: (v) => drafts.updateOptionalFeatures(draftId: widget.draftId, poapDescription: v),
-                        ),
-                        const SizedBox(height: KubusSpacing.md),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              width: 64,
-                              height: 64,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(KubusRadius.md),
-                                border: Border.all(color: scheme.outline.withValues(alpha: 0.25)),
-                                color: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(KubusRadius.md),
-                                child: (draft.poapImageBytes != null && draft.poapImageBytes!.isNotEmpty)
-                                    ? Image.memory(draft.poapImageBytes!, fit: BoxFit.cover)
-                                    : Icon(Icons.badge_outlined, color: scheme.onSurfaceVariant),
-                              ),
-                            ),
-                            const SizedBox(width: KubusSpacing.md),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Badge image', style: KubusTextStyles.detailSectionTitle),
-                                  const SizedBox(height: KubusSpacing.xs),
-                                  Text(
-                                    draft.poapImageBytes == null
-                                        ? 'Uses your artwork cover by default.'
-                                        : (draft.poapImageFileName ?? 'Custom image'),
-                                    style: KubusTextStyles.detailLabel.copyWith(
-                                      color: scheme.onSurface.withValues(alpha: 0.75),
-                                    ),
-                                  ),
-                                  const SizedBox(height: KubusSpacing.sm),
-                                  Wrap(
-                                    spacing: KubusSpacing.sm,
-                                    runSpacing: KubusSpacing.sm,
-                                    children: [
-                                      OutlinedButton.icon(
-                                        onPressed: draft.isSubmitting ? null : () => unawaited(_pickPoapImage(drafts)),
-                                        icon: const Icon(Icons.upload_file_outlined, size: 18),
-                                        label: const Text('Upload'),
-                                      ),
-                                      if (draft.poapImageBytes != null)
-                                        TextButton(
-                                          onPressed: draft.isSubmitting ? null : () => drafts.clearPoapImage(widget.draftId),
-                                          child: const Text('Use cover instead'),
-                                        ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: KubusSpacing.sm),
-                        Text(
-                          'Your claim link will be generated when you publish.',
-                          style: KubusTextStyles.detailLabel.copyWith(
-                            color: scheme.onSurface.withValues(alpha: 0.7),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(KubusSpacing.md, KubusSpacing.none, KubusSpacing.md, KubusSpacing.md),
-                  child: _feeEstimateCard(drafts, draft),
-                ),
-              ],
-            ],
-          ),
-          const SizedBox(height: KubusSpacing.md),
-          ExpansionTile(
-            initiallyExpanded: false,
-            title: Row(
-              children: [
-                const Expanded(child: Text('AR experience')),
-                _infoIcon('AR lets people scan a printable marker to unlock a 3D experience. You can set it up after publishing.'),
-              ],
-            ),
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(KubusSpacing.md, KubusSpacing.none, KubusSpacing.md, KubusSpacing.md),
-                child: SwitchListTile.adaptive(
-                  value: draft.arEnabled,
-                  onChanged: AppConfig.isFeatureEnabled('ar') && !draft.isSubmitting
-                      ? (v) => drafts.updateOptionalFeatures(draftId: widget.draftId, arEnabled: v)
-                      : null,
-                  title: const Text('Enable AR'),
-                  subtitle: Text(
-                    AppConfig.isFeatureEnabled('ar')
-                        ? 'You can generate or upload a marker after publishing.'
-                        : 'AR is currently unavailable on this platform.',
-                  ),
-                  contentPadding: EdgeInsets.zero,
-                  activeThumbColor: accent,
-                  activeTrackColor: accent.withValues(alpha: 0.35),
-                ),
-              ),
-              if (_createdArtwork != null && draft.arEnabled)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(KubusSpacing.md, KubusSpacing.none, KubusSpacing.md, KubusSpacing.md),
-                  child: OutlinedButton.icon(
-                    onPressed: () async {
-                      final artworkId = _createdArtwork?.id;
-                      if (artworkId == null || artworkId.isEmpty) return;
-                      await Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => ArtworkArManagerScreen(artworkId: artworkId),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.qr_code_2),
-                    label: const Text('Create / Manage AR'),
-                  ),
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Step _buildReviewStep({
-    required ArtworkDraftsProvider drafts,
-    required ArtworkDraftState draft,
-    required int currentStep,
-    required Color accent,
-  }) {
-    final scheme = Theme.of(context).colorScheme;
-
-    Widget buildPublishButton() {
-      return SizedBox(
-        width: double.infinity,
-        child: ElevatedButton.icon(
-          onPressed: draft.isSubmitting
-              ? null
-              : () async {
-                  final validBasics = _validateAndSaveBasics(draft);
-                  final validLocation = _validateAndSaveLocation(drafts: drafts, draft: draft);
-                  final hasCover = draft.coverBytes != null;
-                  if (!validBasics || !validLocation || !hasCover) {
-                    ScaffoldMessenger.of(context).showKubusSnackBar(
-                      const SnackBar(content: Text('Please complete required fields before publishing.')),
-                    );
-                    return;
-                  }
-                  await _publishDraft(drafts);
-                },
-          icon: const Icon(Icons.publish_outlined),
-          label: Text('Publish', style: KubusTextStyles.detailButton),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: accent,
-            foregroundColor: scheme.onPrimary,
-            padding: const EdgeInsets.symmetric(vertical: KubusSpacing.md),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(KubusRadius.md)),
-          ),
-        ),
-      );
-    }
-
-    Widget buildSuccessCard() {
-      final claimUrl = (_createdArtwork?.poapClaimUrl ?? '').trim();
-      final showClaim = _createdArtwork?.poapMode == ArtworkPoapMode.kubusPoap && claimUrl.isNotEmpty;
-      return Container(
-        padding: const EdgeInsets.all(KubusSpacing.md),
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(KubusRadius.md),
-          border: Border.all(color: scheme.outline.withValues(alpha: 0.18)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.check_circle, color: accent),
-                const SizedBox(width: KubusSpacing.sm),
-                Text('Published', style: KubusTextStyles.detailScreenTitle),
-              ],
-            ),
-            const SizedBox(height: KubusSpacing.sm),
-            if (showClaim) ...[
-              Text(
-                'Claim link',
-                style: KubusTextStyles.detailSectionTitle.copyWith(
-                  color: scheme.onSurface,
-                ),
-              ),
-              const SizedBox(height: KubusSpacing.sm),
-              SelectableText(
-                claimUrl,
-                style: KubusTextStyles.detailLabel,
-              ),
-              const SizedBox(height: KubusSpacing.sm),
-            ],
-            if (draft.arEnabled)
-              OutlinedButton.icon(
-                onPressed: () async {
-                  final artworkId = _createdArtwork?.id;
-                  if (artworkId == null || artworkId.isEmpty) return;
-                  await Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => ArtworkArManagerScreen(artworkId: artworkId),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.qr_code_2),
-                label: const Text('Create / Manage AR'),
-              ),
-            if (draft.mintNftAfterPublish &&
-                AppConfig.isFeatureEnabled('web3') &&
-                AppConfig.isFeatureEnabled('nftMinting')) ...[
-              const SizedBox(height: KubusSpacing.sm),
-              OutlinedButton.icon(
-                onPressed: () => unawaited(_mintNftForCreated(draft: draft)),
-                icon: const Icon(Icons.auto_awesome_outlined),
-                label: const Text('Mint NFT series'),
-              ),
-            ],
-            const SizedBox(height: KubusSpacing.sm),
-            SizedBox(
-              width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    if (widget.onCreated != null) {
-                      widget.onCreated?.call();
-                      return;
-                    }
-                    final shellScope = DesktopShellScope.of(context);
-                    if (shellScope != null) {
-                      shellScope.popScreen();
-                      return;
-                    }
-                    Navigator.of(context).maybePop(_createdArtwork?.id);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: accent,
-                    foregroundColor: scheme.onPrimary,
-                    padding: const EdgeInsets.symmetric(vertical: KubusSpacing.md),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(KubusRadius.md)),
-                ),
-                child: Text('Done', style: KubusTextStyles.detailButton),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Step(
-      title: Text('Review & Publish', style: KubusTextStyles.detailCardTitle),
-      isActive: currentStep >= 4,
-      state: StepState.indexed,
-      content: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _stepHeader('Review', subtitle: 'Double-check your details before publishing.'),
-          const SizedBox(height: KubusSpacing.md),
-          Container(
+          return Container(
             padding: const EdgeInsets.all(KubusSpacing.md),
             decoration: BoxDecoration(
               color: scheme.surfaceContainerHighest,
@@ -1636,103 +1283,245 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  draft.title.trim().isEmpty ? 'Untitled' : draft.title.trim(),
-                  style: KubusTextStyles.detailScreenTitle,
-                ),
-                const SizedBox(height: KubusSpacing.sm),
-                Text(
-                  draft.description.trim().isEmpty ? '\u2014' : draft.description.trim(),
-                  style: KubusTextStyles.detailBody.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.75),
+                  'Approx. network fees',
+                  style: KubusTextStyles.detailSectionTitle.copyWith(
+                    color: scheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: KubusSpacing.sm),
                 Text(
-                  'Category: ${draft.category}',
-                  style: KubusTextStyles.detailLabel.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.7),
+                  headline,
+                  style: KubusTextStyles.detailScreenTitle.copyWith(
+                    color: scheme.onSurface,
                   ),
                 ),
-                Text(
-                  'Location: ${(_latController.text.trim().isEmpty || _lngController.text.trim().isEmpty) ? 'Not set' : '${_latController.text.trim()}, ${_lngController.text.trim()}'}',
-                  style: KubusTextStyles.detailLabel.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.7),
-                  ),
-                ),
-                Text(
-                  'Gallery: ${draft.gallery.length} image(s)',
-                  style: KubusTextStyles.detailLabel.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.7),
-                  ),
-                ),
-                Text(
-                  'Attendance badge: ${draft.poapMode.apiValue}',
-                  style: KubusTextStyles.detailLabel.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.7),
-                  ),
-                ),
-                Text(
-                  'AR: ${draft.arEnabled ? 'Enabled' : 'Off'}',
-                  style: KubusTextStyles.detailLabel.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.7),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: KubusSpacing.md),
-          if (draft.submitError != null) ...[
-            Text(
-              draft.submitError!,
-              style: KubusTextStyles.detailCardTitle.copyWith(
-                color: scheme.error,
-              ),
-            ),
-            const SizedBox(height: KubusSpacing.sm),
-          ],
-          if (draft.isSubmitting) ...[
-            LinearProgressIndicator(
-              value: draft.uploadProgress.clamp(0, 1),
-              color: accent,
-              backgroundColor: accent.withValues(alpha: 0.18),
-              minHeight: 6,
-              borderRadius: BorderRadius.circular(KubusRadius.xl),
-            ),
-            const SizedBox(height: KubusSpacing.sm),
-            Row(
-              children: [
-                const SizedBox(width: 18, height: 18, child: InlineLoading(shape: BoxShape.circle, tileSize: 3.5)),
-                const SizedBox(width: KubusSpacing.sm),
-                Expanded(
-                  child: Text(
-                    'Publishing\u2026 ${(draft.uploadProgress * 100).clamp(0, 100).toStringAsFixed(0)}%',
-                    style: KubusTextStyles.detailBody.copyWith(
+                if (explanation.isNotEmpty) ...[
+                  const SizedBox(height: KubusSpacing.sm),
+                  Text(
+                    explanation,
+                    style: KubusTextStyles.detailLabel.copyWith(
                       color: scheme.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
-                ),
+                ],
               ],
             ),
-            const SizedBox(height: KubusSpacing.md),
-          ],
-          if (_createdArtwork == null) buildPublishButton() else buildSuccessCard(),
-        ],
+          );
+        },
       ),
     );
   }
 
+  Widget _buildPublishSection({
+    required ArtworkDraftsProvider drafts,
+    required ArtworkDraftState draft,
+    required Color accent,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+
+    if (_createdArtwork != null) {
+      return _buildSuccessSection(draft: draft, accent: accent);
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Review summary
+        CreatorSection(
+          title: 'Review',
+          children: [
+            _buildReviewRow('Title', draft.title.trim().isEmpty ? 'Untitled' : draft.title.trim()),
+            const CreatorFieldSpacing(height: KubusSpacing.sm),
+            _buildReviewRow('Category', draft.category),
+            const CreatorFieldSpacing(height: KubusSpacing.sm),
+            _buildReviewRow(
+              'Location',
+              (_latController.text.trim().isEmpty || _lngController.text.trim().isEmpty)
+                  ? 'Not set'
+                  : '${_latController.text.trim()}, ${_lngController.text.trim()}',
+            ),
+            const CreatorFieldSpacing(height: KubusSpacing.sm),
+            _buildReviewRow('Gallery', '${draft.gallery.length} image(s)'),
+            const CreatorFieldSpacing(height: KubusSpacing.sm),
+            _buildReviewRow('Badge', draft.poapMode.apiValue),
+            const CreatorFieldSpacing(height: KubusSpacing.sm),
+            _buildReviewRow('AR', draft.arEnabled ? 'Enabled' : 'Off'),
+          ],
+        ),
+        const CreatorSectionSpacing(),
+
+        if (draft.submitError != null) ...[
+          Text(
+            draft.submitError!,
+            style: KubusTextStyles.detailCardTitle.copyWith(
+              color: scheme.error,
+            ),
+          ),
+          const SizedBox(height: KubusSpacing.sm),
+        ],
+
+        if (draft.isSubmitting) ...[
+          LinearProgressIndicator(
+            value: draft.uploadProgress.clamp(0, 1),
+            color: accent,
+            backgroundColor: accent.withValues(alpha: 0.18),
+            minHeight: 6,
+            borderRadius: BorderRadius.circular(KubusRadius.xl),
+          ),
+          const SizedBox(height: KubusSpacing.sm),
+          Row(
+            children: [
+              const SizedBox(width: 18, height: 18, child: InlineLoading(shape: BoxShape.circle, tileSize: 3.5)),
+              const SizedBox(width: KubusSpacing.sm),
+              Expanded(
+                child: Text(
+                  'Publishing\u2026 ${(draft.uploadProgress * 100).clamp(0, 100).toStringAsFixed(0)}%',
+                  style: KubusTextStyles.detailBody.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.7),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: KubusSpacing.md),
+        ],
+
+        CreatorFooterActions(
+          primaryLabel: 'Publish',
+          onPrimary: draft.isSubmitting ? null : () => unawaited(_publishDraft(drafts)),
+          primaryLoading: draft.isSubmitting,
+          accentColor: accent,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReviewRow(String label, String value) {
+    final scheme = Theme.of(context).colorScheme;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 80,
+          child: Text(
+            label,
+            style: KubusTextStyles.detailLabel.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: KubusTextStyles.detailLabel.copyWith(
+              color: scheme.onSurface,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSuccessSection({
+    required ArtworkDraftState draft,
+    required Color accent,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    final claimUrl = (_createdArtwork?.poapClaimUrl ?? '').trim();
+    final showClaim = _createdArtwork?.poapMode == ArtworkPoapMode.kubusPoap && claimUrl.isNotEmpty;
+
+    return CreatorSection(
+      title: 'Published',
+      children: [
+        Row(
+          children: [
+            Icon(Icons.check_circle, color: accent),
+            const SizedBox(width: KubusSpacing.sm),
+            Text('Your artwork is live.', style: KubusTextStyles.detailSectionTitle),
+          ],
+        ),
+        if (showClaim) ...[
+          const CreatorFieldSpacing(),
+          Text(
+            'Claim link',
+            style: KubusTextStyles.detailSectionTitle.copyWith(
+              color: scheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: KubusSpacing.sm),
+          SelectableText(
+            claimUrl,
+            style: KubusTextStyles.detailLabel,
+          ),
+        ],
+        if (draft.arEnabled) ...[
+          const CreatorFieldSpacing(),
+          OutlinedButton.icon(
+            onPressed: () async {
+              final artworkId = _createdArtwork?.id;
+              if (artworkId == null || artworkId.isEmpty) return;
+              await Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ArtworkArManagerScreen(artworkId: artworkId),
+                ),
+              );
+            },
+            icon: const Icon(Icons.qr_code_2),
+            label: const Text('Create / Manage AR'),
+          ),
+        ],
+        if (draft.mintNftAfterPublish &&
+            AppConfig.isFeatureEnabled('web3') &&
+            AppConfig.isFeatureEnabled('nftMinting')) ...[
+          const CreatorFieldSpacing(),
+          OutlinedButton.icon(
+            onPressed: () => unawaited(_mintNftForCreated(draft: draft)),
+            icon: const Icon(Icons.auto_awesome_outlined),
+            label: const Text('Mint NFT series'),
+          ),
+        ],
+        const CreatorFieldSpacing(),
+        CreatorFooterActions(
+          primaryLabel: 'Done',
+          onPrimary: () {
+            if (widget.onCreated != null) {
+              widget.onCreated?.call();
+              return;
+            }
+            final shellScope = DesktopShellScope.of(context);
+            if (shellScope != null) {
+              shellScope.popScreen();
+              return;
+            }
+            Navigator.of(context).maybePop(_createdArtwork?.id);
+          },
+          accentColor: accent,
+        ),
+      ],
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------------
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
     final accent = KubusColorRoles.of(context).web3ArtistStudioAccent;
 
     return Consumer<ArtworkDraftsProvider>(
       builder: (context, drafts, _) {
         final draft = drafts.getDraft(widget.draftId);
         if (draft == null) {
-          return Scaffold(
-            appBar: widget.showAppBar ? AppBar(title: Text(l10n.artistStudioCreateOptionArtworkTitle)) : null,
+          if (widget.embedded) {
+            return CreatorGlassBody(
+              child: Center(child: Text(l10n.commonSomethingWentWrong)),
+            );
+          }
+          return CreatorScaffold(
+            title: l10n.artistStudioCreateOptionArtworkTitle,
+            showAppBar: widget.showAppBar,
             body: Center(child: Text(l10n.commonSomethingWentWrong)),
           );
         }
@@ -1742,40 +1531,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
           _didInitFromDraft = true;
         }
 
-        final currentStep = draft.currentStep.clamp(0, 4);
-
-        final steps = <Step>[
-          _buildBasicsStep(
-            drafts: drafts,
-            draft: draft,
-            currentStep: currentStep,
-            accent: accent,
-          ),
-          _buildLocationStep(
-            drafts: drafts,
-            draft: draft,
-            currentStep: currentStep,
-          ),
-          _buildMediaStep(
-            drafts: drafts,
-            draft: draft,
-            currentStep: currentStep,
-          ),
-          _buildOptionalStep(
-            drafts: drafts,
-            draft: draft,
-            currentStep: currentStep,
-            accent: accent,
-          ),
-          _buildReviewStep(
-            drafts: drafts,
-            draft: draft,
-            currentStep: currentStep,
-            accent: accent,
-          ),
-        ];
-
-        return PopScope(
+        final formBody = PopScope(
           canPop: !draft.isSubmitting,
           onPopInvokedWithResult: (didPop, result) {
             if (!didPop) return;
@@ -1783,76 +1539,33 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               drafts.disposeDraft(widget.draftId);
             } catch (_) {}
           },
-          child: Scaffold(
-            appBar: widget.showAppBar ? AppBar(title: Text(l10n.artistStudioCreateOptionArtworkTitle)) : null,
-            body: Stepper(
-              currentStep: currentStep,
-              steps: steps,
-              onStepTapped: (draft.isSubmitting || _createdArtwork != null)
-                  ? null
-                  : (idx) => drafts.setStep(widget.draftId, idx),
-              onStepContinue: (draft.isSubmitting || _createdArtwork != null)
-                  ? null
-                  : () {
-                      switch (currentStep) {
-                        case 0:
-                          if (!_validateAndSaveBasics(draft)) return;
-                          break;
-                        case 1:
-                          if (!_validateAndSaveLocation(drafts: drafts, draft: draft)) return;
-                          break;
-                        case 2:
-                          if (draft.coverBytes == null) {
-                            ScaffoldMessenger.of(context).showKubusSnackBar(
-                              const SnackBar(content: Text('Cover image is required.')),
-                            );
-                            return;
-                          }
-                          break;
-                        default:
-                          break;
-                      }
-                      if (currentStep < 4) {
-                        drafts.setStep(widget.draftId, currentStep + 1);
-                      }
-                    },
-              onStepCancel: (draft.isSubmitting || _createdArtwork != null)
-                  ? null
-                  : () {
-                      if (currentStep > 0) {
-                        drafts.setStep(widget.draftId, currentStep - 1);
-                      }
-                    },
-              controlsBuilder: (context, details) {
-                final canGoBack = currentStep > 0;
-                final isLast = currentStep == 4;
-                return Padding(
-                  padding: const EdgeInsets.only(top: KubusSpacing.md),
-                  child: Row(
-                    children: [
-                      if (canGoBack)
-                        TextButton(
-                          onPressed: details.onStepCancel,
-                          child: Text(l10n.commonBack),
-                        ),
-                      const Spacer(),
-                      if (!isLast)
-                        ElevatedButton(
-                          onPressed: details.onStepContinue,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: accent,
-                            foregroundColor: scheme.onPrimary,
-                            padding: const EdgeInsets.symmetric(vertical: KubusSpacing.md),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(KubusRadius.md)),
-                          ),
-                          child: Text(l10n.commonNext, style: KubusTextStyles.detailButton),
-                        ),
-                    ],
-                  ),
-                );
-              },
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(
+                KubusSpacing.md, KubusSpacing.md, KubusSpacing.md, KubusSpacing.lg,
+              ),
+              children: [
+                _buildBasicsSection(drafts: drafts, draft: draft, accent: accent),
+                const CreatorSectionSpacing(),
+                _buildLocationSection(drafts: drafts, draft: draft, accent: accent),
+                const CreatorSectionSpacing(),
+                _buildMediaSection(drafts: drafts, draft: draft, accent: accent),
+                const CreatorSectionSpacing(),
+                _buildOptionalSection(drafts: drafts, draft: draft, accent: accent),
+                const CreatorSectionSpacing(),
+                _buildPublishSection(drafts: drafts, draft: draft, accent: accent),
+              ],
             ),
           ),
+        );
+
+        if (widget.embedded) return CreatorGlassBody(child: formBody);
+
+        return CreatorScaffold(
+          title: l10n.artistStudioCreateOptionArtworkTitle,
+          showAppBar: widget.showAppBar,
+          body: formBody,
         );
       },
     );

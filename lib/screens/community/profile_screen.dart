@@ -1307,8 +1307,20 @@ class _ProfileScreenState extends State<ProfileScreen>
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Image.network(
-                  post.imageUrl!,
+                  MediaUrlResolver.resolveDisplayUrl(post.imageUrl) ??
+                      post.imageUrl!,
                   fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    final scheme = Theme.of(context).colorScheme;
+                    return Container(
+                      color: scheme.surfaceContainerHighest,
+                      alignment: Alignment.center,
+                      child: Icon(
+                        Icons.image_not_supported_outlined,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    );
+                  },
                 ),
               ),
             ],
