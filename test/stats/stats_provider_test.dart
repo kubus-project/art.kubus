@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:art_kubus/models/stats/stats_models.dart';
 import 'package:art_kubus/providers/stats_provider.dart';
 import 'package:art_kubus/services/stats_api_service.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 
 class _FakeStatsApiService extends StatsApiService {
   int snapshotCalls = 0;
@@ -108,5 +110,50 @@ void main() {
     expect(second, isNotNull);
     expect(api.snapshotCalls, 1);
   });
+
+  testWidgets(
+      'StatsProvider does not throw when ensureSnapshot is triggered from build',
+      (tester) async {
+    final api = _FakeStatsApiService();
+    final provider = StatsProvider(api: api);
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider<StatsProvider>.value(
+        value: provider,
+        child: const MaterialApp(
+          home: Scaffold(
+            body: _BuildTimeSnapshotProbe(),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 20));
+
+    expect(find.text('ok'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }
 
+class _BuildTimeSnapshotProbe extends StatelessWidget {
+  const _BuildTimeSnapshotProbe();
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<StatsProvider>();
+    unawaited(provider.ensureSnapshot(
+      entityType: 'platform',
+      entityId: 'global',
+      metrics: const <String>['artworks'],
+      scope: 'public',
+    ));
+    final snapshot = provider.getSnapshot(
+      entityType: 'platform',
+      entityId: 'global',
+      metrics: const <String>['artworks'],
+      scope: 'public',
+    );
+    return Text(snapshot == null ? 'loading' : 'ok');
+  }
+}

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 
 import '../config/config.dart';
 import '../models/stats/stats_models.dart';
@@ -26,10 +27,14 @@ class StatsProvider extends ChangeNotifier {
   final Map<String, _SnapshotEntry> _snapshots = <String, _SnapshotEntry>{};
   final Map<String, _SeriesEntry> _series = <String, _SeriesEntry>{};
 
-  final Map<String, Future<void>> _inFlightSnapshotFetches = <String, Future<void>>{};
-  final Map<String, Future<void>> _inFlightSeriesFetches = <String, Future<void>>{};
+  final Map<String, Future<void>> _inFlightSnapshotFetches =
+      <String, Future<void>>{};
+  final Map<String, Future<void>> _inFlightSeriesFetches =
+      <String, Future<void>>{};
 
   bool _initialized = false;
+  bool _disposed = false;
+  bool _notifyQueuedPostFrame = false;
 
   StatsProvider({StatsApiService? api}) : _api = api ?? StatsApiService();
 
@@ -84,13 +89,14 @@ class StatsProvider extends ChangeNotifier {
       // Analytics preference changes may affect whether we fetch series. Keep existing cache,
       // but notify so screens can hide/show charts immediately.
       // Schedule in microtask to avoid synchronous notification during Provider rebuild.
-      Future.microtask(notifyListeners);
+      Future.microtask(_notifyListenersSafely);
     };
     configProvider.addListener(_configListener!);
   }
 
   bool get analyticsEnabled =>
-      AppConfig.isFeatureEnabled('analytics') && (_configProvider?.enableAnalytics ?? true);
+      AppConfig.isFeatureEnabled('analytics') &&
+      (_configProvider?.enableAnalytics ?? true);
 
   void _markAllStale() {
     final staleAt = DateTime.fromMillisecondsSinceEpoch(0);
@@ -99,6 +105,22 @@ class StatsProvider extends ChangeNotifier {
     }
     for (final entry in _series.values) {
       entry.fetchedAt = staleAt;
+    }
+    _notifyListenersSafely();
+  }
+
+  void _notifyListenersSafely() {
+    if (_disposed) return;
+    final phase = SchedulerBinding.instance.schedulerPhase;
+    if (phase == SchedulerPhase.persistentCallbacks) {
+      if (_notifyQueuedPostFrame) return;
+      _notifyQueuedPostFrame = true;
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        _notifyQueuedPostFrame = false;
+        if (_disposed) return;
+        notifyListeners();
+      });
+      return;
     }
     notifyListeners();
   }
@@ -113,7 +135,11 @@ class StatsProvider extends ChangeNotifier {
     final normalizedEntityType = entityType.trim().toLowerCase();
     final normalizedEntityId = entityId.trim();
     final normalizedScope = scope.trim().toLowerCase();
-    final sortedMetrics = metrics.map((m) => m.trim()).where((m) => m.isNotEmpty).toList()..sort();
+    final sortedMetrics = metrics
+        .map((m) => m.trim())
+        .where((m) => m.isNotEmpty)
+        .toList()
+      ..sort();
     final group = (groupBy ?? '').trim().toLowerCase();
     return 'snapshot|$normalizedEntityType|$normalizedEntityId|$normalizedScope|${sortedMetrics.join(",")}|$group';
   }
@@ -306,7 +332,9 @@ class StatsProvider extends ChangeNotifier {
       return entry.snapshot;
     }
 
-    if (!forceRefresh && entry.errorAt != null && !_shouldRetryError(entry.errorAt)) {
+    if (!forceRefresh &&
+        entry.errorAt != null &&
+        !_shouldRetryError(entry.errorAt)) {
       return entry.snapshot;
     }
 
@@ -318,7 +346,7 @@ class StatsProvider extends ChangeNotifier {
 
     entry.isLoading = true;
     entry.error = null;
-    notifyListeners();
+    _notifyListenersSafely();
 
     final future = () async {
       try {
@@ -339,7 +367,7 @@ class StatsProvider extends ChangeNotifier {
       } finally {
         entry.isLoading = false;
         _inFlightSnapshotFetches.remove(key);
-        notifyListeners();
+        _notifyListenersSafely();
       }
     }();
 
@@ -387,11 +415,15 @@ class StatsProvider extends ChangeNotifier {
     );
 
     final entry = _seriesEntry(key);
-    if (!forceRefresh && entry.series != null && !_isStale(entry.fetchedAt, _seriesTtl)) {
+    if (!forceRefresh &&
+        entry.series != null &&
+        !_isStale(entry.fetchedAt, _seriesTtl)) {
       return entry.series;
     }
 
-    if (!forceRefresh && entry.errorAt != null && !_shouldRetryError(entry.errorAt)) {
+    if (!forceRefresh &&
+        entry.errorAt != null &&
+        !_shouldRetryError(entry.errorAt)) {
       return entry.series;
     }
 
@@ -403,7 +435,7 @@ class StatsProvider extends ChangeNotifier {
 
     entry.isLoading = true;
     entry.error = null;
-    notifyListeners();
+    _notifyListenersSafely();
 
     final future = () async {
       try {
@@ -428,7 +460,7 @@ class StatsProvider extends ChangeNotifier {
       } finally {
         entry.isLoading = false;
         _inFlightSeriesFetches.remove(key);
-        notifyListeners();
+        _notifyListenersSafely();
       }
     }();
 
@@ -437,7 +469,8 @@ class StatsProvider extends ChangeNotifier {
     return entry.series;
   }
 
-  void invalidateEntity({required String entityType, required String entityId}) {
+  void invalidateEntity(
+      {required String entityType, required String entityId}) {
     final prefix = '|${entityType.trim().toLowerCase()}|${entityId.trim()}|';
     for (final key in _snapshots.keys.toList(growable: false)) {
       if (key.contains(prefix)) {
@@ -449,7 +482,18 @@ class StatsProvider extends ChangeNotifier {
         _series[key]?.fetchedAt = DateTime.fromMillisecondsSinceEpoch(0);
       }
     }
-    notifyListeners();
+    _notifyListenersSafely();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    if (_configProvider != null && _configListener != null) {
+      try {
+        _configProvider!.removeListener(_configListener!);
+      } catch (_) {}
+    }
+    super.dispose();
   }
 }
 
