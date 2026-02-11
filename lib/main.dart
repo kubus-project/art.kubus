@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as dev;
 import 'package:art_kubus/screens/events/event_detail_screen.dart';
 import 'package:art_kubus/screens/events/exhibition_detail_screen.dart';
 import 'package:art_kubus/widgets/app_loading.dart';
@@ -98,6 +99,7 @@ class _UnhandledErrorDedupe {
   static DateTime? _lastLoggedAt;
   static int _suppressedCount = 0;
   static bool _capturedFirst = false;
+  static DateTime? _lastUiSurfaceAt;
   // Stored for debugging / external stack mapping tools.
   // ignore: unused_field
   static Object? firstError;
@@ -131,7 +133,17 @@ class _UnhandledErrorDedupe {
       debugPrint(
           'main.dart: Unhandled error ($source) ${error.runtimeType}: $error');
       debugPrint('main.dart: stack: $stack');
+    } else {
+      // Keep a minimal breadcrumb in release so errors are never fully silent.
+      dev.log(
+        'Unhandled error ($source) ${error.runtimeType}',
+        name: 'main.dart',
+        error: error,
+        stackTrace: stack,
+      );
     }
+
+    _surfaceDebugUi(error: error, source: source);
   }
 
   static void _captureFirst(Object error, StackTrace stack, String source) {
@@ -150,6 +162,38 @@ class _UnhandledErrorDedupe {
   static String _signatureFor(Object error, StackTrace stack, String source) {
     final stackLine = stack.toString().split('\n').first.trim();
     return '$source|${error.runtimeType}|$error|$stackLine';
+  }
+
+  static void _surfaceDebugUi({
+    required Object error,
+    required String source,
+  }) {
+    if (!kDebugMode) return;
+    final now = DateTime.now();
+    final last = _lastUiSurfaceAt;
+    if (last != null && now.difference(last) < const Duration(seconds: 4)) {
+      return;
+    }
+    _lastUiSurfaceAt = now;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final context = appNavigatorKey.currentContext;
+      if (context == null) return;
+      final messenger = ScaffoldMessenger.maybeOf(context);
+      if (messenger == null) return;
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+          content: Text(
+            'Unhandled $source error: ${error.runtimeType}',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      );
+    });
   }
 }
 
@@ -232,6 +276,12 @@ void main() {
           } catch (e, st) {
             debugPrint('Failed to forward FlutterError to zone: $e\n$st');
           }
+        };
+
+        PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
+          _UnhandledErrorDedupe.handle(error, stack,
+              source: 'PlatformDispatcher');
+          return true;
         };
         // Camera initialization moved to AR screen to avoid early permission requests
       } catch (e) {
@@ -477,9 +527,11 @@ class _AppLauncherState extends State<AppLauncher> {
                   create: (context) => ArtworkDraftsProvider()),
               ChangeNotifierProvider(
                   create: (context) => ArtworkArConfigProvider()),
-              ChangeNotifierProxyProvider2<ArtworkProvider, AppRefreshProvider, PortfolioProvider>(
+              ChangeNotifierProxyProvider2<ArtworkProvider, AppRefreshProvider,
+                  PortfolioProvider>(
                 create: (context) => PortfolioProvider(),
-                update: (context, artworkProvider, appRefreshProvider, portfolioProvider) {
+                update: (context, artworkProvider, appRefreshProvider,
+                    portfolioProvider) {
                   final provider = portfolioProvider ?? PortfolioProvider();
                   provider.bindArtworkProvider(artworkProvider);
                   provider.bindAppRefreshProvider(appRefreshProvider);
