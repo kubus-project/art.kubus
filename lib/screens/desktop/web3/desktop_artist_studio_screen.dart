@@ -301,22 +301,27 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
     }
 
     final showExhibitions = AppConfig.isFeatureEnabled('exhibitions');
-
-    final glassTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
+    final sidebarStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.sidebarBackground,
+      tintBase: scheme.surface,
+    );
 
     return Container(
       decoration: BoxDecoration(
         border: Border(
           left: BorderSide(
-            color: scheme.outline.withValues(alpha: 0.10),
+            color: scheme.outline.withValues(alpha: 0.08),
           ),
         ),
       ),
       child: LiquidGlassPanel(
         padding: EdgeInsets.zero,
         borderRadius: BorderRadius.zero,
+        blurSigma: sidebarStyle.blurSigma,
+        fallbackMinOpacity: sidebarStyle.fallbackMinOpacity,
         showBorder: false,
-        backgroundColor: glassTint,
+        backgroundColor: sidebarStyle.tintColor,
         child: ListView(
           padding: const EdgeInsets.all(KubusSpacing.lg),
           children: [
@@ -370,7 +375,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                     DesktopShellScope.of(context)?.pushScreen(
                       DesktopSubScreen(
                         title: l10n.desktopArtistStudioQuickActionCollaborationInvitesTitle,
-                        child: const InvitesInboxScreen(),
+                        child: const InvitesInboxScreen(embedded: true),
                       ),
                     );
                   },

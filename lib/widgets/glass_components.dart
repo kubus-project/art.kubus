@@ -6,6 +6,154 @@ import 'glass/glass_surface.dart';
 
 export 'glass/glass_surface.dart';
 
+enum KubusGlassSurfaceType {
+  header,
+  sidebarBackground,
+  panelBackground,
+  card,
+  button,
+}
+
+@immutable
+class KubusGlassStyle {
+  final Color tintColor;
+  final double blurSigma;
+  final double fallbackMinOpacity;
+
+  const KubusGlassStyle({
+    required this.tintColor,
+    required this.blurSigma,
+    required this.fallbackMinOpacity,
+  });
+
+  static KubusGlassStyle resolve(
+    BuildContext context, {
+    required KubusGlassSurfaceType surfaceType,
+    Color? tintBase,
+  }) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final base = tintBase ?? scheme.surface;
+
+    final _GlassSurfaceProfile profile;
+    switch (surfaceType) {
+      case KubusGlassSurfaceType.header:
+        profile = const _GlassSurfaceProfile(
+          blurSigma: KubusGlassEffects.blurSigmaLight,
+          tintAlphaDark: 0.20,
+          tintAlphaLight: 0.14,
+          fallbackMinOpacityDark: 0.18,
+          fallbackMinOpacityLight: 0.14,
+        );
+        break;
+      case KubusGlassSurfaceType.sidebarBackground:
+        profile = const _GlassSurfaceProfile(
+          blurSigma: KubusGlassEffects.blurSigmaLight,
+          tintAlphaDark: 0.16,
+          tintAlphaLight: 0.10,
+          fallbackMinOpacityDark: 0.14,
+          fallbackMinOpacityLight: 0.10,
+        );
+        break;
+      case KubusGlassSurfaceType.panelBackground:
+        profile = const _GlassSurfaceProfile(
+          blurSigma: KubusGlassEffects.blurSigmaLight,
+          tintAlphaDark: 0.18,
+          tintAlphaLight: 0.12,
+          fallbackMinOpacityDark: 0.16,
+          fallbackMinOpacityLight: 0.12,
+        );
+        break;
+      case KubusGlassSurfaceType.card:
+        profile = const _GlassSurfaceProfile(
+          blurSigma: KubusGlassEffects.blurSigmaLight,
+          tintAlphaDark: 0.22,
+          tintAlphaLight: 0.16,
+          fallbackMinOpacityDark: 0.30,
+          fallbackMinOpacityLight: 0.24,
+        );
+        break;
+      case KubusGlassSurfaceType.button:
+        profile = const _GlassSurfaceProfile(
+          blurSigma: KubusGlassEffects.blurSigmaLight,
+          tintAlphaDark: 0.20,
+          tintAlphaLight: 0.14,
+          fallbackMinOpacityDark: 0.24,
+          fallbackMinOpacityLight: 0.18,
+        );
+        break;
+    }
+
+    return KubusGlassStyle(
+      tintColor: base.withValues(
+        alpha: isDark ? profile.tintAlphaDark : profile.tintAlphaLight,
+      ),
+      blurSigma: profile.blurSigma,
+      fallbackMinOpacity: isDark
+          ? profile.fallbackMinOpacityDark
+          : profile.fallbackMinOpacityLight,
+    );
+  }
+}
+
+@immutable
+class _GlassSurfaceProfile {
+  final double blurSigma;
+  final double tintAlphaDark;
+  final double tintAlphaLight;
+  final double fallbackMinOpacityDark;
+  final double fallbackMinOpacityLight;
+
+  const _GlassSurfaceProfile({
+    required this.blurSigma,
+    required this.tintAlphaDark,
+    required this.tintAlphaLight,
+    required this.fallbackMinOpacityDark,
+    required this.fallbackMinOpacityLight,
+  });
+}
+
+class KubusGlassAppBarBackdrop extends StatelessWidget {
+  final Color? tintBase;
+  final bool showBottomDivider;
+
+  const KubusGlassAppBarBackdrop({
+    super.key,
+    this.tintBase,
+    this.showBottomDivider = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final style = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.header,
+      tintBase: tintBase,
+    );
+    final scheme = Theme.of(context).colorScheme;
+    final divider = showBottomDivider
+        ? Border(
+            bottom: BorderSide(
+              color: scheme.outline.withValues(alpha: 0.06),
+              width: KubusSizes.hairline,
+            ),
+          )
+        : null;
+    return IgnorePointer(
+      child: GlassSurface(
+        borderRadius: BorderRadius.zero,
+        blurSigma: style.blurSigma,
+        tintColor: style.tintColor,
+        fallbackMinOpacity: style.fallbackMinOpacity,
+        showBorder: false,
+        border: divider,
+        child: const SizedBox.expand(),
+      ),
+    );
+  }
+}
+
 Future<T?> showKubusDialog<T>({
   required BuildContext context,
   required WidgetBuilder builder,
@@ -365,6 +513,9 @@ class LiquidGlassPanel extends StatelessWidget {
   /// Callback when tapped
   final VoidCallback? onTap;
 
+  /// Minimum tint opacity to keep in low-power fallback mode.
+  final double fallbackMinOpacity;
+
   const LiquidGlassPanel({
     super.key,
     required this.child,
@@ -375,6 +526,7 @@ class LiquidGlassPanel extends StatelessWidget {
     this.showBorder = true,
     this.backgroundColor,
     this.onTap,
+    this.fallbackMinOpacity = 0.14,
   });
 
   @override
@@ -388,6 +540,7 @@ class LiquidGlassPanel extends StatelessWidget {
         blurSigma: blurSigma,
         showBorder: showBorder,
         tintColor: backgroundColor,
+        fallbackMinOpacity: fallbackMinOpacity,
         child: Padding(
           padding: padding ?? const EdgeInsets.all(KubusSpacing.md),
           child: child,
@@ -423,6 +576,7 @@ class LiquidGlassCard extends StatelessWidget {
   final bool showBorder;
   final Color? backgroundColor;
   final VoidCallback? onTap;
+  final double fallbackMinOpacity;
 
   const LiquidGlassCard({
     super.key,
@@ -434,6 +588,7 @@ class LiquidGlassCard extends StatelessWidget {
     this.showBorder = true,
     this.backgroundColor,
     this.onTap,
+    this.fallbackMinOpacity = 0.24,
   });
 
   @override
@@ -446,6 +601,7 @@ class LiquidGlassCard extends StatelessWidget {
       showBorder: showBorder,
       backgroundColor: backgroundColor,
       onTap: onTap,
+      fallbackMinOpacity: fallbackMinOpacity,
       child: child,
     );
   }
@@ -462,6 +618,7 @@ class FrostedContainer extends StatelessWidget {
   final bool showBorder;
   final Color? backgroundColor;
   final VoidCallback? onTap;
+  final double fallbackMinOpacity;
 
   const FrostedContainer({
     super.key,
@@ -473,6 +630,7 @@ class FrostedContainer extends StatelessWidget {
     this.showBorder = true,
     this.backgroundColor,
     this.onTap,
+    this.fallbackMinOpacity = 0.26,
   });
 
   @override
@@ -485,6 +643,7 @@ class FrostedContainer extends StatelessWidget {
       showBorder: showBorder,
       backgroundColor: backgroundColor,
       onTap: onTap,
+      fallbackMinOpacity: fallbackMinOpacity,
       child: child,
     );
   }
@@ -502,6 +661,7 @@ class BackdropGlassSheet extends StatelessWidget {
   final Color? backgroundColor;
   final bool showBorder;
   final bool showHandle;
+  final double fallbackMinOpacity;
 
   const BackdropGlassSheet({
     super.key,
@@ -512,6 +672,7 @@ class BackdropGlassSheet extends StatelessWidget {
     this.backgroundColor,
     this.showBorder = true,
     this.showHandle = true,
+    this.fallbackMinOpacity = 0.24,
   });
 
   @override
@@ -530,6 +691,7 @@ class BackdropGlassSheet extends StatelessWidget {
         blurSigma: blurSigma,
         showBorder: showBorder,
         backgroundColor: backgroundColor,
+        fallbackMinOpacity: fallbackMinOpacity,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

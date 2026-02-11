@@ -117,6 +117,8 @@ enum _RightSidebarContent {
   createMarker,
 }
 
+enum _MarkerSocketScope { inScope, outOfScope, unknown }
+
 class DesktopMapScreen extends StatefulWidget {
   final LatLng? initialCenter;
   final double? initialZoom;
@@ -3739,29 +3741,51 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   void _handleMarkerCreated(ArtMarker marker) {
     if (!marker.hasValidPosition) return;
 
-    if (_travelModeEnabled) {
-      final loadedBounds = _loadedTravelBounds;
-      if (loadedBounds == null) return;
-      if (!MapViewportUtils.containsPoint(loadedBounds, marker.position)) {
-        return;
-      }
-    } else {
-      final withinRadius =
-          _distance.as(LengthUnit.Kilometer, _cameraCenter, marker.position) <=
-              (_effectiveSearchRadiusKm + 0.5);
-      if (!withinRadius) return;
+    final existingIndex = _artMarkers.indexWhere((m) => m.id == marker.id);
+    final scope = _resolveMarkerScope(marker);
+    if (scope == _MarkerSocketScope.outOfScope && existingIndex < 0) {
+      return;
     }
 
+    var changed = false;
     setState(() {
-      final existingIndex = _artMarkers.indexWhere((m) => m.id == marker.id);
-      if (existingIndex >= 0) {
-        _artMarkers[existingIndex] = marker;
-      } else {
-        _artMarkers = List<ArtMarker>.from(_artMarkers)..add(marker);
+      final next = List<ArtMarker>.from(_artMarkers, growable: true);
+      if (scope == _MarkerSocketScope.outOfScope) {
+        if (existingIndex >= 0) {
+          next.removeAt(existingIndex);
+          changed = true;
+        }
+      } else if (existingIndex >= 0) {
+        next[existingIndex] = marker;
+        changed = true;
+      } else if (scope == _MarkerSocketScope.inScope) {
+        next.add(marker);
+        changed = true;
+      }
+      if (changed) {
+        _artMarkers = next;
       }
     });
+    if (!changed) return;
     _kubusMapController.setMarkers(_artMarkers);
     unawaited(_syncMapMarkers(themeProvider: context.read<ThemeProvider>()));
+  }
+
+  _MarkerSocketScope _resolveMarkerScope(ArtMarker marker) {
+    if (_travelModeEnabled) {
+      final loadedBounds = _loadedTravelBounds;
+      if (loadedBounds == null) return _MarkerSocketScope.unknown;
+      return MapViewportUtils.containsPoint(loadedBounds, marker.position)
+          ? _MarkerSocketScope.inScope
+          : _MarkerSocketScope.outOfScope;
+    }
+
+    final withinRadius =
+        _distance.as(LengthUnit.Kilometer, _cameraCenter, marker.position) <=
+            (_effectiveSearchRadiusKm + 0.5);
+    return withinRadius
+        ? _MarkerSocketScope.inScope
+        : _MarkerSocketScope.outOfScope;
   }
 
   void _handleMarkerDeleted(String markerId) {

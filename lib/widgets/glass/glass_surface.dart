@@ -37,9 +37,16 @@ class GlassSurface extends StatelessWidget {
   /// Tint opacity when blur is active. When `null`, uses the design-token
   /// defaults ([KubusGlassEffects.glassOpacityDark] / `glassOpacityLight`).
   ///
-  /// In fallback (no blur) mode the opacity is raised to at least `0.70` so
-  /// the surface remains legible without the backdrop blur.
+  /// In fallback (no blur) mode this opacity is clamped by
+  /// [fallbackMinOpacity] so the surface remains legible without backdrop blur.
   final double? tintOpacity;
+
+  /// Minimum tint opacity used when blur is disabled.
+  ///
+  /// Use lower values for broad background surfaces (sidebar/header/panels) so
+  /// the global gradient stays visible in low-power mode, and higher values for
+  /// cards/buttons that need stronger legibility.
+  final double fallbackMinOpacity;
 
   /// Whether to draw a thin border around the surface.
   final bool showBorder;
@@ -54,13 +61,10 @@ class GlassSurface extends StatelessWidget {
     this.blurSigma = KubusGlassEffects.blurSigma,
     this.tintColor,
     this.tintOpacity,
+    this.fallbackMinOpacity = 0.24,
     this.showBorder = true,
     this.border,
   });
-
-  /// Fallback tint opacity used when blur is disabled, ensuring the surface
-  /// is opaque enough to remain legible.
-  static const double _fallbackMinOpacity = 0.70;
 
   @override
   Widget build(BuildContext context) {
@@ -89,10 +93,11 @@ class GlassSurface extends StatelessWidget {
           : KubusGlassEffects.glassOpacityLight;
     }
 
-    // In fallback mode, ensure the tint is at least `_fallbackMinOpacity`
+    // In fallback mode, ensure the tint is at least `fallbackMinOpacity`
     // so text stays readable even without the backdrop blur.
-    final resolvedOpacity =
-        useBlur ? nominalOpacity : nominalOpacity.clamp(_fallbackMinOpacity, 1.0);
+    final resolvedOpacity = useBlur
+        ? nominalOpacity
+        : nominalOpacity.clamp(fallbackMinOpacity, 1.0);
 
     // Gradient tint: top-left slightly darker than bottom-right.
     final tintPrimary = baseTint.withValues(alpha: resolvedOpacity);
@@ -118,7 +123,7 @@ class GlassSurface extends StatelessWidget {
       ),
       borderRadius: borderRadius,
       border: effectiveBorder,
-      boxShadow: useBlur
+      boxShadow: useBlur || fallbackMinOpacity < 0.20
           ? null
           : [
               BoxShadow(

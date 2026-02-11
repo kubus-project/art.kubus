@@ -12,7 +12,9 @@ import '../../widgets/avatar_widget.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class InvitesInboxScreen extends StatefulWidget {
-  const InvitesInboxScreen({super.key});
+  final bool embedded;
+
+  const InvitesInboxScreen({super.key, this.embedded = false});
 
   @override
   State<InvitesInboxScreen> createState() => _InvitesInboxScreenState();
@@ -43,6 +45,81 @@ class _InvitesInboxScreenState extends State<InvitesInboxScreen> {
     final provider = context.watch<CollabProvider>();
 
     final invites = provider.invitesInbox.where((i) => i.isPending).toList(growable: false);
+    final content = Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 860),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Collaboration invites',
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: scheme.onSurface,
+                      ),
+                    ),
+                  ),
+                  if (widget.embedded)
+                    IconButton(
+                      tooltip: 'Refresh',
+                      onPressed: _refresh,
+                      icon: const Icon(Icons.refresh),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Accept an invite to help manage an event, exhibition, artwork, or collection.',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: scheme.onSurface.withValues(alpha: 0.7),
+                ),
+              ),
+              const SizedBox(height: 12),
+              if ((provider.error ?? '').isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    'Could not load invites.',
+                    style: GoogleFonts.inter(color: scheme.error, fontSize: 12),
+                  ),
+                ),
+              Expanded(
+                child: provider.isLoading && invites.isEmpty
+                    ? Center(
+                        child: CircularProgressIndicator(color: scheme.primary),
+                      )
+                    : invites.isEmpty
+                        ? _EmptyState(onRefresh: _refresh)
+                        : ListView.separated(
+                            itemCount: invites.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: 10),
+                            itemBuilder: (context, index) {
+                              final invite = invites[index];
+                              return _InviteCard(
+                                invite: invite,
+                                onAccept: () => _accept(invite),
+                                onDecline: () => _decline(invite),
+                                onOpen: () => _openEntity(invite),
+                              );
+                            },
+                          ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (widget.embedded) {
+      return content;
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -55,65 +132,7 @@ class _InvitesInboxScreenState extends State<InvitesInboxScreen> {
           ),
         ],
       ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 860),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Collaboration invites',
-                  style: GoogleFonts.inter(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: scheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Accept an invite to help manage an event, exhibition, artwork, or collection.',
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    color: scheme.onSurface.withValues(alpha: 0.7),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                if ((provider.error ?? '').isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Text(
-                      'Could not load invites.',
-                      style: GoogleFonts.inter(color: scheme.error, fontSize: 12),
-                    ),
-                  ),
-                Expanded(
-                  child: provider.isLoading && invites.isEmpty
-                      ? Center(
-                          child: CircularProgressIndicator(color: scheme.primary),
-                        )
-                      : invites.isEmpty
-                          ? _EmptyState(onRefresh: _refresh)
-                          : ListView.separated(
-                              itemCount: invites.length,
-                              separatorBuilder: (_, __) => const SizedBox(height: 10),
-                              itemBuilder: (context, index) {
-                                final invite = invites[index];
-                                return _InviteCard(
-                                  invite: invite,
-                                  onAccept: () => _accept(invite),
-                                  onDecline: () => _decline(invite),
-                                  onOpen: () => _openEntity(invite),
-                                );
-                              },
-                            ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+      body: content,
     );
   }
 

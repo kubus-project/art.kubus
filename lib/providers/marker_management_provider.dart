@@ -248,30 +248,37 @@ class MarkerManagementProvider extends ChangeNotifier {
     final id = markerId.trim();
     if (id.isEmpty) return null;
     final index = _markers.indexWhere((m) => m.id == id);
-    if (index < 0) return null;
-
-    final before = _markers[index];
-    final optimistic = _applyUpdatesToMarker(before, updates);
-    _markers = _markers
-        .map((m) => m.id == id ? optimistic : m)
-        .toList(growable: false);
-    _mapMarkerService.notifyMarkerUpserted(optimistic);
-    notifyListeners();
+    final before = index >= 0 ? _markers[index] : null;
+    if (before != null) {
+      final optimistic = _applyUpdatesToMarker(before, updates);
+      _markers = _markers
+          .map((m) => m.id == id ? optimistic : m)
+          .toList(growable: false);
+      _mapMarkerService.notifyMarkerUpserted(optimistic);
+      notifyListeners();
+    }
 
     try {
       final updated = await _api.updateArtMarkerRecord(id, updates).timeout(const Duration(seconds: 20));
       if (updated == null) {
         // Revert when backend returns no marker.
-        _markers = _markers
-            .map((m) => m.id == id ? before : m)
-            .toList(growable: false);
-        _mapMarkerService.notifyMarkerUpserted(before);
-        notifyListeners();
+        if (before != null) {
+          _markers = _markers
+              .map((m) => m.id == id ? before : m)
+              .toList(growable: false);
+          _mapMarkerService.notifyMarkerUpserted(before);
+          notifyListeners();
+        }
         return null;
       }
-      _markers = _markers
-          .map((m) => m.id == id ? updated : m)
-          .toList(growable: false);
+      final updatedIndex = _markers.indexWhere((m) => m.id == id);
+      if (updatedIndex >= 0) {
+        _markers = _markers
+            .map((m) => m.id == id ? updated : m)
+            .toList(growable: false);
+      } else {
+        _markers = <ArtMarker>[updated, ..._markers];
+      }
       _mapMarkerService.notifyMarkerUpserted(updated);
       _lastFetch = DateTime.now();
       notifyListeners();
@@ -279,10 +286,12 @@ class MarkerManagementProvider extends ChangeNotifier {
     } catch (e) {
       _error = e.toString();
       // Revert optimistic change.
-      _markers = _markers
-          .map((m) => m.id == id ? before : m)
-          .toList(growable: false);
-      _mapMarkerService.notifyMarkerUpserted(before);
+      if (before != null) {
+        _markers = _markers
+            .map((m) => m.id == id ? before : m)
+            .toList(growable: false);
+        _mapMarkerService.notifyMarkerUpserted(before);
+      }
       notifyListeners();
       return null;
     }

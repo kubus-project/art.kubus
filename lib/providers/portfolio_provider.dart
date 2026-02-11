@@ -40,13 +40,11 @@ class PortfolioProvider extends ChangeNotifier {
 
   void bindAppRefreshProvider(AppRefreshProvider? appRefreshProvider) {
     if (identical(_appRefreshProvider, appRefreshProvider)) return;
+    _appRefreshProvider?.removeListener(_handleAppRefreshChanged);
     _appRefreshProvider = appRefreshProvider;
-  }
-
-  @override
-  void notifyListeners() {
-    _checkAndHandleRefresh();
-    super.notifyListeners();
+    _lastPortfolioRefreshVersion = _appRefreshProvider?.portfolioVersion ?? -1;
+    _appRefreshProvider?.addListener(_handleAppRefreshChanged);
+    _handleAppRefreshChanged();
   }
 
   List<PortfolioEntry> get entries {
@@ -64,9 +62,10 @@ class PortfolioProvider extends ChangeNotifier {
     return result;
   }
 
-  void _checkAndHandleRefresh() {
-    if (_appRefreshProvider == null || _walletAddress.isEmpty) return;
-    final currentVersion = _appRefreshProvider!.portfolioVersion;
+  void _handleAppRefreshChanged() {
+    final appRefreshProvider = _appRefreshProvider;
+    if (appRefreshProvider == null || _walletAddress.isEmpty) return;
+    final currentVersion = appRefreshProvider.portfolioVersion;
     if (currentVersion > _lastPortfolioRefreshVersion) {
       _lastPortfolioRefreshVersion = currentVersion;
       Future.microtask(() => refresh(force: true));
@@ -105,19 +104,18 @@ class PortfolioProvider extends ChangeNotifier {
 
   void setWalletAddress(String? walletAddress) {
     final next = (walletAddress ?? '').trim();
-    
-    // Check for refresh triggers from app refresh provider
-    _checkAndHandleRefresh();
-    
+
     if (next == _walletAddress) {
       // Wallet didn't change, but ensure we have data if this is the first time
       if (_walletAddress.isNotEmpty && _artworks.isEmpty && _collections.isEmpty && _exhibitions.isEmpty && !_loading) {
         Future.microtask(() => refresh(force: true));
       }
+      _handleAppRefreshChanged();
       return;
     }
-    
+
     _walletAddress = next;
+    _lastPortfolioRefreshVersion = _appRefreshProvider?.portfolioVersion ?? -1;
     _error = null;
     _artworks = const <Artwork>[];
     _collections = const <CollectionRecord>[];
@@ -128,6 +126,12 @@ class PortfolioProvider extends ChangeNotifier {
       // Avoid doing work in widget build; schedule microtask.
       Future.microtask(() => refresh(force: true));
     }
+  }
+
+  @override
+  void dispose() {
+    _appRefreshProvider?.removeListener(_handleAppRefreshChanged);
+    super.dispose();
   }
 
   Future<void> refresh({bool force = false}) async {
