@@ -54,4 +54,40 @@ void main() {
     expect(nextTapped, 1);
     expect(skipTapped, 1);
   });
+
+  testWidgets(
+      'KubusMapTutorialOverlay tolerates missing target render context',
+      (tester) async {
+    final detachedTargetKey = GlobalKey();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: KubusMapTutorialOverlay(
+            visible: true,
+            steps: <TutorialStepDefinition>[
+              TutorialStepDefinition(
+                targetKey: detachedTargetKey,
+                title: 'Title',
+                body: 'Body',
+              ),
+            ],
+            currentIndex: 0,
+            onNext: () {},
+            onBack: () {},
+            onSkip: () {},
+            skipLabel: 'Skip',
+            backLabel: 'Back',
+            nextLabel: 'Next',
+            doneLabel: 'Done',
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Done'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }
