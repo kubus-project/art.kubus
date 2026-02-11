@@ -894,7 +894,7 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                   // Subject section
                   // ==========================================================
                   CreatorSection(
-                    title: 'Subject',
+                    title: l10n.mapMarkerDialogSubjectTypeLabel,
                     children: [
                       Row(
                         children: [
@@ -1093,7 +1093,7 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                   // Details section
                   // ==========================================================
                   CreatorSection(
-                    title: 'Details',
+                    title: l10n.commonDetails,
                     children: [
                       TextFormField(
                         controller: _categoryController,
@@ -1149,7 +1149,7 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                   // Location section
                   // ==========================================================
                   CreatorSection(
-                    title: 'Location',
+                    title: l10n.desktopSettingsLocationLabel,
                     children: [
                       Row(
                         children: [
@@ -1180,7 +1180,7 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                   // Settings section
                   // ==========================================================
                   CreatorSection(
-                    title: 'Settings',
+                    title: l10n.settingsTitle,
                     children: [
                       TextFormField(
                         controller: _activationRadiusController,
