@@ -254,7 +254,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get personaOnboardingTitle => 'How do you want to use art.kubus?';
 
   @override
-  String get personaOnboardingSubtitle => 'Choose what you’re here for. This only changes what we highlight-not what you can access.';
+  String get personaOnboardingSubtitle => 'Choose what you’re here for. This only changes what we highlight - not what you can access.';
 
   @override
   String get personaOptionLoverTitle => 'Art lover';
@@ -456,7 +456,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authEnterValidEmailInline => 'Enter a valid email address.';
 
   @override
-  String get authPasswordPolicyError => 'Password must be 8–128 characters and include a letter and a number.';
+  String get authPasswordPolicyError => 'Password must be atleast 8 characters and include a letter and a number.';
 
   @override
   String get authPasswordMismatchInline => 'Passwords do not match.';
@@ -6834,4 +6834,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get supportTier50Body => 'Funds one focused development session (new feature / fixes / content updates).';
+
+  @override
+  String get collectionCreatorAddArtworksTitle => 'Add Artworks';
+
+  @override
+  String get collectionCreatorSearchArtworksLabel => 'Search';
+
+  @override
+  String get collectionCreatorSearchArtworksHint => 'Search your artworks...';
+
+  @override
+  String get collectionCreatorNoArtworksAvailable => 'No artworks available';
 }
