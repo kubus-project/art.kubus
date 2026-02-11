@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -104,6 +104,9 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   bool _popularCommunityLoading = false;
   bool _popularCommunityFetchFailed = false;
   bool _artFeedLoadQueued = false;
+  bool _platformStatsPrefetchQueued = false;
+  String _lastDiscoveredStatsWallet = '';
+  String? _queuedDiscoveredStatsWallet;
 
   final Map<String, ({String displayName, String? username})>
       _resolvedCreatorIdentityByWallet =
@@ -140,6 +143,22 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     });
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _schedulePlatformStatsPrefetch();
+
+    final walletAddress =
+        (context.watch<WalletProvider>().currentWalletAddress ?? '').trim();
+    if (walletAddress.isEmpty) {
+      _lastDiscoveredStatsWallet = '';
+      return;
+    }
+    if (walletAddress == _lastDiscoveredStatsWallet) return;
+    _lastDiscoveredStatsWallet = walletAddress;
+    _scheduleDiscoveredStatsPrefetch(walletAddress);
+  }
+
   void _queueArtFeedLoad({
     double? lat,
     double? lng,
@@ -158,6 +177,47 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         radiusKm: radiusKm ?? provider.artFeedRadiusKm,
         limit: limit ?? 20,
         refresh: true,
+      ));
+    });
+  }
+
+  void _schedulePlatformStatsPrefetch() {
+    if (_platformStatsPrefetchQueued) return;
+    _platformStatsPrefetchQueued = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _platformStatsPrefetchQueued = false;
+      if (!mounted) return;
+      final statsProvider = context.read<StatsProvider>();
+      unawaited(statsProvider.ensureSnapshot(
+        entityType: 'platform',
+        entityId: 'global',
+        metrics: const <String>[
+          'artworks',
+          'arEnabledArtworks',
+          'posts',
+          'groups',
+        ],
+        scope: 'public',
+      ));
+    });
+  }
+
+  void _scheduleDiscoveredStatsPrefetch(String walletAddress) {
+    final normalizedWallet = walletAddress.trim();
+    if (normalizedWallet.isEmpty) return;
+    if (_queuedDiscoveredStatsWallet == normalizedWallet) return;
+    _queuedDiscoveredStatsWallet = normalizedWallet;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_queuedDiscoveredStatsWallet == normalizedWallet) {
+        _queuedDiscoveredStatsWallet = null;
+      }
+      if (!mounted) return;
+      final statsProvider = context.read<StatsProvider>();
+      unawaited(statsProvider.ensureSnapshot(
+        entityType: 'user',
+        entityId: normalizedWallet,
+        metrics: const <String>['artworksDiscovered'],
+        scope: 'private',
       ));
     });
   }
@@ -891,14 +951,6 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
 
     final walletAddress = (walletProvider.currentWalletAddress ?? '').trim();
     const discoveredMetrics = <String>['artworksDiscovered'];
-    if (walletAddress.isNotEmpty) {
-      unawaited(statsProvider.ensureSnapshot(
-        entityType: 'user',
-        entityId: walletAddress,
-        metrics: discoveredMetrics,
-        scope: 'private',
-      ));
-    }
     final discoveredSnapshot = walletAddress.isEmpty
         ? null
         : statsProvider.getSnapshot(
@@ -924,6 +976,11 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         ) &&
         discoveredSnapshot == null &&
         discoveredError == null;
+    if (walletAddress.isNotEmpty &&
+        discoveredSnapshot == null &&
+        !discoveredLoading) {
+      _scheduleDiscoveredStatsPrefetch(walletAddress);
+    }
 
     final discoveredFromStats =
         discoveredSnapshot?.counters['artworksDiscovered'] ?? 0;
@@ -2229,13 +2286,6 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       'groups',
     ];
 
-    unawaited(statsProvider.ensureSnapshot(
-      entityType: 'platform',
-      entityId: 'global',
-      metrics: metrics,
-      scope: 'public',
-    ));
-
     final snapshot = statsProvider.getSnapshot(
       entityType: 'platform',
       entityId: 'global',
@@ -2254,6 +2304,9 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       metrics: metrics,
       scope: 'public',
     );
+    if (snapshot == null && !isRefreshing) {
+      _schedulePlatformStatsPrefetch();
+    }
     final isLoading = isRefreshing && snapshot == null;
     final hasError = statsError != null && snapshot == null;
 
