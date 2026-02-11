@@ -3,6 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
+import 'dart:async';
 import 'dart:typed_data';
 
 import '../../../services/backend_api_service.dart';
@@ -43,12 +44,9 @@ class _CollectionCreatorState extends State<CollectionCreator> {
   final Set<String> _selectedArtworkIds = <String>{};
   String _artworkSearchQuery = '';
   bool _artworksLoading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadArtworks();
-  }
+  String _attemptedWalletAddress = '';
+  String _inflightWalletAddress = '';
+  String _scheduledWalletAddress = '';
 
   @override
   void dispose() {
@@ -57,24 +55,41 @@ class _CollectionCreatorState extends State<CollectionCreator> {
     super.dispose();
   }
 
-  Future<void> _loadArtworks() async {
-    final artworkProvider = context.read<ArtworkProvider>();
-    final profileProvider = context.read<ProfileProvider>();
-    final web3Provider = context.read<Web3Provider>();
-    final walletAddress = WalletUtils.coalesce(
-      walletAddress: profileProvider.currentUser?.walletAddress,
-      wallet: web3Provider.walletAddress,
-    );
+  void _scheduleLoadArtworksIfNeeded(String walletAddress) {
+    final normalized = walletAddress.trim();
+    if (normalized.isEmpty) return;
+    if (normalized == _attemptedWalletAddress) return;
+    if (normalized == _inflightWalletAddress) return;
+    if (normalized == _scheduledWalletAddress) return;
 
-    if (walletAddress.isEmpty) return;
+    _scheduledWalletAddress = normalized;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final toLoad = _scheduledWalletAddress;
+      _scheduledWalletAddress = '';
+      if (toLoad.isEmpty) return;
+      unawaited(_loadArtworksForWallet(toLoad));
+    });
+  }
+
+  Future<void> _loadArtworksForWallet(String walletAddress) async {
+    final normalized = walletAddress.trim();
+    if (normalized.isEmpty) return;
+
+    final artworkProvider = context.read<ArtworkProvider>();
+    _attemptedWalletAddress = normalized;
+    _inflightWalletAddress = normalized;
 
     setState(() => _artworksLoading = true);
     try {
-      await artworkProvider.loadArtworksForWallet(walletAddress);
+      await artworkProvider.loadArtworksForWallet(normalized);
     } catch (_) {
       // Non-fatal; artworks list will be empty.
     } finally {
-      if (mounted) setState(() => _artworksLoading = false);
+      _inflightWalletAddress = '';
+      if (mounted) {
+        setState(() => _artworksLoading = false);
+      }
     }
   }
 
@@ -185,6 +200,13 @@ class _CollectionCreatorState extends State<CollectionCreator> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final studioAccent = KubusColorRoles.of(context).web3ArtistStudioAccent;
+    final profileProvider = context.watch<ProfileProvider>();
+    final web3Provider = context.watch<Web3Provider>();
+    final walletAddress = WalletUtils.coalesce(
+      walletAddress: profileProvider.currentUser?.walletAddress,
+      wallet: web3Provider.walletAddress,
+    );
+    _scheduleLoadArtworksIfNeeded(walletAddress);
 
     return CreatorScaffold(
       title: l10n.collectionCreatorTitle,
