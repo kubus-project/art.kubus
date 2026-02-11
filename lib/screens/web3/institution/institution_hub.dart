@@ -34,6 +34,7 @@ class InstitutionHub extends StatefulWidget {
 
 class _InstitutionHubState extends State<InstitutionHub> {
   int _selectedIndex = 0;
+  int? _hoveredTabIndex;
   DAOReview? _institutionReview;
   bool _reviewLoading = false;
   bool _hasFetchedReviewForWallet = false;
@@ -186,6 +187,9 @@ class _InstitutionHubState extends State<InstitutionHub> {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
+        flexibleSpace: KubusGlassAppBarBackdrop(
+          tintBase: Theme.of(context).colorScheme.surface,
+        ),
         title: Text(
           'Institution Hub',
           style: KubusTextStyles.screenTitle.copyWith(
@@ -290,7 +294,9 @@ class _InstitutionHubState extends State<InstitutionHub> {
   }
 
   Widget _buildInstitutionHeader({required bool isApprovedInstitution}) {
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final roles = KubusColorRoles.of(context);
     final persona = context.watch<ProfileProvider>().userPersona;
     final subtitle = switch (persona) {
       UserPersona.institution => 'Host events, exhibitions, and AR experiences for your visitors',
@@ -298,112 +304,139 @@ class _InstitutionHubState extends State<InstitutionHub> {
       UserPersona.lover => 'Discover exhibitions and events curated by institutions',
       null => 'Host events, exhibitions, and AR experiences for your visitors',
     };
+    final panelStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.panelBackground,
+      tintBase: roles.web3InstitutionAccent,
+    );
+    final radius = BorderRadius.circular(KubusRadius.lg);
 
-    return Container(
+    return LiquidGlassCard(
       margin: const EdgeInsets.symmetric(
         horizontal: KubusSpacing.md,
         vertical: KubusSpacing.sm,
       ),
       padding: const EdgeInsets.all(KubusSpacing.md),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            scheme.primary,
-            scheme.primary.withValues(alpha: 0.75),
-          ],
+      borderRadius: radius,
+      blurSigma: panelStyle.blurSigma,
+      fallbackMinOpacity: panelStyle.fallbackMinOpacity,
+      showBorder: false,
+      backgroundColor: panelStyle.tintColor,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: radius,
+          border: Border.all(
+            color: roles.web3InstitutionAccent.withValues(alpha: 0.24),
+            width: KubusSizes.hairline,
+          ),
         ),
-        borderRadius: BorderRadius.circular(KubusRadius.lg),
+        child: Padding(
+          padding: const EdgeInsets.all(KubusSpacing.md),
+          child: Row(
+            children: [
+              Container(
+                width: KubusSpacing.xxl,
+                height: KubusSpacing.xxl,
+                decoration: BoxDecoration(
+                  color: roles.web3InstitutionAccent.withValues(alpha: 0.22),
+                  borderRadius: BorderRadius.circular(KubusRadius.xl),
+                ),
+                child: Icon(
+                  Icons.location_city,
+                  color: roles.web3InstitutionAccent,
+                  size: KubusSpacing.lg,
+                ),
+              ),
+              const SizedBox(width: KubusSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Institution Dashboard',
+                      style: KubusTextStyles.sectionTitle
+                          .copyWith(color: scheme.onSurface),
+                    ),
+                    const SizedBox(height: KubusSpacing.xs),
+                    Text(
+                      subtitle,
+                      style: KubusTextStyles.actionTileSubtitle.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.86),
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (isApprovedInstitution) ...[
+                      const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
+                      Wrap(
+                        spacing: KubusSpacing.sm,
+                        runSpacing: KubusSpacing.sm,
+                        children: [
+                          if (AppConfig.isFeatureEnabled('events'))
+                            _buildHubHeaderButton(
+                              label: 'Create event',
+                              icon: Icons.add,
+                              accent: roles.positiveAction,
+                              onTap: () => setState(
+                                () => _selectedIndex = AppConfig.isFeatureEnabled('exhibitions') ? 2 : 1,
+                              ),
+                            ),
+                          if (AppConfig.isFeatureEnabled('exhibitions'))
+                            _buildHubHeaderButton(
+                              label: 'Exhibitions',
+                              icon: Icons.collections_bookmark_outlined,
+                              accent: roles.web3InstitutionAccent,
+                              onTap: () => setState(() => _selectedIndex = 1),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHubHeaderButton({
+    required String label,
+    required IconData icon,
+    required Color accent,
+    required VoidCallback onTap,
+  }) {
+    final buttonStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.button,
+      tintBase: accent,
+    );
+    return LiquidGlassCard(
+      onTap: onTap,
+      padding: const EdgeInsets.symmetric(
+        horizontal: KubusSpacing.md - KubusSpacing.xs,
+        vertical: KubusSpacing.sm + KubusSpacing.xs,
+      ),
+      borderRadius: BorderRadius.circular(KubusRadius.md),
+      blurSigma: buttonStyle.blurSigma,
+      fallbackMinOpacity: buttonStyle.fallbackMinOpacity,
+      showBorder: false,
+      backgroundColor: accent.withValues(
+        alpha: Theme.of(context).brightness == Brightness.dark ? 0.20 : 0.14,
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: KubusSpacing.xxl,
-            height: KubusSpacing.xxl,
-            decoration: BoxDecoration(
-              color: scheme.onSurface.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(KubusRadius.xl),
-            ),
-            child: Icon(
-              Icons.location_city,
-              color: scheme.onSurface,
-              size: KubusSpacing.lg,
-            ),
+          Icon(
+            icon,
+            size: KubusSizes.trailingChevron,
+            color: accent,
           ),
-          const SizedBox(width: KubusSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Institution Dashboard',
-                  style: KubusTextStyles.sectionTitle
-                      .copyWith(color: scheme.onSurface),
-                ),
-                const SizedBox(height: KubusSpacing.xs),
-                Text(
-                  subtitle,
-                  style: KubusTextStyles.actionTileSubtitle.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.9),
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                if (isApprovedInstitution) ...[
-                  const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
-                  Wrap(
-                    spacing: KubusSpacing.sm,
-                    runSpacing: KubusSpacing.sm,
-                    children: [
-                      if (AppConfig.isFeatureEnabled('events'))
-                        OutlinedButton.icon(
-                          // "Create" tab index depends on exhibitions feature
-                          onPressed: () => setState(() => _selectedIndex = AppConfig.isFeatureEnabled('exhibitions') ? 2 : 1),
-                          icon: Icon(
-                            Icons.add,
-                            size: KubusSizes.trailingChevron,
-                            color: scheme.onSurface,
-                          ),
-                          label: Text(
-                            'Create event',
-                            style: KubusTextStyles.actionTileTitle
-                                .copyWith(color: scheme.onSurface),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: scheme.onSurface.withValues(alpha: 0.35)),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: KubusSpacing.md - KubusSpacing.xs,
-                              vertical: KubusSpacing.sm + KubusSpacing.xs,
-                            ),
-                          ),
-                        ),
-                      if (AppConfig.isFeatureEnabled('exhibitions'))
-                        OutlinedButton.icon(
-                          onPressed: () => setState(() => _selectedIndex = 1),
-                          icon: Icon(
-                            Icons.collections_bookmark_outlined,
-                            size: KubusSizes.trailingChevron,
-                            color: scheme.onSurface,
-                          ),
-                          label: Text(
-                            'Exhibitions',
-                            style: KubusTextStyles.actionTileTitle
-                                .copyWith(color: scheme.onSurface),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: scheme.onSurface.withValues(alpha: 0.35)),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: KubusSpacing.md - KubusSpacing.xs,
-                              vertical: KubusSpacing.sm + KubusSpacing.xs,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
-              ],
-            ),
+          const SizedBox(width: KubusSpacing.xs),
+          Text(
+            label,
+            style: KubusTextStyles.actionTileTitle.copyWith(color: accent),
           ),
         ],
       ),
@@ -626,61 +659,135 @@ class _InstitutionHubState extends State<InstitutionHub> {
   }
 
   Widget _buildNavigationTabs(bool enabled) {
+    final roles = KubusColorRoles.of(context);
     final scheme = Theme.of(context).colorScheme;
+    final exhibitionsEnabled = AppConfig.isFeatureEnabled('exhibitions');
+    final panelStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.panelBackground,
+      tintBase: scheme.surface,
+    );
     return LiquidGlassCard(
       margin: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
       padding: const EdgeInsets.all(KubusSpacing.xs),
       borderRadius: BorderRadius.circular(KubusRadius.md),
-      blurSigma: KubusGlassEffects.blurSigmaLight,
-      backgroundColor: scheme.surfaceContainerHighest.withValues(alpha: 0.18),
+      blurSigma: panelStyle.blurSigma,
+      fallbackMinOpacity: panelStyle.fallbackMinOpacity,
+      showBorder: false,
+      backgroundColor: panelStyle.tintColor,
       child: Row(
         children: [
-          Expanded(child: _buildTabButton('Events', Icons.event, 0, enabled)),
-          if (AppConfig.isFeatureEnabled('exhibitions'))
-            Expanded(child: _buildTabButton('Exhibitions', Icons.collections_bookmark, 1, enabled)),
-          Expanded(child: _buildTabButton('Create', Icons.add_box, AppConfig.isFeatureEnabled('exhibitions') ? 2 : 1, enabled)),
-          Expanded(child: _buildTabButton('Analytics', Icons.analytics, AppConfig.isFeatureEnabled('exhibitions') ? 3 : 2, enabled)),
+          Expanded(
+            child: _buildTabButton(
+              'Events',
+              Icons.event,
+              0,
+              enabled,
+              scheme.primary,
+            ),
+          ),
+          if (exhibitionsEnabled)
+            Expanded(
+              child: _buildTabButton(
+                'Exhibitions',
+                Icons.collections_bookmark,
+                1,
+                enabled,
+                roles.web3InstitutionAccent,
+              ),
+            ),
+          Expanded(
+            child: _buildTabButton(
+              'Create',
+              Icons.add_box,
+              exhibitionsEnabled ? 2 : 1,
+              enabled,
+              roles.positiveAction,
+            ),
+          ),
+          Expanded(
+            child: _buildTabButton(
+              'Analytics',
+              Icons.analytics,
+              exhibitionsEnabled ? 3 : 2,
+              enabled,
+              roles.statTeal,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildTabButton(String label, IconData icon, int index, bool enabled) {
+  Widget _buildTabButton(
+    String label,
+    IconData icon,
+    int index,
+    bool enabled,
+    Color accent,
+  ) {
     final isSelected = _selectedIndex == index;
-    final scheme = Theme.of(context).colorScheme;
-    return GestureDetector(
-      onTap: enabled
-          ? () => _setSelectedIndex(index)
-          : () => ScaffoldMessenger.of(context).showKubusSnackBar(
-                const SnackBar(content: Text('Institution tools unlock after DAO approval.')),
-              ),
-      child: Container(
+    final isHovered = _hoveredTabIndex == index;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final tintBase = (enabled && (isSelected || isHovered)) ? accent : scheme.surface;
+    final buttonStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.button,
+      tintBase: tintBase,
+    );
+    final background = !enabled
+        ? scheme.surface.withValues(alpha: isDark ? 0.10 : 0.08)
+        : isSelected
+            ? accent.withValues(alpha: isDark ? 0.28 : 0.20)
+            : isHovered
+                ? accent.withValues(alpha: isDark ? 0.18 : 0.12)
+                : scheme.surface.withValues(alpha: isDark ? 0.06 : 0.04);
+    final foreground = !enabled
+        ? scheme.onSurface.withValues(alpha: 0.35)
+        : isSelected
+            ? scheme.onSurface
+            : isHovered
+                ? accent.withValues(alpha: 0.90)
+                : scheme.onSurface.withValues(alpha: 0.72);
+    return MouseRegion(
+      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      onEnter: (_) => setState(() => _hoveredTabIndex = index),
+      onExit: (_) {
+        if (_hoveredTabIndex == index) {
+          setState(() => _hoveredTabIndex = null);
+        }
+      },
+      child: LiquidGlassCard(
+        onTap: enabled
+            ? () => _setSelectedIndex(index)
+            : () => ScaffoldMessenger.of(context).showKubusSnackBar(
+                  const SnackBar(content: Text('Institution tools unlock after DAO approval.')),
+                ),
         padding: const EdgeInsets.symmetric(
           vertical: KubusSpacing.md,
           horizontal: KubusSpacing.sm,
         ),
         margin: const EdgeInsets.symmetric(horizontal: KubusSpacing.xxs),
-        decoration: BoxDecoration(
-          color: enabled && isSelected ? scheme.primaryContainer : Colors.transparent,
-          borderRadius: BorderRadius.circular(KubusRadius.sm),
-        ),
+        borderRadius: BorderRadius.circular(KubusRadius.sm),
+        blurSigma: buttonStyle.blurSigma,
+        fallbackMinOpacity: buttonStyle.fallbackMinOpacity,
+        showBorder: false,
+        backgroundColor: background,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               icon,
-              color: enabled && isSelected
-                  ? scheme.onPrimaryContainer
-                  : scheme.onSurface.withValues(alpha: enabled ? 0.6 : 0.35),
+              color: foreground,
               size: KubusSizes.sidebarActionIcon,
             ),
             const SizedBox(height: KubusSpacing.xs),
             Text(
               label,
               style: KubusTypography.textTheme.labelSmall?.copyWith(
-                color: enabled && isSelected
-                    ? scheme.onPrimaryContainer
-                    : scheme.onSurface.withValues(alpha: enabled ? 0.6 : 0.35),
+                color: foreground,
               ),
               textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,

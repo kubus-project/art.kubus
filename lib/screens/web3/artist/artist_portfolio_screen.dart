@@ -39,6 +39,13 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
   }
 
   @override
+  void didUpdateWidget(covariant ArtistPortfolioScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.walletAddress.trim() == widget.walletAddress.trim()) return;
+    context.read<PortfolioProvider>().setWalletAddress(widget.walletAddress);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;

@@ -102,6 +102,8 @@ import 'map_core/map_data_coordinator.dart';
 import 'map_core/map_ui_state_coordinator.dart';
 import 'map_core/map_marker_render_coordinator.dart';
 
+enum _MarkerSocketScope { inScope, outOfScope, unknown }
+
 /// Custom painter for the direction cone indicator
 class DirectionConePainter extends CustomPainter {
   final Color color;
@@ -1603,33 +1605,63 @@ class _MapScreenState extends State<MapScreen>
   void _handleMarkerCreated(ArtMarker marker) {
     try {
       if (!marker.hasValidPosition) return;
-      if (_travelModeEnabled) {
-        final bounds = _loadedTravelBounds;
-        if (bounds == null ||
-            !MapViewportUtils.containsPoint(bounds, marker.position)) {
-          return;
-        }
-      } else if (_currentPosition != null) {
-        final distanceKm = _distanceCalculator.as(
-          LengthUnit.Kilometer,
-          _currentPosition!,
-          marker.position,
-        );
-        if (distanceKm > _mapMarkerService.lastQueryRadiusKm + 1) {
-          // Ignore markers far outside the current view; cache will refresh when user pans/refreshes.
-          return;
-        }
+      final existingIndex = _artMarkers.indexWhere((m) => m.id == marker.id);
+      final scope = _resolveMarkerScope(marker);
+      if (scope == _MarkerSocketScope.outOfScope && existingIndex < 0) {
+        return;
       }
+
+      var changed = false;
       setState(() {
-        _artMarkers.removeWhere((m) => m.id == marker.id);
-        _artMarkers.add(marker);
+        final working = List<ArtMarker>.from(_artMarkers, growable: true);
+        if (scope == _MarkerSocketScope.outOfScope) {
+          if (existingIndex >= 0) {
+            working.removeAt(existingIndex);
+            changed = true;
+          }
+        } else if (existingIndex >= 0) {
+          working[existingIndex] = marker;
+          changed = true;
+        } else if (scope == _MarkerSocketScope.inScope) {
+          working.add(marker);
+          changed = true;
+        }
+        if (changed) {
+          _artMarkers = working;
+        }
       });
+      if (!changed) return;
       _kubusMapController.setMarkers(_artMarkers);
       unawaited(_syncMapMarkers(themeProvider: context.read<ThemeProvider>()));
       AppConfig.debugPrint('MapScreen: added marker from socket ${marker.id}');
     } catch (e) {
       AppConfig.debugPrint('MapScreen: failed to handle socket marker: $e');
     }
+  }
+
+  _MarkerSocketScope _resolveMarkerScope(ArtMarker marker) {
+    if (_travelModeEnabled) {
+      final bounds = _loadedTravelBounds;
+      if (bounds == null) {
+        return _MarkerSocketScope.unknown;
+      }
+      return MapViewportUtils.containsPoint(bounds, marker.position)
+          ? _MarkerSocketScope.inScope
+          : _MarkerSocketScope.outOfScope;
+    }
+
+    if (_currentPosition == null) {
+      return _MarkerSocketScope.inScope;
+    }
+
+    final distanceKm = _distanceCalculator.as(
+      LengthUnit.Kilometer,
+      _currentPosition!,
+      marker.position,
+    );
+    return distanceKm <= _mapMarkerService.lastQueryRadiusKm + 1
+        ? _MarkerSocketScope.inScope
+        : _MarkerSocketScope.outOfScope;
   }
 
   void _handleMarkerDeleted(String markerId) {

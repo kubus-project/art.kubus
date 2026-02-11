@@ -811,7 +811,7 @@ class _DesktopShellState extends State<DesktopShell>
     _pushScreenToStack(
       DesktopSubScreen(
         title: 'Collaboration Invites',
-        child: const InvitesInboxScreen(),
+        child: const InvitesInboxScreen(embedded: true),
       ),
     );
   }

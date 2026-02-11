@@ -210,6 +210,11 @@ class _DesktopInstitutionHubScreenState
     final reviewIsInstitution = review?.isInstitutionApplication ?? false;
     final isApprovedInstitution = hasInstitutionBadge ||
         (reviewIsInstitution && reviewStatus == 'approved');
+    final sidebarStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.sidebarBackground,
+      tintBase: scheme.surface,
+    );
 
     String sectionTitle() {
       switch (section) {
@@ -229,8 +234,8 @@ class _DesktopInstitutionHubScreenState
         border: Border(
           left: BorderSide(
             color: isDark
-                ? Colors.white.withValues(alpha: 0.06)
-                : scheme.outline.withValues(alpha: 0.10),
+                ? Colors.white.withValues(alpha: 0.05)
+                : scheme.outline.withValues(alpha: 0.08),
             width: 1,
           ),
         ),
@@ -239,8 +244,10 @@ class _DesktopInstitutionHubScreenState
         padding: EdgeInsets.zero,
         margin: EdgeInsets.zero,
         borderRadius: BorderRadius.zero,
+        blurSigma: sidebarStyle.blurSigma,
+        fallbackMinOpacity: sidebarStyle.fallbackMinOpacity,
         showBorder: false,
-        backgroundColor: scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10),
+        backgroundColor: sidebarStyle.tintColor,
         child: ListView(
           padding: const EdgeInsets.all(KubusSpacing.lg),
           children: [
@@ -294,7 +301,7 @@ class _DesktopInstitutionHubScreenState
                     DesktopShellScope.of(context)?.pushScreen(
                       DesktopSubScreen(
                         title: 'Collaboration Invites',
-                        child: const InvitesInboxScreen(),
+                        child: const InvitesInboxScreen(embedded: true),
                       ),
                     );
                   },

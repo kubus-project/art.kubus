@@ -38,13 +38,15 @@ extension KubusActionSemanticX on KubusActionSemantic {
   }
 }
 
-class KubusActionSidebarTile extends StatelessWidget {
+class KubusActionSidebarTile extends StatefulWidget {
   final String title;
   final String subtitle;
   final IconData icon;
   final KubusActionSemantic semantic;
   final VoidCallback onTap;
   final Widget? trailing;
+  final bool selected;
+  final bool enabled;
 
   const KubusActionSidebarTile({
     super.key,
@@ -54,16 +56,36 @@ class KubusActionSidebarTile extends StatelessWidget {
     required this.semantic,
     required this.onTap,
     this.trailing,
+    this.selected = false,
+    this.enabled = true,
   });
+
+  @override
+  State<KubusActionSidebarTile> createState() => _KubusActionSidebarTileState();
+}
+
+class _KubusActionSidebarTileState extends State<KubusActionSidebarTile> {
+  bool _isHovered = false;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
+    final selected = widget.selected;
+    final enabled = widget.enabled;
 
-    final accent = semantic.accentColor(context);
-    final tileTint = accent.withValues(alpha: isDark ? 0.16 : 0.10);
+    final accent = widget.semantic.accentColor(context);
+    final stateAccent = enabled
+        ? accent
+        : scheme.onSurface.withValues(alpha: 0.45);
+    final tileTint = !enabled
+        ? scheme.surface.withValues(alpha: isDark ? 0.10 : 0.08)
+        : selected
+            ? accent.withValues(alpha: isDark ? 0.22 : 0.14)
+            : _isHovered
+                ? accent.withValues(alpha: isDark ? 0.18 : 0.12)
+                : accent.withValues(alpha: isDark ? 0.14 : 0.08);
 
     final radius = BorderRadius.circular(KubusRadius.md);
     final iconRadius = BorderRadius.circular(KubusRadius.sm);
@@ -71,66 +93,76 @@ class KubusActionSidebarTile extends StatelessWidget {
     final fallbackTrailing = Icon(
       Icons.arrow_forward_ios,
       size: KubusSizes.trailingChevron,
-      color: scheme.onSurface.withValues(alpha: 0.4),
+      color: scheme.onSurface.withValues(alpha: enabled ? 0.4 : 0.28),
     );
 
-    return Padding(
-      padding:
-          const EdgeInsets.only(bottom: KubusSpacing.sm + KubusSpacing.xs),
-      child: LiquidGlassCard(
-        padding: EdgeInsets.zero,
-        borderRadius: radius,
-        showBorder: false,
-        backgroundColor: tileTint,
-        onTap: onTap,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
+    return MouseRegion(
+      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      onEnter: enabled ? (_) => setState(() => _isHovered = true) : null,
+      onExit: enabled ? (_) => setState(() => _isHovered = false) : null,
+      child: Opacity(
+        opacity: enabled ? 1.0 : 0.72,
+        child: Padding(
+          padding:
+              const EdgeInsets.only(bottom: KubusSpacing.sm + KubusSpacing.xs),
+          child: LiquidGlassCard(
+            padding: EdgeInsets.zero,
             borderRadius: radius,
-            border: Border.all(
-              color: accent.withValues(alpha: 0.20),
-              width: KubusSizes.hairline,
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(KubusSpacing.md),
-            child: Row(
-              children: [
-                Container(
-                  width: KubusSizes.sidebarActionIconBox,
-                  height: KubusSizes.sidebarActionIconBox,
-                  decoration: BoxDecoration(
-                    color: accent.withValues(alpha: 0.15),
-                    borderRadius: iconRadius,
+            showBorder: false,
+            backgroundColor: tileTint,
+            onTap: enabled ? widget.onTap : null,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: radius,
+                border: Border.all(
+                  color: stateAccent.withValues(
+                    alpha: selected ? 0.32 : (_isHovered ? 0.24 : 0.18),
                   ),
-                  child: Icon(
-                    icon,
-                    color: accent,
-                    size: KubusSizes.sidebarActionIcon,
-                  ),
+                  width: KubusSizes.hairline,
                 ),
-                const SizedBox(width: KubusSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: KubusTextStyles.actionTileTitle.copyWith(
-                          color: scheme.onSurface,
-                        ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(KubusSpacing.md),
+                child: Row(
+                  children: [
+                    Container(
+                      width: KubusSizes.sidebarActionIconBox,
+                      height: KubusSizes.sidebarActionIconBox,
+                      decoration: BoxDecoration(
+                        color: stateAccent.withValues(alpha: 0.15),
+                        borderRadius: iconRadius,
                       ),
-                      const SizedBox(height: KubusSpacing.xxs),
-                      Text(
-                        subtitle,
-                        style: KubusTextStyles.actionTileSubtitle.copyWith(
-                          color: scheme.onSurface.withValues(alpha: 0.6),
-                        ),
+                      child: Icon(
+                        widget.icon,
+                        color: stateAccent,
+                        size: KubusSizes.sidebarActionIcon,
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: KubusSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.title,
+                            style: KubusTextStyles.actionTileTitle.copyWith(
+                              color: scheme.onSurface,
+                            ),
+                          ),
+                          const SizedBox(height: KubusSpacing.xxs),
+                          Text(
+                            widget.subtitle,
+                            style: KubusTextStyles.actionTileSubtitle.copyWith(
+                              color: scheme.onSurface.withValues(alpha: 0.6),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    widget.trailing ?? fallbackTrailing,
+                  ],
                 ),
-                trailing ?? fallbackTrailing,
-              ],
+              ),
             ),
           ),
         ),

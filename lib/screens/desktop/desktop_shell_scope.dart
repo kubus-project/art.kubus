@@ -82,54 +82,47 @@ class DesktopSubScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final shellScope = DesktopShellScope.of(context);
     final scheme = Theme.of(context).colorScheme;
+    final headerStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.header,
+      tintBase: scheme.surface,
+    );
 
     return Column(
       children: [
         // Header with back button
-        DecoratedBox(
-          decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(
-                color: scheme.outline.withValues(alpha: 0.2),
-              ),
-            ),
-          ),
-          child: SizedBox(
-            height: KubusSpacing.xl + KubusSpacing.lg,
-            child: LiquidGlassPanel(
-              padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
-              margin: EdgeInsets.zero,
-              borderRadius: BorderRadius.zero,
-              blurSigma: KubusGlassEffects.blurSigmaLight,
-              showBorder: false,
-              backgroundColor: scheme.surface.withValues(
-                alpha: Theme.of(context).brightness == Brightness.dark
-                    ? 0.18
-                    : 0.12,
-              ),
-              child: Row(
-                children: [
-                  if (shellScope?.canPop ?? false) ...[
-                    IconButton(
-                      onPressed: () => shellScope?.popScreen(),
-                      icon: Icon(
-                        Icons.arrow_back,
+        SizedBox(
+          height: KubusSpacing.xl + KubusSpacing.lg,
+          child: LiquidGlassPanel(
+            padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
+            margin: EdgeInsets.zero,
+            borderRadius: BorderRadius.zero,
+            blurSigma: headerStyle.blurSigma,
+            fallbackMinOpacity: headerStyle.fallbackMinOpacity,
+            showBorder: false,
+            backgroundColor: headerStyle.tintColor,
+            child: Row(
+              children: [
+                if (shellScope?.canPop ?? false) ...[
+                  IconButton(
+                    onPressed: () => shellScope?.popScreen(),
+                    icon: Icon(
+                      Icons.arrow_back,
+                      color: scheme.onSurface,
+                    ),
+                    tooltip: 'Back',
+                  ),
+                  const SizedBox(width: KubusSpacing.sm),
+                ],
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         color: scheme.onSurface,
                       ),
-                      tooltip: 'Back',
-                    ),
-                    const SizedBox(width: KubusSpacing.sm),
-                  ],
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: scheme.onSurface,
-                        ),
-                  ),
-                  const Spacer(),
-                  if (actions != null) ...actions!,
-                ],
-              ),
+                ),
+                const Spacer(),
+                if (actions != null) ...actions!,
+              ],
             ),
           ),
         ),
@@ -139,4 +132,3 @@ class DesktopSubScreen extends StatelessWidget {
     );
   }
 }
-

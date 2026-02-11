@@ -7,6 +7,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 
 import '../../config/config.dart';
 import '../../providers/artwork_provider.dart';
+import '../../providers/app_refresh_provider.dart';
 import '../../services/backend_api_service.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../widgets/collaboration_panel.dart';
@@ -304,6 +305,7 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
         return;
       }
 
+      context.read<AppRefreshProvider>().triggerPortfolio();
       messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commonSavedToast)));
       Navigator.of(context).pop();
     } catch (_) {
