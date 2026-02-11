@@ -81,6 +81,7 @@ class KubusFilterPanel extends StatelessWidget {
                   KubusGlassIconButton(
                     icon: Icons.close,
                     tooltip: closeTooltip,
+                    borderRadius: 10,
                     onPressed: onClose,
                   ),
               ],

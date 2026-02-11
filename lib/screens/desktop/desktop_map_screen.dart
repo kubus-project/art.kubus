@@ -2024,6 +2024,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   _showFiltersPanel ? l10n.commonClose : l10n.mapFiltersTitle,
               active: _showFiltersPanel,
               accentColor: themeProvider.accentColor,
+              borderRadius: 10,
               onPressed: () {
                 setState(() {
                   _showFiltersPanel = !_showFiltersPanel;
@@ -2101,9 +2102,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 setState(() => _selectedFilter = filter);
                 // Reload markers so the nearby panel and
                 // sidebar reflect the new filter immediately.
-                unawaited(
-                  _loadMarkersForCurrentView(force: true),
-                );
+                unawaited(_loadMarkersForCurrentView(force: true).then((_) {
+                  if (!mounted) return;
+                  _requestMarkerVisualSync(force: true);
+                }));
                 // Force immediate sidebar sync for the shell-scope nearby panel.
                 _forceNearbySidebarSync();
               },
@@ -2690,6 +2692,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   _kubusMapController
                       .setMarkerTypeVisibility(_markerLayerVisibility);
                   _renderCoordinator.requestStyleUpdate(force: true);
+                  _requestMarkerVisualSync(force: true);
                   _forceNearbySidebarSync();
                 },
                 style: OutlinedButton.styleFrom(
@@ -2707,6 +2710,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 onPressed: () {
                   setState(() => _showFiltersPanel = false);
                   _loadMarkersForCurrentView(force: true);
+                  _requestMarkerVisualSync(force: true);
                   _forceNearbySidebarSync();
                 },
                 style: ElevatedButton.styleFrom(
@@ -2812,6 +2816,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               );
               _kubusMapController.setMarkerTypeVisibility(_markerLayerVisibility);
               _renderCoordinator.requestStyleUpdate(force: true);
+              _requestMarkerVisualSync(force: true);
+              _forceNearbySidebarSync();
             },
           ),
           const SizedBox(height: 24),
@@ -3183,11 +3189,29 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     return 'filter=$_selectedFilter|sort=$_selectedSort|query=$query|travel=${_travelModeEnabled ? 1 : 0}';
   }
 
+  Set<String> _visibleArtworkIdsFromLoadedMarkers() {
+    final ids = <String>{};
+    for (final marker in _artMarkers) {
+      if (!marker.hasValidPosition) continue;
+      if (!(_markerLayerVisibility[marker.type] ?? true)) continue;
+      final artworkId = marker.artworkId?.trim();
+      if (artworkId == null || artworkId.isEmpty) continue;
+      ids.add(artworkId);
+    }
+    return ids;
+  }
+
   List<Artwork> _getFilteredArtworks(
     List<Artwork> artworks, {
     LatLng? basePositionOverride,
   }) {
-    var filtered = artworks.where((a) => a.hasValidLocation).toList();
+    final visibleArtworkIds = _visibleArtworkIdsFromLoadedMarkers();
+    final enforceMarkerScope = _artMarkers.isNotEmpty;
+    var filtered = artworks
+        .where((a) =>
+            a.hasValidLocation &&
+            (!enforceMarkerScope || visibleArtworkIds.contains(a.id)))
+        .toList();
     final query = _mapSearchController.state.query.trim().toLowerCase();
     if (query.isNotEmpty) {
       filtered = filtered.where((artwork) {

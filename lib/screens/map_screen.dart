@@ -4301,6 +4301,14 @@ class _MapScreenState extends State<MapScreen>
                           : Icons.filter_alt,
                       color: hintColor,
                     ),
+                    style: IconButton.styleFrom(
+                      minimumSize: const Size(36, 36),
+                      maximumSize: const Size(36, 36),
+                      padding: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
                     onPressed: () {
                       setState(() {
                         _filtersExpanded = !_filtersExpanded;
@@ -4510,9 +4518,10 @@ class _MapScreenState extends State<MapScreen>
                   setState(() => _artworkFilter = key);
                   // Reload markers so the nearby panel reflects
                   // the new filter immediately.
-                  unawaited(
-                    _loadMarkersForCurrentView(force: true),
-                  );
+                  unawaited(_loadMarkersForCurrentView(force: true).then((_) {
+                    if (!mounted) return;
+                    _requestMarkerVisualSync(force: true);
+                  }));
                 },
               );
             }).toList(),
@@ -4533,6 +4542,7 @@ class _MapScreenState extends State<MapScreen>
               setState(() => _markerLayerVisibility[type] = nextSelected);
               _kubusMapController.setMarkerTypeVisibility(_markerLayerVisibility);
               _renderCoordinator.requestStyleUpdate(force: true);
+              _requestMarkerVisualSync(force: true);
             },
           ),
         ],
@@ -4670,11 +4680,29 @@ class _MapScreenState extends State<MapScreen>
     return 'filter=$_artworkFilter|query=$query|travel=${_travelModeEnabled ? 1 : 0}';
   }
 
+  Set<String> _visibleArtworkIdsFromLoadedMarkers() {
+    final ids = <String>{};
+    for (final marker in _artMarkers) {
+      if (!marker.hasValidPosition) continue;
+      if (!(_markerLayerVisibility[marker.type] ?? true)) continue;
+      final artworkId = marker.artworkId?.trim();
+      if (artworkId == null || artworkId.isEmpty) continue;
+      ids.add(artworkId);
+    }
+    return ids;
+  }
+
   List<Artwork> _filterArtworks(
     List<Artwork> artworks, {
     LatLng? basePosition,
   }) {
-    var filtered = artworks.where((a) => a.hasValidLocation).toList();
+    final visibleArtworkIds = _visibleArtworkIdsFromLoadedMarkers();
+    final enforceMarkerScope = _artMarkers.isNotEmpty;
+    var filtered = artworks
+        .where((a) =>
+            a.hasValidLocation &&
+            (!enforceMarkerScope || visibleArtworkIds.contains(a.id)))
+        .toList();
     final query = _mapSearchController.state.query.trim().toLowerCase();
 
     if (query.isNotEmpty) {
