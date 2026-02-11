@@ -64,13 +64,14 @@ import '../services/backend_api_service.dart';
 import '../services/map_data_controller.dart';
 import '../services/map_style_service.dart';
 import '../config/config.dart';
-import '../features/map/map_view_mode_prefs.dart';
+import '../features/map/controller/map_view_preferences_controller.dart';
 import '../features/map/shared/map_screen_constants.dart';
 import '../features/map/map_layers_manager.dart';
 import '../features/map/map_overlay_stack.dart';
 import '../features/map/controller/kubus_map_controller.dart';
 import '../features/map/search/map_search_controller.dart';
 import '../features/map/nearby/nearby_art_controller.dart';
+import '../features/map/tutorial/map_tutorial_coordinator.dart';
 import '../utils/marker_cube_geometry.dart';
 import 'events/exhibition_detail_screen.dart';
 import '../widgets/glass_components.dart';
@@ -79,19 +80,20 @@ import '../widgets/map_overlay_blocker.dart';
 import '../widgets/search/kubus_search_bar.dart';
 import '../widgets/map/nearby/kubus_nearby_art_panel.dart';
 import '../widgets/tutorial/interactive_tutorial_overlay.dart';
+import '../widgets/map/tutorial/kubus_map_tutorial_overlay.dart';
 import '../widgets/map/kubus_map_marker_rendering.dart';
 import '../widgets/map/kubus_map_marker_geojson_builder.dart';
 import '../widgets/map/kubus_map_marker_features.dart';
-import '../widgets/map/discovery/kubus_discovery_path_card.dart';
+import '../widgets/map/cards/kubus_discovery_card.dart';
 import '../widgets/map/filters/kubus_map_marker_layer_chips.dart';
 import '../widgets/map/controls/kubus_map_primary_controls.dart'
     show KubusMapPrimaryControlsLayout;
 import '../widgets/common/kubus_filter_panel.dart';
 import '../widgets/common/kubus_glass_chip.dart';
-import '../widgets/common/kubus_glass_icon_button.dart';
 import '../widgets/common/kubus_map_controls.dart';
 import '../widgets/common/kubus_marker_overlay_card.dart';
 import '../widgets/common/kubus_search_overlay_scaffold.dart';
+import '../widgets/map/overlays/kubus_marker_overlay_card_wrapper.dart';
 import 'map_core/map_marker_interaction_controller.dart';
 import 'map_core/map_camera_controller.dart';
 import 'map_core/marker_visual_sync_coordinator.dart';
@@ -273,6 +275,8 @@ class _MapScreenState extends State<MapScreen>
   bool _pendingMarkerRefreshForce = false;
 
   late final MapDataCoordinator _mapDataCoordinator;
+  late final MapViewPreferencesController _mapViewPreferencesController;
+  late final MapTutorialCoordinator _mapTutorialCoordinator;
 
   // Map search (shared controller + UI)
   late final MapSearchController _mapSearchController;
@@ -448,6 +452,12 @@ class _MapScreenState extends State<MapScreen>
     // Shared UI state mirror (selection/tutorial/etc). Not yet used by the UI;
     // this is a no-behavior-change bridge for incremental refactors.
     _mapUiStateCoordinator = MapUiStateCoordinator();
+    _mapViewPreferencesController = MapViewPreferencesController();
+    _mapViewPreferencesController.addListener(_handleMapViewPreferencesChanged);
+    _mapTutorialCoordinator = MapTutorialCoordinator(
+      seenPreferenceKey: PreferenceKeys.mapOnboardingMobileSeenV2,
+    );
+    _mapTutorialCoordinator.addListener(_handleTutorialCoordinatorChanged);
 
     _mapSearchController = MapSearchController(
       // Preserve mobile's current UX: show the hint panel when the field is
@@ -660,10 +670,7 @@ class _MapScreenState extends State<MapScreen>
       await _loadPersistedPermissionFlags();
       if (!mounted) return;
 
-      await _loadMapTravelPrefs();
-      if (!mounted) return;
-
-      await _loadMapIsometricPrefs();
+      await _loadMapViewPreferences();
       if (!mounted) return;
 
       _initializeMap();
@@ -703,7 +710,7 @@ class _MapScreenState extends State<MapScreen>
 
       if (!mounted) return;
 
-      unawaited(_maybeShowInteractiveMapTutorial());
+      unawaited(_mapTutorialCoordinator.maybeStart());
     });
   }
 
@@ -963,30 +970,35 @@ class _MapScreenState extends State<MapScreen>
     unawaited(_loadMarkersForCurrentView(force: shouldForce));
   }
 
-  Future<void> _loadMapTravelPrefs() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final enabled = await MapViewModePrefs.loadTravelModeEnabled(prefs);
-      if (!mounted) return;
-      setState(() {
-        _travelModeEnabled = enabled;
-      });
-    } catch (_) {
-      // Best-effort.
+  void _handleMapViewPreferencesChanged() {
+    if (!mounted) return;
+    final next = _mapViewPreferencesController.value;
+    if (_travelModeEnabled == next.travelModeEnabled &&
+        _isometricViewEnabled == next.isometricViewEnabled) {
+      return;
     }
+    _safeSetState(() {
+      _travelModeEnabled = next.travelModeEnabled;
+      _isometricViewEnabled = next.isometricViewEnabled;
+    });
   }
 
-  Future<void> _loadMapIsometricPrefs() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final enabled = await MapViewModePrefs.loadIsometricViewEnabled(prefs);
-      if (!mounted) return;
-      setState(() {
-        _isometricViewEnabled = enabled;
-      });
-    } catch (_) {
-      // Best-effort.
-    }
+  void _handleTutorialCoordinatorChanged() {
+    if (!mounted) return;
+    final tutorial = _mapTutorialCoordinator.state;
+    _mapUiStateCoordinator.setTutorial(
+      show: tutorial.show,
+      index: tutorial.index,
+    );
+  }
+
+  Future<void> _loadMapViewPreferences() async {
+    final prefs = await _mapViewPreferencesController.load();
+    if (!mounted) return;
+    setState(() {
+      _travelModeEnabled = prefs.travelModeEnabled;
+      _isometricViewEnabled = prefs.isometricViewEnabled;
+    });
   }
 
   Future<void> _setTravelModeEnabled(bool enabled) async {
@@ -1002,8 +1014,7 @@ class _MapScreenState extends State<MapScreen>
     _loadedTravelZoomBucket = null;
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await MapViewModePrefs.persistTravelModeEnabled(prefs, enabled);
+      await _mapViewPreferencesController.setTravelMode(enabled);
     } catch (_) {
       // Best-effort.
     }
@@ -1019,8 +1030,7 @@ class _MapScreenState extends State<MapScreen>
     });
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await MapViewModePrefs.persistIsometricViewEnabled(prefs, enabled);
+      await _mapViewPreferencesController.setIsometric(enabled);
     } catch (_) {
       // Best-effort.
     }
@@ -1029,132 +1039,108 @@ class _MapScreenState extends State<MapScreen>
         _applyIsometricCamera(enabled: enabled, adjustZoomForScale: true));
   }
 
-  Future<void> _maybeShowInteractiveMapTutorial() async {
-    if (!mounted) return;
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final seen =
-          prefs.getBool(PreferenceKeys.mapOnboardingMobileSeenV2) ?? false;
-      if (seen) return;
-
-      // Wait until the UI is laid out so we can compute highlight rects.
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        _mapUiStateCoordinator.setTutorial(show: true, index: 0);
-      });
-    } catch (_) {
-      // Best-effort.
-    }
-  }
-
-  Future<void> _setMapTutorialSeen() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(PreferenceKeys.mapOnboardingMobileSeenV2, true);
-    } catch (_) {
-      // Best-effort.
-    }
-  }
-
-  void _dismissMapTutorial() {
-    KubusMapTutorialNav.dismiss(
-      mounted: mounted,
-      coordinator: _mapUiStateCoordinator,
-      persistSeen: _setMapTutorialSeen,
-    );
-  }
-
-  void _tutorialNext() {
-    final steps = _buildMapTutorialSteps(AppLocalizations.of(context)!);
-    KubusMapTutorialNav.next(
-      mounted: mounted,
-      coordinator: _mapUiStateCoordinator,
-      stepsLength: steps.length,
-      onDismiss: _dismissMapTutorial,
-    );
-  }
-
-  void _tutorialBack() {
-    KubusMapTutorialNav.back(
-      mounted: mounted,
-      coordinator: _mapUiStateCoordinator,
-    );
-  }
-
-  List<TutorialStepDefinition> _buildMapTutorialSteps(AppLocalizations l10n) {
-    final steps = <TutorialStepDefinition>[
-      TutorialStepDefinition(
-        targetKey: _tutorialMapKey,
-        icon: Icons.map_outlined,
-        title: l10n.mapTutorialStepMapTitle,
-        body: l10n.mapTutorialStepMapBody,
+  List<MapTutorialStepBinding> _buildMapTutorialStepBindings(
+    AppLocalizations l10n,
+  ) {
+    final bindings = <MapTutorialStepBinding>[
+      MapTutorialStepBinding(
+        id: 'map',
+        isAnchorAvailable: () => _tutorialMapKey.currentContext != null,
+        step: TutorialStepDefinition(
+          targetKey: _tutorialMapKey,
+          icon: Icons.map_outlined,
+          title: l10n.mapTutorialStepMapTitle,
+          body: l10n.mapTutorialStepMapBody,
+        ),
       ),
-      TutorialStepDefinition(
-        targetKey: _tutorialMapKey,
-        icon: Icons.place_outlined,
-        title: l10n.mapTutorialStepMarkersTitle,
-        body: l10n.mapTutorialStepMarkersBody,
+      MapTutorialStepBinding(
+        id: 'markers',
+        isAnchorAvailable: () => _tutorialMapKey.currentContext != null,
+        step: TutorialStepDefinition(
+          targetKey: _tutorialMapKey,
+          icon: Icons.place_outlined,
+          title: l10n.mapTutorialStepMarkersTitle,
+          body: l10n.mapTutorialStepMarkersBody,
+        ),
       ),
-      TutorialStepDefinition(
-        targetKey: _tutorialAddMarkerButtonKey,
-        icon: Icons.add_location_alt,
-        title: l10n.mapTutorialStepCreateMarkerTitle,
-        body: l10n.mapTutorialStepCreateMarkerBody,
+      MapTutorialStepBinding(
+        id: 'create_marker',
+        isAnchorAvailable: () =>
+            _tutorialAddMarkerButtonKey.currentContext != null,
+        step: TutorialStepDefinition(
+          targetKey: _tutorialAddMarkerButtonKey,
+          icon: Icons.add_location_alt,
+          title: l10n.mapTutorialStepCreateMarkerTitle,
+          body: l10n.mapTutorialStepCreateMarkerBody,
+        ),
       ),
-      TutorialStepDefinition(
-        targetKey: _tutorialNearbyTitleKey,
-        icon: Icons.view_list,
-        title: l10n.mapTutorialStepNearbyTitle,
-        body: l10n.mapTutorialStepNearbyBody,
-        onTargetTap: () {
-          // Expand the sheet a bit so users see the list.
-          try {
-            _sheetController.animateTo(
-              0.50,
-              duration: const Duration(milliseconds: 260),
-              curve: Curves.easeOutCubic,
-            );
-          } catch (_) {}
-        },
+      MapTutorialStepBinding(
+        id: 'nearby',
+        isAnchorAvailable: () => _tutorialNearbyTitleKey.currentContext != null,
+        step: TutorialStepDefinition(
+          targetKey: _tutorialNearbyTitleKey,
+          icon: Icons.view_list,
+          title: l10n.mapTutorialStepNearbyTitle,
+          body: l10n.mapTutorialStepNearbyBody,
+          onTargetTap: () {
+            // Expand the sheet a bit so users see the list.
+            try {
+              _sheetController.animateTo(
+                0.50,
+                duration: const Duration(milliseconds: 260),
+                curve: Curves.easeOutCubic,
+              );
+            } catch (_) {}
+          },
+        ),
       ),
-      TutorialStepDefinition(
-        targetKey: _tutorialFilterButtonKey,
-        icon: Icons.filter_alt_outlined,
-        title: l10n.mapTutorialStepFiltersTitle,
-        body: l10n.mapTutorialStepFiltersBody,
-        onTargetTap: () {
-          if (!mounted) return;
-          setState(() {
-            _filtersExpanded = true;
-          });
-        },
+      MapTutorialStepBinding(
+        id: 'filters',
+        isAnchorAvailable: () => _tutorialFilterButtonKey.currentContext != null,
+        step: TutorialStepDefinition(
+          targetKey: _tutorialFilterButtonKey,
+          icon: Icons.filter_alt_outlined,
+          title: l10n.mapTutorialStepFiltersTitle,
+          body: l10n.mapTutorialStepFiltersBody,
+          onTargetTap: () {
+            if (!mounted) return;
+            setState(() {
+              _filtersExpanded = true;
+            });
+          },
+        ),
+      ),
+      MapTutorialStepBinding(
+        id: 'recenter',
+        isAnchorAvailable: () => _tutorialCenterButtonKey.currentContext != null,
+        step: TutorialStepDefinition(
+          targetKey: _tutorialCenterButtonKey,
+          icon: Icons.my_location,
+          title: l10n.mapTutorialStepRecenterTitle,
+          body: l10n.mapTutorialStepRecenterBody,
+        ),
       ),
     ];
 
     if (AppConfig.isFeatureEnabled('mapTravelMode')) {
-      steps.add(
-        TutorialStepDefinition(
-          targetKey: _tutorialTravelButtonKey,
-          icon: Icons.travel_explore,
-          title: l10n.mapTutorialStepTravelTitle,
-          body: l10n.mapTutorialStepTravelBody,
-          onTargetTap: () => unawaited(_setTravelModeEnabled(true)),
+      bindings.insert(
+        5,
+        MapTutorialStepBinding(
+          id: 'travel_mode',
+          isAnchorAvailable: () =>
+              _tutorialTravelButtonKey.currentContext != null,
+          step: TutorialStepDefinition(
+            targetKey: _tutorialTravelButtonKey,
+            icon: Icons.travel_explore,
+            title: l10n.mapTutorialStepTravelTitle,
+            body: l10n.mapTutorialStepTravelBody,
+            onTargetTap: () => unawaited(_setTravelModeEnabled(true)),
+          ),
         ),
       );
     }
 
-    // Optional: end on the recenter control so users know how to get back.
-    steps.add(
-      TutorialStepDefinition(
-        targetKey: _tutorialCenterButtonKey,
-        icon: Icons.my_location,
-        title: l10n.mapTutorialStepRecenterTitle,
-        body: l10n.mapTutorialStepRecenterBody,
-      ),
-    );
-
-    return steps;
+    return bindings;
   }
 
   Future<void> _loadPersistedPermissionFlags() async {
@@ -1184,6 +1170,11 @@ class _MapScreenState extends State<MapScreen>
     _mapDeepLinkProvider = null;
     _tabProvider?.removeListener(_handleTabProviderChanged);
     _tabProvider = null;
+    _mapViewPreferencesController
+        .removeListener(_handleMapViewPreferencesChanged);
+    _mapViewPreferencesController.dispose();
+    _mapTutorialCoordinator.removeListener(_handleTutorialCoordinatorChanged);
+    _mapTutorialCoordinator.dispose();
     _mapCameraController.dispose();
     _markerVisualSyncCoordinator.dispose();
     _mapDataCoordinator.dispose();
@@ -2930,6 +2921,11 @@ class _MapScreenState extends State<MapScreen>
     );
     final discoveryProgress = taskProvider.getOverallProgress();
     final isLoadingArtworks = artworkProvider.isLoading('load_artworks');
+    final l10n = AppLocalizations.of(context)!;
+    _mapTutorialCoordinator.configure(
+      bindings: _buildMapTutorialStepBindings(l10n),
+    );
+    final tutorialSteps = _mapTutorialCoordinator.steps;
 
     final stack = ValueListenableBuilder<MapUiStateSnapshot>(
       valueListenable: _mapUiStateCoordinator.state,
@@ -2991,39 +2987,18 @@ class _MapScreenState extends State<MapScreen>
                 ),
                 _buildMarkerOverlay(themeProvider, ui.markerSelection),
                 _buildTopOverlays(theme, themeProvider, taskProvider),
-                if (showMapTutorial)
-                  Positioned.fill(
-                    child: KubusMapWebPointerInterceptor.wrap(
-                      child: const ModalBarrier(
-                        dismissible: false,
-                        color: Colors.transparent,
-                      ),
-                    ),
-                  ),
-                if (showMapTutorial)
-                  Positioned.fill(
-                    child: KubusMapWebPointerInterceptor.wrap(
-                      child: Builder(
-                        builder: (context) {
-                          final l10n = AppLocalizations.of(context)!;
-                          final steps = _buildMapTutorialSteps(l10n);
-                          final idx =
-                              mapTutorialIndex.clamp(0, steps.length - 1);
-                          return InteractiveTutorialOverlay(
-                            steps: steps,
-                            currentIndex: idx,
-                            onNext: _tutorialNext,
-                            onBack: _tutorialBack,
-                            onSkip: _dismissMapTutorial,
-                            skipLabel: l10n.commonSkip,
-                            backLabel: l10n.commonBack,
-                            nextLabel: l10n.commonNext,
-                            doneLabel: l10n.commonDone,
-                          );
-                        },
-                      ),
-                    ),
-                  ),
+                KubusMapTutorialOverlay(
+                  visible: showMapTutorial,
+                  steps: tutorialSteps,
+                  currentIndex: mapTutorialIndex,
+                  onNext: _mapTutorialCoordinator.next,
+                  onBack: _mapTutorialCoordinator.back,
+                  onSkip: () => unawaited(_mapTutorialCoordinator.dismiss()),
+                  skipLabel: l10n.commonSkip,
+                  backLabel: l10n.commonBack,
+                  nextLabel: l10n.commonNext,
+                  doneLabel: l10n.commonDone,
+                ),
               ],
             );
           },
@@ -3778,219 +3753,155 @@ class _MapScreenState extends State<MapScreen>
       showTypeLabel: canPresentExhibition,
     );
 
-    return ValueListenableBuilder<Offset?>(
-      valueListenable: _selectedMarkerAnchorNotifier,
-      builder: (context, anchorValue, _) {
-        return Positioned.fill(
-          child: IgnorePointer(
-            ignoring: false,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final Offset? anchor = (anchorValue != null &&
-                        anchorValue.dx.isFinite &&
-                        anchorValue.dy.isFinite)
-                    ? anchorValue
-                    : null;
-                const double cardWidth = 360;
-                final double maxWidth =
-                    math.min(cardWidth, constraints.maxWidth - 32);
-                // Clamp maxHeight to the available viewport (safe-area aware).
-                final double safeVerticalPadding =
-                    MediaQuery.of(context).padding.vertical;
-                final double maxCardHeight = math
-                    .max(
-                      200.0,
-                      constraints.maxHeight - safeVerticalPadding - 24,
-                    )
-                    .toDouble();
-                final double minExpandedHeight =
-                    constraints.maxWidth < 600 ? 320.0 : 260.0;
-                final double cardHeight = math.min(
-                  math.max(estimatedHeight, minExpandedHeight),
-                  maxCardHeight,
-                );
+    final stack = selection.stackedMarkers.isNotEmpty
+        ? selection.stackedMarkers
+        : <ArtMarker>[marker];
+    final int stackIndex = selection.stackIndex.clamp(0, math.max(0, stack.length - 1));
 
-                // Cache the last computed overlay height so camera focus can
-                // compute an offset deterministically (without measuring/looping
-                // from build).
-                if ((_lastComputedMarkerOverlayHeightPx - cardHeight).abs() >
-                    1.0) {
-                  _lastComputedMarkerOverlayHeightPx = cardHeight;
-                }
-                final double topSafe = MediaQuery.of(context).padding.top + 12;
-                final double bottomSafe =
-                    constraints.maxHeight - cardHeight - 12;
-
-                // Account for marker height (flat square markers).
-                const double markerOffset = 32.0;
-
-                double left = (constraints.maxWidth - maxWidth) / 2;
-
-                final bool isCompact = constraints.maxWidth < 600;
-
-                final bool anchorLooksUsable = anchor != null &&
-                    anchor.dx >= -constraints.maxWidth * 0.5 &&
-                    anchor.dx <= constraints.maxWidth * 1.5 &&
-                    anchor.dy >= -constraints.maxHeight * 0.5 &&
-                    anchor.dy <= constraints.maxHeight * 1.5;
-                final Offset? safeAnchor = anchorLooksUsable ? anchor : null;
-
-                // Prefer anchoring above the marker. If the anchor isn't ready yet,
-                // fall back to a stable heuristic so the first frame looks good.
-                final markerY = safeAnchor?.dy ??
-                    (constraints.maxHeight * (isCompact ? 0.72 : 0.66));
-                double top = markerY - cardHeight - markerOffset;
-                if (top < topSafe) {
-                  top = topSafe;
-                }
-                top = top.clamp(topSafe, math.max(topSafe, bottomSafe));
-
-                if (kDebugMode) {
-                  AppConfig.debugPrint(
-                    'MapScreen: card anchor=(${safeAnchor?.dx.toStringAsFixed(0)}, ${safeAnchor?.dy.toStringAsFixed(0)}) '
-                    'pos=(${left.toStringAsFixed(0)}, ${top.toStringAsFixed(0)}) '
-                    'maxH=${maxCardHeight.toStringAsFixed(0)} estH=${estimatedHeight.toStringAsFixed(0)} cardH=${cardHeight.toStringAsFixed(0)}',
-                  );
-                }
-
-                final stack = selection.stackedMarkers.isNotEmpty
-                    ? selection.stackedMarkers
-                    : <ArtMarker>[marker];
-                final int stackIndex = selection.stackIndex
-                    .clamp(0, math.max(0, stack.length - 1));
-
-                void goToStackIndex(int index) {
-                  if (index < 0 || index >= stack.length) return;
-                  if (_markerStackPageController.hasClients) {
-                    unawaited(
-                      _markerStackPageController.animateToPage(
-                        index,
-                        duration: const Duration(milliseconds: 240),
-                        curve: Curves.easeOutCubic,
-                      ),
-                    );
-                    return;
-                  }
-                  _handleMarkerStackPageChanged(index);
-                }
-
-                KubusMarkerOverlayCard buildCardForMarker(ArtMarker pageMarker) {
-                  final pageArtwork = pageMarker.isExhibitionMarker
-                      ? null
-                      : context
-                          .read<ArtworkProvider>()
-                          .getArtworkById(pageMarker.artworkId ?? '');
-
-                  final pagePrimaryExhibition =
-                      pageMarker.resolvedExhibitionSummary;
-                  final exhibitionsFeatureEnabled =
-                      AppConfig.isFeatureEnabled('exhibitions');
-                  final exhibitionsApiAvailable =
-                      BackendApiService().exhibitionsApiAvailable;
-                  final canPresentExhibition = exhibitionsFeatureEnabled &&
-                      pagePrimaryExhibition != null &&
-                      pagePrimaryExhibition.id.isNotEmpty &&
-                      exhibitionsApiAvailable != false;
-
-                  final exhibitionTitle =
-                      (pagePrimaryExhibition?.title ?? '').trim();
-                  final pageDisplayTitle =
-                      canPresentExhibition && exhibitionTitle.isNotEmpty
-                          ? exhibitionTitle
-                          : (pageArtwork?.title.isNotEmpty == true
-                              ? pageArtwork!.title
-                              : pageMarker.name);
-
-                  final pageDistanceText = () {
-                    if (_currentPosition == null) return null;
-                    final meters = _distanceCalculator.as(
-                      LengthUnit.Meter,
-                      _currentPosition!,
-                      pageMarker.position,
-                    );
-                    if (meters >= 1000) {
-                      return l10n
-                          .commonDistanceKm((meters / 1000).toStringAsFixed(1));
-                    }
-                    return l10n.commonDistanceM(meters.round().toString());
-                  }();
-
-                  final pageBaseColor =
-                      _resolveArtMarkerColor(pageMarker, themeProvider);
-
-                  return KubusMarkerOverlayCard(
-                    marker: pageMarker,
-                    artwork: pageArtwork,
-                    baseColor: pageBaseColor,
-                    displayTitle: pageDisplayTitle,
-                    canPresentExhibition: canPresentExhibition,
-                    distanceText: pageDistanceText,
-                    description: pageMarker.description.isNotEmpty
-                        ? pageMarker.description
-                        : (pageArtwork?.description ?? ''),
-                    onClose: _dismissSelectedMarker,
-                    onPrimaryAction: canPresentExhibition
-                        ? () => _openExhibitionFromMarker(
-                              pageMarker,
-                              pagePrimaryExhibition,
-                              pageArtwork,
-                            )
-                        : () => _openMarkerDetail(pageMarker, pageArtwork),
-                    primaryActionIcon: canPresentExhibition
-                        ? Icons.museum_outlined
-                        : Icons.arrow_forward,
-                    primaryActionLabel: l10n.commonViewDetails,
-                    stackCount: stack.length,
-                    stackIndex: stackIndex,
-                    onNextStacked: stack.length > 1 ? _nextStackedMarker : null,
-                    onPreviousStacked:
-                        stack.length > 1 ? _previousStackedMarker : null,
-                    onSelectStackIndex:
-                        stack.length > 1 ? (i) => goToStackIndex(i) : null,
-                  );
-                }
-
-                final Widget cardDeck = RepaintBoundary(
-                  child: stack.length <= 1
-                      ? buildCardForMarker(marker)
-                      : PageView.builder(
-                          controller: _markerStackPageController,
-                          itemCount: stack.length,
-                          onPageChanged: _handleMarkerStackPageChanged,
-                          itemBuilder: (context, index) {
-                            return buildCardForMarker(stack[index]);
-                          },
-                        ),
-                );
-
-                return Stack(
-                  children: [
-                    Positioned(
-                      left: left,
-                      top: top,
-                      width: maxWidth,
-                      child: MapOverlayBlocker(
-                        enabled: true,
-                        cursor: SystemMouseCursors.basic,
-                        interceptPlatformViews: true,
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(
-                            maxHeight: maxCardHeight,
-                          ),
-                          child: SizedBox(
-                            height: cardHeight,
-                            child: cardDeck,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
+    void goToStackIndex(int index) {
+      if (index < 0 || index >= stack.length) return;
+      if (_markerStackPageController.hasClients) {
+        unawaited(
+          _markerStackPageController.animateToPage(
+            index,
+            duration: const Duration(milliseconds: 240),
+            curve: Curves.easeOutCubic,
           ),
         );
-      },
+        return;
+      }
+      _handleMarkerStackPageChanged(index);
+    }
+
+    KubusMarkerOverlayCard buildCardForMarker(ArtMarker pageMarker) {
+      final pageArtwork = pageMarker.isExhibitionMarker
+          ? null
+          : context.read<ArtworkProvider>().getArtworkById(pageMarker.artworkId ?? '');
+
+      final pagePrimaryExhibition = pageMarker.resolvedExhibitionSummary;
+      final exhibitionsFeatureEnabled = AppConfig.isFeatureEnabled('exhibitions');
+      final exhibitionsApiAvailable = BackendApiService().exhibitionsApiAvailable;
+      final canPresentExhibition = exhibitionsFeatureEnabled &&
+          pagePrimaryExhibition != null &&
+          pagePrimaryExhibition.id.isNotEmpty &&
+          exhibitionsApiAvailable != false;
+
+      final exhibitionTitle = (pagePrimaryExhibition?.title ?? '').trim();
+      final pageDisplayTitle = canPresentExhibition && exhibitionTitle.isNotEmpty
+          ? exhibitionTitle
+          : (pageArtwork?.title.isNotEmpty == true ? pageArtwork!.title : pageMarker.name);
+
+      final pageDistanceText = () {
+        if (_currentPosition == null) return null;
+        final meters = _distanceCalculator.as(
+          LengthUnit.Meter,
+          _currentPosition!,
+          pageMarker.position,
+        );
+        if (meters >= 1000) {
+          return l10n.commonDistanceKm((meters / 1000).toStringAsFixed(1));
+        }
+        return l10n.commonDistanceM(meters.round().toString());
+      }();
+
+      final pageBaseColor = _resolveArtMarkerColor(pageMarker, themeProvider);
+
+      return KubusMarkerOverlayCard(
+        marker: pageMarker,
+        artwork: pageArtwork,
+        baseColor: pageBaseColor,
+        displayTitle: pageDisplayTitle,
+        canPresentExhibition: canPresentExhibition,
+        distanceText: pageDistanceText,
+        description:
+            pageMarker.description.isNotEmpty ? pageMarker.description : (pageArtwork?.description ?? ''),
+        onClose: _dismissSelectedMarker,
+        onPrimaryAction: canPresentExhibition
+            ? () => _openExhibitionFromMarker(
+                  pageMarker,
+                  pagePrimaryExhibition,
+                  pageArtwork,
+                )
+            : () => _openMarkerDetail(pageMarker, pageArtwork),
+        primaryActionIcon: canPresentExhibition ? Icons.museum_outlined : Icons.arrow_forward,
+        primaryActionLabel: l10n.commonViewDetails,
+        stackCount: stack.length,
+        stackIndex: stackIndex,
+        onNextStacked: stack.length > 1 ? _nextStackedMarker : null,
+        onPreviousStacked: stack.length > 1 ? _previousStackedMarker : null,
+        onSelectStackIndex: stack.length > 1 ? (i) => goToStackIndex(i) : null,
+      );
+    }
+
+    final Widget cardDeck = RepaintBoundary(
+      child: stack.length <= 1
+          ? buildCardForMarker(marker)
+          : PageView.builder(
+              controller: _markerStackPageController,
+              itemCount: stack.length,
+              onPageChanged: _handleMarkerStackPageChanged,
+              itemBuilder: (context, index) {
+                return buildCardForMarker(stack[index]);
+              },
+            ),
+    );
+
+    return Positioned.fill(
+      child: KubusMarkerOverlayCardWrapper(
+        anchorListenable: _selectedMarkerAnchorNotifier,
+        placementStrategy: KubusMarkerOverlayPlacementStrategy.anchored,
+        widthResolver: (constraints, mediaQuery) {
+          const cardWidth = 360.0;
+          return math.min(cardWidth, constraints.maxWidth - 32);
+        },
+        maxHeightResolver: (constraints, mediaQuery) {
+          return math
+              .max(200.0, constraints.maxHeight - mediaQuery.padding.vertical - 24)
+              .toDouble();
+        },
+        heightResolver: (constraints, mediaQuery, maxCardHeight) {
+          final minExpandedHeight = constraints.maxWidth < 600 ? 320.0 : 260.0;
+          return math.min(
+            math.max(estimatedHeight, minExpandedHeight),
+            maxCardHeight,
+          );
+        },
+        fallbackAnchorResolver: (constraints) {
+          final isCompact = constraints.maxWidth < 600;
+          return Offset(
+            constraints.maxWidth / 2,
+            constraints.maxHeight * (isCompact ? 0.72 : 0.66),
+          );
+        },
+        markerOffset: 32,
+        horizontalPadding: 16,
+        topPadding: 12,
+        bottomPadding: 12,
+        animation: const KubusMarkerOverlayAnimationConfig(
+          duration: Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+        ),
+        cardBuilder: (context, layout) {
+          if ((_lastComputedMarkerOverlayHeightPx - layout.cardHeight).abs() > 1.0) {
+            _lastComputedMarkerOverlayHeightPx = layout.cardHeight;
+          }
+          if (kDebugMode) {
+            AppConfig.debugPrint(
+              'MapScreen: card anchor=(${layout.anchor?.dx.toStringAsFixed(0)}, ${layout.anchor?.dy.toStringAsFixed(0)}) '
+              'maxH=${layout.maxCardHeight.toStringAsFixed(0)} estH=${estimatedHeight.toStringAsFixed(0)} cardH=${layout.cardHeight.toStringAsFixed(0)}',
+            );
+          }
+          return ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: layout.maxCardHeight,
+            ),
+            child: SizedBox(
+              height: layout.cardHeight,
+              child: cardDeck,
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -4633,26 +4544,18 @@ class _MapScreenState extends State<MapScreen>
     final activeProgress = taskProvider.getActiveTaskProgress();
     if (activeProgress.isEmpty) return const SizedBox.shrink();
 
-    final l10n = AppLocalizations.of(context)!;
     final showTasks = _isDiscoveryExpanded;
     final tasksToRender = showTasks ? activeProgress : const <TaskProgress>[];
     final scheme = theme.colorScheme;
     final overall = taskProvider.getOverallProgress();
-    return KubusDiscoveryPathCard(
+    return KubusDiscoveryCard(
       overallProgress: overall,
       expanded: _isDiscoveryExpanded,
       taskRows: [
         for (final progress in tasksToRender) _buildTaskProgressRow(progress),
       ],
-      toggleButton: KubusGlassIconButton(
-        icon: _isDiscoveryExpanded
-            ? Icons.keyboard_arrow_up
-            : Icons.keyboard_arrow_down,
-        tooltip: _isDiscoveryExpanded ? l10n.commonCollapse : l10n.commonExpand,
-        size: 36,
-        onPressed: () =>
-            setState(() => _isDiscoveryExpanded = !_isDiscoveryExpanded),
-      ),
+      onToggleExpanded: () =>
+          setState(() => _isDiscoveryExpanded = !_isDiscoveryExpanded),
       titleStyle: KubusTypography.textTheme.titleSmall?.copyWith(
         fontWeight: FontWeight.w700,
         color: scheme.onSurface,
@@ -4661,6 +4564,7 @@ class _MapScreenState extends State<MapScreen>
         color: scheme.onSurfaceVariant,
       ),
       glassPadding: const EdgeInsets.all(14),
+      expandButtonSize: 36,
       badgeGap: 10,
       tasksTopGap: 10,
     );

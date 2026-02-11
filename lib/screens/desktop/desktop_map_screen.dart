@@ -9,7 +9,6 @@ import 'package:maplibre_gl/maplibre_gl.dart' as ml;
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 
@@ -63,25 +62,27 @@ import 'desktop_shell.dart';
 import 'art/desktop_artwork_detail_screen.dart';
 import '../events/exhibition_detail_screen.dart';
 import 'community/desktop_user_profile_screen.dart';
-import '../../features/map/map_view_mode_prefs.dart';
+import '../../features/map/controller/map_view_preferences_controller.dart';
 import '../../features/map/shared/map_marker_collision_config.dart';
 import '../../features/map/shared/map_screen_constants.dart';
 import '../../features/map/map_layers_manager.dart';
 import '../../features/map/map_overlay_stack.dart';
 import '../../features/map/controller/kubus_map_controller.dart';
 import '../../features/map/search/map_search_controller.dart';
+import '../../features/map/tutorial/map_tutorial_coordinator.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/marker_cube_geometry.dart';
 import '../../widgets/glass_components.dart';
 import '../../widgets/kubus_snackbar.dart';
 import '../../widgets/tutorial/interactive_tutorial_overlay.dart';
+import '../../widgets/map/tutorial/kubus_map_tutorial_overlay.dart';
 import '../../widgets/map/kubus_map_marker_geojson_builder.dart';
 import '../../widgets/map/kubus_map_marker_rendering.dart';
 import '../../widgets/map/kubus_map_marker_features.dart';
 import '../../widgets/map/controls/kubus_map_primary_controls.dart'
     show KubusMapPrimaryControlsLayout;
-import '../../widgets/map/discovery/kubus_discovery_path_card.dart';
+import '../../widgets/map/cards/kubus_discovery_card.dart';
 import '../../widgets/map/filters/kubus_map_marker_layer_chips.dart';
 import '../../widgets/common/kubus_filter_panel.dart';
 import '../../widgets/common/kubus_glass_chip.dart';
@@ -90,6 +91,8 @@ import '../../widgets/common/kubus_map_controls.dart';
 import '../../widgets/common/kubus_marker_overlay_card.dart';
 import '../../widgets/common/kubus_search_overlay_scaffold.dart';
 import '../../widgets/common/kubus_sort_option.dart';
+import '../../widgets/map/overlays/kubus_marker_overlay_card_wrapper.dart';
+import '../../widgets/map/panels/kubus_detail_panel.dart';
 import '../../features/map/nearby/nearby_art_controller.dart';
 import '../../widgets/map/nearby/kubus_nearby_art_panel.dart';
 import '../map_core/map_marker_interaction_controller.dart';
@@ -237,6 +240,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   static const Duration _markerRefreshInterval = MapScreenConstants.markerRefreshInterval;
 
   late final MapSearchController _mapSearchController;
+  late final MapViewPreferencesController _mapViewPreferencesController;
+  late final MapTutorialCoordinator _mapTutorialCoordinator;
   bool _pendingSafeSetState = false;
   int _debugMarkerTapCount = 0;
 
@@ -281,6 +286,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     // Shared UI state mirror (selection/tutorial/etc). Not yet used by the UI;
     // this is a no-behavior-change bridge for incremental refactors.
     _mapUiStateCoordinator = MapUiStateCoordinator();
+    _mapViewPreferencesController = MapViewPreferencesController();
+    _mapViewPreferencesController
+        .addListener(_handleMapViewPreferencesChanged);
+    _mapTutorialCoordinator = MapTutorialCoordinator(
+      seenPreferenceKey: PreferenceKeys.mapOnboardingDesktopSeenV2,
+    );
+    _mapTutorialCoordinator.addListener(_handleTutorialCoordinatorChanged);
 
     _mapSearchController = MapSearchController(
       scope: SearchScope.map,
@@ -503,8 +515,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _perf.subscriptionStarted('marker_socket_created');
     _perf.subscriptionStarted('marker_socket_deleted');
 
-    unawaited(_loadMapTravelPrefs());
-    unawaited(_loadMapIsometricPrefs());
+    unawaited(_loadMapViewPreferences());
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Load markers after the first layout. If travel mode is enabled we will
@@ -523,7 +534,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       // instead of rendering a "nearby" card overlay on the map.
       _scheduleInitialNearbyArtPanelOpen();
 
-      unawaited(_maybeShowInteractiveMapTutorial());
+      unawaited(_mapTutorialCoordinator.maybeStart());
     });
   }
 
@@ -544,30 +555,26 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
   }
 
-  Future<void> _loadMapTravelPrefs() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final enabled = await MapViewModePrefs.loadTravelModeEnabled(prefs);
-      if (!mounted) return;
-      setState(() {
-        _travelModeEnabled = enabled;
-      });
-    } catch (_) {
-      // Best-effort.
+  void _handleMapViewPreferencesChanged() {
+    if (!mounted) return;
+    final next = _mapViewPreferencesController.value;
+    if (_travelModeEnabled == next.travelModeEnabled &&
+        _isometricViewEnabled == next.isometricViewEnabled) {
+      return;
     }
+    setState(() {
+      _travelModeEnabled = next.travelModeEnabled;
+      _isometricViewEnabled = next.isometricViewEnabled;
+    });
   }
 
-  Future<void> _loadMapIsometricPrefs() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final enabled = await MapViewModePrefs.loadIsometricViewEnabled(prefs);
-      if (!mounted) return;
-      setState(() {
-        _isometricViewEnabled = enabled;
-      });
-    } catch (_) {
-      // Best-effort.
-    }
+  Future<void> _loadMapViewPreferences() async {
+    final prefs = await _mapViewPreferencesController.load();
+    if (!mounted) return;
+    setState(() {
+      _travelModeEnabled = prefs.travelModeEnabled;
+      _isometricViewEnabled = prefs.isometricViewEnabled;
+    });
   }
 
   Future<void> _setTravelModeEnabled(bool enabled) async {
@@ -583,8 +590,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _loadedTravelZoomBucket = null;
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await MapViewModePrefs.persistTravelModeEnabled(prefs, enabled);
+      await _mapViewPreferencesController.setTravelMode(enabled);
     } catch (_) {
       // Best-effort.
     }
@@ -599,8 +605,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     });
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await MapViewModePrefs.persistIsometricViewEnabled(prefs, enabled);
+      await _mapViewPreferencesController.setIsometric(enabled);
     } catch (_) {
       // Best-effort.
     }
@@ -609,119 +614,107 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         _applyIsometricCamera(enabled: enabled, adjustZoomForScale: true));
   }
 
-  Future<void> _maybeShowInteractiveMapTutorial() async {
+  void _handleTutorialCoordinatorChanged() {
     if (!mounted) return;
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final seen =
-          prefs.getBool(PreferenceKeys.mapOnboardingDesktopSeenV2) ?? false;
-      if (seen) return;
-
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        _mapUiStateCoordinator.setTutorial(show: true, index: 0);
-      });
-    } catch (_) {
-      // Best-effort.
-    }
-  }
-
-  Future<void> _setMapTutorialSeen() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(PreferenceKeys.mapOnboardingDesktopSeenV2, true);
-    } catch (_) {
-      // Best-effort.
-    }
-  }
-
-  void _dismissMapTutorial() {
-    KubusMapTutorialNav.dismiss(
-      mounted: mounted,
-      coordinator: _mapUiStateCoordinator,
-      persistSeen: _setMapTutorialSeen,
+    final tutorial = _mapTutorialCoordinator.state;
+    _mapUiStateCoordinator.setTutorial(
+      show: tutorial.show,
+      index: tutorial.index,
     );
   }
 
-  void _tutorialNext() {
-    final steps = _buildMapTutorialSteps(AppLocalizations.of(context)!);
-    KubusMapTutorialNav.next(
-      mounted: mounted,
-      coordinator: _mapUiStateCoordinator,
-      stepsLength: steps.length,
-      onDismiss: _dismissMapTutorial,
-    );
-  }
-
-  void _tutorialBack() {
-    KubusMapTutorialNav.back(
-      mounted: mounted,
-      coordinator: _mapUiStateCoordinator,
-    );
-  }
-
-  List<TutorialStepDefinition> _buildMapTutorialSteps(AppLocalizations l10n) {
-    final steps = <TutorialStepDefinition>[
-      TutorialStepDefinition(
-        targetKey: _tutorialMapKey,
-        icon: Icons.map_outlined,
-        title: l10n.mapTutorialStepMapTitle,
-        body: l10n.mapTutorialStepMapBody,
+  List<MapTutorialStepBinding> _buildMapTutorialStepBindings(
+    AppLocalizations l10n,
+  ) {
+    final bindings = <MapTutorialStepBinding>[
+      MapTutorialStepBinding(
+        id: 'map',
+        isAnchorAvailable: () => _tutorialMapKey.currentContext != null,
+        step: TutorialStepDefinition(
+          targetKey: _tutorialMapKey,
+          icon: Icons.map_outlined,
+          title: l10n.mapTutorialStepMapTitle,
+          body: l10n.mapTutorialStepMapBody,
+        ),
       ),
-      TutorialStepDefinition(
-        targetKey: _tutorialMapKey,
-        icon: Icons.place_outlined,
-        title: l10n.mapTutorialStepMarkersTitle,
-        body: l10n.mapTutorialStepMarkersBody,
+      MapTutorialStepBinding(
+        id: 'markers',
+        isAnchorAvailable: () => _tutorialMapKey.currentContext != null,
+        step: TutorialStepDefinition(
+          targetKey: _tutorialMapKey,
+          icon: Icons.place_outlined,
+          title: l10n.mapTutorialStepMarkersTitle,
+          body: l10n.mapTutorialStepMarkersBody,
+        ),
       ),
-      TutorialStepDefinition(
-        targetKey: _tutorialNearbyButtonKey,
-        icon: Icons.view_list,
-        title: l10n.mapTutorialStepNearbyTitle,
-        body: l10n.mapTutorialStepNearbyDesktopBody,
-        onTargetTap: _openNearbyArtPanel,
+      MapTutorialStepBinding(
+        id: 'nearby',
+        isAnchorAvailable: () => _tutorialNearbyButtonKey.currentContext != null,
+        step: TutorialStepDefinition(
+          targetKey: _tutorialNearbyButtonKey,
+          icon: Icons.view_list,
+          title: l10n.mapTutorialStepNearbyTitle,
+          body: l10n.mapTutorialStepNearbyDesktopBody,
+          onTargetTap: _openNearbyArtPanel,
+        ),
       ),
-      TutorialStepDefinition(
-        targetKey: _tutorialFilterChipsKey,
-        icon: Icons.auto_awesome,
-        title: l10n.mapTutorialStepTypesTitle,
-        body: l10n.mapTutorialStepTypesDesktopBody,
+      MapTutorialStepBinding(
+        id: 'types',
+        isAnchorAvailable: () => _tutorialFilterChipsKey.currentContext != null,
+        step: TutorialStepDefinition(
+          targetKey: _tutorialFilterChipsKey,
+          icon: Icons.auto_awesome,
+          title: l10n.mapTutorialStepTypesTitle,
+          body: l10n.mapTutorialStepTypesDesktopBody,
+        ),
       ),
-      TutorialStepDefinition(
-        targetKey: _tutorialFiltersButtonKey,
-        icon: Icons.tune,
-        title: l10n.mapTutorialStepFiltersTitle,
-        body: l10n.mapTutorialStepFiltersDesktopBody,
-        tooltipAlignToTargetRightEdge: true,
-        onTargetTap: () {
-          if (!mounted) return;
-          setState(() => _showFiltersPanel = true);
-        },
+      MapTutorialStepBinding(
+        id: 'filters',
+        isAnchorAvailable: () =>
+            _tutorialFiltersButtonKey.currentContext != null,
+        step: TutorialStepDefinition(
+          targetKey: _tutorialFiltersButtonKey,
+          icon: Icons.tune,
+          title: l10n.mapTutorialStepFiltersTitle,
+          body: l10n.mapTutorialStepFiltersDesktopBody,
+          tooltipAlignToTargetRightEdge: true,
+          onTargetTap: () {
+            if (!mounted) return;
+            setState(() => _showFiltersPanel = true);
+          },
+        ),
+      ),
+      MapTutorialStepBinding(
+        id: 'search',
+        isAnchorAvailable: () => _tutorialSearchKey.currentContext != null,
+        step: TutorialStepDefinition(
+          targetKey: _tutorialSearchKey,
+          icon: Icons.search,
+          title: l10n.mapTutorialStepSearchTitle,
+          body: l10n.mapTutorialStepSearchBody,
+        ),
       ),
     ];
 
     if (AppConfig.isFeatureEnabled('mapTravelMode')) {
-      steps.add(
-        TutorialStepDefinition(
-          targetKey: _tutorialTravelButtonKey,
-          icon: Icons.travel_explore,
-          title: l10n.mapTutorialStepTravelTitle,
-          body: l10n.mapTutorialStepTravelBody,
-          onTargetTap: () => unawaited(_setTravelModeEnabled(true)),
+      bindings.insert(
+        5,
+        MapTutorialStepBinding(
+          id: 'travel_mode',
+          isAnchorAvailable: () =>
+              _tutorialTravelButtonKey.currentContext != null,
+          step: TutorialStepDefinition(
+            targetKey: _tutorialTravelButtonKey,
+            icon: Icons.travel_explore,
+            title: l10n.mapTutorialStepTravelTitle,
+            body: l10n.mapTutorialStepTravelBody,
+            onTargetTap: () => unawaited(_setTravelModeEnabled(true)),
+          ),
         ),
       );
     }
 
-    steps.add(
-      TutorialStepDefinition(
-        targetKey: _tutorialSearchKey,
-        icon: Icons.search,
-        title: l10n.mapTutorialStepSearchTitle,
-        body: l10n.mapTutorialStepSearchBody,
-      ),
-    );
-
-    return steps;
+    return bindings;
   }
 
   void _scheduleInitialNearbyArtPanelOpen() {
@@ -1554,6 +1547,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _perf.controllerDisposed('panel');
     _cubeSyncDebouncer.dispose();
     _radiusChangeDebouncer.dispose();
+    _mapViewPreferencesController
+        .removeListener(_handleMapViewPreferencesChanged);
+    _mapViewPreferencesController.dispose();
+    _mapTutorialCoordinator.removeListener(_handleTutorialCoordinatorChanged);
+    _mapTutorialCoordinator.dispose();
     _markerStreamSub?.cancel();
     _perf.subscriptionStopped('marker_socket_created');
     _markerDeletedSub?.cancel();
@@ -1586,6 +1584,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final themeProvider = Provider.of<ThemeProvider>(context);
     _maybeScheduleThemeResync(themeProvider);
     final animationTheme = context.animationTheme;
+    final l10n = AppLocalizations.of(context)!;
+    _mapTutorialCoordinator.configure(
+      bindings: _buildMapTutorialStepBindings(l10n),
+    );
+    final tutorialSteps = _mapTutorialCoordinator.steps;
 
     // Always show the nearby panel as a local overlay on top of the map
     // (glass panel with blur). This keeps the map at full width; only the
@@ -1744,39 +1747,18 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 },
               ),
 
-              if (showMapTutorial)
-                Positioned.fill(
-                  child: KubusMapWebPointerInterceptor.wrap(
-                    child: const ModalBarrier(
-                      dismissible: false,
-                      color: Colors.transparent,
-                    ),
-                  ),
-                ),
-
-              if (showMapTutorial)
-                Positioned.fill(
-                  child: KubusMapWebPointerInterceptor.wrap(
-                    child: Builder(
-                      builder: (context) {
-                        final l10n = AppLocalizations.of(context)!;
-                        final steps = _buildMapTutorialSteps(l10n);
-                        final idx = mapTutorialIndex.clamp(0, steps.length - 1);
-                        return InteractiveTutorialOverlay(
-                          steps: steps,
-                          currentIndex: idx,
-                          onNext: _tutorialNext,
-                          onBack: _tutorialBack,
-                          onSkip: _dismissMapTutorial,
-                          skipLabel: l10n.commonSkip,
-                          backLabel: l10n.commonBack,
-                          nextLabel: l10n.commonNext,
-                          doneLabel: l10n.commonDone,
-                        );
-                      },
-                    ),
-                  ),
-                ),
+              KubusMapTutorialOverlay(
+                visible: showMapTutorial,
+                steps: tutorialSteps,
+                currentIndex: mapTutorialIndex,
+                onNext: _mapTutorialCoordinator.next,
+                onBack: _mapTutorialCoordinator.back,
+                onSkip: () => unawaited(_mapTutorialCoordinator.dismiss()),
+                skipLabel: l10n.commonSkip,
+                backLabel: l10n.commonBack,
+                nextLabel: l10n.commonNext,
+                doneLabel: l10n.commonDone,
+              ),
             ],
           );
         },
@@ -2151,387 +2133,287 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           _kubusMapController.selectedMarkerData?.metadata ?? artwork.metadata,
     );
     final distanceLabel = _formatDistanceToArtwork(artwork);
-    final fallbackIconColor =
-        ThemeData.estimateBrightnessForColor(accent) == Brightness.dark
-            ? KubusColors.textPrimaryDark.withValues(alpha: 0.78)
-            : KubusColors.textPrimaryLight.withValues(alpha: 0.78);
+    final arBadge = artwork.arEnabled
+        ? Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: scheme.surface.withValues(alpha: isDark ? 0.88 : 0.92),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.view_in_ar,
+                  size: 16,
+                  color: accent,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  AppLocalizations.of(context)!.mapArReadyChipLabel,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: accent,
+                      ),
+                ),
+              ],
+            ),
+          )
+        : null;
 
-    return LiquidGlassPanel(
+    return KubusDetailPanel(
+      kind: DetailPanelKind.artwork,
+      presentation: PanelPresentation.sidePanel,
       margin: const EdgeInsets.only(left: 24),
-      padding: EdgeInsets.zero,
-      borderRadius: BorderRadius.circular(20),
-      blurSigma: KubusGlassEffects.blurSigmaLight,
-      backgroundColor: scheme.surface.withValues(alpha: isDark ? 0.20 : 0.14),
-      showBorder: true,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header image
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            child: SizedBox(
-              height: 220,
-              child: Stack(
-                fit: StackFit.expand,
+      header: DetailHeader(
+        imageUrl: coverUrl,
+        accentColor: accent,
+        closeTooltip: AppLocalizations.of(context)!.commonClose,
+        onClose: () {
+          setState(() => _selectedArtwork = null);
+        },
+        badge: arBadge,
+        closeAccentColor: themeProvider.accentColor,
+        fallbackIcon: Icons.image_not_supported,
+      ),
+      sections: [
+        Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                artwork.title,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              ArtworkCreatorByline(
+                artwork: artwork,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontSize: 14,
+                      color: scheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w500,
+                    ),
+                maxLines: 1,
+              ),
+              const SizedBox(height: 16),
+              if (artwork.description.isNotEmpty) ...[
+                Text(
+                  artwork.description,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontSize: 14,
+                        height: 1.6,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.7),
+                      ),
+                ),
+                const SizedBox(height: 24),
+              ],
+              Wrap(
+                spacing: 24,
+                runSpacing: 12,
                 children: [
-                  if (coverUrl != null)
-                    Image.network(
-                      coverUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              accent,
-                              accent.withValues(alpha: 0.7),
-                            ],
-                          ),
-                        ),
-                        child: Center(
-                          child: Icon(
-                            Icons.image_not_supported,
-                            color: fallbackIconColor,
-                            size: 40,
-                          ),
-                        ),
-                      ),
-                    )
-                  else
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            accent,
-                            accent.withValues(alpha: 0.7),
-                          ],
-                        ),
-                      ),
-                      child: Center(
-                        child: Icon(
-                          Icons.image_outlined,
-                          color: fallbackIconColor,
-                          size: 40,
-                        ),
-                      ),
+                  _buildDetailStat(Icons.favorite, '${artwork.likesCount}'),
+                  _buildDetailStat(Icons.visibility, '${artwork.viewsCount}'),
+                  if (artwork.discoveryCount > 0)
+                    _buildDetailStat(
+                      Icons.explore,
+                      AppLocalizations.of(context)!
+                          .desktopMapDiscoveriesCount(artwork.discoveryCount),
                     ),
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          scheme.shadow.withValues(alpha: 0.35),
-                          scheme.shadow.withValues(alpha: 0.15),
-                        ],
-                      ),
+                  if (artwork.actualRewards > 0)
+                    _buildDetailStat(
+                      Icons.token,
+                      '${artwork.actualRewards} KUB8',
                     ),
-                  ),
-                  Positioned(
-                    top: 12,
-                    right: 12,
-                    child: KubusGlassIconButton(
-                      icon: Icons.close,
-                      accentColor: themeProvider.accentColor,
-                      iconColor: KubusColors.textPrimaryDark,
-                      tooltip: AppLocalizations.of(context)!.commonClose,
-                      onPressed: () {
-                        setState(() => _selectedArtwork = null);
-                      },
-                    ),
-                  ),
-                  if (artwork.arEnabled)
-                    Positioned(
-                      top: 12,
-                      left: 12,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: scheme.surface
-                              .withValues(alpha: isDark ? 0.88 : 0.92),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.view_in_ar,
-                              size: 16,
-                              color: accent,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              AppLocalizations.of(context)!.mapArReadyChipLabel,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: accent,
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                  if (distanceLabel != null)
+                    _buildDetailStat(Icons.location_on, distanceLabel),
                 ],
               ),
-            ),
-          ),
-
-          // Content
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              const SizedBox(height: 24),
+              DetailActionRow(
                 children: [
-                  Text(
-                    artwork.title,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                  ),
-                  const SizedBox(height: 8),
-                  ArtworkCreatorByline(
-                    artwork: artwork,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontSize: 14,
-                          color: scheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w500,
-                        ),
-                    maxLines: 1,
-                  ),
-                  const SizedBox(height: 16),
-                  if (artwork.description.isNotEmpty) ...[
-                    Text(
-                      artwork.description,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontSize: 14,
-                            height: 1.6,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.7),
-                          ),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-
-                  // Stats row
-                  Wrap(
-                    spacing: 24,
-                    runSpacing: 12,
-                    children: [
-                      _buildDetailStat(Icons.favorite, '${artwork.likesCount}'),
-                      _buildDetailStat(
-                          Icons.visibility, '${artwork.viewsCount}'),
-                      if (artwork.discoveryCount > 0)
-                        _buildDetailStat(
-                          Icons.explore,
-                          AppLocalizations.of(context)!
-                              .desktopMapDiscoveriesCount(
-                                  artwork.discoveryCount),
-                        ),
-                      if (artwork.actualRewards > 0)
-                        _buildDetailStat(
-                            Icons.token, '${artwork.actualRewards} KUB8'),
-                      if (distanceLabel != null)
-                        _buildDetailStat(Icons.location_on, distanceLabel),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Action buttons
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: [
-                      if (artwork.arEnabled &&
-                          AppConfig.isFeatureEnabled('ar') &&
-                          !kIsWeb)
-                        SizedBox(
-                          width: 170,
-                          child: ElevatedButton.icon(
-                            onPressed: () async {
-                              final messenger = ScaffoldMessenger.of(context);
-                              final modelUrl = artwork.model3DURL ??
-                                  (artwork.model3DCID != null
-                                      ? 'ipfs://${artwork.model3DCID}'
-                                      : null);
-                              if (modelUrl == null) {
-                                final l10n = AppLocalizations.of(context)!;
-                                messenger.showKubusSnackBar(
-                                  SnackBar(
-                                    content:
-                                        Text(l10n.desktopMapNoArAssetToast),
-                                  ),
-                                  tone: KubusSnackBarTone.warning,
-                                );
-                                return;
-                              }
-                              unawaited(ARService().launchARViewer(
-                                modelUrl: modelUrl,
-                                title: artwork.title,
-                              ));
-                            },
-                            icon: const Icon(Icons.view_in_ar, size: 20),
-                            label: Text(
-                                AppLocalizations.of(context)!.commonViewInAr),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: accent,
-                              foregroundColor:
-                                  AppColorUtils.contrastText(accent),
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 14, horizontal: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                  if (artwork.arEnabled &&
+                      AppConfig.isFeatureEnabled('ar') &&
+                      !kIsWeb)
+                    SizedBox(
+                      width: 170,
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          final messenger = ScaffoldMessenger.of(context);
+                          final modelUrl = artwork.model3DURL ??
+                              (artwork.model3DCID != null
+                                  ? 'ipfs://${artwork.model3DCID}'
+                                  : null);
+                          if (modelUrl == null) {
+                            final l10n = AppLocalizations.of(context)!;
+                            messenger.showKubusSnackBar(
+                              SnackBar(
+                                content: Text(l10n.desktopMapNoArAssetToast),
                               ),
-                            ),
-                          ),
-                        ),
-                      SizedBox(
-                        width: 170,
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            unawaited(
-                              openArtwork(
-                                context,
-                                artwork.id,
-                                source: 'desktop_map',
-                                attendanceMarkerId: artwork.arMarkerId,
-                              ),
+                              tone: KubusSnackBarTone.warning,
                             );
-                          },
-                          icon: const Icon(Icons.info_outline, size: 18),
-                          label: Text(
-                              AppLocalizations.of(context)!.commonViewDetails),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 14, horizontal: 12),
-                            side: BorderSide(
-                              color: accent.withValues(alpha: 0.75),
-                              width: 1.2,
-                            ),
-                            foregroundColor: accent,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                            return;
+                          }
+                          unawaited(ARService().launchARViewer(
+                            modelUrl: modelUrl,
+                            title: artwork.title,
+                          ));
+                        },
+                        icon: const Icon(Icons.view_in_ar, size: 20),
+                        label: Text(AppLocalizations.of(context)!.commonViewInAr),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: accent,
+                          foregroundColor: AppColorUtils.contrastText(accent),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 14,
+                            horizontal: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
                       ),
-                      SizedBox(
-                        width: 170,
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            unawaited(
-                                artworkProvider.toggleFavorite(artwork.id));
-                          },
-                          icon: Icon(
-                            artwork.isFavoriteByCurrentUser ||
-                                    artwork.isFavorite
-                                ? Icons.bookmark
-                                : Icons.bookmark_border,
-                            size: 18,
+                    ),
+                  SizedBox(
+                    width: 170,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        unawaited(
+                          openArtwork(
+                            context,
+                            artwork.id,
+                            source: 'desktop_map',
+                            attendanceMarkerId: artwork.arMarkerId,
                           ),
-                          label: Text(
-                            (artwork.isFavoriteByCurrentUser ||
-                                    artwork.isFavorite)
-                                ? AppLocalizations.of(context)!.commonSavedToast
-                                : AppLocalizations.of(context)!.commonSave,
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 14, horizontal: 12),
-                            side: BorderSide(
-                              color: (artwork.isFavoriteByCurrentUser ||
-                                      artwork.isFavorite)
-                                  ? accent
-                                  : accent.withValues(alpha: 0.55),
-                              width: (artwork.isFavoriteByCurrentUser ||
-                                      artwork.isFavorite)
-                                  ? 1.5
-                                  : 1.1,
-                            ),
-                            foregroundColor: (artwork.isFavoriteByCurrentUser ||
-                                    artwork.isFavorite)
+                        );
+                      },
+                      icon: const Icon(Icons.info_outline, size: 18),
+                      label: Text(AppLocalizations.of(context)!.commonViewDetails),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 14,
+                          horizontal: 12,
+                        ),
+                        side: BorderSide(
+                          color: accent.withValues(alpha: 0.75),
+                          width: 1.2,
+                        ),
+                        foregroundColor: accent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 170,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        unawaited(artworkProvider.toggleFavorite(artwork.id));
+                      },
+                      icon: Icon(
+                        artwork.isFavoriteByCurrentUser || artwork.isFavorite
+                            ? Icons.bookmark
+                            : Icons.bookmark_border,
+                        size: 18,
+                      ),
+                      label: Text(
+                        (artwork.isFavoriteByCurrentUser || artwork.isFavorite)
+                            ? AppLocalizations.of(context)!.commonSavedToast
+                            : AppLocalizations.of(context)!.commonSave,
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 14,
+                          horizontal: 12,
+                        ),
+                        side: BorderSide(
+                          color: (artwork.isFavoriteByCurrentUser ||
+                                  artwork.isFavorite)
+                              ? accent
+                              : accent.withValues(alpha: 0.55),
+                          width: (artwork.isFavoriteByCurrentUser ||
+                                  artwork.isFavorite)
+                              ? 1.5
+                              : 1.1,
+                        ),
+                        foregroundColor:
+                            (artwork.isFavoriteByCurrentUser || artwork.isFavorite)
                                 ? accent
                                 : scheme.onSurface,
-                            backgroundColor: (artwork.isFavoriteByCurrentUser ||
-                                    artwork.isFavorite)
+                        backgroundColor:
+                            (artwork.isFavoriteByCurrentUser || artwork.isFavorite)
                                 ? accent.withValues(alpha: 0.08)
                                 : null,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                      ),
-                      KubusGlassIconButton(
-                        icon: artwork.isLikedByCurrentUser
-                            ? Icons.favorite
-                            : Icons.favorite_border,
-                        tooltip:
-                            '${artwork.likesCount} ${artwork.isLikedByCurrentUser ? AppLocalizations.of(context)!.artworkDetailLiked : AppLocalizations.of(context)!.artworkDetailLike}',
-                        active: artwork.isLikedByCurrentUser,
-                        accentColor: themeProvider.accentColor,
-                        activeTint: scheme.error.withValues(alpha: 0.18),
-                        activeIconColor: scheme.error,
-                        onPressed: () {
-                          unawaited(artworkProvider.toggleLike(artwork.id));
-                        },
-                      ),
-                      KubusGlassIconButton(
-                        icon: Icons.share,
-                        accentColor: themeProvider.accentColor,
-                        tooltip: AppLocalizations.of(context)!.commonShare,
-                        onPressed: () {
-                          ShareService().showShareSheet(
-                            context,
-                            target: ShareTarget.artwork(
-                              artworkId: artwork.id,
-                              title: artwork.title,
-                            ),
-                            sourceScreen: 'desktop_map',
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Directions button
-                  OutlinedButton.icon(
-                    onPressed: () async {
-                      final uri = Uri.parse(
-                          'https://www.google.com/maps/dir/?api=1&destination=${artwork.position.latitude},${artwork.position.longitude}');
-                      if (await canLaunchUrl(uri)) {
-                        await launchUrl(uri,
-                            mode: LaunchMode.externalApplication);
-                      }
-                    },
-                    icon: const Icon(Icons.directions),
-                    label:
-                        Text(AppLocalizations.of(context)!.commonGetDirections),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      side: BorderSide(color: accent),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                   ),
+                  KubusGlassIconButton(
+                    icon: artwork.isLikedByCurrentUser
+                        ? Icons.favorite
+                        : Icons.favorite_border,
+                    tooltip:
+                        '${artwork.likesCount} ${artwork.isLikedByCurrentUser ? AppLocalizations.of(context)!.artworkDetailLiked : AppLocalizations.of(context)!.artworkDetailLike}',
+                    active: artwork.isLikedByCurrentUser,
+                    accentColor: themeProvider.accentColor,
+                    activeTint: scheme.error.withValues(alpha: 0.18),
+                    activeIconColor: scheme.error,
+                    onPressed: () {
+                      unawaited(artworkProvider.toggleLike(artwork.id));
+                    },
+                  ),
+                  KubusGlassIconButton(
+                    icon: Icons.share,
+                    accentColor: themeProvider.accentColor,
+                    tooltip: AppLocalizations.of(context)!.commonShare,
+                    onPressed: () {
+                      ShareService().showShareSheet(
+                        context,
+                        target: ShareTarget.artwork(
+                          artworkId: artwork.id,
+                          title: artwork.title,
+                        ),
+                        sourceScreen: 'desktop_map',
+                      );
+                    },
+                  ),
                 ],
               ),
-            ),
+              const SizedBox(height: 24),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final uri = Uri.parse(
+                    'https://www.google.com/maps/dir/?api=1&destination=${artwork.position.latitude},${artwork.position.longitude}',
+                  );
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                },
+                icon: const Icon(Icons.directions),
+                label: Text(AppLocalizations.of(context)!.commonGetDirections),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  side: BorderSide(color: accent),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -2567,11 +2449,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final l10n = AppLocalizations.of(context)!;
     final exhibitionAccent = AppColorUtils.exhibitionColor;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final fallbackIconColor =
-        ThemeData.estimateBrightnessForColor(exhibitionAccent) ==
-                Brightness.dark
-            ? KubusColors.textPrimaryDark.withValues(alpha: 0.78)
-            : KubusColors.textPrimaryLight.withValues(alpha: 0.78);
 
     // Format date range
     String? dateRange;
@@ -2590,288 +2467,176 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         ? exhibition.locationName!.trim()
         : null;
     final coverUrl = MediaUrlResolver.resolve(exhibition.coverUrl);
-
-    return LiquidGlassPanel(
-      margin: const EdgeInsets.only(left: 24),
-      padding: EdgeInsets.zero,
-      borderRadius: BorderRadius.circular(20),
-      blurSigma: KubusGlassEffects.blurSigmaLight,
-      backgroundColor: scheme.surface.withValues(alpha: isDark ? 0.20 : 0.14),
-      showBorder: true,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    final badge = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: scheme.surface.withValues(alpha: isDark ? 0.88 : 0.92),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Header image
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            child: SizedBox(
-              height: 200,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  if (coverUrl != null && coverUrl.isNotEmpty)
-                    Image.network(
-                      coverUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              exhibitionAccent,
-                              exhibitionAccent.withValues(alpha: 0.7),
-                            ],
-                          ),
-                        ),
-                        child: Center(
-                          child: Icon(
-                            Icons.museum,
-                            color: fallbackIconColor,
-                            size: 48,
-                          ),
-                        ),
-                      ),
-                    )
-                  else
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            exhibitionAccent,
-                            exhibitionAccent.withValues(alpha: 0.7),
-                          ],
-                        ),
-                      ),
-                      child: Center(
-                        child: Icon(
-                          Icons.museum,
-                          color: fallbackIconColor,
-                          size: 48,
-                        ),
-                      ),
-                    ),
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          scheme.shadow.withValues(alpha: 0.35),
-                          scheme.shadow.withValues(alpha: 0.15),
-                        ],
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    top: 12,
-                    right: 12,
-                    child: KubusGlassIconButton(
-                      icon: Icons.close,
-                      accentColor: themeProvider.accentColor,
-                      iconColor: KubusColors.textPrimaryDark,
-                      tooltip: l10n.commonClose,
-                      onPressed: () {
-                        setState(() => _selectedExhibition = null);
-                      },
-                    ),
-                  ),
-                  // Exhibition badge
-                  Positioned(
-                    top: 12,
-                    left: 12,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: scheme.surface
-                            .withValues(alpha: isDark ? 0.88 : 0.92),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            AppColorUtils.exhibitionIcon,
-                            size: 16,
-                            color: exhibitionAccent,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Exhibition',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: exhibitionAccent,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          Icon(
+            AppColorUtils.exhibitionIcon,
+            size: 16,
+            color: exhibitionAccent,
           ),
+          const SizedBox(width: 6),
+          Text(
+            'Exhibition',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: exhibitionAccent,
+                ),
+          ),
+        ],
+      ),
+    );
 
-          // Content
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    exhibition.title,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: scheme.onSurface,
-                        ),
-                  ),
-                  if (exhibition.host != null) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      'Hosted by ${exhibition.host!.displayName ?? exhibition.host!.username ?? 'Unknown'}',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontSize: 14,
-                            color: exhibitionAccent,
-                            fontWeight: FontWeight.w500,
-                          ),
+    return KubusDetailPanel(
+      kind: DetailPanelKind.exhibition,
+      presentation: PanelPresentation.sidePanel,
+      margin: const EdgeInsets.only(left: 24),
+      header: DetailHeader(
+        imageUrl: coverUrl,
+        accentColor: exhibitionAccent,
+        closeTooltip: l10n.commonClose,
+        onClose: () {
+          setState(() => _selectedExhibition = null);
+        },
+        badge: badge,
+        closeAccentColor: themeProvider.accentColor,
+        fallbackIcon: Icons.museum,
+      ),
+      sections: [
+        Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                exhibition.title,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: scheme.onSurface,
                     ),
-                  ],
-                  const SizedBox(height: 16),
-
-                  // Info rows
-                  if (dateRange != null)
-                    _buildExhibitionInfoRow(Icons.schedule, dateRange, scheme),
-                  if (location != null)
-                    _buildExhibitionInfoRow(
-                        Icons.place_outlined, location, scheme),
-                  _buildExhibitionInfoRow(
-                    Icons.event_available_outlined,
-                    'Status: ${_labelForExhibitionStatus(exhibition.status)}',
-                    scheme,
-                  ),
-
-                  if ((exhibition.description ?? '').trim().isNotEmpty) ...[
-                    const SizedBox(height: 16),
-                    Text(
-                      exhibition.description!,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontSize: 14,
-                            height: 1.6,
-                            color: scheme.onSurface.withValues(alpha: 0.7),
-                          ),
-                    ),
-                  ],
-
-                  const SizedBox(height: 24),
-
-                  // Action buttons
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            final attendanceMarkerId =
-                                _kubusMapController.selectedMarkerData?.id;
-                            final shellScope = DesktopShellScope.of(context);
-                            if (shellScope != null) {
-                              shellScope.pushScreen(
-                                DesktopSubScreen(
-                                  title: exhibition.title,
-                                  child: ExhibitionDetailScreen(
-                                    exhibitionId: exhibition.id,
-                                    attendanceMarkerId: attendanceMarkerId,
-                                  ),
-                                ),
-                              );
-                            } else {
-                              unawaited(Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => ExhibitionDetailScreen(
-                                    exhibitionId: exhibition.id,
-                                    attendanceMarkerId: attendanceMarkerId,
-                                  ),
-                                ),
-                              ));
-                            }
-                          },
-                          icon: Icon(AppColorUtils.exhibitionIcon, size: 20),
-                          label: Text(l10n.commonViewDetails),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: exhibitionAccent,
-                            foregroundColor:
-                                ThemeData.estimateBrightnessForColor(
-                                            exhibitionAccent) ==
-                                        Brightness.dark
-                                    ? KubusColors.textPrimaryDark
-                                    : KubusColors.textPrimaryLight,
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 14, horizontal: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
+              ),
+              if (exhibition.host != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Hosted by ${exhibition.host!.displayName ?? exhibition.host!.username ?? 'Unknown'}',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontSize: 14,
+                        color: exhibitionAccent,
+                        fontWeight: FontWeight.w500,
                       ),
-                    ],
-                  ),
-
-                  if (exhibition.lat != null && exhibition.lng != null) ...[
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      onPressed: () async {
-                        final uri = Uri.parse(
-                            'https://www.google.com/maps/dir/?api=1&destination=${exhibition.lat},${exhibition.lng}');
-                        if (await canLaunchUrl(uri)) {
-                          await launchUrl(uri,
-                              mode: LaunchMode.externalApplication);
+                ),
+              ],
+              const SizedBox(height: 16),
+              if (dateRange != null)
+                DetailMetaRow(
+                  icon: Icons.schedule,
+                  label: dateRange,
+                ),
+              if (location != null)
+                DetailMetaRow(
+                  icon: Icons.place_outlined,
+                  label: location,
+                ),
+              DetailMetaRow(
+                icon: Icons.event_available_outlined,
+                label: 'Status: ${_labelForExhibitionStatus(exhibition.status)}',
+              ),
+              if ((exhibition.description ?? '').trim().isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Text(
+                  exhibition.description!,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontSize: 14,
+                        height: 1.6,
+                        color: scheme.onSurface.withValues(alpha: 0.7),
+                      ),
+                ),
+              ],
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        final attendanceMarkerId =
+                            _kubusMapController.selectedMarkerData?.id;
+                        final shellScope = DesktopShellScope.of(context);
+                        if (shellScope != null) {
+                          shellScope.pushScreen(
+                            DesktopSubScreen(
+                              title: exhibition.title,
+                              child: ExhibitionDetailScreen(
+                                exhibitionId: exhibition.id,
+                                attendanceMarkerId: attendanceMarkerId,
+                              ),
+                            ),
+                          );
+                        } else {
+                          unawaited(Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => ExhibitionDetailScreen(
+                                exhibitionId: exhibition.id,
+                                attendanceMarkerId: attendanceMarkerId,
+                              ),
+                            ),
+                          ));
                         }
                       },
-                      icon: const Icon(Icons.directions),
-                      label: Text(l10n.commonGetDirections),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        side: BorderSide(color: exhibitionAccent),
+                      icon: Icon(AppColorUtils.exhibitionIcon, size: 20),
+                      label: Text(l10n.commonViewDetails),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: exhibitionAccent,
+                        foregroundColor:
+                            ThemeData.estimateBrightnessForColor(exhibitionAccent) ==
+                                    Brightness.dark
+                                ? KubusColors.textPrimaryDark
+                                : KubusColors.textPrimaryLight,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 14,
+                          horizontal: 12,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                     ),
-                  ],
+                  ),
                 ],
               ),
-            ),
+              if (exhibition.lat != null && exhibition.lng != null) ...[
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final uri = Uri.parse(
+                      'https://www.google.com/maps/dir/?api=1&destination=${exhibition.lat},${exhibition.lng}',
+                    );
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    }
+                  },
+                  icon: const Icon(Icons.directions),
+                  label: Text(l10n.commonGetDirections),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    side: BorderSide(color: exhibitionAccent),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildExhibitionInfoRow(
-      IconData icon, String label, ColorScheme scheme) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: scheme.onSurface.withValues(alpha: 0.7)),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              label,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(fontSize: 13, color: scheme.onSurface),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -3139,7 +2904,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   Widget _buildDiscoveryCard(TaskProvider taskProvider) {
-    final l10n = AppLocalizations.of(context)!;
     final activeProgress = taskProvider.getActiveTaskProgress();
     if (activeProgress.isEmpty) return const SizedBox.shrink();
 
@@ -3149,20 +2913,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final scheme = theme.colorScheme;
     final overall = taskProvider.getOverallProgress();
 
-    return KubusDiscoveryPathCard(
+    return KubusDiscoveryCard(
       overallProgress: overall,
       expanded: _isDiscoveryExpanded,
       taskRows: [
         for (final progress in tasksToRender) _buildTaskProgressRow(progress),
       ],
-      toggleButton: KubusGlassIconButton(
-        icon: _isDiscoveryExpanded
-            ? Icons.keyboard_arrow_up
-            : Icons.keyboard_arrow_down,
-        tooltip: _isDiscoveryExpanded ? l10n.commonCollapse : l10n.commonExpand,
-        onPressed: () =>
-            setState(() => _isDiscoveryExpanded = !_isDiscoveryExpanded),
-      ),
+      onToggleExpanded: () =>
+          setState(() => _isDiscoveryExpanded = !_isDiscoveryExpanded),
       titleStyle: theme.textTheme.bodyMedium?.copyWith(
         fontWeight: FontWeight.w700,
         color: scheme.onSurface,
@@ -4099,10 +3857,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         : <ArtMarker>[marker];
     final count = stack.length;
 
-    final viewportHeight = MediaQuery.of(context).size.height;
-    final safeVerticalPadding = MediaQuery.of(context).padding.vertical;
-    final double maxCardHeight =
-        math.max(240.0, viewportHeight - safeVerticalPadding - 24).toDouble();
+    final media = MediaQuery.of(context);
+    final viewportHeight = media.size.height;
+    final safeVerticalPadding = media.padding.vertical;
+    final double maxCardHeight = math
+        .max(240.0, viewportHeight - safeVerticalPadding - 24)
+        .toDouble();
     final double estimatedCardHeight = math.min(360.0, maxCardHeight);
 
     Widget card;
@@ -4159,107 +3919,37 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       );
     }
 
-    // Absorb pointer events within the card so they don't leak through to the
-    // map platform view (especially on web). Do not block the full screen.
-    final wrappedCard = MapOverlayBlocker(
-      enabled: true,
-      cursor: SystemMouseCursors.basic,
-      interceptPlatformViews: true,
-      child: card,
-    );
+    const baseOffset = 32.0;
+    final zoomFactor = (_cameraZoom / 15.0).clamp(0.5, 1.5);
+    final verticalOffset = baseOffset * zoomFactor;
 
-    return ValueListenableBuilder<Offset?>(
-      valueListenable: _selectedMarkerAnchorNotifier,
-      builder: (context, anchor, _) {
-        if (_markerOverlayMode == _MarkerOverlayMode.centered ||
-            anchor == null) {
-          // Use UnconstrainedBox to prevent Positioned.fill from passing
-          // full-screen constraints to the card, which caused the 1-frame
-          // "correct then huge" snap issue on desktop.
-          return Center(
-            child: UnconstrainedBox(
-              child: wrappedCard,
-            ),
-          );
-        }
-
-        // Offset the card above the marker (flat square markers).
-        // Account for icon scaling at different zoom levels.
-        const double baseOffset = 32.0;
-        final zoomFactor = (_cameraZoom / 15.0).clamp(0.5, 1.5);
-        final verticalOffset = baseOffset * zoomFactor;
-
-        // Use LayoutBuilder + Positioned for proper viewport clamping
-        // instead of CompositedTransformFollower which has no viewport awareness.
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            const double cardWidth =
-                280; // Match maxWidth in _buildMarkerOverlayCard
-            const double padding = 16;
-            // Estimate the *rendered* card height (do not use the maxHeight
-            // constraint, which can be near full-viewport and will over-offset the
-            // camera).
-            final viewportHeight = constraints.maxHeight;
-            final safeVerticalPadding = MediaQuery.of(context).padding.vertical;
-            final double maxCardHeight = math
-                .max(240.0, viewportHeight - safeVerticalPadding - 24)
-                .toDouble();
-            final double estimatedCardHeight = math.min(360.0, maxCardHeight);
-
-            // Center horizontally around anchor, clamped to viewport
-            double left = anchor.dx - (cardWidth / 2);
-            final maxLeft =
-                math.max(padding, constraints.maxWidth - cardWidth - padding);
-            left = left.clamp(padding, maxLeft);
-
-            // Calculate available space above the marker
-            final topSafe = MediaQuery.of(context).padding.top + padding;
-            final bottomPadding = padding;
-            final spaceAbove = anchor.dy - topSafe - verticalOffset;
-
-            // Position above marker; if not enough space, keep within safe area.
-            double top = anchor.dy - estimatedCardHeight - verticalOffset;
-            if (top < topSafe) {
-              top = topSafe;
-            }
-
-            // Final clamp to ensure card never goes off-screen
-            top = top.clamp(
-              topSafe,
-              math.max(
-                topSafe,
-                constraints.maxHeight - estimatedCardHeight - bottomPadding,
-              ),
-            );
-
-            if (kDebugMode) {
-              AppConfig.debugPrint(
-                'DesktopMapScreen: card positioned at ($left, $top) anchor=(${anchor.dx.toStringAsFixed(0)}, ${anchor.dy.toStringAsFixed(0)}) '
-                'spaceAbove=${spaceAbove.toStringAsFixed(0)}',
-              );
-            }
-
-            return Stack(
-              children: [
-                Positioned(
-                  left: left,
-                  top: top,
-                  // Use UnconstrainedBox to prevent the Positioned widget from
-                  // passing unbounded height constraints to the card, which would
-                  // cause the card to expand to fill all available space.
-                  // constrainedAxis: Axis.horizontal ensures width is respected.
-                  child: UnconstrainedBox(
-                    alignment: Alignment.topLeft,
-                    constrainedAxis: Axis.horizontal,
-                    child: SizedBox(
-                      width: cardWidth,
-                      child: wrappedCard,
-                    ),
-                  ),
-                ),
-              ],
-            );
-          },
+    return KubusMarkerOverlayCardWrapper(
+      anchorListenable: _selectedMarkerAnchorNotifier,
+      placementStrategy: _markerOverlayMode == _MarkerOverlayMode.centered
+          ? KubusMarkerOverlayPlacementStrategy.centered
+          : KubusMarkerOverlayPlacementStrategy.anchored,
+      widthResolver: (constraints, mediaQuery) => 280,
+      maxHeightResolver: (constraints, mediaQuery) {
+        return math
+            .max(240.0, constraints.maxHeight - mediaQuery.padding.vertical - 24)
+            .toDouble();
+      },
+      heightResolver: (constraints, mediaQuery, maxHeight) {
+        return math.min(360.0, maxHeight);
+      },
+      markerOffset: verticalOffset,
+      horizontalPadding: 16,
+      topPadding: 16,
+      bottomPadding: 16,
+      animation: const KubusMarkerOverlayAnimationConfig(
+        duration: Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+      ),
+      cardBuilder: (context, layout) {
+        return SizedBox(
+          width: layout.cardWidth,
+          height: layout.cardHeight,
+          child: card,
         );
       },
     );
