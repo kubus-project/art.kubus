@@ -6,7 +6,9 @@ import '../../../features/map/controller/kubus_map_controller.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/app_color_utils.dart';
 import '../../../utils/design_tokens.dart';
+import '../../common/kubus_glass_icon_button.dart';
 import '../../glass_components.dart';
+import 'map_view_mode_controls.dart';
 
 /// Layout variants for [KubusMapPrimaryControls].
 ///
@@ -195,11 +197,13 @@ class KubusMapPrimaryControls extends StatelessWidget {
 		}
 	}
 
-	Widget _buildMobileRightRail(BuildContext context) {
-		final resolvedGap = gap ?? 10.0;
-		final resolvedButtonSize = buttonSize ?? 44.0;
+  Widget _buildMobileRightRail(BuildContext context) {
+    final resolvedGap = gap ?? 10.0;
+    final resolvedButtonSize = buttonSize ?? 44.0;
+    final hasModeControls = (showTravelModeToggle && onToggleTravelMode != null) ||
+        (showIsometricViewToggle && onToggleIsometricView != null);
 
-		final children = <Widget>[];
+    final children = <Widget>[];
 
 		children.add(
 			ValueListenableBuilder<double>(
@@ -224,108 +228,122 @@ class KubusMapPrimaryControls extends StatelessWidget {
 						],
 					);
 				},
-			),
-		);
+      ),
+    );
 
-		if (showTravelModeToggle && onToggleTravelMode != null) {
-			children.add(
-				KeyedSubtree(
-					key: travelModeKey,
-					child: _KubusSquareControlButton.mobile(
-						size: resolvedButtonSize,
-						icon: Icons.travel_explore,
-						tooltip: _resolveTooltip(
-							active: travelModeActive,
-							fallback: travelModeTooltip,
-							whenActive: travelModeTooltipWhenActive,
-							whenInactive: travelModeTooltipWhenInactive,
-						),
-						onTap: onToggleTravelMode,
-						active: travelModeActive,
-					),
-				),
-			);
-			children.add(SizedBox(height: resolvedGap));
-		}
+    if (hasModeControls) {
+      children.add(
+        MapViewModeControls(
+          density: MapViewModeControlsDensity.mobileRail,
+          showTravelModeToggle: showTravelModeToggle,
+          travelModeActive: travelModeActive,
+          onToggleTravelMode: onToggleTravelMode,
+          showIsometricViewToggle: showIsometricViewToggle,
+          isometricViewActive: isometricViewActive,
+          onToggleIsometricView: onToggleIsometricView,
+          travelModeIcon: Icons.travel_explore,
+          isometricViewIcon: Icons.filter_tilt_shift,
+          travelModeKey: travelModeKey,
+          travelModeTooltip: _resolveTooltip(
+            active: travelModeActive,
+            fallback: travelModeTooltip,
+            whenActive: travelModeTooltipWhenActive,
+            whenInactive: travelModeTooltipWhenInactive,
+          ),
+          isometricViewTooltip: _resolveTooltip(
+            active: isometricViewActive,
+            fallback: isometricViewTooltip,
+            whenActive: isometricViewTooltipWhenActive,
+            whenInactive: isometricViewTooltipWhenInactive,
+          ),
+          gap: resolvedGap,
+          buttonBuilder: (context, spec) {
+            final button = _KubusSquareControlButton.mobile(
+              size: resolvedButtonSize,
+              icon: spec.icon,
+              tooltip: spec.tooltip,
+              onTap: spec.onPressed,
+              active: spec.active,
+            );
+            if (spec.controlKey == null) return button;
+            return KeyedSubtree(
+              key: spec.controlKey,
+              child: button,
+            );
+          },
+        ),
+      );
+      children.add(
+        SizedBox(height: resolvedGap),
+      );
+    }
 
-		if (showIsometricViewToggle && onToggleIsometricView != null) {
-			children.add(
-				_KubusSquareControlButton.mobile(
-					size: resolvedButtonSize,
-					icon: Icons.filter_tilt_shift,
-					tooltip: _resolveTooltip(
-						active: isometricViewActive,
-						fallback: isometricViewTooltip,
-						whenActive: isometricViewTooltipWhenActive,
-						whenInactive: isometricViewTooltipWhenInactive,
-					),
-					onTap: onToggleIsometricView,
-					active: isometricViewActive,
-				),
-			);
-			children.add(SizedBox(height: resolvedGap));
-		}
+    children.add(
+      Semantics(
+        label: 'map_zoom_in',
+        button: true,
+        child: _KubusSquareControlButton.mobile(
+          size: resolvedButtonSize,
+          icon: Icons.add,
+          tooltip: zoomInTooltip,
+          onTap: () => unawaited(_zoomBy(delta: zoomStep)),
+        ),
+      ),
+    );
+    children.add(
+      SizedBox(height: resolvedGap),
+    );
 
-		children.add(
-			Semantics(
-				label: 'map_zoom_in',
-				button: true,
-				child: _KubusSquareControlButton.mobile(
-					size: resolvedButtonSize,
-					icon: Icons.add,
-					tooltip: zoomInTooltip,
-					onTap: () => unawaited(_zoomBy(delta: zoomStep)),
-				),
-			),
-		);
-		children.add(SizedBox(height: resolvedGap));
+    children.add(
+      Semantics(
+        label: 'map_zoom_out',
+        button: true,
+        child: _KubusSquareControlButton.mobile(
+          size: resolvedButtonSize,
+          icon: Icons.remove,
+          tooltip: zoomOutTooltip,
+          onTap: () => unawaited(_zoomBy(delta: -zoomStep)),
+        ),
+      ),
+    );
+    children.add(
+      SizedBox(height: resolvedGap),
+    );
 
-		children.add(
-			Semantics(
-				label: 'map_zoom_out',
-				button: true,
-				child: _KubusSquareControlButton.mobile(
-					size: resolvedButtonSize,
-					icon: Icons.remove,
-					tooltip: zoomOutTooltip,
-					onTap: () => unawaited(_zoomBy(delta: -zoomStep)),
-				),
-			),
-		);
-		children.add(SizedBox(height: resolvedGap));
+    children.add(
+      KeyedSubtree(
+        key: centerOnMeKey,
+        child: _KubusSquareControlButton.mobile(
+          size: resolvedButtonSize,
+          icon: Icons.my_location,
+          tooltip: centerOnMeTooltip,
+          onTap: onCenterOnMe,
+          active: centerOnMeActive,
+        ),
+      ),
+    );
+    children.add(
+      SizedBox(height: resolvedGap),
+    );
 
-		children.add(
-			KeyedSubtree(
-				key: centerOnMeKey,
-				child: _KubusSquareControlButton.mobile(
-					size: resolvedButtonSize,
-					icon: Icons.my_location,
-					tooltip: centerOnMeTooltip,
-					onTap: onCenterOnMe,
-					active: centerOnMeActive,
-				),
-			),
-		);
-		children.add(SizedBox(height: resolvedGap));
+    children.add(
+      Semantics(
+        label: 'map_create_marker',
+        button: true,
+        child: KeyedSubtree(
+          key: createMarkerKey,
+          child: _KubusSquareControlButton.mobile(
+            size: resolvedButtonSize,
+            icon: createMarkerIcon ?? Icons.add_location_alt,
+            tooltip: createMarkerTooltip,
+            onTap: onCreateMarker,
+          ),
+        ),
+      ),
+    );
 
-		children.add(
-			Semantics(
-				label: 'map_create_marker',
-				button: true,
-				child: KeyedSubtree(
-					key: createMarkerKey,
-					child: _KubusSquareControlButton.mobile(
-						size: resolvedButtonSize,
-						icon: createMarkerIcon ?? Icons.add_location_alt,
-						tooltip: createMarkerTooltip,
-						onTap: onCreateMarker,
-					),
-				),
-			),
-		);
-
-		return Column(children: children);
-	}
+    return Column(children: children);
+  }
 
 	Widget _buildDesktopToolbar(BuildContext context) {
 		final theme = Theme.of(context);
@@ -335,97 +353,106 @@ class KubusMapPrimaryControls extends StatelessWidget {
 		final resolvedButtonSize = buttonSize ?? 42.0;
 		final resolvedPadding = desktopToolbarPadding ??
 				const EdgeInsets.symmetric(horizontal: 8, vertical: 6);
-		final resolvedRadius = desktopToolbarRadius ?? 14.0;
+    final resolvedRadius = desktopToolbarRadius ?? 14.0;
 
-		final accent = accentColor ?? scheme.primary;
+    final accent = accentColor ?? scheme.primary;
+    final hasModeControls = (showTravelModeToggle && onToggleTravelMode != null) ||
+        (showIsometricViewToggle && onToggleIsometricView != null);
 
-		final divider = Container(
-			width: 1,
-			height: 26,
-			margin: const EdgeInsets.symmetric(horizontal: 4),
-			color: scheme.outline.withValues(alpha: 0.22),
-		);
+    Widget buildDivider() {
+      return Container(
+        width: 1,
+        height: 26,
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        color: scheme.outline.withValues(alpha: 0.22),
+      );
+    }
 
-		final rowChildren = <Widget>[];
+    final rowChildren = <Widget>[];
 
-		if (showTravelModeToggle && onToggleTravelMode != null) {
-			rowChildren.add(
-				KeyedSubtree(
-					key: travelModeKey,
-					child: _KubusSquareControlButton.desktop(
-						size: resolvedButtonSize,
-						accent: accent,
-						icon: Icons.travel_explore,
-						tooltip: _resolveTooltip(
-							active: travelModeActive,
-							fallback: travelModeTooltip,
-							whenActive: travelModeTooltipWhenActive,
-							whenInactive: travelModeTooltipWhenInactive,
-						),
-						onTap: onToggleTravelMode,
-						active: travelModeActive,
-					),
-				),
-			);
-			rowChildren.add(divider);
-		}
+    if (hasModeControls) {
+      rowChildren.add(
+        MapViewModeControls(
+          density: MapViewModeControlsDensity.desktopToolbar,
+          showTravelModeToggle: showTravelModeToggle,
+          travelModeActive: travelModeActive,
+          onToggleTravelMode: onToggleTravelMode,
+          showIsometricViewToggle: showIsometricViewToggle,
+          isometricViewActive: isometricViewActive,
+          onToggleIsometricView: onToggleIsometricView,
+          travelModeIcon: Icons.travel_explore,
+          isometricViewIcon: Icons.filter_tilt_shift,
+          travelModeKey: travelModeKey,
+          travelModeTooltip: _resolveTooltip(
+            active: travelModeActive,
+            fallback: travelModeTooltip,
+            whenActive: travelModeTooltipWhenActive,
+            whenInactive: travelModeTooltipWhenInactive,
+          ),
+          isometricViewTooltip: _resolveTooltip(
+            active: isometricViewActive,
+            fallback: isometricViewTooltip,
+            whenActive: isometricViewTooltipWhenActive,
+            whenInactive: isometricViewTooltipWhenInactive,
+          ),
+          appendTrailingSeparator: true,
+          separatorBuilder: (context) => buildDivider(),
+          buttonBuilder: (context, spec) {
+            final button = _KubusSquareControlButton.desktop(
+              size: resolvedButtonSize,
+              accent: accent,
+              icon: spec.icon,
+              tooltip: spec.tooltip,
+              onTap: spec.onPressed,
+              active: spec.active,
+            );
+            if (spec.controlKey == null) return button;
+            return KeyedSubtree(
+              key: spec.controlKey,
+              child: button,
+            );
+          },
+        ),
+      );
+    }
 
-		if (showIsometricViewToggle && onToggleIsometricView != null) {
-			rowChildren.add(
-				_KubusSquareControlButton.desktop(
-					size: resolvedButtonSize,
-					accent: accent,
-					icon: Icons.filter_tilt_shift,
-					tooltip: _resolveTooltip(
-						active: isometricViewActive,
-						fallback: isometricViewTooltip,
-						whenActive: isometricViewTooltipWhenActive,
-						whenInactive: isometricViewTooltipWhenInactive,
-					),
-					onTap: onToggleIsometricView,
-					active: isometricViewActive,
-				),
-			);
-			rowChildren.add(divider);
-		}
+    if (showNearbyToggle && onToggleNearby != null) {
+      final tooltip = _resolveTooltip(
+        active: nearbyActive,
+        fallback: nearbyTooltip,
+        whenActive: nearbyTooltipWhenActive,
+        whenInactive: nearbyTooltipWhenInactive,
+      );
 
-		if (showNearbyToggle && onToggleNearby != null) {
-			final tooltip = _resolveTooltip(
-				active: nearbyActive,
-				fallback: nearbyTooltip,
-				whenActive: nearbyTooltipWhenActive,
-				whenInactive: nearbyTooltipWhenInactive,
-			);
+      final idleTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.12);
 
-			final idleTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.12);
-
-			rowChildren.add(
-				KeyedSubtree(
-					key: nearbyKey,
-					child: _KubusSquareControlButton.desktop(
-						size: resolvedButtonSize,
-						accent: accent,
-						icon: nearbyIcon,
-						tooltip: tooltip,
-						onTap: onToggleNearby,
-						active: nearbyActive,
-						// Keep the button background visually stable; the active state is
-						// primarily communicated via the icon accent.
-						activeTint: idleTint,
-						activeIconColor: accent,
-					),
-				),
-			);
-			rowChildren.add(divider);
-		}
+      rowChildren.add(
+        KeyedSubtree(
+          key: nearbyKey,
+          child: _KubusSquareControlButton.desktop(
+            size: resolvedButtonSize,
+            accent: accent,
+            icon: nearbyIcon,
+            tooltip: tooltip,
+            onTap: onToggleNearby,
+            active: nearbyActive,
+            // Keep the button background visually stable; the active state is
+            // primarily communicated via the icon accent.
+            activeTint: idleTint,
+            activeIconColor: accent,
+          ),
+        ),
+      );
+      rowChildren.add(buildDivider());
+    }
 
 		rowChildren.add(
 			Semantics(
 				label: 'map_zoom_out',
 				button: true,
-				child: _KubusSquareControlButton.desktop(
-					size: resolvedButtonSize,
-					accent: accent,
+        child: _KubusSquareControlButton.desktop(
+          size: resolvedButtonSize,
+          accent: accent,
 					icon: Icons.remove,
 					tooltip: zoomOutTooltip,
 					onTap: () => unawaited(_zoomBy(delta: -zoomStep)),
@@ -447,20 +474,20 @@ class KubusMapPrimaryControls extends StatelessWidget {
 			),
 		);
 
-		rowChildren.add(
-			ValueListenableBuilder<double>(
-				valueListenable: controller.bearingDegrees,
+    rowChildren.add(
+      ValueListenableBuilder<double>(
+        valueListenable: controller.bearingDegrees,
 				builder: (context, bearing, _) {
 					if (bearing.abs() <= bearingVisibleThresholdDegrees) {
 						return const SizedBox.shrink();
 					}
-					return Row(
-						mainAxisSize: MainAxisSize.min,
-						children: [
-							divider,
-							Semantics(
-								label: resetBearingSemanticLabel,
-								button: true,
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              buildDivider(),
+              Semantics(
+                label: resetBearingSemanticLabel,
+                button: true,
 								child: _KubusSquareControlButton.desktop(
 									size: resolvedButtonSize,
 									accent: accent,
@@ -473,9 +500,9 @@ class KubusMapPrimaryControls extends StatelessWidget {
 					);
 				},
 			),
-		);
+    );
 
-		rowChildren.add(divider);
+    rowChildren.add(buildDivider());
 
 		rowChildren.add(
 			Semantics(
@@ -600,52 +627,21 @@ class _KubusSquareControlButton extends StatelessWidget {
 
 		switch (_variant) {
 			case _KubusSquareControlVariant.mobile:
-				final borderColor = active ? scheme.primary : scheme.outlineVariant;
-				final iconColor = active ? scheme.onPrimary : scheme.onSurface;
-				final background = active
-						? scheme.primary.withValues(alpha: 0.20)
-						: scheme.surface.withValues(alpha: 0.46);
-
-				return Tooltip(
-					message: tooltip,
-					child: Material(
-						color: Colors.transparent,
-						child: InkWell(
-							mouseCursor: !enabled
-									? SystemMouseCursors.basic
-									: SystemMouseCursors.click,
-							borderRadius: radius,
-							onTap: resolvedOnTap,
-							child: Container(
-								width: size,
-								height: size,
-								decoration: BoxDecoration(
-									borderRadius: radius,
-									border: Border.all(
-										color: borderColor.withValues(alpha: 0.40),
-									),
-									boxShadow: [
-										BoxShadow(
-											color:
-													scheme.shadow.withValues(alpha: isDark ? 0.20 : 0.12),
-											blurRadius: active ? 18 : 14,
-											offset: const Offset(0, 10),
-										),
-									],
-								),
-								child: LiquidGlassPanel(
-									padding: EdgeInsets.zero,
-									margin: EdgeInsets.zero,
-									borderRadius: radius,
-									showBorder: false,
-									backgroundColor: background,
-									child: Center(
-										child: Icon(icon, color: iconColor, size: 22),
-									),
-								),
-							),
-						),
-					),
+				final mobileAccent = scheme.primary;
+				final mobileActiveIconColor =
+						ThemeData.estimateBrightnessForColor(mobileAccent) == Brightness.dark
+								? KubusColors.textPrimaryDark
+								: KubusColors.textPrimaryLight;
+				return KubusGlassIconButton(
+					icon: icon,
+					onPressed: resolvedOnTap,
+					tooltip: tooltip,
+					size: size,
+					active: active,
+					accentColor: mobileAccent,
+					iconColor: scheme.onSurface,
+					activeIconColor: mobileActiveIconColor,
+					activeTint: mobileAccent.withValues(alpha: 0.20),
 				);
 
 			case _KubusSquareControlVariant.desktop:
