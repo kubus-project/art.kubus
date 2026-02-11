@@ -5,7 +5,6 @@ import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' as ml;
 import 'package:provider/provider.dart';
@@ -18,10 +17,12 @@ import '../../providers/exhibitions_provider.dart';
 import '../../providers/marker_management_provider.dart';
 import '../../providers/tile_providers.dart';
 import '../../services/storage_config.dart';
+import '../../utils/design_tokens.dart';
 import '../../utils/map_marker_subject_loader.dart';
 import '../../utils/marker_subject_utils.dart';
 import '../../utils/maplibre_style_utils.dart';
 import '../../widgets/art_map_view.dart';
+import '../../widgets/creator/creator_kit.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class MarkerEditorView extends StatefulWidget {
@@ -441,6 +442,7 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                       .where((o) =>
                           o.title.toLowerCase().contains(query) || o.subtitle.toLowerCase().contains(query))
                       .toList(growable: false);
+              final dialogScheme = Theme.of(context).colorScheme;
 
               return KubusAlertDialog(
                 title: Text(title),
@@ -452,21 +454,22 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                       TextField(
                         controller: controller,
                         focusNode: focusNode,
-                        decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.search),
+                        decoration: _creatorInputDecoration(
+                          dialogScheme,
                           hintText: hintText,
+                          prefixIcon: const Icon(Icons.search),
                           isDense: true,
                         ),
                         onChanged: (_) => setStateDialog(() {}),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: KubusSpacing.md),
                       Flexible(
                         child: filtered.isEmpty
                             ? Center(
                                 child: Text(
                                   l10n.manageMarkersSearchNoResults,
-                                  style: GoogleFonts.inter(
-                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                  style: KubusTypography.inter(
+                                    color: dialogScheme.onSurface.withValues(alpha: 0.6),
                                   ),
                                 ),
                               )
@@ -755,6 +758,49 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Shared InputDecoration matching Creator Design Kit styling
+  // ---------------------------------------------------------------------------
+
+  InputDecoration _creatorInputDecoration(
+    ColorScheme scheme, {
+    String? labelText,
+    Widget? suffixIcon,
+    Widget? prefixIcon,
+    String? hintText,
+    bool isDense = false,
+  }) {
+    return InputDecoration(
+      labelText: labelText,
+      hintText: hintText,
+      suffixIcon: suffixIcon,
+      prefixIcon: prefixIcon,
+      isDense: isDense,
+      filled: true,
+      fillColor: scheme.onSurface.withValues(alpha: 0.04),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(KubusRadius.md),
+        borderSide: BorderSide(color: scheme.outline.withValues(alpha: 0.25)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(KubusRadius.md),
+        borderSide: BorderSide(color: scheme.outline.withValues(alpha: 0.25)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(KubusRadius.md),
+        borderSide: BorderSide(color: scheme.primary),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(KubusRadius.md),
+        borderSide: BorderSide(color: scheme.error),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(KubusRadius.md),
+        borderSide: BorderSide(color: scheme.error),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -772,7 +818,7 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
               Expanded(
                 child: Text(
                   widget.isNew ? l10n.manageMarkersNewButton : l10n.manageMarkersEditTitle,
-                  style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600, color: scheme.onSurface),
+                  style: KubusTextStyles.sectionTitle.copyWith(color: scheme.onSurface),
                 ),
               ),
               if (widget.onClose != null)
@@ -791,18 +837,20 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
     return AbsorbPointer(
       absorbing: _saving,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (widget.showHeader) ...[
               header,
-              const SizedBox(height: 12),
+              const CreatorFieldSpacing(),
             ],
+
+            // ---- Map (kept outside any CreatorSection) ----
             SizedBox(
               height: 220,
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(KubusRadius.lg),
                 child: ArtMapView(
                   initialCenter: markerPosition,
                   initialZoom: 15,
@@ -834,321 +882,344 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                 ),
               ),
             ),
-            const SizedBox(height: 12),
+            const CreatorFieldSpacing(),
+
+            // ---- Form ----
             Form(
               key: _formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                  // ==========================================================
+                  // Subject section
+                  // ==========================================================
+                  CreatorSection(
+                    title: 'Subject',
                     children: [
-                      Expanded(
-                        child: Text(
-                          l10n.mapMarkerDialogAttachHint,
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            color: scheme.onSurface.withValues(alpha: 0.7),
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        tooltip: l10n.mapMarkerDialogRefreshSubjectsTooltip,
-                        onPressed: _refreshingSubjects ? null : () => unawaited(_refreshSubjects(force: true)),
-                        icon: _refreshingSubjects
-                            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                            : const Icon(Icons.refresh),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<MarkerSubjectType>(
-                    isExpanded: true,
-                    initialValue: _subjectType,
-                    decoration: InputDecoration(labelText: l10n.mapMarkerDialogSubjectTypeLabel),
-                    items: MarkerSubjectType.values
-                        .map(
-                          (type) => DropdownMenuItem<MarkerSubjectType>(
-                            value: type,
-                            child: Text(_subjectTypeLabel(l10n, type)),
-                          ),
-                        )
-                        .toList(growable: false),
-                    onChanged: (value) {
-                      if (value == null) return;
-                      _applySubjectType(value);
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  if (_subjectSelectionRequired(_subjectType))
-                    if (subjectOptions.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 4),
-                        child: Text(
-                          l10n.mapMarkerDialogNoSubjectsAvailable(subjectTypeLabel),
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: scheme.onSurface.withValues(alpha: 0.65),
-                          ),
-                        ),
-                      )
-                    else
-                      InkWell(
-                        borderRadius: BorderRadius.circular(12),
-                        onTap: _saving
-                            ? null
-                            : () async {
-                                final picked = await _pickOption(
-                                  l10n: l10n,
-                                  title: l10n.manageMarkersPickSubjectTitle(subjectTypeLabel),
-                                  hintText: l10n.manageMarkersSearchSubjectsHint,
-                                  options: subjectOptions,
-                                  selected: _subject,
-                                );
-                                if (!mounted || picked == null) return;
-                                _applySubjectSelection(picked);
-                              },
-                        child: InputDecorator(
-                          decoration: InputDecoration(
-                            labelText: l10n.mapMarkerDialogSubjectRequiredLabel(subjectTypeLabel),
-                            border: const OutlineInputBorder(),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      (_subject?.title ?? l10n.mapMarkerDialogSelectSubjectToast).trim(),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-                                    ),
-                                  ],
-                                ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              l10n.mapMarkerDialogAttachHint,
+                              style: KubusTextStyles.detailCaption.copyWith(
+                                fontWeight: FontWeight.w500,
+                                color: scheme.onSurface.withValues(alpha: 0.7),
                               ),
-                              const SizedBox(width: 8),
-                              Icon(Icons.chevron_right, color: scheme.onSurface.withValues(alpha: 0.6)),
-                            ],
+                            ),
                           ),
-                        ),
-                      )
-                  else
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text(
-                        l10n.mapMarkerDialogMiscHint,
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: scheme.onSurface.withValues(alpha: 0.65),
-                        ),
+                          IconButton(
+                            tooltip: l10n.mapMarkerDialogRefreshSubjectsTooltip,
+                            onPressed: _refreshingSubjects ? null : () => unawaited(_refreshSubjects(force: true)),
+                            icon: _refreshingSubjects
+                                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                                : const Icon(Icons.refresh),
+                          ),
+                        ],
                       ),
-                    ),
-                  if (_showOptionalArAsset(_subjectType)) ...[
-                    const SizedBox(height: 12),
-                    if (_arEnabledArtworks.isEmpty)
-                      Text(
-                        l10n.mapMarkerDialogNoArEnabledArtworksHint,
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: scheme.onSurface.withValues(alpha: 0.65),
-                        ),
-                      )
-                    else
-                      InkWell(
-                        borderRadius: BorderRadius.circular(12),
-                        onTap: _saving
-                            ? null
-                            : () async {
-                                final options = _arEnabledArtworks
-                                    .map(
-                                      (a) => MarkerSubjectOption(
-                                        type: MarkerSubjectType.artwork,
-                                        id: a.id,
-                                        title: a.title,
-                                        subtitle: a.description,
-                                      ),
-                                    )
-                                    .toList(growable: false);
-                                final selected = (_linkedArtworkId ?? '').trim().isEmpty
-                                    ? null
-                                    : options
-                                        .where((o) => o.id == _linkedArtworkId)
-                                        .cast<MarkerSubjectOption?>()
-                                        .firstOrNull;
+                      const CreatorFieldSpacing(),
 
-                                final picked = await _pickOption(
-                                  l10n: l10n,
-                                  title: l10n.manageMarkersPickArAssetTitle,
-                                  hintText: l10n.manageMarkersSearchArAssetsHint,
-                                  options: options,
-                                  selected: selected,
-                                );
-                                if (!mounted || picked == null) return;
-                                setState(() {
-                                  _linkedArtworkCleared = false;
-                                  _linkedArtworkId = picked.id;
-                                  _linkedArtwork = findArtworkById(_arEnabledArtworks, picked.id);
-                                });
-                              },
-                        child: InputDecorator(
-                          decoration: InputDecoration(
-                            labelText: l10n.mapMarkerDialogLinkedArAssetTitle,
-                            border: const OutlineInputBorder(),
-                            suffixIcon: (_linkedArtworkId ?? '').trim().isEmpty
-                                ? null
-                                : IconButton(
-                                    tooltip: l10n.manageMarkersClearSelectionTooltip,
-                                    onPressed: () => setState(() {
-                                      _linkedArtworkCleared = true;
-                                      _linkedArtwork = null;
-                                      _linkedArtworkId = null;
-                                    }),
-                                    icon: const Icon(Icons.clear),
-                                  ),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  (_linkedArtwork?.title ?? l10n.manageMarkersPickArAssetPlaceholder).trim(),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-                                ),
+                      // Subject type dropdown
+                      DropdownButtonFormField<MarkerSubjectType>(
+                        isExpanded: true,
+                        initialValue: _subjectType,
+                        decoration: _creatorInputDecoration(scheme, labelText: l10n.mapMarkerDialogSubjectTypeLabel),
+                        items: MarkerSubjectType.values
+                            .map(
+                              (type) => DropdownMenuItem<MarkerSubjectType>(
+                                value: type,
+                                child: Text(_subjectTypeLabel(l10n, type)),
                               ),
-                              const SizedBox(width: 8),
-                              Icon(Icons.chevron_right, color: scheme.onSurface.withValues(alpha: 0.6)),
-                            ],
+                            )
+                            .toList(growable: false),
+                        onChanged: (value) {
+                          if (value == null) return;
+                          _applySubjectType(value);
+                        },
+                      ),
+                      const CreatorFieldSpacing(),
+
+                      // Subject selection (required) or misc hint
+                      if (_subjectSelectionRequired(_subjectType)) ...[
+                        if (subjectOptions.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: KubusSpacing.xs),
+                            child: Text(
+                              l10n.mapMarkerDialogNoSubjectsAvailable(subjectTypeLabel),
+                              style: KubusTextStyles.detailLabel.copyWith(
+                                color: scheme.onSurface.withValues(alpha: 0.65),
+                              ),
+                            ),
+                          )
+                        else
+                          InkWell(
+                            borderRadius: BorderRadius.circular(KubusRadius.md),
+                            onTap: _saving
+                                ? null
+                                : () async {
+                                    final picked = await _pickOption(
+                                      l10n: l10n,
+                                      title: l10n.manageMarkersPickSubjectTitle(subjectTypeLabel),
+                                      hintText: l10n.manageMarkersSearchSubjectsHint,
+                                      options: subjectOptions,
+                                      selected: _subject,
+                                    );
+                                    if (!mounted || picked == null) return;
+                                    _applySubjectSelection(picked);
+                                  },
+                            child: InputDecorator(
+                              decoration: _creatorInputDecoration(
+                                scheme,
+                                labelText: l10n.mapMarkerDialogSubjectRequiredLabel(subjectTypeLabel),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          (_subject?.title ?? l10n.mapMarkerDialogSelectSubjectToast).trim(),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: KubusTextStyles.actionTileTitle,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: KubusSpacing.sm),
+                                  Icon(Icons.chevron_right, color: scheme.onSurface.withValues(alpha: 0.6)),
+                                ],
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                  ],
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _categoryController,
-                    decoration: InputDecoration(labelText: l10n.mapMarkerDialogCategoryLabel),
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<ArtMarkerType>(
-                    isExpanded: true,
-                    initialValue: _markerType,
-                    decoration: InputDecoration(labelText: l10n.mapMarkerDialogMarkerLayerLabel),
-                    items: ArtMarkerType.values
-                        .map(
-                          (type) => DropdownMenuItem(
-                            value: type,
-                            child: Text(_describeMarkerType(l10n, type)),
+                      ] else ...[
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: KubusSpacing.xs),
+                          child: Text(
+                            l10n.mapMarkerDialogMiscHint,
+                            style: KubusTextStyles.detailLabel.copyWith(
+                              color: scheme.onSurface.withValues(alpha: 0.65),
+                            ),
                           ),
-                        )
-                        .toList(growable: false),
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setState(() => _markerType = value);
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _nameController,
-                    decoration: InputDecoration(labelText: l10n.mapMarkerDialogMarkerTitleLabel),
-                    validator: (value) {
-                      final v = (value ?? '').trim();
-                      if (v.isEmpty) return l10n.mapMarkerDialogEnterTitleError;
-                      if (v.length < 3) return l10n.mapMarkerDialogTitleMinLengthError(3);
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _descriptionController,
-                    decoration: InputDecoration(labelText: l10n.mapMarkerDialogDescriptionLabel),
-                    minLines: 2,
-                    maxLines: 4,
-                    validator: (value) {
-                      final v = (value ?? '').trim();
-                      if (v.isEmpty) return l10n.mapMarkerDialogEnterDescriptionError;
-                      if (v.length < 10) return l10n.mapMarkerDialogDescriptionMinLengthError(10);
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _latController,
-                          decoration: InputDecoration(labelText: l10n.mapMarkerDialogLatitudeLabel),
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                          onChanged: (_) => _updatePositionFromFields(),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextFormField(
-                          controller: _lngController,
-                          decoration: InputDecoration(labelText: l10n.mapMarkerDialogLongitudeLabel),
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                          onChanged: (_) => _updatePositionFromFields(),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _activationRadiusController,
-                    decoration: InputDecoration(labelText: l10n.manageMarkersActivationRadiusLabel),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  ),
-                  const SizedBox(height: 12),
-                  SwitchListTile.adaptive(
-                    value: _isActive,
-                    onChanged: (value) => setState(() => _isActive = value),
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(l10n.manageMarkersPublishedToggleTitle),
-                  ),
-                  SwitchListTile.adaptive(
-                    value: _isPublic,
-                    onChanged: (value) => setState(() => _isPublic = value),
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(l10n.mapMarkerDialogPublicMarkerTitle),
-                    subtitle: Text(l10n.mapMarkerDialogPublicMarkerSubtitle),
-                  ),
-                  SwitchListTile.adaptive(
-                    value: _requiresProximity,
-                    onChanged: (value) => setState(() => _requiresProximity = value),
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(l10n.manageMarkersRequiresProximityTitle),
-                    subtitle: Text(l10n.manageMarkersRequiresProximitySubtitle),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: _saving ? null : _save,
-                          child: _saving
-                              ? SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: scheme.onPrimary),
-                                )
-                              : Text(widget.isNew ? l10n.manageMarkersCreateButton : l10n.manageMarkersSaveButton),
-                        ),
-                      ),
-                      if (!widget.isNew) ...[
-                        const SizedBox(width: 12),
-                        OutlinedButton(
-                          onPressed: _saving ? null : _delete,
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: scheme.error,
-                            side: BorderSide(color: scheme.error.withValues(alpha: 0.5)),
-                          ),
-                          child: Text(l10n.manageMarkersDeleteButton),
                         ),
                       ],
+
+                      // Optional AR asset linking
+                      if (_showOptionalArAsset(_subjectType)) ...[
+                        const CreatorFieldSpacing(),
+                        if (_arEnabledArtworks.isEmpty)
+                          Text(
+                            l10n.mapMarkerDialogNoArEnabledArtworksHint,
+                            style: KubusTextStyles.detailLabel.copyWith(
+                              color: scheme.onSurface.withValues(alpha: 0.65),
+                            ),
+                          )
+                        else
+                          InkWell(
+                            borderRadius: BorderRadius.circular(KubusRadius.md),
+                            onTap: _saving
+                                ? null
+                                : () async {
+                                    final options = _arEnabledArtworks
+                                        .map(
+                                          (a) => MarkerSubjectOption(
+                                            type: MarkerSubjectType.artwork,
+                                            id: a.id,
+                                            title: a.title,
+                                            subtitle: a.description,
+                                          ),
+                                        )
+                                        .toList(growable: false);
+                                    final selected = (_linkedArtworkId ?? '').trim().isEmpty
+                                        ? null
+                                        : options
+                                            .where((o) => o.id == _linkedArtworkId)
+                                            .cast<MarkerSubjectOption?>()
+                                            .firstOrNull;
+
+                                    final picked = await _pickOption(
+                                      l10n: l10n,
+                                      title: l10n.manageMarkersPickArAssetTitle,
+                                      hintText: l10n.manageMarkersSearchArAssetsHint,
+                                      options: options,
+                                      selected: selected,
+                                    );
+                                    if (!mounted || picked == null) return;
+                                    setState(() {
+                                      _linkedArtworkCleared = false;
+                                      _linkedArtworkId = picked.id;
+                                      _linkedArtwork = findArtworkById(_arEnabledArtworks, picked.id);
+                                    });
+                                  },
+                            child: InputDecorator(
+                              decoration: _creatorInputDecoration(
+                                scheme,
+                                labelText: l10n.mapMarkerDialogLinkedArAssetTitle,
+                                suffixIcon: (_linkedArtworkId ?? '').trim().isEmpty
+                                    ? null
+                                    : IconButton(
+                                        tooltip: l10n.manageMarkersClearSelectionTooltip,
+                                        onPressed: () => setState(() {
+                                          _linkedArtworkCleared = true;
+                                          _linkedArtwork = null;
+                                          _linkedArtworkId = null;
+                                        }),
+                                        icon: const Icon(Icons.clear),
+                                      ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      (_linkedArtwork?.title ?? l10n.manageMarkersPickArAssetPlaceholder).trim(),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: KubusTextStyles.actionTileTitle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: KubusSpacing.sm),
+                                  Icon(Icons.chevron_right, color: scheme.onSurface.withValues(alpha: 0.6)),
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
                     ],
+                  ),
+                  const CreatorSectionSpacing(),
+
+                  // ==========================================================
+                  // Details section
+                  // ==========================================================
+                  CreatorSection(
+                    title: 'Details',
+                    children: [
+                      TextFormField(
+                        controller: _categoryController,
+                        decoration: _creatorInputDecoration(scheme, labelText: l10n.mapMarkerDialogCategoryLabel),
+                      ),
+                      const CreatorFieldSpacing(),
+                      DropdownButtonFormField<ArtMarkerType>(
+                        isExpanded: true,
+                        initialValue: _markerType,
+                        decoration: _creatorInputDecoration(scheme, labelText: l10n.mapMarkerDialogMarkerLayerLabel),
+                        items: ArtMarkerType.values
+                            .map(
+                              (type) => DropdownMenuItem(
+                                value: type,
+                                child: Text(_describeMarkerType(l10n, type)),
+                              ),
+                            )
+                            .toList(growable: false),
+                        onChanged: (value) {
+                          if (value == null) return;
+                          setState(() => _markerType = value);
+                        },
+                      ),
+                      const CreatorFieldSpacing(),
+                      TextFormField(
+                        controller: _nameController,
+                        decoration: _creatorInputDecoration(scheme, labelText: l10n.mapMarkerDialogMarkerTitleLabel),
+                        validator: (value) {
+                          final v = (value ?? '').trim();
+                          if (v.isEmpty) return l10n.mapMarkerDialogEnterTitleError;
+                          if (v.length < 3) return l10n.mapMarkerDialogTitleMinLengthError(3);
+                          return null;
+                        },
+                      ),
+                      const CreatorFieldSpacing(),
+                      TextFormField(
+                        controller: _descriptionController,
+                        decoration: _creatorInputDecoration(scheme, labelText: l10n.mapMarkerDialogDescriptionLabel),
+                        minLines: 2,
+                        maxLines: 4,
+                        validator: (value) {
+                          final v = (value ?? '').trim();
+                          if (v.isEmpty) return l10n.mapMarkerDialogEnterDescriptionError;
+                          if (v.length < 10) return l10n.mapMarkerDialogDescriptionMinLengthError(10);
+                          return null;
+                        },
+                      ),
+                    ],
+                  ),
+                  const CreatorSectionSpacing(),
+
+                  // ==========================================================
+                  // Location section
+                  // ==========================================================
+                  CreatorSection(
+                    title: 'Location',
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _latController,
+                              decoration: _creatorInputDecoration(scheme, labelText: l10n.mapMarkerDialogLatitudeLabel),
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                              onChanged: (_) => _updatePositionFromFields(),
+                            ),
+                          ),
+                          const SizedBox(width: KubusSpacing.md),
+                          Expanded(
+                            child: TextFormField(
+                              controller: _lngController,
+                              decoration: _creatorInputDecoration(scheme, labelText: l10n.mapMarkerDialogLongitudeLabel),
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                              onChanged: (_) => _updatePositionFromFields(),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const CreatorSectionSpacing(),
+
+                  // ==========================================================
+                  // Settings section
+                  // ==========================================================
+                  CreatorSection(
+                    title: 'Settings',
+                    children: [
+                      TextFormField(
+                        controller: _activationRadiusController,
+                        decoration: _creatorInputDecoration(scheme, labelText: l10n.manageMarkersActivationRadiusLabel),
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      ),
+                      const CreatorFieldSpacing(),
+                      CreatorSwitchTile(
+                        title: l10n.manageMarkersPublishedToggleTitle,
+                        value: _isActive,
+                        onChanged: (value) => setState(() => _isActive = value),
+                      ),
+                      const CreatorFieldSpacing(),
+                      CreatorSwitchTile(
+                        title: l10n.mapMarkerDialogPublicMarkerTitle,
+                        subtitle: l10n.mapMarkerDialogPublicMarkerSubtitle,
+                        value: _isPublic,
+                        onChanged: (value) => setState(() => _isPublic = value),
+                      ),
+                      const CreatorFieldSpacing(),
+                      CreatorSwitchTile(
+                        title: l10n.manageMarkersRequiresProximityTitle,
+                        subtitle: l10n.manageMarkersRequiresProximitySubtitle,
+                        value: _requiresProximity,
+                        onChanged: (value) => setState(() => _requiresProximity = value),
+                      ),
+                    ],
+                  ),
+                  const CreatorSectionSpacing(),
+
+                  // ==========================================================
+                  // Footer actions
+                  // ==========================================================
+                  CreatorFooterActions(
+                    primaryLabel: widget.isNew ? l10n.manageMarkersCreateButton : l10n.manageMarkersSaveButton,
+                    onPrimary: _saving ? null : _save,
+                    primaryLoading: _saving,
+                    destructiveLabel: widget.isNew ? null : l10n.manageMarkersDeleteButton,
+                    onDestructive: _saving ? null : _delete,
                   ),
                 ],
               ),

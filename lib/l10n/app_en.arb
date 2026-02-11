@@ -323,7 +323,6 @@
   "desktopSettingsWebsiteHint": "https://",
   "desktopSettingsLocationLabel": "Location",
   "desktopSettingsLocationHint": "City, Country",
-
   "desktopSettingsWalletSectionSubtitle": "Manage your wallet connection and Web3 settings",
   "desktopSettingsViewWalletButton": "View wallet",
   "desktopSettingsSecuritySectionTitle": "Security",
@@ -334,19 +333,15 @@
   "desktopSettingsWalletDisconnectedToast": "Wallet disconnected",
   "desktopSettingsDisconnectButton": "Disconnect",
   "desktopSettingsExportingDataToast": "Exporting data…",
-
   "desktopSettingsPlatformSubtitle": "Check which capabilities are available on this device",
   "desktopSettingsAppearanceSubtitle": "Customize the look and feel",
-
   "desktopSettingsShowFriendsTitle": "Show friends",
   "desktopSettingsShowFriendsSubtitle": "Display your friends list on your profile",
   "desktopSettingsShowAchievementsTitle": "Show achievements",
   "desktopSettingsShowAchievementsSubtitle": "Display your achievements on your profile",
   "desktopSettingsAllowMessagesTitle": "Allow messages",
   "desktopSettingsAllowMessagesSubtitle": "Allow others to message you",
-
   "desktopSettingsDangerZoneSubtitle": "Irreversible actions that require caution",
-
   "desktopSettingsAchievementsTitle": "Achievements & rewards",
   "desktopSettingsAchievementsSubtitle": "Track your progress and earn KUB8 points",
   "desktopSettingsAchievementsStatArtworksDiscovered": "Artworks discovered",
@@ -363,7 +358,6 @@
   "desktopSettingsAchievementEventExplorerDescription": "Attend 5 art events",
   "desktopSettingsAchievementNftCreatorTitle": "NFT creator",
   "desktopSettingsAchievementNftCreatorDescription": "Mint your first NFT",
-
   "desktopSettingsHelpSupportTitle": "Help & support",
   "desktopSettingsHelpSupportSubtitle": "Get help and find answers to common questions",
   "desktopSettingsFaqTileTitle": "FAQ",
@@ -372,7 +366,6 @@
   "desktopSettingsReportBugTileTitle": "Report a bug",
   "desktopSettingsReportBugTileSubtitle": "Help us improve the app",
   "desktopSettingsOpeningBugReportToast": "Opening bug report form…",
-
   "desktopSettingsAboutSubtitle": "AR art platform connecting artists and institutions",
   "desktopSettingsFeaturesSectionTitle": "Features",
   "desktopSettingsFeatureArDiscoveryTitle": "AR art discovery",
@@ -1251,10 +1244,8 @@
   "mapArReadyChipLabel": "AR ready",
   "mapAlreadyDiscoveredTooltip": "Already discovered",
   "mapMarkAsDiscoveredTooltip": "Mark as discovered",
-
   "arWebFallbackFeature": "AR experience",
   "arWebFallbackDescription": "Augmented Reality (AR) features require native device capabilities. Download the art.kubus app to view digital artworks in your physical space using your phone’s camera.",
-
   "arModeScanName": "Scan",
   "arModePlaceName": "Place",
   "arModeViewName": "View",
@@ -1263,23 +1254,19 @@
   "arModePlaceDescription": "Place digital artworks into your space.",
   "arModeViewDescription": "View your placed artworks and revisit them.",
   "arModeCreateDescription": "Create and experiment with AR placements.",
-
   "arMarkerNearbyToast": "Marker nearby: {name}",
   "@arMarkerNearbyToast": {
     "placeholders": {
       "name": {}
     }
   },
-
   "arInitializingTitle": "Initializing AR…",
   "arReadyStatus": "AR is ready",
   "arSettingUpStatus": "Setting things up…",
   "arNoArtworksYetTitle": "No artworks yet",
   "arNoArtworksYetDescription": "Scan a marker or place an artwork to start building your AR view.",
-
   "arModelLoadedToast": "AR model loaded",
   "arModelLoadFailedToast": "Failed to load AR model. Please try again.",
-
   "arPlacingTitle": "Placing: {title}",
   "@arPlacingTitle": {
     "placeholders": {
@@ -1287,21 +1274,17 @@
     }
   },
   "arPlacingInstruction": "Move your device to find a flat surface.",
-
   "arModePreviewTitle": "{mode} mode",
   "@arModePreviewTitle": {
     "placeholders": {
       "mode": {}
     }
   },
-
   "arPlaceArtworkFailedToast": "Failed to place artwork. Please try again.",
-
   "arActionScan": "Scan for artwork",
   "arActionPlace": "Place artwork here",
   "arActionView": "View details",
   "arActionCreate": "Create AR artwork",
-
   "arArtworkPlacedToast": "Artwork placed successfully!",
   "arNearbyArtworksTitle": "Nearby artworks",
   "arSelectedArtworkToast": "Selected: {title}",
@@ -1312,7 +1295,6 @@
   },
   "arSelectArtworkBeforePlacingToast": "Select or create an artwork before placing it.",
   "arNoPlacedArtworksToast": "No artworks placed yet. Try placing some first!",
-
   "arPlacedArtworksTitle": "Placed artworks ({count})",
   "@arPlacedArtworksTitle": {
     "placeholders": {
@@ -1320,7 +1302,6 @@
     }
   },
   "arArtworkRemovedToast": "Artwork removed",
-
   "arLocationUnavailableToast": "Current location unavailable. Move your device to calibrate AR tracking.",
   "arUnableToReadFileError": "Unable to read file data. Please try another file.",
   "arFileSelectionFailedError": "File selection failed. Please try again.",
@@ -1330,7 +1311,6 @@
   "arUploadFailedToast": "Upload failed. Please try again.",
   "arMarkerCreatedSwitchToPlaceToast": "AR asset uploaded and marker created. Switching to Place mode.",
   "arCreateMarkerFailedToast": "Failed to create AR marker. Please try again.",
-
   "arShareText": "Check out this AR artwork on art.kubus!\n\n\"{title}\"\nby {artist}\n\nExperience it in augmented reality!",
   "@arShareText": {
     "placeholders": {
@@ -1340,14 +1320,11 @@
   },
   "arShareSuccessToast": "Artwork shared successfully!",
   "arShareFailedToast": "Share failed. Please try again.",
-
   "commonActions": "Actions",
   "commonCurrentlyOn": "Currently ON",
   "commonCurrentlyOff": "Currently OFF",
-
   "commonOk": "OK",
   "commonRetry": "Retry",
-
   "commonJustNow": "Just now",
   "commonMinutesAgo": "{minutes, plural, =1{1m ago} other{{minutes}m ago}}",
   "@commonMinutesAgo": {
@@ -1367,20 +1344,17 @@
       "days": {}
     }
   },
-
   "commonWeeksAgo": "{weeks, plural, =1{1w ago} other{{weeks}w ago}}",
   "@commonWeeksAgo": {
     "placeholders": {
       "weeks": {}
     }
   },
-
   "commonTba": "TBA",
   "commonUntitled": "Untitled",
   "commonDigital": "Digital",
   "commonArtwork": "Artwork",
   "commonUndo": "Undo",
-
   "messagesTitle": "Messages",
   "messagesEmptyNoConversationsTitle": "No conversations",
   "messagesEmptyNoConversationsDescription": "Start a conversation using the chat button below.",
@@ -1393,7 +1367,6 @@
   "messagesCreateConversationMembersLabel": "Members (username or wallet)",
   "messagesCreateConversationGroupAvatarOptionalLabel": "Group avatar (optional)",
   "messagesCreateConversationIsGroupLabel": "Group",
-
   "messagesReplyingToLabel": "Replying to {name}",
   "@messagesReplyingToLabel": {
     "placeholders": {
@@ -1442,30 +1415,25 @@
   "messagesRenameConversationTitle": "Rename conversation",
   "messagesRenameConversationHint": "Enter a new name",
   "messagesRenameConversationFieldLabel": "Conversation name",
-
   "userProfileTitle": "Profile",
   "userProfileNotFound": "User not found",
   "userProfileNotFoundDescription": "This profile may have been deleted or doesn't exist.",
   "userProfileShareTooltip": "Share",
   "userProfileMoreTooltip": "More",
   "userProfileSharedToast": "Profile shared!",
-
   "userProfileJoinedLabel": "Joined {date}",
   "@userProfileJoinedLabel": {
     "placeholders": {
       "date": {}
     }
   },
-
   "userProfileMessageButtonLabel": "Message",
-
   "userProfileArtistPortfolioTitle": "Artist portfolio",
   "userProfileInstitutionHighlightsDesktopSubtitle": "Featured exhibitions and programs",
   "userProfileArtistPortfolioDesktopSubtitle": "Latest artworks and collections",
   "userProfileNoCreatorContentTitle": "No content available",
   "userProfileNoInstitutionContentDescription": "No exhibitions or programs to display yet",
   "userProfileNoArtistContentDescription": "No artworks or collections to display yet",
-
   "userProfileFollowButton": "Follow",
   "userProfileFollowingButton": "Following",
   "userProfileSignInToFollowToast": "Please sign in to follow creators.",
@@ -1482,15 +1450,12 @@
       "name": {}
     }
   },
-
   "userProfilePostsStatLabel": "Posts",
   "userProfileFollowersStatLabel": "Followers",
   "userProfileFollowingStatLabel": "Following",
-
   "userProfileMessageLoginRequiredToast": "Please log in to message this user.",
   "userProfileConversationOpenFailedToast": "Could not open conversation.",
   "userProfileConversationOpenGenericErrorToast": "Failed to open conversation. Please try again.",
-
   "userProfileAchievementsTitle": "Achievements",
   "userProfileAchievementsProgressLabel": "{completed} of {total} unlocked",
   "@userProfileAchievementsProgressLabel": {
@@ -1507,7 +1472,6 @@
   },
   "userProfileAchievementsEmptyDescription": "Start exploring to unlock achievements",
   "userProfileAchievementCompletedLabel": "Completed",
-
   "userProfilePostsTitle": "Posts",
   "userProfileRecentActivitySubtitle": "Recent activity from {name}",
   "@userProfileRecentActivitySubtitle": {
@@ -1526,7 +1490,6 @@
     }
   },
   "userProfileNoMorePostsLabel": "No more posts",
-
   "userProfileArtistHighlightsTitle": "Artist highlights",
   "userProfileArtistHighlightsSubtitle": "Latest drops from {name}.",
   "@userProfileArtistHighlightsSubtitle": {
@@ -1541,7 +1504,6 @@
       "name": {}
     }
   },
-
   "userProfileArtworksTitle": "Artworks",
   "userProfileCollectionsTitle": "Collections",
   "userProfileEventsTitle": "Events",
@@ -1575,7 +1537,6 @@
       "title": {}
     }
   },
-
   "userProfileLikesLabel": "{count, plural, =1{1 like} other{{count} likes}}",
   "@userProfileLikesLabel": {
     "placeholders": {
@@ -1596,7 +1557,6 @@
   },
   "userProfileCollectionFallbackTitle": "Collection",
   "userProfileEventFallbackTitle": "Event",
-
   "collectionSettingsTitle": "Collection Settings",
   "artistStudioCreatePrompt": "What would you like to create?",
   "artistStudioCreateOptionArtworkTitle": "Create artwork",
@@ -1657,12 +1617,10 @@
     }
   },
   "collectionSettingsDeletedToast": "Collection deleted",
-
   "userProfileMoreOptionsBlockUser": "Block user",
   "userProfileMoreOptionsReportUser": "Report user",
   "userProfileMoreOptionsCopyLink": "Copy profile link",
   "userProfileLinkCopiedToast": "Profile link copied to clipboard",
-
   "userProfileBlockDialogTitle": "Block {name}?",
   "@userProfileBlockDialogTitle": {
     "placeholders": {
@@ -1679,7 +1637,6 @@
     }
   },
   "userProfileBlockButtonLabel": "Block",
-
   "userProfileReportDialogTitle": "Report {name}",
   "@userProfileReportDialogTitle": {
     "placeholders": {
@@ -1692,29 +1649,23 @@
   "userProfileReportReasonHarassment": "Harassment",
   "userProfileReportReasonOther": "Other",
   "userProfileReportSubmittedToast": "Report submitted. Thank you for your feedback.",
-
   "arDetailModelLabel": "Model",
   "arDetailScaleLabel": "Scale",
   "arDetailPlacedLabel": "Placed",
-
   "arShareButtonLabel": "Share",
   "arLikeButtonLabel": "Like",
   "arLikedButtonLabel": "Liked",
   "arSaveButtonLabel": "Save",
   "arSavedButtonLabel": "Saved",
-
   "arLikeAddedToast": "Added to your likes!",
   "arLikeRemovedToast": "Removed from likes",
   "arSaveAddedToast": "Saved to your collection!",
   "arSaveRemovedToast": "Removed from saved items",
-
   "arNotSupportedTitle": "AR not supported",
   "arNotSupportedMessage": "Your device does not support AR features. AR requires ARCore (Android) or ARKit (iOS).",
   "arInitializationFailedTitle": "AR initialization failed",
   "arInitializationFailedMessage": "Could not initialize AR. Please check camera permissions and try again.",
-
   "commonRequired": "required",
-
   "commonFileSizeKb": "{value} KB",
   "@commonFileSizeKb": {
     "description": "File size in kilobytes",
@@ -1733,7 +1684,6 @@
       }
     }
   },
-
   "arCreateUploadTitle": "Upload AR asset",
   "arCreateUploadSubtitle": "Link an existing artwork, upload a 3D model (GLB/GLTF/USDZ), and we'll enrich its AR marker.",
   "arCreateSubjectTypeLabel": "Subject type",
@@ -1778,7 +1728,6 @@
   "arCreatePublicMarkerSubtitle": "Visible to nearby explorers",
   "arCreateUploadingLabel": "Uploading…",
   "arCreateUploadAndCreateButton": "Upload & create marker",
-
   "arSettingsTitle": "AR settings",
   "arScannerSettingsTitle": "Scanner settings",
   "arFlashControlTitle": "Flash control",
@@ -1786,7 +1735,6 @@
   "arScannerOverlayTitle": "Scanner overlay",
   "arScannerOverlaySubtitle": "Show/hide scanner guide",
   "arScannerOverlayResetToast": "Scanner overlay resets automatically after 3 seconds.",
-
   "arDisplayTitle": "AR display",
   "arShowFeaturePointsTitle": "Show feature points",
   "arShowFeaturePointsSubtitle": "Display tracking points on surfaces",
@@ -1796,23 +1744,19 @@
   "arAutoDetectSurfacesSubtitle": "Automatically detect flat surfaces",
   "arDebugInfoTitle": "Debug info",
   "arDebugInfoSubtitle": "Show technical information",
-
   "arModelScaleLabel": "Model scale: {percent}%",
   "@arModelScaleLabel": {
     "placeholders": {
       "percent": {}
     }
   },
-
   "arClearAllArtworksTitle": "Clear all artworks",
   "arClearAllArtworksSubtitle": "Remove all placed AR objects",
   "arAllArtworksClearedToast": "All artworks cleared",
   "arResetSessionTitle": "Reset AR session",
   "arResetSessionSubtitle": "Restart AR tracking",
   "arSessionResetToast": "AR session reset",
-
   "connectWalletSecureAccessTitle": "Secure access",
-
   "connectWalletChooseTitle": "Connect your wallet",
   "connectWalletChooseDescription": "Choose how you want to connect. You can create a new wallet, import an existing one, or use WalletConnect.",
   "connectWalletOptionWalletConnectTitle": "WalletConnect",
@@ -1822,7 +1766,6 @@
   "connectWalletOptionRegisterTitle": "Register account",
   "connectWalletOptionRegisterDescription": "Register with your e-mail or Google account",
   "connectWalletHybridHelpLink": "What’s WalletConnect?",
-
   "connectWalletImportTitle": "Import wallet",
   "connectWalletImportDescription": "Enter your 12-word recovery phrase to import a wallet stored on another device.",
   "connectWalletImportHint": "Enter 12 words separated by spaces",
@@ -1842,7 +1785,6 @@
     }
   },
   "connectWalletImportFailedToast": "Wallet import failed. Please try again.",
-
   "connectWalletCreateTitle": "Create a new wallet",
   "connectWalletCreateDescription": "We’ll generate a new wallet on this device. Make sure to back up your recovery phrase securely.",
   "connectWalletCreateInfoTitle": "Important",
@@ -1851,10 +1793,8 @@
   "connectWalletCreateGenerateButton": "Generate wallet",
   "connectWalletCreateAlreadyHaveWalletPrefix": "Already have a wallet?",
   "connectWalletCreateAlreadyHaveWalletLink": "Import it",
-
   "connectWalletCreateSuccessToast": "Wallet created and profile set up.",
   "connectWalletCreateFailedToast": "Failed to create wallet. Please try again.",
-
   "connectWalletMnemonicDialogTitle": "Save your recovery phrase",
   "connectWalletMnemonicDialogWarning": "Write this down and keep it safe!",
   "connectWalletMnemonicDialogConfirmPrompt": "Confirm by typing your recovery phrase:",
@@ -1866,12 +1806,10 @@
     }
   },
   "connectWalletMnemonicDialogConfirmButton": "I’ve saved it",
-
   "connectWalletConnectedTitle": "Wallet connected",
   "connectWalletConnectedDescription": "Your wallet is now connected to art.kubus. You can explore AR art, trade NFTs, and participate in the ecosystem.",
   "connectWalletConnectedStartExploringButton": "Start exploring",
   "connectWalletConnectedDisconnectButton": "Disconnect wallet",
-
   "connectWalletWeb3GuideTitle": "What is a Web3 wallet?",
   "connectWalletWeb3GuideDescription": "A Web3 wallet is your gateway to the decentralized internet:",
   "connectWalletWeb3GuideFeatureSecureTitle": "Secure",
@@ -1883,7 +1821,6 @@
   "connectWalletWeb3GuideFeatureDefiTitle": "DeFi",
   "connectWalletWeb3GuideFeatureDefiDescription": "Access decentralized finance",
   "connectWalletWeb3GuideGotItButton": "Got it!",
-
   "connectWalletWalletConnectTitle": "Connect with WalletConnect",
   "connectWalletWalletConnectDescription": "Use WalletConnect to connect your wallet app to art.kubus.",
   "connectWalletWalletConnectSupportedTitle": "Supported wallets",
@@ -1900,10 +1837,8 @@
   "connectWalletWalletConnectConnectButton": "Connect",
   "connectWalletWalletConnectNoWalletPrefix": "Don’t have a wallet yet?",
   "connectWalletWalletConnectNoWalletLink": "Create one",
-
   "connectWalletWalletConnectScanQrTitle": "Scan WalletConnect QR code",
   "connectWalletWalletConnectScanQrHint": "Position the QR code within the frame",
-
   "connectWalletWalletConnectUriRequiredToast": "Please enter a WalletConnect URI",
   "connectWalletWalletConnectInvalidUriToast": "Invalid WalletConnect URI",
   "connectWalletWalletConnectNeedsLocalWalletToast": "Create or import a wallet before using WalletConnect",
@@ -1916,7 +1851,6 @@
   "connectWalletWalletConnectConnectionErrorToast": "Connection error. Please try again.",
   "connectWalletWalletConnectWaitingApprovalToast": "Waiting for wallet approval…",
   "connectWalletWalletConnectFailedToast": "Failed to connect with WalletConnect",
-
   "walletHomeTitle": "My wallet",
   "walletHomeLoadingLabel": "Loading your wallet…",
   "walletHomeNoWalletDescription": "Connect a wallet to get started.",
@@ -1957,7 +1891,6 @@
   "walletHomeTxStakeLabel": "Staked",
   "walletHomeTxUnstakeLabel": "Unstaked",
   "walletHomeTxGovernanceVoteLabel": "Governance vote",
-
   "receiveTokenTitle": "Receive tokens",
   "receiveTokenSelectTokenTitle": "Select token to receive",
   "receiveTokenBalanceLabel": "Bal. {amount}",
@@ -2024,7 +1957,6 @@
     }
   },
   "receiveTokenNoTokensMessage": "Connect or import a wallet to display available tokens.",
-
   "sendTokenTitle": "Send token",
   "sendTokenScanQrTooltip": "Scan QR code",
   "sendTokenQrScannerUnavailableTooltip": "QR scanner not available",
@@ -2066,11 +1998,9 @@
   "sendTokenInsufficientBalanceError": "Insufficient balance",
   "sendTokenNoBalanceToast": "No balance available for this token",
   "sendTokenMaxAmountComputeFailedToast": "Unable to compute max amount. Keep some balance for fees.",
-
   "sendTokenQrScannerUnsupportedWeb": "QR code scanning is not available on web browsers. Please use the mobile or desktop app for this feature.",
   "sendTokenQrScannerUnsupportedDesktop": "QR code scanning is not available on desktop platforms. Please use the mobile app for this feature.",
   "sendTokenQrScannerUnsupportedPlatform": "QR code scanning is not supported on this platform.",
-
   "sendTokenQrUnreadableToast": "Unable to read QR code payload.",
   "sendTokenQrInvalidAddressToast": "QR code did not include a valid address.",
   "sendTokenQrScannedAddressLabel": "Address scanned",
@@ -2087,7 +2017,6 @@
     }
   },
   "sendTokenQrScanErrorToast": "Error scanning QR code. Please try again.",
-
   "sendTokenSendSuccessToast": "Sent {amount} {token} successfully",
   "@sendTokenSendSuccessToast": {
     "placeholders": {
@@ -2100,7 +2029,6 @@
   "sendTokenNoKeypairToast": "No wallet keypair available. Reconnect or re-import your wallet.",
   "sendTokenInvalidAddressBeforeSendToast": "Enter a valid Solana address before sending.",
   "sendTokenConnectWalletBeforeSendToast": "Connect your wallet before sending tokens.",
-
   "qrScannerTitle": "Scan QR code",
   "qrScannerWebUnavailableTitle": "QR scanner not available",
   "qrScannerWebUnavailableDescription": "Camera-based QR scanning is not supported on web browsers. Please paste or type the address manually instead.",
@@ -2122,7 +2050,6 @@
   "qrScannerInvalidQrToast": "Please scan a Solana wallet QR code.",
   "qrScannerTorchNotSupportedToast": "Torch toggle not supported on this device.",
   "qrScannerSwitchCameraFailedToast": "Unable to switch camera.",
-
   "artworkNotFound": "Artwork not found",
   "web3DashboardComingSoon": "Web3 dashboard - coming soon",
   "artDetailLoadingTitle": "Loading artwork",
@@ -2132,29 +2059,24 @@
   "artworkDetailLiked": "Liked",
   "artworkDetailHideComments": "Hide comments",
   "artworkDetailMintNft": "Mint as NFT",
-
   "eventCreatorSelectStartEndDatesToast": "Please select start and end dates",
   "eventCreatorEnterCapacityToast": "Please enter event capacity",
   "eventCreatorNoInstitutionAvailableToast": "No institution available for this event",
   "eventCreatorSelectedInstitutionNotFoundToast": "Selected institution not found",
   "eventCreatorEndTimeAfterStartToast": "End time must be after start time",
-
   "eventCreatorEventUpdatedTitle": "Event updated",
   "eventCreatorEventCreatedTitle": "Event created",
   "eventCreatorEventUpdatedBody": "Your event has been updated successfully.",
   "eventCreatorEventCreatedBody": "Your event has been created successfully.",
   "eventCreatorCreateAnotherButton": "Create another",
   "eventCreatorSaveFailedToast": "Failed to save event. Please try again.",
-
   "activityNavigationUnableToOpenToast": "Unable to open this activity right now.",
-
   "navigationUnableToNavigateToScreen": "Unable to navigate to {screenName}",
   "@navigationUnableToNavigateToScreen": {
     "placeholders": {
       "screenName": {}
     }
   },
-
   "arMarkerScannerDefaultArtworkTitle": "AR artwork",
   "arMarkerScannerInvalidQrFormatToast": "Invalid QR code format",
   "arMarkerScannerMissingModelUrlToast": "QR code missing model URL",
@@ -2170,11 +2092,9 @@
   "arMarkerScannerProcessingQrLabel": "Processing QR code…",
   "arMarkerScannerPointCameraLabel": "Point camera at QR code to discover AR artwork",
   "arMarkerScannerLaunchingViewerLabel": "Launching AR viewer…",
-
   "arArtworkCardLaunchFailedToast": "Failed to launch AR. Please try again.",
   "arArtworkCardUnavailableLabel": "AR unavailable",
   "arArtworkCardGetCloserLabel": "Get closer",
-
   "artistGalleryTitle": "Your gallery",
   "artistGalleryArtworkCount": "{count, plural, =1{1 artwork} other{{count} artworks}}",
   "@artistGalleryArtworkCount": {
@@ -2251,7 +2171,6 @@
       "title": {}
     }
   },
-
   "artistCreatorCreateArtworkButton": "Create artwork",
   "artistCreatorCoverSelectedToast": "Cover selected",
   "artistCreatorPickImageFailedToast": "Failed to pick an image. Please try again.",
@@ -2271,23 +2190,19 @@
   "artistCreatorCreateFailedToast": "Failed to create artwork. Please try again.",
   "artistCreatorHelpTitle": "AR marker creation",
   "artistCreatorHelpBody": "Follow the 4-step process to create your AR artwork:\n\n1. Upload: Select your artwork image\n2. Details: Enter title, description, and pricing\n3. Settings: Configure location and features\n4. Review: Confirm and publish your artwork",
-
   "artistStudioTitle": "Artist Studio",
   "artistStudioHeaderWelcome": "Welcome to your Studio",
   "artistStudioHeaderSubtitle": "Create AR markers for your artwork and share them with the world",
-
   "artistStudioInstitutionRoleActiveTitle": "Institution role active",
   "artistStudioInstitutionReviewInProgressTitle": "Institution review in progress",
   "artistStudioInstitutionRoleActiveDescription": "Institution accounts can view exhibitions and events but cannot maintain artist applications. Use a dedicated artist wallet to create artworks.",
   "artistStudioInstitutionReviewInProgressDescription": "You have an institution application pending. Complete or withdraw it before switching to an artist review.",
-
   "artistStudioCrossRoleInstitutionBadgeActiveTitle": "Institution badge active",
   "artistStudioCrossRoleInstitutionBadgeActiveDescription": "Institution accounts unlock curation & event tooling. Use a dedicated artist wallet if you need creator utilities.",
   "artistStudioCrossRoleInstitutionReviewInProgressTitle": "Institution review in progress",
   "artistStudioCrossRoleInstitutionReviewInProgressDescription": "You currently have an institution application pending. Complete that process or request a review reset before applying as an artist.",
   "artistStudioCrossRoleConflictTitle": "Role conflict detected",
   "artistStudioCrossRoleConflictDescription": "We detected an existing institution record for this wallet. Clear it from settings before applying as an artist.",
-
   "artistStudioDaoCardTitle": "Artist application (DAO)",
   "artistStudioDaoCardSubtitle": "Submit your practice for DAO review. Future releases will route approvals directly through governance.",
   "artistStudioDaoStatusApproved": "APPROVED",
@@ -2299,24 +2214,20 @@
   "artistStudioReviewApprovedInfo": "Congratulations! You've been cleared by DAO reviewers.",
   "artistStudioReviewRejectedInfo": "Your last submission was rejected. You can resubmit with updates.",
   "artistStudioConnectWalletToSubmitForDaoReview": "Connect your wallet to submit for DAO review.",
-
   "artistStudioCtaConnectWalletToApply": "Connect a wallet to apply",
   "artistStudioCtaApprovedByDao": "Approved by DAO",
   "artistStudioCtaPendingDaoReview": "Pending DAO review",
   "artistStudioCtaResubmitForReview": "Resubmit for review",
   "artistStudioCtaApplyForDaoReview": "Apply for DAO review",
-
   "artistStudioTabGallery": "Gallery",
   "artistStudioTabCreate": "Create",
   "artistStudioTabExhibitions": "Exhibitions",
   "artistStudioTabAnalytics": "Analytics",
   "artistStudioUnlocksAfterDaoApprovalToast": "Artist Studio unlocks after DAO approval.",
-
   "artistStudioSeparateWalletsTip": "Tip: Use separate wallets for artist and institution roles to avoid DAO review conflicts.",
   "artistStudioLockedTitle": "Artist Studio is locked",
   "artistStudioLockedDescription": "Apply for DAO review to unlock gallery, creation tools, and analytics.",
   "artistStudioSettingsTitle": "Studio Settings",
-
   "artistStudioApplicationModalTitle": "Artist application",
   "artistStudioApplicationModalSubtitle": "Share a snapshot of your practice. Submissions are routed to the DAO review queue.",
   "artistStudioApplicationFieldPortfolioLabel": "Portfolio or website",
@@ -2336,7 +2247,6 @@
   "artistStudioApplicationUnableToSubmitToast": "Unable to submit application right now.",
   "artistStudioApplicationSubmissionFailedToast": "Submission failed. Please try again.",
   "artistStudioApplicationSubmitButton": "Submit application",
-
   "desktopArtistStudioOverviewTitle": "Studio Overview",
   "desktopArtistStudioQuickActionsTitle": "Quick Actions",
   "desktopArtistStudioQuickActionInvitesTitle": "Invites",
@@ -2354,7 +2264,6 @@
   "desktopArtistStudioStatisticsTitle": "Studio Statistics",
   "desktopArtistStudioRecentActivityTitle": "Recent Activity",
   "desktopArtistStudioNoRecentActivityLabel": "No recent activity",
-
   "desktopArtistStudioVerificationNotAppliedTitle": "Not Applied",
   "desktopArtistStudioVerificationNotAppliedDescription": "Apply for artist verification",
   "desktopArtistStudioVerificationLoadingTitle": "Loading…",
@@ -2366,15 +2275,12 @@
   "desktopArtistStudioVerificationRejectedTitle": "Application Rejected",
   "desktopArtistStudioVerificationRejectedDescription": "Please resubmit with improvements",
   "desktopArtistStudioApplyForVerificationButton": "Apply for Verification",
-
   "desktopArtistStudioStatArtworks": "Artworks",
   "desktopArtistStudioStatViews": "Views",
   "desktopArtistStudioStatLikes": "Likes",
   "desktopArtistStudioStatSales": "Sales",
-
   "commonRemove": "Remove",
   "commonNotAvailableShort": "N/A",
-
   "marketplaceNetworkLabel": "Network: {network}",
   "@marketplaceNetworkLabel": {
     "placeholders": {
@@ -2405,7 +2311,6 @@
   "marketplaceViewInWalletButton": "View in wallet",
   "marketplaceMintFailedTitle": "Mint failed",
   "marketplaceMintFailedDescription": "Unable to mint NFT right now. Please try again.",
-
   "daoModerationApproveLabel": "Approve",
   "daoModerationRejectLabel": "Reject",
   "daoModerationSetPendingLabel": "Set pending",
@@ -2424,7 +2329,6 @@
   "daoModerationSubmissionUpdatedToast": "Submission updated",
   "daoModerationNoChangesSavedToast": "No changes saved",
   "daoModerationUpdateFailedToast": "Unable to update review right now.",
-
   "daoReviewDetailsVotingDisabledForApplicant": "Voting disabled for the applicant profile.",
   "daoReviewDetailsVotingDisabledForSubmission": "Voting is disabled for this submission.",
   "daoReviewDetailsVotingManagedByDao": "Review decisions are managed by the DAO review process.",
@@ -2461,7 +2365,6 @@
     }
   },
   "daoReviewDetailsReviewerNotesLabel": "Reviewer notes:",
-
   "daoProposalCategoryLabel": "Category",
   "daoCategoryPlatformUpdate": "Platform update",
   "daoCategoryNewFeature": "New feature",
@@ -2469,21 +2372,17 @@
   "daoCategoryTreasuryAllocation": "Treasury allocation",
   "daoCategoryCommunityInitiative": "Community initiative",
   "daoCategoryTechnicalImprovement": "Technical improvement",
-
   "daoProposalRequirementsTitle": "Proposal Requirements",
   "daoProposalRequirementWalletConnected": "Wallet connection required to submit",
   "daoProposalRequirementClearlyDefined": "Proposal must be clearly defined",
   "daoProposalRequirementVotingPeriod": "Voting period: 3–14 days",
   "daoProposalRequirementQuorumTargets": "Quorum targets are enforced by DAO config",
-
   "daoProposalFillRequiredFieldsToast": "Please fill in all required fields",
   "daoProposalWalletRequiredToast": "Connect your wallet to submit proposals.",
   "daoProposalSubmittedToast": "Proposal submitted to DAO",
   "daoProposalSubmitFailedToast": "Unable to submit proposal right now.",
-
   "daoQuorumReached": "Quorum reached",
   "daoQuorumPending": "Quorum pending",
-
   "daoVoteWalletRequiredToast": "Connect your wallet before voting",
   "daoVoteSubmittedYesToast": "Vote Yes submitted",
   "daoVoteSubmittedNoToast": "Vote No submitted",
@@ -2508,7 +2407,6 @@
       "count": {}
     }
   },
-
   "daoVotingHistoryUnknownProposal": "Unknown Proposal",
   "daoVoteChoiceYes": "Yes",
   "daoVoteChoiceNo": "No",
@@ -2523,20 +2421,16 @@
   },
   "daoVotingHistoryEmptyTitle": "No voting history yet",
   "daoVotingHistoryEmptyDescription": "Cast your first vote on an active proposal",
-
   "daoActiveProposalsEmptyTitle": "No active proposals",
   "daoActiveProposalsEmptyDescription": "Submit a proposal or review to get governance moving.",
-
   "daoTreasuryTitle": "DAO Treasury",
   "daoTreasurySubtitle": "Community-controlled funds for platform development",
   "daoTreasuryInflowLabel": "Inflow",
   "daoTreasuryOutflowLabel": "Outflow",
   "daoTreasuryProposalsLabel": "Proposals",
-
   "daoRecentTransactionsTitle": "Recent Transactions",
   "daoRecentTransactionsEmptyTitle": "No recent transactions",
   "daoRecentTransactionsEmptyDescription": "",
-
   "commonTimeAgoDays": "{count}d ago",
   "@commonTimeAgoDays": {
     "placeholders": {
@@ -2555,12 +2449,10 @@
       "count": {}
     }
   },
-
   "daoTreasuryProposalsEmptyTitle": "No treasury proposals yet",
   "daoTreasuryProposalsEmptyDescription": "Create a treasury request to allocate KUB8 to initiatives.",
   "daoTreasuryProposalsTitle": "Treasury Proposals",
   "daoCreateProposalButton": "Create proposal",
-
   "daoVoteDelegationTitle": "Vote Delegation",
   "daoVoteDelegationSubtitle": "Delegate your voting power to trusted community members",
   "daoTopDelegatesTitle": "Top Delegates",
@@ -2568,13 +2460,11 @@
   "daoTopDelegatesEmptyDescription": "No delegates have been registered yet.",
   "daoDelegateActiveLabel": "Active",
   "daoTapToDelegateHint": "Tap to delegate",
-
   "daoDelegationActionsTitle": "Delegation Actions",
   "daoDelegationActionsSubtitle": "Choose how to use your voting power",
   "daoDelegateToTrustedMembersButton": "Delegate to Trusted Members",
   "daoSelfDelegateButton": "Self Delegate",
   "daoRevokeButton": "Revoke",
-
   "daoDelegateVotingPowerDialogTitle": "Delegate Voting Power",
   "daoDelegateVotingPowerDialogBody": "Are you sure you want to delegate your {votingPower} voting power to {delegateName}?",
   "@daoDelegateVotingPowerDialogBody": {
@@ -2586,7 +2476,6 @@
   "daoDelegationBenefitsTitle": "Delegation Benefits",
   "daoDelegationBenefitsBody": "• Your delegate will vote on your behalf\n• You can revoke delegation anytime\n• Your voting power remains yours",
   "daoConfirmDelegationButton": "Confirm Delegation",
-
   "daoDelegationSuccessToast": "Voting power successfully delegated to {delegateName}",
   "@daoDelegationSuccessToast": {
     "placeholders": {
@@ -2594,7 +2483,6 @@
     }
   },
   "daoViewDelegationDetailsAction": "View Details",
-
   "daoDelegationActiveTitle": "Delegation Active",
   "daoDelegationDetailDelegateLabel": "Delegate",
   "daoDelegationDetailVotingPowerLabel": "Voting Power",
@@ -2605,7 +2493,6 @@
   "daoRevokeDelegationButton": "Revoke Delegation",
   "daoDelegationRevokedToast": "Delegation revoked successfully",
   "daoSelfDelegationEnabledToast": "Self-delegation enabled",
-
   "commonPost": "Post",
   "commonComments": "Comments",
   "commonLikes": "Likes",
@@ -2614,7 +2501,6 @@
   "commonYou": "You",
   "commonUnknown": "Unknown",
   "commonUnnamed": "Unnamed",
-
   "commonOwner": "Owner",
   "commonJoined": "Joined",
   "commonJoin": "Join",
@@ -2639,7 +2525,6 @@
       "value": {}
     }
   },
-
   "commonTimeAgoWeeks": "{count}w ago",
   "@commonTimeAgoWeeks": {
     "placeholders": {
@@ -2647,7 +2532,6 @@
     }
   },
   "commonTimeAgoJustNow": "Just now",
-
   "presenceOnlineLabel": "Online",
   "presenceLastSeenLabel": "Last seen {timeAgo}",
   "@presenceLastSeenLabel": {
@@ -2661,7 +2545,6 @@
       "location": {}
     }
   },
-
   "postDetailLoadPostFailedMessage": "Failed to load post.",
   "postDetailMoreOptionsReportAction": "Report",
   "postDetailReportPostDialogTitle": "Report post",
@@ -2678,15 +2561,12 @@
   "postDetailUndoLikeFailedToast": "Failed to undo like.",
   "postDetailUpdateLikeFailedToast": "Failed to update like.",
   "postDetailRetryLikeFailedToast": "Retry failed.",
-
   "postDetailCommentAddedToast": "Comment added",
   "postDetailAddCommentFailedToast": "Failed to add comment.",
   "postDetailUpdateCommentLikeFailedToast": "Failed to update like.",
-
   "postDetailLoadLikesFailedMessage": "Failed to load likes.",
   "postDetailNoLikesTitle": "No likes yet",
   "postDetailNoLikesDescription": "Be the first to like this",
-
   "postDetailSharePostTitle": "Share post",
   "postDetailSearchProfilesHint": "Search for profiles…",
   "postDetailCopyLink": "Copy link",
@@ -2702,7 +2582,6 @@
     }
   },
   "postDetailShareFailedToast": "Failed to share.",
-
   "postDetailRepostTitle": "Repost",
   "postDetailRepostButton": "Repost",
   "postDetailRepostSuccessToast": "Reposted!",
@@ -2710,7 +2589,6 @@
   "postDetailRepostFailedToast": "Failed to repost.",
   "postDetailRepostThoughtsHint": "Add your thoughts (optional)…",
   "postDetailRepostingLabel": "Reposting:",
-
   "postDetailNoCommentsTitle": "No comments yet",
   "postDetailNoCommentsDescription": "Be the first to start the conversation",
   "postDetailReplyingToLabel": "Replying to {author}",
@@ -2722,31 +2600,25 @@
   "postDetailWriteCommentHint": "Write a comment…",
   "postDetailLinkedArtworkLabel": "Linked artwork",
   "postDetailOriginalUnavailableMessage": "Original post is no longer available",
-
   "communityGroupsRefreshFailedToast": "Could not refresh groups.",
   "communityGroupMembershipUpdateFailedToast": "Could not update group membership.",
   "communityGroupNoDescription": "No description provided.",
   "communityGroupLatestPostLabel": "Latest post",
   "communityOpenGroupFeedButton": "Open group feed",
-
   "communityLocationEnableServicesToast": "Enable location services to attach your location.",
   "communityLocationPermissionRequiredToast": "Location permission is required.",
   "communityLocationUnableToDetermineToast": "Unable to determine your location.",
   "communityLocationUnableToAccessToast": "Unable to access your location.",
-
   "communityArtFeedLocationPermissionRequiredError": "Location permission is required for the art feed.",
   "communityArtFeedLoadFailedError": "Unable to load the art feed.",
   "communityArtFeedLoadFailedToast": "Unable to load the art feed right now.",
-
   "communityFollowingFeedUnavailableToast": "Following feed is unavailable. Please try again later.",
   "communityDiscoverFeedUnavailableToast": "Discover feed is unavailable. Please try again later.",
-
   "communityScreenTitle": "Connect",
   "communityFollowingTab": "Following",
   "communityDiscoverTab": "Discover",
   "communityGroupsTab": "Groups",
   "communityArtTab": "Art",
-
   "communityFeedEmptyTitle": "No posts yet",
   "communityFeedEmptyDescription": "Follow creators to see their updates here.",
   "communityDiscoverEmptyTitle": "Nothing to discover yet",
@@ -2757,7 +2629,6 @@
       "count": {}
     }
   },
-
   "communityGroupsEmptyTitle": "No groups yet",
   "communityGroupsEmptyDescription": "Create a group or join one to start collaborating.",
   "communityGroupsEmptySearchDescription": "No groups found for \"{query}\".",
@@ -2769,13 +2640,11 @@
   "communityGroupsEndOfDirectory": "End of directory",
   "communityGroupsSearchHint": "Search community groups",
   "communityClearSearchTooltip": "Clear search",
-
   "communityFabNewPost": "New post",
   "communityFabCreateGroup": "Create group",
   "communityFabGroupPost": "Group post",
   "communityFabArtDrop": "Art drop",
   "communityFabPostReview": "Post review",
-
   "communityCreateGroupTitle": "Create Group",
   "communityCreateGroupNameLabel": "Group Name",
   "communityCreateGroupNameHint": "e.g. Ljubljana creators",
@@ -2792,9 +2661,7 @@
       "name": {}
     }
   },
-
   "communityViewPostButton": "View post",
-
   "communitySearchTypeProfiles": "Profiles",
   "communitySearchTypeArtworks": "Artworks",
   "communitySearchTypeInstitutions": "Institutions",
@@ -2807,12 +2674,10 @@
   "communitySearchHintPosts": "Search posts…",
   "communitySearchEmptyStartTyping": "Start typing to search",
   "communitySearchEmptyNoResults": "No results found",
-
   "communitySearchSheetHintTags": "Search tags…",
   "communitySearchSheetHintProfiles": "Search users by name or @handle…",
   "communitySearchSheetHintArtworks": "Search artworks…",
   "communitySearchSheetHintDefault": "Search…",
-
   "communityComposerTitle": "Compose",
   "communityComposerTextHint": "Share what you’re building, discovering, or activating…",
   "communityComposerTargetGroupLabel": "Target group",
@@ -2824,7 +2689,6 @@
     }
   },
   "communityComposerRemoveGroupTooltip": "Remove group",
-
   "communityComposerLinkArtworkTitle": "Link artwork",
   "communityComposerLinkArtworkDescription": "Choose an artwork to attach to your post.",
   "communityComposerArtworkAttachedDescription": "Attached artwork: {title}",
@@ -2837,11 +2701,9 @@
   "communityComposerAttachCurrentLocationButton": "Attach current location",
   "communityComposerAttachedLocationLabel": "Attached location",
   "communityComposerRemoveLocationTooltip": "Remove location",
-
   "communityBookmarkAddedToast": "Post bookmarked!",
   "communityBookmarkRemovedToast": "Bookmark removed!",
   "communityBookmarkUpdateFailedToast": "Could not update bookmark.",
-
   "communityComposerCategoryPostLabel": "Post",
   "communityComposerCategoryPostDescription": "Share an update with the community",
   "communityComposerCategoryArtDropLabel": "Art drop",
@@ -2852,7 +2714,6 @@
   "communityComposerCategoryEventDescription": "Announce a meetup or event",
   "communityComposerCategoryQuestionLabel": "Question",
   "communityComposerCategoryQuestionDescription": "Ask the community",
-
   "communityGroupFeedEmptyTitle": "No posts in this group yet",
   "communityGroupFeedEmptyDescription": "Be the first to start the conversation.",
   "communityGroupFeedShareText": "Check out {authorName}'s post in {groupName} on art.kubus.",
@@ -2862,7 +2723,6 @@
       "groupName": {}
     }
   },
-
   "communityArtFeedHeaderTitle": "Art feed",
   "communityArtFeedRadiusSubtitle": "Radius: {radius}",
   "@communityArtFeedRadiusSubtitle": {
@@ -2892,10 +2752,8 @@
       "authorName": {}
     }
   },
-
   "communityNameThisPlaceTitle": "Name this place",
   "communityNamePlaceHint": "e.g. City park",
-
   "communityConnectWalletFirstToast": "Please connect your wallet first.",
   "communityUnableToAuthenticateToast": "Unable to authenticate. Please try again.",
   "communityComposerAddContentToast": "Add text, an image, or a video.",
@@ -2909,31 +2767,23 @@
   "communityComposerPostCreatedToast": "Post created",
   "communityComposerCreatePostFailedToast": "Failed to create post.",
   "communityToggleLikeFailedToast": "Failed to update like.",
-
   "communityPostLikesTitle": "Post likes",
   "communityCommentLikesTitle": "Comment likes",
-
   "communityReplyingToCommentLabel": "Replying…",
   "communityCommentAuthRequiredToast": "Sign in to comment.",
-
   "communityRepostedByTitle": "Reposted by",
-
   "communityRepostsLoadFailedMessage": "Failed to load reposts.",
   "communityNoRepostsTitle": "No reposts yet",
   "communityNoRepostsDescription": "Be the first to repost this",
-
   "communityUnrepostAction": "Unrepost",
   "communityUnrepostTitle": "Remove repost?",
   "communityUnrepostConfirmBody": "Remove your repost of this post?",
   "communityRepostRemovedToast": "Repost removed",
   "communityUnrepostFailedToast": "Failed to remove repost.",
-
   "commonSomethingWentWrong": "Something went wrong.",
-
   "commonGreetingMorning": "Good morning",
   "commonGreetingAfternoon": "Good afternoon",
   "commonGreetingEvening": "Good evening",
-
   "commonWeekdayMonShort": "Mon",
   "commonWeekdayTueShort": "Tue",
   "commonWeekdayWedShort": "Wed",
@@ -2941,10 +2791,8 @@
   "commonWeekdayFriShort": "Fri",
   "commonWeekdaySatShort": "Sat",
   "commonWeekdaySunShort": "Sun",
-
   "commonIosLabel": "iOS",
   "commonAndroidLabel": "Android",
-
   "downloadAppCouldNotOpenStoreToast": "Could not open the store. Please visit: {url}",
   "@downloadAppCouldNotOpenStoreToast": {
     "placeholders": {
@@ -2967,23 +2815,18 @@
   "downloadAppScanQrTitle": "Scan QR code",
   "downloadAppScanQrSubtitle": "Open this page on your phone to download the app.",
   "downloadAppContinueBrowsingButton": "Continue browsing",
-
   "homeDefaultDisplayName": "there",
   "homeWelcomeSubtitle": "Ready to discover new art today?",
   "homeExploreWeb3Button": "Explore Web3",
-
   "homeQuickActionsTitle": "Quick Actions",
   "homeRecentlyUsedLabel": "Recently Used",
   "homeQuickActionsEmptyDescription": "Your shortcuts will appear here as you use the app.",
-
   "homeYourStatsTitle": "Your Stats",
   "homeNoStatsAvailableTitle": "No stats yet",
   "homeNoStatsAvailableDescription": "Check back later for your activity stats.",
-
   "homeStatArtworks": "Artworks",
   "homeStatFollowers": "Followers",
   "homeStatViews": "Views",
-
   "homeStatsDialogTitle": "{statName} Details",
   "@homeStatsDialogTitle": {
     "placeholders": {
@@ -2999,7 +2842,6 @@
   "homeViewAdvancedButton": "View Advanced",
   "homeRecentMilestonesTitle": "Recent Milestones",
   "homeStatsNoMilestonesYet": "No milestones yet",
-
   "homeStatsMilestoneArtworks1": "1st artwork created",
   "homeStatsMilestoneArtworks2": "5 artworks created",
   "homeStatsMilestoneArtworks3": "10 artworks created",
@@ -3009,35 +2851,27 @@
   "homeStatsMilestoneViews1": "100 views",
   "homeStatsMilestoneViews2": "500 views",
   "homeStatsMilestoneViews3": "1,000 views",
-
   "homeRecentActivityTitle": "Recent Activity",
   "homeNoRecentActivityTitle": "No recent activity",
   "homeNoRecentActivityDescription": "Your recent actions will show up here.",
   "homeUnableToLoadActivityTitle": "Unable to load activity",
-
   "homeFeaturedArtworksTitle": "Featured Artworks",
   "homeNoFeaturedArtworksTitle": "No featured artworks",
   "homeNoFeaturedArtworksDescription": "Check back soon for curated picks.",
-
   "homeActivityTitle": "Activity",
-
   "homeMarkAllReadButton": "Mark all read",
   "homeUnableToLoadNotificationsTitle": "Unable to load notifications",
   "homeNoNotificationsTitle": "No notifications",
   "homeAllCaughtUpDescription": "You're all caught up.",
-
   "homeMockNotificationNewArtworkTitle": "New artwork added",
   "homeMockNotificationNewArtworkBody": "A new piece has been added to the gallery.",
   "homeMockNotificationCommunityTitle": "Community update",
   "homeMockNotificationCommunityBody": "New posts are waiting in the community.",
   "homeMockNotificationRewardsTitle": "Rewards available",
   "homeMockNotificationRewardsBody": "You have new rewards ready to claim.",
-
   "commonExplore": "Explore",
-
   "commonNoSuggestions": "No suggestions",
   "commonArShort": "AR",
-
   "desktopHomeWelcomeFallbackName": "Welcome to art.kubus",
   "desktopHomeDiscoverArtTitle": "Discover Art Around You",
   "desktopHomeDiscoverArtDescription": "Explore immersive augmented reality artworks, connect with creators, and earn KUB8 tokens for discovering art.",
@@ -3074,7 +2908,6 @@
   "desktopHomePlatformStatsCommunityPosts": "Community Posts",
   "desktopHomePlatformStatsActiveGroups": "Active Groups",
   "desktopHomeUnreadNotificationsLabel": "unread notifications",
-
   "homeWeb3SectionTitle": "Web3",
   "homeAccountRequiredLabel": "Wallet required",
   "homeWeb3DaoTitle": "DAO",
@@ -3085,14 +2918,11 @@
   "homeWeb3InstitutionSubtitle": "Events & collections",
   "homeWeb3MarketplaceTitle": "Marketplace",
   "homeWeb3MarketplaceSubtitle": "Discover & trade",
-
   "homeMockNotificationFriendRequestTitle": "New friend request",
   "homeMockNotificationFriendRequestBody": "Someone sent you a friend request.",
   "homeMockNotificationFeaturedTitle": "Featured today",
   "homeMockNotificationFeaturedBody": "Check out today's featured artwork.",
-
   "commonReset": "Reset",
-
   "onboardingResetToolTitle": "Onboarding Reset Tool",
   "onboardingResetDialogTitle": "Reset onboarding",
   "onboardingResetDialogBody": "This will reset all onboarding flags. The app will show onboarding screens on next launch.\n\nContinue?",
@@ -3104,7 +2934,6 @@
   "onboardingResetButtonLabel": "Reset onboarding state",
   "onboardingResetHowToTestTitle": "How to test",
   "onboardingResetHowToTestSteps": "1. Tap \"Reset onboarding state\"\n2. Restart the app (close and reopen)\n3. Onboarding should show on launch",
-
   "season0BannerTitle": "Season 0, Ljubljana (beta)",
   "season0BannerTap": "Learn more about the launch program",
   "season0ScreenTitle": "Season 0",
@@ -3119,7 +2948,6 @@
   "season0PointsLabel": "KUB8 points",
   "season0PointsTooltip": "Off-chain progress tokens",
   "season0OnChainNote": "On-chain features available on dev-net for now",
-
   "mnemonicRevealTitle": "Reveal Recovery Phrase",
   "mnemonicRevealPrivacyWarning": "Your recovery phrase (keep it private)",
   "mnemonicRevealBiometricUnavailable": "Biometric unlock unavailable. Enter PIN to reveal your recovery phrase.",
@@ -3141,7 +2969,6 @@
   "mnemonicRevealCopiedToast": "Mnemonic copied to clipboard",
   "mnemonicRevealShowButton": "Show",
   "mnemonicRevealEnterPinDialogTitle": "Enter PIN",
-
   "manageMarkersTitle": "Manage markers",
   "manageMarkersCardSubtitle": "Create, publish, and edit your map markers",
   "manageMarkersQuickActionSubtitle": "Create, publish, and edit markers",
@@ -3175,7 +3002,6 @@
   "manageMarkersPublishedToggleTitle": "Published",
   "manageMarkersRequiresProximityTitle": "Requires proximity",
   "manageMarkersRequiresProximitySubtitle": "Require users to be near the marker to activate AR",
-
   "manageMarkersSearchNoResults": "No results",
   "manageMarkersPickSubjectTitle": "Pick {subjectType}",
   "@manageMarkersPickSubjectTitle": {
@@ -3187,13 +3013,11 @@
   "manageMarkersPickArAssetTitle": "Pick AR asset",
   "manageMarkersSearchArAssetsHint": "Search AR assets",
   "manageMarkersClearSelectionTooltip": "Clear selection",
-
   "artworkCommentAddButton": "Add Comment",
   "artworkCommentAddTitle": "Add Comment",
   "artworkCommentAddHint": "Share your thoughts about this artwork...",
   "artworkCommentPostButton": "Post Comment",
   "artworkCommentAddedToast": "Comment added successfully!",
-
   "profileFieldOfWorkLabel": "Field of work",
   "profileYearsActiveLabel": "Years active",
   "profileYearsActiveValue": "{count, plural, one {{count} year} other {{count} years}}",
@@ -3228,7 +3052,6 @@
   "communitySubjectPickerEmptyExhibition": "No exhibitions found.",
   "communitySubjectPickerEmptyCollection": "No collections found.",
   "communitySubjectPickerEmptyInstitution": "No institutions found.",
-
   "supportSectionTitle": "Support",
   "supportSectionSubtitle": "Help us keep building art.kubus - every donation helps.",
   "supportSectionMoreInfo": "More info",
@@ -3245,5 +3068,9 @@
   "supportTier15Amount": "€15",
   "supportTier15Body": "Supports steady weekly improvements.",
   "supportTier50Amount": "€50",
-  "supportTier50Body": "Funds one focused development session (new feature / fixes / content updates)."
+  "supportTier50Body": "Funds one focused development session (new feature / fixes / content updates).",
+  "collectionCreatorAddArtworksTitle": "Add Artworks",
+  "collectionCreatorSearchArtworksLabel": "Search",
+  "collectionCreatorSearchArtworksHint": "Search your artworks...",
+  "collectionCreatorNoArtworksAvailable": "No artworks available"
 }

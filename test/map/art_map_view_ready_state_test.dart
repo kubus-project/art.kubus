@@ -1,4 +1,5 @@
 import 'package:art_kubus/widgets/art_map_view.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

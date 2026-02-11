@@ -2951,7 +2951,6 @@
   "settingsShowCollectionSubtitle": "Javno prikaži svojo NFT zbirko",
   "settingsAllowMessagesTitle": "Dovoli sporočila",
   "settingsAllowMessagesSubtitle": "Prejemaj neposredna sporočila od drugih",
-
   "presenceOnlineLabel": "Na spletu",
   "presenceLastSeenLabel": "Nazadnje viden/-a {timeAgo}",
   "@presenceLastSeenLabel": {
@@ -2998,7 +2997,6 @@
   "manageMarkersPublishedToggleTitle": "Objavljeno",
   "manageMarkersRequiresProximityTitle": "Zahteva bližino",
   "manageMarkersRequiresProximitySubtitle": "Uporabnik mora biti blizu označevalnika za aktivacijo AR",
-
   "manageMarkersSearchNoResults": "Ni rezultatov",
   "manageMarkersPickSubjectTitle": "Izberi {subjectType}",
   "@manageMarkersPickSubjectTitle": {
@@ -3054,7 +3052,6 @@
   "communitySubjectPickerEmptyExhibition": "Ni najdenih razstav.",
   "communitySubjectPickerEmptyCollection": "Ni najdenih zbirk.",
   "communitySubjectPickerEmptyInstitution": "Ni najdenih institucij.",
-
   "supportSectionTitle": "Podpri",
   "supportSectionSubtitle": "Pomagaj nam graditi art.kubus - vsaka donacija šteje.",
   "supportSectionMoreInfo": "Več informacij",
@@ -3071,5 +3068,9 @@
   "supportTier15Amount": "15 €",
   "supportTier15Body": "Podpira stalne tedenske izboljšave.",
   "supportTier50Amount": "50 €",
-  "supportTier50Body": "Financira eno osredotočeno razvojno sejo (nova funkcija / popravki / posodobitve vsebin)."
+  "supportTier50Body": "Financira eno osredotočeno razvojno sejo (nova funkcija / popravki / posodobitve vsebin).",
+  "collectionCreatorAddArtworksTitle": "Dodaj umetnine",
+  "collectionCreatorSearchArtworksLabel": "Iskanje",
+  "collectionCreatorSearchArtworksHint": "Iskanje umetnin...",
+  "collectionCreatorNoArtworksAvailable": "Ni razpoložljivih umetnin"
 }

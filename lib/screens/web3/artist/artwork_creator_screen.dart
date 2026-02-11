@@ -6,7 +6,6 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' as ml;
 import 'package:provider/provider.dart';
@@ -20,6 +19,7 @@ import '../../../providers/tile_providers.dart';
 import '../../../providers/web3provider.dart';
 import '../../../models/collectible.dart';
 import '../../../services/nft_minting_service.dart';
+import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/maplibre_style_utils.dart';
 import '../../../utils/wallet_utils.dart';
@@ -495,7 +495,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
       return;
     }
     setState(() => _createdArtwork = created);
-    
+
     // Trigger portfolio refresh so gallery auto-updates
     if (mounted) {
       try {
@@ -539,13 +539,13 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: scheme.surface,
         title: Text(
-          'Minting NFT…',
-          style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+          'Minting NFT\u2026',
+          style: KubusTextStyles.detailSectionTitle,
         ),
         content: Row(
           children: const [
             SizedBox(width: 18, height: 18, child: InlineLoading(shape: BoxShape.circle, tileSize: 3.5)),
-            SizedBox(width: 12),
+            SizedBox(width: KubusSpacing.md),
             Expanded(child: Text('This may take a few moments.')),
           ],
         ),
@@ -599,18 +599,15 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
       children: [
         Text(
           title,
-          style: GoogleFonts.inter(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
+          style: KubusTextStyles.detailSectionTitle.copyWith(
             color: scheme.onSurface,
           ),
         ),
         if (subtitle != null && subtitle.trim().isNotEmpty) ...[
-          const SizedBox(height: 4),
+          const SizedBox(height: KubusSpacing.xs),
           Text(
             subtitle,
-            style: GoogleFonts.inter(
-              fontSize: 12,
+            style: KubusTextStyles.detailLabel.copyWith(
               color: scheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
@@ -628,6 +625,35 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
         Icons.help_outline,
         size: 18,
         color: scheme.onSurface.withValues(alpha: 0.6),
+      ),
+    );
+  }
+
+  InputDecoration _kubusInputDecoration({
+    String? labelText,
+    String? hintText,
+    Widget? suffixIcon,
+    BoxConstraints? suffixIconConstraints,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    return InputDecoration(
+      labelText: labelText,
+      hintText: hintText,
+      suffixIcon: suffixIcon,
+      suffixIconConstraints: suffixIconConstraints,
+      filled: true,
+      fillColor: scheme.onSurface.withValues(alpha: 0.04),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(KubusRadius.md),
+        borderSide: BorderSide(color: scheme.outline.withValues(alpha: 0.25)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(KubusRadius.md),
+        borderSide: BorderSide(color: scheme.outline.withValues(alpha: 0.25)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(KubusRadius.md),
+        borderSide: BorderSide(color: scheme.primary),
       ),
     );
   }
@@ -656,15 +682,15 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
         } else if (minCost == maxCost) {
           headline = '$minCost';
         } else {
-          headline = '$minCost – $maxCost';
+          headline = '$minCost \u2013 $maxCost';
         }
 
         return Container(
-          margin: const EdgeInsets.only(top: 12),
-          padding: const EdgeInsets.all(12),
+          margin: const EdgeInsets.only(top: KubusSpacing.md),
+          padding: const EdgeInsets.all(KubusSpacing.md),
           decoration: BoxDecoration(
             color: scheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(KubusRadius.md),
             border: Border.all(color: scheme.outline.withValues(alpha: 0.18)),
           ),
           child: Column(
@@ -674,30 +700,26 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                 children: [
                   Text(
                     'Approx. network fees',
-                    style: GoogleFonts.inter(
-                      fontWeight: FontWeight.w700,
+                    style: KubusTextStyles.detailSectionTitle.copyWith(
                       color: scheme.onSurface,
                     ),
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: KubusSpacing.sm),
                   _infoIcon('If no wallet/network transaction is performed, the fee is 0.'),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: KubusSpacing.sm),
               Text(
                 headline,
-                style: GoogleFonts.inter(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
+                style: KubusTextStyles.detailScreenTitle.copyWith(
                   color: scheme.onSurface,
                 ),
               ),
               if (explanation.isNotEmpty) ...[
-                const SizedBox(height: 6),
+                const SizedBox(height: KubusSpacing.sm),
                 Text(
                   explanation,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
+                  style: KubusTextStyles.detailLabel.copyWith(
                     color: scheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
@@ -716,7 +738,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     required Color accent,
   }) {
     return Step(
-      title: Text('Basics', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+      title: Text('Basics', style: KubusTextStyles.detailCardTitle),
       isActive: currentStep >= 0,
       state: currentStep > 0 ? StepState.complete : StepState.indexed,
       content: Form(
@@ -728,10 +750,10 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               'Tell the story',
               subtitle: 'Add a title and a short description. Web3 and AR are optional and come later.',
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: KubusSpacing.md),
             TextFormField(
               initialValue: draft.title,
-              decoration: const InputDecoration(
+              decoration: _kubusInputDecoration(
                 labelText: 'Title',
                 hintText: 'e.g. Mural at the river walk',
               ),
@@ -739,10 +761,10 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               onChanged: (v) => drafts.updateBasics(draftId: widget.draftId, title: v),
               validator: (value) => (value ?? '').trim().isEmpty ? 'Title is required.' : null,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: KubusSpacing.md),
             TextFormField(
               initialValue: draft.description,
-              decoration: const InputDecoration(
+              decoration: _kubusInputDecoration(
                 labelText: 'Description',
                 hintText: 'What should people notice, feel, or learn?',
               ),
@@ -752,10 +774,10 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               onChanged: (v) => drafts.updateBasics(draftId: widget.draftId, description: v),
               validator: (value) => (value ?? '').trim().isEmpty ? 'Description is required.' : null,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: KubusSpacing.md),
             DropdownButtonFormField<String>(
               initialValue: draft.category,
-              decoration: const InputDecoration(labelText: 'Category'),
+              decoration: _kubusInputDecoration(labelText: 'Category'),
               items: const [
                 DropdownMenuItem(value: 'Digital Art', child: Text('Digital Art')),
                 DropdownMenuItem(value: 'Street Art', child: Text('Street Art')),
@@ -768,17 +790,17 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                 drafts.updateBasics(draftId: widget.draftId, category: value);
               },
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: KubusSpacing.md),
             TextFormField(
               initialValue: draft.tagsCsv,
-              decoration: const InputDecoration(
+              decoration: _kubusInputDecoration(
                 labelText: 'Tags (optional)',
                 hintText: 'comma-separated (e.g. community, mural, river)',
               ),
               textInputAction: TextInputAction.done,
               onChanged: (v) => drafts.updateBasics(draftId: widget.draftId, tagsCsv: v),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: KubusSpacing.md),
             SwitchListTile.adaptive(
               value: draft.isPublic,
               onChanged: (v) => drafts.updateBasics(draftId: widget.draftId, isPublic: v),
@@ -801,7 +823,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
   }) {
     final locationEnabled = _isLocationEnabled(draft);
     return Step(
-      title: Text('Location', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+      title: Text('Location', style: KubusTextStyles.detailCardTitle),
       isActive: currentStep >= 1,
       state: currentStep > 1 ? StepState.complete : StepState.indexed,
       content: Form(
@@ -813,7 +835,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               'Pin it on the map',
               subtitle: 'Location is optional. You can publish now and add a location later from the map.',
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: KubusSpacing.md),
             SwitchListTile.adaptive(
               value: locationEnabled,
               onChanged: (v) {
@@ -833,11 +855,11 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               contentPadding: EdgeInsets.zero,
             ),
             if (locationEnabled) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: KubusSpacing.md),
             SizedBox(
               height: 220,
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(KubusRadius.lg),
                 child: Builder(
                   builder: (context) {
                     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -878,10 +900,10 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                 ),
               ),
             ),
-              const SizedBox(height: 12),
+              const SizedBox(height: KubusSpacing.md),
               TextFormField(
                 controller: _locationNameController,
-                decoration: const InputDecoration(
+                decoration: _kubusInputDecoration(
                   labelText: 'Place name (optional)',
                   hintText: 'e.g. River Walk, Downtown',
                 ),
@@ -894,23 +916,23 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                   longitude: double.tryParse(_lngController.text.trim()),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: KubusSpacing.md),
               Row(
                 children: [
                   Expanded(
                     child: TextFormField(
                       controller: _latController,
-                      decoration: const InputDecoration(labelText: 'Latitude'),
+                      decoration: _kubusInputDecoration(labelText: 'Latitude'),
                       keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
                       textInputAction: TextInputAction.next,
                       onChanged: (_) => _updateLocationFromFields(drafts),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: KubusSpacing.md),
                   Expanded(
                     child: TextFormField(
                       controller: _lngController,
-                      decoration: const InputDecoration(labelText: 'Longitude'),
+                      decoration: _kubusInputDecoration(labelText: 'Longitude'),
                       keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
                       textInputAction: TextInputAction.done,
                       onChanged: (_) => _updateLocationFromFields(drafts),
@@ -934,7 +956,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     final l10n = AppLocalizations.of(context)!;
 
     return Step(
-      title: Text('Media', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+      title: Text('Media', style: KubusTextStyles.detailCardTitle),
       isActive: currentStep >= 2,
       state: currentStep > 2 ? StepState.complete : StepState.indexed,
       content: Column(
@@ -944,7 +966,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
             'Add visuals',
             subtitle: 'Upload a cover image and an optional gallery. Recommended: 4:3 cover, 1024px+.',
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: KubusSpacing.md),
           Row(
             children: [
               Expanded(
@@ -954,7 +976,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                   label: Text(draft.coverBytes == null ? 'Upload cover' : 'Change cover'),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: KubusSpacing.sm),
               IconButton(
                 tooltip: l10n.commonRemove,
                 onPressed: (draft.isSubmitting || draft.coverBytes == null) ? null : () => drafts.clearCover(widget.draftId),
@@ -963,9 +985,9 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
             ],
           ),
           if (draft.coverBytes != null) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: KubusSpacing.sm),
             ClipRRect(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
               child: Container(
                 height: 180,
                 width: double.infinity,
@@ -974,45 +996,45 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               ),
             ),
           ],
-          const SizedBox(height: 18),
+          const SizedBox(height: KubusSpacing.md),
           OutlinedButton.icon(
             onPressed: draft.isSubmitting ? null : () => _pickGallery(drafts),
             icon: const Icon(Icons.collections_outlined),
             label: Text(draft.gallery.isEmpty ? 'Add gallery images' : 'Add more'),
           ),
           if (draft.gallery.isNotEmpty) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: KubusSpacing.sm),
             ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: draft.gallery.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              separatorBuilder: (_, __) => const SizedBox(height: KubusSpacing.sm),
               itemBuilder: (context, index) {
                 final item = draft.gallery[index];
                 return Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(KubusSpacing.sm),
                   decoration: BoxDecoration(
                     color: scheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(KubusRadius.md),
                     border: Border.all(color: scheme.outline.withValues(alpha: 0.18)),
                   ),
                   child: Row(
                     children: [
                       ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(KubusRadius.sm),
                         child: SizedBox(
                           width: 56,
                           height: 56,
                           child: Image.memory(item.bytes, fit: BoxFit.cover),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: KubusSpacing.md),
                       Expanded(
                         child: Text(
                           item.fileName,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                          style: KubusTextStyles.detailCardTitle,
                         ),
                       ),
                       IconButton(
@@ -1054,7 +1076,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     final scheme = Theme.of(context).colorScheme;
 
     return Step(
-      title: Text('Optional', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+      title: Text('Optional', style: KubusTextStyles.detailCardTitle),
       isActive: currentStep >= 3,
       state: currentStep > 3 ? StepState.complete : StepState.indexed,
       content: Column(
@@ -1064,7 +1086,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
             'Optional features',
             subtitle: 'Web3 and AR are optional. Your artwork can be published without them.',
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: KubusSpacing.md),
           ExpansionTile(
             initiallyExpanded: false,
             title: Row(
@@ -1075,7 +1097,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
             ),
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                padding: const EdgeInsets.fromLTRB(KubusSpacing.md, KubusSpacing.none, KubusSpacing.md, KubusSpacing.md),
                 child: SwitchListTile.adaptive(
                   value: draft.mintNftAfterPublish,
                   onChanged: (AppConfig.isFeatureEnabled('web3') &&
@@ -1104,37 +1126,37 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               ),
               if (draft.mintNftAfterPublish)
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  padding: const EdgeInsets.fromLTRB(KubusSpacing.md, KubusSpacing.none, KubusSpacing.md, KubusSpacing.md),
                   child: Column(
                     children: [
                       TextFormField(
                         controller: _nftSeriesNameController,
-                        decoration: InputDecoration(
+                        decoration: _kubusInputDecoration(
                           labelText: 'Series name',
                           hintText: draft.title.trim().isEmpty ? 'Defaults to artwork title' : draft.title.trim(),
                         ),
                         onChanged: (v) => drafts.updateOptionalFeatures(draftId: widget.draftId, nftSeriesName: v),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: KubusSpacing.md),
                       TextFormField(
                         controller: _nftSeriesDescriptionController,
-                        decoration: const InputDecoration(
+                        decoration: _kubusInputDecoration(
                           labelText: 'Series description',
                           hintText: 'Defaults to artwork description',
                         ),
                         maxLines: 3,
                         onChanged: (v) => drafts.updateOptionalFeatures(draftId: widget.draftId, nftSeriesDescription: v),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: KubusSpacing.md),
                       Row(
                         children: [
                           Expanded(
                             child: TextFormField(
                               controller: _nftSupplyController,
-                              decoration: InputDecoration(
+                              decoration: _kubusInputDecoration(
                                 labelText: 'Supply',
                                 suffixIcon: Padding(
-                                  padding: const EdgeInsets.only(right: 12),
+                                  padding: const EdgeInsets.only(right: KubusSpacing.md),
                                   child: _infoIcon('Total number of collectibles in the series.'),
                                 ),
                                 suffixIconConstraints: const BoxConstraints(minWidth: 24, minHeight: 24),
@@ -1148,14 +1170,14 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                               },
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: KubusSpacing.md),
                           Expanded(
                             child: TextFormField(
                               controller: _nftMintPriceController,
-                              decoration: InputDecoration(
+                              decoration: _kubusInputDecoration(
                                 labelText: 'Mint price (KUB8)',
                                 suffixIcon: Padding(
-                                  padding: const EdgeInsets.only(right: 12),
+                                  padding: const EdgeInsets.only(right: KubusSpacing.md),
                                   child: _infoIcon('Price to mint one collectible from the series.'),
                                 ),
                                 suffixIconConstraints: const BoxConstraints(minWidth: 24, minHeight: 24),
@@ -1171,14 +1193,14 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: KubusSpacing.md),
                       TextFormField(
                         controller: _nftRoyaltyController,
-                        decoration: InputDecoration(
+                        decoration: _kubusInputDecoration(
                           labelText: 'Artist fee (royalty %)',
                           suffixIcon: Padding(
-                            padding: const EdgeInsets.only(right: 12),
-                            child: _infoIcon('Royalty on secondary sales (0–100%).'),
+                            padding: const EdgeInsets.only(right: KubusSpacing.md),
+                            child: _infoIcon('Royalty on secondary sales (0\u2013100%).'),
                           ),
                           suffixIconConstraints: const BoxConstraints(minWidth: 24, minHeight: 24),
                         ),
@@ -1196,10 +1218,12 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               const Divider(height: 1),
               if (!AppConfig.isFeatureEnabled('attendance'))
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  padding: const EdgeInsets.fromLTRB(KubusSpacing.md, KubusSpacing.none, KubusSpacing.md, KubusSpacing.md),
                   child: Text(
                     'Attendance rewards are currently unavailable.',
-                    style: GoogleFonts.inter(color: scheme.onSurface.withValues(alpha: 0.7)),
+                    style: KubusTextStyles.detailBody.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.7),
+                    ),
                   ),
                 )
               else ...[
@@ -1232,28 +1256,28 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                 ),
                 if (draft.poapMode == ArtworkPoapMode.existingPoap) ...[
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    padding: const EdgeInsets.fromLTRB(KubusSpacing.md, KubusSpacing.none, KubusSpacing.md, KubusSpacing.md),
                     child: Column(
                       children: [
                         TextFormField(
                           initialValue: draft.poapEventId,
-                          decoration: InputDecoration(
+                          decoration: _kubusInputDecoration(
                             labelText: 'POAP Event ID (optional)',
                             suffixIcon: Padding(
-                              padding: const EdgeInsets.only(right: 12),
+                              padding: const EdgeInsets.only(right: KubusSpacing.md),
                               child: _infoIcon('If you have an Event ID, paste it here. If not, you can paste a claim link instead.'),
                             ),
                             suffixIconConstraints: const BoxConstraints(minWidth: 24, minHeight: 24),
                           ),
                           onChanged: (v) => drafts.updateOptionalFeatures(draftId: widget.draftId, poapEventId: v),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: KubusSpacing.md),
                         TextFormField(
                           initialValue: draft.poapClaimUrl,
-                          decoration: InputDecoration(
+                          decoration: _kubusInputDecoration(
                             labelText: 'POAP Claim URL (optional)',
                             suffixIcon: Padding(
-                              padding: const EdgeInsets.only(right: 12),
+                              padding: const EdgeInsets.only(right: KubusSpacing.md),
                               child: _infoIcon('A link people can open to claim the badge.'),
                             ),
                             suffixIconConstraints: const BoxConstraints(minWidth: 24, minHeight: 24),
@@ -1266,16 +1290,16 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                 ],
                 if (draft.poapMode == ArtworkPoapMode.kubusPoap) ...[
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    padding: const EdgeInsets.fromLTRB(KubusSpacing.md, KubusSpacing.none, KubusSpacing.md, KubusSpacing.md),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         TextFormField(
                           controller: _poapRewardAmountController,
-                          decoration: InputDecoration(
+                          decoration: _kubusInputDecoration(
                             labelText: 'Reward amount (KUB8)',
                             suffixIcon: Padding(
-                              padding: const EdgeInsets.only(right: 12),
+                              padding: const EdgeInsets.only(right: KubusSpacing.md),
                               child: _infoIcon('Optional. How many KUB8 tokens to reward for confirmed attendance.'),
                             ),
                             suffixIconConstraints: const BoxConstraints(minWidth: 24, minHeight: 24),
@@ -1288,13 +1312,13 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                             }
                           },
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: KubusSpacing.md),
                         TextFormField(
                           controller: _poapClaimDaysController,
-                          decoration: InputDecoration(
+                          decoration: _kubusInputDecoration(
                             labelText: 'Claim window (days)',
                             suffixIcon: Padding(
-                              padding: const EdgeInsets.only(right: 12),
+                              padding: const EdgeInsets.only(right: KubusSpacing.md),
                               child: _infoIcon('How long the claim link stays active after publishing.'),
                             ),
                             suffixIconConstraints: const BoxConstraints(minWidth: 24, minHeight: 24),
@@ -1310,28 +1334,28 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                             }
                           },
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: KubusSpacing.md),
                         TextFormField(
                           controller: _poapTitleController,
-                          decoration: InputDecoration(
+                          decoration: _kubusInputDecoration(
                             labelText: 'Badge title',
                             hintText: draft.title.trim().isEmpty ? 'Defaults to your artwork title' : 'Defaults to: ${draft.title.trim()}',
                             suffixIcon: Padding(
-                              padding: const EdgeInsets.only(right: 12),
+                              padding: const EdgeInsets.only(right: KubusSpacing.md),
                               child: _infoIcon('Shown on the badge and claim page. Leave empty to use your artwork title.'),
                             ),
                             suffixIconConstraints: const BoxConstraints(minWidth: 24, minHeight: 24),
                           ),
                           onChanged: (v) => drafts.updateOptionalFeatures(draftId: widget.draftId, poapTitle: v),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: KubusSpacing.md),
                         TextFormField(
                           controller: _poapDescriptionController,
-                          decoration: InputDecoration(
+                          decoration: _kubusInputDecoration(
                             labelText: 'Badge description',
                             hintText: 'Defaults to your artwork description',
                             suffixIcon: Padding(
-                              padding: const EdgeInsets.only(right: 12),
+                              padding: const EdgeInsets.only(right: KubusSpacing.md),
                               child: _infoIcon('A short explanation for visitors. Leave empty to use your artwork description.'),
                             ),
                             suffixIconConstraints: const BoxConstraints(minWidth: 24, minHeight: 24),
@@ -1339,7 +1363,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                           maxLines: 3,
                           onChanged: (v) => drafts.updateOptionalFeatures(draftId: widget.draftId, poapDescription: v),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: KubusSpacing.md),
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -1347,34 +1371,36 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                               width: 64,
                               height: 64,
                               decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(KubusRadius.md),
                                 border: Border.all(color: scheme.outline.withValues(alpha: 0.25)),
                                 color: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
                               ),
                               child: ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(KubusRadius.md),
                                 child: (draft.poapImageBytes != null && draft.poapImageBytes!.isNotEmpty)
                                     ? Image.memory(draft.poapImageBytes!, fit: BoxFit.cover)
                                     : Icon(Icons.badge_outlined, color: scheme.onSurfaceVariant),
                               ),
                             ),
-                            const SizedBox(width: 12),
+                            const SizedBox(width: KubusSpacing.md),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('Badge image', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
-                                  const SizedBox(height: 4),
+                                  Text('Badge image', style: KubusTextStyles.detailSectionTitle),
+                                  const SizedBox(height: KubusSpacing.xs),
                                   Text(
                                     draft.poapImageBytes == null
                                         ? 'Uses your artwork cover by default.'
                                         : (draft.poapImageFileName ?? 'Custom image'),
-                                    style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.75)),
+                                    style: KubusTextStyles.detailLabel.copyWith(
+                                      color: scheme.onSurface.withValues(alpha: 0.75),
+                                    ),
                                   ),
-                                  const SizedBox(height: 8),
+                                  const SizedBox(height: KubusSpacing.sm),
                                   Wrap(
-                                    spacing: 8,
-                                    runSpacing: 8,
+                                    spacing: KubusSpacing.sm,
+                                    runSpacing: KubusSpacing.sm,
                                     children: [
                                       OutlinedButton.icon(
                                         onPressed: draft.isSubmitting ? null : () => unawaited(_pickPoapImage(drafts)),
@@ -1393,23 +1419,25 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: KubusSpacing.sm),
                         Text(
                           'Your claim link will be generated when you publish.',
-                          style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.7)),
+                          style: KubusTextStyles.detailLabel.copyWith(
+                            color: scheme.onSurface.withValues(alpha: 0.7),
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ],
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  padding: const EdgeInsets.fromLTRB(KubusSpacing.md, KubusSpacing.none, KubusSpacing.md, KubusSpacing.md),
                   child: _feeEstimateCard(drafts, draft),
                 ),
               ],
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: KubusSpacing.md),
           ExpansionTile(
             initiallyExpanded: false,
             title: Row(
@@ -1420,7 +1448,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
             ),
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                padding: const EdgeInsets.fromLTRB(KubusSpacing.md, KubusSpacing.none, KubusSpacing.md, KubusSpacing.md),
                 child: SwitchListTile.adaptive(
                   value: draft.arEnabled,
                   onChanged: AppConfig.isFeatureEnabled('ar') && !draft.isSubmitting
@@ -1439,7 +1467,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               ),
               if (_createdArtwork != null && draft.arEnabled)
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  padding: const EdgeInsets.fromLTRB(KubusSpacing.md, KubusSpacing.none, KubusSpacing.md, KubusSpacing.md),
                   child: OutlinedButton.icon(
                     onPressed: () async {
                       final artworkId = _createdArtwork?.id;
@@ -1488,12 +1516,12 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                   await _publishDraft(drafts);
                 },
           icon: const Icon(Icons.publish_outlined),
-          label: const Text('Publish'),
+          label: Text('Publish', style: KubusTextStyles.detailButton),
           style: ElevatedButton.styleFrom(
             backgroundColor: accent,
             foregroundColor: scheme.onPrimary,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            padding: const EdgeInsets.symmetric(vertical: KubusSpacing.md),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(KubusRadius.md)),
           ),
         ),
       );
@@ -1503,10 +1531,10 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
       final claimUrl = (_createdArtwork?.poapClaimUrl ?? '').trim();
       final showClaim = _createdArtwork?.poapMode == ArtworkPoapMode.kubusPoap && claimUrl.isNotEmpty;
       return Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         decoration: BoxDecoration(
           color: scheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(KubusRadius.md),
           border: Border.all(color: scheme.outline.withValues(alpha: 0.18)),
         ),
         child: Column(
@@ -1515,19 +1543,24 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
             Row(
               children: [
                 Icon(Icons.check_circle, color: accent),
-                const SizedBox(width: 8),
-                Text('Published', style: GoogleFonts.inter(fontWeight: FontWeight.w800)),
+                const SizedBox(width: KubusSpacing.sm),
+                Text('Published', style: KubusTextStyles.detailScreenTitle),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: KubusSpacing.sm),
             if (showClaim) ...[
-              Text('Claim link', style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: scheme.onSurface)),
-              const SizedBox(height: 6),
+              Text(
+                'Claim link',
+                style: KubusTextStyles.detailSectionTitle.copyWith(
+                  color: scheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: KubusSpacing.sm),
               SelectableText(
                 claimUrl,
-                style: GoogleFonts.inter(fontSize: 12),
+                style: KubusTextStyles.detailLabel,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: KubusSpacing.sm),
             ],
             if (draft.arEnabled)
               OutlinedButton.icon(
@@ -1546,14 +1579,14 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
             if (draft.mintNftAfterPublish &&
                 AppConfig.isFeatureEnabled('web3') &&
                 AppConfig.isFeatureEnabled('nftMinting')) ...[
-              const SizedBox(height: 10),
+              const SizedBox(height: KubusSpacing.sm),
               OutlinedButton.icon(
                 onPressed: () => unawaited(_mintNftForCreated(draft: draft)),
                 icon: const Icon(Icons.auto_awesome_outlined),
                 label: const Text('Mint NFT series'),
               ),
             ],
-            const SizedBox(height: 10),
+            const SizedBox(height: KubusSpacing.sm),
             SizedBox(
               width: double.infinity,
                 child: ElevatedButton(
@@ -1572,9 +1605,10 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: accent,
                     foregroundColor: scheme.onPrimary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    padding: const EdgeInsets.symmetric(vertical: KubusSpacing.md),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(KubusRadius.md)),
                 ),
-                child: const Text('Done'),
+                child: Text('Done', style: KubusTextStyles.detailButton),
               ),
             ),
           ],
@@ -1583,19 +1617,19 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     }
 
     return Step(
-      title: Text('Review & Publish', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+      title: Text('Review & Publish', style: KubusTextStyles.detailCardTitle),
       isActive: currentStep >= 4,
       state: StepState.indexed,
       content: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _stepHeader('Review', subtitle: 'Double-check your details before publishing.'),
-          const SizedBox(height: 12),
+          const SizedBox(height: KubusSpacing.md),
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(KubusSpacing.md),
             decoration: BoxDecoration(
               color: scheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
               border: Border.all(color: scheme.outline.withValues(alpha: 0.18)),
             ),
             child: Column(
@@ -1603,44 +1637,58 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               children: [
                 Text(
                   draft.title.trim().isEmpty ? 'Untitled' : draft.title.trim(),
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w800),
+                  style: KubusTextStyles.detailScreenTitle,
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: KubusSpacing.sm),
                 Text(
-                  draft.description.trim().isEmpty ? '—' : draft.description.trim(),
-                  style: GoogleFonts.inter(color: scheme.onSurface.withValues(alpha: 0.75)),
+                  draft.description.trim().isEmpty ? '\u2014' : draft.description.trim(),
+                  style: KubusTextStyles.detailBody.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.75),
+                  ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: KubusSpacing.sm),
                 Text(
                   'Category: ${draft.category}',
-                  style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.7)),
+                  style: KubusTextStyles.detailLabel.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.7),
+                  ),
                 ),
                 Text(
                   'Location: ${(_latController.text.trim().isEmpty || _lngController.text.trim().isEmpty) ? 'Not set' : '${_latController.text.trim()}, ${_lngController.text.trim()}'}',
-                  style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.7)),
+                  style: KubusTextStyles.detailLabel.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.7),
+                  ),
                 ),
                 Text(
                   'Gallery: ${draft.gallery.length} image(s)',
-                  style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.7)),
+                  style: KubusTextStyles.detailLabel.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.7),
+                  ),
                 ),
                 Text(
                   'Attendance badge: ${draft.poapMode.apiValue}',
-                  style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.7)),
+                  style: KubusTextStyles.detailLabel.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.7),
+                  ),
                 ),
                 Text(
                   'AR: ${draft.arEnabled ? 'Enabled' : 'Off'}',
-                  style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.7)),
+                  style: KubusTextStyles.detailLabel.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.7),
+                  ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: KubusSpacing.md),
           if (draft.submitError != null) ...[
             Text(
               draft.submitError!,
-              style: GoogleFonts.inter(color: scheme.error, fontWeight: FontWeight.w600),
+              style: KubusTextStyles.detailCardTitle.copyWith(
+                color: scheme.error,
+              ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: KubusSpacing.sm),
           ],
           if (draft.isSubmitting) ...[
             LinearProgressIndicator(
@@ -1648,22 +1696,24 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               color: accent,
               backgroundColor: accent.withValues(alpha: 0.18),
               minHeight: 6,
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: BorderRadius.circular(KubusRadius.xl),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: KubusSpacing.sm),
             Row(
               children: [
                 const SizedBox(width: 18, height: 18, child: InlineLoading(shape: BoxShape.circle, tileSize: 3.5)),
-                const SizedBox(width: 10),
+                const SizedBox(width: KubusSpacing.sm),
                 Expanded(
                   child: Text(
-                    'Publishing… ${(draft.uploadProgress * 100).clamp(0, 100).toStringAsFixed(0)}%',
-                    style: GoogleFonts.inter(color: scheme.onSurface.withValues(alpha: 0.7)),
+                    'Publishing\u2026 ${(draft.uploadProgress * 100).clamp(0, 100).toStringAsFixed(0)}%',
+                    style: KubusTextStyles.detailBody.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.7),
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: KubusSpacing.md),
           ],
           if (_createdArtwork == null) buildPublishButton() else buildSuccessCard(),
         ],
@@ -1777,7 +1827,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                 final canGoBack = currentStep > 0;
                 final isLast = currentStep == 4;
                 return Padding(
-                  padding: const EdgeInsets.only(top: 14),
+                  padding: const EdgeInsets.only(top: KubusSpacing.md),
                   child: Row(
                     children: [
                       if (canGoBack)
@@ -1792,9 +1842,10 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: accent,
                             foregroundColor: scheme.onPrimary,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(vertical: KubusSpacing.md),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(KubusRadius.md)),
                           ),
-                          child: Text(l10n.commonNext),
+                          child: Text(l10n.commonNext, style: KubusTextStyles.detailButton),
                         ),
                     ],
                   ),

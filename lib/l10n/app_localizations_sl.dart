@@ -456,7 +456,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get authEnterValidEmailInline => 'Vnesi veljaven e-poštni naslov.';
 
   @override
-  String get authPasswordPolicyError => 'Geslo mora biti dolgo 8–128 znakov in vsebuje črko ter številko.';
+  String get authPasswordPolicyError => 'Geslo mora biti dolgo vsaj 8 znakov in vsebuje črko ter številko.';
 
   @override
   String get authPasswordMismatchInline => 'Gesli se ne ujemata.';
@@ -6858,4 +6858,16 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get supportTier50Body => 'Financira eno osredotočeno razvojno sejo (nova funkcija / popravki / posodobitve vsebin).';
+
+  @override
+  String get collectionCreatorAddArtworksTitle => 'Dodaj umetnine';
+
+  @override
+  String get collectionCreatorSearchArtworksLabel => 'Iskanje';
+
+  @override
+  String get collectionCreatorSearchArtworksHint => 'Iskanje umetnin...';
+
+  @override
+  String get collectionCreatorNoArtworksAvailable => 'Ni razpoložljivih umetnin';
 }

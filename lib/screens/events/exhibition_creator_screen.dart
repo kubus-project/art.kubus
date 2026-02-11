@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import 'dart:typed_data';
@@ -9,16 +8,17 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 
 import '../../config/config.dart';
 import '../../providers/exhibitions_provider.dart';
+import '../../utils/design_tokens.dart';
 import 'exhibition_detail_screen.dart';
-import '../../widgets/glass_components.dart';
+import '../../widgets/creator/creator_kit.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
- 
 
 class ExhibitionCreatorScreen extends StatefulWidget {
   const ExhibitionCreatorScreen({super.key});
 
   @override
-  State<ExhibitionCreatorScreen> createState() => _ExhibitionCreatorScreenState();
+  State<ExhibitionCreatorScreen> createState() =>
+      _ExhibitionCreatorScreenState();
 }
 
 class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
@@ -85,13 +85,20 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
 
     if (!AppConfig.isFeatureEnabled('exhibitions')) {
       return Scaffold(
-        appBar: AppBar(title: Text(l10n.exhibitionCreatorDisabledAppBarTitle, style: GoogleFonts.inter())),
+        appBar: AppBar(
+          title: Text(
+            l10n.exhibitionCreatorDisabledAppBarTitle,
+            style: KubusTextStyles.detailScreenTitle,
+          ),
+        ),
         body: Center(
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(KubusSpacing.lg),
             child: Text(
               l10n.exhibitionCreatorDisabledMessage,
-              style: GoogleFonts.inter(color: scheme.onSurface.withValues(alpha: 0.75)),
+              style: KubusTextStyles.detailCaption.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.75),
+              ),
               textAlign: TextAlign.center,
             ),
           ),
@@ -99,185 +106,119 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
       );
     }
 
-    return AnimatedGradientBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          title: Text(
-            l10n.exhibitionCreatorAppBarTitle,
-            style: GoogleFonts.inter(fontWeight: FontWeight.w700),
-          ),
-        ),
-        body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Form(
-              key: _formKey,
-              child: ListView(
+    return CreatorScaffold(
+      title: l10n.exhibitionCreatorAppBarTitle,
+      body: Padding(
+        padding: const EdgeInsets.all(KubusSpacing.md),
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            children: [
+              // --- Basics section ---
+              CreatorSection(
+                title: l10n.exhibitionCreatorBasicsTitle,
                 children: [
-                  Text(
-                    l10n.exhibitionCreatorBasicsTitle,
-                    style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
+                  CreatorTextField(
                     controller: _titleController,
-                    decoration: InputDecoration(
-                      labelText: l10n.exhibitionCreatorTitleLabel,
-                      border: const OutlineInputBorder(),
-                    ),
+                    label: l10n.exhibitionCreatorTitleLabel,
                     validator: (v) {
-                      if ((v ?? '').trim().isEmpty) return l10n.exhibitionCreatorTitleValidation;
+                      if ((v ?? '').trim().isEmpty) {
+                        return l10n.exhibitionCreatorTitleValidation;
+                      }
                       return null;
                     },
                   ),
-                  const SizedBox(height: 12),
-                  TextFormField(
+                  const CreatorFieldSpacing(),
+                  CreatorTextField(
                     controller: _descriptionController,
-                    decoration: InputDecoration(
-                      labelText: l10n.exhibitionCreatorDescriptionLabel,
-                      border: const OutlineInputBorder(),
-                    ),
-                    minLines: 3,
-                    maxLines: 6,
+                    label: l10n.exhibitionCreatorDescriptionLabel,
+                    maxLines: 4,
                   ),
-                  const SizedBox(height: 12),
-                  TextFormField(
+                  const CreatorFieldSpacing(),
+                  CreatorTextField(
                     controller: _locationController,
-                    decoration: InputDecoration(
-                      labelText: l10n.exhibitionCreatorLocationLabel,
-                      border: const OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  Text(
-                    l10n.exhibitionCreatorScheduleTitle,
-                    style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 12),
-                  _DateRow(
-                    label: l10n.exhibitionCreatorStartsLabel,
-                    value: _startsAt,
-                    onPick: () => _pickDate(isStart: true),
-                    onClear: () => setState(() => _startsAt = null),
-                  ),
-                  const SizedBox(height: 10),
-                  _DateRow(
-                    label: l10n.exhibitionCreatorEndsLabel,
-                    value: _endsAt,
-                    onPick: () => _pickDate(isStart: false),
-                    onClear: () => setState(() => _endsAt = null),
-                  ),
-                  const SizedBox(height: 18),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    value: _published,
-                    title: Text(
-                      l10n.exhibitionCreatorPublishTitle,
-                      style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-                    ),
-                    subtitle: Text(
-                      _published ? l10n.exhibitionCreatorPublishVisible : l10n.exhibitionCreatorPublishDraft,
-                      style: GoogleFonts.inter(
-                        color: scheme.onSurface.withValues(alpha: 0.7),
-                        fontSize: 12,
-                      ),
-                    ),
-                    onChanged: _submitting ? null : (v) => setState(() => _published = v),
-                  ),
-                  const SizedBox(height: 18),
-                  Text(
-                    l10n.commonCoverImage,
-                    style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: _submitting ? null : _pickCoverImage,
-                          icon: const Icon(Icons.image_outlined),
-                          label: Text(
-                            _coverBytes == null ? l10n.commonUpload : l10n.commonChangeCover,
-                            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        tooltip: l10n.commonRemove,
-                        onPressed: (_submitting || _coverBytes == null)
-                            ? null
-                            : () => setState(() {
-                                  _coverBytes = null;
-                                  _coverFileName = null;
-                                }),
-                        icon: const Icon(Icons.delete_outline),
-                      ),
-                    ],
-                  ),
-                  if (_coverBytes != null) ...[
-                    const SizedBox(height: 10),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        height: 160,
-                        width: double.infinity,
-                        color: scheme.surfaceContainerHighest,
-                        child: Image.memory(
-                          _coverBytes!,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 18),
-                  if (AppConfig.isFeatureEnabled('collabInvites'))
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: scheme.primaryContainer.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: scheme.outline.withValues(alpha: 0.2)),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.group_add_outlined, size: 20, color: scheme.primary),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              l10n.exhibitionCreatorCollabHint,
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                color: scheme.onSurface.withValues(alpha: 0.8),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _submitting ? null : _submit,
-                      child: _submitting
-                          ? const SizedBox(
-                              height: 18,
-                              width: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2.2),
-                            )
-                          : Text(
-                              l10n.commonCreate,
-                              style: GoogleFonts.inter(fontWeight: FontWeight.w700),
-                            ),
-                    ),
+                    label: l10n.exhibitionCreatorLocationLabel,
                   ),
                 ],
               ),
-            ),
+
+              const CreatorSectionSpacing(),
+
+              // --- Schedule section ---
+              CreatorSection(
+                title: l10n.exhibitionCreatorScheduleTitle,
+                children: [
+                  CreatorDateField(
+                    label: l10n.exhibitionCreatorStartsLabel,
+                    value: _startsAt,
+                    notSetLabel: l10n.exhibitionCreatorNotSetLabel,
+                    onPick: () => _pickDate(isStart: true),
+                    onClear: () => setState(() => _startsAt = null),
+                  ),
+                  const CreatorFieldSpacing(),
+                  CreatorDateField(
+                    label: l10n.exhibitionCreatorEndsLabel,
+                    value: _endsAt,
+                    notSetLabel: l10n.exhibitionCreatorNotSetLabel,
+                    onPick: () => _pickDate(isStart: false),
+                    onClear: () => setState(() => _endsAt = null),
+                  ),
+                ],
+              ),
+
+              const CreatorSectionSpacing(),
+
+              // --- Visibility toggle ---
+              CreatorSwitchTile(
+                title: l10n.exhibitionCreatorPublishTitle,
+                subtitle: _published
+                    ? l10n.exhibitionCreatorPublishVisible
+                    : l10n.exhibitionCreatorPublishDraft,
+                value: _published,
+                onChanged:
+                    _submitting ? null : (v) => setState(() => _published = v),
+              ),
+
+              const CreatorSectionSpacing(),
+
+              // --- Cover Image section ---
+              CreatorSection(
+                title: l10n.commonCoverImage,
+                children: [
+                  CreatorCoverImagePicker(
+                    imageBytes: _coverBytes,
+                    uploadLabel: l10n.commonUpload,
+                    changeLabel: l10n.commonChangeCover,
+                    removeTooltip: l10n.commonRemove,
+                    onPick: _pickCoverImage,
+                    onRemove: () => setState(() {
+                      _coverBytes = null;
+                      _coverFileName = null;
+                    }),
+                    enabled: !_submitting,
+                  ),
+                ],
+              ),
+
+              const CreatorSectionSpacing(),
+
+              // --- Collaboration hint ---
+              if (AppConfig.isFeatureEnabled('collabInvites'))
+                CreatorInfoBox(
+                  text: l10n.exhibitionCreatorCollabHint,
+                  icon: Icons.group_add_outlined,
+                ),
+
+              if (AppConfig.isFeatureEnabled('collabInvites'))
+                const CreatorSectionSpacing(),
+
+              // --- Create button ---
+              CreatorFooterActions(
+                primaryLabel: l10n.commonCreate,
+                onPrimary: _submit,
+                primaryLoading: _submitting,
+              ),
+            ],
           ),
         ),
       ),
@@ -318,9 +259,12 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
     final description = _descriptionController.text.trim();
     final locationName = _locationController.text.trim();
 
-    if (_endsAt != null && _startsAt != null && _endsAt!.isBefore(_startsAt!)) {
+    if (_endsAt != null &&
+        _startsAt != null &&
+        _endsAt!.isBefore(_startsAt!)) {
       messenger.showKubusSnackBar(
-        SnackBar(content: Text(l10n.exhibitionCreatorEndDateAfterStartError)),
+        SnackBar(
+            content: Text(l10n.exhibitionCreatorEndDateAfterStartError)),
       );
       return;
     }
@@ -357,7 +301,8 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
       if (!mounted) return;
 
       if (created == null) {
-        messenger.showKubusSnackBar(SnackBar(content: Text(l10n.exhibitionCreatorCreateFailed)));
+        messenger.showKubusSnackBar(
+            SnackBar(content: Text(l10n.exhibitionCreatorCreateFailed)));
         return;
       }
 
@@ -372,51 +317,11 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
     } catch (e) {
       if (!mounted) return;
       messenger.showKubusSnackBar(
-        SnackBar(content: Text(l10n.exhibitionCreatorCreateFailedWithError(e))),
+        SnackBar(
+            content: Text(l10n.exhibitionCreatorCreateFailedWithError(e))),
       );
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
-  }
-}
-
-class _DateRow extends StatelessWidget {
-  const _DateRow({
-    required this.label,
-    required this.value,
-    required this.onPick,
-    required this.onClear,
-  });
-
-  final String label;
-  final DateTime? value;
-  final VoidCallback onPick;
-  final VoidCallback onClear;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context)!;
-    final text = value == null
-      ? l10n.exhibitionCreatorNotSetLabel
-        : '${value!.year.toString().padLeft(4, '0')}-${value!.month.toString().padLeft(2, '0')}-${value!.day.toString().padLeft(2, '0')}';
-
-    return Row(
-      children: [
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: onPick,
-            icon: const Icon(Icons.calendar_today_outlined, size: 18),
-            label: Text('$label: $text', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-          ),
-        ),
-        const SizedBox(width: 8),
-        IconButton(
-          tooltip: l10n.commonClear,
-          onPressed: value == null ? null : onClear,
-          icon: Icon(Icons.close, color: scheme.onSurface.withValues(alpha: 0.6)),
-        ),
-      ],
-    );
   }
 }

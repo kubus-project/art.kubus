@@ -2,11 +2,12 @@ import 'dart:async';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/art_marker.dart';
 import '../../providers/marker_management_provider.dart';
+import '../../utils/design_tokens.dart';
+import '../../widgets/creator/creator_kit.dart';
 import '../../widgets/empty_state_card.dart';
 import 'marker_editor_screen.dart';
 import 'marker_editor_view.dart';
@@ -83,7 +84,7 @@ class _ManageMarkersScreenState extends State<ManageMarkersScreen> {
 
       if (provider.error != null && provider.markers.isEmpty) {
         return Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(KubusSpacing.md),
           child: EmptyStateCard(
             icon: Icons.error_outline,
             title: l10n.manageMarkersLoadFailedTitle,
@@ -97,7 +98,7 @@ class _ManageMarkersScreenState extends State<ManageMarkersScreen> {
 
       if (provider.markers.isEmpty) {
         return Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(KubusSpacing.md),
           child: EmptyStateCard(
             icon: Icons.place_outlined,
             title: l10n.manageMarkersEmptyTitle,
@@ -125,7 +126,7 @@ class _ManageMarkersScreenState extends State<ManageMarkersScreen> {
         itemBuilder: (context, index) {
           if (index == 0) {
             return Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              padding: const EdgeInsets.fromLTRB(KubusSpacing.md, KubusSpacing.md, KubusSpacing.md, KubusSpacing.md),
               child: Row(
                 children: [
                   Expanded(
@@ -135,17 +136,31 @@ class _ManageMarkersScreenState extends State<ManageMarkersScreen> {
                         prefixIcon: const Icon(Icons.search),
                         hintText: l10n.manageMarkersSearchHint,
                         isDense: true,
+                        filled: true,
+                        fillColor: scheme.onSurface.withValues(alpha: 0.04),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(KubusRadius.md),
+                          borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(KubusRadius.md),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(KubusRadius.md),
+                          borderSide: BorderSide(color: scheme.primary),
+                        ),
                       ),
                       onChanged: (_) => setState(() {}),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: KubusSpacing.md),
                   IconButton(
                     tooltip: l10n.manageMarkersRefreshTooltip,
                     onPressed: provider.isLoading ? null : () => unawaited(provider.refresh(force: true)),
                     icon: const Icon(Icons.refresh),
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: KubusSpacing.xs),
                   FilledButton.icon(
                     onPressed: () {
                       if (isWide) {
@@ -180,13 +195,13 @@ class _ManageMarkersScreenState extends State<ManageMarkersScreen> {
               marker.name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+              style: KubusTextStyles.actionTileTitle,
             ),
             subtitle: Text(
               [
                 if (subjectLabel.isNotEmpty) subjectLabel,
                 '${marker.position.latitude.toStringAsFixed(4)}, ${marker.position.longitude.toStringAsFixed(4)}',
-              ].join(' · '),
+              ].join(' \u00b7 '),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -194,27 +209,14 @@ class _ManageMarkersScreenState extends State<ManageMarkersScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: statusColor.withValues(alpha: 0.35)),
-                  ),
-                  child: Text(
-                    _statusLabel(l10n, marker),
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: statusColor,
-                    ),
-                  ),
+                CreatorStatusBadge(
+                  label: _statusLabel(l10n, marker),
+                  color: statusColor,
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: KubusSpacing.xs),
                 Text(
                   updatedLabel,
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
+                  style: KubusTextStyles.detailCaption.copyWith(
                     color: scheme.onSurface.withValues(alpha: 0.55),
                   ),
                 ),
@@ -252,7 +254,7 @@ class _ManageMarkersScreenState extends State<ManageMarkersScreen> {
 
       if (selectedMarker == null) {
         return Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(KubusSpacing.md),
           child: EmptyStateCard(
             icon: Icons.place_outlined,
             title: l10n.manageMarkersSelectTitle,
@@ -282,7 +284,7 @@ class _ManageMarkersScreenState extends State<ManageMarkersScreen> {
                   flex: 5,
                   child: buildList(),
                 ),
-                VerticalDivider(width: 1, color: scheme.outline.withValues(alpha: 0.2)),
+                VerticalDivider(width: 1, color: scheme.outline.withValues(alpha: 0.12)),
                 Flexible(
                   flex: 4,
                   child: buildEditorPane(),
@@ -301,4 +303,3 @@ extension<T> on Iterable<T> {
     return iterator.current;
   }
 }
-

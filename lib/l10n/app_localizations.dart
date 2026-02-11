@@ -584,7 +584,7 @@ abstract class AppLocalizations {
   /// No description provided for @personaOnboardingSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Choose what you’re here for. This only changes what we highlight-not what you can access.'**
+  /// **'Choose what you’re here for. This only changes what we highlight - not what you can access.'**
   String get personaOnboardingSubtitle;
 
   /// No description provided for @personaOptionLoverTitle.
@@ -980,7 +980,7 @@ abstract class AppLocalizations {
   /// No description provided for @authPasswordPolicyError.
   ///
   /// In en, this message translates to:
-  /// **'Password must be 8–128 characters and include a letter and a number.'**
+  /// **'Password must be atleast 8 characters and include a letter and a number.'**
   String get authPasswordPolicyError;
 
   /// No description provided for @authPasswordMismatchInline.
@@ -8276,7 +8276,7 @@ abstract class AppLocalizations {
   /// No description provided for @sendTokenSummaryFeesLabel.
   ///
   /// In en, this message translates to:
-  /// **'Kubus fees (~{percent}%)'**
+  /// **'kubus fees (~{percent}%)'**
   String sendTokenSummaryFeesLabel(Object percent);
 
   /// No description provided for @sendTokenSummaryEstimatedDebitLabel.
@@ -12410,7 +12410,7 @@ abstract class AppLocalizations {
   /// No description provided for @season0OnChainNote.
   ///
   /// In en, this message translates to:
-  /// **'On-chain features available in Labs'**
+  /// **'On-chain features available on dev-net for now'**
   String get season0OnChainNote;
 
   /// No description provided for @mnemonicRevealTitle.
@@ -12964,6 +12964,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Funds one focused development session (new feature / fixes / content updates).'**
   String get supportTier50Body;
+
+  /// No description provided for @collectionCreatorAddArtworksTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Artworks'**
+  String get collectionCreatorAddArtworksTitle;
+
+  /// No description provided for @collectionCreatorSearchArtworksLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get collectionCreatorSearchArtworksLabel;
+
+  /// No description provided for @collectionCreatorSearchArtworksHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search your artworks...'**
+  String get collectionCreatorSearchArtworksHint;
+
+  /// No description provided for @collectionCreatorNoArtworksAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No artworks available'**
+  String get collectionCreatorNoArtworksAvailable;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
