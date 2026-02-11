@@ -13,6 +13,7 @@ class KubusGlassChip extends StatelessWidget {
     required this.active,
     required this.onPressed,
     this.accentColor,
+    this.borderRadius = 20,
   });
 
   final String label;
@@ -20,6 +21,7 @@ class KubusGlassChip extends StatelessWidget {
   final bool active;
   final VoidCallback? onPressed;
   final Color? accentColor;
+  final double borderRadius;
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +31,8 @@ class KubusGlassChip extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
     final accent = accentColor ?? scheme.primary;
 
-    final radius = BorderRadius.circular(20);
+    final resolvedRadius = borderRadius.clamp(0.0, 999.0).toDouble();
+    final radius = BorderRadius.circular(resolvedRadius);
     final idleTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.12);
     final selectedTint = accent.withValues(alpha: isDark ? 0.14 : 0.16);
 

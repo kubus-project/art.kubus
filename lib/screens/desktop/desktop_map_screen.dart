@@ -1863,7 +1863,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 }
                 _queueMarkerRefresh(fromGesture: false);
               },
-              onMapClick: (point, _) {
+              onMapClick: (dynamic point, _) {
                 unawaited(
                   _markerInteractionController.handleMapClick(point),
                 );
@@ -2096,6 +2096,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               icon: Icons.filter_alt_outlined,
               active: isActive,
               accentColor: themeProvider.accentColor,
+              borderRadius: 10,
               onPressed: () {
                 setState(() => _selectedFilter = filter);
                 // Reload markers so the nearby panel and
@@ -2877,7 +2878,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         _startMarkerCreationFlow(position: target);
       },
       createMarkerTooltip: l10n.mapCreateMarkerHereTooltip,
-      createMarkerHighlighted: true,
+      createMarkerHighlighted: false,
       showTravelModeToggle: AppConfig.isFeatureEnabled('mapTravelMode'),
       travelModeActive: _travelModeEnabled,
       onToggleTravelMode: () =>

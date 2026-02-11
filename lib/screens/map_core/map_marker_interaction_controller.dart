@@ -21,7 +21,11 @@ class MapMarkerInteractionController {
   final KubusMapController _mapController;
   final bool _isWeb;
 
-  Future<void> handleMapClick(math.Point<double> point) {
+  Future<void> handleMapClick(Object? rawPoint) {
+    final point = _coercePoint(rawPoint);
+    if (point == null) {
+      return Future<void>.value();
+    }
     return _mapController.handleMapClick(point, isWeb: _isWeb);
   }
 
@@ -39,5 +43,27 @@ class MapMarkerInteractionController {
 
   void dismissSelection() {
     _mapController.dismissSelection();
+  }
+
+  math.Point<double>? _coercePoint(Object? rawPoint) {
+    if (rawPoint is math.Point) {
+      final x = (rawPoint.x as num?)?.toDouble();
+      final y = (rawPoint.y as num?)?.toDouble();
+      if (x == null || y == null || !x.isFinite || !y.isFinite) {
+        return null;
+      }
+      return math.Point<double>(x, y);
+    }
+
+    if (rawPoint is Map) {
+      final x = (rawPoint['x'] as num?)?.toDouble();
+      final y = (rawPoint['y'] as num?)?.toDouble();
+      if (x == null || y == null || !x.isFinite || !y.isFinite) {
+        return null;
+      }
+      return math.Point<double>(x, y);
+    }
+
+    return null;
   }
 }

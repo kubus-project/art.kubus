@@ -60,8 +60,6 @@ class InteractiveTutorialOverlay extends StatelessWidget {
     required this.doneLabel,
   });
 
-  TutorialStepDefinition get _step => steps[currentIndex];
-
   bool _isRectUsable(Rect rect) {
     if (!rect.left.isFinite ||
         !rect.top.isFinite ||
@@ -81,12 +79,22 @@ class InteractiveTutorialOverlay extends StatelessWidget {
     return true;
   }
 
-  Rect? _targetRect(BuildContext context) {
-    final key = _step.targetKey;
+  Rect? _targetRect(
+    BuildContext context,
+    TutorialStepDefinition step,
+  ) {
+    final key = step.targetKey;
     if (key == null) return null;
     final ctx = key.currentContext;
-    if (ctx == null) return null;
-    final render = ctx.findRenderObject();
+    if (ctx == null || !ctx.mounted) return null;
+
+    RenderObject? rawRender;
+    try {
+      rawRender = ctx.findRenderObject();
+    } catch (_) {
+      return null;
+    }
+    final render = rawRender;
     if (render is! RenderBox) return null;
     if (!render.attached) return null;
     if (!render.hasSize) return null;
@@ -119,7 +127,11 @@ class InteractiveTutorialOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    assert(steps.isNotEmpty);
+    if (steps.isEmpty) return const SizedBox.shrink();
+    if (currentIndex < 0 || currentIndex >= steps.length) {
+      return const SizedBox.shrink();
+    }
+    final step = steps[currentIndex];
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final media = MediaQuery.of(context);
@@ -131,7 +143,7 @@ class InteractiveTutorialOverlay extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    final rect = _targetRect(context);
+    final rect = _targetRect(context, step);
 
     // Expand the highlight a bit so it feels forgiving.
     final inflated = rect?.inflate(10);
@@ -156,31 +168,34 @@ class InteractiveTutorialOverlay extends StatelessWidget {
     const double horizontalSafeMargin = 12;
 
     final double preferredCenteredX = (highlightRect != null)
-      ? (highlightRect.center.dx - (tooltipWidth / 2))
-      : ((size.width - tooltipWidth) / 2);
+        ? (highlightRect.center.dx - (tooltipWidth / 2))
+        : ((size.width - tooltipWidth) / 2);
 
-    final bool alignRightEdge = _step.tooltipAlignToTargetRightEdge;
+    final bool alignRightEdge = step.tooltipAlignToTargetRightEdge;
 
     // If requested, align tooltip's RIGHT edge to the target's right edge.
     // Otherwise, center it; if centering would clamp on the right edge, fall
     // back to right-edge alignment to keep the association with the target.
     final bool wouldClampRight = highlightRect != null &&
-      preferredCenteredX > (size.width - tooltipWidth - horizontalSafeMargin);
+        preferredCenteredX > (size.width - tooltipWidth - horizontalSafeMargin);
 
-    final double preferredX = (highlightRect != null && (alignRightEdge || wouldClampRight))
-      ? (highlightRect.right - tooltipWidth)
-      : preferredCenteredX;
+    final double preferredX =
+        (highlightRect != null && (alignRightEdge || wouldClampRight))
+            ? (highlightRect.right - tooltipWidth)
+            : preferredCenteredX;
 
     final minX = horizontalSafeMargin;
-    final maxX =
-        math.max(horizontalSafeMargin, size.width - tooltipWidth - horizontalSafeMargin);
-    final double tooltipX = preferredX.isFinite
-        ? preferredX.clamp(minX, maxX).toDouble()
-        : minX;
+    final maxX = math.max(
+        horizontalSafeMargin, size.width - tooltipWidth - horizontalSafeMargin);
+    final double tooltipX =
+        preferredX.isFinite ? preferredX.clamp(minX, maxX).toDouble() : minX;
 
     // Decide whether to place tooltip above or below highlight.
-    final double spaceAbove = (highlightRect?.top ?? (size.height / 2)) - safe.top;
-    final double spaceBelow = size.height - safe.bottom - (highlightRect?.bottom ?? (size.height / 2));
+    final double spaceAbove =
+        (highlightRect?.top ?? (size.height / 2)) - safe.top;
+    final double spaceBelow = size.height -
+        safe.bottom -
+        (highlightRect?.bottom ?? (size.height / 2));
 
     final bool placeBelow = spaceBelow >= spaceAbove;
     final rawTooltipY = () {
@@ -200,9 +215,8 @@ class InteractiveTutorialOverlay extends StatelessWidget {
     }();
     final minY = safe.top + 14;
     final maxY = math.max(minY, size.height - safe.bottom - 220);
-    final double tooltipY = rawTooltipY.isFinite
-        ? rawTooltipY.clamp(minY, maxY).toDouble()
-        : minY;
+    final double tooltipY =
+        rawTooltipY.isFinite ? rawTooltipY.clamp(minY, maxY).toDouble() : minY;
 
     final isLast = currentIndex == steps.length - 1;
     final stepLabel = '${currentIndex + 1}/${steps.length}';
@@ -211,31 +225,27 @@ class InteractiveTutorialOverlay extends StatelessWidget {
       clipBehavior: Clip.none,
       children: [
         Positioned.fill(
-          child: Listener(
+          child: GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onPointerSignal: (_) {},
-            onPointerDown: (_) {},
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onScaleStart: (_) {},
-              onScaleUpdate: (_) {},
-              onScaleEnd: (_) {},
-              onTapUp: (details) {
-                if (highlightRect == null) return;
-                if (!_isInside(highlightRect, details.globalPosition)) return;
+            onTapUp: (details) {
+              if (highlightRect == null) return;
+              final globalPosition = details.globalPosition;
+              if (!globalPosition.dx.isFinite || !globalPosition.dy.isFinite) {
+                return;
+              }
+              if (!_isInside(highlightRect, globalPosition)) return;
 
-                final onTargetTap = _step.onTargetTap;
-                if (onTargetTap != null) onTargetTap();
-                if (_step.advanceOnTargetTap && !isLast) {
-                  onNext();
-                }
-              },
-              child: CustomPaint(
-                painter: _CoachMarkPainter(
-                  highlightRect: highlightRect,
-                  color: Colors.black.withValues(alpha: 0.55),
-                  accent: scheme.primary,
-                ),
+              final onTargetTap = step.onTargetTap;
+              if (onTargetTap != null) onTargetTap();
+              if (step.advanceOnTargetTap && !isLast) {
+                onNext();
+              }
+            },
+            child: CustomPaint(
+              painter: _CoachMarkPainter(
+                highlightRect: highlightRect,
+                color: Colors.black.withValues(alpha: 0.55),
+                accent: scheme.primary,
               ),
             ),
           ),
@@ -257,9 +267,9 @@ class InteractiveTutorialOverlay extends StatelessWidget {
           top: tooltipY,
           width: tooltipWidth,
           child: _TutorialTooltipCard(
-            title: _step.title,
-            body: _step.body,
-            icon: _step.icon,
+            title: step.title,
+            body: step.body,
+            icon: step.icon,
             stepLabel: stepLabel,
             backLabel: backLabel,
             nextLabel: isLast ? doneLabel : nextLabel,
@@ -316,12 +326,12 @@ class _CoachMarkPainter extends CustomPainter {
         highlightRect!,
         const Radius.circular(16),
       );
+      final maskedPath = Path()
+        ..fillType = PathFillType.evenOdd
+        ..addRect(full)
+        ..addRRect(rrect);
 
-      final holePath = Path()..addRRect(rrect);
-      final combined =
-          Path.combine(PathOperation.difference, overlayPath, holePath);
-
-      canvas.drawPath(combined, paint);
+      canvas.drawPath(maskedPath, paint);
 
       // Accent ring around the hole.
       final ringPaint = Paint()
@@ -388,7 +398,8 @@ class _TutorialTooltipCard extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.35)),
+          border:
+              Border.all(color: scheme.outlineVariant.withValues(alpha: 0.35)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.18),
@@ -424,11 +435,13 @@ class _TutorialTooltipCard extends StatelessWidget {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(999),
                       color: scheme.primary.withValues(alpha: 0.16),
-                      border: Border.all(color: scheme.primary.withValues(alpha: 0.25)),
+                      border: Border.all(
+                          color: scheme.primary.withValues(alpha: 0.25)),
                     ),
                     child: Text(
                       stepLabel,
@@ -495,7 +508,8 @@ class _GlassActionChip extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.35)),
+        border:
+            Border.all(color: scheme.outlineVariant.withValues(alpha: 0.35)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: isDark ? 0.22 : 0.14),
