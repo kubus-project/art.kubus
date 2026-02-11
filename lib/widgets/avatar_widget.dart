@@ -403,6 +403,8 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
       return candidate;
     }
 
-    return MediaUrlResolver.resolve(candidate) ?? candidate;
+    return MediaUrlResolver.resolveDisplayUrl(candidate) ??
+        MediaUrlResolver.resolve(candidate) ??
+        candidate;
   }
 }

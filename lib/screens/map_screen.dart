@@ -56,6 +56,7 @@ import '../utils/map_perf_tracker.dart';
 import '../utils/map_performance_debug.dart';
 import '../utils/presence_marker_visit.dart';
 import '../utils/geo_bounds.dart';
+import '../utils/media_url_resolver.dart';
 import '../widgets/map_marker_dialog.dart';
 import '../providers/tile_providers.dart';
 import '../widgets/art_map_view.dart';
@@ -4189,9 +4190,14 @@ class _MapScreenState extends State<MapScreen>
   Future<void> _showMarkerInfoFallback(ArtMarker marker) async {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    final coverUrl = ArtworkMediaResolver.resolveCover(
+    final coverUrl = MediaUrlResolver.resolveDisplayUrl(
+      ArtworkMediaResolver.resolveCover(
       metadata: marker.metadata,
+      ),
     );
+    final dpr = MediaQuery.maybeOf(context)?.devicePixelRatio ?? 1.0;
+    final cacheWidth = (640 * dpr).clamp(256.0, 1600.0).round();
+    final cacheHeight = (360 * dpr).clamp(144.0, 1200.0).round();
 
     await showKubusDialog<void>(
       context: context,
@@ -4216,6 +4222,9 @@ class _MapScreenState extends State<MapScreen>
                   width: double.infinity,
                   height: 160,
                   fit: BoxFit.cover,
+                  filterQuality: FilterQuality.low,
+                  cacheWidth: cacheWidth,
+                  cacheHeight: cacheHeight,
                   errorBuilder: (_, __, ___) =>
                       KubusMapMarkerHelpers.markerImageFallback(
                     baseColor: _resolveArtMarkerColor(

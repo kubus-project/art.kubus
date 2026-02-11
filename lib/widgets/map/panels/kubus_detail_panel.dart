@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../utils/design_tokens.dart';
+import '../../../utils/media_url_resolver.dart';
 import '../../common/kubus_glass_icon_button.dart';
 import '../../glass_components.dart';
 
@@ -111,6 +112,10 @@ class DetailHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final resolvedImageUrl =
+        MediaUrlResolver.resolveDisplayUrl(imageUrl) ?? imageUrl;
+    final dpr = MediaQuery.maybeOf(context)?.devicePixelRatio ?? 1.0;
+    final cacheHeight = (height * dpr).clamp(96.0, 1440.0).round();
     final fallbackIconColor =
         ThemeData.estimateBrightnessForColor(accentColor) == Brightness.dark
             ? KubusColors.textPrimaryDark.withValues(alpha: 0.78)
@@ -125,10 +130,12 @@ class DetailHeader extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            if (imageUrl != null && imageUrl!.isNotEmpty)
+            if (resolvedImageUrl != null && resolvedImageUrl.isNotEmpty)
               Image.network(
-                imageUrl!,
+                resolvedImageUrl,
                 fit: BoxFit.cover,
+                filterQuality: FilterQuality.low,
+                cacheHeight: cacheHeight,
                 errorBuilder: (_, __, ___) => _buildFallback(
                   icon: fallbackIcon,
                   accentColor: accentColor,
