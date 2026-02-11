@@ -62,6 +62,25 @@ class InteractiveTutorialOverlay extends StatelessWidget {
 
   TutorialStepDefinition get _step => steps[currentIndex];
 
+  bool _isRectUsable(Rect rect) {
+    if (!rect.left.isFinite ||
+        !rect.top.isFinite ||
+        !rect.right.isFinite ||
+        !rect.bottom.isFinite) {
+      return false;
+    }
+    if (rect.width <= 0 || rect.height <= 0) return false;
+    // Reject pathological values that can appear during transient web layouts.
+    const maxAbs = 1e7;
+    if (rect.left.abs() > maxAbs ||
+        rect.top.abs() > maxAbs ||
+        rect.right.abs() > maxAbs ||
+        rect.bottom.abs() > maxAbs) {
+      return false;
+    }
+    return true;
+  }
+
   Rect? _targetRect(BuildContext context) {
     final key = _step.targetKey;
     if (key == null) return null;
@@ -69,10 +88,26 @@ class InteractiveTutorialOverlay extends StatelessWidget {
     if (ctx == null) return null;
     final render = ctx.findRenderObject();
     if (render is! RenderBox) return null;
+    if (!render.attached) return null;
     if (!render.hasSize) return null;
+    final size = render.size;
+    if (!size.width.isFinite ||
+        !size.height.isFinite ||
+        size.width <= 0 ||
+        size.height <= 0) {
+      return null;
+    }
 
-    final offset = render.localToGlobal(Offset.zero);
-    return offset & render.size;
+    try {
+      final offset = render.localToGlobal(Offset.zero);
+      if (!offset.dx.isFinite || !offset.dy.isFinite) return null;
+      final rect = offset & size;
+      if (!_isRectUsable(rect)) return null;
+      return rect;
+    } catch (_) {
+      // Web can briefly surface detached/invalid transforms during layout.
+      return null;
+    }
   }
 
   bool _isInside(Rect rect, Offset point) {
@@ -89,17 +124,32 @@ class InteractiveTutorialOverlay extends StatelessWidget {
     final scheme = theme.colorScheme;
     final media = MediaQuery.of(context);
     final size = media.size;
+    if (!size.width.isFinite ||
+        !size.height.isFinite ||
+        size.width <= 0 ||
+        size.height <= 0) {
+      return const SizedBox.shrink();
+    }
 
     final rect = _targetRect(context);
 
     // Expand the highlight a bit so it feels forgiving.
-    final highlightRect = rect?.inflate(10);
+    final inflated = rect?.inflate(10);
+    final highlightRect =
+        inflated != null && _isRectUsable(inflated) ? inflated : null;
 
     // Tooltip sizing/position.
     // Keep this reasonably narrow so it doesn't feel like a full-width banner,
     // and so it can be positioned safely near right-edge targets.
     const double tooltipMaxWidth = 340;
-    final double tooltipWidth = math.min(tooltipMaxWidth, size.width - 24);
+    final availableWidth = math.max(0.0, size.width - 24);
+    if (!availableWidth.isFinite || availableWidth <= 0) {
+      return const SizedBox.shrink();
+    }
+    final double tooltipWidth = math
+        .min(tooltipMaxWidth, availableWidth)
+        .clamp(1.0, tooltipMaxWidth)
+        .toDouble();
 
     final EdgeInsets safe = media.padding;
 
@@ -121,15 +171,19 @@ class InteractiveTutorialOverlay extends StatelessWidget {
       ? (highlightRect.right - tooltipWidth)
       : preferredCenteredX;
 
-    final double tooltipX =
-      preferredX.clamp(horizontalSafeMargin, size.width - tooltipWidth - horizontalSafeMargin);
+    final minX = horizontalSafeMargin;
+    final maxX =
+        math.max(horizontalSafeMargin, size.width - tooltipWidth - horizontalSafeMargin);
+    final double tooltipX = preferredX.isFinite
+        ? preferredX.clamp(minX, maxX).toDouble()
+        : minX;
 
     // Decide whether to place tooltip above or below highlight.
     final double spaceAbove = (highlightRect?.top ?? (size.height / 2)) - safe.top;
     final double spaceBelow = size.height - safe.bottom - (highlightRect?.bottom ?? (size.height / 2));
 
     final bool placeBelow = spaceBelow >= spaceAbove;
-    final double tooltipY = () {
+    final rawTooltipY = () {
       if (highlightRect == null) {
         return safe.top + 84;
       }
@@ -144,6 +198,11 @@ class InteractiveTutorialOverlay extends StatelessWidget {
         highlightRect.top - 14 - 220,
       );
     }();
+    final minY = safe.top + 14;
+    final maxY = math.max(minY, size.height - safe.bottom - 220);
+    final double tooltipY = rawTooltipY.isFinite
+        ? rawTooltipY.clamp(minY, maxY).toDouble()
+        : minY;
 
     final isLast = currentIndex == steps.length - 1;
     final stepLabel = '${currentIndex + 1}/${steps.length}';
@@ -225,42 +284,63 @@ class _CoachMarkPainter extends CustomPainter {
     required this.accent,
   });
 
+  bool _isRectUsable(Rect rect) {
+    return rect.left.isFinite &&
+        rect.top.isFinite &&
+        rect.right.isFinite &&
+        rect.bottom.isFinite &&
+        rect.width > 0 &&
+        rect.height > 0;
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
+    if (!size.width.isFinite ||
+        !size.height.isFinite ||
+        size.width <= 0 ||
+        size.height <= 0) {
+      return;
+    }
     final full = Rect.fromLTWH(0, 0, size.width, size.height);
 
     final overlayPath = Path()..addRect(full);
     final paint = Paint()..color = color;
 
-    if (highlightRect == null) {
+    if (highlightRect == null || !_isRectUsable(highlightRect!)) {
       canvas.drawPath(overlayPath, paint);
       return;
     }
 
-    final rrect = RRect.fromRectAndRadius(
-      highlightRect!,
-      const Radius.circular(16),
-    );
+    try {
+      final rrect = RRect.fromRectAndRadius(
+        highlightRect!,
+        const Radius.circular(16),
+      );
 
-    final holePath = Path()..addRRect(rrect);
-    final combined = Path.combine(PathOperation.difference, overlayPath, holePath);
+      final holePath = Path()..addRRect(rrect);
+      final combined =
+          Path.combine(PathOperation.difference, overlayPath, holePath);
 
-    canvas.drawPath(combined, paint);
+      canvas.drawPath(combined, paint);
 
-    // Accent ring around the hole.
-    final ringPaint = Paint()
-      ..color = accent.withValues(alpha: 0.75)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0;
+      // Accent ring around the hole.
+      final ringPaint = Paint()
+        ..color = accent.withValues(alpha: 0.75)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0;
 
-    canvas.drawRRect(rrect, ringPaint);
+      canvas.drawRRect(rrect, ringPaint);
 
-    // Soft glow
-    final glowPaint = Paint()
-      ..color = accent.withValues(alpha: 0.16)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14);
+      // Soft glow
+      final glowPaint = Paint()
+        ..color = accent.withValues(alpha: 0.16)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14);
 
-    canvas.drawRRect(rrect, glowPaint);
+      canvas.drawRRect(rrect, glowPaint);
+    } catch (_) {
+      // On web, invalid transient geometry should fall back to a plain scrim.
+      canvas.drawPath(overlayPath, paint);
+    }
   }
 
   @override
