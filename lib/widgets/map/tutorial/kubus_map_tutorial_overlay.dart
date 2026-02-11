@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../features/map/shared/map_screen_shared_helpers.dart';
+import '../../map_overlay_blocker.dart';
 import '../../tutorial/interactive_tutorial_overlay.dart';
 
 /// Shared map tutorial overlay shell used by mobile + desktop map screens.
@@ -45,25 +45,31 @@ class KubusMapTutorialOverlay extends StatelessWidget {
     return Stack(
       children: [
         Positioned.fill(
-          child: KubusMapWebPointerInterceptor.wrap(
-            child: const ModalBarrier(
-              dismissible: false,
-              color: Colors.transparent,
-            ),
-          ),
-        ),
-        Positioned.fill(
-          child: KubusMapWebPointerInterceptor.wrap(
-            child: InteractiveTutorialOverlay(
-              steps: steps,
-              currentIndex: clampedIndex,
-              onNext: onNext,
-              onBack: onBack,
-              onSkip: onSkip,
-              skipLabel: skipLabel,
-              backLabel: backLabel,
-              nextLabel: nextLabel,
-              doneLabel: doneLabel,
+          child: MapOverlayBlocker(
+            enabled: true,
+            cursor: SystemMouseCursors.basic,
+            child: Stack(
+              children: [
+                const Positioned.fill(
+                  child: ModalBarrier(
+                    dismissible: false,
+                    color: Colors.transparent,
+                  ),
+                ),
+                Positioned.fill(
+                  child: InteractiveTutorialOverlay(
+                    steps: steps,
+                    currentIndex: clampedIndex,
+                    onNext: onNext,
+                    onBack: onBack,
+                    onSkip: onSkip,
+                    skipLabel: skipLabel,
+                    backLabel: backLabel,
+                    nextLabel: nextLabel,
+                    doneLabel: doneLabel,
+                  ),
+                ),
+              ],
             ),
           ),
         ),

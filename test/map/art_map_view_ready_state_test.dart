@@ -39,4 +39,51 @@ void main() {
       true,
     );
   });
+
+  test('ArtMapView preserveDrawingBuffer policy disables mobile web', () {
+    expect(
+      ArtMapView.shouldUseWebPreserveDrawingBufferForTest(
+        isWeb: false,
+        platform: TargetPlatform.android,
+        featureEnabled: true,
+      ),
+      false,
+    );
+
+    expect(
+      ArtMapView.shouldUseWebPreserveDrawingBufferForTest(
+        isWeb: true,
+        platform: TargetPlatform.android,
+        featureEnabled: true,
+      ),
+      false,
+    );
+
+    expect(
+      ArtMapView.shouldUseWebPreserveDrawingBufferForTest(
+        isWeb: true,
+        platform: TargetPlatform.iOS,
+        featureEnabled: true,
+      ),
+      false,
+    );
+
+    expect(
+      ArtMapView.shouldUseWebPreserveDrawingBufferForTest(
+        isWeb: true,
+        platform: TargetPlatform.macOS,
+        featureEnabled: false,
+      ),
+      false,
+    );
+
+    expect(
+      ArtMapView.shouldUseWebPreserveDrawingBufferForTest(
+        isWeb: true,
+        platform: TargetPlatform.macOS,
+        featureEnabled: true,
+      ),
+      true,
+    );
+  });
 }

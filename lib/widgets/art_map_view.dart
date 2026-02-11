@@ -84,6 +84,24 @@ class ArtMapView extends StatefulWidget {
     return styleLoaded && !styleFailed && !pendingStyleApply;
   }
 
+  /// Web-only policy for MapLibre's `preserveDrawingBuffer`.
+  ///
+  /// Mobile browsers are more prone to compositing artifacts ("burn-in"/trail
+  /// frames where overlay UI appears baked into the map canvas) when this is
+  /// enabled, so we force it off on Android/iOS web even if the feature flag
+  /// is enabled.
+  @visibleForTesting
+  static bool shouldUseWebPreserveDrawingBufferForTest({
+    required bool isWeb,
+    required TargetPlatform platform,
+    required bool featureEnabled,
+  }) {
+    if (!isWeb || !featureEnabled) return false;
+    final isMobileWeb =
+        platform == TargetPlatform.android || platform == TargetPlatform.iOS;
+    return !isMobileWeb;
+  }
+
   @override
   State<ArtMapView> createState() => _ArtMapViewState();
 }
@@ -402,8 +420,13 @@ class _ArtMapViewState extends State<ArtMapView> {
                 // Preserve the WebGL drawing buffer to improve context stability
                 // in some environments, but can significantly hurt performance.
                 // Keep it off by default and enable only when needed.
-                webPreserveDrawingBuffer: kIsWeb &&
-                    AppConfig.isFeatureEnabled('mapWebPreserveDrawingBuffer'),
+                webPreserveDrawingBuffer:
+                    ArtMapView.shouldUseWebPreserveDrawingBufferForTest(
+                  isWeb: kIsWeb,
+                  platform: defaultTargetPlatform,
+                  featureEnabled:
+                      AppConfig.isFeatureEnabled('mapWebPreserveDrawingBuffer'),
+                ),
                 // We don't use the plugin's annotation managers (we manage sources/layers
                 // directly). Disabling them avoids plugin-managed sources being added
                 // during style swaps, which can cause platform errors.

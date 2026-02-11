@@ -89,4 +89,67 @@ void main() {
     expect(panCount, 0);
     expect(scaleCount, 0);
   });
+
+  testWidgets(
+      'InteractiveTutorialOverlay defers target actions to next frame on web-safe path',
+      (tester) async {
+    int targetTapCount = 0;
+    int nextCount = 0;
+    final firstTargetKey = GlobalKey();
+
+    final steps = <TutorialStepDefinition>[
+      TutorialStepDefinition(
+        targetKey: firstTargetKey,
+        title: 'Step 1',
+        body: 'Body 1',
+        onTargetTap: () => targetTapCount += 1,
+      ),
+      const TutorialStepDefinition(
+        title: 'Step 2',
+        body: 'Body 2',
+      ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Stack(
+            children: [
+              Center(
+                child: SizedBox(
+                  key: firstTargetKey,
+                  width: 48,
+                  height: 48,
+                ),
+              ),
+              InteractiveTutorialOverlay(
+                steps: steps,
+                currentIndex: 0,
+                onNext: () => nextCount += 1,
+                onBack: () {},
+                onSkip: () {},
+                skipLabel: 'Skip',
+                backLabel: 'Back',
+                nextLabel: 'Next',
+                doneLabel: 'Done',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    final targetCenter = tester.getCenter(find.byKey(firstTargetKey));
+    await tester.tapAt(targetCenter);
+
+    // Deferred until the next frame.
+    expect(targetTapCount, 0);
+    expect(nextCount, 0);
+
+    await tester.pump();
+    expect(targetTapCount, 1);
+    expect(nextCount, 1);
+  });
 }

@@ -89,4 +89,60 @@ void main() {
     expect(find.text('Done'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+      'KubusMapTutorialOverlay blocks taps from reaching underlying map layer',
+      (tester) async {
+    final targetKey = GlobalKey();
+    var backgroundTapCount = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Stack(
+            children: [
+              Positioned.fill(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => backgroundTapCount += 1,
+                  child: const SizedBox.expand(),
+                ),
+              ),
+              Center(
+                child: SizedBox(
+                  key: targetKey,
+                  width: 40,
+                  height: 40,
+                ),
+              ),
+              KubusMapTutorialOverlay(
+                visible: true,
+                steps: <TutorialStepDefinition>[
+                  TutorialStepDefinition(
+                    targetKey: targetKey,
+                    title: 'Title',
+                    body: 'Body',
+                  ),
+                ],
+                currentIndex: 0,
+                onNext: () {},
+                onBack: () {},
+                onSkip: () {},
+                skipLabel: 'Skip',
+                backLabel: 'Back',
+                nextLabel: 'Next',
+                doneLabel: 'Done',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pump();
+
+    expect(backgroundTapCount, 0);
+  });
 }
