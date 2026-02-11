@@ -112,10 +112,14 @@ class DetailHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final resolvedImageUrl =
-        MediaUrlResolver.resolveDisplayUrl(imageUrl) ?? imageUrl;
     final dpr = MediaQuery.maybeOf(context)?.devicePixelRatio ?? 1.0;
+    final cacheWidth = (920 * dpr).clamp(256.0, 1600.0).round();
     final cacheHeight = (height * dpr).clamp(96.0, 1440.0).round();
+    final resolvedImageUrl = MediaUrlResolver.resolveDisplayUrl(
+          imageUrl,
+          maxWidth: cacheWidth,
+        ) ??
+        imageUrl;
     final fallbackIconColor =
         ThemeData.estimateBrightnessForColor(accentColor) == Brightness.dark
             ? KubusColors.textPrimaryDark.withValues(alpha: 0.78)
@@ -135,6 +139,7 @@ class DetailHeader extends StatelessWidget {
                 resolvedImageUrl,
                 fit: BoxFit.cover,
                 filterQuality: FilterQuality.low,
+                cacheWidth: cacheWidth,
                 cacheHeight: cacheHeight,
                 errorBuilder: (_, __, ___) => _buildFallback(
                   icon: fallbackIcon,

@@ -4190,14 +4190,15 @@ class _MapScreenState extends State<MapScreen>
   Future<void> _showMarkerInfoFallback(ArtMarker marker) async {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    final coverUrl = MediaUrlResolver.resolveDisplayUrl(
-      ArtworkMediaResolver.resolveCover(
-      metadata: marker.metadata,
-      ),
-    );
     final dpr = MediaQuery.maybeOf(context)?.devicePixelRatio ?? 1.0;
     final cacheWidth = (640 * dpr).clamp(256.0, 1600.0).round();
     final cacheHeight = (360 * dpr).clamp(144.0, 1200.0).round();
+    final coverUrl = MediaUrlResolver.resolveDisplayUrl(
+      ArtworkMediaResolver.resolveCover(
+        metadata: marker.metadata,
+      ),
+      maxWidth: cacheWidth,
+    );
 
     await showKubusDialog<void>(
       context: context,

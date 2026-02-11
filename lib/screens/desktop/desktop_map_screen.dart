@@ -4124,7 +4124,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       ),
     );
 
-    final resolvedImageUrl = MediaUrlResolver.resolveDisplayUrl(imageUrl);
     final dpr = MediaQuery.maybeOf(context)?.devicePixelRatio ?? 1.0;
     final cacheWidth = width.isFinite && width > 0
         ? (width * dpr).clamp(64.0, 1024.0).round()
@@ -4132,6 +4131,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final cacheHeight = height.isFinite && height > 0
         ? (height * dpr).clamp(64.0, 1024.0).round()
         : null;
+    final resolvedImageUrl = MediaUrlResolver.resolveDisplayUrl(
+      imageUrl,
+      maxWidth: cacheWidth,
+    );
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(borderRadius),
@@ -4290,14 +4293,15 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   Future<void> _showMarkerInfoFallback(ArtMarker marker) async {
     final scheme = Theme.of(context).colorScheme;
-    final coverUrl = MediaUrlResolver.resolveDisplayUrl(
-      ArtworkMediaResolver.resolveCover(
-      metadata: marker.metadata,
-      ),
-    );
     final dpr = MediaQuery.maybeOf(context)?.devicePixelRatio ?? 1.0;
     final cacheWidth = (640 * dpr).clamp(256.0, 1600.0).round();
     final cacheHeight = (360 * dpr).clamp(144.0, 1200.0).round();
+    final coverUrl = MediaUrlResolver.resolveDisplayUrl(
+      ArtworkMediaResolver.resolveCover(
+        metadata: marker.metadata,
+      ),
+      maxWidth: cacheWidth,
+    );
 
     await showKubusDialog<void>(
       context: context,

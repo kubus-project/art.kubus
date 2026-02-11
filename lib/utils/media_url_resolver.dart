@@ -19,36 +19,21 @@ class MediaUrlResolver {
     'avif',
   };
 
-  // Rate limit tracking for media proxy
-  static DateTime? _proxyRateLimitUntil;
-  static int _proxyFailureCount = 0;
-
   /// Call this when a media proxy request fails with 429 or similar rate limit error.
   static void markProxyRateLimited() {
-    _proxyFailureCount++;
-    // Exponential backoff: 5min, 10min, 20min based on failure count (capped at 3 failures)
-    final backoff = Duration(minutes: 5 * (1 << (_proxyFailureCount - 1).clamp(0, 2)));
-    _proxyRateLimitUntil = DateTime.now().add(backoff);
+    // Intentionally a no-op for routing decisions.
+    // We never fall back to direct cross-origin fetches for hosts that require
+    // proxying, because that reintroduces CORS failures on web.
     if (foundation.kDebugMode) {
-      foundation.debugPrint('MediaUrlResolver: proxy rate-limited until $_proxyRateLimitUntil (failures: $_proxyFailureCount)');
+      foundation.debugPrint(
+        'MediaUrlResolver: proxy rate-limited (routing unchanged)',
+      );
     }
   }
 
   /// Call this when a media proxy request succeeds to reset the failure counter.
   static void markProxySuccess() {
-    _proxyFailureCount = 0;
-    _proxyRateLimitUntil = null;
-  }
-
-  /// Check if we should skip proxying due to rate limiting.
-  static bool get _isProxyRateLimited {
-    if (_proxyRateLimitUntil == null) return false;
-    if (DateTime.now().isAfter(_proxyRateLimitUntil!)) {
-      // Rate limit window expired, allow retry but keep failure count for backoff
-      _proxyRateLimitUntil = null;
-      return false;
-    }
-    return true;
+    // Intentionally a no-op; kept for compatibility with existing callers.
   }
 
   // Hosts that are allowed to be fetched directly by web clients for display
@@ -61,11 +46,11 @@ class MediaUrlResolver {
     'localhost',
     '127.0.0.1',
     '[::1]',
-    // Known permissive media hosts.
+    // Wikimedia's upload CDN is generally CORS-safe for direct image fetches.
     'upload.wikimedia.org',
-    'wikimedia.org',
-    'wikipedia.org',
   };
+
+  static const int _defaultMaxDisplayWidth = 1600;
 
   static bool _isHttpUrl(String url) {
     final lower = url.toLowerCase();
@@ -99,6 +84,43 @@ class MediaUrlResolver {
       return _directDisplayDomains.any((d) => _hostMatches(host, d));
     } catch (_) {
       return false;
+    }
+  }
+
+  static bool _isKnownCorsHostileRedirector(String url) {
+    try {
+      final uri = Uri.parse(url);
+      final host = uri.host.toLowerCase();
+      final path = uri.path.toLowerCase();
+      // commons.wikimedia.org/wiki/Special:FilePath/* commonly redirects with
+      // non-image + CORS-restricted responses. Route through backend proxy.
+      if (_hostMatches(host, 'commons.wikimedia.org') &&
+          path.startsWith('/wiki/special:filepath/')) {
+        return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  static String _clampDisplayWidthQuery(String url, {int? maxWidth}) {
+    final targetMaxWidth = (maxWidth ?? _defaultMaxDisplayWidth).clamp(64, 4096);
+    try {
+      final uri = Uri.parse(url);
+      if (!uri.hasScheme) return url;
+      final scheme = uri.scheme.toLowerCase();
+      if (scheme != 'http' && scheme != 'https') return url;
+
+      final existing = uri.queryParameters['width'];
+      if (existing == null || existing.trim().isEmpty) return url;
+      final parsedWidth = int.tryParse(existing.trim());
+      if (parsedWidth == null || parsedWidth <= 0) return url;
+      if (parsedWidth <= targetMaxWidth) return url;
+
+      final params = Map<String, String>.from(uri.queryParameters);
+      params['width'] = '$targetMaxWidth';
+      return uri.replace(queryParameters: params).toString();
+    } catch (_) {
+      return url;
     }
   }
 
@@ -151,6 +173,7 @@ class MediaUrlResolver {
     final canonical = _canonicalizeHttpUrl(absoluteUrl);
     if (!_isHttpUrl(canonical)) return false;
     if (_isProxiedUrl(canonical)) return false;
+    if (_isKnownCorsHostileRedirector(canonical)) return true;
     if (_isSameHostAsBackend(canonical)) return false;
     if (_isSameHostAsCurrentOrigin(canonical)) return false;
     return !_isAllowedDirectDisplayHost(canonical);
@@ -169,11 +192,15 @@ class MediaUrlResolver {
   ///
   /// For Flutter Web, this routes non-allowlisted external hosts through the
   /// backend media proxy to avoid CORS/image decode failures in CanvasKit.
-  static String? resolveDisplayUrl(String? raw) {
-    return _resolveInternal(raw, forDisplay: true);
+  static String? resolveDisplayUrl(String? raw, {int? maxWidth}) {
+    return _resolveInternal(raw, forDisplay: true, maxWidth: maxWidth);
   }
 
-  static String? _resolveInternal(String? raw, {required bool forDisplay}) {
+  static String? _resolveInternal(
+    String? raw, {
+    required bool forDisplay,
+    int? maxWidth,
+  }) {
     if (raw == null) return null;
     final candidate = raw.trim();
     if (candidate.isEmpty) return null;
@@ -192,17 +219,15 @@ class MediaUrlResolver {
 
     final resolved = StorageConfig.resolveUrl(candidate);
     if (resolved == null) return null;
-    final normalized = _canonicalizeHttpUrl(resolved);
+    var normalized = _canonicalizeHttpUrl(resolved);
+    if (forDisplay && _isHttpUrl(normalized)) {
+      normalized = _clampDisplayWidthQuery(normalized, maxWidth: maxWidth);
+    }
 
     // Flutter Web (CanvasKit) loads images via fetch/wasm decode and therefore
     // requires upstream CORS headers. Route external display media through
     // backend proxy unless the host is explicitly allowlisted.
     if (foundation.kIsWeb && AppConfig.isFeatureEnabled('externalImageProxy')) {
-      // Skip proxying if rate-limited
-      if (_isProxyRateLimited) {
-        return normalized;
-      }
-
       if (_isHttpUrl(normalized)) {
         if (forDisplay) {
           if (shouldProxyDisplayUrl(normalized)) {
