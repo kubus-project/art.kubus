@@ -49,6 +49,7 @@ import '../../widgets/map_marker_style_config.dart';
 import '../../widgets/artwork_creator_byline.dart';
 import '../../widgets/art_map_view.dart';
 import '../../widgets/map_marker_dialog.dart';
+import '../../widgets/map/panels/kubus_create_marker_panel.dart';
 import '../../widgets/map_overlay_blocker.dart';
 import '../../utils/grid_utils.dart';
 import '../../widgets/app_logo.dart';
@@ -109,6 +110,11 @@ import '../../models/task.dart';
 enum _MarkerOverlayMode {
   anchored,
   centered,
+}
+
+enum _RightSidebarContent {
+  nearby,
+  createMarker,
 }
 
 class DesktopMapScreen extends StatefulWidget {
@@ -184,7 +190,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   int? _userLocationTimestampMs;
   bool _autoFollow = true;
   bool _isLocating = false;
-  bool _isNearbyPanelOpen = false;
+  _RightSidebarContent? _rightSidebarContent;
+  bool get _isNearbyPanelOpen =>
+      _rightSidebarContent == _RightSidebarContent.nearby;
+  bool get _isRightSidebarOpen => _rightSidebarContent != null;
   bool _pendingInitialNearbyPanelOpen = true;
   int _nearbyPanelAutoloadAttempts = 0;
   bool _nearbyPanelAutoloadScheduled = false;
@@ -198,6 +207,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   LatLng? _nearbySidebarPendingBasePosition;
   static const Duration _nearbySidebarSyncCooldown =
       Duration(milliseconds: 250);
+  // Create-marker sidebar state
+  MarkerSubjectData? _createMarkerSubjectData;
+  Set<MarkerSubjectType>? _createMarkerAllowedTypes;
+  MarkerSubjectType? _createMarkerInitialType;
+  LatLng? _createMarkerPosition;
   final Distance _distance = const Distance();
   StreamSubscription<ArtMarker>? _markerStreamSub;
   StreamSubscription<String>? _markerDeletedSub;
@@ -784,7 +798,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final anchor = _userLocation ?? _effectiveCenter;
 
     _safeSetState(() {
-      _isNearbyPanelOpen = true;
+      _rightSidebarContent = _RightSidebarContent.nearby;
       _nearbySidebarSignature = null;
       _nearbySidebarSyncScheduled = false;
       _nearbySidebarAnchor = anchor;
@@ -792,6 +806,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _selectedArtwork = null;
       _selectedExhibition = null;
       _showFiltersPanel = false;
+      // Clear any lingering create-marker state.
+      _createMarkerSubjectData = null;
+      _createMarkerAllowedTypes = null;
+      _createMarkerInitialType = null;
+      _createMarkerPosition = null;
     });
     // The nearby panel is always rendered as a local glass overlay inside
     // the map Stack (see build → AnimatedPositioned). We no longer push it
@@ -800,7 +819,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   void _closeNearbyArtPanel() {
     _safeSetState(() {
-      _isNearbyPanelOpen = false;
+      _rightSidebarContent = null;
       _nearbySidebarSyncScheduled = false;
       _nearbySidebarAnchor = null;
       _nearbySidebarLastSyncAt = null;
@@ -1593,7 +1612,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     // Always show the nearby panel as a local overlay on top of the map
     // (glass panel with blur). This keeps the map at full width; only the
     // UI chrome (controls, search bar) shifts to avoid overlap.
-    final showLocalNearbyPanel = _isNearbyPanelOpen;
+    final showLocalNearbyPanel = _isRightSidebarOpen;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -1673,33 +1692,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 bottom: 0,
                 width: 360,
                 child: KubusMapWebPointerInterceptor.wrap(
-                  child: MapOverlayBlocker(
-                    child: Consumer<ArtworkProvider>(
-                      builder: (context, artworkProvider, _) {
-                        final nearbyBasePosition =
-                            _nearbySidebarAnchor ?? _userLocation ?? _effectiveCenter;
-                        final filteredArtworks = _getFilteredArtworks(
-                          artworkProvider.artworks,
-                          basePositionOverride: nearbyBasePosition,
-                        );
-                        final isLoadingArtworks =
-                            artworkProvider.isLoading('load_artworks');
-                        return Semantics(
-                          label: 'nearby_sidebar_panel',
-                          container: true,
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: () {},
-                            child: _buildNearbyArtSidebar(
-                              themeProvider,
-                              filteredArtworks,
-                              basePosition: nearbyBasePosition,
-                              isLoading: isLoadingArtworks,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+                  child: Consumer<ArtworkProvider>(
+                    builder: (context, artworkProvider, _) {
+                      return _buildRightSidebarContent(
+                        themeProvider,
+                        artworkProvider,
+                      );
+                    },
                   ),
                 ),
               ),
@@ -2880,11 +2879,16 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       centerOnMeActive: _autoFollow,
       centerOnMeTooltip: l10n.mapCenterOnMeTooltip,
       onCreateMarker: () {
+        if (_rightSidebarContent == _RightSidebarContent.createMarker) {
+          _handleMarkerFormCancel();
+          return;
+        }
         final target = _pendingMarkerLocation ?? _effectiveCenter;
         _startMarkerCreationFlow(position: target);
       },
       createMarkerTooltip: l10n.mapCreateMarkerHereTooltip,
-      createMarkerHighlighted: false,
+      createMarkerHighlighted:
+          _rightSidebarContent == _RightSidebarContent.createMarker,
       showTravelModeToggle: AppConfig.isFeatureEnabled('mapTravelMode'),
       travelModeActive: _travelModeEnabled,
       onToggleTravelMode: () =>
@@ -2946,6 +2950,127 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   Widget _buildTaskProgressRow(TaskProgress progress) {
     return KubusMapTaskProgressRow.build(context: context, progress: progress);
+  }
+
+  Widget _buildRightSidebarContent(
+    ThemeProvider themeProvider,
+    ArtworkProvider artworkProvider,
+  ) {
+    if (_rightSidebarContent == _RightSidebarContent.createMarker) {
+      return Semantics(
+        label: 'create_marker_sidebar_panel',
+        container: true,
+        child: _buildCreateMarkerSidebar(),
+      );
+    }
+    // Default: nearby art panel
+    final nearbyBasePosition =
+        _nearbySidebarAnchor ?? _userLocation ?? _effectiveCenter;
+    final filteredArtworks = _getFilteredArtworks(
+      artworkProvider.artworks,
+      basePositionOverride: nearbyBasePosition,
+    );
+    final isLoadingArtworks = artworkProvider.isLoading('load_artworks');
+    return Semantics(
+      label: 'nearby_sidebar_panel',
+      container: true,
+      child: MapOverlayBlocker(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () {},
+          child: _buildNearbyArtSidebar(
+            themeProvider,
+            filteredArtworks,
+            basePosition: nearbyBasePosition,
+            isLoading: isLoadingArtworks,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCreateMarkerSidebar() {
+    final subjectData = _createMarkerSubjectData;
+    if (subjectData == null) return const SizedBox.shrink();
+
+    return KubusCreateMarkerPanel(
+      key: const ValueKey<String>('kubus_create_marker_panel_desktop'),
+      subjectData: subjectData,
+      onRefreshSubjects: ({bool force = false}) =>
+          _refreshMarkerSubjectData(force: force),
+      initialPosition: _createMarkerPosition ?? _effectiveCenter,
+      allowManualPosition: true,
+      mapCenter: _effectiveCenter,
+      onUseMapCenter: () {
+        final center = _effectiveCenter;
+        setState(() {
+          _pendingMarkerLocation = center;
+          _createMarkerPosition = center;
+        });
+        _kubusMapController.dismissSelection();
+      },
+      initialSubjectType: _createMarkerInitialType ?? MarkerSubjectType.artwork,
+      allowedSubjectTypes: _createMarkerAllowedTypes,
+      blockedArtworkIds: _artMarkers
+          .where((m) => (m.artworkId ?? '').isNotEmpty)
+          .map((m) => m.artworkId!)
+          .toSet(),
+      onSubmit: _handleMarkerFormSubmit,
+      onCancel: _handleMarkerFormCancel,
+    );
+  }
+
+  Future<void> _handleMarkerFormSubmit(MapMarkerFormResult result) async {
+    final targetPosition = _createMarkerPosition ?? _effectiveCenter;
+    final selectedPosition = result.positionOverride ?? targetPosition;
+
+    // Close the sidebar.
+    _safeSetState(() {
+      _rightSidebarContent = null;
+      _createMarkerSubjectData = null;
+      _createMarkerAllowedTypes = null;
+      _createMarkerInitialType = null;
+      _createMarkerPosition = null;
+      _pendingMarkerLocation = null;
+    });
+
+    final themeProvider = context.read<ThemeProvider>();
+    unawaited(_syncPendingMarker(themeProvider: themeProvider));
+
+    final success = await _createMarkerAtPosition(
+      position: selectedPosition,
+      form: result,
+    );
+
+    if (!mounted) return;
+
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    if (success) {
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.mapMarkerCreatedToast)),
+        tone: KubusSnackBarTone.success,
+      );
+      await _loadMarkersForCurrentView(force: true);
+    } else {
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.mapMarkerCreateFailedToast)),
+        tone: KubusSnackBarTone.error,
+      );
+    }
+  }
+
+  void _handleMarkerFormCancel() {
+    _safeSetState(() {
+      _rightSidebarContent = null;
+      _createMarkerSubjectData = null;
+      _createMarkerAllowedTypes = null;
+      _createMarkerInitialType = null;
+      _createMarkerPosition = null;
+      _pendingMarkerLocation = null;
+    });
+    final themeProvider = context.read<ThemeProvider>();
+    unawaited(_syncPendingMarker(themeProvider: themeProvider));
   }
 
   Widget _buildNearbyArtSidebar(
@@ -4180,46 +4305,55 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         backgroundColor: scheme.surface,
         title: Text(
           marker.name,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: scheme.onSurface,
               ),
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (coverUrl != null && coverUrl.isNotEmpty)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: Image.network(
-                  coverUrl,
-                  width: double.infinity,
-                  height: 160,
-                  fit: BoxFit.cover,
-                  filterQuality: FilterQuality.low,
-                  cacheWidth: cacheWidth,
-                  cacheHeight: cacheHeight,
-                  errorBuilder: (_, __, ___) =>
-                      KubusMapMarkerHelpers.markerImageFallback(
-                    baseColor: _resolveArtMarkerColor(
-                        marker, context.read<ThemeProvider>()),
-                    scheme: scheme,
-                    marker: marker,
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (coverUrl != null && coverUrl.isNotEmpty)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.network(
+                    coverUrl,
+                    width: double.infinity,
+                    height: 160,
+                    fit: BoxFit.cover,
+                    filterQuality: FilterQuality.low,
+                    cacheWidth: cacheWidth,
+                    cacheHeight: cacheHeight,
+                    errorBuilder: (_, __, ___) =>
+                        KubusMapMarkerHelpers.markerImageFallback(
+                      baseColor: _resolveArtMarkerColor(
+                          marker, context.read<ThemeProvider>()),
+                      scheme: scheme,
+                      marker: marker,
+                    ),
                   ),
                 ),
+              const SizedBox(height: 12),
+              Flexible(
+                child: Text(
+                  marker.description.isNotEmpty
+                      ? marker.description
+                      : AppLocalizations.of(context)!.mapNoLinkedArtworkForMarker,
+                  maxLines: 12,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.copyWith(color: scheme.onSurfaceVariant),
+                ),
               ),
-            const SizedBox(height: 12),
-            Text(
-              marker.description.isNotEmpty
-                  ? marker.description
-                  : AppLocalizations.of(context)!.mapNoLinkedArtworkForMarker,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: scheme.onSurfaceVariant),
-            ),
-          ],
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -4284,54 +4418,17 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     ? MarkerSubjectType.institution
                     : MarkerSubjectType.misc;
 
-    final MapMarkerFormResult? result = await MapMarkerDialog.show(
-      context: context,
-      subjectData: subjectData,
-      onRefreshSubjects: ({bool force = false}) =>
-          _refreshMarkerSubjectData(force: force),
-      initialPosition: targetPosition,
-      allowManualPosition: true,
-      mapCenter: _effectiveCenter,
-      onUseMapCenter: () {
-        final center = _effectiveCenter;
-        setState(() {
-          _pendingMarkerLocation = center;
-        });
-        _kubusMapController.dismissSelection();
-      },
-      initialSubjectType: initialSubjectType,
-      allowedSubjectTypes: allowedSubjectTypes,
-      blockedArtworkIds: _artMarkers
-          .where((m) => (m.artworkId ?? '').isNotEmpty)
-          .map((m) => m.artworkId!)
-          .toSet(),
-      useSheet: true,
-    );
-
-    if (!mounted || result == null) return;
-
-    final selectedPosition = result.positionOverride ?? targetPosition;
-    final success = await _createMarkerAtPosition(
-      position: selectedPosition,
-      form: result,
-    );
-
-    if (!mounted) return;
-
-    if (success) {
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.showKubusSnackBar(
-        SnackBar(content: Text(l10n.mapMarkerCreatedToast)),
-        tone: KubusSnackBarTone.success,
-      );
-      await _loadMarkersForCurrentView(force: true);
-    } else {
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.showKubusSnackBar(
-        SnackBar(content: Text(l10n.mapMarkerCreateFailedToast)),
-        tone: KubusSnackBarTone.error,
-      );
-    }
+    _safeSetState(() {
+      _createMarkerSubjectData = subjectData;
+      _createMarkerAllowedTypes = allowedSubjectTypes;
+      _createMarkerInitialType = initialSubjectType;
+      _createMarkerPosition = targetPosition;
+      _rightSidebarContent = _RightSidebarContent.createMarker;
+      // Close left panels to avoid clutter.
+      _selectedArtwork = null;
+      _selectedExhibition = null;
+      _showFiltersPanel = false;
+    });
   }
 
   Future<bool> _createMarkerAtPosition({
