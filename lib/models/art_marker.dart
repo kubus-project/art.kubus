@@ -335,11 +335,13 @@ class ArtMarker {
 
   static ArtMarkerType _parseMarkerType(dynamic raw, Map<String, dynamic>? metadata) {
     final metaType = metadata?['subjectType'] ?? metadata?['subject_type'];
-    final metaCategory = metadata?['subjectCategory'] ?? metadata?['subject_category'];
+    final metaCategory =
+        metadata?['subjectCategory'] ?? metadata?['subject_category'];
     final metaLabel = metadata?['subjectLabel'] ?? metadata?['subject_label'];
 
     String normalized = raw?.toString().toLowerCase() ?? '';
-    if ((normalized.isEmpty || normalized == 'geolocation') && metaType is String) {
+    if ((normalized.isEmpty || normalized == 'geolocation') &&
+        metaType is String) {
       normalized = metaType.toLowerCase();
     }
     if (metaCategory is String && normalized.isEmpty) {
@@ -349,22 +351,34 @@ class ArtMarker {
       normalized = metaLabel.toLowerCase();
     }
 
-    if (normalized.contains('institution') || normalized.contains('museum') || normalized.contains('gallery')) {
+    if (normalized.contains('institution') ||
+        normalized.contains('museum') ||
+        normalized.contains('gallery')) {
       return ArtMarkerType.institution;
     }
     if (normalized.contains('event')) {
       return ArtMarkerType.event;
     }
-    if (normalized.contains('residency') || normalized.contains('group') || normalized.contains('dao')) {
+    if (normalized.contains('residency') ||
+        normalized.contains('group') ||
+        normalized.contains('dao')) {
       return ArtMarkerType.residency;
     }
     if (normalized.contains('drop') || normalized.contains('airdrop')) {
       return ArtMarkerType.drop;
     }
-    if (normalized.contains('experience') || normalized.contains('ar') || normalized.contains('xr')) {
+    // `type` in API payloads may be the DB transport type (`geolocation`, `qr`, ...)
+    // while semantic marker kind is carried by `markerType` / metadata subject fields.
+    // Keep AR/XR detection token-based so values like `artwork` don't get misread
+    // as AR experiences just because they contain the substring "ar".
+    if (normalized.contains('experience') ||
+        _containsTypeToken(normalized, 'ar') ||
+        _containsTypeToken(normalized, 'xr')) {
       return ArtMarkerType.experience;
     }
-    if (normalized.contains('artwork') || normalized.contains('art') || normalized.isEmpty) {
+    if (normalized.contains('artwork') ||
+        normalized.contains('art') ||
+        normalized.isEmpty) {
       return ArtMarkerType.artwork;
     }
     return ArtMarkerType.other;
@@ -424,6 +438,12 @@ class ArtMarker {
   ExhibitionSummaryDto? get primaryExhibitionSummary {
     if (exhibitionSummaries.isEmpty) return null;
     return exhibitionSummaries.first;
+  }
+
+  static bool _containsTypeToken(String value, String token) {
+    if (value.isEmpty || token.isEmpty) return false;
+    final pattern = RegExp('(^|[^a-z0-9])$token([^a-z0-9]|\$)');
+    return pattern.hasMatch(value);
   }
 
   String? _metadataString(List<String> keys) {
