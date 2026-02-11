@@ -2079,8 +2079,11 @@ class _CommunityScreenState extends State<CommunityScreen>
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
-    final imageUrl = post.imageUrl ??
-        (post.mediaUrls.isNotEmpty ? post.mediaUrls.first : null);
+    final rawImageUrl =
+        post.imageUrl ?? (post.mediaUrls.isNotEmpty ? post.mediaUrls.first : null);
+    final imageUrl = MediaUrlResolver.resolveDisplayUrl(rawImageUrl) ??
+        MediaUrlResolver.resolve(rawImageUrl) ??
+        rawImageUrl;
 
     return Container(
       margin: const EdgeInsets.only(bottom: KubusSpacing.lg),
@@ -2479,10 +2482,16 @@ class _CommunityScreenState extends State<CommunityScreen>
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(12),
                                 child: Image.network(
-                                  (post.postType == 'repost' &&
-                                          post.originalPost != null)
-                                      ? post.originalPost!.imageUrl!
-                                      : post.imageUrl!,
+                                  MediaUrlResolver.resolveDisplayUrl(
+                                        (post.postType == 'repost' &&
+                                                post.originalPost != null)
+                                            ? post.originalPost!.imageUrl
+                                            : post.imageUrl,
+                                      ) ??
+                                      ((post.postType == 'repost' &&
+                                              post.originalPost != null)
+                                          ? post.originalPost!.imageUrl!
+                                          : post.imageUrl!),
                                   height: 200,
                                   width: double.infinity,
                                   fit: BoxFit.cover,
@@ -2677,24 +2686,39 @@ class _CommunityScreenState extends State<CommunityScreen>
                                           color: themeProvider.accentColor.withValues(alpha: 0.15),
                                           borderRadius: BorderRadius.circular(10),
                                         ),
-                                        child: post.artwork!.imageUrl != null
-                                            ? ClipRRect(
-                                                borderRadius: BorderRadius.circular(10),
-                                                child: Image.network(
-                                                  post.artwork!.imageUrl!,
-                                                  fit: BoxFit.cover,
-                                                  errorBuilder: (_, __, ___) => Icon(
-                                                    Icons.view_in_ar,
-                                                    color: themeProvider.accentColor,
-                                                    size: 22,
-                                                  ),
-                                                ),
-                                              )
-                                            : Icon(
+                                        child: Builder(
+                                          builder: (context) {
+                                            final rawCoverUrl =
+                                                post.artwork?.imageUrl;
+                                            final coverUrl =
+                                                MediaUrlResolver.resolveDisplayUrl(
+                                                      rawCoverUrl,
+                                                    ) ??
+                                                    MediaUrlResolver.resolve(
+                                                      rawCoverUrl,
+                                                    ) ??
+                                                    rawCoverUrl;
+                                            if (coverUrl == null || coverUrl.isEmpty) {
+                                              return Icon(
                                                 Icons.view_in_ar,
                                                 color: themeProvider.accentColor,
                                                 size: 22,
+                                              );
+                                            }
+                                            return ClipRRect(
+                                              borderRadius: BorderRadius.circular(10),
+                                              child: Image.network(
+                                                coverUrl,
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (_, __, ___) => Icon(
+                                                  Icons.view_in_ar,
+                                                  color: themeProvider.accentColor,
+                                                  size: 22,
+                                                ),
                                               ),
+                                            );
+                                          },
+                                        ),
                                       ),
                                       const SizedBox(width: 12),
                                       Expanded(
@@ -2975,7 +2999,8 @@ class _CommunityScreenState extends State<CommunityScreen>
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: Image.network(
-                  originalPost.imageUrl!,
+                  MediaUrlResolver.resolveDisplayUrl(originalPost.imageUrl) ??
+                      originalPost.imageUrl!,
                   height: 140,
                   width: double.infinity,
                   fit: BoxFit.cover,
@@ -4754,7 +4779,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: Image.network(
-                    imageUrl,
+                    MediaUrlResolver.resolveDisplayUrl(imageUrl) ?? imageUrl,
                     width: 44,
                     height: 44,
                     fit: BoxFit.cover,
@@ -5517,7 +5542,9 @@ class _CommunityScreenState extends State<CommunityScreen>
               ? ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: Image.network(
-                    image,
+                    MediaUrlResolver.resolveDisplayUrl(image.toString()) ??
+                        MediaUrlResolver.resolve(image.toString()) ??
+                        image.toString(),
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => Icon(
                       Icons.image,
@@ -7284,10 +7311,26 @@ class _CommunityScreenState extends State<CommunityScreen>
                               const SizedBox(height: 8),
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(8),
-                                child: Image.network(post.imageUrl!,
-                                    fit: BoxFit.cover,
-                                    height: 120,
-                                    width: double.infinity),
+                                child: Image.network(
+                                  MediaUrlResolver.resolveDisplayUrl(post.imageUrl) ??
+                                      post.imageUrl!,
+                                  fit: BoxFit.cover,
+                                  height: 120,
+                                  width: double.infinity,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    final scheme = Theme.of(context).colorScheme;
+                                    return Container(
+                                      height: 120,
+                                      width: double.infinity,
+                                      color: scheme.surfaceContainerHighest,
+                                      alignment: Alignment.center,
+                                      child: Icon(
+                                        Icons.image_not_supported_outlined,
+                                        color: scheme.onSurfaceVariant,
+                                      ),
+                                    );
+                                  },
+                                ),
                               ),
                             ],
                           ],

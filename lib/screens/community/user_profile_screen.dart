@@ -1373,7 +1373,22 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                           const SizedBox(height: 8),
                           ClipRRect(
                             borderRadius: BorderRadius.circular(8),
-                            child: Image.network(post.imageUrl!, fit: BoxFit.cover),
+                            child: Image.network(
+                              MediaUrlResolver.resolveDisplayUrl(post.imageUrl) ??
+                                  post.imageUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                final scheme = Theme.of(context).colorScheme;
+                                return Container(
+                                  color: scheme.surfaceContainerHighest,
+                                  alignment: Alignment.center,
+                                  child: Icon(
+                                    Icons.image_not_supported_outlined,
+                                    color: scheme.onSurfaceVariant,
+                                  ),
+                                );
+                              },
+                            ),
                           ),
                         ],
                         const SizedBox(height: 8),

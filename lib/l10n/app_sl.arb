@@ -2081,9 +2081,6 @@
   "arMarkerScannerProcessingQrLabel": "Obdelujem QR kodo…",
   "arMarkerScannerPointCameraLabel": "Usmeri kamero v QR kodo za odkrivanje AR umetnin",
   "arMarkerScannerLaunchingViewerLabel": "Zaganjam AR pregledovalnik…",
-  "arArtworkCardLaunchFailedToast": "Zagon AR ni uspel. Poskusi znova.",
-  "arArtworkCardUnavailableLabel": "AR ni na voljo",
-  "arArtworkCardGetCloserLabel": "Približaj se",
   "artistGalleryTitle": "Tvoja galerija",
   "artistGalleryArtworkCount": "{count, plural, =1{1 umetnina} =2{2 umetnini} few{{count} umetnine} other{{count} umetnin}}",
   "@artistGalleryArtworkCount": {

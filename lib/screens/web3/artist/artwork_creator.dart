@@ -7,11 +7,16 @@ class ArtworkCreator extends StatelessWidget {
   final VoidCallback? onCreated;
   final bool showAppBar;
 
+  /// When `true` the screen omits its own Scaffold / AppBar because the
+  /// surrounding shell (e.g. [DesktopSubScreen]) already provides one.
+  final bool embedded;
+
   const ArtworkCreator({
     super.key,
     required this.draftId,
     this.onCreated,
     this.showAppBar = true,
+    this.embedded = false,
   });
 
   @override
@@ -20,6 +25,7 @@ class ArtworkCreator extends StatelessWidget {
       draftId: draftId,
       onCreated: onCreated,
       showAppBar: showAppBar,
+      embedded: embedded,
     );
   }
 }
