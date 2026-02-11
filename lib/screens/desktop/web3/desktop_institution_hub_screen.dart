@@ -315,7 +315,7 @@ class _DesktopInstitutionHubScreenState
                 DesktopShellScope.of(context)?.pushScreen(
                   DesktopSubScreen(
                     title: 'Create Event',
-                    child: const EventCreator(),
+                    child: const EventCreator(embedded: true),
                   ),
                 );
               },
@@ -333,7 +333,7 @@ class _DesktopInstitutionHubScreenState
                 DesktopShellScope.of(context)?.pushScreen(
                   DesktopSubScreen(
                     title: 'Create Exhibition',
-                    child: const ExhibitionCreatorScreen(),
+                    child: const ExhibitionCreatorScreen(embedded: true),
                   ),
                 );
               },
@@ -350,7 +350,7 @@ class _DesktopInstitutionHubScreenState
                 DesktopShellScope.of(context)?.pushScreen(
                   DesktopSubScreen(
                     title: 'Manage Markers',
-                    child: const ManageMarkersScreen(),
+                    child: const ManageMarkersScreen(embedded: true),
                   ),
                 );
               },
@@ -365,7 +365,7 @@ class _DesktopInstitutionHubScreenState
                 DesktopShellScope.of(context)?.pushScreen(
                   DesktopSubScreen(
                     title: 'Manage Events',
-                    child: const EventManager(),
+                    child: const EventManager(embedded: true),
                   ),
                 );
               },
@@ -389,7 +389,7 @@ class _DesktopInstitutionHubScreenState
                         DesktopShellScope.of(context)?.pushScreen(
                           DesktopSubScreen(
                             title: 'Create Exhibition',
-                            child: const ExhibitionCreatorScreen(),
+                            child: const ExhibitionCreatorScreen(embedded: true),
                           ),
                         );
                       },

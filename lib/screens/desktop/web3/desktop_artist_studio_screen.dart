@@ -185,6 +185,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
         DesktopSubScreen(
           title: l10n.collectionCreatorTitle,
           child: CollectionCreator(
+            embedded: true,
             onCreated: (collectionId) {
               shellScope.popScreen();
               shellScope.pushScreen(
@@ -207,7 +208,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
       shellScope.pushScreen(
         DesktopSubScreen(
           title: l10n.exhibitionCreatorAppBarTitle,
-          child: const ExhibitionCreatorScreen(),
+          child: const ExhibitionCreatorScreen(embedded: true),
         ),
       );
     }
@@ -409,6 +410,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                   DesktopSubScreen(
                     title: l10n.collectionCreatorTitle,
                     child: CollectionCreator(
+                      embedded: true,
                       onCreated: (collectionId) {
                         shellScope.popScreen();
                         shellScope.pushScreen(
@@ -435,7 +437,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                 DesktopShellScope.of(context)?.pushScreen(
                   DesktopSubScreen(
                     title: l10n.manageMarkersTitle,
-                    child: const ManageMarkersScreen(),
+                    child: const ManageMarkersScreen(embedded: true),
                   ),
                 );
               },
@@ -473,7 +475,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                         DesktopShellScope.of(context)?.pushScreen(
                           DesktopSubScreen(
                             title: l10n.exhibitionCreatorAppBarTitle,
-                            child: const ExhibitionCreatorScreen(),
+                            child: const ExhibitionCreatorScreen(embedded: true),
                           ),
                         );
                       },

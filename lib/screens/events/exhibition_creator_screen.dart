@@ -14,7 +14,11 @@ import '../../widgets/creator/creator_kit.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class ExhibitionCreatorScreen extends StatefulWidget {
-  const ExhibitionCreatorScreen({super.key});
+  /// When `true` the screen omits its own Scaffold / AppBar because the
+  /// surrounding shell (e.g. [DesktopSubScreen]) already provides one.
+  final bool embedded;
+
+  const ExhibitionCreatorScreen({super.key, this.embedded = false});
 
   @override
   State<ExhibitionCreatorScreen> createState() =>
@@ -84,6 +88,21 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
     final scheme = Theme.of(context).colorScheme;
 
     if (!AppConfig.isFeatureEnabled('exhibitions')) {
+      final disabledBody = Center(
+        child: Padding(
+          padding: const EdgeInsets.all(KubusSpacing.lg),
+          child: Text(
+            l10n.exhibitionCreatorDisabledMessage,
+            style: KubusTextStyles.detailCaption.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.75),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+
+      if (widget.embedded) return CreatorGlassBody(child: disabledBody);
+
       return Scaffold(
         appBar: AppBar(
           title: Text(
@@ -91,29 +110,16 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
             style: KubusTextStyles.detailScreenTitle,
           ),
         ),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(KubusSpacing.lg),
-            child: Text(
-              l10n.exhibitionCreatorDisabledMessage,
-              style: KubusTextStyles.detailCaption.copyWith(
-                color: scheme.onSurface.withValues(alpha: 0.75),
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ),
+        body: disabledBody,
       );
     }
 
-    return CreatorScaffold(
-      title: l10n.exhibitionCreatorAppBarTitle,
-      body: Padding(
-        padding: const EdgeInsets.all(KubusSpacing.md),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
+    final formBody = Padding(
+      padding: const EdgeInsets.all(KubusSpacing.md),
+      child: Form(
+        key: _formKey,
+        child: ListView(
+          children: [
               // --- Basics section ---
               CreatorSection(
                 title: l10n.exhibitionCreatorBasicsTitle,
@@ -218,10 +224,16 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
                 onPrimary: _submit,
                 primaryLoading: _submitting,
               ),
-            ],
-          ),
+          ],
         ),
       ),
+    );
+
+    if (widget.embedded) return CreatorGlassBody(child: formBody);
+
+    return CreatorScaffold(
+      title: l10n.exhibitionCreatorAppBarTitle,
+      body: formBody,
     );
   }
 

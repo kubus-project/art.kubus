@@ -1,20 +1,26 @@
-﻿import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
 import '../../../models/institution.dart';
 import '../../../providers/institution_provider.dart';
+import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../../widgets/empty_state_card.dart';
+import '../../../widgets/creator/creator_kit.dart';
 import 'event_creator.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 
 class EventManager extends StatefulWidget {
-  const EventManager({super.key});
+  /// When `true` the screen wraps in a frosted glass body because the
+  /// surrounding shell (e.g. [DesktopSubScreen]) already provides a header
+  /// and gradient background.
+  final bool embedded;
+
+  const EventManager({super.key, this.embedded = false});
 
   @override
   State<EventManager> createState() => _EventManagerState();
@@ -57,7 +63,7 @@ class _EventManagerState extends State<EventManager>
     final institutionProvider = context.watch<InstitutionProvider>();
     final filteredEvents = _getFilteredEvents(institutionProvider.events);
 
-    return FadeTransition(
+    Widget body = FadeTransition(
       opacity: _fadeAnimation,
       child: Container(
         color: Colors.transparent,
@@ -71,44 +77,42 @@ class _EventManagerState extends State<EventManager>
         ),
       ),
     );
+
+    if (widget.embedded) return CreatorGlassBody(child: body);
+    return body;
   }
 
   Widget _buildHeader() {
+    final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(KubusSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Event Manager',
-            style: GoogleFonts.inter(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
+            style: KubusTextStyles.screenTitle.copyWith(
+              color: scheme.onSurface,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: KubusSpacing.xs),
           Text(
             'Manage your institution\'s events',
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.7),
+            style: KubusTextStyles.detailCaption.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: KubusSpacing.sm),
           Row(
             children: [
               IconButton(
                 icon: Icon(Icons.notifications,
-                    color: Theme.of(context).colorScheme.onSurface, size: 20),
+                    color: scheme.onSurface, size: 20),
                 onPressed: () => _showNotifications(),
               ),
               IconButton(
                 icon: Icon(Icons.search,
-                    color: Theme.of(context).colorScheme.onSurface, size: 20),
+                    color: scheme.onSurface, size: 20),
                 onPressed: () => _showSearchDialog(),
               ),
             ],
@@ -122,23 +126,22 @@ class _EventManagerState extends State<EventManager>
     final filters = ['All', 'Upcoming', 'Active', 'Completed'];
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
           children: filters.map((filter) {
             final isSelected = _selectedFilter == filter;
             return Padding(
-              padding: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.only(right: KubusSpacing.sm),
               child: FilterChip(
                 selected: isSelected,
                 label: Text(
                   filter,
-                  style: TextStyle(
+                  style: KubusTextStyles.detailCaption.copyWith(
                     color: isSelected
                         ? Theme.of(context).colorScheme.onPrimary
                         : Theme.of(context).colorScheme.onSurface,
-                    fontSize: 12,
                   ),
                 ),
                 backgroundColor: Colors.transparent,
@@ -164,7 +167,7 @@ class _EventManagerState extends State<EventManager>
         events.fold<int>(0, (sum, event) => sum + event.currentAttendees);
 
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(KubusSpacing.md),
       child: Row(
         children: [
           Expanded(
@@ -180,35 +183,24 @@ class _EventManagerState extends State<EventManager>
   }
 
   Widget _buildStatItem(String label, String value) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      margin: const EdgeInsets.only(right: 6),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-            color:
-                Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
-      ),
+    final scheme = Theme.of(context).colorScheme;
+    return LiquidGlassCard(
+      margin: const EdgeInsets.only(right: KubusSpacing.xs),
+      padding: const EdgeInsets.all(KubusSpacing.sm),
+      borderRadius: BorderRadius.circular(KubusRadius.md),
       child: Column(
         children: [
           Text(
             value,
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
+            style: KubusTextStyles.detailSectionTitle.copyWith(
+              color: scheme.onSurface,
             ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: KubusSpacing.xxs),
           Text(
             label,
-            style: GoogleFonts.inter(
-              fontSize: 9,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.7),
+            style: KubusTextStyles.detailCaption.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.7),
             ),
             textAlign: TextAlign.center,
             overflow: TextOverflow.ellipsis,
@@ -231,7 +223,7 @@ class _EventManagerState extends State<EventManager>
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
       itemCount: events.length,
       itemBuilder: (context, index) {
         return _buildEventCard(events[index]);
@@ -249,16 +241,10 @@ class _EventManagerState extends State<EventManager>
     final occupancyPercentage =
         hasCapacity ? (event.currentAttendees / capacity) : 0.0;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-            color:
-                Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
-      ),
+    return LiquidGlassCard(
+      margin: const EdgeInsets.only(bottom: KubusSpacing.sm),
+      padding: const EdgeInsets.all(KubusSpacing.md),
+      borderRadius: BorderRadius.circular(KubusRadius.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -267,94 +253,62 @@ class _EventManagerState extends State<EventManager>
               Expanded(
                 child: Text(
                   event.title,
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
+                  style: KubusTextStyles.actionTileTitle.copyWith(
+                    color: scheme.onSurface,
                   ),
                   overflow: TextOverflow.ellipsis,
                   maxLines: 1,
                 ),
               ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: statusColor),
-                ),
-                child: Text(
-                  _statusLabel(status),
-                  style: GoogleFonts.inter(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w600,
-                    color: statusColor,
-                  ),
-                ),
+              const SizedBox(width: KubusSpacing.sm),
+              CreatorStatusBadge(
+                label: _statusLabel(status),
+                color: statusColor,
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: KubusSpacing.xs),
           Text(
             event.description,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.7),
+            style: KubusTextStyles.detailCaption.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.7),
             ),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: KubusSpacing.sm),
           Row(
             children: [
               Icon(Icons.location_on,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.6),
+                  color: scheme.onSurface.withValues(alpha: 0.6),
                   size: 14),
-              const SizedBox(width: 4),
+              const SizedBox(width: KubusSpacing.xs),
               Flexible(
                 child: Text(
                   event.location,
-                  style: GoogleFonts.inter(
-                    fontSize: 10,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.6),
+                  style: KubusTextStyles.detailCaption.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.6),
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: KubusSpacing.sm),
               Icon(Icons.schedule,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.6),
+                  color: scheme.onSurface.withValues(alpha: 0.6),
                   size: 14),
-              const SizedBox(width: 4),
+              const SizedBox(width: KubusSpacing.xs),
               Flexible(
                 child: Text(
                   _formatDate(event.startDate),
-                  style: GoogleFonts.inter(
-                    fontSize: 10,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.6),
+                  style: KubusTextStyles.detailCaption.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.6),
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: KubusSpacing.sm),
           Row(
             children: [
               Expanded(
@@ -365,20 +319,16 @@ class _EventManagerState extends State<EventManager>
                       hasCapacity
                           ? 'Occupancy: ${event.currentAttendees}/$capacity'
                           : 'Attendees: ${event.currentAttendees}',
-                      style: GoogleFonts.inter(
-                        fontSize: 10,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.7),
+                      style: KubusTextStyles.detailCaption.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.7),
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: KubusSpacing.xs),
                     if (hasCapacity)
                       SizedBox(
                         height: 6,
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
+                          borderRadius: BorderRadius.circular(KubusRadius.xs),
                           child: InlineLoading(
                             progress: occupancyPercentage,
                             tileSize: 6.0,
@@ -393,18 +343,17 @@ class _EventManagerState extends State<EventManager>
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: KubusSpacing.sm),
               Text(
                 event.formattedPrice,
-                style: GoogleFonts.inter(
-                  fontSize: 14,
+                style: KubusTextStyles.detailLabel.copyWith(
                   fontWeight: FontWeight.bold,
                   color: KubusColorRoles.of(context).web3InstitutionAccent,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: KubusSpacing.sm),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -424,16 +373,16 @@ class _EventManagerState extends State<EventManager>
 
   Widget _buildActionButton(
       String label, IconData icon, VoidCallback onPressed) {
+    final scheme = Theme.of(context).colorScheme;
     return TextButton.icon(
       onPressed: onPressed,
       icon: Icon(icon,
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+          color: scheme.onSurface.withValues(alpha: 0.7),
           size: 16),
       label: Text(
         label,
-        style: GoogleFonts.inter(
-          fontSize: 12,
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+        style: KubusTextStyles.detailCaption.copyWith(
+          color: scheme.onSurface.withValues(alpha: 0.7),
         ),
       ),
     );
@@ -518,25 +467,26 @@ class _EventManagerState extends State<EventManager>
       }
     }
 
+    final scheme = Theme.of(context).colorScheme;
     showKubusDialog(
       context: context,
       builder: (context) => KubusAlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+        backgroundColor: scheme.surfaceContainerHighest,
         title: Text('Notifications',
-            style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+            style: KubusTextStyles.detailSectionTitle.copyWith(
+              color: scheme.onSurface,
+            )),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (alerts.isEmpty)
               Padding(
-                padding: const EdgeInsets.only(top: 8),
+                padding: const EdgeInsets.only(top: KubusSpacing.sm),
                 child: Text(
                   'No alerts right now.',
-                  style: GoogleFonts.inter(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.7)),
+                  style: KubusTextStyles.detailCaption.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.7),
+                  ),
                 ),
               )
             else
@@ -555,8 +505,9 @@ class _EventManagerState extends State<EventManager>
   }
 
   Widget _buildNotificationItem(String message, String time) {
+    final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
       child: Row(
         children: [
           Container(
@@ -567,26 +518,21 @@ class _EventManagerState extends State<EventManager>
               shape: BoxShape.circle,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: KubusSpacing.sm),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   message,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface,
+                  style: KubusTextStyles.detailCaption.copyWith(
+                    color: scheme.onSurface,
                   ),
                 ),
                 Text(
                   time,
-                  style: GoogleFonts.inter(
-                    fontSize: 10,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.5),
+                  style: KubusTextStyles.detailCaption.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
               ],
@@ -598,23 +544,40 @@ class _EventManagerState extends State<EventManager>
   }
 
   void _showSearchDialog() {
+    final scheme = Theme.of(context).colorScheme;
     showKubusDialog(
       context: context,
       builder: (context) => KubusAlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+        backgroundColor: scheme.surfaceContainerHighest,
         title: Text('Search Events',
-            style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+            style: KubusTextStyles.detailSectionTitle.copyWith(
+              color: scheme.onSurface,
+            )),
         content: TextField(
           decoration: InputDecoration(
             hintText: 'Enter event name or keyword...',
-            hintStyle: TextStyle(
-                color: Theme.of(context)
-                    .colorScheme
-                    .onPrimary
-                    .withValues(alpha: 0.54)),
-            border: OutlineInputBorder(),
+            hintStyle: KubusTextStyles.detailCaption.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.54),
+            ),
+            filled: true,
+            fillColor: scheme.onSurface.withValues(alpha: 0.04),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(KubusRadius.md),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(KubusRadius.md),
+              borderSide: BorderSide(
+                color: scheme.outline.withValues(alpha: 0.3),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(KubusRadius.md),
+              borderSide: BorderSide(color: scheme.primary),
+            ),
           ),
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+          style: KubusTextStyles.detailBody.copyWith(
+            color: scheme.onSurface,
+          ),
           onChanged: (value) {
             setState(() => _searchQuery = value);
           },
@@ -626,7 +589,7 @@ class _EventManagerState extends State<EventManager>
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Search'),
+            child: const Text('Search'),
           ),
         ],
       ),
@@ -648,28 +611,33 @@ class _EventManagerState extends State<EventManager>
         return KubusAlertDialog(
           backgroundColor: scheme.surfaceContainerHighest,
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(KubusRadius.lg)),
           title: Text(event.title,
-              style: GoogleFonts.inter(
-                  color: scheme.onSurface, fontWeight: FontWeight.bold)),
+              style: KubusTextStyles.detailSectionTitle.copyWith(
+                color: scheme.onSurface,
+              )),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(event.description,
-                  style: GoogleFonts.inter(
-                      color: scheme.onSurface.withValues(alpha: 0.8))),
-              const SizedBox(height: 12),
+                  style: KubusTextStyles.detailBody.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.8),
+                  )),
+              const SizedBox(height: KubusSpacing.sm),
               Text('Location: ${event.location}',
-                  style: GoogleFonts.inter(
-                      color: scheme.onSurface.withValues(alpha: 0.8))),
+                  style: KubusTextStyles.detailBody.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.8),
+                  )),
               Text(
                   'Dates: ${_formatDate(event.startDate)} - ${_formatDate(event.endDate)}',
-                  style: GoogleFonts.inter(
-                      color: scheme.onSurface.withValues(alpha: 0.8))),
+                  style: KubusTextStyles.detailBody.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.8),
+                  )),
               Text('Price: ${event.formattedPrice}',
-                  style: GoogleFonts.inter(
-                      color: scheme.onSurface.withValues(alpha: 0.8))),
+                  style: KubusTextStyles.detailBody.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.8),
+                  )),
             ],
           ),
           actions: [
@@ -691,19 +659,20 @@ class _EventManagerState extends State<EventManager>
   }
 
   void _deleteEvent(Event event) {
+    final scheme = Theme.of(context).colorScheme;
     showKubusDialog(
       context: context,
       builder: (context) => KubusAlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+        backgroundColor: scheme.surfaceContainerHighest,
         title: Text('Delete Event',
-            style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+            style: KubusTextStyles.detailSectionTitle.copyWith(
+              color: scheme.onSurface,
+            )),
         content: Text(
           'Are you sure you want to delete "${event.title}"? This action cannot be undone.',
-          style: TextStyle(
-              color: Theme.of(context)
-                  .colorScheme
-                  .onPrimary
-                  .withValues(alpha: 0.7)),
+          style: KubusTextStyles.detailBody.copyWith(
+            color: scheme.onSurface.withValues(alpha: 0.7),
+          ),
         ),
         actions: [
           TextButton(
@@ -712,7 +681,7 @@ class _EventManagerState extends State<EventManager>
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.error),
+                backgroundColor: scheme.error),
             onPressed: () {
               context.read<InstitutionProvider>().deleteEvent(event.id);
               Navigator.pop(context);
@@ -721,8 +690,7 @@ class _EventManagerState extends State<EventManager>
               );
             },
             child: Text('Delete',
-                style:
-                    TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+                style: TextStyle(color: scheme.onError)),
           ),
         ],
       ),

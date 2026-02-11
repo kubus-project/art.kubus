@@ -13,7 +13,11 @@ import 'marker_editor_screen.dart';
 import 'marker_editor_view.dart';
 
 class ManageMarkersScreen extends StatefulWidget {
-  const ManageMarkersScreen({super.key});
+  /// When `true` the screen omits its own Scaffold / AppBar because the
+  /// surrounding shell (e.g. [DesktopSubScreen]) already provides one.
+  final bool embedded;
+
+  const ManageMarkersScreen({super.key, this.embedded = false});
 
   @override
   State<ManageMarkersScreen> createState() => _ManageMarkersScreenState();
@@ -273,25 +277,29 @@ class _ManageMarkersScreenState extends State<ManageMarkersScreen> {
       );
     }
 
+    final content = isWide
+        ? Row(
+            children: [
+              Flexible(
+                flex: 5,
+                child: buildList(),
+              ),
+              VerticalDivider(width: 1, color: scheme.outline.withValues(alpha: 0.12)),
+              Flexible(
+                flex: 4,
+                child: buildEditorPane(),
+              ),
+            ],
+          )
+        : buildList();
+
+    if (widget.embedded) return CreatorGlassBody(child: content);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.manageMarkersTitle),
       ),
-      body: isWide
-          ? Row(
-              children: [
-                Flexible(
-                  flex: 5,
-                  child: buildList(),
-                ),
-                VerticalDivider(width: 1, color: scheme.outline.withValues(alpha: 0.12)),
-                Flexible(
-                  flex: 4,
-                  child: buildEditorPane(),
-                ),
-              ],
-            )
-          : buildList(),
+      body: content,
     );
   }
 }

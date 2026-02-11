@@ -21,9 +21,14 @@ import 'package:art_kubus/widgets/creator/creator_kit.dart';
 class CollectionCreator extends StatefulWidget {
   final void Function(String collectionId)? onCreated;
 
+  /// When `true` the screen omits its own Scaffold / AppBar because the
+  /// surrounding shell (e.g. [DesktopSubScreen]) already provides one.
+  final bool embedded;
+
   const CollectionCreator({
     super.key,
     this.onCreated,
+    this.embedded = false,
   });
 
   @override
@@ -208,15 +213,13 @@ class _CollectionCreatorState extends State<CollectionCreator> {
     );
     _scheduleLoadArtworksIfNeeded(walletAddress);
 
-    return CreatorScaffold(
-      title: l10n.collectionCreatorTitle,
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(
-            KubusSpacing.md, KubusSpacing.md, KubusSpacing.md, KubusSpacing.lg,
-          ),
-          children: [
+    final formBody = Form(
+      key: _formKey,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(
+          KubusSpacing.md, KubusSpacing.md, KubusSpacing.md, KubusSpacing.lg,
+        ),
+        children: [
             // --- Basics section ---
             CreatorSection(
               title: l10n.collectionSettingsBasicInfo,
@@ -291,9 +294,15 @@ class _CollectionCreatorState extends State<CollectionCreator> {
               primaryLoading: _isSubmitting,
               accentColor: studioAccent,
             ),
-          ],
-        ),
+        ],
       ),
+    );
+
+    if (widget.embedded) return CreatorGlassBody(child: formBody);
+
+    return CreatorScaffold(
+      title: l10n.collectionCreatorTitle,
+      body: formBody,
     );
   }
 
