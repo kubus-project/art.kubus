@@ -257,6 +257,13 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
   bool _showOptionalArAsset(MarkerSubjectType type) =>
       type != MarkerSubjectType.artwork && type != MarkerSubjectType.misc;
 
+  static const int _subjectSubtitleMetadataMaxLength = 600;
+
+  String _truncateMetadataText(String input, int maxLength) {
+    if (input.length <= maxLength) return input;
+    return input.substring(0, maxLength).trimRight();
+  }
+
   Map<MarkerSubjectType, List<MarkerSubjectOption>> _buildOptions(MarkerSubjectData data) {
     return {
       for (final type in MarkerSubjectType.values)
@@ -565,13 +572,18 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
     final markerType = _markerType.name;
 
     final artworkId = _subjectType == MarkerSubjectType.artwork ? _subject?.id : (_linkedArtwork?.id ?? _linkedArtworkId);
+    final subjectSubtitleRaw = _subject?.subtitle.trim() ?? '';
     final metadata = <String, dynamic>{
       'subjectType': _subjectType.name,
       'subjectLabel': _subjectType.label,
       if (_subject != null) ...{
         'subjectId': _subject!.id,
         'subjectTitle': _subject!.title,
-        'subjectSubtitle': _subject!.subtitle,
+        if (subjectSubtitleRaw.isNotEmpty)
+          'subjectSubtitle': _truncateMetadataText(
+            subjectSubtitleRaw,
+            _subjectSubtitleMetadataMaxLength,
+          ),
       },
       if ((_linkedArtwork?.id ?? _linkedArtworkId)?.trim().isNotEmpty == true) ...{
         'linkedArtworkId': _linkedArtwork?.id ?? _linkedArtworkId,
