@@ -10,12 +10,18 @@ import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/wallet_utils.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import '../../../widgets/creator/creator_kit.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 
 class EventCreator extends StatefulWidget {
   final Event? initialEvent;
 
-  const EventCreator({super.key, this.initialEvent});
+  /// When `true` the screen wraps in a frosted glass body because the
+  /// surrounding shell (e.g. [DesktopSubScreen]) already provides a header
+  /// and gradient background.
+  final bool embedded;
+
+  const EventCreator({super.key, this.initialEvent, this.embedded = false});
 
   @override
   State<EventCreator> createState() => _EventCreatorState();
@@ -123,7 +129,7 @@ class _EventCreatorState extends State<EventCreator>
 
   @override
   Widget build(BuildContext context) {
-    return FadeTransition(
+    Widget body = FadeTransition(
       opacity: _fadeAnimation,
       child: SlideTransition(
         position: _slideAnimation,
@@ -140,6 +146,9 @@ class _EventCreatorState extends State<EventCreator>
         ),
       ),
     );
+
+    if (widget.embedded) return CreatorGlassBody(child: body);
+    return body;
   }
 
   Widget _buildHeader() {
@@ -383,18 +392,20 @@ class _EventCreatorState extends State<EventCreator>
             ],
           ),
           const SizedBox(height: KubusSpacing.lg),
-          _buildSwitchTile(
+          CreatorSwitchTile(
             title: 'Public Event',
             subtitle: 'Allow public discovery and registration',
             value: _isPublic,
             onChanged: (value) => setState(() => _isPublic = value),
+            activeColor: KubusColorRoles.of(context).web3InstitutionAccent,
           ),
           const SizedBox(height: KubusSpacing.md),
-          _buildSwitchTile(
+          CreatorSwitchTile(
             title: 'Allow Registration',
             subtitle: 'Enable online registration for this event',
             value: _allowRegistration,
             onChanged: (value) => setState(() => _allowRegistration = value),
+            activeColor: KubusColorRoles.of(context).web3InstitutionAccent,
           ),
         ],
       ),
@@ -402,8 +413,6 @@ class _EventCreatorState extends State<EventCreator>
   }
 
   Widget _buildReviewStep() {
-    final scheme = Theme.of(context).colorScheme;
-    final accent = KubusColorRoles.of(context).web3InstitutionAccent;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(KubusSpacing.lg),
       child: Column(
@@ -413,32 +422,9 @@ class _EventCreatorState extends State<EventCreator>
           const SizedBox(height: KubusSpacing.lg),
           _buildReviewCard(),
           const SizedBox(height: KubusSpacing.lg),
-          Container(
-            padding: const EdgeInsets.all(KubusSpacing.md),
-            decoration: BoxDecoration(
-              color: accent.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-              border: Border.all(
-                color: accent.withValues(alpha: 0.2),
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.info_outline,
-                  color: accent,
-                ),
-                const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
-                Expanded(
-                  child: Text(
-                    'Your event will be reviewed and published within 24 hours.',
-                    style: KubusTextStyles.detailCaption.copyWith(
-                      color: scheme.onSurface.withValues(alpha: 0.8),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          CreatorInfoBox(
+            text: 'Your event will be reviewed and published within 24 hours.',
+            icon: Icons.info_outline,
           ),
         ],
       ),
@@ -447,14 +433,9 @@ class _EventCreatorState extends State<EventCreator>
 
   Widget _buildReviewCard() {
     final scheme = Theme.of(context).colorScheme;
-    return Container(
+    return LiquidGlassCard(
       padding: const EdgeInsets.all(KubusSpacing.md + KubusSpacing.xs),
-      decoration: BoxDecoration(
-        color: scheme.onSurface.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(KubusRadius.lg),
-        border: Border.all(
-            color: scheme.outline.withValues(alpha: 0.25)),
-      ),
+      borderRadius: BorderRadius.circular(KubusRadius.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -820,55 +801,6 @@ class _EventCreatorState extends State<EventCreator>
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildSwitchTile({
-    required String title,
-    required String subtitle,
-    required bool value,
-    required void Function(bool) onChanged,
-  }) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(KubusSpacing.md),
-      decoration: BoxDecoration(
-        color: scheme.onSurface.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(KubusRadius.md),
-        border: Border.all(
-            color: scheme.outline.withValues(alpha: 0.12)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: KubusTextStyles.detailLabel.copyWith(
-                    color: scheme.onSurface,
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(top: KubusSpacing.xxs),
-                  child: Text(
-                    subtitle,
-                    style: KubusTextStyles.detailCaption.copyWith(
-                      color: scheme.onSurface.withValues(alpha: 0.6),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Switch.adaptive(
-            value: value,
-            onChanged: onChanged,
-            activeTrackColor: KubusColorRoles.of(context).web3InstitutionAccent,
-          ),
-        ],
-      ),
     );
   }
 

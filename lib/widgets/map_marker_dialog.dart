@@ -1,4 +1,5 @@
 ﻿import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -309,49 +310,62 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
     final formContent = _buildFormContent(scheme, maxHeight, viewInsets);
 
     if (widget.useSheet) {
-      return Material(
-        color: scheme.surface,
+      return ClipRRect(
         borderRadius: const BorderRadius.vertical(top: Radius.circular(KubusRadius.xl)),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(
+            sigmaX: KubusGlassEffects.blurSigma,
+            sigmaY: KubusGlassEffects.blurSigma,
+          ),
+          child: Material(
+            color: scheme.surface.withValues(alpha: 0.78),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(KubusRadius.xl)),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                KubusSpacing.md + KubusSpacing.xs,
+                KubusSpacing.md + KubusSpacing.xs,
+                KubusSpacing.md + KubusSpacing.xs,
+                KubusSpacing.sm,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.add_location_alt, color: scheme.primary),
-                  const SizedBox(width: 10),
-                  Text(
-                    l10n.mapMarkerDialogTitle,
-                    style: KubusTypography.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: scheme.onSurface,
-                    ),
+                  Row(
+                    children: [
+                      Icon(Icons.add_location_alt, color: scheme.primary),
+                      const SizedBox(width: KubusSpacing.sm),
+                      Text(
+                        l10n.mapMarkerDialogTitle,
+                        style: KubusTextStyles.detailSectionTitle.copyWith(
+                          color: scheme.onSurface,
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: _refreshing
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.refresh),
+                        tooltip: l10n.mapMarkerDialogRefreshSubjectsTooltip,
+                        onPressed: _refreshing ? null : () => _scheduleRefresh(force: true),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(context).maybePop(),
+                      ),
+                    ],
                   ),
-                  const Spacer(),
-                  IconButton(
-                    icon: _refreshing
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.refresh),
-                    tooltip: l10n.mapMarkerDialogRefreshSubjectsTooltip,
-                    onPressed: _refreshing ? null : () => _scheduleRefresh(force: true),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.of(context).maybePop(),
-                  ),
+                  const SizedBox(height: KubusSpacing.sm),
+                  formContent,
+                  const SizedBox(height: KubusSpacing.sm),
+                  _buildActionsRow(scheme),
                 ],
               ),
-              const SizedBox(height: 12),
-              formContent,
-              const SizedBox(height: 12),
-              _buildActionsRow(scheme),
-            ],
+            ),
           ),
         ),
       );

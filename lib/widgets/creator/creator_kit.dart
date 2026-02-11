@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import '../../utils/design_tokens.dart';
@@ -9,6 +10,38 @@ import '../glass_components.dart';
 /// Every creator screen should use these widgets to ensure visual consistency
 /// across Artwork Creator, Exhibition Creator, Event Creator, Collection
 /// Creator, Marker Editor, and their respective managers.
+
+// ---------------------------------------------------------------------------
+// CreatorGlassBody
+// ---------------------------------------------------------------------------
+
+/// A frosted-glass wrapper for creator/editor content when **embedded** inside
+/// a desktop shell (e.g. [DesktopSubScreen]).
+///
+/// It applies a subtle backdrop blur so the parent gradient is visible behind
+/// the content, instead of overlapping it with an opaque or duplicate gradient.
+class CreatorGlassBody extends StatelessWidget {
+  final Widget child;
+
+  const CreatorGlassBody({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(
+          sigmaX: KubusGlassEffects.blurSigma * 0.6,
+          sigmaY: KubusGlassEffects.blurSigma * 0.6,
+        ),
+        child: ColoredBox(
+          color: scheme.surface.withValues(alpha: 0.55),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
 
 // ---------------------------------------------------------------------------
 // CreatorScaffold
