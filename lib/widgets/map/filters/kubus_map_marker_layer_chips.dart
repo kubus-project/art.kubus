@@ -59,6 +59,7 @@ class KubusMapMarkerLayerChips extends StatelessWidget {
           icon: KubusMapMarkerHelpers.resolveArtMarkerIcon(type),
           active: selected,
           accentColor: accent,
+          borderRadius: 10,
           onPressed: () => onToggle(type, !selected),
         );
       }).toList(),

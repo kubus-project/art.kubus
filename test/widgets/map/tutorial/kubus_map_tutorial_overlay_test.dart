@@ -55,8 +55,7 @@ void main() {
     expect(skipTapped, 1);
   });
 
-  testWidgets(
-      'KubusMapTutorialOverlay tolerates missing target render context',
+  testWidgets('KubusMapTutorialOverlay tolerates missing target render context',
       (tester) async {
     final detachedTargetKey = GlobalKey();
 

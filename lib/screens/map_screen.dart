@@ -3054,7 +3054,7 @@ class _MapScreenState extends State<MapScreen>
         compassEnabled: false,
         onCameraMove: _handleCameraMove,
         onCameraIdle: _handleCameraIdle,
-        onMapClick: (point, latLng) {
+        onMapClick: (dynamic point, _) {
           unawaited(_handleMapTap(point));
         },
         onMapCreated: (controller) {
@@ -3320,7 +3320,7 @@ class _MapScreenState extends State<MapScreen>
   }
 
   Future<void> _handleMapTap(
-    math.Point<double> point,
+    Object? point,
   ) async {
     await _markerInteractionController.handleMapClick(point);
   }
@@ -4505,6 +4505,7 @@ class _MapScreenState extends State<MapScreen>
                 icon: Icons.filter_alt_outlined,
                 active: selected,
                 accentColor: filterAccent(key),
+                borderRadius: 10,
                 onPressed: () {
                   setState(() => _artworkFilter = key);
                   // Reload markers so the nearby panel reflects

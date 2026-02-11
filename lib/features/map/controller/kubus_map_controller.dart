@@ -579,12 +579,8 @@ class KubusMapController {
       bearingDegrees.value = nextBearing;
     }
 
-    if (_expandedCoordinateKey != null) {
-      if (hasGesture) {
-        _collapseSpiderfy();
-      } else if (nextZoom < tapConfig.spiderfyAutoExpandZoom) {
-        _collapseSpiderfy();
-      }
+    if (_expandedCoordinateKey != null && hasGesture) {
+      _collapseSpiderfy();
     }
 
     // If the user is panning while an overlay is open, close it.
@@ -622,44 +618,103 @@ class KubusMapController {
     // No-op here; screens can still wire their existing logic.
   }
 
+  math.Point<double>? _coerceScreenPoint(Object? rawPoint) {
+    if (rawPoint is math.Point) {
+      final x = (rawPoint.x as num?)?.toDouble();
+      final y = (rawPoint.y as num?)?.toDouble();
+      if (x == null || y == null || !x.isFinite || !y.isFinite) {
+        return null;
+      }
+      return math.Point<double>(x, y);
+    }
+
+    if (rawPoint is Map) {
+      final x = (rawPoint['x'] as num?)?.toDouble();
+      final y = (rawPoint['y'] as num?)?.toDouble();
+      if (x == null || y == null || !x.isFinite || !y.isFinite) {
+        return null;
+      }
+      return math.Point<double>(x, y);
+    }
+
+    return null;
+  }
+
+  LatLng? _coerceLatLng(Object? rawCoordinates) {
+    if (rawCoordinates is ml.LatLng) {
+      final lat = rawCoordinates.latitude;
+      final lng = rawCoordinates.longitude;
+      if (!lat.isFinite || !lng.isFinite) return null;
+      return LatLng(lat, lng);
+    }
+
+    if (rawCoordinates is Map) {
+      final lat = ((rawCoordinates['lat'] ?? rawCoordinates['latitude']) as num?)
+          ?.toDouble();
+      final lng = ((rawCoordinates['lng'] ?? rawCoordinates['longitude']) as num?)
+          ?.toDouble();
+      if (lat == null || lng == null || !lat.isFinite || !lng.isFinite) {
+        return null;
+      }
+      return LatLng(lat, lng);
+    }
+
+    return null;
+  }
+
+  bool _isFiniteScreenPoint(math.Point<double> point) =>
+      point.x.isFinite && point.y.isFinite;
+
   /// Web only: invoked via MapLibre's onFeatureTapped.
   void _handleMapFeatureTapped(
-    math.Point<double> point,
-    ml.LatLng coordinates,
-    String id,
-    String layerId,
-    ml.Annotation? annotation,
+    dynamic point,
+    dynamic coordinates,
+    dynamic id,
+    dynamic layerId,
+    dynamic annotation,
   ) {
-    _lastFeatureTapAt = DateTime.now();
-    _lastFeatureTapPoint = point;
+    final tapPoint = _coerceScreenPoint(point);
+    final tappedCoordinates = _coerceLatLng(coordinates);
+    final featureId = id?.toString();
+    if (tapPoint == null ||
+        tappedCoordinates == null ||
+        featureId == null ||
+        featureId.isEmpty) {
+      return;
+    }
 
-    if (id.startsWith(tapConfig.sameLocationClusterIdPrefix)) {
+    _lastFeatureTapAt = DateTime.now();
+    _lastFeatureTapPoint = tapPoint;
+
+    if (featureId.startsWith(tapConfig.sameLocationClusterIdPrefix)) {
       final coordinateKey =
-          id.substring(tapConfig.sameLocationClusterIdPrefix.length);
+          featureId.substring(tapConfig.sameLocationClusterIdPrefix.length);
       unawaited(
         expandSpiderfyForCoordinateKey(
           coordinateKey,
-          anchor: LatLng(coordinates.latitude, coordinates.longitude),
+          anchor: tappedCoordinates,
           triggerSelection: true,
         ),
       );
       return;
     }
 
-    if (id.startsWith(tapConfig.clusterIdPrefix)) {
+    if (featureId.startsWith(tapConfig.clusterIdPrefix)) {
       _collapseSpiderfy();
-      final nextZoom = math.min(_camera.zoom + tapConfig.clusterTapZoomDelta,
-          tapConfig.clusterTapMaxZoom);
+      final nextZoom = math.min(
+        _camera.zoom + tapConfig.clusterTapZoomDelta,
+        tapConfig.clusterTapMaxZoom,
+      );
       unawaited(
         animateTo(
-          LatLng(coordinates.latitude, coordinates.longitude),
+          tappedCoordinates,
           zoom: nextZoom,
         ),
       );
       return;
     }
 
-    final selected = _findMarkerById(id);
+    final selected = _findMarkerById(featureId);
     if (selected == null) return;
 
     final stack = _computeMarkerStack(selected, pinSelectedFirst: true);
@@ -668,16 +723,16 @@ class KubusMapController {
 
   /// Web only: invoked via MapLibre's onFeatureHover.
   void _handleMapFeatureHover(
-    math.Point<double> point,
-    ml.LatLng coordinates,
-    String id,
-    ml.Annotation? annotation,
-    ml.HoverEventType eventType,
+    dynamic point,
+    dynamic coordinates,
+    dynamic id,
+    dynamic annotation,
+    dynamic eventType,
   ) {
     if (!kIsWeb) return;
 
-    if (id.startsWith(tapConfig.clusterIdPrefix) ||
-        id.startsWith(tapConfig.sameLocationClusterIdPrefix)) {
+    final featureId = id?.toString();
+    if (featureId == null || featureId.isEmpty) {
       if (_hoveredMarkerId != null) {
         _hoveredMarkerId = null;
         onRequestMarkerLayerStyleUpdate?.call();
@@ -685,7 +740,18 @@ class KubusMapController {
       return;
     }
 
-    final next = eventType == ml.HoverEventType.leave ? null : id;
+    if (featureId.startsWith(tapConfig.clusterIdPrefix) ||
+        featureId.startsWith(tapConfig.sameLocationClusterIdPrefix)) {
+      if (_hoveredMarkerId != null) {
+        _hoveredMarkerId = null;
+        onRequestMarkerLayerStyleUpdate?.call();
+      }
+      return;
+    }
+
+    final isLeave = eventType == ml.HoverEventType.leave ||
+        eventType?.toString() == 'HoverEventType.leave';
+    final next = isLeave ? null : featureId;
     if (next == _hoveredMarkerId) return;
     _hoveredMarkerId = next;
     onRequestMarkerLayerStyleUpdate?.call();
@@ -698,6 +764,15 @@ class KubusMapController {
   }) async {
     final controller = _mapController;
     if (controller == null) return;
+    if (!_isFiniteScreenPoint(point)) return;
+
+    if (MapTapGating.shouldIgnoreMapClickAfterFeatureTap(
+      lastFeatureTapAt: _lastFeatureTapAt,
+      lastFeatureTapPoint: _lastFeatureTapPoint,
+      clickPoint: point,
+    )) {
+      return;
+    }
 
     if (isWeb) {
       // On web, feature hits are delivered via onFeatureTapped; treat this
@@ -705,14 +780,6 @@ class KubusMapController {
       _collapseSpiderfy();
       onBackgroundTap?.call();
       dismissSelection();
-      return;
-    }
-
-    if (MapTapGating.shouldIgnoreMapClickAfterFeatureTap(
-      lastFeatureTapAt: _lastFeatureTapAt,
-      lastFeatureTapPoint: _lastFeatureTapPoint,
-      clickPoint: point,
-    )) {
       return;
     }
 
@@ -1068,7 +1135,6 @@ class KubusMapController {
     }
 
     if (_camera.zoom < tapConfig.spiderfyAutoExpandZoom) {
-      _collapseSpiderfy();
       return;
     }
 
@@ -1091,7 +1157,6 @@ class KubusMapController {
 
   Future<void> _maybeAutoExpandSameLocationAtHighZoom() async {
     if (_camera.zoom < tapConfig.spiderfyAutoExpandZoom) {
-      _collapseSpiderfy();
       return;
     }
 

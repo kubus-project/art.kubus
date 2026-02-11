@@ -119,6 +119,34 @@ void main() {
       expect(coordinator.state.show, isTrue);
       expect(coordinator.state.index, 0);
     });
+
+    test('retries start until anchors become available without reconfigure',
+        () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      var anchorReady = false;
+      final coordinator = MapTutorialCoordinator(
+        seenPreferenceKey: PreferenceKeys.mapOnboardingMobileSeenV2,
+      );
+
+      coordinator.configure(
+        bindings: <MapTutorialStepBinding>[
+          _binding(
+            id: 'delayed_retry',
+            isAnchorAvailable: () => anchorReady,
+          ),
+        ],
+      );
+
+      await coordinator.maybeStart();
+      expect(coordinator.state.show, isFalse);
+
+      anchorReady = true;
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+
+      expect(coordinator.state.show, isTrue);
+      expect(coordinator.state.index, 0);
+      expect(coordinator.steps.length, 1);
+    });
   });
 }
 

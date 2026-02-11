@@ -63,6 +63,11 @@ class MapTutorialCoordinator extends ChangeNotifier {
   List<TutorialStepDefinition> _resolvedSteps = const <TutorialStepDefinition>[];
   bool _startRequested = false;
   bool _startInFlight = false;
+  Timer? _startRetryTimer;
+  int _startRetryAttempts = 0;
+
+  static const Duration _startRetryDelay = Duration(milliseconds: 100);
+  static const int _maxStartRetryAttempts = 30;
 
   MapTutorialState get state => _state;
   List<TutorialStepDefinition> get steps =>
@@ -108,26 +113,37 @@ class MapTutorialCoordinator extends ChangeNotifier {
       );
     }
 
-    if (_startRequested && !_state.show && _resolvedSteps.isNotEmpty) {
-      unawaited(_tryStartIfRequested());
+    if (_startRequested && !_state.show) {
+      if (_resolvedSteps.isNotEmpty) {
+        _cancelStartRetry();
+        unawaited(_tryStartIfRequested());
+      } else {
+        _scheduleStartRetry();
+      }
     }
   }
 
   Future<void> maybeStart() async {
     _startRequested = true;
+    _startRetryAttempts = 0;
     await _tryStartIfRequested();
   }
 
   Future<void> _tryStartIfRequested() async {
     if (!_startRequested) return;
-    if (_resolvedSteps.isEmpty) return;
+    if (_resolvedSteps.isEmpty) {
+      _scheduleStartRetry();
+      return;
+    }
     if (_startInFlight) return;
+    _cancelStartRetry();
     _startInFlight = true;
     try {
       final prefs = await _sharedPreferencesLoader();
       final seen = prefs.getBool(seenPreferenceKey) ?? false;
       if (seen) {
         _startRequested = false;
+        _cancelStartRetry();
         return;
       }
       _setState(
@@ -138,6 +154,7 @@ class MapTutorialCoordinator extends ChangeNotifier {
         ),
       );
       _startRequested = false;
+      _cancelStartRetry();
     } catch (_) {
       // Best-effort.
     } finally {
@@ -175,11 +192,13 @@ class MapTutorialCoordinator extends ChangeNotifier {
   Future<void> dismiss() async {
     _setState(_state.copyWith(show: false));
     _startRequested = false;
+    _cancelStartRetry();
     await _persistSeen();
   }
 
   Future<void> markSeen() async {
     _startRequested = false;
+    _cancelStartRetry();
     await _persistSeen();
   }
 
@@ -194,6 +213,24 @@ class MapTutorialCoordinator extends ChangeNotifier {
       steps.add(binding.step);
     }
     return steps;
+  }
+
+  void _scheduleStartRetry() {
+    if (!_startRequested || _state.show) return;
+    if (_startRetryAttempts >= _maxStartRetryAttempts) return;
+    if (_startRetryTimer != null) return;
+    _startRetryTimer = Timer(_startRetryDelay, () {
+      _startRetryTimer = null;
+      if (!_startRequested || _state.show) return;
+      _startRetryAttempts += 1;
+      configure(bindings: _bindings);
+      unawaited(_tryStartIfRequested());
+    });
+  }
+
+  void _cancelStartRetry() {
+    _startRetryTimer?.cancel();
+    _startRetryTimer = null;
   }
 
   Future<void> _persistSeen() async {
@@ -213,5 +250,11 @@ class MapTutorialCoordinator extends ChangeNotifier {
     }
     _state = next;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _cancelStartRetry();
+    super.dispose();
   }
 }
