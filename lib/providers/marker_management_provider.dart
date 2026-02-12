@@ -29,6 +29,16 @@ class MarkerManagementProvider extends ChangeNotifier {
   DateTime? _lastFetch;
   Future<void>? _inFlightRefresh;
 
+  void _schedulePostUpdateRefresh() {
+    unawaited(Future<void>.delayed(const Duration(seconds: 2), () async {
+      try {
+        await refresh(force: true);
+      } catch (_) {
+        // Best-effort reconciliation.
+      }
+    }));
+  }
+
   bool get initialized => _initialized;
   bool get isLoading => _loading;
   String? get error => _error;
@@ -365,7 +375,7 @@ class MarkerManagementProvider extends ChangeNotifier {
             );
           }
           _lastFetch = DateTime.now();
-          unawaited(refresh(force: true));
+          _schedulePostUpdateRefresh();
           return optimistic;
         }
 
@@ -378,11 +388,11 @@ class MarkerManagementProvider extends ChangeNotifier {
           _mapMarkerService.notifyMarkerUpserted(synthesized);
           _lastFetch = DateTime.now();
           notifyListeners();
-          unawaited(refresh(force: true));
+          _schedulePostUpdateRefresh();
           return synthesized;
         }
 
-        unawaited(refresh(force: true));
+        _schedulePostUpdateRefresh();
         return null;
       }
       final updatedIndex = _markers.indexWhere((m) => m.id == id);
@@ -399,7 +409,45 @@ class MarkerManagementProvider extends ChangeNotifier {
       return updated;
     } catch (e) {
       _error = e.toString();
-      // Revert optimistic change.
+      if (kDebugMode) {
+        debugPrint(
+          'MarkerManagementProvider.updateMarker: update failed for $id, attempting recovery: $e',
+        );
+      }
+
+      ArtMarker? recovered;
+      try {
+        final api = _api;
+        if (api is BackendApiService) {
+          recovered = await api.getArtMarker(id);
+        }
+        if (recovered == null) {
+          await refresh(force: true);
+          for (final marker in _markers) {
+            if (marker.id == id) {
+              recovered = marker;
+              break;
+            }
+          }
+        }
+      } catch (_) {
+        // Recovery is best-effort.
+      }
+
+      if (recovered != null) {
+        final mergedRecovered = _applyUpdatesToMarker(recovered, updates);
+        _markers = <ArtMarker>[
+          mergedRecovered,
+          ..._markers.where((m) => m.id != mergedRecovered.id)
+        ];
+        _mapMarkerService.notifyMarkerUpserted(mergedRecovered);
+        _lastFetch = DateTime.now();
+        notifyListeners();
+        _schedulePostUpdateRefresh();
+        return mergedRecovered;
+      }
+
+      // Revert optimistic change only when we cannot recover the marker.
       if (before != null) {
         _markers = _markers
             .map((m) => m.id == id ? before : m)

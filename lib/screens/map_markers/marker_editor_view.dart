@@ -249,8 +249,9 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
       if (type.name == normalized) return type;
     }
     if (normalized.contains('exhibition')) return MarkerSubjectType.exhibition;
-    if (normalized.contains('institution'))
+    if (normalized.contains('institution')) {
       return MarkerSubjectType.institution;
+    }
     if (normalized.contains('event')) return MarkerSubjectType.event;
     if (normalized.contains('group') ||
         normalized.contains('dao') ||
@@ -330,8 +331,9 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
       }
 
       if (widget.isNew && _subject != null) {
-        if (_nameController.text.trim().isEmpty)
+        if (_nameController.text.trim().isEmpty) {
           _nameController.text = _subject!.title;
+        }
         if (_descriptionController.text.trim().isEmpty &&
             _subject!.subtitle.trim().isNotEmpty) {
           _descriptionController.text = _subject!.subtitle;
@@ -426,8 +428,9 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
       }
 
       if (_subject != null) {
-        if (_nameController.text.trim().isEmpty)
+        if (_nameController.text.trim().isEmpty) {
           _nameController.text = _subject!.title;
+        }
         if (_descriptionController.text.trim().isEmpty &&
             _subject!.subtitle.trim().isNotEmpty) {
           _descriptionController.text = _subject!.subtitle;
@@ -439,8 +442,9 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
   void _applySubjectSelection(MarkerSubjectOption option) {
     setState(() {
       _subject = option;
-      if (_nameController.text.trim().isEmpty || widget.isNew)
+      if (_nameController.text.trim().isEmpty || widget.isNew) {
         _nameController.text = option.title;
+      }
       if ((_descriptionController.text.trim().isEmpty || widget.isNew) &&
           option.subtitle.trim().isNotEmpty) {
         _descriptionController.text = option.subtitle;
@@ -1244,10 +1248,12 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                             labelText: l10n.mapMarkerDialogMarkerTitleLabel),
                         validator: (value) {
                           final v = (value ?? '').trim();
-                          if (v.isEmpty)
+                          if (v.isEmpty) {
                             return l10n.mapMarkerDialogEnterTitleError;
-                          if (v.length < 3)
+                          }
+                          if (v.length < 3) {
                             return l10n.mapMarkerDialogTitleMinLengthError(3);
+                          }
                           return null;
                         },
                       ),
@@ -1260,11 +1266,13 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                         maxLines: 4,
                         validator: (value) {
                           final v = (value ?? '').trim();
-                          if (v.isEmpty)
+                          if (v.isEmpty) {
                             return l10n.mapMarkerDialogEnterDescriptionError;
-                          if (v.length < 10)
+                          }
+                          if (v.length < 10) {
                             return l10n
                                 .mapMarkerDialogDescriptionMinLengthError(10);
+                          }
                           return null;
                         },
                       ),
