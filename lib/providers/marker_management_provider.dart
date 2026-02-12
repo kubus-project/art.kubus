@@ -198,6 +198,71 @@ class MarkerManagementProvider extends ChangeNotifier {
     );
   }
 
+  ArtMarker? _buildMarkerFromUpdatePayload(
+    String markerId,
+    Map<String, dynamic> updates,
+  ) {
+    final name = (updates['name'] ?? '').toString().trim();
+    final description = (updates['description'] ?? '').toString();
+
+    final latRaw =
+        updates['latitude'] ?? updates['lat'] ?? updates['position']?['lat'];
+    final lngRaw =
+        updates['longitude'] ?? updates['lng'] ?? updates['position']?['lng'];
+    final lat = latRaw is num
+        ? latRaw.toDouble()
+        : double.tryParse(latRaw?.toString() ?? '');
+    final lng = lngRaw is num
+        ? lngRaw.toDouble()
+        : double.tryParse(lngRaw?.toString() ?? '');
+
+    if (name.isEmpty || lat == null || lng == null) return null;
+
+    final markerTypeRaw =
+        (updates['markerType'] ?? updates['type'] ?? '').toString().trim();
+    final markerType = ArtMarkerType.values.firstWhere(
+      (t) => t.name.toLowerCase() == markerTypeRaw.toLowerCase(),
+      orElse: () => ArtMarkerType.other,
+    );
+
+    final category = (updates['category'] ?? 'General').toString();
+    final isPublic =
+        updates.containsKey('isPublic') ? updates['isPublic'] == true : true;
+    final isActive =
+        updates.containsKey('isActive') ? updates['isActive'] == true : true;
+    final requiresProximity = updates.containsKey('requiresProximity')
+        ? updates['requiresProximity'] == true
+        : true;
+    final activationRadiusRaw = updates['activationRadius'];
+    final activationRadius = activationRadiusRaw is num
+        ? activationRadiusRaw.toDouble()
+        : double.tryParse(activationRadiusRaw?.toString() ?? '') ?? 50.0;
+    final metadata = updates['metadata'] is Map<String, dynamic>
+        ? Map<String, dynamic>.from(updates['metadata'] as Map<String, dynamic>)
+        : null;
+
+    return ArtMarker(
+      id: markerId,
+      name: name,
+      description: description,
+      position: LatLng(lat, lng),
+      type: markerType,
+      category: category,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      createdBy:
+          (_boundWallet ?? '').trim().isNotEmpty ? _boundWallet! : 'unknown',
+      isPublic: isPublic,
+      isActive: isActive,
+      requiresProximity: requiresProximity,
+      activationRadius: activationRadius,
+      metadata: metadata,
+      artworkId: updates['artworkId']?.toString(),
+      modelCID: updates['modelCID']?.toString(),
+      modelURL: updates['modelURL']?.toString(),
+    );
+  }
+
   Future<ArtMarker?> createMarker(Map<String, dynamic> payload) async {
     String? clientNonce;
     final normalizedPayload = Map<String, dynamic>.from(payload);
@@ -302,6 +367,19 @@ class MarkerManagementProvider extends ChangeNotifier {
           _lastFetch = DateTime.now();
           unawaited(refresh(force: true));
           return optimistic;
+        }
+
+        final synthesized = _buildMarkerFromUpdatePayload(id, updates);
+        if (synthesized != null) {
+          _markers = <ArtMarker>[
+            synthesized,
+            ..._markers.where((m) => m.id != synthesized.id)
+          ];
+          _mapMarkerService.notifyMarkerUpserted(synthesized);
+          _lastFetch = DateTime.now();
+          notifyListeners();
+          unawaited(refresh(force: true));
+          return synthesized;
         }
 
         unawaited(refresh(force: true));
