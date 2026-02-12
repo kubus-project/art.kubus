@@ -1,4 +1,4 @@
 void ensureMapLibreWebRegistrationImpl() {
-  // No-op on non-web platforms.
+  // MapLibre web registration is only required on web.
+  return;
 }
-

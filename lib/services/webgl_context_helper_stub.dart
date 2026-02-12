@@ -4,9 +4,11 @@ import 'package:flutter/foundation.dart';
 final ValueNotifier<bool> webGLContextHealthy = ValueNotifier<bool>(true);
 
 /// Stub: non-web platforms don't expose this CSS media query.
-bool prefersReducedMotion() => false;
+bool prefersReducedMotion() {
+  return false;
+}
 
-/// Stub: no WebGL context handling needed on non-web platforms.
+/// Non-web fallback: no WebGL context handling is required.
 void initWebGLContextHelper() {
-  // No-op on non-web platforms.
+  return;
 }
