@@ -176,4 +176,57 @@ void main() {
     expect(provider.markers.firstWhere((m) => m.id == 'm1').name, 'Optimistic');
     expect(api.updateCalls, 1);
   });
+
+  test(
+      'MarkerManagementProvider.updateMarker recovers from update exception via refresh',
+      () async {
+    final api = _FakeMarkerApi();
+    final provider = MarkerManagementProvider(
+        api: api, mapMarkerService: MapMarkerService());
+
+    provider.ingestMarker(_marker('m1', name: 'Old'));
+    api.getMyResult = <ArtMarker>[_marker('m1', name: 'Recovered')];
+
+    api.updateCompleter = Completer<ArtMarker?>();
+    final future =
+        provider.updateMarker('m1', <String, dynamic>{'name': 'Optimistic'});
+
+    // Optimistic update first.
+    expect(provider.markers.firstWhere((m) => m.id == 'm1').name, 'Optimistic');
+
+    api.updateCompleter!
+        .completeError(Exception('client timeout after successful PUT'));
+    final updated = await future;
+
+    expect(updated, isNotNull);
+    expect(updated!.name, 'Optimistic');
+    expect(provider.markers.firstWhere((m) => m.id == 'm1').name, 'Optimistic');
+    expect(api.updateCalls, 1);
+    expect(api.getMyCalls, greaterThanOrEqualTo(1));
+  });
+
+  test(
+      'MarkerManagementProvider.updateMarker does not reset edited name when refresh returns stale marker',
+      () async {
+    final api = _FakeMarkerApi();
+    final provider = MarkerManagementProvider(
+        api: api, mapMarkerService: MapMarkerService());
+
+    provider.ingestMarker(_marker('m1', name: 'Old'));
+
+    // Simulate stale read-after-write from refresh.
+    api.getMyResult = <ArtMarker>[_marker('m1', name: 'Old')];
+    api.updateCompleter = Completer<ArtMarker?>();
+
+    final future =
+        provider.updateMarker('m1', <String, dynamic>{'name': 'Edited'});
+
+    api.updateCompleter!
+        .completeError(Exception('client timeout after successful PUT'));
+    final updated = await future;
+
+    expect(updated, isNotNull);
+    expect(updated!.name, 'Edited');
+    expect(provider.markers.firstWhere((m) => m.id == 'm1').name, 'Edited');
+  });
 }
