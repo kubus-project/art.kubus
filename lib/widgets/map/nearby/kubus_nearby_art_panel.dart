@@ -14,6 +14,7 @@ import '../../../utils/artwork_media_resolver.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/media_url_resolver.dart';
+import '../../common/kubus_cached_image.dart';
 import '../../artwork_creator_byline.dart';
 import '../../glass_components.dart';
 import '../../map_overlay_blocker.dart';
@@ -479,6 +480,10 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
                   children: [
                     _ArtworkThumbnail(
                       url: cover,
+                      cacheVersion:
+                          KubusCachedImage.versionTokenFromDate(
+                        artwork.updatedAt ?? artwork.createdAt,
+                      ),
                       width: 88,
                       height: 66,
                       borderRadius: 10,
@@ -606,6 +611,10 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
                 children: [
                   _ArtworkThumbnail(
                     url: cover,
+                    cacheVersion:
+                        KubusCachedImage.versionTokenFromDate(
+                      artwork.updatedAt ?? artwork.createdAt,
+                    ),
                     width: double.infinity,
                     height: 120,
                     borderRadius: 12,
@@ -862,6 +871,7 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
 class _ArtworkThumbnail extends StatelessWidget {
   const _ArtworkThumbnail({
     required this.url,
+    this.cacheVersion,
     required this.width,
     required this.height,
     required this.borderRadius,
@@ -869,6 +879,7 @@ class _ArtworkThumbnail extends StatelessWidget {
   });
 
   final String? url;
+  final String? cacheVersion;
   final double width;
   final double height;
   final double borderRadius;
@@ -903,39 +914,36 @@ class _ArtworkThumbnail extends StatelessWidget {
         ),
       );
     } else {
-      child = Image.network(
-        resolved,
+      child = KubusCachedImage(
+        imageUrl: resolved,
         width: width,
         height: height,
         fit: BoxFit.cover,
         filterQuality: FilterQuality.low,
         cacheWidth: cacheWidth,
         cacheHeight: cacheHeight,
-        errorBuilder: (context, error, stackTrace) {
-          return ColoredBox(
-            color: scheme.surfaceContainerHighest.withValues(alpha: 0.55),
-            child: Center(
-              child: Icon(
-                Icons.broken_image_outlined,
-                color: scheme.onSurfaceVariant,
-                size: iconSize,
-              ),
+        maxDisplayWidth: cacheWidth,
+        cacheVersion: cacheVersion,
+        placeholderBuilder: (context) => ColoredBox(
+          color: scheme.surfaceContainerHighest.withValues(alpha: 0.55),
+          child: Center(
+            child: SizedBox(
+              width: math.max(16.0, iconSize - 8),
+              height: math.max(16.0, iconSize - 8),
+              child: const CircularProgressIndicator(strokeWidth: 2),
             ),
-          );
-        },
-        loadingBuilder: (context, child, progress) {
-          if (progress == null) return child;
-          return ColoredBox(
-            color: scheme.surfaceContainerHighest.withValues(alpha: 0.55),
-            child: Center(
-              child: SizedBox(
-                width: math.max(16.0, iconSize - 8),
-                height: math.max(16.0, iconSize - 8),
-                child: const CircularProgressIndicator(strokeWidth: 2),
-              ),
+          ),
+        ),
+        errorBuilder: (context, error, stackTrace) => ColoredBox(
+          color: scheme.surfaceContainerHighest.withValues(alpha: 0.55),
+          child: Center(
+            child: Icon(
+              Icons.broken_image_outlined,
+              color: scheme.onSurfaceVariant,
+              size: iconSize,
             ),
-          );
-        },
+          ),
+        ),
       );
     }
 
