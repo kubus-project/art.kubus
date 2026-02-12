@@ -2,5 +2,6 @@
 ///
 /// This file is imported on mobile/desktop platforms.
 void configureUrlStrategy() {
-  // No-op.
+  // URL strategy is only relevant on web.
+  return;
 }
