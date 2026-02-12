@@ -128,7 +128,7 @@ void main() {
   });
 
   test(
-      'MarkerManagementProvider.updateMarker is optimistic and then applies server response',
+      'MarkerManagementProvider.updateMarker fails when server response does not reflect requested update',
       () async {
     final api = _FakeMarkerApi();
     final provider = MarkerManagementProvider(
@@ -147,13 +147,13 @@ void main() {
     api.updateCompleter!.complete(_marker('m1', name: 'Server'));
     final updated = await future;
 
-    expect(updated, isNotNull);
-    expect(provider.markers.firstWhere((m) => m.id == 'm1').name, 'Server');
+    expect(updated, isNull);
+    expect(provider.markers.firstWhere((m) => m.id == 'm1').name, 'Old');
     expect(api.updateCalls, 1);
   });
 
   test(
-      'MarkerManagementProvider.updateMarker keeps optimistic marker when backend returns null payload',
+      'MarkerManagementProvider.updateMarker reverts optimistic marker when backend returns null payload',
       () async {
     final api = _FakeMarkerApi();
     final provider = MarkerManagementProvider(
@@ -171,14 +171,13 @@ void main() {
     api.updateCompleter!.complete(null);
     final updated = await future;
 
-    expect(updated, isNotNull);
-    expect(updated!.name, 'Optimistic');
-    expect(provider.markers.firstWhere((m) => m.id == 'm1').name, 'Optimistic');
+    expect(updated, isNull);
+    expect(provider.markers.firstWhere((m) => m.id == 'm1').name, 'Old');
     expect(api.updateCalls, 1);
   });
 
   test(
-      'MarkerManagementProvider.updateMarker recovers from update exception via refresh',
+      'MarkerManagementProvider.updateMarker returns failure on update exception and reverts optimistic state',
       () async {
     final api = _FakeMarkerApi();
     final provider = MarkerManagementProvider(
@@ -198,15 +197,13 @@ void main() {
         .completeError(Exception('client timeout after successful PUT'));
     final updated = await future;
 
-    expect(updated, isNotNull);
-    expect(updated!.name, 'Optimistic');
-    expect(provider.markers.firstWhere((m) => m.id == 'm1').name, 'Optimistic');
+    expect(updated, isNull);
+    expect(provider.markers.firstWhere((m) => m.id == 'm1').name, 'Old');
     expect(api.updateCalls, 1);
-    expect(api.getMyCalls, greaterThanOrEqualTo(1));
   });
 
   test(
-      'MarkerManagementProvider.updateMarker does not reset edited name when refresh returns stale marker',
+      'MarkerManagementProvider.updateMarker does not report success when post-error refresh is stale',
       () async {
     final api = _FakeMarkerApi();
     final provider = MarkerManagementProvider(
@@ -225,8 +222,7 @@ void main() {
         .completeError(Exception('client timeout after successful PUT'));
     final updated = await future;
 
-    expect(updated, isNotNull);
-    expect(updated!.name, 'Edited');
-    expect(provider.markers.firstWhere((m) => m.id == 'm1').name, 'Edited');
+    expect(updated, isNull);
+    expect(provider.markers.firstWhere((m) => m.id == 'm1').name, 'Old');
   });
 }

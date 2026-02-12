@@ -2770,7 +2770,10 @@ class BackendApiService
 
   /// Get single art marker by ID
   /// GET /api/art-markers/:id
-  Future<ArtMarker?> getArtMarker(String markerId) async {
+  Future<ArtMarker?> getArtMarker(
+    String markerId, {
+    bool allowOrbitFallback = true,
+  }) async {
     final id = markerId.trim();
     if (id.isEmpty) return null;
 
@@ -2785,7 +2788,7 @@ class BackendApiService
       final dynamic data = await _fetchJson(
         uri,
         includeAuth: true,
-        allowOrbitFallback: true,
+        allowOrbitFallback: allowOrbitFallback,
       );
 
       final dynamic payload = data is Map<String, dynamic>
@@ -2884,6 +2887,45 @@ class BackendApiService
   @override
   Future<ArtMarker?> updateArtMarkerRecord(
       String markerId, Map<String, dynamic> updates) async {
+    bool markerReflectsUpdates(ArtMarker marker, Map<String, dynamic> requested) {
+      final requestedName = requested['name'] ?? requested['title'];
+      if (requestedName != null && marker.name != requestedName.toString()) {
+        return false;
+      }
+
+      if (requested.containsKey('description')) {
+        final expected = (requested['description'] ?? '').toString();
+        if (marker.description != expected) return false;
+      }
+
+      if (requested.containsKey('category')) {
+        final expected = (requested['category'] ?? '').toString();
+        if (expected.isNotEmpty && marker.category != expected) return false;
+      }
+
+      if (requested.containsKey('isPublic') && marker.isPublic != (requested['isPublic'] == true)) {
+        return false;
+      }
+
+      if (requested.containsKey('isActive') && marker.isActive != (requested['isActive'] == true)) {
+        return false;
+      }
+
+      final latRaw = requested['latitude'] ?? requested['lat'] ?? requested['position']?['lat'];
+      final lngRaw = requested['longitude'] ?? requested['lng'] ?? requested['position']?['lng'];
+      final expectedLat = latRaw is num ? latRaw.toDouble() : double.tryParse(latRaw?.toString() ?? '');
+      final expectedLng = lngRaw is num ? lngRaw.toDouble() : double.tryParse(lngRaw?.toString() ?? '');
+
+      if (expectedLat != null && (marker.position.latitude - expectedLat).abs() > 0.000001) {
+        return false;
+      }
+      if (expectedLng != null && (marker.position.longitude - expectedLng).abs() > 0.000001) {
+        return false;
+      }
+
+      return true;
+    }
+
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/art-markers/$markerId');
@@ -2927,11 +2969,17 @@ class BackendApiService
             final candidate =
                 decoded['data'] ?? decoded['marker'] ?? decoded['artMarker'];
             if (candidate is Map<String, dynamic>) {
-              return _artMarkerFromBackendJson(candidate);
+              final marker = _artMarkerFromBackendJson(candidate);
+              if (markerReflectsUpdates(marker, updates)) {
+                return marker;
+              }
             }
 
             if (looksLikeMarkerMap(decoded)) {
-              return _artMarkerFromBackendJson(decoded);
+              final marker = _artMarkerFromBackendJson(decoded);
+              if (markerReflectsUpdates(marker, updates)) {
+                return marker;
+              }
             }
           }
         } catch (e) {
@@ -2943,10 +2991,20 @@ class BackendApiService
         }
       }
 
-      final refreshed = await getArtMarker(markerId);
+      final refreshed = await getArtMarker(
+        markerId,
+        allowOrbitFallback: false,
+      );
       if (kDebugMode && refreshed == null) {
         debugPrint(
           'BackendApiService.updateArtMarkerRecord: successful PUT but GET fallback returned null for marker $markerId',
+        );
+      }
+      if (refreshed != null && !markerReflectsUpdates(refreshed, updates)) {
+        throw BackendApiRequestException(
+          statusCode: 409,
+          path: uri.path,
+          body: 'Marker update verification failed: response does not match requested changes',
         );
       }
       return refreshed;

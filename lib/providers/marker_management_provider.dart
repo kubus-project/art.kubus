@@ -208,6 +208,70 @@ class MarkerManagementProvider extends ChangeNotifier {
     );
   }
 
+  bool _markerReflectsRequestedUpdates(
+    ArtMarker marker,
+    Map<String, dynamic> updates,
+  ) {
+    final requestedName = updates['name'] ?? updates['title'];
+    if (requestedName != null && marker.name != requestedName.toString()) {
+      return false;
+    }
+
+    if (updates.containsKey('description')) {
+      final expected = (updates['description'] ?? '').toString();
+      if (marker.description != expected) return false;
+    }
+
+    if (updates.containsKey('category')) {
+      final expected = (updates['category'] ?? '').toString();
+      if (expected.isNotEmpty && marker.category != expected) return false;
+    }
+
+    if (updates.containsKey('isPublic') && marker.isPublic != (updates['isPublic'] == true)) {
+      return false;
+    }
+
+    if (updates.containsKey('isActive') && marker.isActive != (updates['isActive'] == true)) {
+      return false;
+    }
+
+    if (updates.containsKey('requiresProximity') &&
+        marker.requiresProximity != (updates['requiresProximity'] == true)) {
+      return false;
+    }
+
+    if (updates.containsKey('activationRadius')) {
+      final raw = updates['activationRadius'];
+      final expected = raw is num
+          ? raw.toDouble()
+          : double.tryParse(raw?.toString() ?? '');
+      if (expected != null && (marker.activationRadius - expected).abs() > 0.0001) {
+        return false;
+      }
+    }
+
+    final latRaw = updates['latitude'] ?? updates['lat'] ?? updates['position']?['lat'];
+    final lngRaw = updates['longitude'] ?? updates['lng'] ?? updates['position']?['lng'];
+    final expectedLat = latRaw is num ? latRaw.toDouble() : double.tryParse(latRaw?.toString() ?? '');
+    final expectedLng = lngRaw is num ? lngRaw.toDouble() : double.tryParse(lngRaw?.toString() ?? '');
+    if (expectedLat != null && (marker.position.latitude - expectedLat).abs() > 0.000001) {
+      return false;
+    }
+    if (expectedLng != null && (marker.position.longitude - expectedLng).abs() > 0.000001) {
+      return false;
+    }
+
+    final requestedMetadata = updates['metadata'];
+    if (requestedMetadata is Map<String, dynamic>) {
+      final markerMeta = marker.metadata ?? const <String, dynamic>{};
+      for (final entry in requestedMetadata.entries) {
+        if (markerMeta[entry.key] != entry.value) return false;
+      }
+    }
+
+    return true;
+  }
+
   ArtMarker? _buildMarkerFromUpdatePayload(
     String markerId,
     Map<String, dynamic> updates,
@@ -366,35 +430,28 @@ class MarkerManagementProvider extends ChangeNotifier {
           .updateArtMarkerRecord(id, updates)
           .timeout(const Duration(seconds: 20));
       if (updated == null) {
-        // Some backend variants return success with an empty body (e.g. 204).
-        // Keep optimistic state and reconcile with a background refresh.
-        if (optimistic != null) {
-          if (kDebugMode) {
-            debugPrint(
-              'MarkerManagementProvider.updateMarker: backend returned null marker for successful update, keeping optimistic marker $id',
-            );
-          }
-          _lastFetch = DateTime.now();
-          _schedulePostUpdateRefresh();
-          return optimistic;
-        }
-
-        final synthesized = _buildMarkerFromUpdatePayload(id, updates);
-        if (synthesized != null) {
-          _markers = <ArtMarker>[
-            synthesized,
-            ..._markers.where((m) => m.id != synthesized.id)
-          ];
-          _mapMarkerService.notifyMarkerUpserted(synthesized);
-          _lastFetch = DateTime.now();
+        if (before != null) {
+          _markers = _markers
+              .map((m) => m.id == id ? before : m)
+              .toList(growable: false);
+          _mapMarkerService.notifyMarkerUpserted(before);
           notifyListeners();
-          _schedulePostUpdateRefresh();
-          return synthesized;
         }
-
-        _schedulePostUpdateRefresh();
         return null;
       }
+
+      if (!_markerReflectsRequestedUpdates(updated, updates)) {
+        if (before != null) {
+          _markers = _markers
+              .map((m) => m.id == id ? before : m)
+              .toList(growable: false);
+          _mapMarkerService.notifyMarkerUpserted(before);
+          notifyListeners();
+        }
+        _error = 'Marker update was not persisted';
+        return null;
+      }
+
       final updatedIndex = _markers.indexWhere((m) => m.id == id);
       if (updatedIndex >= 0) {
         _markers = _markers
@@ -411,43 +468,10 @@ class MarkerManagementProvider extends ChangeNotifier {
       _error = e.toString();
       if (kDebugMode) {
         debugPrint(
-          'MarkerManagementProvider.updateMarker: update failed for $id, attempting recovery: $e',
+          'MarkerManagementProvider.updateMarker: update failed for $id: $e',
         );
       }
 
-      ArtMarker? recovered;
-      try {
-        final api = _api;
-        if (api is BackendApiService) {
-          recovered = await api.getArtMarker(id);
-        }
-        if (recovered == null) {
-          await refresh(force: true);
-          for (final marker in _markers) {
-            if (marker.id == id) {
-              recovered = marker;
-              break;
-            }
-          }
-        }
-      } catch (_) {
-        // Recovery is best-effort.
-      }
-
-      if (recovered != null) {
-        final mergedRecovered = _applyUpdatesToMarker(recovered, updates);
-        _markers = <ArtMarker>[
-          mergedRecovered,
-          ..._markers.where((m) => m.id != mergedRecovered.id)
-        ];
-        _mapMarkerService.notifyMarkerUpserted(mergedRecovered);
-        _lastFetch = DateTime.now();
-        notifyListeners();
-        _schedulePostUpdateRefresh();
-        return mergedRecovered;
-      }
-
-      // Revert optimistic change only when we cannot recover the marker.
       if (before != null) {
         _markers = _markers
             .map((m) => m.id == id ? before : m)

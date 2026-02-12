@@ -52,7 +52,7 @@ void main() {
         return http.Response(
           jsonEncode(<String, dynamic>{
             'success': true,
-            'data': _markerPayload(name: 'FromGetAfter204'),
+            'data': _markerPayload(name: 'New'),
           }),
           200,
           headers: const <String, String>{'content-type': 'application/json'},
@@ -66,7 +66,7 @@ void main() {
         await api.updateArtMarkerRecord('m1', <String, dynamic>{'name': 'New'});
 
     expect(updated, isNotNull);
-    expect(updated!.name, 'FromGetAfter204');
+    expect(updated!.name, 'New');
     expect(putCalls, 1);
     expect(getCalls, 1);
   });
@@ -97,7 +97,7 @@ void main() {
         return http.Response(
           jsonEncode(<String, dynamic>{
             'success': true,
-            'data': _markerPayload(name: 'FromGetAfter200'),
+            'data': _markerPayload(name: 'New'),
           }),
           200,
           headers: const <String, String>{'content-type': 'application/json'},
@@ -111,7 +111,47 @@ void main() {
         await api.updateArtMarkerRecord('m1', <String, dynamic>{'name': 'New'});
 
     expect(updated, isNotNull);
-    expect(updated!.name, 'FromGetAfter200');
+    expect(updated!.name, 'New');
+    expect(putCalls, 1);
+    expect(getCalls, 1);
+  });
+
+  test(
+      'updateArtMarkerRecord throws when authoritative read does not reflect requested updates',
+      () async {
+    final api = BackendApiService();
+    api.setAuthTokenForTesting('token');
+
+    int putCalls = 0;
+    int getCalls = 0;
+
+    api.setHttpClient(MockClient((request) async {
+      if (request.method.toUpperCase() == 'PUT' &&
+          request.url.path.endsWith('/api/art-markers/m1')) {
+        putCalls += 1;
+        return http.Response('', 204);
+      }
+
+      if (request.method.toUpperCase() == 'GET' &&
+          request.url.path.endsWith('/api/art-markers/m1')) {
+        getCalls += 1;
+        return http.Response(
+          jsonEncode(<String, dynamic>{
+            'success': true,
+            'data': _markerPayload(name: 'StaleName'),
+          }),
+          200,
+          headers: const <String, String>{'content-type': 'application/json'},
+        );
+      }
+
+      return http.Response('Unexpected request', 500);
+    }));
+
+    await expectLater(
+      api.updateArtMarkerRecord('m1', <String, dynamic>{'name': 'New'}),
+      throwsA(isA<BackendApiRequestException>()),
+    );
     expect(putCalls, 1);
     expect(getCalls, 1);
   });
