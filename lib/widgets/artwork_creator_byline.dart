@@ -229,12 +229,6 @@ class _CreatorRef {
 List<_CreatorRef> _extractCreators(Artwork artwork) {
   final creators = <_CreatorRef>[];
   final bylineLabels = _extractCreatorBylineLabels(artwork.metadata);
-  if (bylineLabels.isNotEmpty) {
-    for (final label in bylineLabels) {
-      _addBylineLabel(creators, label);
-    }
-    return creators;
-  }
 
   void add({String? userId, String? label, String? username}) {
     final safeLabel = (label ?? '').trim();
@@ -325,16 +319,45 @@ List<_CreatorRef> _extractCreators(Artwork artwork) {
     add(userId: wallet, label: label);
   }
 
+  if (bylineLabels.isNotEmpty) {
+    final relabeledCreators = <_CreatorRef>[];
+    for (var i = 0; i < creators.length; i++) {
+      final creator = creators[i];
+      if (i >= bylineLabels.length) {
+        relabeledCreators.add(creator);
+        continue;
+      }
+
+      final bylineLabel = _normalizeBylineLabel(bylineLabels[i]);
+      relabeledCreators.add(
+        _CreatorRef(
+          label: bylineLabel ?? creator.label,
+          userId: creator.userId,
+          username: creator.username,
+        ),
+      );
+    }
+
+    for (var i = creators.length; i < bylineLabels.length; i++) {
+      _addBylineLabel(relabeledCreators, bylineLabels[i]);
+    }
+    return relabeledCreators;
+  }
+
   return creators;
 }
 
 void _addBylineLabel(List<_CreatorRef> creators, String label) {
-  final clean = label.trim();
-  if (clean.isEmpty) return;
-  final safeLabel = WalletUtils.looksLikeWallet(clean)
-      ? (_compactWallet(clean) ?? 'Unknown artist')
-      : clean;
+  final safeLabel = _normalizeBylineLabel(label);
+  if (safeLabel == null) return;
   creators.add(_CreatorRef(label: safeLabel));
+}
+
+String? _normalizeBylineLabel(String label) {
+  final clean = label.trim();
+  if (clean.isEmpty) return null;
+  if (!WalletUtils.looksLikeWallet(clean)) return clean;
+  return _compactWallet(clean) ?? 'Unknown artist';
 }
 
 String? _extractFallbackWallet(Map<String, dynamic>? meta) {
