@@ -87,16 +87,20 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
     super.initState();
 
     final marker = widget.marker;
-    final position = marker?.hasValidPosition == true ? marker!.position : _defaultCenter;
+    final position =
+        marker?.hasValidPosition == true ? marker!.position : _defaultCenter;
     _position = position;
 
     _nameController = TextEditingController(text: marker?.name ?? '');
-    _descriptionController = TextEditingController(text: marker?.description ?? '');
+    _descriptionController =
+        TextEditingController(text: marker?.description ?? '');
     _categoryController = TextEditingController(text: marker?.category ?? '');
-    _latController = TextEditingController(text: position.latitude.toStringAsFixed(6));
-    _lngController = TextEditingController(text: position.longitude.toStringAsFixed(6));
-    _activationRadiusController =
-        TextEditingController(text: (marker?.activationRadius ?? 50).toStringAsFixed(0));
+    _latController =
+        TextEditingController(text: position.latitude.toStringAsFixed(6));
+    _lngController =
+        TextEditingController(text: position.longitude.toStringAsFixed(6));
+    _activationRadiusController = TextEditingController(
+        text: (marker?.activationRadius ?? 50).toStringAsFixed(0));
 
     _markerType = marker?.type ?? ArtMarkerType.artwork;
     _isPublic = marker?.isPublic ?? true;
@@ -123,7 +127,8 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
     super.dispose();
   }
 
-  bool _validateLatLng(double lat, double lng) => lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+  bool _validateLatLng(double lat, double lng) =>
+      lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
 
   void _updatePositionFromFields() {
     final lat = double.tryParse(_latController.text.trim());
@@ -244,16 +249,20 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
       if (type.name == normalized) return type;
     }
     if (normalized.contains('exhibition')) return MarkerSubjectType.exhibition;
-    if (normalized.contains('institution')) return MarkerSubjectType.institution;
+    if (normalized.contains('institution'))
+      return MarkerSubjectType.institution;
     if (normalized.contains('event')) return MarkerSubjectType.event;
-    if (normalized.contains('group') || normalized.contains('dao') || normalized.contains('residency')) {
+    if (normalized.contains('group') ||
+        normalized.contains('dao') ||
+        normalized.contains('residency')) {
       return MarkerSubjectType.group;
     }
     if (normalized.contains('art')) return MarkerSubjectType.artwork;
     return MarkerSubjectType.misc;
   }
 
-  bool _subjectSelectionRequired(MarkerSubjectType type) => type != MarkerSubjectType.misc;
+  bool _subjectSelectionRequired(MarkerSubjectType type) =>
+      type != MarkerSubjectType.misc;
 
   bool _showOptionalArAsset(MarkerSubjectType type) =>
       type != MarkerSubjectType.artwork && type != MarkerSubjectType.misc;
@@ -265,7 +274,8 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
     return input.substring(0, maxLength).trimRight();
   }
 
-  Map<MarkerSubjectType, List<MarkerSubjectOption>> _buildOptions(MarkerSubjectData data) {
+  Map<MarkerSubjectType, List<MarkerSubjectOption>> _buildOptions(
+      MarkerSubjectData data) {
     return {
       for (final type in MarkerSubjectType.values)
         type: buildSubjectOptions(
@@ -285,24 +295,31 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
       final snapshot = loader.snapshot();
       _subjectData = snapshot;
       _subjectOptionsByType = _buildOptions(snapshot);
-      _arEnabledArtworks = snapshot.artworks.where(artworkSupportsAR).toList(growable: false);
+      _arEnabledArtworks =
+          snapshot.artworks.where(artworkSupportsAR).toList(growable: false);
 
       final requestedType = _parseSubjectType(marker?.subjectType);
-      final resolvedType = requestedType == MarkerSubjectType.misc && (marker?.artworkId ?? '').trim().isNotEmpty
+      final resolvedType = requestedType == MarkerSubjectType.misc &&
+              (marker?.artworkId ?? '').trim().isNotEmpty
           ? MarkerSubjectType.artwork
           : requestedType;
       _subjectType = widget.isNew ? MarkerSubjectType.artwork : resolvedType;
 
-      final options = _subjectOptionsByType[_subjectType] ?? const <MarkerSubjectOption>[];
+      final options =
+          _subjectOptionsByType[_subjectType] ?? const <MarkerSubjectOption>[];
       final subjectIdCandidate = (marker?.subjectId ?? '').trim().isNotEmpty
           ? marker!.subjectId!.trim()
-          : ((marker?.artworkId ?? '').trim().isNotEmpty && _subjectType == MarkerSubjectType.artwork)
+          : ((marker?.artworkId ?? '').trim().isNotEmpty &&
+                  _subjectType == MarkerSubjectType.artwork)
               ? marker!.artworkId!.trim()
               : null;
 
       _subject = subjectIdCandidate == null
           ? (options.isNotEmpty ? options.first : null)
-          : options.where((o) => o.id == subjectIdCandidate).cast<MarkerSubjectOption?>().firstOrNull ??
+          : options
+                  .where((o) => o.id == subjectIdCandidate)
+                  .cast<MarkerSubjectOption?>()
+                  .firstOrNull ??
               (options.isNotEmpty ? options.first : null);
 
       if (widget.isNew) {
@@ -313,18 +330,24 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
       }
 
       if (widget.isNew && _subject != null) {
-        if (_nameController.text.trim().isEmpty) _nameController.text = _subject!.title;
-        if (_descriptionController.text.trim().isEmpty && _subject!.subtitle.trim().isNotEmpty) {
+        if (_nameController.text.trim().isEmpty)
+          _nameController.text = _subject!.title;
+        if (_descriptionController.text.trim().isEmpty &&
+            _subject!.subtitle.trim().isNotEmpty) {
           _descriptionController.text = _subject!.subtitle;
         }
       }
 
       if (_subjectType == MarkerSubjectType.artwork) {
         final selectedArtworkId = _subject?.id ?? marker?.artworkId;
-        _linkedArtworkId = (selectedArtworkId ?? '').trim().isEmpty ? null : selectedArtworkId!.trim();
+        _linkedArtworkId = (selectedArtworkId ?? '').trim().isEmpty
+            ? null
+            : selectedArtworkId!.trim();
         _linkedArtwork = findArtworkById(snapshot.artworks, _linkedArtworkId);
       } else {
-        _linkedArtworkId = (marker?.artworkId ?? '').trim().isEmpty ? null : marker!.artworkId!.trim();
+        _linkedArtworkId = (marker?.artworkId ?? '').trim().isEmpty
+            ? null
+            : marker!.artworkId!.trim();
         _linkedArtwork = findArtworkById(_arEnabledArtworks, _linkedArtworkId);
       }
     } catch (e) {
@@ -344,20 +367,25 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
       final next = fresh ?? loader.snapshot();
       _subjectData = next;
       _subjectOptionsByType = _buildOptions(next);
-      _arEnabledArtworks = next.artworks.where(artworkSupportsAR).toList(growable: false);
+      _arEnabledArtworks =
+          next.artworks.where(artworkSupportsAR).toList(growable: false);
 
-      final options = _subjectOptionsByType[_subjectType] ?? const <MarkerSubjectOption>[];
+      final options =
+          _subjectOptionsByType[_subjectType] ?? const <MarkerSubjectOption>[];
       if (_subject != null && !options.any((o) => o.id == _subject!.id)) {
         _subject = options.isNotEmpty ? options.first : null;
       }
 
       if (_subjectType == MarkerSubjectType.artwork) {
         final selectedArtworkId = _subject?.id ?? _linkedArtworkId;
-        _linkedArtworkId = (selectedArtworkId ?? '').trim().isNotEmpty ? selectedArtworkId!.trim() : null;
+        _linkedArtworkId = (selectedArtworkId ?? '').trim().isNotEmpty
+            ? selectedArtworkId!.trim()
+            : null;
         _linkedArtwork = findArtworkById(next.artworks, _linkedArtworkId);
       } else if (!_linkedArtworkCleared) {
         final keepId = _linkedArtwork?.id ?? _linkedArtworkId;
-        _linkedArtworkId = (keepId ?? '').trim().isNotEmpty ? keepId!.trim() : null;
+        _linkedArtworkId =
+            (keepId ?? '').trim().isNotEmpty ? keepId!.trim() : null;
         _linkedArtwork = findArtworkById(_arEnabledArtworks, _linkedArtworkId);
       } else {
         _linkedArtwork = null;
@@ -382,13 +410,15 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
       _markerType = type.defaultMarkerType;
       _categoryController.text = type.defaultCategory;
 
-      final options = _subjectOptionsByType[type] ?? const <MarkerSubjectOption>[];
+      final options =
+          _subjectOptionsByType[type] ?? const <MarkerSubjectOption>[];
       _subject = options.isNotEmpty ? options.first : null;
 
       if (type == MarkerSubjectType.artwork) {
         _linkedArtworkCleared = false;
         _linkedArtworkId = _subject?.id;
-        _linkedArtwork = findArtworkById(_subjectData?.artworks ?? const <Artwork>[], _linkedArtworkId);
+        _linkedArtwork = findArtworkById(
+            _subjectData?.artworks ?? const <Artwork>[], _linkedArtworkId);
       } else {
         _linkedArtworkCleared = false;
         _linkedArtwork = null;
@@ -396,8 +426,10 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
       }
 
       if (_subject != null) {
-        if (_nameController.text.trim().isEmpty) _nameController.text = _subject!.title;
-        if (_descriptionController.text.trim().isEmpty && _subject!.subtitle.trim().isNotEmpty) {
+        if (_nameController.text.trim().isEmpty)
+          _nameController.text = _subject!.title;
+        if (_descriptionController.text.trim().isEmpty &&
+            _subject!.subtitle.trim().isNotEmpty) {
           _descriptionController.text = _subject!.subtitle;
         }
       }
@@ -407,15 +439,18 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
   void _applySubjectSelection(MarkerSubjectOption option) {
     setState(() {
       _subject = option;
-      if (_nameController.text.trim().isEmpty || widget.isNew) _nameController.text = option.title;
-      if ((_descriptionController.text.trim().isEmpty || widget.isNew) && option.subtitle.trim().isNotEmpty) {
+      if (_nameController.text.trim().isEmpty || widget.isNew)
+        _nameController.text = option.title;
+      if ((_descriptionController.text.trim().isEmpty || widget.isNew) &&
+          option.subtitle.trim().isNotEmpty) {
         _descriptionController.text = option.subtitle;
       }
 
       if (_subjectType == MarkerSubjectType.artwork) {
         _linkedArtworkCleared = false;
         _linkedArtworkId = option.id;
-        _linkedArtwork = findArtworkById(_subjectData?.artworks ?? const <Artwork>[], option.id);
+        _linkedArtwork = findArtworkById(
+            _subjectData?.artworks ?? const <Artwork>[], option.id);
       }
     });
   }
@@ -440,7 +475,8 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                   ? options
                   : options
                       .where((o) =>
-                          o.title.toLowerCase().contains(query) || o.subtitle.toLowerCase().contains(query))
+                          o.title.toLowerCase().contains(query) ||
+                          o.subtitle.toLowerCase().contains(query))
                       .toList(growable: false);
               final dialogScheme = Theme.of(context).colorScheme;
 
@@ -469,25 +505,32 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                                 child: Text(
                                   l10n.manageMarkersSearchNoResults,
                                   style: KubusTypography.inter(
-                                    color: dialogScheme.onSurface.withValues(alpha: 0.6),
+                                    color: dialogScheme.onSurface
+                                        .withValues(alpha: 0.6),
                                   ),
                                 ),
                               )
                             : ListView.separated(
                                 shrinkWrap: true,
                                 itemCount: filtered.length,
-                                separatorBuilder: (_, __) => const Divider(height: 1),
+                                separatorBuilder: (_, __) =>
+                                    const Divider(height: 1),
                                 itemBuilder: (_, index) {
                                   final option = filtered[index];
                                   final isSelected = selected?.id == option.id;
                                   return ListTile(
                                     dense: true,
                                     selected: isSelected,
-                                    title: Text(option.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                                    title: Text(option.title,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis),
                                     subtitle: option.subtitle.trim().isEmpty
                                         ? null
-                                        : Text(option.subtitle, maxLines: 2, overflow: TextOverflow.ellipsis),
-                                    onTap: () => Navigator.of(dialogContext).pop(option),
+                                        : Text(option.subtitle,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis),
+                                    onTap: () =>
+                                        Navigator.of(dialogContext).pop(option),
                                   );
                                 },
                               ),
@@ -556,25 +599,32 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context)!;
     final provider = context.read<MarkerManagementProvider>();
-    final exhibitionsProvider = AppConfig.isFeatureEnabled('exhibitions') ? context.read<ExhibitionsProvider>() : null;
+    final exhibitionsProvider = AppConfig.isFeatureEnabled('exhibitions')
+        ? context.read<ExhibitionsProvider>()
+        : null;
 
     final lat = double.tryParse(_latController.text.trim());
     final lng = double.tryParse(_lngController.text.trim());
     if (lat == null || lng == null || !_validateLatLng(lat, lng)) {
-      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.mapMarkerDialogValidLatitudeError)));
+      messenger.showKubusSnackBar(
+          SnackBar(content: Text(l10n.mapMarkerDialogValidLatitudeError)));
       return;
     }
 
     if (_subjectSelectionRequired(_subjectType) && _subject == null) {
-      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.mapMarkerDialogSelectSubjectToast)));
+      messenger.showKubusSnackBar(
+          SnackBar(content: Text(l10n.mapMarkerDialogSelectSubjectToast)));
       return;
     }
 
-    final activationRadius = double.tryParse(_activationRadiusController.text.trim()) ?? 50;
+    final activationRadius =
+        double.tryParse(_activationRadiusController.text.trim()) ?? 50;
     final category = _categoryController.text.trim();
     final markerType = _markerType.name;
 
-    final artworkId = _subjectType == MarkerSubjectType.artwork ? _subject?.id : (_linkedArtwork?.id ?? _linkedArtworkId);
+    final artworkId = _subjectType == MarkerSubjectType.artwork
+        ? _subject?.id
+        : (_linkedArtwork?.id ?? _linkedArtworkId);
     final subjectSubtitleRaw = _subject?.subtitle.trim() ?? '';
     final metadata = <String, dynamic>{
       'subjectType': _subjectType.name,
@@ -588,7 +638,8 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
             _subjectSubtitleMetadataMaxLength,
           ),
       },
-      if ((_linkedArtwork?.id ?? _linkedArtworkId)?.trim().isNotEmpty == true) ...{
+      if ((_linkedArtwork?.id ?? _linkedArtworkId)?.trim().isNotEmpty ==
+          true) ...{
         'linkedArtworkId': _linkedArtwork?.id ?? _linkedArtworkId,
         if (_linkedArtwork != null) 'linkedArtworkTitle': _linkedArtwork!.title,
       },
@@ -655,20 +706,30 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
 
       if (!mounted) return;
       if (saved == null) {
-        messenger.showKubusSnackBar(SnackBar(content: Text(l10n.manageMarkersSaveFailed)));
+        if (kDebugMode) {
+          debugPrint(
+            'MarkerEditorView: save returned null for markerId=${widget.marker?.id ?? '(new)'}',
+          );
+        }
+        messenger.showKubusSnackBar(
+            SnackBar(content: Text(l10n.manageMarkersSaveFailed)));
         return;
       }
 
       if (exhibitionsProvider != null) {
         final prevMarker = widget.marker;
         final prevExhibitionId = prevMarker?.isExhibitionSubject == true
-            ? (prevMarker?.subjectId ?? prevMarker?.resolvedExhibitionSummary?.id)
+            ? (prevMarker?.subjectId ??
+                prevMarker?.resolvedExhibitionSummary?.id)
             : prevMarker?.resolvedExhibitionSummary?.id;
-        final nextExhibitionId = _subjectType == MarkerSubjectType.exhibition ? _subject?.id : null;
+        final nextExhibitionId =
+            _subjectType == MarkerSubjectType.exhibition ? _subject?.id : null;
 
-        if ((prevExhibitionId ?? '').trim().isNotEmpty && prevExhibitionId != nextExhibitionId) {
+        if ((prevExhibitionId ?? '').trim().isNotEmpty &&
+            prevExhibitionId != nextExhibitionId) {
           try {
-            await exhibitionsProvider.unlinkExhibitionMarker(prevExhibitionId!, saved.id);
+            await exhibitionsProvider.unlinkExhibitionMarker(
+                prevExhibitionId!, saved.id);
           } catch (_) {
             // Non-fatal (endpoint might not exist or user might not have permissions).
           }
@@ -676,15 +737,18 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
 
         if ((nextExhibitionId ?? '').trim().isNotEmpty) {
           try {
-            await exhibitionsProvider.linkExhibitionMarkers(nextExhibitionId!, [saved.id]);
+            await exhibitionsProvider
+                .linkExhibitionMarkers(nextExhibitionId!, [saved.id]);
           } catch (_) {
             // Non-fatal.
           }
 
-          final nextLinkedArtworkId = (_linkedArtwork?.id ?? _linkedArtworkId ?? '').trim();
+          final nextLinkedArtworkId =
+              (_linkedArtwork?.id ?? _linkedArtworkId ?? '').trim();
           if (nextLinkedArtworkId.isNotEmpty) {
             try {
-              await exhibitionsProvider.linkExhibitionArtworks(nextExhibitionId!, [nextLinkedArtworkId]);
+              await exhibitionsProvider.linkExhibitionArtworks(
+                  nextExhibitionId!, [nextLinkedArtworkId]);
             } catch (_) {
               // Non-fatal.
             }
@@ -693,12 +757,23 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
       }
 
       messenger.showKubusSnackBar(
-        SnackBar(content: Text(widget.isNew ? l10n.manageMarkersCreatedToast : l10n.manageMarkersUpdatedToast)),
+        SnackBar(
+            content: Text(widget.isNew
+                ? l10n.manageMarkersCreatedToast
+                : l10n.manageMarkersUpdatedToast)),
       );
-      widget.onSaved?.call(saved);
+      try {
+        widget.onSaved?.call(saved);
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint(
+              'MarkerEditorView: onSaved callback failed after successful save: $e');
+        }
+      }
     } catch (e) {
       if (!mounted) return;
-      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.manageMarkersSaveFailed)));
+      messenger.showKubusSnackBar(
+          SnackBar(content: Text(l10n.manageMarkersSaveFailed)));
       if (kDebugMode) {
         debugPrint('MarkerEditorView: save failed: $e');
       }
@@ -742,10 +817,12 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
       final ok = await markerProvider.deleteMarker(marker.id);
       if (!mounted) return;
       if (!ok) {
-        messenger.showKubusSnackBar(SnackBar(content: Text(l10n.manageMarkersDeleteFailed)));
+        messenger.showKubusSnackBar(
+            SnackBar(content: Text(l10n.manageMarkersDeleteFailed)));
         return;
       }
-      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.manageMarkersDeletedToast)));
+      messenger.showKubusSnackBar(
+          SnackBar(content: Text(l10n.manageMarkersDeletedToast)));
       widget.onDeleted?.call();
       widget.onClose?.call();
       if (!widget.showHeader) {
@@ -810,15 +887,21 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
 
     final lat = double.tryParse(_latController.text.trim());
     final lng = double.tryParse(_lngController.text.trim());
-    final markerPosition = (lat != null && lng != null && _validateLatLng(lat, lng)) ? LatLng(lat, lng) : _position;
+    final markerPosition =
+        (lat != null && lng != null && _validateLatLng(lat, lng))
+            ? LatLng(lat, lng)
+            : _position;
 
     final header = widget.showHeader
         ? Row(
             children: [
               Expanded(
                 child: Text(
-                  widget.isNew ? l10n.manageMarkersNewButton : l10n.manageMarkersEditTitle,
-                  style: KubusTextStyles.sectionTitle.copyWith(color: scheme.onSurface),
+                  widget.isNew
+                      ? l10n.manageMarkersNewButton
+                      : l10n.manageMarkersEditTitle,
+                  style: KubusTextStyles.sectionTitle
+                      .copyWith(color: scheme.onSurface),
                 ),
               ),
               if (widget.onClose != null)
@@ -832,7 +915,8 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
         : const SizedBox.shrink();
 
     final subjectTypeLabel = _subjectTypeLabel(l10n, _subjectType);
-    final subjectOptions = _subjectOptionsByType[_subjectType] ?? const <MarkerSubjectOption>[];
+    final subjectOptions =
+        _subjectOptionsByType[_subjectType] ?? const <MarkerSubjectOption>[];
 
     return AbsorbPointer(
       absorbing: _saving,
@@ -857,7 +941,8 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                   minZoom: 3,
                   maxZoom: 24,
                   isDarkMode: isDarkMode,
-                  styleAsset: tileProviders.mapStyleAsset(isDarkMode: isDarkMode),
+                  styleAsset:
+                      tileProviders.mapStyleAsset(isDarkMode: isDarkMode),
                   onMapCreated: (controller) {
                     _mapController = controller;
                     _styleReady = false;
@@ -909,9 +994,16 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                           ),
                           IconButton(
                             tooltip: l10n.mapMarkerDialogRefreshSubjectsTooltip,
-                            onPressed: _refreshingSubjects ? null : () => unawaited(_refreshSubjects(force: true)),
+                            onPressed: _refreshingSubjects
+                                ? null
+                                : () =>
+                                    unawaited(_refreshSubjects(force: true)),
                             icon: _refreshingSubjects
-                                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2))
                                 : const Icon(Icons.refresh),
                           ),
                         ],
@@ -922,7 +1014,8 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                       DropdownButtonFormField<MarkerSubjectType>(
                         isExpanded: true,
                         initialValue: _subjectType,
-                        decoration: _creatorInputDecoration(scheme, labelText: l10n.mapMarkerDialogSubjectTypeLabel),
+                        decoration: _creatorInputDecoration(scheme,
+                            labelText: l10n.mapMarkerDialogSubjectTypeLabel),
                         items: MarkerSubjectType.values
                             .map(
                               (type) => DropdownMenuItem<MarkerSubjectType>(
@@ -942,9 +1035,11 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                       if (_subjectSelectionRequired(_subjectType)) ...[
                         if (subjectOptions.isEmpty)
                           Padding(
-                            padding: const EdgeInsets.only(bottom: KubusSpacing.xs),
+                            padding:
+                                const EdgeInsets.only(bottom: KubusSpacing.xs),
                             child: Text(
-                              l10n.mapMarkerDialogNoSubjectsAvailable(subjectTypeLabel),
+                              l10n.mapMarkerDialogNoSubjectsAvailable(
+                                  subjectTypeLabel),
                               style: KubusTextStyles.detailLabel.copyWith(
                                 color: scheme.onSurface.withValues(alpha: 0.65),
                               ),
@@ -958,8 +1053,10 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                                 : () async {
                                     final picked = await _pickOption(
                                       l10n: l10n,
-                                      title: l10n.manageMarkersPickSubjectTitle(subjectTypeLabel),
-                                      hintText: l10n.manageMarkersSearchSubjectsHint,
+                                      title: l10n.manageMarkersPickSubjectTitle(
+                                          subjectTypeLabel),
+                                      hintText:
+                                          l10n.manageMarkersSearchSubjectsHint,
                                       options: subjectOptions,
                                       selected: _subject,
                                     );
@@ -969,33 +1066,42 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                             child: InputDecorator(
                               decoration: _creatorInputDecoration(
                                 scheme,
-                                labelText: l10n.mapMarkerDialogSubjectRequiredLabel(subjectTypeLabel),
+                                labelText:
+                                    l10n.mapMarkerDialogSubjectRequiredLabel(
+                                        subjectTypeLabel),
                               ),
                               child: Row(
                                 children: [
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Text(
-                                          (_subject?.title ?? l10n.mapMarkerDialogSelectSubjectToast).trim(),
+                                          (_subject?.title ??
+                                                  l10n.mapMarkerDialogSelectSubjectToast)
+                                              .trim(),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
-                                          style: KubusTextStyles.actionTileTitle,
+                                          style:
+                                              KubusTextStyles.actionTileTitle,
                                         ),
                                       ],
                                     ),
                                   ),
                                   const SizedBox(width: KubusSpacing.sm),
-                                  Icon(Icons.chevron_right, color: scheme.onSurface.withValues(alpha: 0.6)),
+                                  Icon(Icons.chevron_right,
+                                      color: scheme.onSurface
+                                          .withValues(alpha: 0.6)),
                                 ],
                               ),
                             ),
                           ),
                       ] else ...[
                         Padding(
-                          padding: const EdgeInsets.only(bottom: KubusSpacing.xs),
+                          padding:
+                              const EdgeInsets.only(bottom: KubusSpacing.xs),
                           child: Text(
                             l10n.mapMarkerDialogMiscHint,
                             style: KubusTextStyles.detailLabel.copyWith(
@@ -1031,17 +1137,21 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                                           ),
                                         )
                                         .toList(growable: false);
-                                    final selected = (_linkedArtworkId ?? '').trim().isEmpty
+                                    final selected = (_linkedArtworkId ?? '')
+                                            .trim()
+                                            .isEmpty
                                         ? null
                                         : options
-                                            .where((o) => o.id == _linkedArtworkId)
+                                            .where(
+                                                (o) => o.id == _linkedArtworkId)
                                             .cast<MarkerSubjectOption?>()
                                             .firstOrNull;
 
                                     final picked = await _pickOption(
                                       l10n: l10n,
                                       title: l10n.manageMarkersPickArAssetTitle,
-                                      hintText: l10n.manageMarkersSearchArAssetsHint,
+                                      hintText:
+                                          l10n.manageMarkersSearchArAssetsHint,
                                       options: options,
                                       selected: selected,
                                     );
@@ -1049,37 +1159,45 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                                     setState(() {
                                       _linkedArtworkCleared = false;
                                       _linkedArtworkId = picked.id;
-                                      _linkedArtwork = findArtworkById(_arEnabledArtworks, picked.id);
+                                      _linkedArtwork = findArtworkById(
+                                          _arEnabledArtworks, picked.id);
                                     });
                                   },
                             child: InputDecorator(
                               decoration: _creatorInputDecoration(
                                 scheme,
-                                labelText: l10n.mapMarkerDialogLinkedArAssetTitle,
-                                suffixIcon: (_linkedArtworkId ?? '').trim().isEmpty
-                                    ? null
-                                    : IconButton(
-                                        tooltip: l10n.manageMarkersClearSelectionTooltip,
-                                        onPressed: () => setState(() {
-                                          _linkedArtworkCleared = true;
-                                          _linkedArtwork = null;
-                                          _linkedArtworkId = null;
-                                        }),
-                                        icon: const Icon(Icons.clear),
-                                      ),
+                                labelText:
+                                    l10n.mapMarkerDialogLinkedArAssetTitle,
+                                suffixIcon:
+                                    (_linkedArtworkId ?? '').trim().isEmpty
+                                        ? null
+                                        : IconButton(
+                                            tooltip: l10n
+                                                .manageMarkersClearSelectionTooltip,
+                                            onPressed: () => setState(() {
+                                              _linkedArtworkCleared = true;
+                                              _linkedArtwork = null;
+                                              _linkedArtworkId = null;
+                                            }),
+                                            icon: const Icon(Icons.clear),
+                                          ),
                               ),
                               child: Row(
                                 children: [
                                   Expanded(
                                     child: Text(
-                                      (_linkedArtwork?.title ?? l10n.manageMarkersPickArAssetPlaceholder).trim(),
+                                      (_linkedArtwork?.title ??
+                                              l10n.manageMarkersPickArAssetPlaceholder)
+                                          .trim(),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: KubusTextStyles.actionTileTitle,
                                     ),
                                   ),
                                   const SizedBox(width: KubusSpacing.sm),
-                                  Icon(Icons.chevron_right, color: scheme.onSurface.withValues(alpha: 0.6)),
+                                  Icon(Icons.chevron_right,
+                                      color: scheme.onSurface
+                                          .withValues(alpha: 0.6)),
                                 ],
                               ),
                             ),
@@ -1097,13 +1215,15 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                     children: [
                       TextFormField(
                         controller: _categoryController,
-                        decoration: _creatorInputDecoration(scheme, labelText: l10n.mapMarkerDialogCategoryLabel),
+                        decoration: _creatorInputDecoration(scheme,
+                            labelText: l10n.mapMarkerDialogCategoryLabel),
                       ),
                       const CreatorFieldSpacing(),
                       DropdownButtonFormField<ArtMarkerType>(
                         isExpanded: true,
                         initialValue: _markerType,
-                        decoration: _creatorInputDecoration(scheme, labelText: l10n.mapMarkerDialogMarkerLayerLabel),
+                        decoration: _creatorInputDecoration(scheme,
+                            labelText: l10n.mapMarkerDialogMarkerLayerLabel),
                         items: ArtMarkerType.values
                             .map(
                               (type) => DropdownMenuItem(
@@ -1120,24 +1240,31 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                       const CreatorFieldSpacing(),
                       TextFormField(
                         controller: _nameController,
-                        decoration: _creatorInputDecoration(scheme, labelText: l10n.mapMarkerDialogMarkerTitleLabel),
+                        decoration: _creatorInputDecoration(scheme,
+                            labelText: l10n.mapMarkerDialogMarkerTitleLabel),
                         validator: (value) {
                           final v = (value ?? '').trim();
-                          if (v.isEmpty) return l10n.mapMarkerDialogEnterTitleError;
-                          if (v.length < 3) return l10n.mapMarkerDialogTitleMinLengthError(3);
+                          if (v.isEmpty)
+                            return l10n.mapMarkerDialogEnterTitleError;
+                          if (v.length < 3)
+                            return l10n.mapMarkerDialogTitleMinLengthError(3);
                           return null;
                         },
                       ),
                       const CreatorFieldSpacing(),
                       TextFormField(
                         controller: _descriptionController,
-                        decoration: _creatorInputDecoration(scheme, labelText: l10n.mapMarkerDialogDescriptionLabel),
+                        decoration: _creatorInputDecoration(scheme,
+                            labelText: l10n.mapMarkerDialogDescriptionLabel),
                         minLines: 2,
                         maxLines: 4,
                         validator: (value) {
                           final v = (value ?? '').trim();
-                          if (v.isEmpty) return l10n.mapMarkerDialogEnterDescriptionError;
-                          if (v.length < 10) return l10n.mapMarkerDialogDescriptionMinLengthError(10);
+                          if (v.isEmpty)
+                            return l10n.mapMarkerDialogEnterDescriptionError;
+                          if (v.length < 10)
+                            return l10n
+                                .mapMarkerDialogDescriptionMinLengthError(10);
                           return null;
                         },
                       ),
@@ -1156,8 +1283,11 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                           Expanded(
                             child: TextFormField(
                               controller: _latController,
-                              decoration: _creatorInputDecoration(scheme, labelText: l10n.mapMarkerDialogLatitudeLabel),
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                              decoration: _creatorInputDecoration(scheme,
+                                  labelText: l10n.mapMarkerDialogLatitudeLabel),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                      decimal: true, signed: true),
                               onChanged: (_) => _updatePositionFromFields(),
                             ),
                           ),
@@ -1165,8 +1295,12 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                           Expanded(
                             child: TextFormField(
                               controller: _lngController,
-                              decoration: _creatorInputDecoration(scheme, labelText: l10n.mapMarkerDialogLongitudeLabel),
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                              decoration: _creatorInputDecoration(scheme,
+                                  labelText:
+                                      l10n.mapMarkerDialogLongitudeLabel),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                      decimal: true, signed: true),
                               onChanged: (_) => _updatePositionFromFields(),
                             ),
                           ),
@@ -1184,8 +1318,10 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                     children: [
                       TextFormField(
                         controller: _activationRadiusController,
-                        decoration: _creatorInputDecoration(scheme, labelText: l10n.manageMarkersActivationRadiusLabel),
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: _creatorInputDecoration(scheme,
+                            labelText: l10n.manageMarkersActivationRadiusLabel),
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
                       ),
                       const CreatorFieldSpacing(),
                       CreatorSwitchTile(
@@ -1205,7 +1341,8 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                         title: l10n.manageMarkersRequiresProximityTitle,
                         subtitle: l10n.manageMarkersRequiresProximitySubtitle,
                         value: _requiresProximity,
-                        onChanged: (value) => setState(() => _requiresProximity = value),
+                        onChanged: (value) =>
+                            setState(() => _requiresProximity = value),
                       ),
                     ],
                   ),
@@ -1215,10 +1352,13 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                   // Footer actions
                   // ==========================================================
                   CreatorFooterActions(
-                    primaryLabel: widget.isNew ? l10n.manageMarkersCreateButton : l10n.manageMarkersSaveButton,
+                    primaryLabel: widget.isNew
+                        ? l10n.manageMarkersCreateButton
+                        : l10n.manageMarkersSaveButton,
                     onPrimary: _saving ? null : _save,
                     primaryLoading: _saving,
-                    destructiveLabel: widget.isNew ? null : l10n.manageMarkersDeleteButton,
+                    destructiveLabel:
+                        widget.isNew ? null : l10n.manageMarkersDeleteButton,
                     onDestructive: _saving ? null : _delete,
                   ),
                 ],
