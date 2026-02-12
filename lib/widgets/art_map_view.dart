@@ -446,7 +446,6 @@ class _ArtMapViewState extends State<ArtMapView> {
                 attributionButtonPosition: widget.attributionButtonPosition,
                 attributionButtonMargins: widget.attributionButtonMargins,
                 myLocationEnabled: false,
-                myLocationTrackingMode: ml.MyLocationTrackingMode.none,
                 onMapCreated: (controller) {
                   assert(() {
                     if (_mapCreated) {

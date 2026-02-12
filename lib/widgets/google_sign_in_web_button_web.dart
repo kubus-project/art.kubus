@@ -27,13 +27,8 @@ class GoogleSignInWebButton extends StatefulWidget {
 }
 
 class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
-  // GIS script loading can stall indefinitely when browser privacy settings
-  // block third-party resources, so we fail over to a visible fallback.
-  static const Duration _googleInitTimeout = Duration(seconds: 8);
-
   StreamSubscription<GoogleSignInAuthenticationEvent>? _sub;
   bool _ready = false;
-  bool _googleUiAvailable = true;
   bool _processingAuth = false;
   String? _lastProcessedUid;
 
@@ -44,24 +39,16 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
   }
 
   Future<void> _init() async {
-    Object? initError;
     try {
-      await GoogleAuthService()
-          .ensureInitialized()
-          .timeout(_googleInitTimeout);
+      await GoogleAuthService().ensureInitialized();
     } catch (e) {
-      initError = e;
+      widget.onAuthError?.call(e);
     }
 
     if (!mounted) return;
     setState(() {
       _ready = true;
-      _googleUiAvailable = initError == null;
     });
-
-    if (initError != null) {
-      return;
-    }
 
     _sub ??= GoogleSignIn.instance.authenticationEvents.listen(
       (GoogleSignInAuthenticationEvent event) async {
@@ -127,23 +114,6 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
     }
   }
 
-  Future<void> _retryInitializeGoogleUi() async {
-    if (!mounted || widget.isLoading) return;
-    setState(() {
-      _ready = false;
-      _googleUiAvailable = true;
-    });
-    await _init();
-    if (!mounted) return;
-    if (!_googleUiAvailable) {
-      widget.onAuthError?.call(
-        TimeoutException(
-          'Google sign-in is unavailable in this browser session.',
-        ),
-      );
-    }
-  }
-
   @override
   void didUpdateWidget(GoogleSignInWebButton oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -163,8 +133,7 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final Widget child;
     if (!_ready) {
@@ -173,8 +142,6 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
         height: 20,
         child: CircularProgressIndicator(strokeWidth: 2),
       );
-    } else if (!_googleUiAvailable) {
-      child = _googleAuthUnavailableFallback(theme);
     } else {
       final platform = GoogleSignInPlatform.instance;
       child = LayoutBuilder(
@@ -210,11 +177,10 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
             }
           } catch (e) {
             // Never crash the auth screen due to a GIS rendering failure.
-            // Surface the issue only when the user clicks the fallback button.
           }
 
           if (gisButton == null) {
-            return _googleAuthUnavailableFallback(theme);
+            return SizedBox(width: buttonWidth);
           }
 
           // Use only the GIS button (no custom visible wrappers).
@@ -262,33 +228,6 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
               ),
             ),
         ],
-      ),
-    );
-  }
-
-  Widget _googleAuthUnavailableFallback(ThemeData theme) {
-    final scheme = widget.colorScheme;
-    final textStyle = theme.textTheme.labelLarge?.copyWith(
-      color: scheme.onSurface,
-      fontWeight: FontWeight.w600,
-    );
-
-    return OutlinedButton.icon(
-      onPressed: widget.isLoading
-          ? null
-          : () => unawaited(_retryInitializeGoogleUi()),
-      icon: Icon(Icons.login, color: scheme.onSurface),
-      label: Text(
-        'Continue with Google',
-        style: textStyle,
-        overflow: TextOverflow.ellipsis,
-      ),
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size.fromHeight(56),
-        side: BorderSide(
-          color: scheme.outline.withValues(alpha: 0.35),
-        ),
-        foregroundColor: scheme.onSurface,
       ),
     );
   }

@@ -72,6 +72,14 @@ class KubusCachedImage extends StatelessWidget {
         (parsed.scheme != 'http' && parsed.scheme != 'https')) {
       return url;
     }
+    final isMediaProxyRequest =
+        parsed.path.contains('/api/media/proxy') &&
+            parsed.queryParameters.containsKey('url');
+    if (isMediaProxyRequest) {
+      // Keep proxy URLs stable so proxy-side caching (including cached 4xx/5xx)
+      // works as intended.
+      return url;
+    }
     final params = Map<String, String>.from(parsed.queryParameters);
     params['v'] = token;
     return parsed.replace(queryParameters: params).toString();
