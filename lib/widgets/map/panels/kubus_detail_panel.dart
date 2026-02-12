@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../utils/design_tokens.dart';
 import '../../../utils/media_url_resolver.dart';
+import '../../common/kubus_cached_image.dart';
 import '../../common/kubus_glass_icon_button.dart';
 import '../../glass_components.dart';
 
@@ -90,6 +91,7 @@ class DetailHeader extends StatelessWidget {
     required this.closeTooltip,
     required this.onClose,
     this.imageUrl,
+    this.imageVersion,
     this.height = 220,
     this.borderRadius = 20,
     this.badge,
@@ -102,6 +104,7 @@ class DetailHeader extends StatelessWidget {
   final String closeTooltip;
   final VoidCallback onClose;
   final String? imageUrl;
+  final String? imageVersion;
   final double height;
   final double borderRadius;
   final Widget? badge;
@@ -135,12 +138,14 @@ class DetailHeader extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             if (resolvedImageUrl != null && resolvedImageUrl.isNotEmpty)
-              Image.network(
-                resolvedImageUrl,
+              KubusCachedImage(
+                imageUrl: resolvedImageUrl,
                 fit: BoxFit.cover,
                 filterQuality: FilterQuality.low,
                 cacheWidth: cacheWidth,
                 cacheHeight: cacheHeight,
+                maxDisplayWidth: cacheWidth,
+                cacheVersion: imageVersion,
                 errorBuilder: (_, __, ___) => _buildFallback(
                   icon: fallbackIcon,
                   accentColor: accentColor,

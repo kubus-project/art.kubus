@@ -126,9 +126,13 @@ class _ArtworkCreatorBylineState extends State<ArtworkCreatorByline> {
     final creators = _creators;
     if (creators.isEmpty) {
       final artist = widget.artwork.artist.trim();
+      final walletFallback = _extractFallbackWallet(widget.artwork.metadata);
+      final compactWallet = _compactWallet(
+        WalletUtils.looksLikeWallet(artist) ? artist : walletFallback,
+      );
       final safeArtist = artist.isNotEmpty && !WalletUtils.looksLikeWallet(artist)
           ? artist
-          : (l10n?.commonUnknown ?? 'Unknown artist');
+          : (compactWallet ?? (l10n?.commonUnknown ?? 'Unknown artist'));
       return Text(
         safeArtist,
         style: baseStyle,
@@ -224,6 +228,13 @@ class _CreatorRef {
 
 List<_CreatorRef> _extractCreators(Artwork artwork) {
   final creators = <_CreatorRef>[];
+  final bylineLabels = _extractCreatorBylineLabels(artwork.metadata);
+  if (bylineLabels.isNotEmpty) {
+    for (final label in bylineLabels) {
+      _addBylineLabel(creators, label);
+    }
+    return creators;
+  }
 
   void add({String? userId, String? label, String? username}) {
     final safeLabel = (label ?? '').trim();
@@ -232,7 +243,9 @@ List<_CreatorRef> _extractCreators(Artwork artwork) {
 
     final display = (safeLabel.isNotEmpty && !WalletUtils.looksLikeWallet(safeLabel))
         ? safeLabel
-        : 'Unknown artist';
+        : (_compactWallet(
+                WalletUtils.looksLikeWallet(safeUserId) ? safeUserId : safeLabel) ??
+            'Unknown artist');
 
     creators.add(
       _CreatorRef(
@@ -307,10 +320,82 @@ List<_CreatorRef> _extractCreators(Artwork artwork) {
         : (artistName != null && artistName.isNotEmpty ? artistName : '');
     final label = labelCandidate.isNotEmpty && !WalletUtils.looksLikeWallet(labelCandidate)
         ? labelCandidate
-        : 'Unknown artist';
+        : (_compactWallet(wallet ?? labelCandidate) ?? 'Unknown artist');
 
     add(userId: wallet, label: label);
   }
 
   return creators;
+}
+
+void _addBylineLabel(List<_CreatorRef> creators, String label) {
+  final clean = label.trim();
+  if (clean.isEmpty) return;
+  final safeLabel = WalletUtils.looksLikeWallet(clean)
+      ? (_compactWallet(clean) ?? 'Unknown artist')
+      : clean;
+  creators.add(_CreatorRef(label: safeLabel));
+}
+
+String? _extractFallbackWallet(Map<String, dynamic>? meta) {
+  if (meta == null || meta.isEmpty) return null;
+  for (final key in const <String>[
+    'walletAddress',
+    'wallet_address',
+    'artistWallet',
+    'artist_wallet',
+    'creatorWallet',
+    'creator_wallet',
+    'creatorWalletAddress',
+    'creator_wallet_address',
+  ]) {
+    final raw = meta[key]?.toString().trim();
+    if (raw != null && raw.isNotEmpty && WalletUtils.looksLikeWallet(raw)) {
+      return raw;
+    }
+  }
+  return null;
+}
+
+List<String> _extractCreatorBylineLabels(Map<String, dynamic>? meta) {
+  if (meta == null || meta.isEmpty) return const <String>[];
+  final raw = meta['creator_name_byline'] ??
+      meta['creatorNameByline'] ??
+      meta['creator_byline'] ??
+      meta['creatorByline'] ??
+      meta['artist_name_byline'] ??
+      meta['artistNameByline'] ??
+      meta['artist_byline'] ??
+      meta['artistByline'];
+  if (raw == null) return const <String>[];
+
+  if (raw is List) {
+    return raw
+        .map((entry) => entry.toString().trim())
+        .where((entry) => entry.isNotEmpty)
+        .toList(growable: false);
+  }
+
+  final byline = raw.toString().trim();
+  if (byline.isEmpty) return const <String>[];
+  if (!byline.contains(',') &&
+      !byline.contains(';') &&
+      !byline.contains('/') &&
+      !byline.contains('|')) {
+    return <String>[byline];
+  }
+
+  return byline
+      .split(RegExp(r'\s*[,;/|]\s*'))
+      .map((entry) => entry.trim())
+      .where((entry) => entry.isNotEmpty)
+      .toList(growable: false);
+}
+
+String? _compactWallet(String? wallet) {
+  final normalized = (wallet ?? '').trim();
+  if (normalized.isEmpty) return null;
+  if (!WalletUtils.looksLikeWallet(normalized)) return null;
+  if (normalized.length <= 10) return '${normalized.substring(0, 4)}...';
+  return '${normalized.substring(0, 6)}...${normalized.substring(normalized.length - 4)}';
 }

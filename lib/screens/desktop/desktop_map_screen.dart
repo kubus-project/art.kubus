@@ -88,6 +88,7 @@ import '../../widgets/map/filters/kubus_map_marker_layer_chips.dart';
 import '../../widgets/common/kubus_filter_panel.dart';
 import '../../widgets/common/kubus_glass_chip.dart';
 import '../../widgets/common/kubus_glass_icon_button.dart';
+import '../../widgets/common/kubus_cached_image.dart';
 import '../../widgets/common/kubus_map_controls.dart';
 import '../../widgets/common/kubus_marker_overlay_card.dart';
 import '../../widgets/common/kubus_search_overlay_scaffold.dart';
@@ -2172,6 +2173,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       margin: const EdgeInsets.only(left: 24),
       header: DetailHeader(
         imageUrl: coverUrl,
+        imageVersion: KubusCachedImage.versionTokenFromDate(
+          artwork.updatedAt ?? artwork.createdAt,
+        ),
         accentColor: accent,
         closeTooltip: AppLocalizations.of(context)!.commonClose,
         onClose: () {
@@ -2504,6 +2508,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       margin: const EdgeInsets.only(left: 24),
       header: DetailHeader(
         imageUrl: coverUrl,
+        imageVersion: KubusCachedImage.versionTokenFromDate(
+          exhibition.updatedAt ?? exhibition.createdAt,
+        ),
         accentColor: exhibitionAccent,
         closeTooltip: l10n.commonClose,
         onClose: () {
@@ -4166,12 +4173,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         width: width,
         height: height,
         child: resolvedImageUrl != null
-            ? Image.network(
-                resolvedImageUrl,
+            ? KubusCachedImage(
+                imageUrl: resolvedImageUrl,
                 fit: BoxFit.cover,
                 filterQuality: FilterQuality.low,
                 cacheWidth: cacheWidth,
                 cacheHeight: cacheHeight,
+                maxDisplayWidth: cacheWidth,
                 errorBuilder: (_, __, ___) => fallback,
               )
             : fallback,
@@ -4349,14 +4357,18 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               if (coverUrl != null && coverUrl.isNotEmpty)
                 ClipRRect(
                   borderRadius: BorderRadius.circular(10),
-                  child: Image.network(
-                    coverUrl,
+                  child: KubusCachedImage(
+                    imageUrl: coverUrl,
                     width: double.infinity,
                     height: 160,
                     fit: BoxFit.cover,
                     filterQuality: FilterQuality.low,
                     cacheWidth: cacheWidth,
                     cacheHeight: cacheHeight,
+                    maxDisplayWidth: cacheWidth,
+                    cacheVersion: KubusCachedImage.versionTokenFromDate(
+                      marker.updatedAt,
+                    ),
                     errorBuilder: (_, __, ___) =>
                         KubusMapMarkerHelpers.markerImageFallback(
                       baseColor: _resolveArtMarkerColor(

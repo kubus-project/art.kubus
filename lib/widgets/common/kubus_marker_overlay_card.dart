@@ -7,6 +7,7 @@ import '../../utils/app_color_utils.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/media_url_resolver.dart';
+import 'kubus_cached_image.dart';
 import '../glass_components.dart';
 
 class MarkerOverlayActionSpec {
@@ -117,6 +118,9 @@ class KubusMarkerOverlayCard extends StatelessWidget {
     final imageUrl = MediaUrlResolver.resolveDisplayUrl(
       rawImageUrl,
       maxWidth: 960,
+    );
+    final imageVersion = KubusCachedImage.versionTokenFromDate(
+      artwork?.updatedAt ?? marker.updatedAt,
     );
     final dpr = MediaQuery.maybeOf(context)?.devicePixelRatio ?? 1.0;
     final cacheWidth = (320 * dpr).clamp(128.0, 960.0).round();
@@ -231,28 +235,27 @@ class KubusMarkerOverlayCard extends StatelessWidget {
                     height: 120,
                     width: double.infinity,
                     child: imageUrl != null
-                        ? Image.network(
-                            imageUrl,
+                        ? KubusCachedImage(
+                            imageUrl: imageUrl,
                             fit: BoxFit.cover,
                             filterQuality: FilterQuality.low,
                             cacheWidth: cacheWidth,
                             cacheHeight: cacheHeight,
+                            maxDisplayWidth: cacheWidth,
+                            cacheVersion: imageVersion,
+                            placeholderBuilder: (context) => Container(
+                              color: baseColor.withValues(alpha: 0.12),
+                              child: const Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            ),
                             errorBuilder: (_, __, ___) => _imageFallback(
                               baseColor,
                               scheme,
                               marker,
                             ),
-                            loadingBuilder: (context, child, progress) {
-                              if (progress == null) return child;
-                              return Container(
-                                color: baseColor.withValues(alpha: 0.12),
-                                child: const Center(
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                ),
-                              );
-                            },
                           )
                         : _imageFallback(
                             baseColor,

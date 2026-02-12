@@ -92,6 +92,7 @@ import '../widgets/map/controls/kubus_map_primary_controls.dart'
 import '../widgets/common/kubus_filter_panel.dart';
 import '../widgets/common/kubus_glass_chip.dart';
 import '../widgets/common/kubus_map_controls.dart';
+import '../widgets/common/kubus_cached_image.dart';
 import '../widgets/common/kubus_marker_overlay_card.dart';
 import '../widgets/common/kubus_search_overlay_scaffold.dart';
 import '../widgets/map/overlays/kubus_marker_overlay_card_wrapper.dart';
@@ -4254,14 +4255,18 @@ class _MapScreenState extends State<MapScreen>
               if (coverUrl != null && coverUrl.isNotEmpty)
                 ClipRRect(
                   borderRadius: BorderRadius.circular(10),
-                  child: Image.network(
-                    coverUrl,
+                  child: KubusCachedImage(
+                    imageUrl: coverUrl,
                     width: double.infinity,
                     height: 160,
                     fit: BoxFit.cover,
                     filterQuality: FilterQuality.low,
                     cacheWidth: cacheWidth,
                     cacheHeight: cacheHeight,
+                    maxDisplayWidth: cacheWidth,
+                    cacheVersion: KubusCachedImage.versionTokenFromDate(
+                      marker.updatedAt,
+                    ),
                     errorBuilder: (_, __, ___) =>
                         KubusMapMarkerHelpers.markerImageFallback(
                       baseColor: _resolveArtMarkerColor(

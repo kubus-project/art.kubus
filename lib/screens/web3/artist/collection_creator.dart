@@ -14,9 +14,10 @@ import '../../../providers/web3provider.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/wallet_utils.dart';
-import '../../../utils/media_url_resolver.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/creator/creator_kit.dart';
+import 'package:art_kubus/widgets/artwork_creator_byline.dart';
+import 'package:art_kubus/widgets/common/kubus_cached_image.dart';
 
 class CollectionCreator extends StatefulWidget {
   final void Function(String collectionId)? onCreated;
@@ -393,9 +394,11 @@ class _CollectionCreatorState extends State<CollectionCreator> {
               itemBuilder: (_, index) {
                 final artwork = filtered[index];
                 final isSelected = _selectedArtworkIds.contains(artwork.id);
-                final imageUrl = MediaUrlResolver.resolve(artwork.imageUrl);
+                final dpr = MediaQuery.maybeOf(context)?.devicePixelRatio ?? 1.0;
+                final thumbCacheSize = (40 * dpr).clamp(64.0, 256.0).round();
 
                 return ListTile(
+                  key: ValueKey<String>(artwork.id),
                   dense: true,
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: KubusSpacing.sm,
@@ -406,27 +409,25 @@ class _CollectionCreatorState extends State<CollectionCreator> {
                     child: SizedBox(
                       width: 40,
                       height: 40,
-                      child: imageUrl != null && imageUrl.isNotEmpty
-                          ? Image.network(
-                              imageUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Container(
-                                color: scheme.surfaceContainerHighest,
-                                child: Icon(
-                                  Icons.image_outlined,
-                                  size: 20,
-                                  color: scheme.onSurface.withValues(alpha: 0.3),
-                                ),
-                              ),
-                            )
-                          : Container(
-                              color: scheme.surfaceContainerHighest,
-                              child: Icon(
-                                Icons.image_outlined,
-                                size: 20,
-                                color: scheme.onSurface.withValues(alpha: 0.3),
-                              ),
-                            ),
+                      child: KubusCachedImage(
+                        imageUrl: artwork.imageUrl,
+                        fit: BoxFit.cover,
+                        cacheWidth: thumbCacheSize,
+                        cacheHeight: thumbCacheSize,
+                        maxDisplayWidth: thumbCacheSize,
+                        cacheVersion: KubusCachedImage.versionTokenFromDate(
+                          artwork.updatedAt ?? artwork.createdAt,
+                        ),
+                        iconSize: 20,
+                        errorBuilder: (_, __, ___) => Container(
+                          color: scheme.surfaceContainerHighest,
+                          child: Icon(
+                            Icons.image_outlined,
+                            size: 20,
+                            color: scheme.onSurface.withValues(alpha: 0.3),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                   title: Text(
@@ -435,16 +436,16 @@ class _CollectionCreatorState extends State<CollectionCreator> {
                     overflow: TextOverflow.ellipsis,
                     style: KubusTextStyles.detailLabel,
                   ),
-                  subtitle: artwork.artist.isNotEmpty
-                      ? Text(
-                          artwork.artist,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: KubusTextStyles.detailCaption.copyWith(
-                            color: scheme.onSurface.withValues(alpha: 0.6),
-                          ),
-                        )
-                      : null,
+                  subtitle: ArtworkCreatorByline(
+                    artwork: artwork,
+                    includeByPrefix: false,
+                    showUsername: false,
+                    linkToProfile: false,
+                    maxLines: 1,
+                    style: KubusTextStyles.detailCaption.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
                   trailing: Checkbox(
                     value: isSelected,
                     activeColor: accent,

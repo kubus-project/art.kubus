@@ -8135,6 +8135,17 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
           json['walletAddresses'] ??
           json['wallets'],
     );
+    addMeta(
+      'creator_name_byline',
+      json['creator_name_byline'] ??
+          json['creatorNameByline'] ??
+          json['creator_byline'] ??
+          json['creatorByline'] ??
+          json['artist_name_byline'] ??
+          json['artistNameByline'] ??
+          json['artist_byline'] ??
+          json['artistByline'],
+    );
     addMeta('locationName', json['locationName']);
     addMeta('nft', json['nft']);
     addMeta('price', json['price']);
