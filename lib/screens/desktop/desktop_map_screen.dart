@@ -152,6 +152,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   late final MapMarkerRenderCoordinator _renderCoordinator;
 
   ml.MapLibreMapController? _mapController;
+  ml.MapLibreMapController? _deactivateDetachedMapController;
   MapLayersManager? _layersManager;
   late AnimationController _animationController;
   late AnimationController _panelController;
@@ -1543,6 +1544,29 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   @override
+  void deactivate() {
+    // Detach early (top-down) so listeners are removed before the MapLibre
+    // plugin disposes the controller during child disposal.
+    _deactivateDetachedMapController = _mapController;
+    _kubusMapController.detachMapController();
+    _mapController = null;
+    _layersManager = null;
+    super.deactivate();
+  }
+
+  @override
+  void activate() {
+    super.activate();
+    final controller = _deactivateDetachedMapController;
+    _deactivateDetachedMapController = null;
+    if (controller == null || _mapController != null) return;
+
+    _mapController = controller;
+    _kubusMapController.attachMapController(controller);
+    _layersManager = _kubusMapController.layersManager;
+  }
+
+  @override
   void dispose() {
     if (_subscribedRoute != null) {
       appRouteObserver.unsubscribe(this);
@@ -1554,6 +1578,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     } catch (_) {}
 
     _mapController = null;
+    _deactivateDetachedMapController = null;
     _layersManager = null;
     _styleInitialized = false;
     _registeredMapImages.clear();
@@ -1806,6 +1831,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     .then((_) => _handleMapReady()));
               },
               onCameraMove: (position) {
+                if (_mapController == null) return;
                 _kubusMapController.handleCameraMove(position);
 
                 final previousZoom = _cameraZoom;
@@ -1850,6 +1876,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 _queueMarkerRefresh(fromGesture: hasGesture);
               },
               onCameraIdle: () {
+                if (_mapController == null) return;
                 final wasProgrammatic =
                     _kubusMapController.programmaticCameraMove;
                 _kubusMapController.handleCameraIdle(

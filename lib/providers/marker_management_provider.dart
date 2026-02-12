@@ -114,7 +114,8 @@ class MarkerManagementProvider extends ChangeNotifier {
       _error = null;
       notifyListeners();
       try {
-        final results = await _api.getMyArtMarkers().timeout(const Duration(seconds: 20));
+        final results =
+            await _api.getMyArtMarkers().timeout(const Duration(seconds: 20));
         _markers = results;
         _lastFetch = DateTime.now();
       } catch (e) {
@@ -136,32 +137,51 @@ class MarkerManagementProvider extends ChangeNotifier {
     }
   }
 
-  ArtMarker _applyUpdatesToMarker(ArtMarker base, Map<String, dynamic> updates) {
+  ArtMarker _applyUpdatesToMarker(
+      ArtMarker base, Map<String, dynamic> updates) {
     String? name;
     String? description;
     String? category;
 
     if (updates.containsKey('name')) name = updates['name']?.toString();
-    if (updates.containsKey('description')) description = updates['description']?.toString();
-    if (updates.containsKey('category')) category = updates['category']?.toString();
+    if (updates.containsKey('description')) {
+      description = updates['description']?.toString();
+    }
+    if (updates.containsKey('category')) {
+      category = updates['category']?.toString();
+    }
 
     // Coordinate updates can arrive in a few shapes.
-    final latRaw = updates['latitude'] ?? updates['lat'] ?? updates['position']?['lat'];
-    final lngRaw = updates['longitude'] ?? updates['lng'] ?? updates['position']?['lng'];
-    final lat = latRaw is num ? latRaw.toDouble() : double.tryParse(latRaw?.toString() ?? '');
-    final lng = lngRaw is num ? lngRaw.toDouble() : double.tryParse(lngRaw?.toString() ?? '');
+    final latRaw =
+        updates['latitude'] ?? updates['lat'] ?? updates['position']?['lat'];
+    final lngRaw =
+        updates['longitude'] ?? updates['lng'] ?? updates['position']?['lng'];
+    final lat = latRaw is num
+        ? latRaw.toDouble()
+        : double.tryParse(latRaw?.toString() ?? '');
+    final lng = lngRaw is num
+        ? lngRaw.toDouble()
+        : double.tryParse(lngRaw?.toString() ?? '');
     final hasNewPos = lat != null && lng != null;
 
-    final isPublic = updates.containsKey('isPublic') ? updates['isPublic'] == true : null;
-    final isActive = updates.containsKey('isActive') ? updates['isActive'] == true : null;
-    final requiresProximity = updates.containsKey('requiresProximity') ? updates['requiresProximity'] == true : null;
+    final isPublic =
+        updates.containsKey('isPublic') ? updates['isPublic'] == true : null;
+    final isActive =
+        updates.containsKey('isActive') ? updates['isActive'] == true : null;
+    final requiresProximity = updates.containsKey('requiresProximity')
+        ? updates['requiresProximity'] == true
+        : null;
     final activationRadiusRaw = updates['activationRadius'];
     final activationRadius = activationRadiusRaw is num
         ? activationRadiusRaw.toDouble()
         : double.tryParse(activationRadiusRaw?.toString() ?? '');
 
-    final metadata = updates.containsKey('metadata') && updates['metadata'] is Map<String, dynamic>
-        ? <String, dynamic>{...(base.metadata ?? const {}), ...(updates['metadata'] as Map<String, dynamic>)}
+    final metadata = updates.containsKey('metadata') &&
+            updates['metadata'] is Map<String, dynamic>
+        ? <String, dynamic>{
+            ...(base.metadata ?? const {}),
+            ...(updates['metadata'] as Map<String, dynamic>)
+          }
         : base.metadata;
 
     return base.copyWith(
@@ -194,7 +214,8 @@ class MarkerManagementProvider extends ChangeNotifier {
       clientNonce ??= TelemetryUuid.v4();
 
       meta['clientNonce'] = clientNonce;
-      meta.putIfAbsent('clientCreatedAtMs', () => DateTime.now().millisecondsSinceEpoch);
+      meta.putIfAbsent(
+          'clientCreatedAtMs', () => DateTime.now().millisecondsSinceEpoch);
       normalizedPayload['metadata'] = meta;
     } catch (_) {
       // Best-effort; keep original payload and disable nonce recovery.
@@ -209,7 +230,8 @@ class MarkerManagementProvider extends ChangeNotifier {
         if (clientNonce != null && clientNonce.isNotEmpty) {
           await refresh(force: true);
           for (final marker in _markers) {
-            if ((marker.metadata?['clientNonce'] ?? '').toString() == clientNonce) {
+            if ((marker.metadata?['clientNonce'] ?? '').toString() ==
+                clientNonce) {
               _mapMarkerService.notifyMarkerUpserted(marker);
               return marker;
             }
@@ -217,7 +239,10 @@ class MarkerManagementProvider extends ChangeNotifier {
         }
         return null;
       }
-      _markers = <ArtMarker>[created, ..._markers.where((m) => m.id != created.id)];
+      _markers = <ArtMarker>[
+        created,
+        ..._markers.where((m) => m.id != created.id)
+      ];
       _mapMarkerService.notifyMarkerUpserted(created);
       notifyListeners();
       return created;
@@ -230,7 +255,8 @@ class MarkerManagementProvider extends ChangeNotifier {
         try {
           await refresh(force: true);
           for (final marker in _markers) {
-            if ((marker.metadata?['clientNonce'] ?? '').toString() == clientNonce) {
+            if ((marker.metadata?['clientNonce'] ?? '').toString() ==
+                clientNonce) {
               _mapMarkerService.notifyMarkerUpserted(marker);
               return marker;
             }
@@ -244,31 +270,41 @@ class MarkerManagementProvider extends ChangeNotifier {
     }
   }
 
-  Future<ArtMarker?> updateMarker(String markerId, Map<String, dynamic> updates) async {
+  Future<ArtMarker?> updateMarker(
+      String markerId, Map<String, dynamic> updates) async {
     final id = markerId.trim();
     if (id.isEmpty) return null;
     final index = _markers.indexWhere((m) => m.id == id);
     final before = index >= 0 ? _markers[index] : null;
+    ArtMarker? optimistic;
     if (before != null) {
-      final optimistic = _applyUpdatesToMarker(before, updates);
+      optimistic = _applyUpdatesToMarker(before, updates);
       _markers = _markers
-          .map((m) => m.id == id ? optimistic : m)
+          .map((m) => m.id == id ? optimistic! : m)
           .toList(growable: false);
       _mapMarkerService.notifyMarkerUpserted(optimistic);
       notifyListeners();
     }
 
     try {
-      final updated = await _api.updateArtMarkerRecord(id, updates).timeout(const Duration(seconds: 20));
+      final updated = await _api
+          .updateArtMarkerRecord(id, updates)
+          .timeout(const Duration(seconds: 20));
       if (updated == null) {
-        // Revert when backend returns no marker.
-        if (before != null) {
-          _markers = _markers
-              .map((m) => m.id == id ? before : m)
-              .toList(growable: false);
-          _mapMarkerService.notifyMarkerUpserted(before);
-          notifyListeners();
+        // Some backend variants return success with an empty body (e.g. 204).
+        // Keep optimistic state and reconcile with a background refresh.
+        if (optimistic != null) {
+          if (kDebugMode) {
+            debugPrint(
+              'MarkerManagementProvider.updateMarker: backend returned null marker for successful update, keeping optimistic marker $id',
+            );
+          }
+          _lastFetch = DateTime.now();
+          unawaited(refresh(force: true));
+          return optimistic;
         }
+
+        unawaited(refresh(force: true));
         return null;
       }
       final updatedIndex = _markers.indexWhere((m) => m.id == id);
@@ -309,10 +345,13 @@ class MarkerManagementProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final ok = await _api.deleteArtMarkerRecord(id).timeout(const Duration(seconds: 20));
+      final ok = await _api
+          .deleteArtMarkerRecord(id)
+          .timeout(const Duration(seconds: 20));
       if (!ok) {
         _markers = before;
-        _mapMarkerService.notifyMarkerUpserted(before.firstWhere((m) => m.id == id));
+        _mapMarkerService
+            .notifyMarkerUpserted(before.firstWhere((m) => m.id == id));
         notifyListeners();
         return false;
       }
@@ -323,7 +362,8 @@ class MarkerManagementProvider extends ChangeNotifier {
       _error = e.toString();
       _markers = before;
       try {
-        _mapMarkerService.notifyMarkerUpserted(before.firstWhere((m) => m.id == id));
+        _mapMarkerService
+            .notifyMarkerUpserted(before.firstWhere((m) => m.id == id));
       } catch (_) {}
       notifyListeners();
       return false;

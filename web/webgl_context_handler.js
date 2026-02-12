@@ -31,6 +31,8 @@
   var canvasToMap = new WeakMap();
   var mapRecoveryState = new WeakMap();
   var mapIdSeq = 0;
+  // Track per-map removal to prevent double-remove from plugin + interception.
+  var removedMapIds = {};
 
   /**
    * Log with prefix for debugging (only in development or with debug flag)
@@ -205,6 +207,13 @@
     if (!map && !container) return;
 
     if (map) {
+      // Skip recovery if the map has been removed (navigated away).
+      if (map.__kubusMapId && removedMapIds[map.__kubusMapId]) {
+        debugLog('info', 'Skipping MapLibre recovery for removed map', {
+          mapId: map.__kubusMapId
+        });
+        return;
+      }
       var state = mapRecoveryState.get(map) || {
         pending: false,
         attemptCount: 0
@@ -401,6 +410,19 @@
     if (OriginalMap.prototype && OriginalMap.prototype.remove) {
       var originalRemove = OriginalMap.prototype.remove;
       OriginalMap.prototype.remove = function () {
+        var mapId = this.__kubusMapId;
+
+        // Prevent double-remove: if this map was already removed, skip.
+        if (mapId && removedMapIds[mapId]) {
+          debugLog('info', 'MapLibre remove skipped (already removed)', {
+            mapId: mapId
+          });
+          return this;
+        }
+        if (mapId) {
+          removedMapIds[mapId] = true;
+        }
+
         var before = snapshotCanvases();
         var canvas = null;
         try {
@@ -408,7 +430,7 @@
         } catch (_) { }
 
         debugLog('info', 'MapLibre remove intercepted', {
-          mapId: this.__kubusMapId,
+          mapId: mapId,
           ts: new Date().toISOString(),
           route: currentRoute(),
           mapState: mapStateForLog(this),

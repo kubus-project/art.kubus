@@ -195,6 +195,7 @@ class _MapScreenState extends State<MapScreen>
   Location? _mobileLocation;
   Timer? _timer;
   ml.MapLibreMapController? _mapController;
+  ml.MapLibreMapController? _deactivateDetachedMapController;
   MapLayersManager? _layersManager;
   late final KubusMapController _kubusMapController;
   late final MapMarkerInteractionController _markerInteractionController;
@@ -1164,6 +1165,30 @@ class _MapScreenState extends State<MapScreen>
   }
 
   @override
+  void deactivate() {
+    // Detach the controller early (deactivate runs top-down, before children
+    // dispose). This removes feature tap/hover listeners before the MapLibre
+    // plugin disposes the controller, preventing "used after being disposed".
+    _deactivateDetachedMapController = _mapController;
+    _kubusMapController.detachMapController();
+    _mapController = null;
+    _layersManager = null;
+    super.deactivate();
+  }
+
+  @override
+  void activate() {
+    super.activate();
+    final controller = _deactivateDetachedMapController;
+    _deactivateDetachedMapController = null;
+    if (controller == null || _mapController != null) return;
+
+    _mapController = controller;
+    _kubusMapController.attachMapController(controller);
+    _layersManager = _kubusMapController.layersManager;
+  }
+
+  @override
   void dispose() {
     if (_subscribedRoute != null) {
       appRouteObserver.unsubscribe(this);
@@ -1184,6 +1209,7 @@ class _MapScreenState extends State<MapScreen>
     _mapDataCoordinator.dispose();
     _mapUiStateCoordinator.dispose();
     _kubusMapController.dispose();
+    _deactivateDetachedMapController = null;
     _mapController = null;
     _layersManager = null;
     _styleInitialized = false;
@@ -3196,7 +3222,7 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _handleCameraMove(ml.CameraPosition position) {
-    if (!mounted) return;
+    if (!mounted || _mapController == null) return;
     _kubusMapController.handleCameraMove(position);
     _cameraIsMoving = _kubusMapController.cameraIsMoving;
 
@@ -3230,7 +3256,7 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _handleCameraIdle() {
-    if (!mounted) return;
+    if (!mounted || _mapController == null) return;
     final wasProgrammatic = _kubusMapController.programmaticCameraMove;
     _kubusMapController.handleCameraIdle(fromProgrammaticMove: wasProgrammatic);
     _cameraIsMoving = _kubusMapController.cameraIsMoving;

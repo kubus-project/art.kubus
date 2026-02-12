@@ -459,6 +459,11 @@ class KubusMapController {
     _viewportInitRetryTimer?.cancel();
     _viewportInitRetryTimer = null;
     _viewportInitAttemptCount = 0;
+
+    // Cancel debouncers so in-flight callbacks don't fire after detach and
+    // try to call methods on the now-null controller.
+    _overlayAnchorDebouncer.cancel();
+    _viewportVisibilityDebouncer.cancel();
   }
 
   void dispose() {
@@ -552,6 +557,7 @@ class KubusMapController {
   }
 
   void handleCameraMove(ml.CameraPosition position) {
+    if (_mapController == null) return;
     _cameraIsMoving = true;
 
     final bool hasGesture = !_programmaticCameraMove;
@@ -599,6 +605,7 @@ class KubusMapController {
   }
 
   void handleCameraIdle({required bool fromProgrammaticMove}) {
+    if (_mapController == null) return;
     _cameraIsMoving = false;
     _programmaticCameraMove = false;
 

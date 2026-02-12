@@ -47,7 +47,8 @@ class _FakeMarkerApi implements MarkerBackendApi {
   }
 
   @override
-  Future<ArtMarker?> updateArtMarkerRecord(String markerId, Map<String, dynamic> updates) {
+  Future<ArtMarker?> updateArtMarkerRecord(
+      String markerId, Map<String, dynamic> updates) {
     updateCalls += 1;
     final c = updateCompleter;
     if (c != null) return c.future;
@@ -63,7 +64,8 @@ class _FakeMarkerApi implements MarkerBackendApi {
   }
 }
 
-ArtMarker _marker(String id, {String name = 'Old', String createdBy = 'wallet_1'}) {
+ArtMarker _marker(String id,
+    {String name = 'Old', String createdBy = 'wallet_1'}) {
   return ArtMarker(
     id: id,
     name: name,
@@ -76,9 +78,11 @@ ArtMarker _marker(String id, {String name = 'Old', String createdBy = 'wallet_1'
 }
 
 void main() {
-  test('MarkerManagementProvider.refresh dedupes in-flight and respects TTL', () async {
+  test('MarkerManagementProvider.refresh dedupes in-flight and respects TTL',
+      () async {
     final api = _FakeMarkerApi();
-    final provider = MarkerManagementProvider(api: api, mapMarkerService: MapMarkerService());
+    final provider = MarkerManagementProvider(
+        api: api, mapMarkerService: MapMarkerService());
 
     api.getMyCompleter = Completer<List<ArtMarker>>();
 
@@ -99,9 +103,12 @@ void main() {
     expect(api.getMyCalls, 1);
   });
 
-  test('MarkerManagementProvider.deleteMarker is optimistic and reverts on failure', () async {
+  test(
+      'MarkerManagementProvider.deleteMarker is optimistic and reverts on failure',
+      () async {
     final api = _FakeMarkerApi();
-    final provider = MarkerManagementProvider(api: api, mapMarkerService: MapMarkerService());
+    final provider = MarkerManagementProvider(
+        api: api, mapMarkerService: MapMarkerService());
 
     provider.ingestMarker(_marker('m1'));
     provider.ingestMarker(_marker('m2'));
@@ -120,15 +127,19 @@ void main() {
     expect(provider.markers.any((m) => m.id == 'm1'), true);
   });
 
-  test('MarkerManagementProvider.updateMarker is optimistic and then applies server response', () async {
+  test(
+      'MarkerManagementProvider.updateMarker is optimistic and then applies server response',
+      () async {
     final api = _FakeMarkerApi();
-    final provider = MarkerManagementProvider(api: api, mapMarkerService: MapMarkerService());
+    final provider = MarkerManagementProvider(
+        api: api, mapMarkerService: MapMarkerService());
 
     provider.ingestMarker(_marker('m1', name: 'Old'));
 
     api.updateCompleter = Completer<ArtMarker?>();
 
-    final future = provider.updateMarker('m1', <String, dynamic>{'name': 'Optimistic'});
+    final future =
+        provider.updateMarker('m1', <String, dynamic>{'name': 'Optimistic'});
 
     // Optimistic update should be reflected immediately.
     expect(provider.markers.firstWhere((m) => m.id == 'm1').name, 'Optimistic');
@@ -138,6 +149,31 @@ void main() {
 
     expect(updated, isNotNull);
     expect(provider.markers.firstWhere((m) => m.id == 'm1').name, 'Server');
+    expect(api.updateCalls, 1);
+  });
+
+  test(
+      'MarkerManagementProvider.updateMarker keeps optimistic marker when backend returns null payload',
+      () async {
+    final api = _FakeMarkerApi();
+    final provider = MarkerManagementProvider(
+        api: api, mapMarkerService: MapMarkerService());
+
+    provider.ingestMarker(_marker('m1', name: 'Old'));
+
+    api.updateCompleter = Completer<ArtMarker?>();
+
+    final future =
+        provider.updateMarker('m1', <String, dynamic>{'name': 'Optimistic'});
+
+    expect(provider.markers.firstWhere((m) => m.id == 'm1').name, 'Optimistic');
+
+    api.updateCompleter!.complete(null);
+    final updated = await future;
+
+    expect(updated, isNotNull);
+    expect(updated!.name, 'Optimistic');
+    expect(provider.markers.firstWhere((m) => m.id == 'm1').name, 'Optimistic');
     expect(api.updateCalls, 1);
   });
 }

@@ -2894,26 +2894,62 @@ class BackendApiService
         timeout: const Duration(seconds: 15),
       );
 
-      final decoded =
-          response.body.isNotEmpty ? jsonDecode(response.body) : null;
-      if (response.statusCode == 200) {
-        if (decoded is Map<String, dynamic>) {
-          final marker = decoded['data'] ??
-              decoded['marker'] ??
-              decoded['artMarker'] ??
-              decoded;
-          if (marker is Map<String, dynamic>) {
-            return _artMarkerFromBackendJson(marker);
-          }
-        }
-        return null;
+      if (!_isSuccessStatus(response.statusCode)) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: uri.path,
+          body: response.body,
+        );
       }
 
-      throw BackendApiRequestException(
-        statusCode: response.statusCode,
-        path: uri.path,
-        body: response.body,
-      );
+      if (kDebugMode) {
+        debugPrint(
+          'BackendApiService.updateArtMarkerRecord: status=${response.statusCode} bodyLength=${response.body.length}',
+        );
+      }
+
+      if (response.body.isNotEmpty) {
+        try {
+          final decoded = jsonDecode(response.body);
+          if (decoded is Map<String, dynamic>) {
+            bool looksLikeMarkerMap(Map<String, dynamic> map) {
+              final hasId = (map['id'] ?? '').toString().trim().isNotEmpty;
+              final hasNameOrTitle = (map['name'] ?? map['title'] ?? '')
+                  .toString()
+                  .trim()
+                  .isNotEmpty;
+              final hasCoords = map.containsKey('latitude') ||
+                  map.containsKey('lat') ||
+                  map['position'] is Map;
+              return hasId && (hasNameOrTitle || hasCoords);
+            }
+
+            final candidate =
+                decoded['data'] ?? decoded['marker'] ?? decoded['artMarker'];
+            if (candidate is Map<String, dynamic>) {
+              return _artMarkerFromBackendJson(candidate);
+            }
+
+            if (looksLikeMarkerMap(decoded)) {
+              return _artMarkerFromBackendJson(decoded);
+            }
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            debugPrint(
+              'BackendApiService.updateArtMarkerRecord: response parse failed, falling back to GET: $e',
+            );
+          }
+        }
+      }
+
+      final refreshed = await getArtMarker(markerId);
+      if (kDebugMode && refreshed == null) {
+        debugPrint(
+          'BackendApiService.updateArtMarkerRecord: successful PUT but GET fallback returned null for marker $markerId',
+        );
+      }
+      return refreshed;
     } catch (e) {
       AppConfig.debugPrint(
           'BackendApiService.updateArtMarkerRecord failed: $e');
@@ -8279,10 +8315,9 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
     metadata['image_cid'],
     json['cid'],
   ]);
-  final normalizedImageUrl =
-      MediaUrlResolver.resolveDisplayUrl(rawImage) ??
-          MediaUrlResolver.resolveDisplayUrl(imageCid) ??
-          StorageConfig.resolveUrl(imageCid);
+  final normalizedImageUrl = MediaUrlResolver.resolveDisplayUrl(rawImage) ??
+      MediaUrlResolver.resolveDisplayUrl(imageCid) ??
+      StorageConfig.resolveUrl(imageCid);
   final arScale =
       doubleVal(json['arScale'] ?? json['ar_scale'] ?? arAsset?['scale']);
   final arRotation = normalizeRotation(
