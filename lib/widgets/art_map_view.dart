@@ -116,6 +116,10 @@ class _ArtMapViewState extends State<ArtMapView> {
   Size? _lastWebLayoutSize;
   Timer? _webResizeDebounce;
 
+  /// Set to `true` once [deactivate] fires; prevents late callbacks from
+  /// touching the [_controller] after the widget is going away.
+  bool _disposed = false;
+
   // Web: repeated layout changes (side panels, route transitions) can trigger a
   // storm of resize calls. This is costly across browsers; on some engines it
   // can cause noticeable startup jank. We adapt the debounce based on how
@@ -170,23 +174,38 @@ class _ArtMapViewState extends State<ArtMapView> {
   }
 
   @override
-  void dispose() {
+  void deactivate() {
+    // Mark inactive early (top-down) so callbacks that fire during child
+    // disposal (MapLibre plugin removing the platform view) see this flag
+    // and bail out instead of touching the already-disposed controller.
+    _disposed = true;
     _styleLoadTimer?.cancel();
     _styleLoadTimer = null;
     _webResizeDebounce?.cancel();
     _webResizeDebounce = null;
-    final controller = _controller;
     _controller = null;
-    if (controller != null) {
-      try {
-        controller.dispose();
-      } catch (e, st) {
-        AppConfig.debugPrint('ArtMapView: controller dispose failed: $e');
-        if (kDebugMode) {
-          AppConfig.debugPrint('ArtMapView: dispose stack: $st');
-        }
-      }
-    }
+    super.deactivate();
+  }
+
+  @override
+  void activate() {
+    super.activate();
+    // A state can be deactivated and reinserted (e.g. GlobalKey reparenting)
+    // without being disposed. Re-enable callbacks in that case.
+    _disposed = false;
+  }
+
+  @override
+  void dispose() {
+    // Timers were already cancelled in deactivate; null-guard for safety.
+    _styleLoadTimer?.cancel();
+    _styleLoadTimer = null;
+    _webResizeDebounce?.cancel();
+    _webResizeDebounce = null;
+    // Do NOT call controller.dispose() here. The MapLibre plugin's own
+    // State.dispose() disposes the controller when the platform view is
+    // removed. Calling dispose again causes "used after being disposed".
+    _controller = null;
     assert(() {
       _debugLiveInstances = math.max(0, _debugLiveInstances - 1);
       AppConfig.debugPrint(
@@ -198,7 +217,7 @@ class _ArtMapViewState extends State<ArtMapView> {
   }
 
   void _handleWebLayoutChanged(Size size) {
-    if (!kIsWeb) return;
+    if (!kIsWeb || _disposed) return;
     if (size.width.isNaN ||
         size.height.isNaN ||
         !size.width.isFinite ||
@@ -224,7 +243,7 @@ class _ArtMapViewState extends State<ArtMapView> {
     _webResizeDebounce?.cancel();
     final debounce = Duration(milliseconds: _webResizeDebounceMs);
     _webResizeDebounce = Timer(debounce, () {
-      if (!mounted) return;
+      if (!mounted || _disposed) return;
       final controller = _controller;
       if (controller == null) return;
       try {
@@ -258,7 +277,7 @@ class _ArtMapViewState extends State<ArtMapView> {
     final future = MapStyleService.resolveStyleString(widget.styleAsset);
     _resolvedStyleFuture = future;
     future.then((resolved) {
-      if (!mounted) return;
+      if (!mounted || _disposed) return;
       if (_resolvedStyleFuture != future) return;
       if (_resolvedStyleString == resolved) return;
       setState(() {
@@ -283,7 +302,7 @@ class _ArtMapViewState extends State<ArtMapView> {
   }
 
   void _markStyleFailure(String reason) {
-    if (!mounted) return;
+    if (!mounted || _disposed) return;
     if (_styleLoaded) return;
     setState(() {
       _styleFailed = true;
@@ -292,7 +311,7 @@ class _ArtMapViewState extends State<ArtMapView> {
   }
 
   Future<void> _attemptFallbackStyle() async {
-    if (_didFallback) return;
+    if (_didFallback || _disposed) return;
 
     final controller = _controller;
     if (controller == null) return;
@@ -318,7 +337,8 @@ class _ArtMapViewState extends State<ArtMapView> {
 
     try {
       final resolved = await MapStyleService.resolveStyleString(fallbackRef);
-      if (!mounted) return;
+      if (!mounted || _disposed) return;
+      if (_controller == null) return;
       await controller.setStyle(resolved);
     } catch (e, st) {
       AppConfig.debugPrint('ArtMapView: failed to apply fallback style: $e');
@@ -331,12 +351,13 @@ class _ArtMapViewState extends State<ArtMapView> {
   Future<void> _applyStyleToController() async {
     final controller = _controller;
     final future = _resolvedStyleFuture;
-    if (controller == null || future == null) return;
+    if (controller == null || future == null || _disposed) return;
 
     final requestId = _styleRequestId;
     final styleString = await future;
-    if (!mounted) return;
+    if (!mounted || _disposed) return;
     if (requestId != _styleRequestId) return;
+    if (_controller == null) return;
 
     try {
       await controller.setStyle(styleString);
@@ -354,7 +375,7 @@ class _ArtMapViewState extends State<ArtMapView> {
   void _startStyleHealthCheck() {
     _styleLoadTimer?.cancel();
     _styleLoadTimer = Timer(MapStyleService.styleLoadTimeout, () {
-      if (!mounted) return;
+      if (!mounted || _disposed) return;
       if (_styleLoaded) return;
       if (_didFallback) return;
 
@@ -447,6 +468,10 @@ class _ArtMapViewState extends State<ArtMapView> {
                 attributionButtonMargins: widget.attributionButtonMargins,
                 myLocationEnabled: false,
                 onMapCreated: (controller) {
+                  if (_disposed) {
+                    // Widget is going away; don't attach this controller.
+                    return;
+                  }
                   assert(() {
                     if (_mapCreated) {
                       AppConfig.debugPrint(
@@ -470,13 +495,14 @@ class _ArtMapViewState extends State<ArtMapView> {
                     // map is mounted behind onboarding / tab transitions. A forced
                     // resize after layout makes the map reliably paint on web.
                     WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (!mounted) return;
+                      if (!mounted || _disposed) return;
                       if (_controller != controller) return;
                       _forceResizeWebMapThrottled(controller);
                     });
                   }
                 },
                 onStyleLoadedCallback: () {
+                  if (_disposed) return;
                   _styleStopwatch?.stop();
                   _styleLoadTimer?.cancel();
                   final elapsedMs = _styleStopwatch?.elapsedMilliseconds;
@@ -488,7 +514,7 @@ class _ArtMapViewState extends State<ArtMapView> {
                   }
                   if (kIsWeb) {
                     final controller = _controller;
-                    if (controller != null && mounted) {
+                    if (controller != null && mounted && !_disposed) {
                       _forceResizeWebMapThrottled(controller);
                     }
                   }
@@ -499,7 +525,7 @@ class _ArtMapViewState extends State<ArtMapView> {
                     unawaited(_applyStyleToController());
                     return;
                   }
-                  if (!mounted) return;
+                  if (!mounted || _disposed) return;
                   setState(() {
                     _styleLoaded = true;
                     _styleFailed = false;
