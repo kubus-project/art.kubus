@@ -10,14 +10,14 @@ void main() {
     const pending = ShareDeepLinkTarget(type: ShareEntityType.marker, id: 'm1');
     final decision = router.decide(pending: pending, shouldShowSignIn: true);
     expect(decision?.route, '/sign-in');
-    expect((decision?.arguments as Map?)?['redirectRoute'], '/map');
+    expect((decision?.arguments as Map?)?['redirectRoute'], '/m/m1');
   });
 
   test('routes non-marker deep link directly to main shell', () {
     const pending = ShareDeepLinkTarget(type: ShareEntityType.artwork, id: 'a1');
     final decision = router.decide(pending: pending, shouldShowSignIn: false);
     expect(decision?.route, '/main');
-    expect(decision?.arguments, isNull);
+    expect((decision?.arguments as Map?)?['canonicalPath'], '/a/a1');
   });
 }
 

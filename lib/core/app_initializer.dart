@@ -1,5 +1,6 @@
 ﻿// NOTE: use_build_context_synchronously lint handled per-instance; avoid file-level ignore
 
+import 'package:art_kubus/services/share/share_types.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 // NOTE: use_build_context_synchronously lint handled per-instance; avoid file-level ignore
 import 'dart:async';
@@ -31,6 +32,9 @@ import '../screens/desktop/desktop_shell.dart';
 import '../widgets/app_loading.dart';
 import 'app_navigator.dart';
 import 'deep_link_startup_routing.dart';
+import '../main_app.dart';
+import 'shell_entry_screen.dart';
+import '../services/share/share_deep_link_parser.dart';
 
 class AppInitializer extends StatefulWidget {
   const AppInitializer({super.key});
@@ -40,6 +44,7 @@ class AppInitializer extends StatefulWidget {
 }
 
 class _AppInitializerState extends State<AppInitializer> {
+  static const ShareDeepLinkCodec _deepLinkCodec = ShareDeepLinkCodec();
   String? initializationError;
   Completer<void>? _initCompleter;
   Timer? _startupWatchdog;
@@ -326,7 +331,25 @@ class _AppInitializerState extends State<AppInitializer> {
         shouldShowSignIn: shouldShowSignIn,
       );
       if (decision == null) return;
-      navigator.pushReplacementNamed(decision.route, arguments: decision.arguments);
+
+      if (decision.route == '/sign-in') {
+        navigator.pushReplacementNamed(
+          decision.route,
+          arguments: decision.arguments,
+        );
+        return;
+      }
+
+      final canonicalPath = _deepLinkCodec.canonicalPathForTarget(pendingDeepLink);
+      final destination = pendingDeepLink.type == ShareEntityType.marker
+          ? const ShellEntryScreen.map()
+          : const MainApp();
+      navigator.pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => destination,
+          settings: RouteSettings(name: canonicalPath),
+        ),
+      );
       return;
     }
     

@@ -51,28 +51,6 @@ extension ShareEntityTypeX on ShareEntityType {
     }
     return null;
   }
-
-  /// Canonical URL path segment for share links.
-  String get canonicalPathSegment {
-    switch (this) {
-      case ShareEntityType.post:
-        return 'post';
-      case ShareEntityType.artwork:
-        return 'artwork';
-      case ShareEntityType.profile:
-        return 'profile';
-      case ShareEntityType.event:
-        return 'event';
-      case ShareEntityType.exhibition:
-        return 'exhibition';
-      case ShareEntityType.collection:
-        return 'collection';
-      case ShareEntityType.marker:
-        return 'marker';
-      case ShareEntityType.nft:
-        return 'nft';
-    }
-  }
 }
 
 /// Minimal description of what is being shared.
