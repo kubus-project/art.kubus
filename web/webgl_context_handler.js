@@ -31,6 +31,8 @@
   var canvasToMap = new WeakMap();
   var mapRecoveryState = new WeakMap();
   var mapIdSeq = 0;
+  var canvasWatcherInstalled = false;
+  var canvasObserver = null;
   // Track per-map removal to prevent double-remove from plugin + interception.
   var removedMapIds = {};
 
@@ -117,8 +119,26 @@
     var now = Date.now();
     var canvas = event.target;
 
+    // Ignore expected context-loss while a map is being explicitly removed.
+    // MapLibre uses WEBGL_lose_context on remove(); this should not be treated
+    // as an app-health failure signal.
+    var mapForCanvas = canvasToMap.get(canvas);
+    var isRemoving = !!(
+      (canvas && canvas.dataset && canvas.dataset.kubusMapRemoving === 'true') ||
+      (mapForCanvas && mapForCanvas.__kubusRemoving === true)
+    );
+
     // Always prevent default to allow potential recovery
     event.preventDefault();
+
+    if (isRemoving) {
+      debugLog('info', 'Ignoring WebGL context loss during map teardown', {
+        ts: new Date(now).toISOString(),
+        route: currentRoute(),
+        mapId: mapForCanvas ? mapForCanvas.__kubusMapId : null
+      });
+      return;
+    }
 
     debugLog('warn', 'WebGL context lost', {
       canvas: canvas,
@@ -295,10 +315,31 @@
     });
   }
 
+  function cleanupCanvasHandlers(canvas) {
+    if (!canvas) return;
+    if (!canvas.dataset || !canvas.dataset.kubusWebglHandled) return;
+    try {
+      canvas.removeEventListener('webglcontextlost', handleContextLost, false);
+      canvas.removeEventListener('webglcontextrestored', handleContextRestored, false);
+    } catch (_) { }
+    try {
+      delete canvas.dataset.kubusWebglHandled;
+      delete canvas.dataset.kubusWebglSource;
+      delete canvas.dataset.webglRecovering;
+      delete canvas.dataset.kubusMapRemoving;
+    } catch (_) { }
+    try {
+      canvasToMap.delete(canvas);
+    } catch (_) { }
+  }
+
   /**
    * Watch for new MapLibre canvas elements via MutationObserver
    */
   function setupCanvasWatcher() {
+    if (canvasWatcherInstalled) return;
+    canvasWatcherInstalled = true;
+
     // Handle any existing MapLibre canvases
     document.querySelectorAll('.maplibregl-canvas').forEach(function (canvas) {
       addCanvasHandlers(canvas, 'maplibre');
@@ -307,7 +348,7 @@
     logCanvasSnapshot('Canvas watcher initial scan');
 
     // Watch for new canvases being added (e.g., when map is recreated)
-    var observer = new MutationObserver(function (mutations) {
+    canvasObserver = new MutationObserver(function (mutations) {
       mutations.forEach(function (mutation) {
         mutation.addedNodes.forEach(function (node) {
           if (node.nodeType !== Node.ELEMENT_NODE) return;
@@ -337,6 +378,9 @@
             });
           }
           if (removedCanvases.length > 0) {
+            removedCanvases.forEach(function (canvas) {
+              cleanupCanvasHandlers(canvas);
+            });
             setTimeout(function () {
               logCanvasSnapshot('Canvas removed', { removedCount: removedCanvases.length });
             }, 0);
@@ -345,7 +389,7 @@
       });
     });
 
-    observer.observe(document.documentElement, {
+    canvasObserver.observe(document.documentElement, {
       childList: true,
       subtree: true
     });
@@ -427,6 +471,10 @@
         var canvas = null;
         try {
           canvas = this.getCanvas ? this.getCanvas() : null;
+          this.__kubusRemoving = true;
+          if (canvas && canvas.dataset) {
+            canvas.dataset.kubusMapRemoving = 'true';
+          }
         } catch (_) { }
 
         debugLog('info', 'MapLibre remove intercepted', {
@@ -440,7 +488,13 @@
         var result = originalRemove.apply(this, arguments);
         try {
           mapRecoveryState.delete(this);
+          mapCanvases.delete(this);
+          this.__kubusRemoving = false;
         } catch (_) { }
+
+        if (canvas) {
+          cleanupCanvasHandlers(canvas);
+        }
 
         setTimeout(function () {
           var mapRef = canvas ? canvasToMap.get(canvas) : null;
