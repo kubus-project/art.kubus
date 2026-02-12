@@ -17,12 +17,65 @@
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta http-equiv="Permissions-Policy" content="identity-credentials-get=(self &quot;https://accounts.google.com&quot;)">
   <meta name="robots" content="index, follow">
   <meta name="description" content="Discover augmented reality (AR) art in real places, create immersive AR experiences, and collect and trade NFTs and digital collectibles on art.kubus - a Web3 art marketplace.">
   <meta name="keywords" content="augmented reality art, AR art, NFT marketplace, Web3 art, blockchain art, digital collectibles, immersive art, AR experiences, creators, Solana, razširjena resničnost, AR umetnost, NFT tržnica, digitalni zbirateljski predmeti">
   <meta name="google-signin-client_id" content="623807687386-b08lhv474n1li9kkaasq46sag1s8gjcp.apps.googleusercontent.com">
 
-  <!-- Google Identity Services is loaded lazily by google_sign_in_web when needed. -->
+  <!-- Google Identity Services (Sign in with Google). -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <script>
+    // Guard Flutter web locale bootstrap: some environments expose
+    // navigator.language/navigator.languages as "undefined", which crashes
+    // Intl.Locale parsing during engine startup.
+    (function () {
+      try {
+        var nav = window.navigator;
+        if (!nav) return;
+
+        function normalizeLanguage(value) {
+          if (value == null) return null;
+          var normalized = String(value).trim();
+          if (!normalized) return null;
+          var lower = normalized.toLowerCase();
+          if (lower === 'undefined' || lower === 'null') return null;
+          return normalized;
+        }
+
+        var rawLanguages = [];
+        try {
+          if (Array.isArray(nav.languages)) rawLanguages = nav.languages.slice();
+        } catch (_) {}
+        if (!rawLanguages.length) rawLanguages = [nav.language];
+
+        var sanitized = rawLanguages
+          .map(normalizeLanguage)
+          .filter(function (value) { return !!value; });
+        if (!sanitized.length) sanitized = ['en-US', 'en'];
+
+        var primary = sanitized[0];
+        try {
+          Object.defineProperty(nav, 'language', {
+            configurable: true,
+            get: function () { return primary; },
+          });
+        } catch (_) {}
+        try {
+          Object.defineProperty(nav, 'languages', {
+            configurable: true,
+            get: function () { return sanitized.slice(); },
+          });
+        } catch (_) {}
+
+        var htmlLang = normalizeLanguage(document.documentElement.lang);
+        if (!htmlLang) {
+          document.documentElement.lang = (primary.split('-')[0] || 'en').toLowerCase();
+        }
+      } catch (_) {}
+    })();
+  </script>
 
   <link rel="canonical" href="https://app.kubus.site/">
   <link rel="alternate" hreflang="en" href="https://app.kubus.site/">

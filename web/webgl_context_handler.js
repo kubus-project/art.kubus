@@ -29,6 +29,7 @@
   var activeMaps = new WeakSet();
   var mapCanvases = new WeakMap();
   var canvasToMap = new WeakMap();
+  var mapRecoveryState = new WeakMap();
   var mapIdSeq = 0;
 
   /**
@@ -197,22 +198,64 @@
    * Attempt to recover the MapLibre map after context restoration
    */
   function tryMapRecovery(canvas) {
-    if (!canvas || !window.maplibregl) return;
+    if (!canvas) return;
 
-    // Find the map container (MapLibre adds .maplibregl-map class to container)
-    var container = canvas.closest('.maplibregl-map');
-    if (!container) return;
+    var map = canvasToMap.get(canvas);
+    var container = canvas.closest ? canvas.closest('.maplibregl-map') : null;
+    if (!map && !container) return;
+
+    if (map) {
+      var state = mapRecoveryState.get(map) || {
+        pending: false,
+        attemptCount: 0
+      };
+      if (state.pending) {
+        debugLog('warn', 'Skipping MapLibre recovery because one is already pending', {
+          mapId: map.__kubusMapId
+        });
+        return;
+      }
+      state.pending = true;
+      state.attemptCount += 1;
+      mapRecoveryState.set(map, state);
+
+      debugLog('info', 'Attempting MapLibre map recovery', {
+        mapId: map.__kubusMapId,
+        attemptCount: state.attemptCount
+      });
+
+      // Trigger a bounded one-shot recovery. Avoid recreate loops by guarding
+      // with `pending` and reusing the same map instance.
+      setTimeout(function () {
+        try {
+          if (typeof map.resize === 'function') {
+            map.resize();
+          }
+          if (typeof map.triggerRepaint === 'function') {
+            map.triggerRepaint();
+          }
+          window.dispatchEvent(new Event('resize'));
+          window.dispatchEvent(new CustomEvent('kubus:map-recovery-requested', {
+            detail: {
+              container: container,
+              mapId: map.__kubusMapId,
+              attemptCount: state.attemptCount
+            }
+          }));
+        } catch (e) {
+          debugLog('error', 'Map recovery failed', e);
+        } finally {
+          state.pending = false;
+          mapRecoveryState.set(map, state);
+        }
+      }, 120);
+      return;
+    }
 
     debugLog('info', 'Attempting MapLibre map recovery');
-
-    // Trigger a resize which forces MapLibre to recalculate and repaint
-    // This is done after a small delay to let the context fully initialize
     setTimeout(function () {
       try {
-        // Dispatch resize event to trigger any resize observers
         window.dispatchEvent(new Event('resize'));
-
-        // Also dispatch our custom event for Flutter handling
         window.dispatchEvent(new CustomEvent('kubus:map-recovery-requested', {
           detail: { container: container }
         }));
@@ -318,6 +361,10 @@
           if (canvas) {
             mapCanvases.set(map, canvas);
             canvasToMap.set(canvas, map);
+            mapRecoveryState.set(map, {
+              pending: false,
+              attemptCount: 0
+            });
             addCanvasHandlers(canvas, 'maplibre');
           }
         }
@@ -326,7 +373,7 @@
       // Map controls (zoom, compass/bearing reset) are handled entirely by
       // Flutter UI widgets. No MapLibre JS NavigationControl is added.
 
-      debugLog('info', 'MapLibre map created', {
+      debugLog('info', 'MapLibre constructor intercepted', {
         mapId: map.__kubusMapId,
         route: currentRoute(),
         ts: new Date().toISOString(),
@@ -360,7 +407,7 @@
           canvas = this.getCanvas ? this.getCanvas() : null;
         } catch (_) { }
 
-        debugLog('info', 'MapLibre map remove() called', {
+        debugLog('info', 'MapLibre remove intercepted', {
           mapId: this.__kubusMapId,
           ts: new Date().toISOString(),
           route: currentRoute(),
@@ -369,6 +416,9 @@
         });
 
         var result = originalRemove.apply(this, arguments);
+        try {
+          mapRecoveryState.delete(this);
+        } catch (_) { }
 
         setTimeout(function () {
           var mapRef = canvas ? canvasToMap.get(canvas) : null;
