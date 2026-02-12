@@ -91,11 +91,28 @@
   <!-- MapLibre GL JS (required by maplibre_gl on web) -->
   <!-- Vendored locally to avoid CSP / CDN availability issues in production. -->
   <!-- Use the CSP build + explicit worker URL to support strict CSP (no blob: workers). -->
-  <script src="vendor/maplibre-gl/maplibre-gl-csp.js"></script>
-  <link href="vendor/maplibre-gl/maplibre-gl.css" rel="stylesheet" />
+  <script src="local/maplibre-gl/maplibre-gl-csp.js"></script>
+  <link href="local/maplibre-gl/maplibre-gl.css" rel="stylesheet" />
   <style id="kubus-maplibre-attribution-style">
     :root {
       --kubus-mobile-map-attrib-bottom: 0px;
+    }
+
+    /*
+     * Firefox-safe user-select declarations.
+     * Keep values strictly standards-compliant to avoid parser drops in
+     * single-line/minified vendor stylesheets.
+     */
+    body,
+    #flt-glass-pane,
+    .maplibregl-map,
+    .maplibregl-canvas,
+    .maplibregl-canvas-container,
+    .maplibregl-popup-track-pointer * {
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
     }
 
     body.kubus-mobile-map .maplibregl-ctrl-bottom-left {
@@ -106,7 +123,7 @@
     (function () {
       try {
         if (window.maplibregl && typeof window.maplibregl.setWorkerUrl === 'function') {
-          window.maplibregl.setWorkerUrl('vendor/maplibre-gl/maplibre-gl-csp-worker.js');
+          window.maplibregl.setWorkerUrl('local/maplibre-gl/maplibre-gl-csp-worker.js');
         } else {
           console.error('MapLibre GL JS not available (window.maplibregl is missing).');
         }

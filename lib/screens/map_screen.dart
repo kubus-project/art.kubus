@@ -822,7 +822,12 @@ class _MapScreenState extends State<MapScreen>
       _resumePolling();
     } else {
       _pausePolling();
-      _setMapViewMounted(false);
+      // Web: avoid tearing down/recreating the platform view during brief
+      // tab/route visibility transitions. Frequent remove/create cycles can
+      // trigger avoidable WebGL context loss bursts in Firefox.
+      if (!kIsWeb) {
+        _setMapViewMounted(false);
+      }
     }
   }
 
