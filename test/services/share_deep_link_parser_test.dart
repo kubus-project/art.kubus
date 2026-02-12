@@ -6,20 +6,20 @@ void main() {
   const parser = ShareDeepLinkParser();
 
   test('ShareDeepLinkParser parses canonical paths', () {
-    expect(parser.parse(Uri.parse('/post/123'))?.type, ShareEntityType.post);
-    expect(parser.parse(Uri.parse('/post/123'))?.id, '123');
+    expect(parser.parse(Uri.parse('/p/123'))?.type, ShareEntityType.post);
+    expect(parser.parse(Uri.parse('/p/123'))?.id, '123');
 
-    expect(parser.parse(Uri.parse('/artwork/abc'))?.type, ShareEntityType.artwork);
-    expect(parser.parse(Uri.parse('/marker/m1'))?.type, ShareEntityType.marker);
-    expect(parser.parse(Uri.parse('/nft/n1'))?.type, ShareEntityType.nft);
-    expect(parser.parse(Uri.parse('/profile/wallet_1'))?.type, ShareEntityType.profile);
-    expect(parser.parse(Uri.parse('/event/e1'))?.type, ShareEntityType.event);
-    expect(parser.parse(Uri.parse('/exhibition/x1'))?.type, ShareEntityType.exhibition);
-    expect(parser.parse(Uri.parse('/collection/c1'))?.type, ShareEntityType.collection);
+    expect(parser.parse(Uri.parse('/a/abc'))?.type, ShareEntityType.artwork);
+    expect(parser.parse(Uri.parse('/m/m1'))?.type, ShareEntityType.marker);
+    expect(parser.parse(Uri.parse('/n/n1'))?.type, ShareEntityType.nft);
+    expect(parser.parse(Uri.parse('/u/wallet_1'))?.type, ShareEntityType.profile);
+    expect(parser.parse(Uri.parse('/e/e1'))?.type, ShareEntityType.event);
+    expect(parser.parse(Uri.parse('/x/x1'))?.type, ShareEntityType.exhibition);
+    expect(parser.parse(Uri.parse('/c/c1'))?.type, ShareEntityType.collection);
 
     // Full canonical URLs should parse the same way as relative paths.
-    expect(parser.parse(Uri.parse('https://app.kubus.site/marker/m_full'))?.type, ShareEntityType.marker);
-    expect(parser.parse(Uri.parse('https://app.kubus.site/marker/m_full'))?.id, 'm_full');
+    expect(parser.parse(Uri.parse('https://app.kubus.site/m/m_full'))?.type, ShareEntityType.marker);
+    expect(parser.parse(Uri.parse('https://app.kubus.site/m/m_full'))?.id, 'm_full');
   });
 
   test('ShareDeepLinkParser accepts legacy aliases', () {
@@ -46,6 +46,6 @@ void main() {
   test('ShareDeepLinkParser returns null for unsupported paths', () {
     expect(parser.parse(Uri.parse('/')), isNull);
     expect(parser.parse(Uri.parse('/unknown/123')), isNull);
-    expect(parser.parse(Uri.parse('/post/')), isNull);
+    expect(parser.parse(Uri.parse('/p/')), isNull);
   });
 }

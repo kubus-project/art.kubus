@@ -16,6 +16,7 @@ class DeepLinkStartupDecision {
 
 class DeepLinkStartupRouting {
   const DeepLinkStartupRouting();
+  static const ShareDeepLinkCodec _codec = ShareDeepLinkCodec();
 
   DeepLinkStartupDecision? decide({
     required ShareDeepLinkTarget? pending,
@@ -24,16 +25,23 @@ class DeepLinkStartupRouting {
     if (pending == null) return null;
 
     final destination = pending.type == ShareEntityType.marker ? '/map' : '/main';
+    final canonicalPath = _codec.canonicalPathForTarget(pending);
+
     if (shouldShowSignIn) {
       return DeepLinkStartupDecision(
         route: '/sign-in',
         arguments: {
-          'redirectRoute': destination,
+          'redirectRoute': canonicalPath,
         },
       );
     }
 
-    return DeepLinkStartupDecision(route: destination);
+    return DeepLinkStartupDecision(
+      route: destination,
+      arguments: {
+        'canonicalPath': canonicalPath,
+      },
+    );
   }
 }
 
