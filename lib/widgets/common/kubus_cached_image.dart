@@ -72,12 +72,17 @@ class KubusCachedImage extends StatelessWidget {
         (parsed.scheme != 'http' && parsed.scheme != 'https')) {
       return url;
     }
-    final isMediaProxyRequest =
-        parsed.path.contains('/api/media/proxy') &&
-            parsed.queryParameters.containsKey('url');
+    final isMediaProxyRequest = parsed.path.contains('/api/media/proxy') &&
+        parsed.queryParameters.containsKey('url');
     if (isMediaProxyRequest) {
       // Keep proxy URLs stable so proxy-side caching (including cached 4xx/5xx)
       // works as intended.
+      return url;
+    }
+    if (parsed.queryParameters.isNotEmpty) {
+      // Keep externally parameterized URLs stable (signed URLs, transform
+      // directives, redirector-style endpoints) by not appending a second
+      // cache-busting query token.
       return url;
     }
     final params = Map<String, String>.from(parsed.queryParameters);
