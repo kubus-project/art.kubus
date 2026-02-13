@@ -52,6 +52,17 @@ class MediaUrlResolver {
 
   static const int _defaultMaxDisplayWidth = 1600;
 
+  static const Set<String> _indirectImageNoiseParams = {
+    'v',
+    'cb',
+    'cachebust',
+    'cache_bust',
+    '_',
+    '_t',
+    'ts',
+    'timestamp',
+  };
+
   static bool _isHttpUrl(String url) {
     final lower = url.toLowerCase();
     return lower.startsWith('http://') || lower.startsWith('https://');
@@ -68,7 +79,33 @@ class MediaUrlResolver {
     if (!uri.hasScheme) return url;
     final scheme = uri.scheme.toLowerCase();
     if (scheme != 'http' && scheme != 'https') return url;
-    return uri.toString();
+    return _canonicalizeIndirectImageUrl(uri).toString();
+  }
+
+  static Uri _canonicalizeIndirectImageUrl(Uri uri) {
+    final isDirectImagePath = _pathLooksLikeImageAsset(uri.path);
+    final params = Map<String, String>.from(uri.queryParameters);
+
+    if (!isDirectImagePath) {
+      // Keep indirect resolver URLs cache-stable across small client-side
+      // variants (e.g. `width`, `v`, `cb`) that usually don't alter the final
+      // origin file selected by upstream redirectors.
+      params.remove('width');
+      params.remove('w');
+      for (final key in _indirectImageNoiseParams) {
+        params.remove(key);
+      }
+    }
+
+    return uri.replace(queryParameters: params.isEmpty ? null : params);
+  }
+
+  static bool _pathLooksLikeImageAsset(String path) {
+    final lowerPath = path.toLowerCase();
+    final dot = lowerPath.lastIndexOf('.');
+    if (dot == -1 || dot == lowerPath.length - 1) return false;
+    final ext = lowerPath.substring(dot + 1);
+    return _imageExtensions.contains(ext);
   }
 
   static bool _hostMatches(String host, String candidateDomain) {
@@ -103,7 +140,8 @@ class MediaUrlResolver {
   }
 
   static String _clampDisplayWidthQuery(String url, {int? maxWidth}) {
-    final targetMaxWidth = (maxWidth ?? _defaultMaxDisplayWidth).clamp(64, 4096);
+    final targetMaxWidth =
+        (maxWidth ?? _defaultMaxDisplayWidth).clamp(64, 4096);
     try {
       final uri = Uri.parse(url);
       if (!uri.hasScheme) return url;
@@ -127,11 +165,7 @@ class MediaUrlResolver {
   static bool _looksLikeImageUrl(String url) {
     try {
       final uri = Uri.parse(url);
-      final path = uri.path.toLowerCase();
-      final dot = path.lastIndexOf('.');
-      if (dot == -1 || dot == path.length - 1) return false;
-      final ext = path.substring(dot + 1);
-      return _imageExtensions.contains(ext);
+      return _pathLooksLikeImageAsset(uri.path);
     } catch (_) {
       return false;
     }
@@ -147,8 +181,11 @@ class MediaUrlResolver {
     try {
       final backend = Uri.parse(StorageConfig.httpBackend);
       final uri = Uri.parse(absoluteUrl);
-      if (!uri.hasScheme || (uri.scheme != 'http' && uri.scheme != 'https')) return true;
-      return backend.host.isNotEmpty && backend.host.toLowerCase() == uri.host.toLowerCase();
+      if (!uri.hasScheme || (uri.scheme != 'http' && uri.scheme != 'https')) {
+        return true;
+      }
+      return backend.host.isNotEmpty &&
+          backend.host.toLowerCase() == uri.host.toLowerCase();
     } catch (_) {
       return false;
     }
@@ -159,7 +196,9 @@ class MediaUrlResolver {
     try {
       final uri = Uri.parse(absoluteUrl);
       final current = Uri.base;
-      if (!uri.hasScheme || (uri.scheme != 'http' && uri.scheme != 'https')) return true;
+      if (!uri.hasScheme || (uri.scheme != 'http' && uri.scheme != 'https')) {
+        return true;
+      }
       return current.host.isNotEmpty &&
           current.host.toLowerCase() == uri.host.toLowerCase();
     } catch (_) {
