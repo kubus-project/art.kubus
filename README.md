@@ -5,13 +5,13 @@
 [![Flutter](https://img.shields.io/badge/Flutter-3.3.4+-02569B?style=flat&logo=flutter)](https://flutter.dev)
 [![Node.js](https://img.shields.io/badge/Node.js-20+-339933?style=flat&logo=node.js)](https://nodejs.org)
 [![Solana](https://img.shields.io/badge/Solana-Blockchain-9945FF?style=flat&logo=solana)](https://solana.com)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 ---
 
 ## Overview
 
-**art.kubus** is a research-driven, open-source platform that bridges the intersection of contemporary art, extended reality (XR), and blockchain technology. Developed as a comprehensive ecosystem for artists, institutions, and collectors, the platform leverages augmented reality (AR) and Web3 infrastructure to democratize access to art while fostering meaningful connections within the creative community.
+**art.kubus** is a research-driven open platform for artists that combines community, map-based discovery, and optional XR/Web3 layers. This repository publishes the open-source client while platform backend operations are maintained separately.
 
 The platform emerged from rigorous academic research exploring spatial computing, decentralized technologies, and contemporary art practices. By combining geospatial artwork discovery, immersive AR experiences, and blockchain-verified ownership, art.kubus creates an innovative framework for experiencing, collecting, and supporting digital and physical art in the 21st century.
 
@@ -61,11 +61,26 @@ The platform's development prioritizes artist autonomy, community governance, an
 
 ### Project Status
 
-art.kubus is currently in active development, with a functional pre-alpha platform available at [https://art.kubus.site](https://art.kubus.site). The codebase is open source under the MIT License, welcoming contributions from developers, artists, and researchers interested in the intersection of art and technology.
+art.kubus is currently in active development, with a functional pre-alpha platform available at [https://art.kubus.site](https://art.kubus.site). The client code in this repository is open source under Apache-2.0, while backend implementation remains proprietary unless explicitly published.
 
 **Current Phase**: Building Key Features
 **Roadmap**: [View detailed roadmap](https://art.kubus.site/#roadmap)  
 **Documentation**: [Project documentation](docs/)
+
+---
+
+## License and IP
+
+This repository follows an **open-source client + public platform APIs** model:
+
+- Client code is licensed under **Apache License 2.0**. See `LICENSE` and `NOTICE`.
+- Backend implementation is proprietary and not open source by default.
+- `art.kubus` name, logos, and brand elements are reserved. See `TRADEMARK.md`.
+- Screenshots, demo media, artwork/content assets, and other non-code assets are all rights reserved unless explicitly licensed otherwise. See `LICENSE_ASSETS.md`.
+- API usage and platform operation terms are documented in `docs/legal/TERMS_OF_SERVICE.md` and `docs/legal/DEVELOPER_API_TERMS.md`.
+- The app exposes dependency license texts in **Settings → About → Open source licenses**.
+
+For contribution workflow and support, see `CONTRIBUTING.md`, `SECURITY.md`, `SUPPORT.md`, and `GOVERNANCE.md`.
 
 ---
 

@@ -2546,7 +2546,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             action: SnackBarAction(
               label: 'Visit',
               onPressed: () {
-                // In production, open https://docs.art-kubus.io
+                // In production, open https://docs.kubus.site
               },
             ),
           ),
@@ -2581,7 +2581,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               style: GoogleFonts.inter(fontSize: 14),
             ),
             const SizedBox(height: 16),
-            _buildContactOption(Icons.email, 'Email', 'support@art-kubus.io'),
+            _buildContactOption(Icons.email, 'Email', 'support@kubus.site'),
             const SizedBox(height: 12),
             _buildContactOption(
                 Icons.chat, 'Live Chat', 'Available Mon-Fri 9AM-5PM'),
