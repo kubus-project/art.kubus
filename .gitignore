@@ -54,9 +54,13 @@ app.*.map.json
 /backend/.env
 /backend/.env.*
 !backend/.env.example
+/backend/.env.production
 /backend/logs/*.log
 /backend/uploads/*
 !backend/uploads/.gitkeep
+/backend/admin-whitelist.json
+/backend/artkubus-*.json
+/backend/ssl/**
 
 # Firebase configuration files
 /android/app/google-services.json

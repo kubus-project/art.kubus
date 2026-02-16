@@ -31,7 +31,6 @@ import '../../utils/app_color_utils.dart';
 import '../../widgets/glass_components.dart';
 import '../../utils/design_tokens.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
-  
 
 /// Desktop profile and settings screen
 /// Clean dashboard layout with account info and settings
@@ -51,13 +50,13 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
 
   // Profile settings state
   String _profileVisibility = 'Public';
-  
+
   // Privacy settings state
   bool _dataCollection = true;
   bool _personalizedAds = true;
   bool _locationTracking = true;
   String _dataRetention = '1 Year';
-  
+
   // Security settings state
   bool _twoFactorAuth = false;
   bool _sessionTimeout = true;
@@ -70,23 +69,23 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
   bool _privacyMode = false;
   bool _hasPin = false;
   bool _biometricsSupported = false;
-  
+
   // Account settings state
   bool _emailNotifications = true;
   bool _pushNotifications = true;
   bool _marketingEmails = false;
   String _accountType = 'Standard';
   bool _publicProfile = true;
-  
+
   // App settings state
   bool _analytics = true;
   bool _crashReporting = true;
   bool _skipOnboardingForReturningUsers = true;
-  
+
   // Wallet settings state
   String _networkSelection = 'Mainnet';
   bool _autoBackup = true;
-  
+
   // Profile interaction settings
   bool _showAchievements = true;
   bool _showFriends = true;
@@ -108,8 +107,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     final web3Provider = Provider.of<Web3Provider>(context, listen: false);
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final settings = await SettingsService.loadSettings(
-      fallbackNetwork:
-          web3Provider.currentNetwork.isNotEmpty ? web3Provider.currentNetwork : null,
+      fallbackNetwork: web3Provider.currentNetwork.isNotEmpty
+          ? web3Provider.currentNetwork
+          : null,
     );
     final hasPin = await walletProvider.hasPin();
     final biometricsSupported = await walletProvider.canUseBiometrics();
@@ -298,16 +298,23 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     final l10n = AppLocalizations.of(context)!;
     final errorColor = Theme.of(context).colorScheme.error;
     final settingsItems = [
-      _SettingsItem(l10n.settingsWalletSectionTitle, Icons.account_balance_wallet_outlined, 0),
-      _SettingsItem(l10n.settingsAppearanceSectionTitle, Icons.palette_outlined, 1),
-      _SettingsItem(l10n.permissionsNotificationsTitle, Icons.notifications_outlined, 2),
-      _SettingsItem(l10n.settingsPrivacySettingsTileTitle, Icons.lock_outline, 3),
+      _SettingsItem(l10n.settingsWalletSectionTitle,
+          Icons.account_balance_wallet_outlined, 0),
+      _SettingsItem(
+          l10n.settingsAppearanceSectionTitle, Icons.palette_outlined, 1),
+      _SettingsItem(
+          l10n.permissionsNotificationsTitle, Icons.notifications_outlined, 2),
+      _SettingsItem(
+          l10n.settingsPrivacySettingsTileTitle, Icons.lock_outline, 3),
       _SettingsItem(l10n.settingsSecuritySettingsTileTitle, Icons.security, 4),
-      _SettingsItem(l10n.userProfileAchievementsTitle, Icons.emoji_events_outlined, 5),
-      _SettingsItem(l10n.settingsPlatformFeaturesSectionTitle, Icons.phone_android_outlined, 6),
+      _SettingsItem(
+          l10n.userProfileAchievementsTitle, Icons.emoji_events_outlined, 5),
+      _SettingsItem(l10n.settingsPlatformFeaturesSectionTitle,
+          Icons.phone_android_outlined, 6),
       _SettingsItem(l10n.settingsSupportDialogTitle, Icons.help_outline, 7),
       _SettingsItem(l10n.settingsAboutSectionTitle, Icons.info_outline, 8),
-      _SettingsItem(l10n.settingsDangerZoneSectionTitle, Icons.warning_outlined, 9),
+      _SettingsItem(
+          l10n.settingsDangerZoneSectionTitle, Icons.warning_outlined, 9),
     ];
 
     return ListView(
@@ -341,7 +348,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
         SizedBox(height: DetailSpacing.sm),
 
         // Settings items
-        ...settingsItems.map((item) => _buildSettingsSidebarItem(item, themeProvider)),
+        ...settingsItems
+            .map((item) => _buildSettingsSidebarItem(item, themeProvider)),
 
         SizedBox(height: DetailSpacing.xl),
         const Divider(),
@@ -404,7 +412,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     }
   }
 
-  Widget _buildSettingsSidebarItem(_SettingsItem item, ThemeProvider themeProvider) {
+  Widget _buildSettingsSidebarItem(
+      _SettingsItem item, ThemeProvider themeProvider) {
     final isSelected = _selectedSettingsIndex == item.index;
     final scheme = Theme.of(context).colorScheme;
     final sectionColor = _getSectionColor(item.index, scheme);
@@ -420,7 +429,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
           key: ValueKey('desktop_settings_sidebar_item_${item.index}'),
           padding: EdgeInsets.all(DetailSpacing.lg),
           decoration: BoxDecoration(
-            color: isSelected ? sectionColor.withValues(alpha: 0.1) : Colors.transparent,
+            color: isSelected
+                ? sectionColor.withValues(alpha: 0.1)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(DetailRadius.md),
           ),
           child: Row(
@@ -432,12 +443,13 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                     ? sectionColor
                     : scheme.onSurface.withValues(alpha: 0.6),
               ),
-               SizedBox(width: DetailSpacing.lg),
+              SizedBox(width: DetailSpacing.lg),
               Expanded(
                 child: Text(
                   item.title,
-                  style: isSelected 
-                      ? DetailTypography.label(context).copyWith(color: sectionColor)
+                  style: isSelected
+                      ? DetailTypography.label(context)
+                          .copyWith(color: sectionColor)
                       : DetailTypography.body(context),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -512,7 +524,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
         final following = wallet.isEmpty
             ? 0
             : (counters['following'] ?? user?.stats?.followingCount ?? 0);
-        String displayCount(int value) => isLoading ? '\u2026' : value.toString();
+        String displayCount(int value) =>
+            isLoading ? '\u2026' : value.toString();
 
         return Container(
           padding: EdgeInsets.all(DetailSpacing.xxl),
@@ -572,11 +585,16 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                             SizedBox(height: DetailSpacing.md),
                             Row(
                               children: [
-                                _buildProfileStat(l10n.userProfileArtworksTitle, displayCount(artworks)),
+                                _buildProfileStat(l10n.userProfileArtworksTitle,
+                                    displayCount(artworks)),
                                 SizedBox(width: DetailSpacing.xl),
-                                _buildProfileStat(l10n.userProfileFollowersStatLabel, displayCount(followers)),
+                                _buildProfileStat(
+                                    l10n.userProfileFollowersStatLabel,
+                                    displayCount(followers)),
                                 SizedBox(width: DetailSpacing.xl),
-                                _buildProfileStat(l10n.userProfileFollowingStatLabel, displayCount(following)),
+                                _buildProfileStat(
+                                    l10n.userProfileFollowingStatLabel,
+                                    displayCount(following)),
                               ],
                             ),
                           ],
@@ -648,7 +666,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     final l10n = AppLocalizations.of(context)!;
     final web3Provider = Provider.of<Web3Provider>(context);
     final walletProvider = Provider.of<WalletProvider>(context);
-    
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32),
       child: SingleChildScrollView(
@@ -668,11 +686,14 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
               l10n.desktopSettingsWalletSectionSubtitle,
               style: GoogleFonts.inter(
                 fontSize: 14,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.6),
               ),
             ),
             const SizedBox(height: 24),
-            
+
             // Connection status
             DesktopCard(
               child: Column(
@@ -690,8 +711,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
-                          web3Provider.isConnected 
-                              ? Icons.check_circle 
+                          web3Provider.isConnected
+                              ? Icons.check_circle
                               : Icons.warning,
                           color: web3Provider.isConnected
                               ? Theme.of(context).colorScheme.tertiary
@@ -704,7 +725,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              web3Provider.isConnected 
+                              web3Provider.isConnected
                                   ? l10n.settingsWalletConnectionConnected
                                   : l10n.settingsWalletConnectionNotConnected,
                               style: GoogleFonts.inter(
@@ -715,10 +736,14 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                             ),
                             if (web3Provider.isConnected)
                               Text(
-                                web3Provider.formatAddress(web3Provider.walletAddress),
+                                web3Provider
+                                    .formatAddress(web3Provider.walletAddress),
                                 style: GoogleFonts.robotoMono(
                                   fontSize: 13,
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.6),
                                 ),
                               ),
                           ],
@@ -729,7 +754,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                           onPressed: () {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (_) => const WalletHome()),
+                              MaterialPageRoute(
+                                  builder: (_) => const WalletHome()),
                             );
                           },
                           icon: const Icon(Icons.visibility, size: 18),
@@ -744,9 +770,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Network selection
             DesktopCard(
               child: Column(
@@ -765,7 +791,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                     spacing: 12,
                     runSpacing: 12,
                     children: ['Mainnet', 'Devnet', 'Testnet'].map((network) {
-                      final isSelected = web3Provider.currentNetwork.toLowerCase() == network.toLowerCase();
+                      final isSelected =
+                          web3Provider.currentNetwork.toLowerCase() ==
+                              network.toLowerCase();
                       return ChoiceChip(
                         label: Text(network),
                         selected: isSelected,
@@ -775,12 +803,14 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                             walletProvider.switchSolanaNetwork(network);
                           }
                         },
-                        selectedColor: AppColorUtils.amberAccent.withValues(alpha: 0.2),
+                        selectedColor:
+                            AppColorUtils.amberAccent.withValues(alpha: 0.2),
                         labelStyle: GoogleFonts.inter(
-                          color: isSelected 
-                              ? AppColorUtils.amberAccent 
+                          color: isSelected
+                              ? AppColorUtils.amberAccent
                               : Theme.of(context).colorScheme.onSurface,
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.normal,
                         ),
                       );
                     }).toList(),
@@ -788,9 +818,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Security options
             if (web3Provider.isConnected) ...[
               Text(
@@ -802,7 +832,6 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                 ),
               ),
               const SizedBox(height: 12),
-              
               DesktopCard(
                 child: Column(
                   children: [
@@ -839,9 +868,11 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
-            Icon(Icons.warning_amber, color: Theme.of(context).colorScheme.error),
+            Icon(Icons.warning_amber,
+                color: Theme.of(context).colorScheme.error),
             const SizedBox(width: 12),
-            Text(l10n.settingsSecurityWarningTitle, style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+            Text(l10n.settingsSecurityWarningTitle,
+                style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
           ],
         ),
         content: Column(
@@ -851,7 +882,10 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             Text(
               l10n.settingsExportRecoveryPhraseDialogBody,
               style: GoogleFonts.inter(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.8),
               ),
             ),
             const SizedBox(height: 12),
@@ -859,7 +893,10 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
               l10n.settingsSecurityWarningBullets,
               style: GoogleFonts.inter(
                 fontSize: 13,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.6),
               ),
             ),
           ],
@@ -878,7 +915,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+              backgroundColor:
+                  Provider.of<ThemeProvider>(context, listen: false)
+                      .accentColor,
               foregroundColor: Colors.white,
             ),
             child: Text(l10n.commonContinue),
@@ -896,11 +935,13 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(l10n.desktopSettingsDisconnectWalletDialogTitle, style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+        title: Text(l10n.desktopSettingsDisconnectWalletDialogTitle,
+            style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
         content: Text(
           l10n.desktopSettingsDisconnectWalletDialogBody,
           style: GoogleFonts.inter(
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
           ),
         ),
         actions: [
@@ -911,9 +952,11 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              Provider.of<Web3Provider>(context, listen: false).disconnectWallet();
+              Provider.of<Web3Provider>(context, listen: false)
+                  .disconnectWallet();
               ScaffoldMessenger.of(context).showKubusSnackBar(
-                SnackBar(content: Text(l10n.desktopSettingsWalletDisconnectedToast)),
+                SnackBar(
+                    content: Text(l10n.desktopSettingsWalletDisconnectedToast)),
               );
             },
             style: ElevatedButton.styleFrom(
@@ -934,21 +977,44 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       context: context,
       builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text(l10n.settingsAppVersionDialogTitle, style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
+        title: Text(l10n.settingsAppVersionDialogTitle,
+            style: GoogleFonts.inter(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(l10n.appTitle, style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
+            Text(l10n.appTitle,
+                style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface)),
             const SizedBox(height: 8),
-            Text(l10n.settingsVersionValue(AppInfo.version), style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface)),
-            Text(l10n.settingsBuildValue(AppInfo.buildNumber), style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface)),
+            Text(l10n.settingsVersionValue(AppInfo.version),
+                style: GoogleFonts.inter(
+                    color: Theme.of(context).colorScheme.onSurface)),
+            Text(l10n.settingsBuildValue(AppInfo.buildNumber),
+                style: GoogleFonts.inter(
+                    color: Theme.of(context).colorScheme.onSurface)),
             const SizedBox(height: 16),
-            Text(l10n.settingsCopyright(DateTime.now().year), style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7))),
-            Text(l10n.settingsAllRightsReserved, style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7))),
+            Text(l10n.settingsCopyright(DateTime.now().year),
+                style: GoogleFonts.inter(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.7))),
+            Text(l10n.settingsAllRightsReserved,
+                style: GoogleFonts.inter(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.7))),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.commonClose)),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.commonClose)),
         ],
       ),
     );
@@ -960,15 +1026,21 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       context: context,
       builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text(l10n.settingsTermsDialogTitle, style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
+        title: Text(l10n.settingsTermsDialogTitle,
+            style: GoogleFonts.inter(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface)),
         content: SingleChildScrollView(
           child: Text(
             l10n.settingsTermsDialogBody,
-            style: GoogleFonts.inter(height: 1.5, color: Theme.of(context).colorScheme.onSurface),
+            style: GoogleFonts.inter(
+                height: 1.5, color: Theme.of(context).colorScheme.onSurface),
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.commonClose)),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.commonClose)),
         ],
       ),
     );
@@ -980,15 +1052,21 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       context: context,
       builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text(l10n.settingsPrivacyPolicyDialogTitle, style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
+        title: Text(l10n.settingsPrivacyPolicyDialogTitle,
+            style: GoogleFonts.inter(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface)),
         content: SingleChildScrollView(
           child: Text(
             l10n.settingsPrivacyPolicyDialogBody,
-            style: GoogleFonts.inter(height: 1.5, color: Theme.of(context).colorScheme.onSurface),
+            style: GoogleFonts.inter(
+                height: 1.5, color: Theme.of(context).colorScheme.onSurface),
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.commonClose)),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.commonClose)),
         ],
       ),
     );
@@ -1001,30 +1079,43 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
         backgroundColor: Theme.of(dialogContext).colorScheme.surface,
-        title: Text(l10n.settingsSupportDialogTitle, style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(dialogContext).colorScheme.onSurface)),
+        title: Text(l10n.settingsSupportDialogTitle,
+            style: GoogleFonts.inter(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(dialogContext).colorScheme.onSurface)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(l10n.settingsSupportDialogBody, style: GoogleFonts.inter(color: Theme.of(dialogContext).colorScheme.onSurface)),
+            Text(l10n.settingsSupportDialogBody,
+                style: GoogleFonts.inter(
+                    color: Theme.of(dialogContext).colorScheme.onSurface)),
             const SizedBox(height: 16),
             ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(backgroundColor: Theme.of(dialogContext).colorScheme.secondary, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor:
+                      Theme.of(dialogContext).colorScheme.secondary,
+                  foregroundColor: Colors.white),
               onPressed: () {
                 Navigator.pop(dialogContext);
-                ScaffoldMessenger.of(rootContext).showKubusSnackBar(SnackBar(content: Text(l10n.settingsOpeningFaqToast)));
+                ScaffoldMessenger.of(rootContext).showKubusSnackBar(
+                    SnackBar(content: Text(l10n.settingsOpeningFaqToast)));
               },
               icon: const Icon(Icons.help_outline),
               label: Text(l10n.settingsViewFaqButton),
             ),
             const SizedBox(height: 8),
             ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(backgroundColor: Theme.of(dialogContext).colorScheme.secondary, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor:
+                      Theme.of(dialogContext).colorScheme.secondary,
+                  foregroundColor: Colors.white),
               onPressed: () async {
                 final messenger = ScaffoldMessenger.of(rootContext);
                 Navigator.pop(dialogContext);
 
                 if (!AppConfig.isFeatureEnabled('supportTickets')) {
-                  messenger.showKubusSnackBar(SnackBar(content: Text(l10n.settingsOpeningEmailClientToast)));
+                  messenger.showKubusSnackBar(SnackBar(
+                      content: Text(l10n.settingsOpeningEmailClientToast)));
                   return;
                 }
 
@@ -1039,7 +1130,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(l10n.commonClose)),
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(l10n.commonClose)),
         ],
       ),
     );
@@ -1047,21 +1140,10 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
 
   void _showLicensesDialog() {
     final l10n = AppLocalizations.of(context)!;
-    showKubusDialog(
+    showLicensePage(
       context: context,
-      builder: (context) => KubusAlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text(l10n.settingsLicensesDialogTitle, style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
-        content: SingleChildScrollView(
-          child: Text(
-            l10n.settingsLicensesDialogBody,
-            style: GoogleFonts.inter(height: 1.5, color: Theme.of(context).colorScheme.onSurface),
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.commonClose)),
-        ],
-      ),
+      applicationName: l10n.appTitle,
+      applicationVersion: AppInfo.version,
     );
   }
 
@@ -1071,21 +1153,37 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       context: context,
       builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text(l10n.settingsRateAppDialogTitle, style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
+        title: Text(l10n.settingsRateAppDialogTitle,
+            style: GoogleFonts.inter(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l10n.settingsRateAppDialogBodyTitle, style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w600)),
+            Text(l10n.settingsRateAppDialogBodyTitle,
+                style: GoogleFonts.inter(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
-            Text(l10n.settingsRateAppDialogBodySubtitle, style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface)),
+            Text(l10n.settingsRateAppDialogBodySubtitle,
+                style: GoogleFonts.inter(
+                    color: Theme.of(context).colorScheme.onSurface)),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.settingsMaybeLaterButton)),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.settingsMaybeLaterButton)),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.secondary, foregroundColor: Colors.white),
-            onPressed: () { Navigator.pop(context); ScaffoldMessenger.of(context).showKubusSnackBar(SnackBar(content: Text(l10n.settingsOpeningAppStoreToast))); },
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.secondary,
+                foregroundColor: Colors.white),
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showKubusSnackBar(
+                  SnackBar(content: Text(l10n.settingsOpeningAppStoreToast)));
+            },
             child: Text(l10n.settingsRateNowButton),
           ),
         ],
@@ -1168,10 +1266,17 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       context: context,
       builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text(l10n.settingsResetAppDialogTitle, style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
-        content: Text(l10n.settingsResetAppDialogBody, style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface)),
+        title: Text(l10n.settingsResetAppDialogTitle,
+            style: GoogleFonts.inter(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface)),
+        content: Text(l10n.settingsResetAppDialogBody,
+            style: GoogleFonts.inter(
+                color: Theme.of(context).colorScheme.onSurface)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.commonCancel)),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.commonCancel)),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
@@ -1180,10 +1285,12 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             onPressed: () async {
               final navigator = Navigator.of(context);
               final messenger = ScaffoldMessenger.of(context);
-              final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+              final walletProvider =
+                  Provider.of<WalletProvider>(context, listen: false);
               final notificationProvider =
                   Provider.of<NotificationProvider>(context, listen: false);
-              final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+              final profileProvider =
+                  Provider.of<ProfileProvider>(context, listen: false);
               await SettingsService.resetApp(
                 walletProvider: walletProvider,
                 backendApi: BackendApiService(),
@@ -1191,7 +1298,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                 profileProvider: profileProvider,
               );
               navigator.pop();
-              messenger.showKubusSnackBar(SnackBar(content: Text(l10n.settingsAppResetSuccessToast), duration: const Duration(seconds: 3)));
+              messenger.showKubusSnackBar(SnackBar(
+                  content: Text(l10n.settingsAppResetSuccessToast),
+                  duration: const Duration(seconds: 3)));
               _restartToOnboarding();
             },
             child: Text(l10n.settingsResetButton),
@@ -1207,13 +1316,19 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       context: context,
       builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text(l10n.settingsDeleteAccountDialogTitle, style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
+        title: Text(l10n.settingsDeleteAccountDialogTitle,
+            style: GoogleFonts.inter(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface)),
         content: Text(
           l10n.settingsDeleteAccountDialogBody,
-          style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface),
+          style:
+              GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.commonCancel)),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.commonCancel)),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
@@ -1222,18 +1337,24 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             onPressed: () async {
               final navigator = Navigator.of(context);
               final messenger = ScaffoldMessenger.of(context);
-              final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+              final walletProvider =
+                  Provider.of<WalletProvider>(context, listen: false);
               final notificationProvider =
                   Provider.of<NotificationProvider>(context, listen: false);
-              final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+              final profileProvider =
+                  Provider.of<ProfileProvider>(context, listen: false);
 
               try {
                 final wallet = walletProvider.currentWalletAddress ??
                     profileProvider.currentUser?.walletAddress;
-                await BackendApiService().deleteMyAccountData(walletAddress: wallet);
+                await BackendApiService()
+                    .deleteMyAccountData(walletAddress: wallet);
               } catch (e) {
-                debugPrint('DesktopSettingsScreen: backend deletion failed: $e');
-                messenger.showKubusSnackBar(SnackBar(content: Text(l10n.settingsDeleteAccountBackendFailedToast)));
+                debugPrint(
+                    'DesktopSettingsScreen: backend deletion failed: $e');
+                messenger.showKubusSnackBar(SnackBar(
+                    content:
+                        Text(l10n.settingsDeleteAccountBackendFailedToast)));
               }
 
               await SettingsService.resetApp(
@@ -1244,7 +1365,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
               );
               if (!mounted) return;
               navigator.pop();
-              messenger.showKubusSnackBar(SnackBar(content: Text(l10n.settingsAccountDeletedToast)));
+              messenger.showKubusSnackBar(
+                  SnackBar(content: Text(l10n.settingsAccountDeletedToast)));
               _restartToOnboarding();
             },
             child: Text(l10n.settingsDeleteForeverButton),
@@ -1260,15 +1382,27 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       context: context,
       builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text(l10n.settingsExportDataDialogTitle, style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
-        content: Text(l10n.settingsExportDataDialogBody, style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface)),
+        title: Text(l10n.settingsExportDataDialogTitle,
+            style: GoogleFonts.inter(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface)),
+        content: Text(l10n.settingsExportDataDialogBody,
+            style: GoogleFonts.inter(
+                color: Theme.of(context).colorScheme.onSurface)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.commonCancel)),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.commonCancel)),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Provider.of<ThemeProvider>(context, listen: false).accentColor, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+                backgroundColor:
+                    Provider.of<ThemeProvider>(context, listen: false)
+                        .accentColor,
+                foregroundColor: Colors.white),
             onPressed: () {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showKubusSnackBar(SnackBar(content: Text(l10n.desktopSettingsExportingDataToast)));
+              ScaffoldMessenger.of(context).showKubusSnackBar(SnackBar(
+                  content: Text(l10n.desktopSettingsExportingDataToast)));
             },
             child: Text(l10n.settingsExportButton),
           ),
@@ -1283,19 +1417,31 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       context: context,
       builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text(l10n.settingsClearCacheDialogTitle, style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
-        content: Text(l10n.settingsClearCacheDialogBody, style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface)),
+        title: Text(l10n.settingsClearCacheDialogTitle,
+            style: GoogleFonts.inter(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface)),
+        content: Text(l10n.settingsClearCacheDialogBody,
+            style: GoogleFonts.inter(
+                color: Theme.of(context).colorScheme.onSurface)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.commonCancel)),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.commonCancel)),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Provider.of<ThemeProvider>(context, listen: false).accentColor, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+                backgroundColor:
+                    Provider.of<ThemeProvider>(context, listen: false)
+                        .accentColor,
+                foregroundColor: Colors.white),
             onPressed: () async {
               final navigator = Navigator.of(context);
               final messenger = ScaffoldMessenger.of(context);
               await SettingsService.clearNonCriticalCaches();
               if (!mounted) return;
               navigator.pop();
-              messenger.showKubusSnackBar(SnackBar(content: Text(l10n.settingsCacheClearedToast)));
+              messenger.showKubusSnackBar(
+                  SnackBar(content: Text(l10n.settingsCacheClearedToast)));
             },
             child: Text(l10n.settingsClearButton),
           ),
@@ -1320,20 +1466,26 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
         ),
         content: Text(
           l10n.settingsResetPermissionFlagsDialogBody,
-          style: GoogleFonts.inter(color: Theme.of(dialogContext).colorScheme.onSurface),
+          style: GoogleFonts.inter(
+              color: Theme.of(dialogContext).colorScheme.onSurface),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(l10n.commonCancel)),
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(l10n.commonCancel)),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Provider.of<ThemeProvider>(dialogContext, listen: false).accentColor,
+              backgroundColor:
+                  Provider.of<ThemeProvider>(dialogContext, listen: false)
+                      .accentColor,
               foregroundColor: Theme.of(dialogContext).colorScheme.onPrimary,
             ),
             onPressed: () async {
               Navigator.pop(dialogContext);
               await _resetPermissionFlags();
               if (!mounted) return;
-              messenger.showKubusSnackBar(SnackBar(content: Text(l10n.settingsPermissionFlagsResetToast)));
+              messenger.showKubusSnackBar(SnackBar(
+                  content: Text(l10n.settingsPermissionFlagsResetToast)));
             },
             child: Text(l10n.settingsResetButton),
           ),
@@ -1373,7 +1525,10 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   l10n.desktopSettingsPlatformSubtitle,
                   style: GoogleFonts.inter(
                     fontSize: 14,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -1386,7 +1541,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                       children: [
                         Icon(
                           isAvailable ? Icons.check_circle : Icons.cancel,
-                          color: isAvailable ? Theme.of(context).colorScheme.tertiary : Theme.of(context).colorScheme.error,
+                          color: isAvailable
+                              ? Theme.of(context).colorScheme.tertiary
+                              : Theme.of(context).colorScheme.error,
                           size: 24,
                         ),
                         const SizedBox(width: 12),
@@ -1399,14 +1556,19 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                                 style: GoogleFonts.inter(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
-                                  color: Theme.of(context).colorScheme.onSurface,
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
                               Text(
-                                isAvailable ? l10n.commonAvailable : l10n.commonNotAvailable,
+                                isAvailable
+                                    ? l10n.commonAvailable
+                                    : l10n.commonNotAvailable,
                                 style: GoogleFonts.inter(
                                   fontSize: 12,
-                                  color: isAvailable ? Theme.of(context).colorScheme.tertiary : Theme.of(context).colorScheme.error,
+                                  color: isAvailable
+                                      ? Theme.of(context).colorScheme.tertiary
+                                      : Theme.of(context).colorScheme.error,
                                 ),
                               ),
                             ],
@@ -1424,7 +1586,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     );
   }
 
-  String _getCapabilityDisplayName(AppLocalizations l10n, PlatformCapability capability) {
+  String _getCapabilityDisplayName(
+      AppLocalizations l10n, PlatformCapability capability) {
     switch (capability) {
       case PlatformCapability.camera:
         return l10n.settingsCapabilityCamera;
@@ -1453,14 +1616,16 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
 
   Future<void> _togglePushNotifications(bool value) async {
     final l10n = AppLocalizations.of(context)!;
-    final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
+    final notificationProvider =
+        Provider.of<NotificationProvider>(context, listen: false);
     if (value) {
       final granted = await PushNotificationService().requestPermission();
       if (!granted) {
         if (mounted) {
           setState(() => _pushNotifications = false);
           ScaffoldMessenger.of(context).showKubusSnackBar(
-            SnackBar(content: Text(l10n.settingsEnableNotificationsInSystemToast)),
+            SnackBar(
+                content: Text(l10n.settingsEnableNotificationsInSystemToast)),
           );
         }
         await _saveSettings();
@@ -1618,7 +1783,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             onPressed: () => Navigator.pop(context),
             child: Text(
               l10n.commonCancel,
-              style: GoogleFonts.inter(color: Theme.of(context).colorScheme.outline),
+              style: GoogleFonts.inter(
+                  color: Theme.of(context).colorScheme.outline),
             ),
           ),
           TextButton(
@@ -1643,33 +1809,39 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
               await _saveSettings();
               await gate.reloadSettings();
               navigator.pop();
-              messenger.showKubusSnackBar(SnackBar(content: Text(l10n.settingsPinClearedToast)));
+              messenger.showKubusSnackBar(
+                  SnackBar(content: Text(l10n.settingsPinClearedToast)));
             },
             child: Text(
               l10n.settingsClearPinButton,
-              style: GoogleFonts.inter(color: Theme.of(context).colorScheme.error),
+              style:
+                  GoogleFonts.inter(color: Theme.of(context).colorScheme.error),
             ),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: themeProvider.accentColor),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: themeProvider.accentColor),
             onPressed: () async {
               final navigator = Navigator.of(context);
               final messenger = ScaffoldMessenger.of(context);
               final pin = pinController.text.trim();
               final confirm = confirmController.text.trim();
               if (pin.length < 4 || confirm.length < 4) {
-                messenger.showKubusSnackBar(SnackBar(content: Text(l10n.settingsPinMinLengthError)));
+                messenger.showKubusSnackBar(
+                    SnackBar(content: Text(l10n.settingsPinMinLengthError)));
                 return;
               }
               if (pin != confirm) {
-                messenger.showKubusSnackBar(SnackBar(content: Text(l10n.settingsPinMismatchError)));
+                messenger.showKubusSnackBar(
+                    SnackBar(content: Text(l10n.settingsPinMismatchError)));
                 return;
               }
               try {
                 await walletProvider.setPin(pin);
                 if (!mounted) return;
                 final hasPin = await walletProvider.hasPin();
-                final biometricsSupported = await walletProvider.canUseBiometrics();
+                final biometricsSupported =
+                    await walletProvider.canUseBiometrics();
                 if (!mounted) return;
                 setState(() {
                   _hasPin = hasPin;
@@ -1677,13 +1849,17 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                 });
                 await gate.reloadSettings();
                 navigator.pop();
-                messenger.showKubusSnackBar(SnackBar(content: Text(l10n.settingsPinSetSuccessToast)));
+                messenger.showKubusSnackBar(
+                    SnackBar(content: Text(l10n.settingsPinSetSuccessToast)));
               } catch (_) {
                 if (!mounted) return;
-                messenger.showKubusSnackBar(SnackBar(content: Text(l10n.settingsPinSetFailedToast)));
+                messenger.showKubusSnackBar(
+                    SnackBar(content: Text(l10n.settingsPinSetFailedToast)));
               }
             },
-            child: Text(l10n.commonSave, style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onPrimary)),
+            child: Text(l10n.commonSave,
+                style: GoogleFonts.inter(
+                    color: Theme.of(context).colorScheme.onPrimary)),
           ),
         ],
       ),
@@ -1705,14 +1881,16 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
         ),
         content: Text(
           l10n.settingsLogoutDialogBody,
-          style: GoogleFonts.inter(color: Theme.of(dialogContext).colorScheme.onSurface),
+          style: GoogleFonts.inter(
+              color: Theme.of(dialogContext).colorScheme.onSurface),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
             child: Text(
               l10n.commonCancel,
-              style: GoogleFonts.inter(color: Theme.of(dialogContext).colorScheme.outline),
+              style: GoogleFonts.inter(
+                  color: Theme.of(dialogContext).colorScheme.outline),
             ),
           ),
           ElevatedButton(
@@ -1729,8 +1907,10 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
 
     if (confirmed != true || !mounted) return;
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final notificationProvider =
+        Provider.of<NotificationProvider>(context, listen: false);
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
     await SettingsService.logout(
       walletProvider: walletProvider,
       backendApi: BackendApiService(),
@@ -1770,11 +1950,13 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
               l10n.desktopSettingsDangerZoneSubtitle,
               style: GoogleFonts.inter(
                 fontSize: 14,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.6),
               ),
             ),
             const SizedBox(height: 24),
-            
             _buildSettingsRow(
               l10n.settingsClearCacheTileTitle,
               l10n.settingsClearCacheTileSubtitle,
@@ -1783,7 +1965,6 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
               onTap: _showClearCacheDialog,
             ),
             const SizedBox(height: 12),
-            
             _buildSettingsRow(
               l10n.settingsResetPermissionFlagsTileTitle,
               l10n.settingsResetPermissionFlagsTileSubtitle,
@@ -1792,7 +1973,6 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
               onTap: _showResetPermissionFlagsDialog,
             ),
             const SizedBox(height: 12),
-            
             _buildSettingsRow(
               l10n.settingsDataExportTileTitle,
               l10n.settingsDataExportTileSubtitle,
@@ -1801,7 +1981,6 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
               onTap: _showDataExportDialog,
             ),
             const SizedBox(height: 12),
-            
             _buildSettingsRow(
               l10n.settingsResetAppTileTitle,
               l10n.settingsResetAppTileSubtitle,
@@ -1810,7 +1989,6 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
               onTap: _showResetDialog,
             ),
             const SizedBox(height: 12),
-            
             _buildSettingsRow(
               l10n.settingsDeleteAccountTileTitle,
               l10n.settingsDeleteAccountTileSubtitle,
@@ -1846,11 +2024,14 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             l10n.desktopSettingsAppearanceSubtitle,
             style: GoogleFonts.inter(
               fontSize: 14,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.6),
             ),
           ),
           const SizedBox(height: 24),
-          
+
           // Theme mode
           DesktopCard(
             child: Column(
@@ -1867,15 +2048,24 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                 const SizedBox(height: 16),
                 Row(
                   children: [
-                    _buildThemeModeOption(l10n.settingsThemeModeLight, Icons.light_mode, !themeProvider.isDarkMode && !themeProvider.isSystemMode, () {
+                    _buildThemeModeOption(
+                        l10n.settingsThemeModeLight,
+                        Icons.light_mode,
+                        !themeProvider.isDarkMode &&
+                            !themeProvider.isSystemMode, () {
                       themeProvider.setThemeMode(ThemeMode.light);
                     }),
                     const SizedBox(width: 12),
-                    _buildThemeModeOption(l10n.settingsThemeModeDark, Icons.dark_mode, themeProvider.isDarkMode && !themeProvider.isSystemMode, () {
+                    _buildThemeModeOption(
+                        l10n.settingsThemeModeDark,
+                        Icons.dark_mode,
+                        themeProvider.isDarkMode && !themeProvider.isSystemMode,
+                        () {
                       themeProvider.setThemeMode(ThemeMode.dark);
                     }),
                     const SizedBox(width: 12),
-                    _buildThemeModeOption(l10n.settingsThemeModeSystem, Icons.settings_suggest, themeProvider.isSystemMode, () {
+                    _buildThemeModeOption(l10n.settingsThemeModeSystem,
+                        Icons.settings_suggest, themeProvider.isSystemMode, () {
                       themeProvider.setThemeMode(ThemeMode.system);
                     }),
                   ],
@@ -1883,9 +2073,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
               ],
             ),
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           // Accent color
           DesktopCard(
             child: Column(
@@ -1916,15 +2106,21 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                           color: color,
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: isSelected ? Colors.white : Colors.transparent,
+                            color:
+                                isSelected ? Colors.white : Colors.transparent,
                             width: 3,
                           ),
                           boxShadow: isSelected
-                              ? [BoxShadow(color: color.withValues(alpha: 0.5), blurRadius: 8)]
+                              ? [
+                                  BoxShadow(
+                                      color: color.withValues(alpha: 0.5),
+                                      blurRadius: 8)
+                                ]
                               : null,
                         ),
                         child: isSelected
-                            ? const Icon(Icons.check, color: Colors.white, size: 20)
+                            ? const Icon(Icons.check,
+                                color: Colors.white, size: 20)
                             : null,
                       ),
                     );
@@ -1956,7 +2152,10 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                         l10n.settingsLanguageDescription,
                         style: GoogleFonts.inter(
                           fontSize: 14,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.6),
                         ),
                       ),
                     ],
@@ -2014,8 +2213,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                             style: GoogleFonts.inter(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
-                              color:
-                                  Theme.of(context).colorScheme.onSurface,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -2043,8 +2241,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                           Provider.of<ThemeProvider>(context, listen: false)
                               .accentColor
                               .withValues(alpha: 0.5),
-                      thumbColor:
-                          WidgetStateProperty.resolveWith((states) {
+                      thumbColor: WidgetStateProperty.resolveWith((states) {
                         if (states.contains(WidgetState.selected)) {
                           return Provider.of<ThemeProvider>(context,
                                   listen: false)
@@ -2063,7 +2260,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     );
   }
 
-  Widget _buildThemeModeOption(String label, IconData icon, bool isSelected, VoidCallback onTap) {
+  Widget _buildThemeModeOption(
+      String label, IconData icon, bool isSelected, VoidCallback onTap) {
     final scheme = Theme.of(context).colorScheme;
     final themeColor = scheme.tertiary;
 
@@ -2099,10 +2297,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   label,
                   style: GoogleFonts.inter(
                     fontSize: 14,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                    color: isSelected
-                        ? themeColor
-                        : scheme.onSurface,
+                    fontWeight:
+                        isSelected ? FontWeight.w600 : FontWeight.normal,
+                    color: isSelected ? themeColor : scheme.onSurface,
                   ),
                 ),
               ],
@@ -2135,7 +2332,6 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             ),
           ),
           const SizedBox(height: 24),
-          
           DesktopCard(
             child: Column(
               children: [
@@ -2168,7 +2364,10 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                     l10n.settingsEmailPreferencesTransactionalNote,
                     style: GoogleFonts.inter(
                       fontSize: 13,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.5),
                     ),
                   ),
                 ),
@@ -2176,9 +2375,13 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   const SizedBox(height: 12),
                   LinearProgressIndicator(
                     minHeight: 2,
-                    backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                    backgroundColor: Theme.of(context)
+                        .colorScheme
+                        .surfaceContainerHighest
+                        .withValues(alpha: 0.5),
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      Provider.of<ThemeProvider>(context, listen: false).accentColor,
+                      Provider.of<ThemeProvider>(context, listen: false)
+                          .accentColor,
                     ),
                   ),
                 ],
@@ -2188,15 +2391,20 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   l10n.settingsEmailPreferencesProductUpdatesSubtitle,
                   emailPreferencesProvider.preferences.productUpdates,
                   saveAfterToggle: false,
-                  enabled: emailPreferencesProvider.canManage && !emailPreferencesProvider.isUpdating,
+                  enabled: emailPreferencesProvider.canManage &&
+                      !emailPreferencesProvider.isUpdating,
                   onChanged: (value) {
-                    final next = emailPreferencesProvider.preferences.copyWith(productUpdates: value);
+                    final next = emailPreferencesProvider.preferences
+                        .copyWith(productUpdates: value);
                     final messenger = ScaffoldMessenger.of(context);
                     unawaited(() async {
-                      final ok = await emailPreferencesProvider.updatePreferences(next);
+                      final ok = await emailPreferencesProvider
+                          .updatePreferences(next);
                       if (!ok && mounted) {
                         messenger.showKubusSnackBar(
-                          SnackBar(content: Text(l10n.settingsEmailPreferencesUpdateFailedToast)),
+                          SnackBar(
+                              content: Text(l10n
+                                  .settingsEmailPreferencesUpdateFailedToast)),
                         );
                       }
                     }());
@@ -2208,15 +2416,20 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   l10n.settingsEmailPreferencesNewsletterSubtitle,
                   emailPreferencesProvider.preferences.newsletter,
                   saveAfterToggle: false,
-                  enabled: emailPreferencesProvider.canManage && !emailPreferencesProvider.isUpdating,
+                  enabled: emailPreferencesProvider.canManage &&
+                      !emailPreferencesProvider.isUpdating,
                   onChanged: (value) {
-                    final next = emailPreferencesProvider.preferences.copyWith(newsletter: value);
+                    final next = emailPreferencesProvider.preferences
+                        .copyWith(newsletter: value);
                     final messenger = ScaffoldMessenger.of(context);
                     unawaited(() async {
-                      final ok = await emailPreferencesProvider.updatePreferences(next);
+                      final ok = await emailPreferencesProvider
+                          .updatePreferences(next);
                       if (!ok && mounted) {
                         messenger.showKubusSnackBar(
-                          SnackBar(content: Text(l10n.settingsEmailPreferencesUpdateFailedToast)),
+                          SnackBar(
+                              content: Text(l10n
+                                  .settingsEmailPreferencesUpdateFailedToast)),
                         );
                       }
                     }());
@@ -2228,15 +2441,20 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   l10n.settingsEmailPreferencesCommunityDigestSubtitle,
                   emailPreferencesProvider.preferences.communityDigest,
                   saveAfterToggle: false,
-                  enabled: emailPreferencesProvider.canManage && !emailPreferencesProvider.isUpdating,
+                  enabled: emailPreferencesProvider.canManage &&
+                      !emailPreferencesProvider.isUpdating,
                   onChanged: (value) {
-                    final next = emailPreferencesProvider.preferences.copyWith(communityDigest: value);
+                    final next = emailPreferencesProvider.preferences
+                        .copyWith(communityDigest: value);
                     final messenger = ScaffoldMessenger.of(context);
                     unawaited(() async {
-                      final ok = await emailPreferencesProvider.updatePreferences(next);
+                      final ok = await emailPreferencesProvider
+                          .updatePreferences(next);
                       if (!ok && mounted) {
                         messenger.showKubusSnackBar(
-                          SnackBar(content: Text(l10n.settingsEmailPreferencesUpdateFailedToast)),
+                          SnackBar(
+                              content: Text(l10n
+                                  .settingsEmailPreferencesUpdateFailedToast)),
                         );
                       }
                     }());
@@ -2248,15 +2466,20 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   l10n.settingsEmailPreferencesSecurityAlertsSubtitle,
                   emailPreferencesProvider.preferences.securityAlerts,
                   saveAfterToggle: false,
-                  enabled: emailPreferencesProvider.canManage && !emailPreferencesProvider.isUpdating,
+                  enabled: emailPreferencesProvider.canManage &&
+                      !emailPreferencesProvider.isUpdating,
                   onChanged: (value) {
-                    final next = emailPreferencesProvider.preferences.copyWith(securityAlerts: value);
+                    final next = emailPreferencesProvider.preferences
+                        .copyWith(securityAlerts: value);
                     final messenger = ScaffoldMessenger.of(context);
                     unawaited(() async {
-                      final ok = await emailPreferencesProvider.updatePreferences(next);
+                      final ok = await emailPreferencesProvider
+                          .updatePreferences(next);
                       if (!ok && mounted) {
                         messenger.showKubusSnackBar(
-                          SnackBar(content: Text(l10n.settingsEmailPreferencesUpdateFailedToast)),
+                          SnackBar(
+                              content: Text(l10n
+                                  .settingsEmailPreferencesUpdateFailedToast)),
                         );
                       }
                     }());
@@ -2281,7 +2504,10 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                             l10n.settingsEmailPreferencesTransactionalSubtitle,
                             style: GoogleFonts.inter(
                               fontSize: 13,
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.5),
                             ),
                           ),
                         ],
@@ -2290,10 +2516,14 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                     Switch(
                       value: true,
                       onChanged: null,
-                      activeTrackColor: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.5),
+                      activeTrackColor: Provider.of<ThemeProvider>(context)
+                          .accentColor
+                          .withValues(alpha: 0.5),
                       thumbColor: WidgetStateProperty.resolveWith((states) {
                         if (states.contains(WidgetState.selected)) {
-                          return Provider.of<ThemeProvider>(context, listen: false).accentColor;
+                          return Provider.of<ThemeProvider>(context,
+                                  listen: false)
+                              .accentColor;
                         }
                         return null;
                       }),
@@ -2305,7 +2535,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   l10n.settingsLoginNotificationsTitle,
                   l10n.settingsLoginNotificationsSubtitle,
                   _loginNotifications,
-                  onChanged: (value) => setState(() => _loginNotifications = value),
+                  onChanged: (value) =>
+                      setState(() => _loginNotifications = value),
                 ),
               ],
             ),
@@ -2334,7 +2565,6 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             ),
           ),
           const SizedBox(height: 24),
-          
           DesktopCard(
             child: Column(
               children: [
@@ -2343,8 +2573,10 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   l10n.settingsPrivateProfileSubtitle,
                   privateProfile,
                   saveAfterToggle: false,
-                  onChanged: (value) => profileProvider.updatePreferences(privateProfile: value),
-                  switchKey: const Key('desktop_settings_privacy_private_profile'),
+                  onChanged: (value) =>
+                      profileProvider.updatePreferences(privateProfile: value),
+                  switchKey:
+                      const Key('desktop_settings_privacy_private_profile'),
                 ),
                 const Divider(height: 32),
                 _buildToggleSetting(
@@ -2354,9 +2586,11 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   saveAfterToggle: false,
                   onChanged: (value) => profileProvider.updatePreferences(
                     showActivityStatus: value,
-                    shareLastVisitedLocation: value ? prefs.shareLastVisitedLocation : false,
+                    shareLastVisitedLocation:
+                        value ? prefs.shareLastVisitedLocation : false,
                   ),
-                  switchKey: const Key('desktop_settings_privacy_show_activity_status'),
+                  switchKey: const Key(
+                      'desktop_settings_privacy_show_activity_status'),
                 ),
                 const Divider(height: 32),
                 _buildToggleSetting(
@@ -2364,9 +2598,11 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   l10n.settingsShareLastVisitedLocationSubtitle,
                   prefs.shareLastVisitedLocation,
                   saveAfterToggle: false,
-                  onChanged: (value) => profileProvider.updatePreferences(shareLastVisitedLocation: value),
+                  onChanged: (value) => profileProvider.updatePreferences(
+                      shareLastVisitedLocation: value),
                   enabled: prefs.showActivityStatus,
-                  switchKey: const Key('desktop_settings_privacy_share_last_visited_location'),
+                  switchKey: const Key(
+                      'desktop_settings_privacy_share_last_visited_location'),
                 ),
                 const Divider(height: 32),
                 _buildToggleSetting(
@@ -2374,8 +2610,10 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   l10n.settingsShowCollectionSubtitle,
                   prefs.showCollection,
                   saveAfterToggle: false,
-                  onChanged: (value) => profileProvider.updatePreferences(showCollection: value),
-                  switchKey: const Key('desktop_settings_privacy_show_collection'),
+                  onChanged: (value) =>
+                      profileProvider.updatePreferences(showCollection: value),
+                  switchKey:
+                      const Key('desktop_settings_privacy_show_collection'),
                 ),
                 const Divider(height: 32),
                 _buildToggleSetting(
@@ -2383,8 +2621,10 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   l10n.settingsAllowMessagesSubtitle,
                   prefs.allowMessages,
                   saveAfterToggle: false,
-                  onChanged: (value) => profileProvider.updatePreferences(allowMessages: value),
-                  switchKey: const Key('desktop_settings_privacy_allow_messages'),
+                  onChanged: (value) =>
+                      profileProvider.updatePreferences(allowMessages: value),
+                  switchKey:
+                      const Key('desktop_settings_privacy_allow_messages'),
                 ),
                 const Divider(height: 32),
                 _buildToggleSetting(
@@ -2398,7 +2638,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   l10n.desktopSettingsShowAchievementsTitle,
                   l10n.desktopSettingsShowAchievementsSubtitle,
                   _showAchievements,
-                  onChanged: (value) => setState(() => _showAchievements = value),
+                  onChanged: (value) =>
+                      setState(() => _showAchievements = value),
                 ),
                 const Divider(height: 32),
                 _buildToggleSetting(
@@ -2446,7 +2687,6 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             ),
           ),
           const SizedBox(height: 24),
-          
           DesktopCard(
             child: Column(
               children: [
@@ -2505,7 +2745,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                     l10n.settingsUseBiometricsOnUnlockTitle,
                     l10n.settingsUseBiometricsOnUnlockSubtitle,
                     _useBiometricsOnUnlock,
-                    onChanged: (value) => setState(() => _useBiometricsOnUnlock = value),
+                    onChanged: (value) =>
+                        setState(() => _useBiometricsOnUnlock = value),
                   ),
                 ],
                 const Divider(height: 32),
@@ -2522,7 +2763,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   l10n.settingsLoginNotificationsTitle,
                   l10n.settingsLoginNotificationsSubtitle,
                   _loginNotifications,
-                  onChanged: (value) => setState(() => _loginNotifications = value),
+                  onChanged: (value) =>
+                      setState(() => _loginNotifications = value),
                 ),
                 const Divider(height: 32),
                 _buildToggleSetting(
@@ -2559,7 +2801,10 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             l10n.desktopSettingsAchievementsSubtitle,
             style: GoogleFonts.inter(
               fontSize: 14,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.6),
             ),
           ),
           const SizedBox(height: 32),
@@ -2569,45 +2814,72 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.2),
-                  Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.05),
+                  Provider.of<ThemeProvider>(context)
+                      .accentColor
+                      .withValues(alpha: 0.2),
+                  Provider.of<ThemeProvider>(context)
+                      .accentColor
+                      .withValues(alpha: 0.05),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.3),
+                color: Provider.of<ThemeProvider>(context)
+                    .accentColor
+                    .withValues(alpha: 0.3),
               ),
             ),
             child: Row(
               children: [
                 Expanded(
-                  child: _buildStatItem(l10n.desktopSettingsAchievementsStatArtworksDiscovered, '12', Icons.image),
+                  child: _buildStatItem(
+                      l10n.desktopSettingsAchievementsStatArtworksDiscovered,
+                      '12',
+                      Icons.image),
                 ),
                 Container(
                   width: 1,
                   height: 60,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.1),
                 ),
                 Expanded(
-                  child: _buildStatItem(l10n.desktopSettingsAchievementsStatArViews, '28', Icons.view_in_ar),
+                  child: _buildStatItem(
+                      l10n.desktopSettingsAchievementsStatArViews,
+                      '28',
+                      Icons.view_in_ar),
                 ),
                 Container(
                   width: 1,
                   height: 60,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.1),
                 ),
                 Expanded(
-                  child: _buildStatItem(l10n.desktopSettingsAchievementsStatEventsAttended, '5', Icons.event),
+                  child: _buildStatItem(
+                      l10n.desktopSettingsAchievementsStatEventsAttended,
+                      '5',
+                      Icons.event),
                 ),
                 Container(
                   width: 1,
                   height: 60,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.1),
                 ),
                 Expanded(
-                  child: _buildStatItem(l10n.desktopSettingsAchievementsStatKub8PointsEarned, '150', Icons.token),
+                  child: _buildStatItem(
+                      l10n.desktopSettingsAchievementsStatKub8PointsEarned,
+                      '150',
+                      Icons.token),
                 ),
               ],
             ),
@@ -2693,7 +2965,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
           label,
           style: GoogleFonts.inter(
             fontSize: 12,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
           textAlign: TextAlign.center,
         ),
@@ -2712,7 +2985,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
   }) {
     final scheme = Theme.of(context).colorScheme;
     final achievementColor = Colors.amber;
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -2852,7 +3125,10 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             l10n.desktopSettingsHelpSupportSubtitle,
             style: GoogleFonts.inter(
               fontSize: 14,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.6),
             ),
           ),
           const SizedBox(height: 32),
@@ -2876,7 +3152,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             Icons.bug_report_outlined,
             onTap: () {
               ScaffoldMessenger.of(context).showKubusSnackBar(
-                SnackBar(content: Text(l10n.desktopSettingsOpeningBugReportToast)),
+                SnackBar(
+                    content: Text(l10n.desktopSettingsOpeningBugReportToast)),
               );
             },
           ),
@@ -2906,11 +3183,14 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             l10n.desktopSettingsAboutSubtitle,
             style: GoogleFonts.inter(
               fontSize: 14,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.6),
             ),
           ),
           const SizedBox(height: 32),
-          
+
           // Version Info
           _buildSettingsRow(
             l10n.settingsAboutVersionTileTitle,
@@ -2919,7 +3199,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             onTap: _showVersionDialog,
           ),
           const SizedBox(height: 12),
-          
+
           // Features Section
           Text(
             l10n.desktopSettingsFeaturesSectionTitle,
@@ -2930,19 +3210,34 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             ),
           ),
           const SizedBox(height: 16),
-          
-          _buildFeatureItem(Icons.view_in_ar, l10n.desktopSettingsFeatureArDiscoveryTitle, l10n.desktopSettingsFeatureArDiscoveryDescription),
+
+          _buildFeatureItem(
+              Icons.view_in_ar,
+              l10n.desktopSettingsFeatureArDiscoveryTitle,
+              l10n.desktopSettingsFeatureArDiscoveryDescription),
           const SizedBox(height: 16),
-          _buildFeatureItem(Icons.account_balance_wallet, l10n.desktopSettingsFeatureWeb3IntegrationTitle, l10n.desktopSettingsFeatureWeb3IntegrationDescription),
+          _buildFeatureItem(
+              Icons.account_balance_wallet,
+              l10n.desktopSettingsFeatureWeb3IntegrationTitle,
+              l10n.desktopSettingsFeatureWeb3IntegrationDescription),
           const SizedBox(height: 16),
-          _buildFeatureItem(Icons.auto_awesome, l10n.desktopSettingsFeatureNftMintingTitle, l10n.desktopSettingsFeatureNftMintingDescription),
+          _buildFeatureItem(
+              Icons.auto_awesome,
+              l10n.desktopSettingsFeatureNftMintingTitle,
+              l10n.desktopSettingsFeatureNftMintingDescription),
           const SizedBox(height: 16),
-          _buildFeatureItem(Icons.groups, l10n.desktopSettingsFeatureCommunityTitle, l10n.desktopSettingsFeatureCommunityDescription),
+          _buildFeatureItem(
+              Icons.groups,
+              l10n.desktopSettingsFeatureCommunityTitle,
+              l10n.desktopSettingsFeatureCommunityDescription),
           const SizedBox(height: 16),
-          _buildFeatureItem(Icons.museum, l10n.desktopSettingsFeatureInstitutionsTitle, l10n.desktopSettingsFeatureInstitutionsDescription),
-          
+          _buildFeatureItem(
+              Icons.museum,
+              l10n.desktopSettingsFeatureInstitutionsTitle,
+              l10n.desktopSettingsFeatureInstitutionsDescription),
+
           const SizedBox(height: 32),
-          
+
           // Legal Links
           Text(
             l10n.desktopSettingsLegalSectionTitle,
@@ -2953,7 +3248,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             ),
           ),
           const SizedBox(height: 16),
-          
+
           _buildSettingsRow(
             l10n.settingsAboutTermsTileTitle,
             l10n.settingsAboutTermsTileSubtitle,
@@ -2961,7 +3256,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             onTap: _showTermsDialog,
           ),
           const SizedBox(height: 12),
-          
+
           _buildSettingsRow(
             l10n.settingsAboutPrivacyTileTitle,
             l10n.settingsAboutPrivacyTileSubtitle,
@@ -2969,16 +3264,16 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             onTap: _showPrivacyPolicyDialog,
           ),
           const SizedBox(height: 12),
-          
+
           _buildSettingsRow(
             l10n.settingsAboutLicensesTileTitle,
             l10n.settingsAboutLicensesTileSubtitle,
             Icons.code,
             onTap: _showLicensesDialog,
           ),
-          
+
           const SizedBox(height: 32),
-          
+
           // Support Section
           Text(
             l10n.settingsSupportDialogTitle,
@@ -2989,7 +3284,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             ),
           ),
           const SizedBox(height: 16),
-          
+
           _buildSettingsRow(
             l10n.settingsAboutSupportTileTitle,
             l10n.settingsAboutSupportTileSubtitle,
@@ -2997,23 +3292,26 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             onTap: _showSupportDialog,
           ),
           const SizedBox(height: 12),
-          
+
           _buildSettingsRow(
             l10n.settingsAboutRateTileTitle,
             l10n.settingsAboutRateTileSubtitle,
             Icons.star,
             onTap: _showRateAppDialog,
           ),
-          
+
           const SizedBox(height: 32),
-          
+
           // Copyright
           Center(
             child: Text(
               'Â© 2025 kubus • ${l10n.settingsAllRightsReserved}',
               style: GoogleFonts.inter(
                 fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.5),
               ),
             ),
           ),
@@ -3030,7 +3328,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.1),
+            color: Provider.of<ThemeProvider>(context)
+                .accentColor
+                .withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(
@@ -3056,7 +3356,10 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                 description,
                 style: GoogleFonts.inter(
                   fontSize: 13,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
                 ),
               ),
             ],
@@ -3096,7 +3399,10 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   icon,
                   color: isDestructive
                       ? errorColor
-                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                      : Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.7),
                 ),
               ),
               const SizedBox(width: 16),
@@ -3118,7 +3424,10 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                       subtitle,
                       style: GoogleFonts.inter(
                         fontSize: 13,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.5),
                       ),
                     ),
                   ],
@@ -3127,7 +3436,10 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
               Icon(
                 Icons.arrow_forward_ios,
                 size: 16,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.3),
               ),
             ],
           ),
@@ -3164,7 +3476,10 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                 subtitle,
                 style: GoogleFonts.inter(
                   fontSize: 13,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.5),
                 ),
               ),
             ],
@@ -3173,16 +3488,21 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
         Switch(
           key: switchKey,
           value: displayedValue,
-          onChanged: enabled ? (value) {
-            onChanged?.call(value);
-            if (saveAfterToggle) {
-              _saveSettings();
-            }
-          } : null,
-          activeTrackColor: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.5),
+          onChanged: enabled
+              ? (value) {
+                  onChanged?.call(value);
+                  if (saveAfterToggle) {
+                    _saveSettings();
+                  }
+                }
+              : null,
+          activeTrackColor: Provider.of<ThemeProvider>(context)
+              .accentColor
+              .withValues(alpha: 0.5),
           thumbColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.selected)) {
-              return Provider.of<ThemeProvider>(context, listen: false).accentColor;
+              return Provider.of<ThemeProvider>(context, listen: false)
+                  .accentColor;
             }
             return null;
           }),
@@ -3194,19 +3514,71 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
   Widget _buildAutoLockDropdown() {
     final l10n = AppLocalizations.of(context)!;
     final options = <Map<String, dynamic>>[
-      {'storedLabel': 'Immediately', 'displayLabel': l10n.settingsAutoLockImmediately, 'seconds': -1},
-      {'storedLabel': '10 seconds', 'displayLabel': l10n.settingsAutoLock10Seconds, 'seconds': 10},
-      {'storedLabel': '30 seconds', 'displayLabel': l10n.settingsAutoLock30Seconds, 'seconds': 30},
-      {'storedLabel': '1 minute', 'displayLabel': l10n.settingsAutoLock1Minute, 'seconds': 60},
-      {'storedLabel': '5 minutes', 'displayLabel': l10n.settingsAutoLock5Minutes, 'seconds': 5 * 60},
-      {'storedLabel': '15 minutes', 'displayLabel': l10n.settingsAutoLock15Minutes, 'seconds': 15 * 60},
-      {'storedLabel': '30 minutes', 'displayLabel': l10n.settingsAutoLock30Minutes, 'seconds': 30 * 60},
-      {'storedLabel': '1 hour', 'displayLabel': l10n.settingsAutoLock1Hour, 'seconds': 60 * 60},
-      {'storedLabel': '3 hours', 'displayLabel': l10n.settingsAutoLock3Hours, 'seconds': 3 * 60 * 60},
-      {'storedLabel': '6 hours', 'displayLabel': l10n.settingsAutoLock6Hours, 'seconds': 6 * 60 * 60},
-      {'storedLabel': '12 hours', 'displayLabel': l10n.settingsAutoLock12Hours, 'seconds': 12 * 60 * 60},
-      {'storedLabel': '1 day', 'displayLabel': l10n.settingsAutoLock1Day, 'seconds': 24 * 60 * 60},
-      {'storedLabel': 'Never', 'displayLabel': l10n.settingsAutoLockNever, 'seconds': 0},
+      {
+        'storedLabel': 'Immediately',
+        'displayLabel': l10n.settingsAutoLockImmediately,
+        'seconds': -1
+      },
+      {
+        'storedLabel': '10 seconds',
+        'displayLabel': l10n.settingsAutoLock10Seconds,
+        'seconds': 10
+      },
+      {
+        'storedLabel': '30 seconds',
+        'displayLabel': l10n.settingsAutoLock30Seconds,
+        'seconds': 30
+      },
+      {
+        'storedLabel': '1 minute',
+        'displayLabel': l10n.settingsAutoLock1Minute,
+        'seconds': 60
+      },
+      {
+        'storedLabel': '5 minutes',
+        'displayLabel': l10n.settingsAutoLock5Minutes,
+        'seconds': 5 * 60
+      },
+      {
+        'storedLabel': '15 minutes',
+        'displayLabel': l10n.settingsAutoLock15Minutes,
+        'seconds': 15 * 60
+      },
+      {
+        'storedLabel': '30 minutes',
+        'displayLabel': l10n.settingsAutoLock30Minutes,
+        'seconds': 30 * 60
+      },
+      {
+        'storedLabel': '1 hour',
+        'displayLabel': l10n.settingsAutoLock1Hour,
+        'seconds': 60 * 60
+      },
+      {
+        'storedLabel': '3 hours',
+        'displayLabel': l10n.settingsAutoLock3Hours,
+        'seconds': 3 * 60 * 60
+      },
+      {
+        'storedLabel': '6 hours',
+        'displayLabel': l10n.settingsAutoLock6Hours,
+        'seconds': 6 * 60 * 60
+      },
+      {
+        'storedLabel': '12 hours',
+        'displayLabel': l10n.settingsAutoLock12Hours,
+        'seconds': 12 * 60 * 60
+      },
+      {
+        'storedLabel': '1 day',
+        'displayLabel': l10n.settingsAutoLock1Day,
+        'seconds': 24 * 60 * 60
+      },
+      {
+        'storedLabel': 'Never',
+        'displayLabel': l10n.settingsAutoLockNever,
+        'seconds': 0
+      },
     ];
 
     String displayLabelForStored(String storedLabel) {
@@ -3252,7 +3624,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             .toList(),
         onChanged: (value) async {
           if (value == null) return;
-          final gate = Provider.of<SecurityGateProvider>(context, listen: false);
+          final gate =
+              Provider.of<SecurityGateProvider>(context, listen: false);
           setState(() {
             _autoLockTime = value;
           });

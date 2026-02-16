@@ -19,6 +19,9 @@ art.kubus is a cross-platform (mobile + desktop) application for discovering, cr
 | [App Screens](SCREENS.md) | Overview of all app screens and navigation |
 | [Features](FEATURES.md) | Detailed feature documentation |
 | [Architecture](ARCHITECTURE.md) | High-level architecture and patterns |
+| [Open Platform](OPEN_PLATFORM.md) | Scope and boundaries of the open platform model |
+| [Terms of Service (stub)](legal/TERMS_OF_SERVICE.md) | Legal terms placeholder pending final legal review |
+| [Developer API Terms (stub)](legal/DEVELOPER_API_TERMS.md) | API usage policy placeholder pending final legal review |
 
 ## Quick Start
 
@@ -69,4 +72,9 @@ See the project root `AGENTS.md` for development guidelines and coding standards
 
 ## License
 
-See `LICENSE` in the project root.
+This documentation follows the repository's open platform model:
+
+- Client code: Apache-2.0 (`../LICENSE`, `../NOTICE`)
+- Brand/trademark policy: `../TRADEMARK.md`
+- Asset/content policy: `../LICENSE_ASSETS.md`
+- Open platform scope: `OPEN_PLATFORM.md`

@@ -819,10 +819,9 @@ class _SettingsScreenState extends State<SettingsScreen>
             onChanged: (value) {
               glassProv.setReduceEffects(value);
             },
-            activeTrackColor:
-                Provider.of<ThemeProvider>(context, listen: false)
-                    .accentColor
-                    .withValues(alpha: 0.5),
+            activeTrackColor: Provider.of<ThemeProvider>(context, listen: false)
+                .accentColor
+                .withValues(alpha: 0.5),
             thumbColor: WidgetStateProperty.resolveWith((states) {
               if (states.contains(WidgetState.selected)) {
                 return Provider.of<ThemeProvider>(context, listen: false)
@@ -3382,38 +3381,10 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   void _showLicensesDialog() {
     final l10n = AppLocalizations.of(context)!;
-    showKubusDialog(
+    showLicensePage(
       context: context,
-      builder: (context) => KubusAlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text(
-          l10n.settingsLicensesDialogTitle,
-          style: GoogleFonts.inter(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: SingleChildScrollView(
-          child: Text(
-            l10n.settingsLicensesDialogBody,
-            style: GoogleFonts.inter(
-              height: 1.5,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              l10n.commonClose,
-              style: GoogleFonts.inter(
-                color: Theme.of(context).colorScheme.outline,
-              ),
-            ),
-          ),
-        ],
-      ),
+      applicationName: l10n.appTitle,
+      applicationVersion: AppInfo.version,
     );
   }
 

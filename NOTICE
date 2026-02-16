@@ -1,0 +1,18 @@
+art.kubus NOTICE
+
+Copyright (c) 2026 art.kubus contributors
+
+This repository contains:
+- open-source client code and designated public platform API artifacts licensed under the Apache License 2.0; and
+- proprietary and reserved rights artifacts as described in TRADEMARK.md and LICENSE_ASSETS.md.
+
+The Apache License, Version 2.0 applies to client source files and other files explicitly marked or documented as Apache-2.0.
+You may obtain a copy of the License at:
+http://www.apache.org/licenses/LICENSE-2.0
+
+No trademark rights are granted under Apache-2.0.
+Use of the names, logos, and marks of art.kubus is governed by TRADEMARK.md.
+
+Unless expressly stated otherwise, media, screenshots, demo content, branding assets, and backend implementation artifacts are not licensed under Apache-2.0 and remain all rights reserved.
+
+Third-party components remain licensed under their respective upstream licenses.
