@@ -1,7 +1,6 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/screens/desktop/desktop_shell.dart';
-import 'package:art_kubus/screens/desktop/onboarding/desktop_permissions_screen.dart';
-import 'package:art_kubus/screens/onboarding/permissions_screen.dart';
+import 'package:art_kubus/screens/onboarding/onboarding_flow_screen.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/widgets/app_logo.dart';
@@ -37,7 +36,7 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen> {
 
   void _goNext() {
     if (_pageIndex >= _pagesCount - 1) {
-      _goToPermissions();
+      _goToOnboardingFlow();
       return;
     }
     _pageController.nextPage(
@@ -54,13 +53,14 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen> {
     );
   }
 
-  void _goToPermissions() {
+  void _goToOnboardingFlow() {
     final navigator = Navigator.of(context);
     final route = MaterialPageRoute(
-      builder: (_) => _isDesktop
-          ? const DesktopPermissionsScreen()
-          : const PermissionsScreen(),
-      settings: const RouteSettings(name: '/onboarding/permissions'),
+      builder: (_) => OnboardingFlowScreen(
+        forceDesktop: _isDesktop,
+        initialStepId: 'account',
+      ),
+      settings: const RouteSettings(name: '/onboarding/flow'),
     );
     navigator.pushReplacement(route);
   }
@@ -71,29 +71,53 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen> {
 
   int get _pagesCount => 3;
 
-  List<_IntroPage> _pages(AppLocalizations l10n) {
+  List<_IntroPage> _pages(AppLocalizations l10n, ColorScheme scheme) {
+    final roles = KubusColorRoles.of(context);
     return <_IntroPage>[
       _IntroPage(
         icon: Icons.auto_awesome_outlined,
         title: l10n.onboardingFlowWelcomeTitle,
         body: l10n.onboardingFlowWelcomeBody,
+        iconStart: roles.statTeal,
+        iconEnd: roles.statBlue,
+        backgroundColors: <Color>[
+          roles.statTeal.withValues(alpha: 0.92),
+          scheme.primary.withValues(alpha: 0.88),
+          roles.statBlue.withValues(alpha: 0.82),
+          roles.statTeal.withValues(alpha: 0.92),
+        ],
       ),
       _IntroPage(
         icon: Icons.map_outlined,
         title: l10n.permissionsLocationSubtitle,
         body: l10n.permissionsLocationBenefit1,
+        iconStart: roles.statBlue,
+        iconEnd: roles.statGreen,
+        backgroundColors: <Color>[
+          roles.statBlue.withValues(alpha: 0.90),
+          roles.statGreen.withValues(alpha: 0.86),
+          roles.positiveAction.withValues(alpha: 0.82),
+          roles.statBlue.withValues(alpha: 0.90),
+        ],
       ),
       _IntroPage(
         icon: Icons.view_in_ar_outlined,
         title: l10n.permissionsCameraSubtitle,
         body: l10n.permissionsCameraBenefit1,
+        iconStart: roles.statAmber,
+        iconEnd: roles.statCoral,
+        backgroundColors: <Color>[
+          roles.statAmber.withValues(alpha: 0.90),
+          roles.statCoral.withValues(alpha: 0.86),
+          roles.negativeAction.withValues(alpha: 0.82),
+          roles.statAmber.withValues(alpha: 0.90),
+        ],
       ),
     ];
   }
 
   Widget _buildDots({
     required int count,
-    required ColorScheme scheme,
   }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -106,8 +130,8 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen> {
           height: 8,
           decoration: BoxDecoration(
             color: active
-                ? scheme.onSurface.withValues(alpha: 0.80)
-                : scheme.onSurface.withValues(alpha: 0.25),
+                ? Colors.white.withValues(alpha: 0.88)
+                : Colors.white.withValues(alpha: 0.30),
             borderRadius: BorderRadius.circular(999),
           ),
         );
@@ -119,14 +143,9 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    final roles = KubusColorRoles.of(context);
-
-    final pages = _pages(l10n);
-    final bgStart = scheme.primary.withValues(alpha: 0.58);
-    final bgEnd = roles.statTeal.withValues(alpha: 0.46);
-    final bgMid =
-        (Color.lerp(bgStart, bgEnd, 0.55) ?? bgEnd).withValues(alpha: 0.50);
-    final bgColors = <Color>[bgStart, bgMid, bgEnd, bgStart];
+    final pages = _pages(l10n, scheme);
+    final page = pages[_pageIndex.clamp(0, pages.length - 1)];
+    final bgColors = page.backgroundColors;
 
     final horizontalPadding = _isDesktop ? KubusSpacing.xl : KubusSpacing.lg;
 
@@ -186,13 +205,13 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen> {
                   ),
                 ),
                 const SizedBox(height: KubusSpacing.md),
-                _buildDots(count: pages.length, scheme: scheme),
+                _buildDots(count: pages.length),
                 const SizedBox(height: KubusSpacing.md),
                 KubusButton(
                   onPressed: _goNext,
-                  label: _pageIndex == pages.length - 1
-                      ? l10n.onboardingGrantPermissions
-                      : l10n.commonContinue,
+                  label: l10n.commonContinue,
+                  backgroundColor: Colors.black.withValues(alpha: 0.28),
+                  foregroundColor: Colors.white,
                   isFullWidth: true,
                 ),
                 const SizedBox(height: KubusSpacing.xs),
@@ -201,6 +220,14 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen> {
                     if (_pageIndex > 0)
                       TextButton(
                         onPressed: _goBack,
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.white.withValues(alpha: 0.14),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: KubusSpacing.sm,
+                            vertical: KubusSpacing.xs,
+                          ),
+                        ),
                         child: Text(l10n.commonBack),
                       )
                     else
@@ -208,6 +235,14 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen> {
                     const Spacer(),
                     TextButton(
                       onPressed: _goToSignIn,
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: Colors.white.withValues(alpha: 0.14),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: KubusSpacing.sm,
+                          vertical: KubusSpacing.xs,
+                        ),
+                      ),
                       child: Text(l10n.commonSignIn),
                     ),
                   ],
@@ -226,11 +261,17 @@ class _IntroPage {
     required this.icon,
     required this.title,
     required this.body,
+    required this.iconStart,
+    required this.iconEnd,
+    required this.backgroundColors,
   });
 
   final IconData icon;
   final String title;
   final String body;
+  final Color iconStart;
+  final Color iconEnd;
+  final List<Color> backgroundColors;
 }
 
 class _IntroPageView extends StatelessWidget {
@@ -240,7 +281,6 @@ class _IntroPageView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return LayoutBuilder(
       builder: (context, constraints) {
         final height = constraints.maxHeight;
@@ -253,11 +293,11 @@ class _IntroPageView extends StatelessWidget {
         final titleStyle = Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w800,
               fontSize: compact ? 22 : null,
-              color: scheme.onSurface,
+              color: Colors.white,
             );
 
         final bodyStyle = Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: scheme.onSurface.withValues(alpha: 0.82),
+              color: Colors.white.withValues(alpha: 0.92),
               height: 1.35,
               fontSize: compact ? 14 : null,
             );
@@ -266,8 +306,8 @@ class _IntroPageView extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             GradientIconCard(
-              start: scheme.primary,
-              end: scheme.primary.withValues(alpha: 0.65),
+              start: page.iconStart,
+              end: page.iconEnd,
               icon: page.icon,
               width: iconCardSize,
               height: iconCardSize,
