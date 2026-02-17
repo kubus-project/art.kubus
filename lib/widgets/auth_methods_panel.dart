@@ -15,9 +15,9 @@ import 'package:art_kubus/services/onboarding_state_service.dart';
 import 'package:art_kubus/services/security/post_auth_security_setup_service.dart';
 import 'package:art_kubus/services/telemetry/telemetry_service.dart';
 import 'package:art_kubus/utils/auth_password_policy.dart';
+import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/widgets/app_logo.dart';
-import 'package:art_kubus/widgets/auth_title_row.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/google_sign_in_button.dart';
 import 'package:art_kubus/widgets/google_sign_in_web_button.dart';
@@ -713,138 +713,160 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     bool compact = false,
   }) {
     final l10n = AppLocalizations.of(context)!;
+    final roles = KubusColorRoles.of(context);
     final compactEmailOpen = compact && _showCompactEmailForm;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        if (!isDesktop && !compact)
-          AuthTitleRow(
-            title: l10n.authRegisterTitle,
-            icon: Icons.person_add_alt_rounded,
-          ),
-        if (!isDesktop && !compact) const SizedBox(height: 20),
-        if (enableWallet && !compactEmailOpen)
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: colorScheme.primary,
-              foregroundColor: colorScheme.onPrimary,
-              minimumSize: Size.fromHeight(compact ? 44 : 56),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
-              elevation: 2,
+    final panelTint = colorScheme.surface.withValues(
+      alpha: Theme.of(context).brightness == Brightness.dark ? 0.20 : 0.24,
+    );
+    return LiquidGlassPanel(
+      borderRadius: BorderRadius.circular(22),
+      padding: EdgeInsets.all(compact ? KubusSpacing.md : KubusSpacing.lg),
+      backgroundColor: panelTint,
+      fallbackMinOpacity: 0.28,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          if (!isDesktop && !compact) ...[
+            GradientIconCard(
+              start: roles.lockedFeature,
+              end: roles.likeAction,
+              icon: Icons.person_add_alt_rounded,
+              iconSize: 40,
+              width: 76,
+              height: 76,
+              radius: 18,
             ),
-            onPressed: _showConnectWalletModal,
-            icon: Icon(Icons.account_balance_wallet_outlined,
-                size: 24, color: colorScheme.onPrimary),
-            label: Text(l10n.authConnectWalletButton,
-                style: GoogleFonts.inter(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    color: colorScheme.onPrimary)),
-          ),
-        if (enableWallet && !compactEmailOpen)
-          SizedBox(height: compact ? 8 : 16),
-        Container(
-          width: double.infinity,
-          padding: EdgeInsets.all(compact ? 12 : 16),
-          decoration: BoxDecoration(
-            color: colorScheme.surfaceContainerHigh,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: colorScheme.outlineVariant),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text(l10n.authOrUseEmail,
+            const SizedBox(height: 12),
+            Text(
+              l10n.authRegisterTitle,
+              textAlign: TextAlign.center,
+              style: KubusTypography.textTheme.headlineSmall?.copyWith(
+                color: colorScheme.onSurface,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+          if (enableWallet && !compactEmailOpen)
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: colorScheme.primary,
+                foregroundColor: colorScheme.onPrimary,
+                minimumSize: Size.fromHeight(compact ? 44 : 56),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
+                elevation: 2,
+              ),
+              onPressed: _showConnectWalletModal,
+              icon: Icon(Icons.account_balance_wallet_outlined,
+                  size: 24, color: colorScheme.onPrimary),
+              label: Text(l10n.authConnectWalletButton,
                   style: GoogleFonts.inter(
-                      fontSize: 16,
+                      fontSize: 17,
                       fontWeight: FontWeight.w700,
-                      color: colorScheme.onSurface)),
-              SizedBox(height: compact ? 8 : 12),
-              if (enableEmail)
-                if (compact && !_showCompactEmailForm)
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        setState(() => _showCompactEmailForm = true);
-                      },
-                      icon: const Icon(Icons.email_outlined),
-                      label: Text(l10n.authContinueWithEmail),
-                    ),
-                  )
-                else
-                  _buildEmailForm(colorScheme, compact: compact),
-              if (enableGoogle && !compactEmailOpen) ...[
+                      color: colorScheme.onPrimary)),
+            ),
+          if (enableWallet && !compactEmailOpen)
+            SizedBox(height: compact ? 8 : 16),
+          LiquidGlassPanel(
+            borderRadius: BorderRadius.circular(18),
+            padding: EdgeInsets.all(compact ? 12 : 16),
+            backgroundColor: colorScheme.surface.withValues(alpha: 0.22),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(l10n.authOrUseEmail,
+                    style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: colorScheme.onSurface),
+                    textAlign: TextAlign.center),
                 SizedBox(height: compact ? 8 : 12),
-                if (kIsWeb)
-                  GoogleSignInWebButton(
-                    colorScheme: colorScheme,
-                    isLoading: _isGoogleSubmitting,
-                    onAuthResult: (GoogleAuthResult googleResult) async {
-                      unawaited(
-                        TelemetryService().trackSignUpAttempt(method: 'google'),
-                      );
-                      if (!_isGoogleSubmitting && mounted) {
-                        setState(() => _isGoogleSubmitting = true);
-                      }
-                      try {
-                        final api = BackendApiService();
-                        final result = await api.loginWithGoogle(
-                          idToken: googleResult.idToken,
-                          code: googleResult.serverAuthCode,
-                          email: googleResult.email,
-                          username: null,
+                if (enableEmail)
+                  if (compact && !_showCompactEmailForm)
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          setState(() => _showCompactEmailForm = true);
+                        },
+                        icon: const Icon(Icons.email_outlined),
+                        label: Text(l10n.authContinueWithEmail),
+                      ),
+                    )
+                  else
+                    _buildEmailForm(colorScheme, compact: compact),
+                if (enableGoogle && !compactEmailOpen) ...[
+                  SizedBox(height: compact ? 8 : 12),
+                  if (kIsWeb)
+                    GoogleSignInWebButton(
+                      colorScheme: colorScheme,
+                      isLoading: _isGoogleSubmitting,
+                      onAuthResult: (GoogleAuthResult googleResult) async {
+                        unawaited(
+                          TelemetryService().trackSignUpAttempt(method: 'google'),
+                        );
+                        if (!_isGoogleSubmitting && mounted) {
+                          setState(() => _isGoogleSubmitting = true);
+                        }
+                        try {
+                          final api = BackendApiService();
+                          final result = await api.loginWithGoogle(
+                            idToken: googleResult.idToken,
+                            code: googleResult.serverAuthCode,
+                            email: googleResult.email,
+                            username: null,
+                          );
+                          if (!mounted) return;
+                          await _handleAuthSuccess(result);
+                          unawaited(
+                            TelemetryService()
+                                .trackSignUpSuccess(method: 'google'),
+                          );
+                        } finally {
+                          if (mounted) {
+                            setState(() => _isGoogleSubmitting = false);
+                          }
+                        }
+                      },
+                      onAuthError: (Object error) {
+                        widget.onError?.call(error);
+                        unawaited(
+                          TelemetryService().trackSignUpFailure(
+                            method: 'google',
+                            errorClass: error.runtimeType.toString(),
+                          ),
                         );
                         if (!mounted) return;
-                        await _handleAuthSuccess(result);
-                        unawaited(
-                          TelemetryService()
-                              .trackSignUpSuccess(method: 'google'),
+                        ScaffoldMessenger.of(context).showKubusSnackBar(
+                          SnackBar(content: Text(l10n.authGoogleSignInFailed)),
                         );
-                      } finally {
-                        if (mounted) {
-                          setState(() => _isGoogleSubmitting = false);
-                        }
-                      }
-                    },
-                    onAuthError: (Object error) {
-                      widget.onError?.call(error);
-                      unawaited(
-                        TelemetryService().trackSignUpFailure(
-                          method: 'google',
-                          errorClass: error.runtimeType.toString(),
-                        ),
-                      );
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(context).showKubusSnackBar(
-                        SnackBar(content: Text(l10n.authGoogleSignInFailed)),
-                      );
-                    },
-                  )
-                else
-                  GoogleSignInButton(
-                    onPressed: _registerWithGoogle,
-                    isLoading: _isGoogleSubmitting,
-                    colorScheme: colorScheme,
+                      },
+                    )
+                  else
+                    GoogleSignInButton(
+                      onPressed: _registerWithGoogle,
+                      isLoading: _isGoogleSubmitting,
+                      colorScheme: colorScheme,
+                    ),
+                ],
+                if (compact && _showCompactEmailForm) ...[
+                  const SizedBox(height: 6),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () {
+                        setState(() => _showCompactEmailForm = false);
+                      },
+                      child: Text(l10n.commonBack),
+                    ),
                   ),
+                ],
               ],
-              if (compact && _showCompactEmailForm) ...[
-                const SizedBox(height: 6),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () {
-                      setState(() => _showCompactEmailForm = false);
-                    },
-                    child: Text(l10n.commonBack),
-                  ),
-                ),
-              ],
-            ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
