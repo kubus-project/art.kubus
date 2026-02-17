@@ -1388,13 +1388,13 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowVerifyLastTitle.
   ///
   /// In en, this message translates to:
-  /// **'One more last step - verify your email'**
+  /// **'One more last step — verify your email'**
   String get onboardingFlowVerifyLastTitle;
 
   /// No description provided for @onboardingFlowVerifyLastBody.
   ///
   /// In en, this message translates to:
-  /// **'Check your inbox and open the verification link. Then return here and continue.'**
+  /// **'You probably got the mail by now. Check your inbox and complete account creation.'**
   String get onboardingFlowVerifyLastBody;
 
   /// No description provided for @onboardingFlowProfileTitle.
@@ -1522,6 +1522,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn’t update follow status. Please try again.'**
   String get onboardingFlowFollowFailed;
+
+  /// No description provided for @onboardingFlowVerifyContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'I verified / Continue'**
+  String get onboardingFlowVerifyContinue;
 
   /// No description provided for @onboardingWelcomeTitle.
   ///

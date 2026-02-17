@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -133,7 +133,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       walletAddress = await _ensureWalletProvisioned(walletAddress?.toString(),
           desiredUsername: usernameFromUser);
     } catch (e) {
-      debugPrint('AuthMethodsPanel: wallet provisioning failed: $e');
+      AppConfig.debugPrint('AuthMethodsPanel: wallet provisioning failed: $e');
     }
     final prefs = await SharedPreferences.getInstance();
     if (!widget.embedded) {
@@ -167,7 +167,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
             .timeout(const Duration(seconds: 5));
       }
     } catch (e) {
-      debugPrint('AuthMethodsPanel: profile load skipped/failed: $e');
+      AppConfig.debugPrint('AuthMethodsPanel: profile load skipped/failed: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(content: Text(l10n.authAccountCreatedProfileLoading)),
@@ -307,7 +307,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
               .connectWalletWithAddress(address)
               .timeout(walletConnectTimeout);
         } catch (e) {
-          debugPrint('AuthMethodsPanel: connectWalletWithAddress failed: $e');
+          AppConfig.debugPrint('AuthMethodsPanel: connectWalletWithAddress failed: $e');
         }
       }
       try {
@@ -319,13 +319,13 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
                   .connectExistingWallet(address!)
                   .timeout(web3ConnectTimeout);
             } catch (e) {
-              debugPrint(
+              AppConfig.debugPrint(
                   'AuthMethodsPanel: connectExistingWallet skipped/failed: $e');
             }
           }());
         }
       } catch (e) {
-        debugPrint('AuthMethodsPanel: connectExistingWallet failed: $e');
+        AppConfig.debugPrint('AuthMethodsPanel: connectExistingWallet failed: $e');
       }
       return address;
     }
@@ -338,17 +338,17 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       try {
         await web3Provider.importWallet(mnemonic).timeout(web3ConnectTimeout);
       } catch (e) {
-        debugPrint('AuthMethodsPanel: web3 import failed: $e');
+        AppConfig.debugPrint('AuthMethodsPanel: web3 import failed: $e');
       }
       try {
         if (AppConfig.enableDebugIssueToken) {
           await BackendApiService().issueTokenForWallet(address);
         }
       } catch (e) {
-        debugPrint('AuthMethodsPanel: issueTokenForWallet failed: $e');
+        AppConfig.debugPrint('AuthMethodsPanel: issueTokenForWallet failed: $e');
       }
     } catch (e) {
-      debugPrint('AuthMethodsPanel: wallet creation failed: $e');
+      AppConfig.debugPrint('AuthMethodsPanel: wallet creation failed: $e');
     }
 
     if (address != null && address.isNotEmpty && createdFreshWallet) {
@@ -368,7 +368,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       await profileProvider.createProfileFromWallet(
           walletAddress: address, username: effectiveUsername);
     } catch (e) {
-      debugPrint('AuthMethodsPanel: createProfileFromWallet failed: $e');
+      AppConfig.debugPrint('AuthMethodsPanel: createProfileFromWallet failed: $e');
     }
     if (effectiveUsername != null && effectiveUsername.isNotEmpty) {
       try {
@@ -377,7 +377,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
           'displayName': effectiveUsername,
         });
       } catch (err) {
-        debugPrint(
+        AppConfig.debugPrint(
             'AuthMethodsPanel: updateProfile username patch failed: $err');
       }
     }
@@ -665,7 +665,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
               builder: (BuildContext context, BoxConstraints constraints) {
                 final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
                 return GestureDetector(
-                  behavior: HitTestBehavior.translucent,
+                  behavior: HitTestBehavior.opaque,
                   onTap: () => FocusScope.of(context).unfocus(),
                   child: AnimatedPadding(
                     duration: const Duration(milliseconds: 180),
@@ -713,7 +713,6 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     bool compact = false,
   }) {
     final l10n = AppLocalizations.of(context)!;
-    final roles = KubusColorRoles.of(context);
     final compactEmailOpen = compact && _showCompactEmailForm;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -749,7 +748,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
           width: double.infinity,
           padding: EdgeInsets.all(compact ? 12 : 16),
           decoration: BoxDecoration(
-            color: colorScheme.surfaceContainerHighest,
+            color: colorScheme.surfaceContainerHigh,
             borderRadius: BorderRadius.circular(18),
             border: Border.all(color: colorScheme.outlineVariant),
           ),

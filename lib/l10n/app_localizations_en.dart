@@ -731,6 +731,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowFollowFailed => 'Couldn’t update follow status. Please try again.';
 
   @override
+  String get onboardingFlowVerifyContinue => 'I verified / Continue';
+
+  @override
   String get onboardingWelcomeTitle => 'Welcome to art.kubus';
 
   @override

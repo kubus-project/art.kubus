@@ -731,6 +731,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get onboardingFlowFollowFailed => 'Posodobitev sledenja ni uspela. Poskusi znova.';
 
   @override
+  String get onboardingFlowVerifyContinue => 'Potrjeno / Nadaljuj';
+
+  @override
   String get onboardingWelcomeTitle => 'Dobrodošel/a v art.kubus';
 
   @override

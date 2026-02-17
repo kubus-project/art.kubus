@@ -35,10 +35,10 @@ class GradientIconCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(radius),
         boxShadow: [
           BoxShadow(
-            color: start.withAlpha((0.28 * 255).round()),
-            blurRadius: 30,
+            color: start.withAlpha((0.18 * 255).round()),
+            blurRadius: 16,
             spreadRadius: 0,
-            offset: const Offset(0, 15),
+            offset: const Offset(0, 6),
           ),
         ],
       ),
