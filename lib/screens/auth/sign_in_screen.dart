@@ -880,11 +880,11 @@ class _SignInScreenState extends State<SignInScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        if (!isDesktop && !compactMobile)
+        if (!isDesktop)
           SizedBox(
             width: double.infinity,
             child: LiquidGlassPanel(
-              padding: const EdgeInsets.all(18),
+              padding: EdgeInsets.all(compactMobile ? 14 : 18),
               borderRadius: BorderRadius.circular(20),
               child: Column(
                 children: [
@@ -892,25 +892,25 @@ class _SignInScreenState extends State<SignInScreen> {
                     start: colorScheme.primary,
                     end: roles.positiveAction,
                     icon: Icons.login_rounded,
-                    iconSize: 52,
-                    width: 100,
-                    height: 100,
+                    iconSize: compactMobile ? 40 : 52,
+                    width: compactMobile ? 78 : 100,
+                    height: compactMobile ? 78 : 100,
                     radius: 20,
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: compactMobile ? 8 : 12),
                   Text(
                     l10n.authSignInTitle,
                     style: GoogleFonts.inter(
-                      fontSize: 26,
+                      fontSize: compactMobile ? 22 : 26,
                       fontWeight: FontWeight.w800,
                       color: colorScheme.onSurface,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: compactMobile ? 6 : 8),
                   Text(
                     l10n.authSignInSubtitle,
                     style: GoogleFonts.inter(
-                      fontSize: 14,
+                      fontSize: compactMobile ? 13 : 14,
                       color: colorScheme.onSurface.withValues(alpha: 0.85),
                     ),
                     textAlign: TextAlign.center,
@@ -919,28 +919,15 @@ class _SignInScreenState extends State<SignInScreen> {
               ),
             ),
           ),
-        if (!isDesktop && compactMobile)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Text(
-              l10n.authSignInTitle,
-              style: GoogleFonts.inter(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: colorScheme.onSurface,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
         if (!isDesktop) SizedBox(height: compactMobile ? 10 : 20),
-        if (enableWallet && !compactMobile)
+        if (enableWallet)
           KubusButton(
             onPressed: _showConnectWalletModal,
             icon: compactMobile ? null : Icons.account_balance_wallet_outlined,
             label: l10n.authConnectWalletButton,
             isFullWidth: true,
           ),
-        if (enableWallet && !compactMobile)
+        if (enableWallet)
           SizedBox(height: compactMobile ? KubusSpacing.sm : KubusSpacing.md),
         KubusCard(
           padding:
@@ -958,7 +945,7 @@ class _SignInScreenState extends State<SignInScreen> {
               ),
               const SizedBox(height: KubusSpacing.md),
               if (enableEmail) _buildEmailForm(colorScheme),
-              if (enableGoogle && (!compactMobile || widget.embedded)) ...[
+              if (enableGoogle) ...[
                 const SizedBox(height: KubusSpacing.md),
                 if (kIsWeb)
                   GoogleSignInWebButton(
