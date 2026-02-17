@@ -62,24 +62,9 @@ import 'app_localizations_sl.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale)
-      : localeName = _safeCanonicalizedLocale(locale.toString());
+  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
-
-  static String _safeCanonicalizedLocale(String rawLocale) {
-    final normalized = rawLocale.trim();
-    if (normalized.isEmpty ||
-        normalized.toLowerCase() == 'undefined' ||
-        normalized.toLowerCase() == 'null') {
-      return intl.Intl.canonicalizedLocale('sl');
-    }
-    try {
-      return intl.Intl.canonicalizedLocale(normalized);
-    } catch (_) {
-      return intl.Intl.canonicalizedLocale('sl');
-    }
-  }
 
   static AppLocalizations? of(BuildContext context) {
     return Localizations.of<AppLocalizations>(context, AppLocalizations);
@@ -1309,6 +1294,198 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Continue with email'**
   String get authContinueWithEmail;
+
+  /// No description provided for @commonEnable.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable'**
+  String get commonEnable;
+
+  /// No description provided for @commonFollow.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow'**
+  String get commonFollow;
+
+  /// No description provided for @commonFollowing.
+  ///
+  /// In en, this message translates to:
+  /// **'Following'**
+  String get commonFollowing;
+
+  /// No description provided for @onboardingFlowTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your quick setup'**
+  String get onboardingFlowTitle;
+
+  /// No description provided for @onboardingFlowWelcomeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to art.kubus'**
+  String get onboardingFlowWelcomeTitle;
+
+  /// No description provided for @onboardingFlowWelcomeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Let’s set things up in under a minute. You can skip anything and continue later.'**
+  String get onboardingFlowWelcomeBody;
+
+  /// No description provided for @onboardingFlowAccountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create your account'**
+  String get onboardingFlowAccountTitle;
+
+  /// No description provided for @onboardingFlowAccountBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Use email, Google, or wallet to create your account.'**
+  String get onboardingFlowAccountBody;
+
+  /// No description provided for @onboardingFlowAccountVerifyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'If you registered with email, verify your email before signing in.'**
+  String get onboardingFlowAccountVerifyHint;
+
+  /// No description provided for @onboardingFlowCreateAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Create account'**
+  String get onboardingFlowCreateAccount;
+
+  /// No description provided for @onboardingFlowOpenVerification.
+  ///
+  /// In en, this message translates to:
+  /// **'Open email verification'**
+  String get onboardingFlowOpenVerification;
+
+  /// No description provided for @onboardingFlowProfileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create your profile'**
+  String get onboardingFlowProfileTitle;
+
+  /// No description provided for @onboardingFlowProfileBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a name and a photo so people can recognize you.'**
+  String get onboardingFlowProfileBody;
+
+  /// No description provided for @onboardingFlowRoleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick your role'**
+  String get onboardingFlowRoleTitle;
+
+  /// No description provided for @onboardingFlowRoleBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose what best describes you. You can change this later in Settings.'**
+  String get onboardingFlowRoleBody;
+
+  /// No description provided for @onboardingFlowPermissionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose what to enable'**
+  String get onboardingFlowPermissionsTitle;
+
+  /// No description provided for @onboardingFlowPermissionsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable location to see nearby art, notifications for updates, and camera for AR.'**
+  String get onboardingFlowPermissionsBody;
+
+  /// No description provided for @onboardingFlowContinueWithoutPermissions.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get onboardingFlowContinueWithoutPermissions;
+
+  /// No description provided for @onboardingFlowArtworkTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create your first artwork'**
+  String get onboardingFlowArtworkTitle;
+
+  /// No description provided for @onboardingFlowArtworkBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Start with one piece. Drafts are fine — you can refine it anytime.'**
+  String get onboardingFlowArtworkBody;
+
+  /// No description provided for @onboardingFlowFollowTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow a few artists'**
+  String get onboardingFlowFollowTitle;
+
+  /// No description provided for @onboardingFlowFollowBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a few creators to personalize your feed.'**
+  String get onboardingFlowFollowBody;
+
+  /// No description provided for @onboardingFlowDoneTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You’re all set'**
+  String get onboardingFlowDoneTitle;
+
+  /// No description provided for @onboardingFlowDoneBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your space is ready. Jump in and explore.'**
+  String get onboardingFlowDoneBody;
+
+  /// No description provided for @onboardingFlowOpenProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Open profile setup'**
+  String get onboardingFlowOpenProfile;
+
+  /// No description provided for @onboardingFlowPermissionLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get onboardingFlowPermissionLocation;
+
+  /// No description provided for @onboardingFlowPermissionNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get onboardingFlowPermissionNotifications;
+
+  /// No description provided for @onboardingFlowPermissionCamera.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera'**
+  String get onboardingFlowPermissionCamera;
+
+  /// No description provided for @onboardingFlowCreateArtwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Create artwork'**
+  String get onboardingFlowCreateArtwork;
+
+  /// No description provided for @onboardingFlowNoSuggestions.
+  ///
+  /// In en, this message translates to:
+  /// **'No suggestions yet. You can follow artists from Community anytime.'**
+  String get onboardingFlowNoSuggestions;
+
+  /// No description provided for @onboardingFlowUnknownArtist.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist'**
+  String get onboardingFlowUnknownArtist;
+
+  /// No description provided for @onboardingFlowFollowFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t update follow status. Please try again.'**
+  String get onboardingFlowFollowFailed;
 
   /// No description provided for @onboardingWelcomeTitle.
   ///
@@ -8779,24 +8956,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Launching AR viewer…'**
   String get arMarkerScannerLaunchingViewerLabel;
-
-  /// No description provided for @arArtworkCardLaunchFailedToast.
-  ///
-  /// In en, this message translates to:
-  /// **'Failed to launch AR. Please try again.'**
-  String get arArtworkCardLaunchFailedToast;
-
-  /// No description provided for @arArtworkCardUnavailableLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'AR unavailable'**
-  String get arArtworkCardUnavailableLabel;
-
-  /// No description provided for @arArtworkCardGetCloserLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Get closer'**
-  String get arArtworkCardGetCloserLabel;
 
   /// No description provided for @artistGalleryTitle.
   ///

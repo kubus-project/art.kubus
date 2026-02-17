@@ -645,6 +645,10 @@ class _SignInScreenState extends State<SignInScreen> {
     final enableGoogle = AppConfig.enableGoogleAuth;
     final isDesktop =
         MediaQuery.of(context).size.width >= DesktopBreakpoints.medium;
+    final compactMobile =
+        !isDesktop &&
+        (MediaQuery.of(context).size.height < 860 ||
+            MediaQuery.viewInsetsOf(context).bottom > 0);
 
     final form = _buildAuthForm(
       colorScheme: colorScheme,
@@ -652,6 +656,7 @@ class _SignInScreenState extends State<SignInScreen> {
       enableEmail: enableEmail,
       enableGoogle: enableGoogle,
       isDesktop: isDesktop,
+      compactMobile: compactMobile,
     );
 
     if (isDesktop) {
@@ -705,7 +710,7 @@ class _SignInScreenState extends State<SignInScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBodyBehindAppBar: true,
-      resizeToAvoidBottomInset: true,
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
@@ -814,27 +819,32 @@ class _SignInScreenState extends State<SignInScreen> {
             top: false,
             child: LayoutBuilder(
               builder: (BuildContext context, BoxConstraints constraints) {
-                return SingleChildScrollView(
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  child: ConstrainedBox(
-                    constraints:
-                        BoxConstraints(minHeight: constraints.maxHeight),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const SizedBox(height: kToolbarHeight + 12),
-                        Center(
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 520),
-                            child: form,
+                final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+                return GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onTap: () => FocusScope.of(context).unfocus(),
+                  child: AnimatedPadding(
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeOut,
+                    padding: EdgeInsets.only(bottom: keyboardInset > 0 ? 10 : 0),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      child: Column(
+                        children: [
+                          const SizedBox(height: kToolbarHeight + 12),
+                          Expanded(
+                            child: Center(
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxWidth: 520,
+                                  maxHeight: constraints.maxHeight - keyboardInset - kToolbarHeight,
+                                ),
+                                child: form,
+                              ),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 );
@@ -852,13 +862,14 @@ class _SignInScreenState extends State<SignInScreen> {
     required bool enableEmail,
     required bool enableGoogle,
     required bool isDesktop,
+    required bool compactMobile,
   }) {
     final l10n = AppLocalizations.of(context)!;
     final roles = KubusColorRoles.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        if (!isDesktop)
+        if (!isDesktop && !compactMobile)
           SizedBox(
             width: double.infinity,
             child: LiquidGlassPanel(
@@ -897,17 +908,31 @@ class _SignInScreenState extends State<SignInScreen> {
               ),
             ),
           ),
-        if (!isDesktop) const SizedBox(height: 20),
-        if (enableWallet)
+        if (!isDesktop && compactMobile)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(
+              l10n.authSignInTitle,
+              style: GoogleFonts.inter(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: colorScheme.onSurface,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        if (!isDesktop) SizedBox(height: compactMobile ? 10 : 20),
+        if (enableWallet && !compactMobile)
           KubusButton(
             onPressed: _showConnectWalletModal,
-            icon: Icons.account_balance_wallet_outlined,
+            icon: compactMobile ? null : Icons.account_balance_wallet_outlined,
             label: l10n.authConnectWalletButton,
             isFullWidth: true,
           ),
-        if (enableWallet) const SizedBox(height: KubusSpacing.md),
+        if (enableWallet && !compactMobile)
+          SizedBox(height: compactMobile ? KubusSpacing.sm : KubusSpacing.md),
         KubusCard(
-          padding: const EdgeInsets.all(KubusSpacing.md),
+          padding: EdgeInsets.all(compactMobile ? KubusSpacing.sm : KubusSpacing.md),
           color: colorScheme.surfaceContainerHighest,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -921,7 +946,7 @@ class _SignInScreenState extends State<SignInScreen> {
               ),
               const SizedBox(height: KubusSpacing.md),
               if (enableEmail) _buildEmailForm(colorScheme),
-              if (enableGoogle) ...[
+              if (enableGoogle && !compactMobile) ...[
                 const SizedBox(height: KubusSpacing.md),
                 if (kIsWeb)
                   GoogleSignInWebButton(
@@ -991,7 +1016,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     colorScheme: colorScheme,
                   ),
               ],
-              const SizedBox(height: KubusSpacing.md),
+                SizedBox(height: compactMobile ? KubusSpacing.sm : KubusSpacing.md),
               TextButton(
                 onPressed: () => Navigator.of(context).pushNamed('/register'),
                 child: Text(

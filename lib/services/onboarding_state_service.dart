@@ -16,6 +16,18 @@ class OnboardingState {
   bool get isReturningUser => !isFirstLaunch || hasSeenWelcome || hasCompletedOnboarding;
 }
 
+class OnboardingFlowProgress {
+  final int lastSeenVersion;
+  final Set<String> completedSteps;
+  final Set<String> deferredSteps;
+
+  const OnboardingFlowProgress({
+    required this.lastSeenVersion,
+    required this.completedSteps,
+    required this.deferredSteps,
+  });
+}
+
 /// Single source-of-truth for onboarding-related SharedPreferences.
 ///
 /// This centralizes:
@@ -28,6 +40,9 @@ class OnboardingStateService {
   static const String _legacyHasCompletedOnboarding = 'has_completed_onboarding';
   static const String _legacyHasSeenOnboarding = 'has_seen_onboarding';
   static const String _legacyHasSeenPermissions = 'has_seen_permissions';
+  static const String _onboardingVersionKey = 'onboarding_version';
+  static const String _onboardingCompletedStepsKey = 'onboarding_completed_steps_v2';
+  static const String _onboardingDeferredStepsKey = 'onboarding_deferred_steps_v2';
 
   static Future<OnboardingState> load({SharedPreferences? prefs}) async {
     final p = prefs ?? await SharedPreferences.getInstance();
@@ -134,5 +149,52 @@ class OnboardingStateService {
         await prefs.setBool(_legacyFirstTime, false);
       }
     }
+  }
+
+  static Future<OnboardingFlowProgress> loadFlowProgress({
+    SharedPreferences? prefs,
+    required int onboardingVersion,
+  }) async {
+    final p = prefs ?? await SharedPreferences.getInstance();
+    final seenVersion = p.getInt(_onboardingVersionKey) ?? 0;
+
+    if (seenVersion != onboardingVersion) {
+      return OnboardingFlowProgress(
+        lastSeenVersion: onboardingVersion,
+        completedSteps: <String>{},
+        deferredSteps: <String>{},
+      );
+    }
+
+    final completed = (p.getStringList(_onboardingCompletedStepsKey) ?? const <String>[])
+        .where((value) => value.trim().isNotEmpty)
+        .toSet();
+    final deferred = (p.getStringList(_onboardingDeferredStepsKey) ?? const <String>[])
+        .where((value) => value.trim().isNotEmpty)
+        .toSet();
+
+    return OnboardingFlowProgress(
+      lastSeenVersion: seenVersion,
+      completedSteps: completed,
+      deferredSteps: deferred,
+    );
+  }
+
+  static Future<void> saveFlowProgress({
+    SharedPreferences? prefs,
+    required int onboardingVersion,
+    required Set<String> completedSteps,
+    required Set<String> deferredSteps,
+  }) async {
+    final p = prefs ?? await SharedPreferences.getInstance();
+    await p.setInt(_onboardingVersionKey, onboardingVersion);
+    await p.setStringList(
+      _onboardingCompletedStepsKey,
+      completedSteps.where((value) => value.trim().isNotEmpty).toList(growable: false),
+    );
+    await p.setStringList(
+      _onboardingDeferredStepsKey,
+      deferredSteps.where((value) => value.trim().isNotEmpty).toList(growable: false),
+    );
   }
 }
