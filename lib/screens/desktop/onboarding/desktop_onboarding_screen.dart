@@ -1,4 +1,4 @@
-import 'package:art_kubus/screens/onboarding/onboarding_flow_screen.dart';
+import 'package:art_kubus/screens/onboarding/onboarding_intro_screen.dart';
 import 'package:flutter/material.dart';
 
 class DesktopOnboardingScreen extends StatelessWidget {
@@ -6,6 +6,6 @@ class DesktopOnboardingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const OnboardingFlowScreen(forceDesktop: true);
+    return const OnboardingIntroScreen(forceDesktop: true);
   }
 }
