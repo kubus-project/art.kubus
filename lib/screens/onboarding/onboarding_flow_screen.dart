@@ -30,6 +30,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 enum _OnboardingStep {
   welcome,
@@ -75,6 +76,15 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   static const String _profileDraftKey = 'onboarding_profile_draft_v3';
   static const String _verificationEmailDraftKey =
       'onboarding_verification_email_v3';
+  static const String _verificationPasswordSecureKey =
+      'onboarding_verification_password_v3';
+  static const AndroidOptions _secureStorageAndroidOptions = AndroidOptions(
+    encryptedSharedPreferences: true,
+    resetOnError: true,
+  );
+  static const IOSOptions _secureStorageIOSOptions = IOSOptions(
+    accessibility: KeychainAccessibility.first_unlock_this_device,
+  );
 
   List<_OnboardingStep> _steps = const <_OnboardingStep>[];
   final Set<_OnboardingStep> _completed = <_OnboardingStep>{};
@@ -107,6 +117,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   bool _verificationPollInFlight = false;
   bool _emailVerifiedConfirmed = false;
   bool _autoAdvancingVerification = false;
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
 
   _StepPalette _paletteForStep(_OnboardingStep step) {
     switch (step) {
@@ -197,6 +208,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
 
     final prefs = await SharedPreferences.getInstance();
     _hydrateLocalDrafts(prefs);
+    await _restorePendingVerificationSecret();
     final progress = await OnboardingStateService.loadFlowProgress(
       prefs: prefs,
       onboardingVersion: _flowVersion,
@@ -248,6 +260,70 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     await _loadPermissionStatuses();
     await _refreshDaoReview();
     _syncStepSideEffects();
+  }
+
+  Future<void> _restorePendingVerificationSecret() async {
+    if (kIsWeb) return;
+    try {
+      final restored = (await _secureStorage.read(
+            key: _verificationPasswordSecureKey,
+            aOptions: _secureStorageAndroidOptions,
+            iOptions: _secureStorageIOSOptions,
+          ) ??
+              '')
+          .trim();
+      final pendingEmail = (_pendingVerificationEmail ?? '').trim();
+      if (pendingEmail.isEmpty) {
+        await _secureStorage.delete(
+          key: _verificationPasswordSecureKey,
+          aOptions: _secureStorageAndroidOptions,
+          iOptions: _secureStorageIOSOptions,
+        );
+        _pendingVerificationPassword = null;
+        return;
+      }
+      _pendingVerificationPassword = restored.isEmpty ? null : restored;
+    } catch (_) {
+      _pendingVerificationPassword = null;
+    }
+  }
+
+  Future<void> _persistPendingVerificationSecret() async {
+    if (kIsWeb) return;
+    final pendingPassword = (_pendingVerificationPassword ?? '').trim();
+    try {
+      if (pendingPassword.isEmpty) {
+        await _secureStorage.delete(
+          key: _verificationPasswordSecureKey,
+          aOptions: _secureStorageAndroidOptions,
+          iOptions: _secureStorageIOSOptions,
+        );
+        return;
+      }
+      await _secureStorage.write(
+        key: _verificationPasswordSecureKey,
+        value: pendingPassword,
+        aOptions: _secureStorageAndroidOptions,
+        iOptions: _secureStorageIOSOptions,
+      );
+    } catch (_) {}
+  }
+
+  Future<void> _clearPendingVerificationSecret({
+    bool clearEmail = false,
+  }) async {
+    _pendingVerificationPassword = null;
+    if (clearEmail) {
+      _pendingVerificationEmail = null;
+    }
+    if (kIsWeb) return;
+    try {
+      await _secureStorage.delete(
+        key: _verificationPasswordSecureKey,
+        aOptions: _secureStorageAndroidOptions,
+        iOptions: _secureStorageIOSOptions,
+      );
+    } catch (_) {}
   }
 
   void _hydrateLocalDrafts(SharedPreferences prefs) {
@@ -495,8 +571,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
       if (!mounted) return;
       _autoAdvancingVerification = true;
       try {
-        _pendingVerificationEmail = null;
-        _pendingVerificationPassword = null;
+        await _clearPendingVerificationSecret(clearEmail: true);
         await _persistLocalDrafts();
         await _confirmVerificationAndContinue();
       } finally {
@@ -772,6 +847,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     _pendingVerificationEmail = email.trim();
     _pendingVerificationPassword = password;
     _emailVerifiedConfirmed = false;
+    await _persistPendingVerificationSecret();
     await _persistLocalDrafts();
     _syncStepSideEffects();
   }
@@ -787,7 +863,14 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     String email, {
     required bool completeAccountStep,
   }) async {
-    _pendingVerificationEmail = email.trim();
+    final normalizedEmail = email.trim();
+    final previousPendingEmail = (_pendingVerificationEmail ?? '').trim();
+    if (previousPendingEmail.isNotEmpty &&
+        previousPendingEmail.toLowerCase() != normalizedEmail.toLowerCase()) {
+      await _clearPendingVerificationSecret();
+    }
+    _pendingVerificationEmail = normalizedEmail;
+    await _persistLocalDrafts();
     _refreshAuthDerivedSteps();
     await _jumpToVerifyStep();
     if (completeAccountStep && _steps.contains(_OnboardingStep.account)) {
@@ -801,13 +884,19 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     final user = (data['user'] as Map<String, dynamic>?) ?? data;
     final signedInEmail = (user['email'] ?? '').toString().trim().toLowerCase();
     final pendingEmail = (_pendingVerificationEmail ?? '').trim().toLowerCase();
+    var shouldPersistDrafts = false;
     if (pendingEmail.isNotEmpty &&
         (signedInEmail.isEmpty || signedInEmail == pendingEmail)) {
-      _pendingVerificationEmail = null;
+      await _clearPendingVerificationSecret(clearEmail: true);
+      shouldPersistDrafts = true;
     } else if (pendingEmail.isEmpty) {
       _pendingVerificationEmail = null;
     }
+    await _clearPendingVerificationSecret();
     _refreshAuthDerivedSteps();
+    if (shouldPersistDrafts) {
+      await _persistLocalDrafts();
+    }
     await _refreshDaoReview();
     await _syncLocalProfileDraftToBackendIfPossible();
     await _flushPendingAvatarUploadIfPossible();
@@ -884,8 +973,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
       final refreshed = await BackendApiService().refreshAuthTokenFromStorage();
       _refreshAuthDerivedSteps();
       if (refreshed) {
-        _pendingVerificationEmail = null;
-        _pendingVerificationPassword = null;
+        await _clearPendingVerificationSecret(clearEmail: true);
         _emailVerifiedConfirmed = true;
         await _persistLocalDrafts();
       }
@@ -1065,6 +1153,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   }
 
   Future<void> _finishOnboarding() async {
+    await _clearPendingVerificationSecret(clearEmail: true);
+    await _persistLocalDrafts();
     await SharedPreferences.getInstance();
     await _persistProgress();
     unawaited(TelemetryService()
@@ -1085,6 +1175,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     setState(() => _isSkippingFlow = true);
 
     try {
+      await _clearPendingVerificationSecret(clearEmail: true);
+      await _persistLocalDrafts();
       final prefs = await SharedPreferences.getInstance();
       await OnboardingStateService.markCompleted(prefs: prefs);
       await _persistProgress();
