@@ -55,7 +55,8 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
         Provider.of<ProfileProvider>(context, listen: false);
     final direct = (walletProvider.currentWalletAddress ?? '').trim();
     if (direct.isNotEmpty) return direct;
-    final fromProfile = (profileProvider.currentUser?.walletAddress ?? '').trim();
+    final fromProfile =
+        (profileProvider.currentUser?.walletAddress ?? '').trim();
     if (fromProfile.isNotEmpty) return fromProfile;
     return '';
   }
@@ -76,7 +77,8 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
     setState(() {
       _emailError = emailLooksValid ? null : l10n.authEnterValidEmailInline;
       _passwordError = passwordOk ? null : l10n.authPasswordPolicyError;
-      _confirmPasswordError = confirmOk ? null : l10n.authPasswordMismatchInline;
+      _confirmPasswordError =
+          confirmOk ? null : l10n.authPasswordMismatchInline;
       _inlineError = null;
     });
 
@@ -85,7 +87,7 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
     final walletAddress = _resolveWalletAddress();
     if (walletAddress.isEmpty) {
       messenger.showKubusSnackBar(
-        SnackBar(content: Text(l10n.authWalletConnectionRequired)),
+        SnackBar(content: Text(l10n.authConnectWalletModalTitle)),
       );
       return;
     }
@@ -197,7 +199,9 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
         TextButton(
           onPressed: _isResending ? null : _resendVerification,
           child: Text(
-            _isResending ? l10n.commonWorking : l10n.authVerifyEmailResendButton,
+            _isResending
+                ? l10n.commonWorking
+                : l10n.authVerifyEmailResendButton,
             style: GoogleFonts.inter(
               color: scheme.onSurface.withValues(alpha: 0.72),
               fontWeight: FontWeight.w600,

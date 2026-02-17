@@ -1,4 +1,5 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/screens/desktop/desktop_shell.dart';
 import 'package:art_kubus/screens/desktop/onboarding/desktop_permissions_screen.dart';
 import 'package:art_kubus/screens/onboarding/permissions_screen.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
@@ -25,7 +26,8 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen> {
   final PageController _pageController = PageController();
   int _pageIndex = 0;
 
-  bool get _isDesktop => widget.forceDesktop || DesktopBreakpoints.isDesktop(context);
+  bool get _isDesktop =>
+      widget.forceDesktop || DesktopBreakpoints.isDesktop(context);
 
   @override
   void dispose() {
@@ -55,8 +57,9 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen> {
   void _goToPermissions() {
     final navigator = Navigator.of(context);
     final route = MaterialPageRoute(
-      builder: (_) =>
-          _isDesktop ? const DesktopPermissionsScreen() : const PermissionsScreen(),
+      builder: (_) => _isDesktop
+          ? const DesktopPermissionsScreen()
+          : const PermissionsScreen(),
       settings: const RouteSettings(name: '/onboarding/permissions'),
     );
     navigator.pushReplacement(route);
@@ -121,7 +124,8 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen> {
     final pages = _pages(l10n);
     final bgStart = scheme.primary.withValues(alpha: 0.58);
     final bgEnd = roles.statTeal.withValues(alpha: 0.46);
-    final bgMid = (Color.lerp(bgStart, bgEnd, 0.55) ?? bgEnd).withValues(alpha: 0.50);
+    final bgMid =
+        (Color.lerp(bgStart, bgEnd, 0.55) ?? bgEnd).withValues(alpha: 0.50);
     final bgColors = <Color>[bgStart, bgMid, bgEnd, bgStart];
 
     final horizontalPadding = _isDesktop ? KubusSpacing.xl : KubusSpacing.lg;
@@ -292,4 +296,3 @@ class _IntroPageView extends StatelessWidget {
     );
   }
 }
-
