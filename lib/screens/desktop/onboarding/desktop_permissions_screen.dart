@@ -454,25 +454,13 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
 
   Widget _buildHeader() {
     final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.all(32),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            children: [
-              const AppLogo(width: 48, height: 48),
-              const SizedBox(width: 16),
-              Text(
-                l10n.appTitle,
-                style: GoogleFonts.inter(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-            ],
-          ),
+          const AppLogo(width: 48, height: 48),
           TextButton(
             onPressed: _completeOnboarding,
             style: TextButton.styleFrom(
@@ -480,13 +468,10 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
             ),
             child: Text(
               l10n.permissionsSkipAll,
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.6),
-              ),
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.70),
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
           ),
         ],
@@ -496,187 +481,90 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
 
   Widget _buildPageContent(PermissionPage page) {
     final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     final isGranted = _isPermissionGranted(page.permissionType);
+
+    final message = page.subtitle.replaceAll('\n', ' ').trim().isNotEmpty
+        ? page.subtitle.replaceAll('\n', ' ').trim()
+        : page.description.trim();
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Icon with status badge
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                GradientIconCard(
-                  start: page.gradient.colors.first,
-                  end: page.gradient.colors.length > 1
-                      ? page.gradient.colors[1]
-                      : page.gradient.colors.first,
-                  icon: page.iconData,
-                  width: 140,
-                  height: 140,
-                  radius: 24,
-                  iconSize: 70,
-                ),
-                if (isGranted)
-                  Positioned(
-                    right: 8,
-                    top: 8,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: Colors.green,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.check,
-                        size: 24,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 48),
-            // Title
-            Text(
-              page.title,
-              style: GoogleFonts.inter(
-                fontSize: 48,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-                height: 1.1,
-              ),
-            ),
-            const SizedBox(height: 16),
-            // Subtitle
-            Text(
-              page.subtitle,
-              style: GoogleFonts.inter(
-                fontSize: 28,
-                fontWeight: FontWeight.w600,
-                color: page.gradient.colors.first,
-                height: 1.3,
-              ),
-            ),
-            const SizedBox(height: 24),
-            // Description
-            Container(
-              constraints: const BoxConstraints(maxWidth: 600),
-              child: Text(
-                page.description,
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.7),
-                  height: 1.6,
-                ),
-              ),
-            ),
-            const SizedBox(height: 40),
-            // Benefits list
-            Container(
-              padding: const EdgeInsets.all(28),
-              decoration: BoxDecoration(
-                color: Theme.of(context)
-                    .colorScheme
-                    .surfaceContainerHighest
-                    .withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: page.gradient.colors.first.withValues(alpha: 0.2),
-                  width: 1,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Stack(
+                alignment: Alignment.center,
                 children: [
-                  Text(
-                    l10n.permissionsBenefitsTitle,
-                    style: GoogleFonts.inter(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
+                  GradientIconCard(
+                    start: page.gradient.colors.first,
+                    end: page.gradient.colors.length > 1
+                        ? page.gradient.colors[1]
+                        : page.gradient.colors.first,
+                    icon: page.iconData,
+                    width: 120,
+                    height: 120,
+                    radius: 22,
+                    iconSize: 60,
                   ),
-                  const SizedBox(height: 20),
-                  ...page.benefits.map((benefit) => Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              margin: const EdgeInsets.only(top: 2),
-                              width: 24,
-                              height: 24,
-                              decoration: BoxDecoration(
-                                gradient: page.gradient,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.check,
-                                size: 16,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Text(
-                                benefit,
-                                style: GoogleFonts.inter(
-                                  fontSize: 16,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.8),
-                                  height: 1.4,
-                                ),
-                              ),
-                            ),
-                          ],
+                  if (isGranted)
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: AppColorUtils.greenAccent,
+                          shape: BoxShape.circle,
                         ),
-                      )),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            // Privacy note
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Theme.of(context)
-                    .colorScheme
-                    .primaryContainer
-                    .withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.lock_outline,
-                    size: 24,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Text(
-                      l10n.permissionsPrivacyNote,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.7),
+                        child: const Icon(
+                          Icons.check,
+                          size: 20,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
-                  ),
                 ],
               ),
-            ),
-          ],
+              const SizedBox(height: 28),
+              Text(
+                page.title,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: scheme.onSurface,
+                    ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.82),
+                      height: 1.35,
+                    ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                l10n.permissionsPrivacyNote,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.65),
+                      height: 1.25,
+                    ),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -307,38 +307,31 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
 
   Widget _buildHeader([bool isSmallScreen = false]) {
     final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
+      padding: EdgeInsets.fromLTRB(
+        isSmallScreen ? KubusSpacing.lg : KubusSpacing.xl,
+        isSmallScreen ? KubusSpacing.md : KubusSpacing.lg,
+        isSmallScreen ? KubusSpacing.lg : KubusSpacing.xl,
+        KubusSpacing.sm,
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           // Logo
-          Row(
-            children: [
-              AppLogo(
-                width: isSmallScreen ? 36 : 40,
-                height: isSmallScreen ? 36 : 40,
-              ),
-              SizedBox(width: isSmallScreen ? 8 : 12),
-              Text(
-                l10n.appTitle,
-                style: GoogleFonts.inter(
-                  fontSize: isSmallScreen ? 18 : 20,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-            ],
+          AppLogo(
+            width: isSmallScreen ? 34 : 38,
+            height: isSmallScreen ? 34 : 38,
           ),
           // Skip button
           TextButton(
             onPressed: _completeOnboarding,
             child: Text(
               l10n.permissionsSkipAll,
-              style: GoogleFonts.inter(
-                fontSize: isSmallScreen ? 14 : 16,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-              ),
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.70),
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
           ),
         ],
@@ -349,33 +342,61 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
   Widget _buildPage(PermissionPage page, [bool isSmallScreen = false]) {
     final l10n = AppLocalizations.of(context)!;
     final isGranted = _isPermissionGranted(page.permissionType);
-    
+
     return LayoutBuilder(
       builder: (context, constraints) {
-        final constraintSmallScreen = constraints.maxHeight < 700;
-        final isVerySmallScreen = constraints.maxHeight < 600;
-        final effectiveSmallScreen = isSmallScreen || constraintSmallScreen;
-        
-        return SingleChildScrollView(
+        final scheme = Theme.of(context).colorScheme;
+        final height = constraints.maxHeight;
+        final compact = isSmallScreen || height < 420;
+        final tight = height < 360;
+
+        final iconCardSize = tight ? 82.0 : (compact ? 100.0 : 120.0);
+        final iconSize = tight ? 40.0 : (compact ? 52.0 : 60.0);
+
+        final titleStyle = Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+              fontSize: tight ? 22 : (compact ? 24 : null),
+              color: scheme.onSurface,
+            );
+
+        final message = page.subtitle.replaceAll('\n', ' ').trim().isNotEmpty
+            ? page.subtitle.replaceAll('\n', ' ').trim()
+            : page.description.trim();
+
+        final messageStyle = Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.82),
+              fontSize: tight ? 13 : (compact ? 14 : null),
+              height: 1.35,
+            );
+
+        final helperStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.65),
+              height: 1.25,
+            );
+
+        return Center(
           child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            constraints: const BoxConstraints(maxWidth: 520),
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: effectiveSmallScreen ? 20 : 24),
+              padding: EdgeInsets.symmetric(
+                horizontal: compact ? KubusSpacing.lg : KubusSpacing.xl,
+              ),
               child: Column(
                 children: [
-                  SizedBox(height: isVerySmallScreen ? 20 : effectiveSmallScreen ? 30 : 40),
-                  // Icon with gradient background (shared widget) + granted badge
+                  const Spacer(),
                   Stack(
                     alignment: Alignment.center,
                     children: [
                       GradientIconCard(
                         start: page.gradient.colors.first,
-                        end: page.gradient.colors.length > 1 ? page.gradient.colors[1] : page.gradient.colors.first,
+                        end: page.gradient.colors.length > 1
+                            ? page.gradient.colors[1]
+                            : page.gradient.colors.first,
                         icon: page.iconData,
-                        width: isVerySmallScreen ? 100 : effectiveSmallScreen ? 110 : 120,
-                        height: isVerySmallScreen ? 100 : effectiveSmallScreen ? 110 : 120,
-                        radius: 20,
-                        iconSize: isVerySmallScreen ? 50 : effectiveSmallScreen ? 55 : 60,
+                        width: iconCardSize,
+                        height: iconCardSize,
+                        radius: KubusRadius.lg,
+                        iconSize: iconSize,
                       ),
                       if (isGranted)
                         Positioned(
@@ -387,7 +408,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                               color: AppColorUtils.greenAccent,
                               shape: BoxShape.circle,
                             ),
-                            child: Icon(
+                            child: const Icon(
                               Icons.check,
                               size: 16,
                               color: Colors.white,
@@ -396,131 +417,33 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                         ),
                     ],
                   ),
-                  SizedBox(height: isVerySmallScreen ? 24 : effectiveSmallScreen ? 32 : 40),
-                  // Title
+                  SizedBox(height: tight ? KubusSpacing.md : KubusSpacing.lg),
                   Text(
                     page.title,
-                    style: GoogleFonts.inter(
-                      fontSize: isVerySmallScreen ? 26 : effectiveSmallScreen ? 28 : 32,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
                     textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: isVerySmallScreen ? 8 : 12),
-                  // Subtitle (single-line & responsive)
-                  Text(
-                    page.subtitle.replaceAll('\n', ' '),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    softWrap: false,
-                    style: GoogleFonts.inter(
-                      fontSize: isVerySmallScreen ? 18 : effectiveSmallScreen ? 20 : 22,
-                      fontWeight: FontWeight.w600,
-                      color: page.gradient.colors.first,
-                      height: 1.3,
-                    ),
-                    textAlign: TextAlign.center,
+                    style: titleStyle,
                   ),
-                  SizedBox(height: isVerySmallScreen ? 16 : 20),
-                  // Description
+                  const SizedBox(height: KubusSpacing.sm),
                   Text(
-                    page.description,
-                    style: GoogleFonts.inter(
-                      fontSize: isVerySmallScreen ? 14 : 15,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                      height: 1.5,
-                    ),
+                    message,
                     textAlign: TextAlign.center,
+                    maxLines: tight ? 2 : 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: messageStyle,
                   ),
-                  SizedBox(height: isVerySmallScreen ? 24 : 32),
-                  // Benefits list
-                  Container(
-                    padding: EdgeInsets.all(isVerySmallScreen ? 16 : 20),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: page.gradient.colors.first.withValues(alpha: 0.2),
-                        width: 1,
-                      ),
+                  if (!tight) ...[
+                    const SizedBox(height: KubusSpacing.sm),
+                    Text(
+                      l10n.permissionsPrivacyNote,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: helperStyle,
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n.permissionsBenefitsTitle,
-                          style: GoogleFonts.inter(
-                            fontSize: isVerySmallScreen ? 14 : 16,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                        ),
-                        SizedBox(height: isVerySmallScreen ? 12 : 16),
-                        ...page.benefits.map((benefit) => Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                margin: const EdgeInsets.only(top: 2),
-                                width: 20,
-                                height: 20,
-                                decoration: BoxDecoration(
-                                  gradient: page.gradient,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.check,
-                                  size: 14,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  benefit,
-                                  style: GoogleFonts.inter(
-                                    fontSize: isVerySmallScreen ? 13 : 14,
-                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
-                                    height: 1.4,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        )),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: isVerySmallScreen ? 20 : 24),
-                  // Privacy note
-                  Container(
-                    padding: EdgeInsets.all(isVerySmallScreen ? 12 : 16),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.lock_outline,
-                          size: isVerySmallScreen ? 18 : 20,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            l10n.permissionsPrivacyNote,
-                            style: GoogleFonts.inter(
-                              fontSize: isVerySmallScreen ? 12 : 13,
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  ],
+                  const Spacer(),
                 ],
               ),
             ),
@@ -535,14 +458,22 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
     final currentPermission = _pages[_currentPage].permissionType;
     final isGranted = _isPermissionGranted(currentPermission);
     final isLastPage = _currentPage == _pages.length - 1;
+    final scheme = Theme.of(context).colorScheme;
     
     return LayoutBuilder(
       builder: (context, constraints) {
         final constraintSmallScreen = MediaQuery.of(context).size.height < 700;
         final effectiveSmallScreen = isSmallScreen || constraintSmallScreen;
+        final primaryBg = scheme.primary;
+        final primaryFg = scheme.onPrimary;
         
         return Padding(
-          padding: EdgeInsets.all(effectiveSmallScreen ? KubusSpacing.lg : KubusSpacing.xl),
+          padding: EdgeInsets.fromLTRB(
+            effectiveSmallScreen ? KubusSpacing.lg : KubusSpacing.xl,
+            KubusSpacing.sm,
+            effectiveSmallScreen ? KubusSpacing.lg : KubusSpacing.xl,
+            effectiveSmallScreen ? KubusSpacing.lg : KubusSpacing.xl,
+          ),
           child: Column(
             children: [
               // Page indicator
@@ -553,50 +484,18 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                   (index) => _buildDot(index),
                 ),
               ),
-              SizedBox(height: effectiveSmallScreen ? KubusSpacing.lg : KubusSpacing.xl),
-              // Permission status
-              if (isGranted)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.md, vertical: KubusSpacing.sm + 4),
-                  margin: const EdgeInsets.only(bottom: KubusSpacing.md),
-                  decoration: BoxDecoration(
-                    color: KubusColors.success.withValues(alpha: 0.1),
-                    borderRadius: KubusRadius.circular(KubusRadius.md),
-                    border: Border.all(
-                      color: KubusColors.success.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.check_circle,
-                        color: KubusColors.success,
-                        size: 20,
-                      ),
-                      const SizedBox(width: KubusSpacing.sm),
-                      Text(
-                        l10n.permissionsGrantedLabel,
-                        style: KubusTypography.textTheme.labelLarge?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: KubusColors.success,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              SizedBox(height: effectiveSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
               // Grant permission button
               KubusButton(
                 onPressed: isGranted ? (isLastPage ? _completeOnboarding : _nextPage) : () => _requestPermission(currentPermission),
-                backgroundColor: isGranted 
-                    ? Theme.of(context).colorScheme.primary
-                    : _pages[_currentPage].gradient.colors.first,
+                backgroundColor: primaryBg,
+                foregroundColor: primaryFg,
                 label: isGranted 
                     ? (isLastPage ? l10n.permissionsGetStarted : l10n.permissionsNextPermission)
                     : l10n.permissionsGrantPermission,
                 isFullWidth: true,
               ),
-              SizedBox(height: effectiveSmallScreen ? KubusSpacing.sm : KubusSpacing.md),
+              SizedBox(height: effectiveSmallScreen ? KubusSpacing.xs : KubusSpacing.sm),
               // Skip button
               TextButton(
                 onPressed: isLastPage ? _completeOnboarding : _nextPage,
