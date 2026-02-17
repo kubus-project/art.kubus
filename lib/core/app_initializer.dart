@@ -67,8 +67,11 @@ class _AppInitializerState extends State<AppInitializer> {
       _didNavigate = true;
       navigator.pushReplacement(
         MaterialPageRoute(
-          builder: (_) => isDesktop ? const DesktopOnboardingScreen() : const OnboardingScreen(),
-          settings: RouteSettings(name: isDesktop ? '/onboarding/desktop' : '/onboarding'),
+          builder: (_) => isDesktop
+              ? const DesktopOnboardingScreen()
+              : const OnboardingScreen(),
+          settings: RouteSettings(
+              name: isDesktop ? '/onboarding/desktop' : '/onboarding'),
         ),
       );
     });
@@ -126,23 +129,30 @@ class _AppInitializerState extends State<AppInitializer> {
       );
       if (!mounted) return;
 
-      final localeProvider = Provider.of<LocaleProvider>(context, listen: false);
-      await _safeStep<void>('locale.initialize', localeProvider.initialize, timeout: const Duration(seconds: 4));
+      final localeProvider =
+          Provider.of<LocaleProvider>(context, listen: false);
+      await _safeStep<void>('locale.initialize', localeProvider.initialize,
+          timeout: const Duration(seconds: 4));
       if (!mounted) return;
 
       // Initialize ConfigProvider first
-      final configProvider = Provider.of<ConfigProvider>(context, listen: false);
-      await _safeStep<void>('config.initialize', configProvider.initialize, timeout: const Duration(seconds: 6));
+      final configProvider =
+          Provider.of<ConfigProvider>(context, listen: false);
+      await _safeStep<void>('config.initialize', configProvider.initialize,
+          timeout: const Duration(seconds: 6));
       if (!mounted) return;
 
       // Ensure cache provider is hydrated before any screen depends on it.
       final cacheProvider = Provider.of<CacheProvider>(context, listen: false);
-      await _safeStep<void>('cache.initialize', cacheProvider.initialize, timeout: const Duration(seconds: 6));
+      await _safeStep<void>('cache.initialize', cacheProvider.initialize,
+          timeout: const Duration(seconds: 6));
       if (!mounted) return;
 
       // Initialize WalletProvider early to restore cached wallet (safe for fresh starts).
-      final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-      await _safeStep<void>('wallet.initialize', walletProvider.initialize, timeout: const Duration(seconds: 8));
+      final walletProvider =
+          Provider.of<WalletProvider>(context, listen: false);
+      await _safeStep<void>('wallet.initialize', walletProvider.initialize,
+          timeout: const Duration(seconds: 8));
       final walletAddress = walletProvider.currentWalletAddress;
       if (!mounted) return;
 
@@ -150,7 +160,9 @@ class _AppInitializerState extends State<AppInitializer> {
       if (walletAddress != null && walletAddress.isNotEmpty) {
         final web3Provider = Provider.of<Web3Provider>(context, listen: false);
         try {
-          await web3Provider.connectExistingWallet(walletAddress).timeout(const Duration(seconds: 6));
+          await web3Provider
+              .connectExistingWallet(walletAddress)
+              .timeout(const Duration(seconds: 6));
         } catch (e) {
           AppConfig.debugPrint('AppInitializer: Web3Provider sync failed: $e');
         }
@@ -158,254 +170,277 @@ class _AppInitializerState extends State<AppInitializer> {
       if (!mounted) return;
 
       // Initialize ProfileProvider and load profile if wallet exists
-      final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
-      await _safeStep<void>('profile.initialize', profileProvider.initialize, timeout: const Duration(seconds: 8));
+      final profileProvider =
+          Provider.of<ProfileProvider>(context, listen: false);
+      await _safeStep<void>('profile.initialize', profileProvider.initialize,
+          timeout: const Duration(seconds: 8));
       if (walletAddress != null && walletAddress.isNotEmpty) {
         try {
-          await profileProvider.loadProfile(walletAddress).timeout(const Duration(seconds: 6));
+          await profileProvider
+              .loadProfile(walletAddress)
+              .timeout(const Duration(seconds: 6));
         } catch (e) {
-          AppConfig.debugPrint('AppInitializer: ProfileProvider load failed: $e');
+          AppConfig.debugPrint(
+              'AppInitializer: ProfileProvider load failed: $e');
         }
       }
       if (!mounted) return;
 
       // Initialize SavedItemsProvider
-      final savedItemsProvider = Provider.of<SavedItemsProvider>(context, listen: false);
-      await _safeStep<void>('saved_items.initialize', savedItemsProvider.initialize, timeout: const Duration(seconds: 6));
+      final savedItemsProvider =
+          Provider.of<SavedItemsProvider>(context, listen: false);
+      await _safeStep<void>(
+          'saved_items.initialize', savedItemsProvider.initialize,
+          timeout: const Duration(seconds: 6));
       if (!mounted) return;
-    
-    // Initialize ArtworkProvider (no mock data needed)
-    final artworkProvider = Provider.of<ArtworkProvider>(context, listen: false);
-    artworkProvider.setUseMockData(false); // Always use backend data
-    
-    // ProfileProvider always uses backend data (no setUseMockData method)
-    
-    final prefs = await _safeStep<SharedPreferences>(
-          'SharedPreferences.getInstance',
-          SharedPreferences.getInstance,
-          timeout: const Duration(seconds: 5),
-        ) ??
-        (throw Exception('SharedPreferences unavailable'));
 
-    final onboardingState = await _safeStep<OnboardingState>(
-          'OnboardingStateService.load',
-          () => OnboardingStateService.load(prefs: prefs),
-          timeout: const Duration(seconds: 5),
-        ) ??
-        (throw Exception('OnboardingState unavailable'));
-    
-    // Check user preference for skipping onboarding (defaults to config setting)
-    final userSkipOnboarding = prefs.getBool('skipOnboardingForReturningUsers') ?? AppConfig.skipOnboardingForReturningUsers;
-    
-    // Check wallet connection status
-    final hasWallet = prefs.getBool('has_wallet') ?? false;
-    final hasCompletedOnboarding = onboardingState.hasCompletedOnboarding;
-    final inMemoryToken = BackendApiService().getAuthToken();
-    final sessionStatus = (inMemoryToken != null &&
-        inMemoryToken.trim().isNotEmpty &&
-        AuthGatingService.isAccessTokenValid(inMemoryToken))
-      ? StoredSessionStatus.valid
-      : AuthGatingService.evaluateStoredSession(prefs: prefs);
-    bool hasValidSession = sessionStatus == StoredSessionStatus.valid;
-    if (sessionStatus == StoredSessionStatus.refreshRequired) {
-      try {
-        final refreshed = await BackendApiService().refreshAuthTokenFromStorage();
-        hasValidSession = refreshed;
-      } catch (e) {
-        AppConfig.debugPrint('AppInitializer: refreshAuthTokenFromStorage failed: $e');
-      }
-    }
-    final hasLocalAccount = AuthGatingService.hasLocalAccountSync(prefs: prefs);
-    final shouldShowFirstRunOnboarding = await AuthGatingService.shouldShowFirstRunOnboarding(
-      prefs: prefs,
-      onboardingState: onboardingState,
-    );
-    final shouldShowSignIn = !hasValidSession &&
-      hasLocalAccount &&
-      AppConfig.enableMultiAuthEntry &&
-      (AppConfig.enableEmailAuth || AppConfig.enableGoogleAuth || AppConfig.enableWalletConnect);
-    
-    if (kDebugMode) {
-      debugPrint('AppInitializer: flags');
-      debugPrint('  isFirstLaunch: ${onboardingState.isFirstLaunch}');
-      debugPrint('  hasSeenWelcome: ${onboardingState.hasSeenWelcome}');
-      debugPrint('  userSkipOnboarding: $userSkipOnboarding');
-      debugPrint('  hasWallet: $hasWallet');
-      debugPrint('  hasCompletedOnboarding: $hasCompletedOnboarding');
-      debugPrint('  hasLocalAccount: $hasLocalAccount');
-      debugPrint('  sessionStatus: $sessionStatus');
-      debugPrint('  shouldShowFirstRunOnboarding: $shouldShowFirstRunOnboarding');
-      debugPrint('  showWelcomeScreen: ${AppConfig.showWelcomeScreen}');
-      debugPrint('  enforceWalletOnboarding: ${AppConfig.enforceWalletOnboarding}');
-    }
-    
-    if (!mounted) return;
-    
-    // Navigate based on user state and configuration
-    final shouldSkipOnboarding = userSkipOnboarding &&
-      hasCompletedOnboarding;
-    
-    if (kDebugMode) {
-      debugPrint('AppInitializer: shouldSkipOnboarding=$shouldSkipOnboarding');
-    }
+      // Initialize ArtworkProvider (no mock data needed)
+      final artworkProvider =
+          Provider.of<ArtworkProvider>(context, listen: false);
+      artworkProvider.setUseMockData(false); // Always use backend data
 
-    // Detect desktop layout for responsive onboarding
-    final isDesktop = DesktopBreakpoints.isDesktop(context);
-    if (kDebugMode) {
-      debugPrint('AppInitializer: isDesktop=$isDesktop');
-    }
+      // ProfileProvider always uses backend data (no setUseMockData method)
 
-    // Prime all data providers before the main UI renders so users see fresh
-    // content without needing manual refreshes on first interaction.
-    //
-    // IMPORTANT: Do not start warm-up during first-run onboarding. It can
-    // trigger expensive polling / socket setup while the user isn't in the
-    // shell yet (and increases perceived startup jank).
-    final bootstrapper = AppBootstrapService();
-    Future<void> startWarmUp() => bootstrapper.warmUp(
-          context: context,
-          walletAddress: walletAddress,
-        );
+      final prefs = await _safeStep<SharedPreferences>(
+            'SharedPreferences.getInstance',
+            SharedPreferences.getInstance,
+            timeout: const Duration(seconds: 5),
+          ) ??
+          (throw Exception('SharedPreferences unavailable'));
 
-    final pendingAuthLink = (() {
-      try {
-        return Provider.of<AuthDeepLinkProvider>(context, listen: false).consumePending();
-      } catch (_) {
-        return null;
-      }
-    })();
-    if (pendingAuthLink != null) {
-      if (!mounted) return;
-      _didNavigate = true;
-      switch (pendingAuthLink.type) {
-        case AuthDeepLinkType.verifyEmail:
-          navigator.pushReplacementNamed(
-            '/verify-email',
-            arguments: {
-              'token': pendingAuthLink.token,
-              if (pendingAuthLink.email != null) 'email': pendingAuthLink.email,
-            },
-          );
-          break;
-        case AuthDeepLinkType.resetPassword:
-          navigator.pushReplacementNamed(
-            '/reset-password',
-            arguments: {'token': pendingAuthLink.token},
-          );
-          break;
-      }
-      return;
-    }
+      final onboardingState = await _safeStep<OnboardingState>(
+            'OnboardingStateService.load',
+            () => OnboardingStateService.load(prefs: prefs),
+            timeout: const Duration(seconds: 5),
+          ) ??
+          (throw Exception('OnboardingState unavailable'));
 
-    // If a share/deep link landed the user on this initializer, route into the
-    // shell first. The shell (MainApp/DesktopShell) will consume & open the
-    // pending target using an in-shell context so sidebars/tabs remain visible.
-    //
-    // NOTE: We intentionally do NOT consume the pending target here because
-    // AppInitializer's navigator context does not have DesktopShellScope.
-    final pendingDeepLink = (() {
-      try {
-        return Provider.of<DeepLinkProvider>(context, listen: false).pending;
-      } catch (_) {
-        return null;
-      }
-    })();
-    if (pendingDeepLink != null) {
-      // If a signed-out user opens the app via a deep link on first launch,
-      // let them see the deep-linked content first and defer onboarding until
-      // they navigate elsewhere.
-      try {
-        if (!hasCompletedOnboarding && !profileProvider.isSignedIn) {
-          Provider.of<DeferredOnboardingProvider>(context, listen: false)
-              .enableForDeepLinkColdStart();
+      // Check user preference for skipping onboarding (defaults to config setting)
+      final userSkipOnboarding =
+          prefs.getBool('skipOnboardingForReturningUsers') ??
+              AppConfig.skipOnboardingForReturningUsers;
+
+      // Check wallet connection status
+      final hasWallet = prefs.getBool('has_wallet') ?? false;
+      final hasCompletedOnboarding = onboardingState.hasCompletedOnboarding;
+      final inMemoryToken = BackendApiService().getAuthToken();
+      final sessionStatus = (inMemoryToken != null &&
+              inMemoryToken.trim().isNotEmpty &&
+              AuthGatingService.isAccessTokenValid(inMemoryToken))
+          ? StoredSessionStatus.valid
+          : AuthGatingService.evaluateStoredSession(prefs: prefs);
+      bool hasValidSession = sessionStatus == StoredSessionStatus.valid;
+      if (sessionStatus == StoredSessionStatus.refreshRequired) {
+        try {
+          final refreshed =
+              await BackendApiService().refreshAuthTokenFromStorage();
+          hasValidSession = refreshed;
+        } catch (e) {
+          AppConfig.debugPrint(
+              'AppInitializer: refreshAuthTokenFromStorage failed: $e');
         }
-      } catch (_) {}
-
-      try {
-        await startWarmUp().timeout(const Duration(seconds: 15));
-      } catch (_) {}
-      if (!mounted) return;
-      _didNavigate = true;
-      final decision = const DeepLinkStartupRouting().decide(
-        pending: pendingDeepLink,
-        shouldShowSignIn: shouldShowSignIn,
+      }
+      final hasLocalAccount =
+          AuthGatingService.hasLocalAccountSync(prefs: prefs);
+      final shouldShowFirstRunOnboarding =
+          await AuthGatingService.shouldShowFirstRunOnboarding(
+        prefs: prefs,
+        onboardingState: onboardingState,
       );
-      if (decision == null) return;
+      final shouldShowSignIn = !hasValidSession &&
+          hasLocalAccount &&
+          AppConfig.enableMultiAuthEntry &&
+          (AppConfig.enableEmailAuth ||
+              AppConfig.enableGoogleAuth ||
+              AppConfig.enableWalletConnect);
 
-      if (decision.route == '/sign-in') {
-        navigator.pushReplacementNamed(
-          decision.route,
-          arguments: decision.arguments,
+      if (kDebugMode) {
+        debugPrint('AppInitializer: flags');
+        debugPrint('  isFirstLaunch: ${onboardingState.isFirstLaunch}');
+        debugPrint('  hasSeenWelcome: ${onboardingState.hasSeenWelcome}');
+        debugPrint('  userSkipOnboarding: $userSkipOnboarding');
+        debugPrint('  hasWallet: $hasWallet');
+        debugPrint('  hasCompletedOnboarding: $hasCompletedOnboarding');
+        debugPrint('  hasLocalAccount: $hasLocalAccount');
+        debugPrint('  sessionStatus: $sessionStatus');
+        debugPrint(
+            '  shouldShowFirstRunOnboarding: $shouldShowFirstRunOnboarding');
+        debugPrint('  showWelcomeScreen: ${AppConfig.showWelcomeScreen}');
+        debugPrint(
+            '  enforceWalletOnboarding: ${AppConfig.enforceWalletOnboarding}');
+      }
+
+      if (!mounted) return;
+
+      // Navigate based on user state and configuration
+      final shouldSkipOnboarding = userSkipOnboarding && hasCompletedOnboarding;
+
+      if (kDebugMode) {
+        debugPrint(
+            'AppInitializer: shouldSkipOnboarding=$shouldSkipOnboarding');
+      }
+
+      // Detect desktop layout for responsive onboarding
+      final isDesktop = DesktopBreakpoints.isDesktop(context);
+      if (kDebugMode) {
+        debugPrint('AppInitializer: isDesktop=$isDesktop');
+      }
+
+      // Prime all data providers before the main UI renders so users see fresh
+      // content without needing manual refreshes on first interaction.
+      //
+      // IMPORTANT: Do not start warm-up during first-run onboarding. It can
+      // trigger expensive polling / socket setup while the user isn't in the
+      // shell yet (and increases perceived startup jank).
+      final bootstrapper = AppBootstrapService();
+      Future<void> startWarmUp() => bootstrapper.warmUp(
+            context: context,
+            walletAddress: walletAddress,
+          );
+
+      final pendingAuthLink = (() {
+        try {
+          return Provider.of<AuthDeepLinkProvider>(context, listen: false)
+              .consumePending();
+        } catch (_) {
+          return null;
+        }
+      })();
+      if (pendingAuthLink != null) {
+        if (!mounted) return;
+        _didNavigate = true;
+        switch (pendingAuthLink.type) {
+          case AuthDeepLinkType.verifyEmail:
+            navigator.pushReplacementNamed(
+              '/verify-email',
+              arguments: {
+                'token': pendingAuthLink.token,
+                if (pendingAuthLink.email != null)
+                  'email': pendingAuthLink.email,
+              },
+            );
+            break;
+          case AuthDeepLinkType.resetPassword:
+            navigator.pushReplacementNamed(
+              '/reset-password',
+              arguments: {'token': pendingAuthLink.token},
+            );
+            break;
+        }
+        return;
+      }
+
+      // If a share/deep link landed the user on this initializer, route into the
+      // shell first. The shell (MainApp/DesktopShell) will consume & open the
+      // pending target using an in-shell context so sidebars/tabs remain visible.
+      //
+      // NOTE: We intentionally do NOT consume the pending target here because
+      // AppInitializer's navigator context does not have DesktopShellScope.
+      final pendingDeepLink = (() {
+        try {
+          return Provider.of<DeepLinkProvider>(context, listen: false).pending;
+        } catch (_) {
+          return null;
+        }
+      })();
+      if (pendingDeepLink != null) {
+        // If a signed-out user opens the app via a deep link on first launch,
+        // let them see the deep-linked content first and defer onboarding until
+        // they navigate elsewhere.
+        try {
+          if (!hasCompletedOnboarding && !profileProvider.isSignedIn) {
+            Provider.of<DeferredOnboardingProvider>(context, listen: false)
+                .enableForDeepLinkColdStart();
+          }
+        } catch (_) {}
+
+        try {
+          await startWarmUp().timeout(const Duration(seconds: 15));
+        } catch (_) {}
+        if (!mounted) return;
+        _didNavigate = true;
+        final decision = const DeepLinkStartupRouting().decide(
+          pending: pendingDeepLink,
+          shouldShowSignIn: shouldShowSignIn,
+        );
+        if (decision == null) return;
+
+        if (decision.route == '/sign-in') {
+          navigator.pushReplacementNamed(
+            decision.route,
+            arguments: decision.arguments,
+          );
+          return;
+        }
+
+        final canonicalPath =
+            _deepLinkCodec.canonicalPathForTarget(pendingDeepLink);
+        final destination = pendingDeepLink.type == ShareEntityType.marker
+            ? const ShellEntryScreen.map()
+            : const MainApp();
+        navigator.pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => destination,
+            settings: RouteSettings(name: canonicalPath),
+          ),
         );
         return;
       }
 
-      final canonicalPath = _deepLinkCodec.canonicalPathForTarget(pendingDeepLink);
-      final destination = pendingDeepLink.type == ShareEntityType.marker
-          ? const ShellEntryScreen.map()
-          : const MainApp();
-      navigator.pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => destination,
-          settings: RouteSettings(name: canonicalPath),
-        ),
-      );
-      return;
-    }
-    
-    if (shouldSkipOnboarding) {
-      // Returning user - skip onboarding and go directly to main app
-      if (kDebugMode) {
-        debugPrint('AppInitializer: route -> MainApp (skip onboarding)');
-      }
-      // Ensure welcome/first-launch flags are consistent for returning users.
-      await OnboardingStateService.markWelcomeSeen(prefs: prefs);
+      if (shouldSkipOnboarding) {
+        // Returning user - skip onboarding and go directly to main app
+        if (kDebugMode) {
+          debugPrint('AppInitializer: route -> MainApp (skip onboarding)');
+        }
+        // Ensure welcome/first-launch flags are consistent for returning users.
+        await OnboardingStateService.markWelcomeSeen(prefs: prefs);
 
-      unawaited(startWarmUp());
-      if (!mounted) return;
-      if (shouldShowSignIn) {
-        _didNavigate = true;
-        navigator.pushReplacementNamed('/sign-in');
-      } else {
-        _didNavigate = true;
-        navigator.pushReplacementNamed('/main');
-      }
-    } else if (shouldShowFirstRunOnboarding) {
-      // First-time user - show onboarding (no wallet required)
-      // Use desktop onboarding for desktop layouts
-      if (isDesktop) {
-        if (kDebugMode) {
-          debugPrint('AppInitializer: route -> DesktopOnboardingScreen');
+        unawaited(startWarmUp());
+        if (!mounted) return;
+        if (shouldShowSignIn) {
+          _didNavigate = true;
+          navigator.pushReplacementNamed('/sign-in');
+        } else {
+          _didNavigate = true;
+          navigator.pushReplacementNamed('/main');
         }
-        _didNavigate = true;
-        navigator.pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => const DesktopOnboardingScreen(),
-            settings: const RouteSettings(name: '/onboarding/desktop'),
-          ),
-        );
-      } else {
-        if (kDebugMode) {
-          debugPrint('AppInitializer: route -> OnboardingScreen');
+      } else if (shouldShowFirstRunOnboarding) {
+        // First-time user - show onboarding (no wallet required)
+        await OnboardingStateService.markWelcomeSeen(prefs: prefs);
+        // Use desktop onboarding for desktop layouts
+        if (isDesktop) {
+          if (kDebugMode) {
+            debugPrint('AppInitializer: route -> DesktopOnboardingScreen');
+          }
+          _didNavigate = true;
+          navigator.pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => const DesktopOnboardingScreen(),
+              settings: const RouteSettings(name: '/onboarding/desktop'),
+            ),
+          );
+        } else {
+          if (kDebugMode) {
+            debugPrint('AppInitializer: route -> OnboardingScreen');
+          }
+          _didNavigate = true;
+          navigator.pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => const OnboardingScreen(),
+              settings: const RouteSettings(name: '/onboarding'),
+            ),
+          );
         }
+      } else {
+        // Returning user who completed onboarding - go to main app (wallet optional)
+        if (kDebugMode) {
+          debugPrint('AppInitializer: route -> MainApp');
+        }
+        unawaited(startWarmUp());
+        if (!mounted) return;
         _didNavigate = true;
-        navigator.pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => const OnboardingScreen(),
-            settings: const RouteSettings(name: '/onboarding'),
-          ),
-        );
+        navigator.pushReplacementNamed(shouldShowSignIn ? '/sign-in' : '/main');
       }
-    } else {
-      // Returning user who completed onboarding - go to main app (wallet optional)
-      if (kDebugMode) {
-        debugPrint('AppInitializer: route -> MainApp');
-      }
-      unawaited(startWarmUp());
-      if (!mounted) return;
-      _didNavigate = true;
-      navigator.pushReplacementNamed(shouldShowSignIn ? '/sign-in' : '/main');
-    }
     } catch (e, st) {
       AppConfig.debugPrint('AppInitializer: initialization failed: $e');
       AppConfig.debugPrint('AppInitializer: init stack: $st');
@@ -414,8 +449,11 @@ class _AppInitializerState extends State<AppInitializer> {
       _didNavigate = true;
       navigator.pushReplacement(
         MaterialPageRoute(
-          builder: (_) => isDesktop ? const DesktopOnboardingScreen() : const OnboardingScreen(),
-          settings: RouteSettings(name: isDesktop ? '/onboarding/desktop' : '/onboarding'),
+          builder: (_) => isDesktop
+              ? const DesktopOnboardingScreen()
+              : const OnboardingScreen(),
+          settings: RouteSettings(
+              name: isDesktop ? '/onboarding/desktop' : '/onboarding'),
         ),
       );
     } finally {
@@ -666,13 +704,13 @@ class OnboardingManager {
     final prefs = await SharedPreferences.getInstance();
     await OnboardingStateService.markWelcomeSeen(prefs: prefs);
   }
-  
+
   /// Reset user state to trigger onboarding again (useful for testing)
   static Future<void> resetOnboardingState() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('has_wallet');
     await OnboardingStateService.reset(prefs: prefs);
-    
+
     // Reset all Web3 feature onboarding
     final keys = prefs.getKeys();
     for (final key in keys) {
@@ -681,13 +719,15 @@ class OnboardingManager {
       }
     }
   }
-  
+
   /// Check if user should skip onboarding
   static Future<bool> shouldSkipOnboarding() async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     // Check user preference (defaults to config setting)
-    final userSkipOnboarding = prefs.getBool('skipOnboardingForReturningUsers') ?? AppConfig.skipOnboardingForReturningUsers;
+    final userSkipOnboarding =
+        prefs.getBool('skipOnboardingForReturningUsers') ??
+            AppConfig.skipOnboardingForReturningUsers;
     if (!userSkipOnboarding) return false;
 
     final onboardingState = await OnboardingStateService.load(prefs: prefs);
