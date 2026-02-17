@@ -18,11 +18,11 @@ import 'package:art_kubus/utils/auth_password_policy.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/widgets/app_logo.dart';
+import 'package:art_kubus/widgets/email_registration_form.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/google_sign_in_button.dart';
 import 'package:art_kubus/widgets/google_sign_in_web_button.dart';
 import 'package:art_kubus/widgets/gradient_icon_card.dart';
-import 'package:art_kubus/widgets/inline_loading.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -795,7 +795,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
                       ),
                     )
                   else
-                    _buildEmailForm(colorScheme, compact: compact),
+                    _buildEmailForm(compact: compact),
                 if (enableGoogle && !compactEmailOpen) ...[
                   SizedBox(height: compact ? 8 : 12),
                   if (kIsWeb)
@@ -870,80 +870,21 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     );
   }
 
-  Widget _buildEmailForm(ColorScheme colorScheme, {bool compact = false}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        TextField(
-          controller: _emailController,
-          keyboardType: TextInputType.emailAddress,
-          decoration: InputDecoration(
-            labelText: AppLocalizations.of(context)!.commonEmail,
-            border: const OutlineInputBorder(),
-            errorText: _emailError,
-          ),
-        ),
-        SizedBox(height: compact ? 8 : 10),
-        TextField(
-          controller: _passwordController,
-          obscureText: true,
-          decoration: InputDecoration(
-            labelText: AppLocalizations.of(context)!.commonPassword,
-            border: const OutlineInputBorder(),
-            errorText: _passwordError,
-          ),
-        ),
-        SizedBox(height: compact ? 8 : 10),
-        TextField(
-          controller: _confirmPasswordController,
-          obscureText: true,
-          decoration: InputDecoration(
-            labelText: AppLocalizations.of(context)!.commonConfirmPassword,
-            border: const OutlineInputBorder(),
-            errorText: _confirmPasswordError,
-          ),
-        ),
-        if (!compact) ...[
-          const SizedBox(height: 10),
-          TextField(
-            controller: _usernameController,
-            decoration: InputDecoration(
-              labelText: AppLocalizations.of(context)!.commonUsernameOptional,
-              border: const OutlineInputBorder(),
-            ),
-          ),
-        ],
-        SizedBox(height: compact ? 8 : 10),
-        ElevatedButton.icon(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: colorScheme.primary,
-            foregroundColor: colorScheme.onPrimary,
-            padding: EdgeInsets.symmetric(
-                vertical: compact ? 12 : 16, horizontal: compact ? 10 : 12),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            elevation: 1,
-            minimumSize: Size.fromHeight(compact ? 46 : 54),
-          ),
-          onPressed: _isSubmitting ? null : _registerWithEmail,
-          icon: _isSubmitting
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: InlineLoading(width: 20, height: 20, tileSize: 5))
-              : Icon(Icons.person_add_alt,
-                  color: colorScheme.onPrimary, size: 22),
-          label: Text(
-            _isSubmitting
-                ? AppLocalizations.of(context)!.commonWorking
-                : AppLocalizations.of(context)!.authContinueWithEmail,
-            style: GoogleFonts.inter(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: colorScheme.onPrimary),
-          ),
-        ),
-      ],
+  Widget _buildEmailForm({bool compact = false}) {
+    final l10n = AppLocalizations.of(context)!;
+    return EmailRegistrationForm(
+      emailController: _emailController,
+      passwordController: _passwordController,
+      confirmPasswordController: _confirmPasswordController,
+      usernameController: _usernameController,
+      emailError: _emailError,
+      passwordError: _passwordError,
+      confirmPasswordError: _confirmPasswordError,
+      onSubmit: _registerWithEmail,
+      isSubmitting: _isSubmitting,
+      compact: compact,
+      submitLabel: l10n.authContinueWithEmail,
+      submittingLabel: l10n.commonWorking,
     );
   }
 }
