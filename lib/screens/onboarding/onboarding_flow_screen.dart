@@ -1,47 +1,30 @@
 import 'dart:async';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/models/user_persona.dart';
 import 'package:art_kubus/providers/locale_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
-import 'package:art_kubus/screens/auth/register_screen.dart';
 import 'package:art_kubus/screens/auth/sign_in_screen.dart';
 import 'package:art_kubus/screens/desktop/desktop_shell.dart';
 import 'package:art_kubus/screens/events/exhibition_creator_screen.dart';
 import 'package:art_kubus/screens/web3/artist/artwork_creator.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
+import 'package:art_kubus/services/notification_helper.dart';
 import 'package:art_kubus/services/onboarding_state_service.dart';
+import 'package:art_kubus/services/push_notification_service.dart';
 import 'package:art_kubus/services/telemetry/telemetry_service.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
+import 'package:art_kubus/widgets/auth_methods_panel.dart';
 import 'package:art_kubus/widgets/app_logo.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
+import 'package:art_kubus/widgets/user_persona_picker_content.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-/// Manual fallback artist suggestions shown in onboarding when backend artist
-/// suggestions are unavailable. Edit this list directly as needed.
-const List<Map<String, dynamic>> onboardingFallbackArtists =
-    <Map<String, dynamic>>[
-  {
-    'id': 'curator_kubus_1',
-    'displayName': 'Kubus Curated Artist',
-    'bio': 'Featured by the Kubus community.',
-  },
-  {
-    'id': 'curator_kubus_2',
-    'displayName': 'AR Studio Collective',
-    'bio': 'Immersive artworks and city interventions.',
-  },
-  {
-    'id': 'curator_kubus_3',
-    'displayName': 'Digital Monument Lab',
-    'bio': 'Public-space AR and on-chain editions.',
-  },
-];
 
 enum _OnboardingStep {
   welcome,
@@ -251,42 +234,54 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
       _OnboardingStep.permissions,
       _OnboardingStep.artwork,
       _OnboardingStep.follow,
-      if (!_isSignedIn || (_pendingVerificationEmail ?? '').trim().isNotEmpty)
-        _OnboardingStep.verifyEmail,
+      if (_verificationRequired) _OnboardingStep.verifyEmail,
       _OnboardingStep.done,
     ];
     return steps;
   }
 
-  Future<void> _loadPermissionStatuses() async {
-    if (kIsWeb) {
-      if (!mounted) return;
-      setState(() {
-        _locationEnabled = true;
-        _notificationEnabled = true;
-        _cameraEnabled = true;
-      });
-      return;
-    }
+  bool get _verificationRequired =>
+      (_pendingVerificationEmail ?? '').trim().isNotEmpty;
 
+  bool get _canCompleteFlow => _isSignedIn && !_verificationRequired;
+
+  Future<void> _loadPermissionStatuses() async {
+    var locationEnabled = false;
+    var notificationEnabled = false;
+    var cameraEnabled = false;
     try {
       final location = await Permission.location.status;
-      final notifications = await Permission.notification.status;
-      final camera = await Permission.camera.status;
-      if (!mounted) return;
-      setState(() {
-        _locationEnabled = location.isGranted;
-        _notificationEnabled = notifications.isGranted;
-        _cameraEnabled = camera.isGranted;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _locationEnabled = false;
-        _notificationEnabled = false;
-        _cameraEnabled = false;
-      });
+      locationEnabled = location.isGranted;
+    } catch (_) {}
+
+    if (kIsWeb) {
+      try {
+        notificationEnabled = await isWebNotificationPermissionGranted();
+      } catch (_) {
+        notificationEnabled = false;
+      }
+      cameraEnabled = true;
+    } else {
+      try {
+        final notifications = await Permission.notification.status;
+        notificationEnabled = notifications.isGranted;
+      } catch (_) {
+        notificationEnabled = false;
+      }
+      try {
+        final camera = await Permission.camera.status;
+        cameraEnabled = camera.isGranted;
+      } catch (_) {
+        cameraEnabled = false;
+      }
     }
+
+    if (!mounted) return;
+    setState(() {
+      _locationEnabled = locationEnabled;
+      _notificationEnabled = notificationEnabled;
+      _cameraEnabled = cameraEnabled;
+    });
   }
 
   Future<void> _loadArtists() async {
@@ -299,21 +294,18 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
       final all = await api.listArtists(limit: 12, offset: 0);
       final merged = <String, Map<String, dynamic>>{};
       for (final artist in [...featured, ...all]) {
-        final id = (artist['id'] ?? artist['walletAddress'] ?? '').toString();
-        if (id.isEmpty) continue;
-        merged[id] = artist;
+        final wallet = (artist['walletAddress'] ?? '').toString().trim();
+        if (wallet.isEmpty) continue;
+        merged[wallet] = <String, dynamic>{...artist, 'walletAddress': wallet};
       }
       if (!mounted) return;
       setState(() {
         _artists = merged.values.take(6).toList(growable: false);
-        if (_artists.isEmpty) {
-          _artists = _fallbackArtists();
-        }
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _artists = _fallbackArtists();
+        _artists = <Map<String, dynamic>>[];
       });
     } finally {
       if (mounted) {
@@ -351,9 +343,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   void _refreshAuthDerivedSteps() {
     final signedInNow =
         Provider.of<ProfileProvider>(context, listen: false).isSignedIn;
-    if (signedInNow == _isSignedIn && _steps.isNotEmpty) {
-      return;
-    }
 
     _isSignedIn = signedInNow;
     _steps = _buildSteps();
@@ -403,32 +392,58 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   }
 
   Future<void> _requestPermission(Permission permission) async {
-    if (kIsWeb) return;
-    final status = await permission.request();
-    if (status.isPermanentlyDenied || status.isRestricted) {
-      await openAppSettings();
+    final l10n = AppLocalizations.of(context)!;
+    PermissionStatus status = PermissionStatus.denied;
+
+    if (kIsWeb && permission == Permission.notification) {
+      await PushNotificationService().requestPermission();
+    } else if (kIsWeb && permission == Permission.camera) {
+      status = PermissionStatus.granted;
+    } else {
+      try {
+        status = await permission.request();
+      } catch (_) {
+        status = PermissionStatus.denied;
+      }
+      if (status.isPermanentlyDenied || status.isRestricted) {
+        await openAppSettings();
+      }
     }
+
     await _loadPermissionStatuses();
     if (!mounted) return;
+
+    final bool granted;
+    if (permission == Permission.location) {
+      granted = _locationEnabled;
+    } else if (permission == Permission.notification) {
+      granted = _notificationEnabled;
+    } else if (permission == Permission.camera) {
+      granted = _cameraEnabled;
+    } else {
+      granted = status.isGranted;
+    }
+
     setState(() {
-      if (permission == Permission.location) {
-        _locationEnabled = status.isGranted;
-        _permissionHint =
-            status.isGranted ? null : 'Location permission still disabled';
-      } else if (permission == Permission.notification) {
-        _notificationEnabled = status.isGranted;
-        _permissionHint =
-            status.isGranted ? null : 'Notifications permission still disabled';
-      } else if (permission == Permission.camera) {
-        _cameraEnabled = status.isGranted;
-        _permissionHint =
-            status.isGranted ? null : 'Camera permission still disabled';
-      }
+      _permissionHint = granted
+          ? null
+          : l10n.permissionsOpenSettingsDialogContent(
+              _permissionLabel(l10n, permission),
+            );
     });
   }
 
-  List<Map<String, dynamic>> _fallbackArtists() {
-    return onboardingFallbackArtists;
+  String _permissionLabel(AppLocalizations l10n, Permission permission) {
+    if (permission == Permission.location) {
+      return l10n.onboardingFlowPermissionLocation;
+    }
+    if (permission == Permission.notification) {
+      return l10n.onboardingFlowPermissionNotifications;
+    }
+    if (permission == Permission.camera) {
+      return l10n.onboardingFlowPermissionCamera;
+    }
+    return 'permission';
   }
 
   Future<void> _saveInlineProfile({
@@ -469,18 +484,70 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     _pendingVerificationEmail = email.trim();
     _refreshAuthDerivedSteps();
     if (!mounted) return;
-    await _markCompleted(_OnboardingStep.account);
+    final verifyIndex = _steps.indexOf(_OnboardingStep.verifyEmail);
+    if (verifyIndex >= 0) {
+      setState(() {
+        _currentIndex = verifyIndex;
+      });
+    }
+    if (_steps.contains(_OnboardingStep.account)) {
+      await _markCompleted(_OnboardingStep.account);
+    }
+  }
+
+  Future<void> _handleEmbeddedSignInNeedsVerification(String email) async {
+    _pendingVerificationEmail = email.trim();
+    _refreshAuthDerivedSteps();
+    if (!mounted) return;
+    final verifyIndex = _steps.indexOf(_OnboardingStep.verifyEmail);
+    if (verifyIndex >= 0) {
+      setState(() {
+        _currentIndex = verifyIndex;
+      });
+    }
   }
 
   Future<void> _handleEmbeddedSignInSuccess(
       Map<String, dynamic> payload) async {
-    _pendingVerificationEmail = null;
+    final data = (payload['data'] as Map<String, dynamic>?) ?? payload;
+    final user = (data['user'] as Map<String, dynamic>?) ?? data;
+    final signedInEmail = (user['email'] ?? '').toString().trim().toLowerCase();
+    final pendingEmail = (_pendingVerificationEmail ?? '').trim().toLowerCase();
+    if (pendingEmail.isNotEmpty &&
+        (signedInEmail.isEmpty || signedInEmail == pendingEmail)) {
+      _pendingVerificationEmail = null;
+    } else if (pendingEmail.isEmpty) {
+      _pendingVerificationEmail = null;
+    }
     _refreshAuthDerivedSteps();
     await _refreshDaoReview();
     if (!mounted) return;
-    setState(() {
-      _currentIndex = _nextIncompleteIndex();
-    });
+    await _markCompleted(_OnboardingStep.account);
+  }
+
+  Future<void> _confirmVerificationAndContinue() async {
+    _refreshAuthDerivedSteps();
+    if (!_isSignedIn) {
+      await _jumpToVerifyStep();
+      return;
+    }
+    if (_verificationRequired) {
+      final refreshed = await BackendApiService().refreshAuthTokenFromStorage();
+      _refreshAuthDerivedSteps();
+      if (!_isSignedIn) return;
+      if (refreshed) {
+        _pendingVerificationEmail = null;
+        _refreshAuthDerivedSteps();
+      }
+      if (_verificationRequired) return;
+    }
+    if (_steps.contains(_OnboardingStep.verifyEmail)) {
+      await _markCompleted(_OnboardingStep.verifyEmail);
+    } else if (mounted) {
+      setState(() {
+        _currentIndex = _nextIncompleteIndex();
+      });
+    }
   }
 
   Future<void> _jumpToVerifyStep() async {
@@ -511,6 +578,18 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     }
     if (!mounted) return;
     await _markCompleted(_OnboardingStep.role);
+  }
+
+  Future<void> _applyPersonaSelection(UserPersona persona) async {
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
+    await profileProvider.setUserPersona(persona);
+    final isArtist = persona == UserPersona.creator;
+    final isInstitution = persona == UserPersona.institution;
+    await _applyRoleSelection(
+      isArtist: isArtist,
+      isInstitution: isInstitution,
+    );
   }
 
   Future<void> _submitDaoApplication({
@@ -552,22 +631,33 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   }
 
   Future<void> _toggleFollow(Map<String, dynamic> artist) async {
-    final artistId = (artist['walletAddress'] ?? artist['id'] ?? '').toString();
-    if (artistId.isEmpty || _isBusy) return;
+    final artistWallet = (artist['walletAddress'] ?? '').toString().trim();
+    if (artistWallet.isEmpty || _isBusy) return;
     if (!_isSignedIn) {
       await _jumpToVerifyStep();
       return;
     }
 
-    setState(() => _isBusy = true);
+    final wasFollowed = _followedArtists.contains(artistWallet);
+    setState(() {
+      _isBusy = true;
+      if (wasFollowed) {
+        _followedArtists.remove(artistWallet);
+      } else {
+        _followedArtists.add(artistWallet);
+      }
+    });
     try {
       final api = BackendApiService();
-      if (_followedArtists.contains(artistId)) {
-        await api.unfollowUser(artistId);
-        _followedArtists.remove(artistId);
+      if (wasFollowed) {
+        await api.unfollowUser(artistWallet);
       } else {
-        await api.followUser(artistId);
-        _followedArtists.add(artistId);
+        await api.followUser(artistWallet);
+      }
+      if (_followedArtists.isNotEmpty &&
+          _steps.contains(_OnboardingStep.follow) &&
+          !_completed.contains(_OnboardingStep.follow)) {
+        await _markCompleted(_OnboardingStep.follow);
       }
       if (mounted) {
         setState(() {});
@@ -575,10 +665,10 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        if (_followedArtists.contains(artistId)) {
-          _followedArtists.remove(artistId);
+        if (wasFollowed) {
+          _followedArtists.add(artistWallet);
         } else {
-          _followedArtists.add(artistId);
+          _followedArtists.remove(artistWallet);
         }
       });
       ScaffoldMessenger.of(context).showSnackBar(
@@ -594,9 +684,18 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   }
 
   Future<void> _finishOnboarding() async {
-    final isSignedIn =
-        Provider.of<ProfileProvider>(context, listen: false).isSignedIn;
-    if (!isSignedIn) {
+    _refreshAuthDerivedSteps();
+    if (!_isSignedIn) {
+      final accountIndex = _steps.indexOf(_OnboardingStep.account);
+      if (!mounted) return;
+      setState(() {
+        if (accountIndex >= 0) {
+          _currentIndex = accountIndex;
+        }
+      });
+      return;
+    }
+    if (_verificationRequired) {
       final verifyIndex = _steps.indexOf(_OnboardingStep.verifyEmail);
       if (!mounted) return;
       setState(() {
@@ -614,12 +713,25 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
         .trackOnboardingComplete(reason: 'step_flow_complete'));
 
     if (!mounted) return;
-    Navigator.of(context)
-        .pushReplacementNamed(isSignedIn ? '/main' : '/sign-in');
+    Navigator.of(context).pushReplacementNamed('/main');
   }
 
   Future<void> _skipForNow() async {
     if (_isSkippingFlow) return;
+    _refreshAuthDerivedSteps();
+    if (!_canCompleteFlow) {
+      if (_verificationRequired) {
+        await _jumpToVerifyStep();
+      } else {
+        final accountIndex = _steps.indexOf(_OnboardingStep.account);
+        if (accountIndex >= 0 && mounted) {
+          setState(() {
+            _currentIndex = accountIndex;
+          });
+        }
+      }
+      return;
+    }
     setState(() => _isSkippingFlow = true);
 
     try {
@@ -645,30 +757,39 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
         await _markCompleted(_OnboardingStep.welcome);
         return;
       case _OnboardingStep.account:
+        if (_isSignedIn) {
+          await _markCompleted(_OnboardingStep.account);
+        }
         return;
       case _OnboardingStep.verifyEmail:
-        if (!_isSignedIn) {
-          await _jumpToVerifyStep();
-          return;
-        }
-        if (_steps.contains(_OnboardingStep.verifyEmail)) {
-          await _markCompleted(_OnboardingStep.verifyEmail);
-        }
+        await _confirmVerificationAndContinue();
         return;
       case _OnboardingStep.profile:
-        await _markCompleted(_OnboardingStep.profile);
+        if (_completed.contains(_OnboardingStep.profile)) {
+          await _markCompleted(_OnboardingStep.profile);
+        }
         return;
       case _OnboardingStep.role:
-        await _markCompleted(_OnboardingStep.role);
+        if (_completed.contains(_OnboardingStep.role)) {
+          await _markCompleted(_OnboardingStep.role);
+        }
         return;
       case _OnboardingStep.permissions:
         await _markCompleted(_OnboardingStep.permissions);
         return;
       case _OnboardingStep.artwork:
-        await _markCompleted(_OnboardingStep.artwork);
+        if (_completed.contains(_OnboardingStep.artwork)) {
+          await _markCompleted(_OnboardingStep.artwork);
+        } else {
+          await _deferCurrentStep();
+        }
         return;
       case _OnboardingStep.follow:
-        await _markCompleted(_OnboardingStep.follow);
+        if (_followedArtists.isNotEmpty) {
+          await _markCompleted(_OnboardingStep.follow);
+        } else {
+          await _deferCurrentStep();
+        }
         return;
       case _OnboardingStep.done:
         await _finishOnboarding();
@@ -850,17 +971,21 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
             title: l10n.onboardingFlowProfileTitle,
             body: l10n.onboardingFlowProfileBody,
             onAuthSuccess: _handleEmbeddedSignInSuccess,
+            onVerificationRequired: _handleEmbeddedSignInNeedsVerification,
           );
         }
       case _OnboardingStep.role:
         if (_isSignedIn) {
-          final user =
-              Provider.of<ProfileProvider>(context, listen: false).currentUser;
+          final profileProvider =
+              Provider.of<ProfileProvider>(context, listen: false);
+          final user = profileProvider.currentUser;
           content = _RoleStep(
             title: l10n.onboardingFlowRoleTitle,
             body: l10n.onboardingFlowRoleBody,
             artistSelected: user?.isArtist ?? false,
             institutionSelected: user?.isInstitution ?? false,
+            selectedPersona: profileProvider.userPersona,
+            onSelectPersona: _applyPersonaSelection,
             onSave: _applyRoleSelection,
             onApplyDao: _submitDaoApplication,
             daoMessage: _daoMessage,
@@ -871,6 +996,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
             title: l10n.onboardingFlowRoleTitle,
             body: l10n.onboardingFlowRoleBody,
             onAuthSuccess: _handleEmbeddedSignInSuccess,
+            onVerificationRequired: _handleEmbeddedSignInNeedsVerification,
           );
         }
       case _OnboardingStep.permissions:
@@ -909,6 +1035,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
             title: l10n.onboardingFlowArtworkTitle,
             body: l10n.onboardingFlowArtworkBody,
             onAuthSuccess: _handleEmbeddedSignInSuccess,
+            onVerificationRequired: _handleEmbeddedSignInNeedsVerification,
           );
         }
       case _OnboardingStep.follow:
@@ -926,6 +1053,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
             title: l10n.onboardingFlowFollowTitle,
             body: l10n.onboardingFlowFollowBody,
             onAuthSuccess: _handleEmbeddedSignInSuccess,
+            onVerificationRequired: _handleEmbeddedSignInNeedsVerification,
           );
         }
       case _OnboardingStep.done:
@@ -940,6 +1068,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
           email: _pendingVerificationEmail,
           isSignedIn: _isSignedIn,
           onAuthSuccess: _handleEmbeddedSignInSuccess,
+          onVerificationRequired: _handleEmbeddedSignInNeedsVerification,
         );
     }
 
@@ -951,13 +1080,13 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            palette.start.withValues(alpha: 0.28),
-            palette.end.withValues(alpha: 0.20),
+            palette.start.withValues(alpha: 0.40),
+            palette.end.withValues(alpha: 0.30),
           ],
         ),
         border: Border.all(
-          color: palette.accent.withValues(alpha: 0.42),
-          width: 1.3,
+          color: palette.accent.withValues(alpha: 0.64),
+          width: 1.5,
         ),
       ),
       child: LiquidGlassPanel(
@@ -983,6 +1112,181 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     );
   }
 
+  IconData _stepIcon(_OnboardingStep step) {
+    switch (step) {
+      case _OnboardingStep.welcome:
+        return Icons.waving_hand_outlined;
+      case _OnboardingStep.account:
+        return Icons.person_add_alt_1_outlined;
+      case _OnboardingStep.profile:
+        return Icons.badge_outlined;
+      case _OnboardingStep.role:
+        return Icons.tune_outlined;
+      case _OnboardingStep.permissions:
+        return Icons.shield_outlined;
+      case _OnboardingStep.artwork:
+        return Icons.palette_outlined;
+      case _OnboardingStep.follow:
+        return Icons.group_add_outlined;
+      case _OnboardingStep.verifyEmail:
+        return Icons.mark_email_read_outlined;
+      case _OnboardingStep.done:
+        return Icons.rocket_launch_outlined;
+    }
+  }
+
+  String _stepLabel(AppLocalizations l10n, _OnboardingStep step) {
+    switch (step) {
+      case _OnboardingStep.welcome:
+        return l10n.onboardingFlowWelcomeTitle;
+      case _OnboardingStep.account:
+        return l10n.onboardingFlowAccountTitle;
+      case _OnboardingStep.profile:
+        return l10n.onboardingFlowProfileTitle;
+      case _OnboardingStep.role:
+        return l10n.onboardingFlowRoleTitle;
+      case _OnboardingStep.permissions:
+        return l10n.onboardingFlowPermissionsTitle;
+      case _OnboardingStep.artwork:
+        return l10n.onboardingFlowArtworkTitle;
+      case _OnboardingStep.follow:
+        return l10n.onboardingFlowFollowTitle;
+      case _OnboardingStep.verifyEmail:
+        return l10n.onboardingFlowVerifyLastTitle;
+      case _OnboardingStep.done:
+        return l10n.onboardingFlowDoneTitle;
+    }
+  }
+
+  Widget _buildDesktopStepRail(AppLocalizations l10n, ColorScheme scheme) {
+    return LiquidGlassPanel(
+      key: const Key('onboarding_desktop_step_rail'),
+      padding: const EdgeInsets.all(12),
+      borderRadius: BorderRadius.circular(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            l10n.onboardingFlowTitle,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: 10),
+          ...List.generate(_steps.length, (index) {
+            final step = _steps[index];
+            final active = _currentIndex == index;
+            final done = _completed.contains(step);
+            final palette = _paletteForStep(step);
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: active
+                    ? palette.accent.withValues(alpha: 0.22)
+                    : scheme.surface.withValues(alpha: 0.28),
+                border: Border.all(
+                  color: done
+                      ? palette.accent.withValues(alpha: 0.55)
+                      : scheme.outline.withValues(alpha: 0.24),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    done ? Icons.check_circle : _stepIcon(step),
+                    size: 16,
+                    color: done ? palette.accent : scheme.onSurface,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _stepLabel(l10n, step),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            color: scheme.onSurface,
+                            fontWeight:
+                                active ? FontWeight.w700 : FontWeight.w500,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+          if (_currentStep == _OnboardingStep.welcome) ...[
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: scheme.surface.withValues(alpha: 0.22),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: scheme.outline.withValues(alpha: 0.2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.onboardingFlowWelcomeInfoTime,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '• ${l10n.onboardingFlowWelcomeInfoAccount}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    '• ${l10n.onboardingFlowWelcomeInfoCreate}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    '• ${l10n.onboardingFlowWelcomeInfoFollow}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBottomActions(AppLocalizations l10n, {required bool compact}) {
+    return LiquidGlassPanel(
+      borderRadius: BorderRadius.circular(14),
+      padding: EdgeInsets.fromLTRB(10, compact ? 8 : 10, 10, compact ? 8 : 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextButton(
+              onPressed:
+                  _currentStep == _OnboardingStep.done ? null : _deferCurrentStep,
+              child: Text(l10n.commonSkip),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: KubusButton(
+              onPressed: _onPrimaryAction,
+              label: _primaryLabelForStep(l10n),
+              isFullWidth: true,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -992,17 +1296,17 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     final accent = themeProvider.accentColor;
     final stepPalette = _paletteForStep(_currentStep);
 
-    final bgStart = stepPalette.start.withValues(alpha: 0.78);
-    final bgEnd = stepPalette.end.withValues(alpha: 0.68);
-    final bgMid = Color.lerp(bgStart, bgEnd, 0.55) ?? bgEnd;
+    final bgStart = stepPalette.start.withValues(alpha: 0.82);
+    final bgEnd = stepPalette.end.withValues(alpha: 0.74);
+    final bgMid = Color.lerp(bgStart, bgEnd, 0.52) ?? bgEnd;
     final bgAccent =
-        Color.lerp(stepPalette.accent, accent, 0.45)?.withValues(alpha: 0.56) ??
-            accent.withValues(alpha: 0.56);
+        Color.lerp(stepPalette.accent, accent, 0.4)?.withValues(alpha: 0.64) ??
+            accent.withValues(alpha: 0.64);
 
     if (_isInitializing) {
       return AnimatedGradientBackground(
         colors: [bgStart, bgMid, bgEnd, bgStart],
-        intensity: 0.34,
+        intensity: 0.38,
         child: const Scaffold(
           backgroundColor: Colors.transparent,
           body: Center(child: CircularProgressIndicator()),
@@ -1012,41 +1316,54 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
 
     return AnimatedGradientBackground(
       colors: [bgStart, bgMid, bgAccent, bgEnd, bgStart],
-      intensity: 0.34,
+      intensity: 0.38,
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        resizeToAvoidBottomInset: false,
-        body: Listener(
-          behavior: HitTestBehavior.deferToChild,
-          onPointerDown: (_) {
-            final focusScope = FocusScope.of(context);
-            if (!focusScope.hasPrimaryFocus &&
-                focusScope.focusedChild != null) {
-              focusScope.unfocus();
-            }
-          },
-          child: SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
-                final horizontalPadding = _isDesktop ? 48.0 : 16.0;
-                final maxWidth = _isDesktop ? 860.0 : 560.0;
+        resizeToAvoidBottomInset: true,
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+              final keyboardOpen = keyboardInset > 0;
 
-                return AnimatedPadding(
-                  duration: const Duration(milliseconds: 180),
-                  curve: Curves.easeOut,
-                  padding: EdgeInsets.only(bottom: keyboardInset > 0 ? 10 : 0),
-                  child: Padding(
-                    padding:
-                        EdgeInsets.symmetric(horizontal: horizontalPadding),
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          maxWidth: maxWidth,
-                          minHeight: constraints.maxHeight -
-                              (keyboardInset > 0 ? 10 : 0),
-                        ),
-                        child: Column(
+              return AnimatedPadding(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOut,
+                padding: EdgeInsets.only(bottom: keyboardInset),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: _isDesktop ? 24 : 16,
+                    vertical: 10,
+                  ),
+                  child: _isDesktop
+                      ? Row(
+                          children: [
+                            SizedBox(
+                              width: 280,
+                              child: _buildDesktopStepRail(l10n, scheme),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                children: [
+                                  _buildHeader(
+                                    l10n,
+                                    scheme,
+                                    localeProvider: localeProvider,
+                                    themeProvider: themeProvider,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  _buildProgress(scheme),
+                                  const SizedBox(height: 10),
+                                  Expanded(child: _buildStepCard(l10n, scheme)),
+                                  const SizedBox(height: 10),
+                                  _buildBottomActions(l10n, compact: keyboardOpen),
+                                ],
+                              ),
+                            ),
+                          ],
+                        )
+                      : Column(
                           children: [
                             _buildHeader(
                               l10n,
@@ -1054,41 +1371,17 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                               localeProvider: localeProvider,
                               themeProvider: themeProvider,
                             ),
-                            const SizedBox(height: 8),
+                            SizedBox(height: keyboardOpen ? 4 : 8),
                             _buildProgress(scheme),
-                            const SizedBox(height: 14),
+                            SizedBox(height: keyboardOpen ? 8 : 12),
                             Expanded(child: _buildStepCard(l10n, scheme)),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: TextButton(
-                                    onPressed:
-                                        _currentStep == _OnboardingStep.done
-                                            ? null
-                                            : _deferCurrentStep,
-                                    child: Text(l10n.commonSkip),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: KubusButton(
-                                    onPressed: _onPrimaryAction,
-                                    label: _primaryLabelForStep(l10n),
-                                    isFullWidth: true,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
+                            const SizedBox(height: 8),
+                            _buildBottomActions(l10n, compact: keyboardOpen),
                           ],
                         ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
+                ),
+              );
+            },
           ),
         ),
       ),
@@ -1108,7 +1401,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
       case _OnboardingStep.follow:
         return l10n.commonContinue;
       case _OnboardingStep.verifyEmail:
-        return l10n.commonContinue;
+        final isSl = Localizations.localeOf(context).languageCode == 'sl';
+        return isSl ? 'Potrjeno / Nadaljuj' : 'I verified / Continue';
       case _OnboardingStep.role:
         return l10n.commonContinue;
       case _OnboardingStep.done:
@@ -1191,29 +1485,22 @@ class _AccountStep extends StatelessWidget {
                 ?.copyWith(fontWeight: FontWeight.w700)),
         const SizedBox(height: 8),
         Text(body, style: Theme.of(context).textTheme.bodyLarge),
-        const SizedBox(height: 12),
-        Expanded(
-          child: RegisterScreen(
-            embedded: true,
-            onAuthCompleted: onAuthCompleted,
-            onVerificationRequired: (email) => onVerificationRequired(email),
-            onSwitchToSignIn: onVerifyEmail,
-          ),
-        ),
-        const SizedBox(height: 6),
-        TextButton(
-          onPressed: onVerifyEmail,
-          child: Text(
-              AppLocalizations.of(context)!.onboardingFlowOpenVerification),
-        ),
-        const SizedBox(height: 2),
+        const SizedBox(height: 4),
         Text(
           verifyHint,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: scheme.onSurface.withValues(alpha: 0.75),
               ),
         ),
-        const Spacer(),
+        const SizedBox(height: 10),
+        Expanded(
+          child: AuthMethodsPanel(
+            embedded: true,
+            onAuthSuccess: onAuthCompleted,
+            onVerificationRequired: onVerificationRequired,
+            onSwitchToSignIn: onVerifyEmail,
+          ),
+        ),
       ],
     );
   }
@@ -1304,6 +1591,7 @@ class _VerifyEmailStep extends StatelessWidget {
     required this.email,
     required this.isSignedIn,
     required this.onAuthSuccess,
+    required this.onVerificationRequired,
   });
 
   final String title;
@@ -1311,6 +1599,7 @@ class _VerifyEmailStep extends StatelessWidget {
   final String? email;
   final bool isSignedIn;
   final Future<void> Function(Map<String, dynamic>) onAuthSuccess;
+  final Future<void> Function(String email) onVerificationRequired;
 
   @override
   Widget build(BuildContext context) {
@@ -1321,6 +1610,7 @@ class _VerifyEmailStep extends StatelessWidget {
       email: normalizedEmail,
       isSignedIn: isSignedIn,
       onAuthSuccess: onAuthSuccess,
+      onVerificationRequired: onVerificationRequired,
     );
   }
 }
@@ -1332,6 +1622,7 @@ class _InlineVerificationPanel extends StatefulWidget {
     required this.email,
     required this.isSignedIn,
     required this.onAuthSuccess,
+    required this.onVerificationRequired,
   });
 
   final String title;
@@ -1339,6 +1630,7 @@ class _InlineVerificationPanel extends StatefulWidget {
   final String email;
   final bool isSignedIn;
   final Future<void> Function(Map<String, dynamic>) onAuthSuccess;
+  final Future<void> Function(String email) onVerificationRequired;
 
   @override
   State<_InlineVerificationPanel> createState() =>
@@ -1417,6 +1709,7 @@ class _InlineVerificationPanelState extends State<_InlineVerificationPanel> {
               embedded: true,
               initialEmail: widget.email,
               onAuthSuccess: widget.onAuthSuccess,
+              onVerificationRequired: widget.onVerificationRequired,
             ),
           ),
         ],
@@ -1549,6 +1842,8 @@ class _RoleStep extends StatefulWidget {
     required this.body,
     required this.artistSelected,
     required this.institutionSelected,
+    required this.selectedPersona,
+    required this.onSelectPersona,
     required this.onSave,
     required this.onApplyDao,
     required this.daoReview,
@@ -1559,8 +1854,10 @@ class _RoleStep extends StatefulWidget {
   final String body;
   final bool artistSelected;
   final bool institutionSelected;
+  final UserPersona? selectedPersona;
   final Map<String, dynamic>? daoReview;
   final String? daoMessage;
+  final Future<void> Function(UserPersona persona) onSelectPersona;
   final Future<void> Function({
     required bool isArtist,
     required bool isInstitution,
@@ -1580,6 +1877,7 @@ class _RoleStep extends StatefulWidget {
 class _RoleStepState extends State<_RoleStep> {
   late bool _artist;
   late bool _institution;
+  UserPersona? _selectedPersona;
   bool _saving = false;
   final TextEditingController _portfolioController = TextEditingController();
   final TextEditingController _mediumController = TextEditingController();
@@ -1591,6 +1889,17 @@ class _RoleStepState extends State<_RoleStep> {
     super.initState();
     _artist = widget.artistSelected;
     _institution = widget.institutionSelected;
+    _selectedPersona = widget.selectedPersona;
+    if (_selectedPersona == UserPersona.creator) {
+      _artist = true;
+      _institution = false;
+    } else if (_selectedPersona == UserPersona.institution) {
+      _artist = false;
+      _institution = true;
+    } else if (_selectedPersona == UserPersona.lover) {
+      _artist = false;
+      _institution = false;
+    }
   }
 
   @override
@@ -1639,6 +1948,15 @@ class _RoleStepState extends State<_RoleStep> {
     }
   }
 
+  Future<void> _selectPersona(UserPersona persona) async {
+    setState(() {
+      _selectedPersona = persona;
+      _artist = persona == UserPersona.creator;
+      _institution = persona == UserPersona.institution;
+    });
+    await widget.onSelectPersona(persona);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -1653,6 +1971,11 @@ class _RoleStepState extends State<_RoleStep> {
         const SizedBox(height: 8),
         Text(widget.body, style: Theme.of(context).textTheme.bodyLarge),
         const SizedBox(height: 12),
+        UserPersonaPickerContent(
+          selectedPersona: _selectedPersona,
+          onSelect: _selectPersona,
+        ),
+        const SizedBox(height: 10),
         SwitchListTile(
           title: Text(l10n.settingsRoleArtistTitle),
           subtitle: Text(l10n.settingsRoleArtistSubtitle),
@@ -1868,11 +2191,13 @@ class _AuthRequiredStep extends StatelessWidget {
     required this.title,
     required this.body,
     required this.onAuthSuccess,
+    required this.onVerificationRequired,
   });
 
   final String title;
   final String body;
   final Future<void> Function(Map<String, dynamic>) onAuthSuccess;
+  final Future<void> Function(String email) onVerificationRequired;
 
   @override
   Widget build(BuildContext context) {
@@ -1891,6 +2216,7 @@ class _AuthRequiredStep extends StatelessWidget {
           child: SignInScreen(
             embedded: true,
             onAuthSuccess: onAuthSuccess,
+            onVerificationRequired: onVerificationRequired,
           ),
         ),
       ],
@@ -1945,8 +2271,7 @@ class _FollowStep extends StatelessWidget {
           )
         else
           ...artists.map((artist) {
-            final id =
-                (artist['id'] ?? artist['walletAddress'] ?? '').toString();
+            final id = (artist['walletAddress'] ?? '').toString().trim();
             final name = (artist['displayName'] ??
                     artist['name'] ??
                     artist['username'] ??

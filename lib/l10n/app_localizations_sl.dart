@@ -662,10 +662,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get onboardingFlowOpenVerification => 'Odpri potrditev e-pošte';
 
   @override
-  String get onboardingFlowVerifyLastTitle => 'Še zadnji korak - potrdi e-pošto';
+  String get onboardingFlowVerifyLastTitle => 'Še zadnji korak — potrdi e-pošto';
 
   @override
-  String get onboardingFlowVerifyLastBody => 'Preveri prejeto pošto in odpri potrditveno povezavo. Nato se vrni sem in nadaljuj.';
+  String get onboardingFlowVerifyLastBody => 'E-pošto si najbrž že prejel/a. Preveri nabiralnik in dokončaj ustvarjanje računa.';
 
   @override
   String get onboardingFlowProfileTitle => 'Ustvari svoj profil';

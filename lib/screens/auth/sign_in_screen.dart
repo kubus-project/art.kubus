@@ -43,6 +43,7 @@ class SignInScreen extends StatefulWidget {
     this.initialEmail,
     this.onAuthSuccess,
     this.embedded = false,
+    this.onVerificationRequired,
   });
 
   final String? redirectRoute;
@@ -50,6 +51,7 @@ class SignInScreen extends StatefulWidget {
   final String? initialEmail;
   final FutureOr<void> Function(Map<String, dynamic> payload)? onAuthSuccess;
   final bool embedded;
+  final ValueChanged<String>? onVerificationRequired;
 
   @override
   State<SignInScreen> createState() => _SignInScreenState();
@@ -172,7 +174,9 @@ class _SignInScreenState extends State<SignInScreen> {
       AppConfig.debugPrint('SignInScreen: wallet provisioning failed: $e');
     }
     final prefs = await SharedPreferences.getInstance();
-    await OnboardingStateService.markCompleted(prefs: prefs);
+    if (!widget.embedded) {
+      await OnboardingStateService.markCompleted(prefs: prefs);
+    }
     if (walletAddress != null && walletAddress.toString().isNotEmpty) {
       await prefs.setString('wallet_address', walletAddress.toString());
       await prefs.setString('wallet', walletAddress.toString());
@@ -394,10 +398,14 @@ class _SignInScreenState extends State<SignInScreen> {
         try {
           final decoded = jsonDecode((e.body ?? '').toString());
           if (decoded is Map && decoded['requiresEmailVerification'] == true) {
-            Navigator.of(context).pushReplacementNamed(
-              '/verify-email',
-              arguments: {'email': email},
-            );
+            if (widget.embedded) {
+              widget.onVerificationRequired?.call(email);
+            } else {
+              Navigator.of(context).pushReplacementNamed(
+                '/verify-email',
+                arguments: {'email': email},
+              );
+            }
             ScaffoldMessenger.of(context).showKubusSnackBar(
               SnackBar(content: Text(l10n.authEmailNotVerifiedToast)),
             );
@@ -717,7 +725,7 @@ class _SignInScreenState extends State<SignInScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBodyBehindAppBar: true,
-      resizeToAvoidBottomInset: false,
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
@@ -833,8 +841,7 @@ class _SignInScreenState extends State<SignInScreen> {
                   child: AnimatedPadding(
                     duration: const Duration(milliseconds: 180),
                     curve: Curves.easeOut,
-                    padding:
-                        EdgeInsets.only(bottom: keyboardInset > 0 ? 10 : 0),
+                    padding: EdgeInsets.only(bottom: keyboardInset),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 20, vertical: 12),
@@ -846,9 +853,7 @@ class _SignInScreenState extends State<SignInScreen> {
                               child: ConstrainedBox(
                                 constraints: BoxConstraints(
                                   maxWidth: 520,
-                                  maxHeight: constraints.maxHeight -
-                                      keyboardInset -
-                                      kToolbarHeight,
+                                  maxHeight: constraints.maxHeight - kToolbarHeight,
                                 ),
                                 child: form,
                               ),

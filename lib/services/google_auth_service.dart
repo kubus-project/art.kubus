@@ -89,11 +89,15 @@ class GoogleAuthService {
     await ensureInitialized();
 
     if (kIsWeb) {
-      throw UnsupportedError(
-        'GoogleAuthService.signIn is not supported on the web. '
-        'Use the google_sign_in_web renderButton UI and listen to '
-        'GoogleSignIn.instance.authenticationEvents instead.',
-      );
+      try {
+        final account = await GoogleSignIn.instance.authenticate();
+        return resultFromAccount(account);
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('GoogleAuthService: web authenticate failed: $e');
+        }
+        return null;
+      }
     }
 
     try {
