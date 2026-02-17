@@ -332,12 +332,23 @@ class _DesktopShellState extends State<DesktopShell>
     if (index < 0 || index >= navItems.length) return;
     final item = navItems[index];
 
+    if (item.route != _activeRoute) {
+      try {
+        if (context
+            .read<DeferredOnboardingProvider>()
+            .maybeShowOnboarding(context)) {
+          return;
+        }
+      } catch (_) {}
+    }
+
     if (!isSignedIn && item.route == _web3EntryRoute) {
       _startWeb3OnboardingFlow();
       return;
     }
 
-    final leavingExplore = _activeRoute == '/explore' && item.route != '/explore';
+    final leavingExplore =
+        _activeRoute == '/explore' && item.route != '/explore';
     if (leavingExplore &&
         _functionsPanel == DesktopFunctionsPanel.exploreNearby) {
       _closeFunctionsPanel();
@@ -469,8 +480,11 @@ class _DesktopShellState extends State<DesktopShell>
   void _syncTelemetry() {
     final hasStack = _screenStack.isNotEmpty;
     final screenRoute = hasStack ? '$_activeRoute#sub' : _activeRoute;
-    final screenName = hasStack ? _screenStack.last.runtimeType.toString() : _telemetryScreenNameForRoute(_activeRoute);
-    TelemetryService().setActiveScreen(screenName: screenName, screenRoute: screenRoute);
+    final screenName = hasStack
+        ? _screenStack.last.runtimeType.toString()
+        : _telemetryScreenNameForRoute(_activeRoute);
+    TelemetryService()
+        .setActiveScreen(screenName: screenName, screenRoute: screenRoute);
   }
 
   List<DesktopNavItem> _navItemsForState(bool isSignedIn,
@@ -570,7 +584,8 @@ class _DesktopShellState extends State<DesktopShell>
                     child: AnimatedGradientBackground(
                       duration: const Duration(seconds: 12),
                       intensity: 0.25,
-                      colors: _backgroundColorsForRoute(context, effectiveRoute),
+                      colors:
+                          _backgroundColorsForRoute(context, effectiveRoute),
                       child: const SizedBox.expand(),
                     ),
                   ),
@@ -595,9 +610,13 @@ class _DesktopShellState extends State<DesktopShell>
                               : (isLarge ? 380 : 320),
                           child: ClipRect(
                             child: IgnorePointer(
-                              ignoring: _functionsPanel == DesktopFunctionsPanel.none,
+                              ignoring:
+                                  _functionsPanel == DesktopFunctionsPanel.none,
                               child: AnimatedOpacity(
-                                opacity: _functionsPanel == DesktopFunctionsPanel.none ? 0 : 1,
+                                opacity: _functionsPanel ==
+                                        DesktopFunctionsPanel.none
+                                    ? 0
+                                    : 1,
                                 duration: const Duration(milliseconds: 150),
                                 child: Builder(
                                   builder: (context) {
@@ -605,9 +624,12 @@ class _DesktopShellState extends State<DesktopShell>
                                       decoration: BoxDecoration(
                                         border: Border(
                                           left: BorderSide(
-                                            color: theme.brightness == Brightness.dark
-                                                ? Colors.white.withValues(alpha: 0.06)
-                                                : theme.colorScheme.outline.withValues(alpha: 0.10),
+                                            color: theme.brightness ==
+                                                    Brightness.dark
+                                                ? Colors.white
+                                                    .withValues(alpha: 0.06)
+                                                : theme.colorScheme.outline
+                                                    .withValues(alpha: 0.10),
                                             width: 1,
                                           ),
                                         ),
@@ -616,39 +638,57 @@ class _DesktopShellState extends State<DesktopShell>
                                         padding: EdgeInsets.zero,
                                         margin: EdgeInsets.zero,
                                         borderRadius: BorderRadius.zero,
-                                        blurSigma: KubusGlassEffects.blurSigmaLight,
+                                        blurSigma:
+                                            KubusGlassEffects.blurSigmaLight,
                                         showBorder: false,
-                                        backgroundColor: theme.colorScheme.surface.withValues(
-                                          alpha: theme.brightness == Brightness.dark ? 0.16 : 0.10,
+                                        backgroundColor: theme
+                                            .colorScheme.surface
+                                            .withValues(
+                                          alpha: theme.brightness ==
+                                                  Brightness.dark
+                                              ? 0.16
+                                              : 0.10,
                                         ),
                                         child: AnimatedSwitcher(
-                                          duration: const Duration(milliseconds: 220),
+                                          duration:
+                                              const Duration(milliseconds: 220),
                                           switchInCurve: Curves.easeOutCubic,
                                           switchOutCurve: Curves.easeInCubic,
                                           child: switch (_functionsPanel) {
-                                            DesktopFunctionsPanel.notifications => _NotificationsPanel(
-                                                key: const ValueKey<String>('functions_notifications'),
+                                            DesktopFunctionsPanel
+                                                  .notifications =>
+                                              _NotificationsPanel(
+                                                key: const ValueKey<String>(
+                                                    'functions_notifications'),
                                                 onClose: _closeFunctionsPanel,
-                                                onActivitySelected: (activity) async {
+                                                onActivitySelected:
+                                                    (activity) async {
                                                   final parentContext = context;
                                                   _closeFunctionsPanel();
-                                                  await ActivityNavigation.open(parentContext, activity);
+                                                  await ActivityNavigation.open(
+                                                      parentContext, activity);
                                                 },
                                               ),
-                                            DesktopFunctionsPanel.exploreNearby =>
-                                              _functionsPanelContent ?? const SizedBox.shrink(
-                                                key: ValueKey<String>('functions_explore_nearby_empty'),
+                                            DesktopFunctionsPanel
+                                                  .exploreNearby =>
+                                              _functionsPanelContent ??
+                                                  const SizedBox.shrink(
+                                                    key: ValueKey<String>(
+                                                        'functions_explore_nearby_empty'),
+                                                  ),
+                                            DesktopFunctionsPanel.none =>
+                                              const SizedBox.shrink(
+                                                key: ValueKey<String>(
+                                                    'functions_empty'),
                                               ),
-                                            DesktopFunctionsPanel.none => const SizedBox.shrink(
-                                              key: ValueKey<String>('functions_empty'),
-                                            ),
                                           },
                                         ),
                                       ),
                                     );
 
                                     if (!kIsWeb ||
-                                        _functionsPanel == DesktopFunctionsPanel.none) {
+                                        _functionsPanel ==
+                                            DesktopFunctionsPanel.none) {
                                       return panel;
                                     }
                                     return PointerInterceptor(child: panel);
@@ -666,9 +706,11 @@ class _DesktopShellState extends State<DesktopShell>
                           final expandedWidth = isLarge
                               ? DesktopNavigation.expandedWidthLarge
                               : DesktopNavigation.expandedWidthMedium;
-                          final collapsedWidth = DesktopNavigation.collapsedWidth;
+                          final collapsedWidth =
+                              DesktopNavigation.collapsedWidth;
                           final currentWidth = collapsedWidth +
-                              (expandedWidth - collapsedWidth) * _navExpandAnimation.value;
+                              (expandedWidth - collapsedWidth) *
+                                  _navExpandAnimation.value;
 
                           final scheme = theme.colorScheme;
                           final glassTint = theme.brightness == Brightness.dark
@@ -683,7 +725,8 @@ class _DesktopShellState extends State<DesktopShell>
                                   left: BorderSide(
                                     color: theme.brightness == Brightness.dark
                                         ? Colors.white.withValues(alpha: 0.06)
-                                        : scheme.outline.withValues(alpha: 0.15),
+                                        : scheme.outline
+                                            .withValues(alpha: 0.15),
                                     width: 1,
                                   ),
                                 ),
@@ -697,19 +740,23 @@ class _DesktopShellState extends State<DesktopShell>
                                 backgroundColor: glassTint,
                                 child: DesktopNavigation(
                                   items: navItems,
-                                  selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
-                                  onItemSelected: (index) =>
-                                      _onNavItemSelected(index, navItems, isSignedIn),
+                                  selectedIndex:
+                                      selectedIndex < 0 ? 0 : selectedIndex,
+                                  onItemSelected: (index) => _onNavItemSelected(
+                                      index, navItems, isSignedIn),
                                   isExpanded: _isNavigationExpanded,
                                   expandAnimation: _navExpandAnimation,
                                   onToggleExpand: _toggleNavigation,
                                   onProfileTap: () => _showProfileMenu(context),
-                                  onSettingsTap: () => _showSettingsScreen(context),
+                                  onSettingsTap: () =>
+                                      _showSettingsScreen(context),
                                   onNotificationsTap: () =>
                                       unawaited(_toggleNotificationsPanel()),
-                                  onWalletTap: () => _handleWalletTap(isSignedIn),
+                                  onWalletTap: () =>
+                                      _handleWalletTap(isSignedIn),
                                   onCollabInvitesTap: isSignedIn &&
-                                          AppConfig.isFeatureEnabled('collabInvites')
+                                          AppConfig.isFeatureEnabled(
+                                              'collabInvites')
                                       ? () => _showCollabInvites()
                                       : null,
                                 ),
@@ -906,7 +953,8 @@ class _NotificationsPanel extends StatelessWidget {
             borderRadius: BorderRadius.zero,
             blurSigma: KubusGlassEffects.blurSigmaLight,
             showBorder: false,
-            backgroundColor: scheme.surface.withValues(alpha: isDark ? 0.18 : 0.12),
+            backgroundColor:
+                scheme.surface.withValues(alpha: isDark ? 0.18 : 0.12),
             child: Row(
               children: [
                 Text(
@@ -940,10 +988,10 @@ class _NotificationsPanel extends StatelessWidget {
                   child: Text(
                     l10n.homeMarkAllReadButton,
                     style: theme.textTheme.labelLarge?.copyWith(
-                          color: hasUnread
-                              ? themeProvider.accentColor
-                              : scheme.onSurface.withValues(alpha: 0.4),
-                        ),
+                      color: hasUnread
+                          ? themeProvider.accentColor
+                          : scheme.onSurface.withValues(alpha: 0.4),
+                    ),
                   ),
                 ),
                 IconButton(
@@ -983,21 +1031,29 @@ class _NotificationsPanel extends StatelessWidget {
                       children: [
                         Icon(Icons.error_outline,
                             size: KubusSpacing.xxl, color: scheme.error),
-                        const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
+                        const SizedBox(
+                            height: KubusSpacing.sm + KubusSpacing.xs),
                         Text(
                           activityProvider.error!,
                           textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(
                                 color: scheme.onSurface.withValues(alpha: 0.8),
                               ),
                         ),
-                        const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
+                        const SizedBox(
+                            height: KubusSpacing.sm + KubusSpacing.xs),
                         TextButton(
                           onPressed: () =>
                               unawaited(activityProvider.refresh(force: true)),
                           child: Text(
                             l10n.commonRetry,
-                            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelLarge
+                                ?.copyWith(
                                   color: themeProvider.accentColor,
                                 ),
                           ),

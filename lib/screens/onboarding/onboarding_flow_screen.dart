@@ -1,11 +1,11 @@
 import 'dart:async';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/providers/locale_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/screens/auth/register_screen.dart';
 import 'package:art_kubus/screens/auth/sign_in_screen.dart';
-import 'package:art_kubus/screens/community/profile_edit_screen.dart';
 import 'package:art_kubus/screens/desktop/desktop_shell.dart';
 import 'package:art_kubus/screens/events/exhibition_creator_screen.dart';
 import 'package:art_kubus/screens/web3/artist/artwork_creator.dart';
@@ -21,6 +21,27 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+/// Manual fallback artist suggestions shown in onboarding when backend artist
+/// suggestions are unavailable. Edit this list directly as needed.
+const List<Map<String, dynamic>> onboardingFallbackArtists =
+    <Map<String, dynamic>>[
+  {
+    'id': 'curator_kubus_1',
+    'displayName': 'Kubus Curated Artist',
+    'bio': 'Featured by the Kubus community.',
+  },
+  {
+    'id': 'curator_kubus_2',
+    'displayName': 'AR Studio Collective',
+    'bio': 'Immersive artworks and city interventions.',
+  },
+  {
+    'id': 'curator_kubus_3',
+    'displayName': 'Digital Monument Lab',
+    'bio': 'Public-space AR and on-chain editions.',
+  },
+];
 
 enum _OnboardingStep {
   welcome,
@@ -72,6 +93,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   List<Map<String, dynamic>> _artists = <Map<String, dynamic>>[];
   final Set<String> _followedArtists = <String>{};
   bool _isLoadingArtists = false;
+  bool _isSkippingFlow = false;
   bool _isSignedIn = false;
   String? _pendingVerificationEmail;
   String? _permissionHint;
@@ -406,35 +428,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   }
 
   List<Map<String, dynamic>> _fallbackArtists() {
-    return const <Map<String, dynamic>>[
-      {
-        'id': 'curator_kubus_1',
-        'displayName': 'Kubus Curated Artist',
-        'bio': 'Featured by the Kubus community.',
-      },
-      {
-        'id': 'curator_kubus_2',
-        'displayName': 'AR Studio Collective',
-        'bio': 'Immersive artworks and city interventions.',
-      },
-      {
-        'id': 'curator_kubus_3',
-        'displayName': 'Digital Monument Lab',
-        'bio': 'Public-space AR and on-chain editions.',
-      },
-    ];
-  }
-
-  Future<void> _saveProfileFromOnboarding() async {
-    final navigator = Navigator.of(context);
-    await navigator.push(
-      MaterialPageRoute(
-        builder: (_) => const ProfileEditScreen(isOnboarding: true),
-      ),
-    );
-
-    if (!mounted) return;
-    await _markCompleted(_OnboardingStep.profile);
+    return onboardingFallbackArtists;
   }
 
   Future<void> _saveInlineProfile({
@@ -557,17 +551,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     });
   }
 
-  Future<void> _openArtworkCreator() async {
-    final navigator = Navigator.of(context);
-    final draftId = 'onboarding_${DateTime.now().microsecondsSinceEpoch}';
-    await navigator.push(
-      MaterialPageRoute(builder: (_) => ArtworkCreator(draftId: draftId)),
-    );
-
-    if (!mounted) return;
-    await _markCompleted(_OnboardingStep.artwork);
-  }
-
   Future<void> _toggleFollow(Map<String, dynamic> artist) async {
     final artistId = (artist['walletAddress'] ?? artist['id'] ?? '').toString();
     if (artistId.isEmpty || _isBusy) return;
@@ -635,6 +618,27 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
         .pushReplacementNamed(isSignedIn ? '/main' : '/sign-in');
   }
 
+  Future<void> _skipForNow() async {
+    if (_isSkippingFlow) return;
+    setState(() => _isSkippingFlow = true);
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await OnboardingStateService.markCompleted(prefs: prefs);
+      await _persistProgress();
+      unawaited(
+        TelemetryService().trackOnboardingComplete(reason: 'skip_for_now'),
+      );
+
+      if (!mounted) return;
+      Navigator.of(context).pushReplacementNamed('/main');
+    } finally {
+      if (mounted) {
+        setState(() => _isSkippingFlow = false);
+      }
+    }
+  }
+
   Future<void> _onPrimaryAction() async {
     switch (_currentStep) {
       case _OnboardingStep.welcome:
@@ -672,30 +676,109 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     }
   }
 
-  Widget _buildHeader(AppLocalizations l10n, ColorScheme scheme) {
+  String _themeModeLabel(AppLocalizations l10n, ThemeMode mode) {
+    switch (mode) {
+      case ThemeMode.light:
+        return l10n.settingsThemeModeLight;
+      case ThemeMode.dark:
+        return l10n.settingsThemeModeDark;
+      case ThemeMode.system:
+        return l10n.settingsThemeModeSystem;
+    }
+  }
+
+  Widget _buildHeader(
+    AppLocalizations l10n,
+    ColorScheme scheme, {
+    required LocaleProvider localeProvider,
+    required ThemeProvider themeProvider,
+  }) {
     final stepNumber = _currentIndex + 1;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
-      child: Row(
-        children: [
-          const AppLogo(width: 34, height: 34),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              l10n.onboardingFlowTitle,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: scheme.onSurface,
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: _isDesktop ? 96 : 126),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                const AppLogo(width: 34, height: 34),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    l10n.onboardingFlowTitle,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSurface,
+                        ),
                   ),
-            ),
-          ),
-          Text(
-            l10n.commonStepOfTotal(stepNumber, _steps.length),
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: scheme.onSurface.withValues(alpha: 0.7),
                 ),
-          ),
-        ],
+                Text(
+                  l10n.commonStepOfTotal(stepNumber, _steps.length),
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.7),
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              alignment: WrapAlignment.end,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                PopupMenuButton<String>(
+                  onSelected: (value) {
+                    unawaited(localeProvider.setLanguageCode(value));
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem<String>(
+                      value: 'sl',
+                      child: Text(l10n.languageSlovenian),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'en',
+                      child: Text(l10n.languageEnglish),
+                    ),
+                  ],
+                  child: _HeaderActionPill(
+                    icon: Icons.language,
+                    label: localeProvider.languageCode.toUpperCase(),
+                  ),
+                ),
+                PopupMenuButton<ThemeMode>(
+                  onSelected: (mode) {
+                    unawaited(themeProvider.setThemeMode(mode));
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem<ThemeMode>(
+                      value: ThemeMode.light,
+                      child: Text(_themeModeLabel(l10n, ThemeMode.light)),
+                    ),
+                    PopupMenuItem<ThemeMode>(
+                      value: ThemeMode.dark,
+                      child: Text(_themeModeLabel(l10n, ThemeMode.dark)),
+                    ),
+                    PopupMenuItem<ThemeMode>(
+                      value: ThemeMode.system,
+                      child: Text(_themeModeLabel(l10n, ThemeMode.system)),
+                    ),
+                  ],
+                  child: _HeaderActionPill(
+                    icon: Icons.brightness_6_outlined,
+                    label: _themeModeLabel(l10n, themeProvider.themeMode),
+                  ),
+                ),
+                TextButton(
+                  onPressed: _isSkippingFlow ? null : _skipForNow,
+                  child: Text(l10n.commonSkipForNow),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -904,7 +987,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    final accent = Provider.of<ThemeProvider>(context).accentColor;
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final localeProvider = Provider.of<LocaleProvider>(context);
+    final accent = themeProvider.accentColor;
     final stepPalette = _paletteForStep(_currentStep);
 
     final bgStart = stepPalette.start.withValues(alpha: 0.78);
@@ -963,7 +1048,12 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                         ),
                         child: Column(
                           children: [
-                            _buildHeader(l10n, scheme),
+                            _buildHeader(
+                              l10n,
+                              scheme,
+                              localeProvider: localeProvider,
+                              themeProvider: themeProvider,
+                            ),
                             const SizedBox(height: 8),
                             _buildProgress(scheme),
                             const SizedBox(height: 14),
@@ -1026,6 +1116,48 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
       case _OnboardingStep.welcome:
         return l10n.commonContinue;
     }
+  }
+}
+
+class _HeaderActionPill extends StatelessWidget {
+  const _HeaderActionPill({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: scheme.surface.withValues(alpha: 0.30),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: scheme.outline.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: scheme.onSurface),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: scheme.onSurface,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+          const SizedBox(width: 2),
+          Icon(
+            Icons.arrow_drop_down,
+            size: 18,
+            color: scheme.onSurface.withValues(alpha: 0.8),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -1297,33 +1429,6 @@ class _InlineVerificationPanelState extends State<_InlineVerificationPanel> {
                 ),
           ),
         ],
-        const Spacer(),
-      ],
-    );
-  }
-}
-
-class _ProfileStep extends StatelessWidget {
-  const _ProfileStep({
-    required this.title,
-    required this.body,
-  });
-
-  final String title;
-  final String body;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title,
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w700)),
-        const SizedBox(height: 8),
-        Text(body, style: Theme.of(context).textTheme.bodyLarge),
         const Spacer(),
       ],
     );
