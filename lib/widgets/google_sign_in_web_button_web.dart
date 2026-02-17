@@ -62,10 +62,11 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
 
           try {
             _processingAuth = true;
-            _lastProcessedUid = uid;
             final result = GoogleAuthService().resultFromAccount(event.user);
             await widget.onAuthResult(result);
+            _lastProcessedUid = uid;
           } catch (e) {
+            _lastProcessedUid = null;
             widget.onAuthError?.call(e);
           } finally {
             if (mounted) {
@@ -92,11 +93,12 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
           final uid = account.id;
           if (_lastProcessedUid != uid) {
             _processingAuth = true;
-            _lastProcessedUid = uid;
             try {
               final result = GoogleAuthService().resultFromAccount(account);
               await widget.onAuthResult(result);
+              _lastProcessedUid = uid;
             } catch (e) {
+              _lastProcessedUid = null;
               widget.onAuthError?.call(e);
             } finally {
               if (mounted) {

@@ -60,6 +60,8 @@ class _SignInScreenState extends State<SignInScreen> {
   bool _isGoogleSubmitting = false;
   int? _googleRateLimitUntilMs;
   bool _didAttemptGoogleAutoSignIn = false;
+  String _googleAuthDiagStage = 'idle';
+  String? _googleAuthDiagCode;
 
   @override
   void initState() {
@@ -86,7 +88,8 @@ class _SignInScreenState extends State<SignInScreen> {
 
     try {
       await GoogleAuthService().ensureInitialized();
-      final account = await GoogleSignIn.instance.attemptLightweightAuthentication();
+      final account =
+          await GoogleSignIn.instance.attemptLightweightAuthentication();
       if (!mounted) return;
       if (account == null) return;
 
@@ -120,6 +123,31 @@ class _SignInScreenState extends State<SignInScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  void _setGoogleAuthDiagnostics(String stage, {String? code}) {
+    _googleAuthDiagStage = stage;
+    _googleAuthDiagCode = code;
+    if (kDebugMode) {
+      AppConfig.debugPrint(
+        'SignInScreen.googleAuth stage=$_googleAuthDiagStage code=${_googleAuthDiagCode ?? 'none'}',
+      );
+    }
+  }
+
+  String _googleErrorCode(Object error) {
+    if (error is BackendApiRequestException) {
+      try {
+        final parsed = jsonDecode((error.body ?? '').toString());
+        if (parsed is Map) {
+          final code =
+              (parsed['errorCode'] ?? parsed['code'] ?? '').toString().trim();
+          if (code.isNotEmpty) return code;
+        }
+      } catch (_) {}
+      return 'http_${error.statusCode}';
+    }
+    return error.runtimeType.toString();
   }
 
   Future<void> _handleAuthSuccess(Map<String, dynamic> payload) async {
@@ -156,7 +184,8 @@ class _SignInScreenState extends State<SignInScreen> {
     if (!mounted) return;
 
     if (!isModalReauth) {
-      final ok = await const PostAuthSecuritySetupService().ensurePostAuthSecuritySetup(
+      final ok = await const PostAuthSecuritySetupService()
+          .ensurePostAuthSecuritySetup(
         navigator: navigator,
         walletProvider: walletProvider,
         securityGateProvider: gate,
@@ -206,12 +235,14 @@ class _SignInScreenState extends State<SignInScreen> {
     }
 
     // Check if user needs profile onboarding (new users from email registration)
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
     final profile = profileProvider.currentUser;
-    final needsProfileSetup = profile != null && 
-        (profile.displayName.isEmpty || profile.displayName == profile.username) &&
+    final needsProfileSetup = profile != null &&
+        (profile.displayName.isEmpty ||
+            profile.displayName == profile.username) &&
         (profile.bio).isEmpty;
-    
+
     if (needsProfileSetup) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
@@ -333,8 +364,8 @@ class _SignInScreenState extends State<SignInScreen> {
   Future<void> _submitEmail() async {
     final l10n = AppLocalizations.of(context)!;
     if (!AppConfig.enableEmailAuth) {
-      ScaffoldMessenger.of(context)
-          .showKubusSnackBar(SnackBar(content: Text(l10n.authEmailSignInDisabled)));
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+          SnackBar(content: Text(l10n.authEmailSignInDisabled)));
       return;
     }
     final email = _emailController.text.trim();
@@ -372,8 +403,8 @@ class _SignInScreenState extends State<SignInScreen> {
           // Fall through to generic error toast.
         }
       }
-      ScaffoldMessenger.of(context)
-          .showKubusSnackBar(SnackBar(content: Text(l10n.authEmailSignInFailed)));
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+          SnackBar(content: Text(l10n.authEmailSignInFailed)));
     } finally {
       if (mounted) setState(() => _isEmailSubmitting = false);
     }
@@ -382,8 +413,9 @@ class _SignInScreenState extends State<SignInScreen> {
   Future<void> _signInWithGoogle() async {
     final l10n = AppLocalizations.of(context)!;
     if (!AppConfig.enableGoogleAuth) {
-      ScaffoldMessenger.of(context)
-          .showKubusSnackBar(SnackBar(content: Text(l10n.authGoogleSignInDisabled)));
+      _setGoogleAuthDiagnostics('disabled', code: 'feature_flag_off');
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+          SnackBar(content: Text(l10n.authGoogleSignInDisabled)));
       return;
     }
 
@@ -392,6 +424,7 @@ class _SignInScreenState extends State<SignInScreen> {
     if (kIsWeb) {
       return;
     }
+    _setGoogleAuthDiagnostics('native_start');
 
     unawaited(TelemetryService().trackSignInAttempt(method: 'google'));
 
@@ -400,6 +433,7 @@ class _SignInScreenState extends State<SignInScreen> {
     if (untilMs != null) {
       final until = DateTime.fromMillisecondsSinceEpoch(untilMs);
       if (DateTime.now().isBefore(until)) {
+        _setGoogleAuthDiagnostics('blocked', code: 'rate_limited_local');
         final remaining = until.difference(DateTime.now());
         final mins = remaining.inMinutes;
         final secs = remaining.inSeconds % 60;
@@ -407,8 +441,8 @@ class _SignInScreenState extends State<SignInScreen> {
         ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(content: Text(l10n.authGoogleRateLimitedRetryIn(friendly))),
         );
-        unawaited(TelemetryService().trackSignInFailure(
-            method: 'google', errorClass: 'rate_limited'));
+        unawaited(TelemetryService()
+            .trackSignInFailure(method: 'google', errorClass: 'rate_limited'));
         return;
       }
     }
@@ -417,6 +451,7 @@ class _SignInScreenState extends State<SignInScreen> {
     try {
       final googleResult = await GoogleAuthService().signIn();
       if (googleResult == null) {
+        _setGoogleAuthDiagnostics('cancelled', code: 'user_cancelled');
         unawaited(TelemetryService()
             .trackSignInFailure(method: 'google', errorClass: 'cancelled'));
         if (!mounted) return;
@@ -424,13 +459,15 @@ class _SignInScreenState extends State<SignInScreen> {
         return;
       }
       await _completeGoogleSignIn(googleResult);
+      _setGoogleAuthDiagnostics('success');
       unawaited(TelemetryService().trackSignInSuccess(method: 'google'));
     } catch (e) {
+      _setGoogleAuthDiagnostics('native_error', code: _googleErrorCode(e));
       unawaited(TelemetryService().trackSignInFailure(
           method: 'google', errorClass: e.runtimeType.toString()));
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showKubusSnackBar(SnackBar(content: Text(l10n.authGoogleSignInFailed)));
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+          SnackBar(content: Text(l10n.authGoogleSignInFailed)));
     } finally {
       if (mounted) setState(() => _isGoogleSubmitting = false);
     }
@@ -444,6 +481,7 @@ class _SignInScreenState extends State<SignInScreen> {
     if (untilMs != null) {
       final until = DateTime.fromMillisecondsSinceEpoch(untilMs);
       if (DateTime.now().isBefore(until)) {
+        _setGoogleAuthDiagnostics('blocked', code: 'rate_limited_local');
         final remaining = until.difference(DateTime.now());
         final mins = remaining.inMinutes;
         final secs = remaining.inSeconds % 60;
@@ -451,8 +489,8 @@ class _SignInScreenState extends State<SignInScreen> {
         ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(content: Text(l10n.authGoogleRateLimitedRetryIn(friendly))),
         );
-        unawaited(TelemetryService().trackSignInFailure(
-            method: 'google', errorClass: 'rate_limited'));
+        unawaited(TelemetryService()
+            .trackSignInFailure(method: 'google', errorClass: 'rate_limited'));
         return;
       }
     }
@@ -462,15 +500,22 @@ class _SignInScreenState extends State<SignInScreen> {
     }
 
     final api = BackendApiService();
+    _setGoogleAuthDiagnostics('backend_exchange');
 
     // For email account merge: pass email but NOT username to avoid overwriting
     // existing account data. Backend preserves existing username/avatar/name.
-    final result = await api.loginWithGoogle(
-      idToken: googleResult.idToken,
-      code: googleResult.serverAuthCode,
-      email: googleResult.email,
-      username: null,
-    );
+    Map<String, dynamic> result;
+    try {
+      result = await api.loginWithGoogle(
+        idToken: googleResult.idToken,
+        code: googleResult.serverAuthCode,
+        email: googleResult.email,
+        username: null,
+      );
+    } catch (e) {
+      _setGoogleAuthDiagnostics('backend_error', code: _googleErrorCode(e));
+      rethrow;
+    }
 
     // Clear any stored cooldown on success.
     try {
@@ -480,7 +525,9 @@ class _SignInScreenState extends State<SignInScreen> {
     } catch (_) {}
 
     if (!mounted) return;
+    _setGoogleAuthDiagnostics('profile_hydration');
     await _handleAuthSuccess(result);
+    _setGoogleAuthDiagnostics('success');
   }
 
   void _showConnectWalletModal() {
@@ -651,7 +698,8 @@ class _SignInScreenState extends State<SignInScreen> {
 
     final bgStart = accentStart.withValues(alpha: 0.55);
     final bgEnd = accentEnd.withValues(alpha: 0.50);
-    final bgMid = (Color.lerp(bgStart, bgEnd, 0.55) ?? bgEnd).withValues(alpha: 0.52);
+    final bgMid =
+        (Color.lerp(bgStart, bgEnd, 0.55) ?? bgEnd).withValues(alpha: 0.52);
     final bgColors = <Color>[bgStart, bgMid, bgEnd, bgStart];
 
     return Scaffold(
@@ -669,11 +717,13 @@ class _SignInScreenState extends State<SignInScreen> {
           // Language selector
           PopupMenuButton<String>(
             onSelected: (value) {
-              final localeProvider = Provider.of<LocaleProvider>(context, listen: false);
+              final localeProvider =
+                  Provider.of<LocaleProvider>(context, listen: false);
               unawaited(localeProvider.setLanguageCode(value));
             },
             itemBuilder: (BuildContext context) {
-              final localeProvider = Provider.of<LocaleProvider>(context, listen: false);
+              final localeProvider =
+                  Provider.of<LocaleProvider>(context, listen: false);
               return [
                 PopupMenuItem(
                   value: 'sl',
@@ -716,13 +766,18 @@ class _SignInScreenState extends State<SignInScreen> {
           // Theme toggle
           IconButton(
             icon: Icon(
-              Provider.of<ThemeProvider>(context).isDarkMode ? Icons.brightness_7 : Icons.brightness_4,
+              Provider.of<ThemeProvider>(context).isDarkMode
+                  ? Icons.brightness_7
+                  : Icons.brightness_4,
               size: 24,
             ),
-            tooltip: Provider.of<ThemeProvider>(context).isDarkMode ? l10n.settingsThemeModeLight : l10n.settingsThemeModeDark,
+            tooltip: Provider.of<ThemeProvider>(context).isDarkMode
+                ? l10n.settingsThemeModeLight
+                : l10n.settingsThemeModeDark,
             color: colorScheme.onSurface.withValues(alpha: 0.7),
             onPressed: () {
-              final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+              final themeProvider =
+                  Provider.of<ThemeProvider>(context, listen: false);
               final currentMode = themeProvider.themeMode;
               final newMode = currentMode == ThemeMode.dark
                   ? ThemeMode.light
@@ -732,10 +787,8 @@ class _SignInScreenState extends State<SignInScreen> {
           ),
           TextButton(
             onPressed: () {
-              unawaited(
-                  TelemetryService().trackSignInAttempt(method: 'guest'));
-              unawaited(
-                  TelemetryService().trackSignInSuccess(method: 'guest'));
+              unawaited(TelemetryService().trackSignInAttempt(method: 'guest'));
+              unawaited(TelemetryService().trackSignInSuccess(method: 'guest'));
               Navigator.of(context).pushReplacementNamed('/main');
             },
             child: Text(
@@ -767,7 +820,8 @@ class _SignInScreenState extends State<SignInScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   child: ConstrainedBox(
-                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                    constraints:
+                        BoxConstraints(minHeight: constraints.maxHeight),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -874,15 +928,49 @@ class _SignInScreenState extends State<SignInScreen> {
                     colorScheme: colorScheme,
                     isLoading: _isGoogleSubmitting,
                     onAuthResult: (GoogleAuthResult googleResult) async {
-                      unawaited(
-                        TelemetryService().trackSignInAttempt(method: 'google'),
-                      );
-                      await _completeGoogleSignIn(googleResult);
-                      unawaited(
-                        TelemetryService().trackSignInSuccess(method: 'google'),
-                      );
+                      if (mounted) {
+                        setState(() => _isGoogleSubmitting = true);
+                      }
+                      _setGoogleAuthDiagnostics('web_auth_event');
+                      try {
+                        unawaited(
+                          TelemetryService()
+                              .trackSignInAttempt(method: 'google'),
+                        );
+                        await _completeGoogleSignIn(googleResult);
+                        _setGoogleAuthDiagnostics('success');
+                        unawaited(
+                          TelemetryService()
+                              .trackSignInSuccess(method: 'google'),
+                        );
+                      } catch (error) {
+                        _setGoogleAuthDiagnostics(
+                          'web_error',
+                          code: _googleErrorCode(error),
+                        );
+                        unawaited(
+                          TelemetryService().trackSignInFailure(
+                            method: 'google',
+                            errorClass: error.runtimeType.toString(),
+                          ),
+                        );
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showKubusSnackBar(
+                            SnackBar(
+                                content: Text(l10n.authGoogleSignInFailed)),
+                          );
+                        }
+                      } finally {
+                        if (mounted) {
+                          setState(() => _isGoogleSubmitting = false);
+                        }
+                      }
                     },
                     onAuthError: (Object error) {
+                      _setGoogleAuthDiagnostics(
+                        'web_plugin_error',
+                        code: _googleErrorCode(error),
+                      );
                       unawaited(
                         TelemetryService().trackSignInFailure(
                           method: 'google',
@@ -890,6 +978,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         ),
                       );
                       if (!mounted) return;
+                      setState(() => _isGoogleSubmitting = false);
                       ScaffoldMessenger.of(context).showKubusSnackBar(
                         SnackBar(content: Text(l10n.authGoogleSignInFailed)),
                       );

@@ -132,7 +132,9 @@ class KubusMarkerOverlayCardWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!enabled) return const SizedBox.shrink();
+    if (!enabled) {
+      return const SizedBox.shrink();
+    }
 
     return ValueListenableBuilder<Offset?>(
       valueListenable: anchorListenable,
@@ -155,9 +157,8 @@ class KubusMarkerOverlayCardWrapper extends StatelessWidget {
               media,
               maxCardHeight,
             );
-            final cardHeight = rawCardHeight
-                .clamp(1.0, maxCardHeight)
-                .toDouble();
+            final cardHeight =
+                rawCardHeight.clamp(1.0, maxCardHeight).toDouble();
 
             final fallbackAnchor = fallbackAnchorResolver?.call(constraints);
             final anchor = _resolveAnchor(
@@ -198,24 +199,28 @@ class KubusMarkerOverlayCardWrapper extends StatelessWidget {
             }
 
             final topSafe = media.padding.top + topPadding;
-            final maxLeft =
-                math.max(horizontalPadding, constraints.maxWidth - cardWidth - horizontalPadding);
-            final left = (anchored.dx - (cardWidth / 2)).clamp(
-              horizontalPadding,
-              maxLeft,
-            ).toDouble();
+            final maxLeft = math.max(horizontalPadding,
+                constraints.maxWidth - cardWidth - horizontalPadding);
+            final left = (anchored.dx - (cardWidth / 2))
+                .clamp(
+                  horizontalPadding,
+                  maxLeft,
+                )
+                .toDouble();
 
             double top = anchored.dy - cardHeight - markerOffset;
             if (top < topSafe) {
               top = topSafe;
             }
-            top = top.clamp(
-              topSafe,
-              math.max(
-                topSafe,
-                constraints.maxHeight - cardHeight - bottomPadding,
-              ),
-            ).toDouble();
+            top = top
+                .clamp(
+                  topSafe,
+                  math.max(
+                    topSafe,
+                    constraints.maxHeight - cardHeight - bottomPadding,
+                  ),
+                )
+                .toDouble();
 
             return KeyedSubtree(
               key: const ValueKey<String>('kubus_marker_overlay_anchored'),
