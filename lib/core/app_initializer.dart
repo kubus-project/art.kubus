@@ -344,11 +344,10 @@ class _AppInitializerState extends State<AppInitializer> {
         }
       })();
       if (pendingDeepLink != null) {
-        // If a signed-out user opens the app via a deep link on first launch,
-        // let them see the deep-linked content first and defer onboarding until
-        // they navigate elsewhere.
+        // For first-run deep-link cold starts, defer onboarding until users
+        // leave the deep-linked destination (handled in shell navigation).
         try {
-          if (!hasCompletedOnboarding && !profileProvider.isSignedIn) {
+          if (shouldShowFirstRunOnboarding && !profileProvider.isSignedIn) {
             Provider.of<DeferredOnboardingProvider>(context, listen: false)
                 .enableForDeepLinkColdStart();
           }

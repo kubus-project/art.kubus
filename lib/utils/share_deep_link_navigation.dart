@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/app_navigator.dart';
+import '../providers/deferred_onboarding_provider.dart';
 import '../providers/main_tab_provider.dart';
 import '../providers/map_deep_link_provider.dart';
 import '../screens/desktop/desktop_map_screen.dart';
@@ -18,13 +19,21 @@ import 'artwork_navigation.dart';
 import 'user_profile_navigation.dart';
 
 class ShareDeepLinkNavigation {
+  static void _maybePromptDeferredOnboarding(BuildContext context) {
+    if (!context.mounted) return;
+    try {
+      context.read<DeferredOnboardingProvider>().maybeShowOnboarding(context);
+    } catch (_) {}
+  }
+
   static Future<void> open(
     BuildContext context,
     ShareDeepLinkTarget target, {
     bool ensureShell = true,
   }) async {
     if (kDebugMode) {
-      debugPrint('ShareDeepLinkNavigation.open: ${target.type} id=${target.id}');
+      debugPrint(
+          'ShareDeepLinkNavigation.open: ${target.type} id=${target.id}');
     }
 
     final desktopScope = DesktopShellScope.of(context);
@@ -80,28 +89,35 @@ class ShareDeepLinkNavigation {
       case ShareEntityType.post:
         tabs?.setIndex(2);
         await PostDetailScreen.openById(context, target.id);
+        _maybePromptDeferredOnboarding(context);
         return;
       case ShareEntityType.artwork:
         tabs?.setIndex(3);
         await openArtwork(context, target.id, source: 'share_deep_link');
+        _maybePromptDeferredOnboarding(context);
         return;
       case ShareEntityType.profile:
         tabs?.setIndex(2);
         await UserProfileNavigation.open(context, userId: target.id);
+        _maybePromptDeferredOnboarding(context);
         return;
       case ShareEntityType.event:
         tabs?.setIndex(3);
-        await Navigator.of(context).push(MaterialPageRoute(builder: (_) => EventDetailScreen(eventId: target.id)));
+        await Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => EventDetailScreen(eventId: target.id)));
+        _maybePromptDeferredOnboarding(context);
         return;
       case ShareEntityType.exhibition:
         tabs?.setIndex(3);
-        await Navigator.of(context)
-            .push(MaterialPageRoute(builder: (_) => ExhibitionDetailScreen(exhibitionId: target.id)));
+        await Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => ExhibitionDetailScreen(exhibitionId: target.id)));
+        _maybePromptDeferredOnboarding(context);
         return;
       case ShareEntityType.collection:
         tabs?.setIndex(3);
-        await Navigator.of(context)
-            .push(MaterialPageRoute(builder: (_) => CollectionDetailScreen(collectionId: target.id)));
+        await Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => CollectionDetailScreen(collectionId: target.id)));
+        _maybePromptDeferredOnboarding(context);
         return;
       case ShareEntityType.marker:
         tabs?.setIndex(0);
@@ -123,6 +139,7 @@ class ShareDeepLinkNavigation {
             ),
           ),
         );
+        _maybePromptDeferredOnboarding(context);
         return;
       case ShareEntityType.nft:
         return;
