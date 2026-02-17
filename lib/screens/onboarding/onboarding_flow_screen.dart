@@ -9,6 +9,7 @@ import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/screens/auth/sign_in_screen.dart';
 import 'package:art_kubus/screens/desktop/desktop_shell.dart';
 import 'package:art_kubus/screens/events/exhibition_creator_screen.dart';
+import 'package:art_kubus/screens/onboarding/permissions_screen.dart';
 import 'package:art_kubus/screens/web3/artist/artwork_creator.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/notification_helper.dart';
@@ -96,6 +97,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   late final String _inlineArtworkDraftId;
   Map<String, dynamic>? _daoReview;
   String? _daoMessage;
+  Uint8List? _pendingAvatarBytes;
+  String? _pendingAvatarFileName;
+  String? _pendingAvatarMimeType;
 
   _StepPalette _paletteForStep(_OnboardingStep step) {
     switch (step) {
@@ -302,7 +306,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
       _OnboardingStep.profile,
       _OnboardingStep.account,
       _OnboardingStep.verifyEmail,
-      _OnboardingStep.permissions,
     ];
   }
 
@@ -562,6 +565,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
         fieldOfWork: fieldOfWork,
         yearsActive: yearsActive,
       );
+      await _flushPendingAvatarUploadIfPossible();
     }
 
     if (!mounted) return;
@@ -571,6 +575,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   Future<void> _handleEmbeddedRegistrationSuccess() async {
     _refreshAuthDerivedSteps();
     await _refreshDaoReview();
+    await _flushPendingAvatarUploadIfPossible();
     if (!mounted) return;
     if (_steps.contains(_OnboardingStep.account)) {
       await _markCompleted(_OnboardingStep.account);
@@ -632,8 +637,56 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     }
     _refreshAuthDerivedSteps();
     await _refreshDaoReview();
+    await _flushPendingAvatarUploadIfPossible();
     if (!mounted) return;
     await _markCompleted(_OnboardingStep.account);
+  }
+
+  Future<void> _stageAvatarForLaterUpload({
+    required Uint8List bytes,
+    required String fileName,
+    String? mimeType,
+  }) async {
+    _pendingAvatarBytes = bytes;
+    _pendingAvatarFileName = fileName;
+    _pendingAvatarMimeType = mimeType;
+  }
+
+  Future<void> _flushPendingAvatarUploadIfPossible() async {
+    final bytes = _pendingAvatarBytes;
+    final fileName = (_pendingAvatarFileName ?? '').trim();
+    if (bytes == null || fileName.isEmpty) return;
+
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final wallet = (profileProvider.currentUser?.walletAddress ?? '').trim();
+    if (wallet.isEmpty) return;
+
+    try {
+      final uploadedUrl = await profileProvider.uploadAvatarBytes(
+        fileBytes: bytes,
+        fileName: fileName,
+        walletAddress: wallet,
+        mimeType: _pendingAvatarMimeType,
+      );
+      if (uploadedUrl.trim().isEmpty) return;
+
+      await profileProvider.saveProfile(
+        walletAddress: wallet,
+        avatar: uploadedUrl.trim(),
+      );
+
+      _localProfileDraft = <String, String>{
+        ..._localProfileDraft,
+        'avatar': uploadedUrl.trim(),
+      };
+      await _persistLocalDrafts();
+
+      _pendingAvatarBytes = null;
+      _pendingAvatarFileName = null;
+      _pendingAvatarMimeType = null;
+    } catch (_) {
+      // Keep staged avatar for retry after auth/session settles.
+    }
   }
 
   Future<void> _confirmVerificationAndContinue() async {
@@ -681,6 +734,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     );
     final wallet = profileProvider.currentUser?.walletAddress;
     if (wallet != null && wallet.isNotEmpty) {
+      await profileProvider.setUserPersona(_selectedPersona ?? UserPersona.lover);
       await profileProvider.saveProfile(
         walletAddress: wallet,
         isArtist: isArtist,
@@ -695,15 +749,14 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
     _selectedPersona = persona;
     await _persistLocalDrafts();
-    if (profileProvider.currentUser?.walletAddress.trim().isNotEmpty == true) {
-      await profileProvider.setUserPersona(persona);
-    }
     final isArtist = persona == UserPersona.creator;
     final isInstitution = persona == UserPersona.institution;
-    await _applyRoleSelection(
+    profileProvider.setRoleFlags(
       isArtist: isArtist,
       isInstitution: isInstitution,
     );
+    if (!mounted) return;
+    setState(() {});
   }
 
   Future<void> _submitDaoApplication({
@@ -717,8 +770,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
         Provider.of<ProfileProvider>(context, listen: false);
     final wallet = profileProvider.currentUser?.walletAddress ?? '';
     if (wallet.trim().isEmpty) return;
-
-    await _applyRoleSelection(isArtist: isArtist, isInstitution: isInstitution);
 
     final review = await BackendApiService().submitDAOReview(
       walletAddress: wallet,
@@ -798,14 +849,18 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   }
 
   Future<void> _finishOnboarding() async {
-    final prefs = await SharedPreferences.getInstance();
-    await OnboardingStateService.markCompleted(prefs: prefs);
+    await SharedPreferences.getInstance();
     await _persistProgress();
     unawaited(TelemetryService()
         .trackOnboardingComplete(reason: 'step_flow_complete'));
 
     if (!mounted) return;
-    Navigator.of(context).pushReplacementNamed('/main');
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => const PermissionsScreen(),
+        settings: const RouteSettings(name: '/onboarding/permissions'),
+      ),
+    );
   }
 
   Future<void> _skipForNow() async {
@@ -1067,6 +1122,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
               ? yearsActive.toString()
               : (_localProfileDraft['yearsActive'] ?? ''),
           onSave: _saveInlineProfile,
+          onAvatarStaged: _stageAvatarForLaterUpload,
         );
       case _OnboardingStep.role:
         final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
@@ -1159,7 +1215,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 260),
-      padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
+      padding: const EdgeInsets.fromLTRB(22, 18, 22, 18),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(KubusRadius.xl),
         color: scheme.surface.withValues(alpha: 0.16),
@@ -1211,15 +1267,26 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   }
 
   Widget _buildBottomActions(AppLocalizations l10n, {required bool compact}) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final palette = _paletteForStep(_currentStep);
+    final skipBackground = isDark
+        ? scheme.surfaceContainerHighest.withValues(alpha: 0.62)
+        : scheme.surface.withValues(alpha: 0.92);
+    final skipForeground = isDark ? scheme.onSurface : scheme.onSurfaceVariant;
+    final ctaBackground = isDark ? palette.accent.withValues(alpha: 0.92) : scheme.primary;
+    final ctaForeground = scheme.onPrimary;
     return Row(
       children: [
         Expanded(
           child: TextButton(
             onPressed: _deferCurrentStep,
             style: TextButton.styleFrom(
-              foregroundColor: Colors.white,
-              backgroundColor: Colors.white.withValues(alpha: 0.14),
+              foregroundColor: skipForeground,
+              backgroundColor: skipBackground,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               padding: EdgeInsets.symmetric(
                 vertical: compact ? 10 : 12,
               ),
@@ -1233,8 +1300,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
             onPressed: _onPrimaryAction,
             label: _primaryLabelForStep(l10n),
             isFullWidth: true,
-            backgroundColor: Colors.white,
-            foregroundColor: palette.start,
+            backgroundColor: ctaBackground,
+            foregroundColor: ctaForeground,
           ),
         ),
       ],
@@ -1329,12 +1396,24 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                   ),
                   child: Row(
                     children: [
-                      Icon(
-                        icon,
-                        size: 18,
-                        color: isActive
-                            ? Colors.white
-                            : Colors.white.withValues(alpha: 0.86),
+                      Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(9),
+                          gradient: LinearGradient(
+                            colors: isDone
+                                ? <Color>[scheme.primary, scheme.primary]
+                                : <Color>[palette.start, palette.end],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        child: Icon(
+                          icon,
+                          size: 16,
+                          color: Colors.white,
+                        ),
                       ),
                       const SizedBox(width: KubusSpacing.sm),
                       Expanded(
@@ -1458,7 +1537,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                                 ? _buildDesktopContent(l10n, scheme)
                                 : _buildStepCard(l10n, scheme),
                           ),
-                          const SizedBox(height: KubusSpacing.sm),
+                          const SizedBox(height: KubusSpacing.md),
                           _buildBottomActions(l10n, compact: keyboardOpen),
                         ],
                       ),
@@ -1504,13 +1583,15 @@ class _HeaderActionPill extends StatelessWidget {
       height: 40,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(999),
+        color: scheme.surface.withValues(
+          alpha: Theme.of(context).brightness == Brightness.dark ? 0.35 : 0.85,
+        ),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.12),
+          color: scheme.outline.withValues(alpha: 0.35),
         ),
       ),
-      child: Icon(icon, size: 18, color: scheme.primary),
+      child: Icon(icon, size: 18, color: scheme.onSurface),
     );
   }
 }
@@ -1559,7 +1640,7 @@ class _AccountStep extends StatelessWidget {
           child: AuthMethodsPanel(
             embedded: true,
             onAuthSuccess: onAuthCompleted,
-            prepareProvisionalProfileBeforeRegister: true,
+            prepareProvisionalProfileBeforeRegister: false,
             onEmailRegistrationAttempted: (email) =>
                 unawaited(onEmailRegistrationAttempted(email)),
             onVerificationRequired: onVerificationRequired,
@@ -1905,6 +1986,7 @@ class _InlineProfileStep extends StatefulWidget {
     required this.initialFieldOfWork,
     required this.initialYearsActive,
     required this.onSave,
+    required this.onAvatarStaged,
   });
 
   final String title;
@@ -1919,6 +2001,11 @@ class _InlineProfileStep extends StatefulWidget {
   final String initialWebsite;
   final String initialFieldOfWork;
   final String initialYearsActive;
+  final Future<void> Function({
+    required Uint8List bytes,
+    required String fileName,
+    String? mimeType,
+  }) onAvatarStaged;
   final Future<void> Function({
     required String displayName,
     required String username,
@@ -1979,16 +2066,6 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
 
   Future<void> _pickAvatar() async {
     if (_uploadingAvatar) return;
-    final messenger = ScaffoldMessenger.of(context);
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
-    final wallet = (profileProvider.currentUser?.walletAddress ?? '').trim();
-    if (wallet.isEmpty) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('No wallet connected. Sign in first.')),
-      );
-      return;
-    }
-
     setState(() => _uploadingAvatar = true);
     try {
       final image = await _picker.pickImage(
@@ -2006,29 +2083,15 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
       final fileName = image.name.trim().isNotEmpty
           ? image.name.trim()
           : 'avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final uploadedUrl = await profileProvider.uploadAvatarBytes(
-        fileBytes: bytes,
+      await widget.onAvatarStaged(
+        bytes: bytes,
         fileName: fileName,
-        walletAddress: wallet,
         mimeType: image.mimeType,
       );
-
+    } catch (_) {
       if (!mounted) return;
-      if (uploadedUrl.trim().isEmpty) {
-        messenger.showSnackBar(
-          const SnackBar(content: Text('Unable to upload avatar right now.')),
-        );
-        return;
-      }
-
-      setState(() {
-        _avatarUrl = uploadedUrl.trim();
-        _localAvatarBytes = null;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text('Unable to upload avatar: $e')),
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to select avatar right now.')),
       );
     } finally {
       if (mounted) {
@@ -2087,7 +2150,8 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
 
   Widget _buildAvatarPreview(ColorScheme scheme) {
     if (_localAvatarBytes != null) {
-      return ClipOval(
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(14),
         child: Image.memory(
           _localAvatarBytes!,
           width: 88,
@@ -2099,7 +2163,8 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
 
     final avatarUrl = _resolvedAvatarUrl();
     if (avatarUrl.isNotEmpty) {
-      return ClipOval(
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(14),
         child: Image.network(
           avatarUrl,
           width: 88,
@@ -2153,7 +2218,7 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
                         width: 92,
                         height: 92,
                         decoration: BoxDecoration(
-                          shape: BoxShape.circle,
+                          borderRadius: BorderRadius.circular(18),
                           color: scheme.surface.withValues(alpha: 0.45),
                           border: Border.all(
                             color: scheme.outline.withValues(alpha: 0.32),
@@ -2171,7 +2236,7 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
                                 child: CircularProgressIndicator(strokeWidth: 2),
                               )
                             : const Icon(Icons.photo_camera_outlined),
-                        label: Text(_uploadingAvatar ? 'Uploading...' : l10n.commonUpload),
+                        label: Text(_uploadingAvatar ? 'Selecting...' : l10n.commonUpload),
                       ),
                     ],
                   ),
@@ -2393,40 +2458,15 @@ class _RoleStepState extends State<_RoleStep> {
           selectedPersona: _selectedPersona,
           onSelect: _selectPersona,
         ),
-        const SizedBox(height: 10),
-        SwitchListTile(
-          title: Text(l10n.settingsRoleArtistTitle),
-          subtitle: Text(l10n.settingsRoleArtistSubtitle),
-          value: _artist,
-          onChanged: (value) => setState(() => _artist = value),
-          contentPadding: EdgeInsets.zero,
-        ),
-        SwitchListTile(
-          title: Text(l10n.settingsRoleInstitutionTitle),
-          subtitle: Text(l10n.settingsRoleInstitutionSubtitle),
-          value: _institution,
-          onChanged: (value) => setState(() => _institution = value),
-          contentPadding: EdgeInsets.zero,
-        ),
-        const SizedBox(height: 10),
-        KubusButton(
-          onPressed: _saving ? null : _save,
-          isLoading: _saving,
-          label: l10n.commonSave,
-          isFullWidth: true,
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _portfolioController,
-          decoration: const InputDecoration(labelText: 'Portfolio URL'),
-        ),
-        const SizedBox(height: KubusSpacing.sm),
-        TextField(
-          controller: _mediumController,
-          decoration: const InputDecoration(labelText: 'Primary medium'),
-        ),
-        const SizedBox(height: KubusSpacing.sm),
         if (_artist || _institution) ...[
+          const SizedBox(height: KubusSpacing.md),
+          Text(
+            'DAO review (optional for now)',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: KubusSpacing.xs),
           TextField(
             controller: _portfolioController,
             decoration: const InputDecoration(labelText: 'Portfolio URL'),
@@ -2451,8 +2491,13 @@ class _RoleStepState extends State<_RoleStep> {
             isFullWidth: true,
           ),
         ],
-        
-        
+        const Spacer(),
+        KubusButton(
+          onPressed: _saving ? null : _save,
+          isLoading: _saving,
+          label: l10n.commonSave,
+          isFullWidth: true,
+        ),
       ],
     );
   }

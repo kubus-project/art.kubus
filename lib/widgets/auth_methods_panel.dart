@@ -244,19 +244,9 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       AppConfig.debugPrint('AuthMethodsPanel._registerWithEmail: registerWithEmail completed');
       if (!mounted) return;
       if (widget.embedded) {
-        // Embedded onboarding handles verification gracefully while we still
-        // attempt immediate sign-in when backend policy permits it.
+        // Embedded onboarding is verification-first: avoid immediate login
+        // attempts that fail on unverified accounts and confuse the flow.
         widget.onVerificationRequired?.call(email);
-        try {
-          final loginResult = await api
-              .loginWithEmail(email: email, password: password)
-              .timeout(const Duration(seconds: 12));
-          if (!mounted) return;
-          await _handleAuthSuccess(loginResult);
-        } catch (_) {
-          // Best-effort only: some backends require verification before email login.
-          // In that case we keep the user in-flow and finish verification later.
-        }
       } else {
         navigator.pushReplacementNamed(
           '/verify-email',
