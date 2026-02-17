@@ -32,6 +32,7 @@ import '../../../widgets/detail/detail_shell_components.dart';
 import '../../community/profile_screen_methods.dart';
 import '../../../widgets/artist_badge.dart';
 import '../../../widgets/institution_badge.dart';
+import '../../../widgets/email_verification_status_badge.dart';
 import '../../../widgets/secure_account_banner_card.dart';
 import '../../../models/dao.dart';
 import '../../../utils/app_animations.dart';
@@ -574,6 +575,11 @@ class _ProfileScreenState extends State<ProfileScreen>
                           ),
                         ),
                       ],
+                      const EmailVerificationStatusBadge(
+                        dense: true,
+                        alignment: Alignment.centerLeft,
+                        topSpacing: 8,
+                      ),
                       const SizedBox(height: 6),
                       UserActivityStatusLine(
                         walletAddress: user?.walletAddress ?? '',

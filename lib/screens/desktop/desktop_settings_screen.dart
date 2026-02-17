@@ -19,6 +19,7 @@ import '../../services/push_notification_service.dart';
 import '../../services/settings_service.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/detail/detail_shell_components.dart';
+import '../../widgets/email_verification_status_badge.dart';
 import '../../widgets/support/support_ticket_dialog.dart';
 import '../../utils/app_animations.dart';
 import 'components/desktop_widgets.dart';
@@ -2694,6 +2695,10 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   'Secure account',
                   'Add email + password for recovery',
                   Icons.verified_user_outlined,
+                  trailing: const EmailVerificationStatusBadge(
+                    dense: true,
+                    alignment: Alignment.centerRight,
+                  ),
                   onTap: () {
                     Navigator.of(context).pushNamed('/secure-account');
                   },
@@ -3384,6 +3389,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     IconData icon, {
     bool isDestructive = false,
     VoidCallback? onTap,
+    Widget? trailing,
   }) {
     final errorColor = Theme.of(context).colorScheme.error;
     return Material(
@@ -3442,6 +3448,10 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   ],
                 ),
               ),
+              if (trailing != null) ...[
+                trailing,
+                const SizedBox(width: 12),
+              ],
               Icon(
                 Icons.arrow_forward_ios,
                 size: 16,
