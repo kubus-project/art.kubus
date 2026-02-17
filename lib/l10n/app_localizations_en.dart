@@ -662,10 +662,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowOpenVerification => 'Open email verification';
 
   @override
-  String get onboardingFlowVerifyLastTitle => 'One more last step - verify your email';
+  String get onboardingFlowVerifyLastTitle => 'One more last step — verify your email';
 
   @override
-  String get onboardingFlowVerifyLastBody => 'Check your inbox and open the verification link. Then return here and continue.';
+  String get onboardingFlowVerifyLastBody => 'You probably got the mail by now. Check your inbox and complete account creation.';
 
   @override
   String get onboardingFlowProfileTitle => 'Create your profile';
