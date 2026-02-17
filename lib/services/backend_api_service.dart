@@ -1459,6 +1459,39 @@ class BackendApiService
     }
   }
 
+  /// Check whether an email has been verified.
+  /// GET /api/auth/email-status?email=...
+  Future<Map<String, dynamic>> getEmailVerificationStatus(
+      {required String email}) async {
+    try {
+      final uri = Uri.parse('$baseUrl/api/auth/email-status')
+          .replace(queryParameters: {'email': email.trim()});
+      final response = await _get(
+        uri,
+        includeAuth: false,
+        headers: _getHeaders(includeAuth: false),
+      );
+      if (response.statusCode == 200) {
+        final raw = jsonDecode(response.body) as Map<String, dynamic>;
+        final data = raw['data'] is Map<String, dynamic>
+            ? raw['data'] as Map<String, dynamic>
+            : raw;
+        return {
+          'verified': data['verified'] == true,
+        };
+      }
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: uri.path,
+        body: response.body,
+      );
+    } catch (e) {
+      AppConfig.debugPrint(
+          'BackendApiService.getEmailVerificationStatus failed: $e');
+      rethrow;
+    }
+  }
+
   /// Verify email
   /// POST /api/auth/verify-email { token }
   Future<Map<String, dynamic>> verifyEmail({required String token}) async {

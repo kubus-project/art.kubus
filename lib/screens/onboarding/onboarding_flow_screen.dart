@@ -103,6 +103,10 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   Uint8List? _pendingAvatarBytes;
   String? _pendingAvatarFileName;
   String? _pendingAvatarMimeType;
+  Timer? _verificationPollTimer;
+  bool _verificationPollInFlight = false;
+  bool _emailVerifiedConfirmed = false;
+  bool _autoAdvancingVerification = false;
 
   _StepPalette _paletteForStep(_OnboardingStep step) {
     switch (step) {
@@ -175,6 +179,12 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     _inlineArtworkDraftId =
         'onboarding_inline_${DateTime.now().microsecondsSinceEpoch}';
     unawaited(_bootstrap());
+  }
+
+  @override
+  void dispose() {
+    _verificationPollTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _bootstrap() async {
@@ -430,6 +440,131 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     });
   }
 
+  void _startVerificationPollingIfNeeded() {
+    final pendingEmail = (_pendingVerificationEmail ?? '').trim();
+    final shouldPoll = _currentStep == _OnboardingStep.verifyEmail &&
+        pendingEmail.isNotEmpty &&
+        !_isSignedIn;
+    if (!shouldPoll) {
+      _verificationPollTimer?.cancel();
+      _verificationPollTimer = null;
+      return;
+    }
+    if (_verificationPollTimer != null) return;
+
+    _verificationPollTimer = Timer.periodic(
+      const Duration(seconds: 3),
+      (_) => unawaited(_pollVerificationStatus()),
+    );
+    unawaited(_pollVerificationStatus());
+  }
+
+  Future<void> _pollVerificationStatus() async {
+    if (_verificationPollInFlight || !mounted) return;
+    final email = (_pendingVerificationEmail ?? '').trim();
+    if (email.isEmpty) return;
+
+    _verificationPollInFlight = true;
+    try {
+      final status =
+          await BackendApiService().getEmailVerificationStatus(email: email);
+      final verified = status['verified'] == true;
+
+      if (!mounted) return;
+      if (verified && !_emailVerifiedConfirmed) {
+        setState(() {
+          _emailVerifiedConfirmed = true;
+        });
+      }
+
+      if (!verified || _autoAdvancingVerification) return;
+
+      final password = (_pendingVerificationPassword ?? '').trim();
+      if (!_isSignedIn && password.isNotEmpty) {
+        try {
+          final loginResult = await BackendApiService().loginWithEmail(
+            email: email,
+            password: password,
+          );
+          await _handleEmbeddedSignInSuccess(loginResult);
+        } catch (_) {
+          return;
+        }
+      }
+
+      if (!mounted) return;
+      _autoAdvancingVerification = true;
+      try {
+        _pendingVerificationEmail = null;
+        _pendingVerificationPassword = null;
+        await _persistLocalDrafts();
+        await _confirmVerificationAndContinue();
+      } finally {
+        _autoAdvancingVerification = false;
+      }
+    } catch (_) {
+      // Quietly retry on next tick.
+    } finally {
+      _verificationPollInFlight = false;
+    }
+  }
+
+  Future<void> _syncLocalProfileDraftToBackendIfPossible() async {
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final wallet = (profileProvider.currentUser?.walletAddress ?? '').trim();
+    if (wallet.isEmpty) return;
+
+    final displayName = (_localProfileDraft['displayName'] ?? '').trim();
+    final username = (_localProfileDraft['username'] ?? '').trim();
+    final bio = (_localProfileDraft['bio'] ?? '').trim();
+    final avatar = (_localProfileDraft['avatar'] ?? '').trim();
+
+    final twitter = (_localProfileDraft['twitter'] ?? '').trim();
+    final instagram = (_localProfileDraft['instagram'] ?? '').trim();
+    final website = (_localProfileDraft['website'] ?? '').trim();
+    final social = <String, String>{
+      if (twitter.isNotEmpty) 'twitter': twitter,
+      if (instagram.isNotEmpty) 'instagram': instagram,
+      if (website.isNotEmpty) 'website': website,
+    };
+
+    final fieldOfWorkRaw = (_localProfileDraft['fieldOfWork'] ?? '').trim();
+    final fieldOfWork = fieldOfWorkRaw
+        .split(',')
+        .map((v) => v.trim())
+        .where((v) => v.isNotEmpty)
+        .toList(growable: false);
+    final yearsActive =
+        int.tryParse((_localProfileDraft['yearsActive'] ?? '').trim());
+
+    final persona = _selectedPersona;
+    final isArtist = persona == UserPersona.creator
+        ? true
+        : (persona == UserPersona.lover ? false : null);
+    final isInstitution = persona == UserPersona.institution
+        ? true
+        : (persona == UserPersona.lover ? false : null);
+
+    await profileProvider.saveProfile(
+      walletAddress: wallet,
+      displayName: displayName.isEmpty ? null : displayName,
+      username: username.isEmpty ? null : username,
+      bio: bio.isEmpty ? null : bio,
+      avatar: avatar.isEmpty ? null : avatar,
+      social: social.isEmpty ? null : social,
+      fieldOfWork: fieldOfWork.isEmpty ? null : fieldOfWork,
+      yearsActive: yearsActive,
+      isArtist: isArtist,
+      isInstitution: isInstitution,
+    );
+
+    if (persona != null) {
+      await profileProvider.setUserPersona(persona);
+    }
+
+    await _flushPendingAvatarUploadIfPossible();
+  }
+
   void _refreshAuthDerivedSteps() {
     final signedInNow =
         Provider.of<ProfileProvider>(context, listen: false).isSignedIn;
@@ -483,6 +618,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   }
 
   void _syncStepSideEffects() {
+    _startVerificationPollingIfNeeded();
     if (_currentStep == _OnboardingStep.follow &&
         _isSignedIn &&
         _artists.isEmpty &&
@@ -598,6 +734,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   Future<void> _handleEmbeddedRegistrationSuccess() async {
     _refreshAuthDerivedSteps();
     await _refreshDaoReview();
+    await _syncLocalProfileDraftToBackendIfPossible();
     await _flushPendingAvatarUploadIfPossible();
     if (!mounted) return;
     if (_steps.contains(_OnboardingStep.account)) {
@@ -624,15 +761,19 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     if (!mounted) return;
     setState(() {
       _pendingVerificationEmail = email.trim();
+      _emailVerifiedConfirmed = false;
     });
     await _persistLocalDrafts();
+    _syncStepSideEffects();
   }
 
   Future<void> _handleEmbeddedEmailCredentialsCaptured(
       String email, String password) async {
     _pendingVerificationEmail = email.trim();
     _pendingVerificationPassword = password;
+    _emailVerifiedConfirmed = false;
     await _persistLocalDrafts();
+    _syncStepSideEffects();
   }
 
   Future<void> _handleEmbeddedSignInNeedsVerification(String email) async {
@@ -668,6 +809,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     }
     _refreshAuthDerivedSteps();
     await _refreshDaoReview();
+    await _syncLocalProfileDraftToBackendIfPossible();
     await _flushPendingAvatarUploadIfPossible();
     if (!mounted) return;
     await _markCompleted(_OnboardingStep.account);
@@ -744,6 +886,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
       if (refreshed) {
         _pendingVerificationEmail = null;
         _pendingVerificationPassword = null;
+        _emailVerifiedConfirmed = true;
         await _persistLocalDrafts();
       }
     }
@@ -763,6 +906,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     if (_steps.contains(_OnboardingStep.verifyEmail)) {
       await _markCompleted(_OnboardingStep.verifyEmail);
     }
+
+    await _syncLocalProfileDraftToBackendIfPossible();
 
     final allDone = _steps.every(_completed.contains);
     if (allDone) {
@@ -787,6 +932,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     setState(() {
       _currentIndex = target;
     });
+    _syncStepSideEffects();
   }
 
   Future<void> _applyRoleSelection({
@@ -1026,10 +1172,10 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     final stepNumber = _currentIndex + 1;
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        _isDesktop ? KubusSpacing.xl : KubusSpacing.lg,
-        10,
-        _isDesktop ? KubusSpacing.xl : KubusSpacing.lg,
-        KubusSpacing.sm,
+        _isDesktop ? 34 : KubusSpacing.xl,
+        16,
+        _isDesktop ? 34 : KubusSpacing.xl,
+        KubusSpacing.md,
       ),
       child: AuthTitleRow(
         title: l10n.onboardingFlowTitle,
@@ -1282,6 +1428,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
           title: l10n.onboardingFlowVerifyLastTitle,
           body: l10n.onboardingFlowVerifyLastBody,
           email: _pendingVerificationEmail,
+          isVerified: _emailVerifiedConfirmed,
           isSignedIn: _isSignedIn,
           onAuthSuccess: _handleEmbeddedSignInSuccess,
           onVerificationRequired: _handleEmbeddedSignInNeedsVerification,
@@ -1344,12 +1491,13 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   Widget _buildBottomActions(AppLocalizations l10n, {required bool compact}) {
     final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final palette = _paletteForStep(_currentStep);
     final skipBackground = isDark
-        ? scheme.surfaceContainerHighest.withValues(alpha: 0.62)
-        : scheme.surface.withValues(alpha: 0.92);
+      ? scheme.surface.withValues(alpha: 0.86)
+      : scheme.surface.withValues(alpha: 0.94);
     final skipForeground = isDark ? scheme.onSurface : scheme.onSurfaceVariant;
-    final ctaBackground = isDark ? palette.accent.withValues(alpha: 0.92) : scheme.primary;
+    final ctaBackground = isDark
+      ? scheme.primary.withValues(alpha: 0.96)
+      : scheme.primary.withValues(alpha: 0.98);
     final ctaForeground = scheme.onPrimary;
     return Row(
       children: [
@@ -1654,10 +1802,10 @@ class _HeaderActionPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return SizedBox(
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       child: Center(
-        child: Icon(icon, size: 18, color: scheme.onSurface),
+        child: Icon(icon, size: 20, color: scheme.onSurface),
       ),
     );
   }
@@ -1877,6 +2025,7 @@ class _VerifyEmailStep extends StatelessWidget {
     required this.title,
     required this.body,
     required this.email,
+    required this.isVerified,
     required this.isSignedIn,
     required this.onAuthSuccess,
     required this.onVerificationRequired,
@@ -1885,6 +2034,7 @@ class _VerifyEmailStep extends StatelessWidget {
   final String title;
   final String body;
   final String? email;
+  final bool isVerified;
   final bool isSignedIn;
   final Future<void> Function(Map<String, dynamic>) onAuthSuccess;
   final Future<void> Function(String email) onVerificationRequired;
@@ -1920,6 +2070,7 @@ class _VerifyEmailStep extends StatelessWidget {
           title: title,
           body: body,
           email: normalizedEmail,
+          isVerified: isVerified,
           isSignedIn: isSignedIn,
           onAuthSuccess: onAuthSuccess,
           onVerificationRequired: onVerificationRequired,
@@ -1934,6 +2085,7 @@ class _InlineVerificationPanel extends StatefulWidget {
     required this.title,
     required this.body,
     required this.email,
+    required this.isVerified,
     required this.isSignedIn,
     required this.onAuthSuccess,
     required this.onVerificationRequired,
@@ -1942,6 +2094,7 @@ class _InlineVerificationPanel extends StatefulWidget {
   final String title;
   final String body;
   final String email;
+  final bool isVerified;
   final bool isSignedIn;
   final Future<void> Function(Map<String, dynamic>) onAuthSuccess;
   final Future<void> Function(String email) onVerificationRequired;
@@ -2003,6 +2156,47 @@ class _InlineVerificationPanelState extends State<_InlineVerificationPanel> {
                   color: scheme.onSurface.withValues(alpha: 0.85),
                 ),
           ),
+        const SizedBox(height: 12),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: widget.isVerified
+                ? Colors.green.withValues(alpha: 0.16)
+                : scheme.surface.withValues(alpha: 0.55),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: widget.isVerified
+                  ? Colors.green.withValues(alpha: 0.5)
+                  : scheme.outline.withValues(alpha: 0.24),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                widget.isVerified
+                    ? Icons.check_circle_outline
+                    : Icons.mark_email_unread_outlined,
+                size: 18,
+                color: widget.isVerified ? Colors.green : scheme.onSurface,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  widget.isVerified
+                      ? AppLocalizations.of(context)!.authVerifyEmailStatusVerified
+                      : AppLocalizations.of(context)!.authVerifyEmailStatusPending,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: widget.isVerified
+                            ? Colors.green
+                            : scheme.onSurface.withValues(alpha: 0.85),
+                      ),
+                ),
+              ),
+            ],
+          ),
+        ),
         const SizedBox(height: 12),
         KubusButton(
           onPressed: _sending || widget.email.isEmpty ? null : _resend,
