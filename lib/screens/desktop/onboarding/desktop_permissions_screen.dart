@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -7,7 +7,9 @@ import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import '../../../services/notification_helper.dart';
 import '../../../services/onboarding_state_service.dart';
+import '../../../services/push_notification_service.dart';
 import '../../../services/telemetry/telemetry_service.dart';
 import '../../../widgets/app_logo.dart';
 import '../../../widgets/gradient_icon_card.dart';
@@ -40,6 +42,7 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
   // Track permission states
   bool _locationGranted = false;
   bool _cameraGranted = false;
+  bool _notificationsGranted = false;
 
   List<PermissionPage> get _allPages {
     final l10n = AppLocalizations.of(context)!;
@@ -58,7 +61,10 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
         ],
         iconData: Icons.location_on,
         gradient: LinearGradient(
-          colors: [roles.statTeal, AppColorUtils.shiftLightness(roles.statTeal, 0.10)],
+          colors: [
+            roles.statTeal,
+            AppColorUtils.shiftLightness(roles.statTeal, 0.10)
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -76,18 +82,46 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
         ],
         iconData: Icons.camera_alt,
         gradient: LinearGradient(
-          colors: [roles.positiveAction, AppColorUtils.shiftLightness(roles.positiveAction, -0.10)],
+          colors: [
+            roles.positiveAction,
+            AppColorUtils.shiftLightness(roles.positiveAction, -0.10)
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         permissionType: PermissionType.camera,
       ),
+      if (kIsWeb)
+        PermissionPage(
+          title: l10n.permissionsNotificationsTitle,
+          subtitle: l10n.permissionsNotificationsSubtitle,
+          description: l10n.permissionsNotificationsDescription,
+          benefits: [
+            l10n.permissionsNotificationsBenefit1,
+            l10n.permissionsNotificationsBenefit2,
+            l10n.permissionsNotificationsBenefit3,
+            l10n.permissionsNotificationsBenefit4,
+          ],
+          iconData: Icons.notifications,
+          gradient: LinearGradient(
+            colors: [
+              roles.statAmber,
+              AppColorUtils.shiftLightness(roles.statAmber, 0.10)
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          permissionType: PermissionType.notifications,
+        ),
     ];
   }
 
   // Only request the core permissions needed for the first-run experience.
-  List<PermissionPage> get _pages =>
-      kIsWeb ? _allPages.where((p) => p.permissionType != PermissionType.camera).toList() : _allPages;
+  List<PermissionPage> get _pages => kIsWeb
+      ? _allPages
+          .where((p) => p.permissionType != PermissionType.camera)
+          .toList()
+      : _allPages;
 
   @override
   void initState() {
@@ -98,6 +132,7 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
   Future<void> _checkExistingPermissions() async {
     bool locationGranted = false;
     bool cameraGranted = false;
+    bool notificationsGranted = false;
 
     try {
       final locationStatus = await Permission.location.status;
@@ -110,9 +145,13 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
         cameraGranted = cameraStatus.isGranted;
       }
 
+      if (kIsWeb) {
+        notificationsGranted = await isWebNotificationPermissionGranted();
+      }
     } catch (e, st) {
       if (kDebugMode) {
-        debugPrint('DesktopPermissionsScreen._checkExistingPermissions: $e\n$st');
+        debugPrint(
+            'DesktopPermissionsScreen._checkExistingPermissions: $e\n$st');
       }
     }
 
@@ -120,6 +159,7 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
       setState(() {
         _locationGranted = locationGranted;
         _cameraGranted = cameraGranted;
+        _notificationsGranted = notificationsGranted;
         _isCheckingPermissions = false;
       });
     }
@@ -128,6 +168,7 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
     final requiredPermissions = <PermissionType>[
       PermissionType.location,
       if (!kIsWeb) PermissionType.camera,
+      if (kIsWeb) PermissionType.notifications,
     ];
 
     if (requiredPermissions.every(_isPermissionGranted)) {
@@ -142,10 +183,57 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
         return _locationGranted;
       case PermissionType.camera:
         return _cameraGranted;
+      case PermissionType.notifications:
+        return _notificationsGranted;
     }
   }
 
   Future<void> _requestPermission(PermissionType type) async {
+    if (type == PermissionType.notifications) {
+      final l10n = AppLocalizations.of(context)!;
+      final messenger = ScaffoldMessenger.of(context);
+
+      bool granted = false;
+      try {
+        granted = await PushNotificationService().requestPermission();
+      } catch (e, st) {
+        if (kDebugMode) {
+          debugPrint(
+            'DesktopPermissionsScreen._requestPermission: notifications request failed: $e\n$st',
+          );
+        }
+        granted = false;
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        _notificationsGranted = granted;
+      });
+
+      if (granted) {
+        messenger.showKubusSnackBar(
+          SnackBar(
+            content: Text(
+              l10n.permissionsPermissionGrantedToast(
+                  _getPermissionName(l10n, type)),
+              style: GoogleFonts.inter(),
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+
+        await Future.delayed(const Duration(milliseconds: 500));
+        if (_currentPage < _pages.length - 1) {
+          _nextPage();
+        }
+      }
+
+      return;
+    }
+
     if (type == PermissionType.camera && kIsWeb) {
       // Camera access is intentionally not requested on web.
       setState(() => _cameraGranted = true);
@@ -160,6 +248,8 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
       case PermissionType.camera:
         permission = Permission.camera;
         break;
+      case PermissionType.notifications:
+        throw StateError('notifications permission is handled separately');
     }
 
     final l10n = AppLocalizations.of(context)!;
@@ -169,7 +259,8 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
       status = await permission.request();
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('DesktopPermissionsScreen._requestPermission: permission.request failed: $e');
+        debugPrint(
+            'DesktopPermissionsScreen._requestPermission: permission.request failed: $e');
       }
       status = PermissionStatus.denied;
     }
@@ -186,6 +277,9 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
         case PermissionType.camera:
           _cameraGranted = status.isGranted;
           break;
+        case PermissionType.notifications:
+          _notificationsGranted = status.isGranted;
+          break;
       }
     });
 
@@ -193,7 +287,8 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
       messenger.showKubusSnackBar(
         SnackBar(
           content: Text(
-            l10n.permissionsPermissionGrantedToast(_getPermissionName(l10n, type)),
+            l10n.permissionsPermissionGrantedToast(
+                _getPermissionName(l10n, type)),
             style: GoogleFonts.inter(),
           ),
           backgroundColor: Colors.green,
@@ -217,6 +312,8 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
         return l10n.permissionsLocationTitle;
       case PermissionType.camera:
         return l10n.permissionsCameraTitle;
+      case PermissionType.notifications:
+        return l10n.permissionsNotificationsTitle;
     }
   }
 
@@ -234,7 +331,8 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
           ),
         ),
         content: Text(
-          l10n.permissionsOpenSettingsDialogContent(_getPermissionName(l10n, type)),
+          l10n.permissionsOpenSettingsDialogContent(
+              _getPermissionName(l10n, type)),
           style: GoogleFonts.inter(
             color: Theme.of(context).colorScheme.onSurface,
           ),
@@ -249,7 +347,8 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
               Navigator.pop(context);
               openAppSettings();
             },
-            child: Text(l10n.permissionsOpenSettings, style: GoogleFonts.inter()),
+            child:
+                Text(l10n.permissionsOpenSettings, style: GoogleFonts.inter()),
           ),
         ],
       ),
@@ -272,7 +371,8 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
 
     setState(() => _isCompletingOnboarding = true);
 
@@ -625,7 +725,8 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
                       page.title,
                       style: GoogleFonts.inter(
                         fontSize: 14,
-                        fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                        fontWeight:
+                            isActive ? FontWeight.w600 : FontWeight.normal,
                         color: isActive
                             ? Theme.of(context).colorScheme.onSurface
                             : Theme.of(context)
@@ -726,7 +827,9 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
                 ),
               ),
               child: Text(
-                isLastPage ? l10n.commonSkipForNow : l10n.permissionsSkipThisPermission,
+                isLastPage
+                    ? l10n.commonSkipForNow
+                    : l10n.permissionsSkipThisPermission,
                 style: GoogleFonts.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
@@ -744,6 +847,7 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
 enum PermissionType {
   location,
   camera,
+  notifications,
 }
 
 class PermissionPage {

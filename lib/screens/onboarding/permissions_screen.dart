@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -6,6 +6,8 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../widgets/inline_loading.dart';
+import '../../services/notification_helper.dart';
+import '../../services/push_notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import '../../services/onboarding_state_service.dart';
@@ -36,10 +38,11 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
   int _currentPage = 0;
   bool _isCheckingPermissions = true;
   bool _isCompletingOnboarding = false;
-  
+
   // Track permission states
   bool _locationGranted = false;
   bool _cameraGranted = false;
+  bool _notificationsGranted = false;
 
   @override
   void initState() {
@@ -50,6 +53,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
   Future<void> _checkExistingPermissions() async {
     bool locationGranted = false;
     bool cameraGranted = false;
+    bool notificationsGranted = false;
 
     try {
       final locationStatus = await Permission.location.status;
@@ -62,12 +66,18 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
         final cameraStatus = await Permission.camera.status;
         cameraGranted = cameraStatus.isGranted;
       }
+
+      if (kIsWeb) {
+        notificationsGranted = await isWebNotificationPermissionGranted();
+      }
     } catch (e, st) {
       if (kDebugMode) {
-        debugPrint('PermissionsScreen._checkExistingPermissions: permission status check failed: $e\n$st');
+        debugPrint(
+            'PermissionsScreen._checkExistingPermissions: permission status check failed: $e\n$st');
       }
       locationGranted = false;
       cameraGranted = false;
+      notificationsGranted = false;
     }
 
     if (!mounted) return;
@@ -75,12 +85,14 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
     setState(() {
       _locationGranted = locationGranted;
       _cameraGranted = cameraGranted;
+      _notificationsGranted = notificationsGranted;
       _isCheckingPermissions = false;
     });
 
     final requiredPermissions = <PermissionType>[
       PermissionType.location,
       if (!kIsWeb) PermissionType.camera,
+      if (kIsWeb) PermissionType.notifications,
     ];
 
     if (requiredPermissions.every(_isPermissionGranted)) {
@@ -93,48 +105,76 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
     final roles = KubusColorRoles.of(context);
 
     return [
-    PermissionPage(
-      title: l10n.permissionsLocationTitle,
-      subtitle: l10n.permissionsLocationSubtitle,
-      description: l10n.permissionsLocationDescription,
-      benefits: [
-        l10n.permissionsLocationBenefit1,
-        l10n.permissionsLocationBenefit2,
-        l10n.permissionsLocationBenefit3,
-        l10n.permissionsLocationBenefit4,
-      ],
-      iconData: Icons.location_on_outlined,
-      gradient: LinearGradient(
-        colors: [roles.statTeal, AppColorUtils.shiftLightness(roles.statTeal, 0.12)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
+      PermissionPage(
+        title: l10n.permissionsLocationTitle,
+        subtitle: l10n.permissionsLocationSubtitle,
+        description: l10n.permissionsLocationDescription,
+        benefits: [
+          l10n.permissionsLocationBenefit1,
+          l10n.permissionsLocationBenefit2,
+          l10n.permissionsLocationBenefit3,
+          l10n.permissionsLocationBenefit4,
+        ],
+        iconData: Icons.location_on_outlined,
+        gradient: LinearGradient(
+          colors: [
+            roles.statTeal,
+            AppColorUtils.shiftLightness(roles.statTeal, 0.12)
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        permissionType: PermissionType.location,
       ),
-      permissionType: PermissionType.location,
-    ),
-    PermissionPage(
-      title: l10n.permissionsCameraTitle,
-      subtitle: l10n.permissionsCameraSubtitle,
-      description: l10n.permissionsCameraDescription,
-      benefits: [
-        l10n.permissionsCameraBenefit1,
-        l10n.permissionsCameraBenefit2,
-        l10n.permissionsCameraBenefit3,
-        l10n.permissionsCameraBenefit4,
-      ],
-      iconData: Icons.camera_alt_outlined,
-      gradient: LinearGradient(
-        colors: [roles.positiveAction, AppColorUtils.shiftLightness(roles.positiveAction, -0.15)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
+      PermissionPage(
+        title: l10n.permissionsCameraTitle,
+        subtitle: l10n.permissionsCameraSubtitle,
+        description: l10n.permissionsCameraDescription,
+        benefits: [
+          l10n.permissionsCameraBenefit1,
+          l10n.permissionsCameraBenefit2,
+          l10n.permissionsCameraBenefit3,
+          l10n.permissionsCameraBenefit4,
+        ],
+        iconData: Icons.camera_alt_outlined,
+        gradient: LinearGradient(
+          colors: [
+            roles.positiveAction,
+            AppColorUtils.shiftLightness(roles.positiveAction, -0.15)
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        permissionType: PermissionType.camera,
       ),
-      permissionType: PermissionType.camera,
-    ),
+      if (kIsWeb)
+        PermissionPage(
+          title: l10n.permissionsNotificationsTitle,
+          subtitle: l10n.permissionsNotificationsSubtitle,
+          description: l10n.permissionsNotificationsDescription,
+          benefits: [
+            l10n.permissionsNotificationsBenefit1,
+            l10n.permissionsNotificationsBenefit2,
+            l10n.permissionsNotificationsBenefit3,
+            l10n.permissionsNotificationsBenefit4,
+          ],
+          iconData: Icons.notifications_outlined,
+          gradient: LinearGradient(
+            colors: [roles.statAmber, roles.negativeAction],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          permissionType: PermissionType.notifications,
+        ),
     ];
   }
 
   // Only request the core permissions needed for the first-run experience.
-  List<PermissionPage> get _pages =>
-      kIsWeb ? _allPages.where((p) => p.permissionType != PermissionType.camera).toList() : _allPages;
+  List<PermissionPage> get _pages => kIsWeb
+      ? _allPages
+          .where((p) => p.permissionType != PermissionType.camera)
+          .toList()
+      : _allPages;
 
   @override
   void dispose() {
@@ -150,7 +190,8 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const DesktopPermissionsScreen()),
+            MaterialPageRoute(
+                builder: (context) => const DesktopPermissionsScreen()),
           );
         }
       });
@@ -165,12 +206,12 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
     final current = pages[_currentPage.clamp(0, pages.length - 1)];
     final start = current.gradient.colors.first.withValues(alpha: 0.55);
     final end = (current.gradient.colors.length > 1
-        ? current.gradient.colors[1]
-        : current.gradient.colors.first)
-      .withValues(alpha: 0.50);
+            ? current.gradient.colors[1]
+            : current.gradient.colors.first)
+        .withValues(alpha: 0.50);
     final mid = (Color.lerp(start, end, 0.55) ?? end).withValues(alpha: 0.52);
     final bgColors = <Color>[start, mid, end, start];
-    
+
     // Show loading while checking permissions
     if (_isCheckingPermissions) {
       return AnimatedGradientBackground(
@@ -209,7 +250,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
         ),
       );
     }
-    
+
     return AnimatedGradientBackground(
       duration: const Duration(seconds: 10),
       intensity: 0.25,
@@ -396,14 +437,14 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
     final isGranted = _isPermissionGranted(currentPermission);
     final isLastPage = _currentPage == _pages.length - 1;
     final scheme = Theme.of(context).colorScheme;
-    
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final constraintSmallScreen = MediaQuery.of(context).size.height < 700;
         final effectiveSmallScreen = isSmallScreen || constraintSmallScreen;
         final primaryBg = scheme.primary;
         final primaryFg = scheme.onPrimary;
-        
+
         return Padding(
           padding: EdgeInsets.fromLTRB(
             effectiveSmallScreen ? KubusSpacing.lg : KubusSpacing.xl,
@@ -421,7 +462,9 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                   (index) => _buildDot(index),
                 ),
               ),
-              SizedBox(height: effectiveSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
+              SizedBox(
+                  height:
+                      effectiveSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
               // Grant permission button
               KubusButton(
                 onPressed: _isCompletingOnboarding
@@ -431,22 +474,31 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                         : () => _requestPermission(currentPermission),
                 backgroundColor: primaryBg,
                 foregroundColor: primaryFg,
-                label: isGranted 
-                    ? (isLastPage ? l10n.permissionsGetStarted : l10n.permissionsNextPermission)
+                label: isGranted
+                    ? (isLastPage
+                        ? l10n.permissionsGetStarted
+                        : l10n.permissionsNextPermission)
                     : l10n.permissionsGrantPermission,
                 isLoading: _isCompletingOnboarding,
                 isFullWidth: true,
               ),
-              SizedBox(height: effectiveSmallScreen ? KubusSpacing.xs : KubusSpacing.sm),
+              SizedBox(
+                  height:
+                      effectiveSmallScreen ? KubusSpacing.xs : KubusSpacing.sm),
               // Skip button
               TextButton(
                 onPressed: _isCompletingOnboarding
                     ? null
                     : (isLastPage ? _completeOnboarding : _nextPage),
                 child: Text(
-                  isLastPage ? l10n.commonSkipForNow : l10n.permissionsSkipThisPermission,
+                  isLastPage
+                      ? l10n.commonSkipForNow
+                      : l10n.permissionsSkipThisPermission,
                   style: KubusTypography.textTheme.labelLarge?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.7),
                   ),
                 ),
               ),
@@ -460,7 +512,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
   Widget _buildDot(int index) {
     final isActive = index == _currentPage;
     final isGranted = _isPermissionGranted(_pages[index].permissionType);
-    
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -469,9 +521,12 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       decoration: BoxDecoration(
         color: isGranted
             ? KubusColors.success
-            : (isActive 
+            : (isActive
                 ? KubusColors.warning
-                : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3)),
+                : Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.3)),
         borderRadius: BorderRadius.circular(4),
       ),
     );
@@ -483,10 +538,60 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
         return _locationGranted;
       case PermissionType.camera:
         return _cameraGranted;
+      case PermissionType.notifications:
+        return _notificationsGranted;
     }
   }
 
   Future<void> _requestPermission(PermissionType type) async {
+    if (type == PermissionType.notifications) {
+      final l10n = AppLocalizations.of(context)!;
+      final messenger = ScaffoldMessenger.of(context);
+
+      bool granted = false;
+      try {
+        granted = await PushNotificationService().requestPermission();
+      } catch (e, st) {
+        if (kDebugMode) {
+          debugPrint(
+            'PermissionsScreen._requestPermission: notifications request failed: $e\n$st',
+          );
+        }
+        granted = false;
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        _notificationsGranted = granted;
+      });
+
+      if (granted) {
+        messenger.showKubusSnackBar(
+          SnackBar(
+            content: Text(
+              l10n.permissionsPermissionGrantedToast(
+                  _getPermissionName(l10n, type)),
+              style: GoogleFonts.inter(),
+            ),
+            backgroundColor: AppColorUtils.greenAccent,
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+
+        await Future.delayed(const Duration(milliseconds: 500));
+        if (_currentPage < _pages.length - 1) {
+          _nextPage();
+        }
+      }
+
+      return;
+    }
+
     if (type == PermissionType.camera && kIsWeb) {
       // Camera access is intentionally not requested on web.
       if (mounted) {
@@ -498,7 +603,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
     }
 
     Permission permission;
-    
+
     switch (type) {
       case PermissionType.location:
         permission = Permission.location;
@@ -506,6 +611,8 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       case PermissionType.camera:
         permission = Permission.camera;
         break;
+      case PermissionType.notifications:
+        throw StateError('notifications permission is handled separately');
     }
 
     final l10n = AppLocalizations.of(context)!;
@@ -515,14 +622,15 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       status = await permission.request();
     } catch (e, st) {
       if (kDebugMode) {
-        debugPrint('PermissionsScreen._requestPermission: permission.request failed: $e\n$st');
+        debugPrint(
+            'PermissionsScreen._requestPermission: permission.request failed: $e\n$st');
       }
       status = PermissionStatus.denied;
     }
     if (!mounted) return;
-    
+
     final nowGranted = status.isGranted;
-    
+
     setState(() {
       switch (type) {
         case PermissionType.location:
@@ -530,6 +638,9 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
           break;
         case PermissionType.camera:
           _cameraGranted = status.isGranted;
+          break;
+        case PermissionType.notifications:
+          _notificationsGranted = status.isGranted;
           break;
       }
     });
@@ -539,7 +650,8 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       messenger.showKubusSnackBar(
         SnackBar(
           content: Text(
-            l10n.permissionsPermissionGrantedToast(_getPermissionName(l10n, type)),
+            l10n.permissionsPermissionGrantedToast(
+                _getPermissionName(l10n, type)),
             style: GoogleFonts.inter(),
           ),
           backgroundColor: AppColorUtils.greenAccent,
@@ -568,6 +680,8 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
         return l10n.permissionsLocationTitle;
       case PermissionType.camera:
         return l10n.permissionsCameraTitle;
+      case PermissionType.notifications:
+        return l10n.permissionsNotificationsTitle;
     }
   }
 
@@ -585,7 +699,8 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
           ),
         ),
         content: Text(
-          l10n.permissionsOpenSettingsDialogContent(_getPermissionName(l10n, type)),
+          l10n.permissionsOpenSettingsDialogContent(
+              _getPermissionName(l10n, type)),
           style: GoogleFonts.inter(
             color: Theme.of(context).colorScheme.onSurface,
           ),
@@ -636,7 +751,8 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
 
     setState(() => _isCompletingOnboarding = true);
 
@@ -651,7 +767,8 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
         }
       } catch (e, st) {
         if (kDebugMode) {
-          debugPrint('PermissionsScreen._completeOnboarding: wallet create failed: $e\n$st');
+          debugPrint(
+              'PermissionsScreen._completeOnboarding: wallet create failed: $e\n$st');
         }
       }
 
@@ -681,7 +798,8 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
             .timeout(const Duration(seconds: 10));
       } catch (e) {
         if (kDebugMode) {
-          debugPrint('PermissionsScreen._completeOnboarding: createProfileFromWallet failed: $e');
+          debugPrint(
+              'PermissionsScreen._completeOnboarding: createProfileFromWallet failed: $e');
         }
       }
 
@@ -691,7 +809,8 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
             .timeout(const Duration(seconds: 10));
       } catch (e) {
         if (kDebugMode) {
-          debugPrint('PermissionsScreen._completeOnboarding: ensureAuthLoaded failed: $e');
+          debugPrint(
+              'PermissionsScreen._completeOnboarding: ensureAuthLoaded failed: $e');
         }
       }
 
@@ -701,7 +820,8 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
             .timeout(const Duration(seconds: 8));
       } catch (e) {
         if (kDebugMode) {
-          debugPrint('PermissionsScreen._completeOnboarding: loadProfile failed: $e');
+          debugPrint(
+              'PermissionsScreen._completeOnboarding: loadProfile failed: $e');
         }
       }
 
@@ -726,6 +846,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
 enum PermissionType {
   location,
   camera,
+  notifications,
 }
 
 class PermissionPage {
