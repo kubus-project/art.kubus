@@ -382,10 +382,10 @@ class _TopIconPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       child: Center(
-        child: Icon(icon, size: 18, color: color),
+        child: Icon(icon, size: 20, color: color),
       ),
     );
   }
