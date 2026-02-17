@@ -18,6 +18,7 @@ import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/widgets/auth_methods_panel.dart';
 import 'package:art_kubus/widgets/auth_title_row.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
+import 'package:art_kubus/widgets/gradient_icon_card.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:art_kubus/widgets/user_persona_picker_content.dart';
 import 'package:flutter/foundation.dart';
@@ -88,57 +89,57 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     switch (step) {
       case _OnboardingStep.welcome:
         return const _StepPalette(
-          start: KubusColors.primary,
-          end: KubusColors.accentTealDark,
-          accent: KubusColors.primary,
+          start: Color(0xFF006064),
+          end: KubusColors.accentTealLight,
+          accent: Color(0xFF26A69A),
         );
       case _OnboardingStep.account:
         return const _StepPalette(
-          start: KubusColors.accentBlue,
-          end: KubusColors.primaryVariantDark,
-          accent: KubusColors.primaryVariantDark,
+          start: Color(0xFF1565C0),
+          end: Color(0xFF42A5F5),
+          accent: KubusColors.accentBlue,
         );
       case _OnboardingStep.profile:
         return const _StepPalette(
-          start: KubusColors.accentTealDark,
-          end: KubusColors.success,
-          accent: KubusColors.successDark,
+          start: Color(0xFF00796B),
+          end: Color(0xFF4DB6AC),
+          accent: KubusColors.accentTealDark,
         );
       case _OnboardingStep.role:
         return const _StepPalette(
-          start: KubusColors.achievementGoldDark,
+          start: Color(0xFFE65100),
           end: KubusColors.accentOrangeDark,
-          accent: KubusColors.accentOrangeDark,
+          accent: Color(0xFFFFB74D),
         );
       case _OnboardingStep.permissions:
         return const _StepPalette(
-          start: KubusColors.warningDark,
-          end: KubusColors.accentOrangeDark,
-          accent: KubusColors.warningDark,
+          start: Color(0xFF6A1B9A),
+          end: Color(0xFFAB47BC),
+          accent: Color(0xFFCE93D8),
         );
       case _OnboardingStep.artwork:
         return const _StepPalette(
-          start: KubusColors.errorDark,
-          end: KubusColors.accentOrangeDark,
-          accent: KubusColors.errorDark,
+          start: Color(0xFFC62828),
+          end: KubusColors.errorDark,
+          accent: Color(0xFFFF8A80),
         );
       case _OnboardingStep.follow:
         return const _StepPalette(
-          start: KubusColors.accentTealLight,
-          end: KubusColors.accentBlue,
-          accent: KubusColors.accentBlue,
+          start: KubusColors.primary,
+          end: Color(0xFF4DD0E1),
+          accent: Color(0xFF80DEEA),
         );
       case _OnboardingStep.verifyEmail:
         return const _StepPalette(
-          start: KubusColors.success,
+          start: Color(0xFF2E7D32),
           end: KubusColors.successDark,
-          accent: KubusColors.successDark,
+          accent: Color(0xFFA5D6A7),
         );
       case _OnboardingStep.done:
         return const _StepPalette(
-          start: KubusColors.achievementGoldLight,
-          end: KubusColors.primary,
-          accent: KubusColors.primaryVariantDark,
+          start: Color(0xFFF57F17),
+          end: KubusColors.achievementGoldDark,
+          accent: Color(0xFFFFE082),
         );
     }
   }
@@ -817,7 +818,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   }) {
     final stepNumber = _currentIndex + 1;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+      padding: const EdgeInsets.fromLTRB(KubusSpacing.md, 10, KubusSpacing.md, KubusSpacing.sm),
       child: ConstrainedBox(
         constraints: BoxConstraints(minHeight: _isDesktop ? 84 : 92),
         child: Column(
@@ -834,10 +835,10 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                     ),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: KubusSpacing.sm),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: KubusSpacing.sm,
+              runSpacing: KubusSpacing.sm,
               alignment: WrapAlignment.end,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
@@ -908,15 +909,21 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               margin:
-                  EdgeInsets.only(right: index == _steps.length - 1 ? 0 : 6),
-              height: 6,
+                  EdgeInsets.only(right: index == _steps.length - 1 ? 0 : KubusSpacing.xs),
+              height: 8,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(999),
                 color: done
                     ? stepPalette.accent
                     : active
-                        ? stepPalette.accent.withValues(alpha: 0.7)
-                        : scheme.outline.withValues(alpha: 0.25),
+                        ? stepPalette.accent
+                        : scheme.outline.withValues(alpha: 0.18),
+                border: (active || done)
+                    ? Border.all(
+                        color: Colors.white.withValues(alpha: 0.25),
+                        width: 0.5,
+                      )
+                    : null,
               ),
             ),
           );
@@ -1066,32 +1073,34 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 260),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(KubusRadius.xl),
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            palette.start.withValues(alpha: 0.40),
-            palette.end.withValues(alpha: 0.30),
+            palette.start.withValues(alpha: 0.55),
+            palette.end.withValues(alpha: 0.40),
           ],
         ),
         border: Border.all(
-          color: palette.accent.withValues(alpha: 0.64),
-          width: 1.5,
+          color: palette.accent.withValues(alpha: 0.45),
+          width: 1,
         ),
       ),
       child: LiquidGlassPanel(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(KubusRadius.xl),
         padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
+        fallbackMinOpacity: 0.30,
+        backgroundColor: palette.start.withValues(alpha: 0.12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
-              height: 5,
+              height: 4,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(999),
                 gradient: LinearGradient(
-                  colors: [palette.start, palette.end],
+                  colors: [palette.start, palette.accent, palette.end],
                 ),
               ),
             ),
@@ -1150,20 +1159,39 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   }
 
   Widget _buildDesktopStepRail(AppLocalizations l10n, ColorScheme scheme) {
+    final activePalette = _paletteForStep(_currentStep);
     return LiquidGlassPanel(
       key: const Key('onboarding_desktop_step_rail'),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(KubusSpacing.md),
       borderRadius: BorderRadius.circular(20),
+      fallbackMinOpacity: 0.28,
+      backgroundColor: activePalette.start.withValues(alpha: 0.08),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            l10n.onboardingFlowTitle,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
+          Row(
+            children: [
+              GradientIconCard(
+                start: activePalette.start,
+                end: activePalette.end,
+                icon: Icons.auto_awesome,
+                iconSize: 18,
+                width: 36,
+                height: 36,
+                radius: 10,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  l10n.onboardingFlowTitle,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                 ),
+              ),
+            ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
           ...List.generate(_steps.length, (index) {
             final step = _steps[index];
             final active = _currentIndex == index;
@@ -1171,34 +1199,60 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
             final palette = _paletteForStep(step);
             return AnimatedContainer(
               duration: const Duration(milliseconds: 180),
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              margin: const EdgeInsets.only(bottom: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
                 color: active
-                    ? palette.accent.withValues(alpha: 0.22)
-                    : scheme.surface.withValues(alpha: 0.28),
+                    ? palette.accent.withValues(alpha: 0.28)
+                    : done
+                        ? palette.accent.withValues(alpha: 0.12)
+                        : Colors.transparent,
                 border: Border.all(
-                  color: done
-                      ? palette.accent.withValues(alpha: 0.55)
-                      : scheme.outline.withValues(alpha: 0.24),
+                  color: active
+                      ? palette.accent.withValues(alpha: 0.65)
+                      : done
+                          ? palette.accent.withValues(alpha: 0.35)
+                          : scheme.outline.withValues(alpha: 0.12),
                 ),
               ),
               child: Row(
                 children: [
-                  Icon(
-                    done ? Icons.check_circle : _stepIcon(step),
-                    size: 16,
-                    color: done ? palette.accent : scheme.onSurface,
+                  Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(KubusRadius.sm),
+                      gradient: (active || done)
+                          ? LinearGradient(
+                              colors: [palette.start, palette.end],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            )
+                          : null,
+                      color: (active || done)
+                          ? null
+                          : scheme.outline.withValues(alpha: 0.12),
+                    ),
+                    child: Icon(
+                      done ? Icons.check_rounded : _stepIcon(step),
+                      size: 15,
+                      color: (active || done)
+                          ? Colors.white
+                          : scheme.onSurface.withValues(alpha: 0.5),
+                    ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       _stepLabel(l10n, step),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            color: scheme.onSurface,
+                            color: active
+                                ? scheme.onSurface
+                                : scheme.onSurface
+                                    .withValues(alpha: done ? 0.75 : 0.55),
                             fontWeight:
                                 active ? FontWeight.w700 : FontWeight.w500,
                           ),
@@ -1208,41 +1262,50 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
               ),
             );
           }),
+          const Spacer(),
           if (_currentStep == _OnboardingStep.welcome) ...[
-            const SizedBox(height: 6),
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: scheme.surface.withValues(alpha: 0.22),
-                borderRadius: BorderRadius.circular(12),
-                border:
-                    Border.all(color: scheme.outline.withValues(alpha: 0.2)),
+                color: activePalette.accent.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: activePalette.accent.withValues(alpha: 0.25),
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    l10n.onboardingFlowWelcomeInfoTime,
-                    style: Theme.of(context).textTheme.bodySmall,
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: KubusSpacing.sm, vertical: KubusSpacing.xs),
+                    decoration: BoxDecoration(
+                      color: activePalette.accent.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(KubusRadius.sm),
+                    ),
+                    child: Text(
+                      l10n.onboardingFlowWelcomeInfoTime,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: activePalette.accent,
+                          ),
+                    ),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    '• ${l10n.onboardingFlowWelcomeInfoAccount}',
-                    style: Theme.of(context).textTheme.bodySmall,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                  const SizedBox(height: 10),
+                  _RailInfoItem(
+                    icon: Icons.person_add_alt_1_outlined,
+                    text: l10n.onboardingFlowWelcomeInfoAccount,
+                    color: activePalette.accent,
                   ),
-                  Text(
-                    '• ${l10n.onboardingFlowWelcomeInfoCreate}',
-                    style: Theme.of(context).textTheme.bodySmall,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                  _RailInfoItem(
+                    icon: Icons.palette_outlined,
+                    text: l10n.onboardingFlowWelcomeInfoCreate,
+                    color: activePalette.accent,
                   ),
-                  Text(
-                    '• ${l10n.onboardingFlowWelcomeInfoFollow}',
-                    style: Theme.of(context).textTheme.bodySmall,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                  _RailInfoItem(
+                    icon: Icons.group_add_outlined,
+                    text: l10n.onboardingFlowWelcomeInfoFollow,
+                    color: activePalette.accent,
                   ),
                 ],
               ),
@@ -1254,9 +1317,11 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   }
 
   Widget _buildBottomActions(AppLocalizations l10n, {required bool compact}) {
+    final palette = _paletteForStep(_currentStep);
     return LiquidGlassPanel(
       borderRadius: BorderRadius.circular(14),
       padding: EdgeInsets.fromLTRB(10, compact ? 8 : 10, 10, compact ? 8 : 10),
+      fallbackMinOpacity: 0.28,
       child: Row(
         children: [
           Expanded(
@@ -1264,6 +1329,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
               onPressed: _currentStep == _OnboardingStep.done
                   ? null
                   : _deferCurrentStep,
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.white.withValues(alpha: 0.9),
+              ),
               child: Text(l10n.commonSkip),
             ),
           ),
@@ -1273,13 +1341,20 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
               onPressed: _onPrimaryAction,
               label: _primaryLabelForStep(l10n),
               isFullWidth: true,
-              backgroundColor: Colors.white,
-              foregroundColor: const Color(0xFF0A0A0A),
+              backgroundColor: palette.accent,
+              foregroundColor: _contrastForeground(palette.accent),
             ),
           ),
         ],
       ),
     );
+  }
+
+  /// Returns white or dark foreground based on luminance of [bg].
+  static Color _contrastForeground(Color bg) {
+    return bg.computeLuminance() > 0.45
+        ? const Color(0xFF0A0A0A)
+        : Colors.white;
   }
 
   @override
@@ -1291,12 +1366,12 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     final accent = themeProvider.accentColor;
     final stepPalette = _paletteForStep(_currentStep);
 
-    final bgStart = stepPalette.start.withValues(alpha: 0.82);
-    final bgEnd = stepPalette.end.withValues(alpha: 0.74);
-    final bgMid = Color.lerp(bgStart, bgEnd, 0.52) ?? bgEnd;
+    final bgStart = stepPalette.start.withValues(alpha: 0.92);
+    final bgEnd = stepPalette.end.withValues(alpha: 0.85);
+    final bgMid = Color.lerp(bgStart, bgEnd, 0.45) ?? bgEnd;
     final bgAccent =
-        Color.lerp(stepPalette.accent, accent, 0.4)?.withValues(alpha: 0.64) ??
-            accent.withValues(alpha: 0.64);
+        Color.lerp(stepPalette.accent, accent, 0.3)?.withValues(alpha: 0.78) ??
+            accent.withValues(alpha: 0.78);
     final isWidgetTestBinding = WidgetsBinding.instance.runtimeType
         .toString()
         .contains('TestWidgetsFlutterBinding');
@@ -1305,7 +1380,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
       return AnimatedGradientBackground(
         animate: !isWidgetTestBinding,
         colors: [bgStart, bgMid, bgEnd, bgStart],
-        intensity: 0.38,
+        intensity: 0.48,
         child: const Scaffold(
           backgroundColor: Colors.transparent,
           body: Center(child: CircularProgressIndicator()),
@@ -1316,7 +1391,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     return AnimatedGradientBackground(
       animate: !isWidgetTestBinding,
       colors: [bgStart, bgMid, bgAccent, bgEnd, bgStart],
-      intensity: 0.38,
+      intensity: 0.48,
       child: Scaffold(
         backgroundColor: Colors.transparent,
         resizeToAvoidBottomInset: false,
@@ -1332,17 +1407,17 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                 padding: EdgeInsets.only(bottom: keyboardInset),
                 child: Padding(
                   padding: EdgeInsets.symmetric(
-                    horizontal: _isDesktop ? 24 : 16,
+                    horizontal: _isDesktop ? KubusSpacing.lg : KubusSpacing.md,
                     vertical: 10,
                   ),
                   child: _isDesktop
                       ? Row(
                           children: [
                             SizedBox(
-                              width: 280,
+                              width: 320,
                               child: _buildDesktopStepRail(l10n, scheme),
                             ),
-                            const SizedBox(width: 14),
+                            const SizedBox(width: 18),
                             Expanded(
                               child: Column(
                                 children: [
@@ -1352,7 +1427,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                                     localeProvider: localeProvider,
                                     themeProvider: themeProvider,
                                   ),
-                                  const SizedBox(height: 8),
+                                  const SizedBox(height: KubusSpacing.sm),
                                   _buildProgress(scheme),
                                   const SizedBox(height: 10),
                                   Expanded(child: _buildStepCard(l10n, scheme)),
@@ -1372,11 +1447,11 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                               localeProvider: localeProvider,
                               themeProvider: themeProvider,
                             ),
-                            SizedBox(height: keyboardOpen ? 4 : 8),
+                            SizedBox(height: keyboardOpen ? KubusSpacing.xs : KubusSpacing.sm),
                             _buildProgress(scheme),
-                            SizedBox(height: keyboardOpen ? 8 : 12),
+                            SizedBox(height: keyboardOpen ? KubusSpacing.sm : 12),
                             Expanded(child: _buildStepCard(l10n, scheme)),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: KubusSpacing.sm),
                             _buildBottomActions(l10n, compact: keyboardOpen),
                           ],
                         ),
@@ -1425,9 +1500,11 @@ class _HeaderActionPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: scheme.surface.withValues(alpha: 0.30),
+        color: scheme.surface.withValues(alpha: 0.18),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: scheme.outline.withValues(alpha: 0.35)),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.12),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1443,11 +1520,49 @@ class _HeaderActionPill extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
           ),
-          const SizedBox(width: 2),
+          const SizedBox(width: KubusSpacing.xxs),
           Icon(
             Icons.arrow_drop_down,
             size: 18,
             color: scheme.onSurface.withValues(alpha: 0.8),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RailInfoItem extends StatelessWidget {
+  const _RailInfoItem({
+    required this.icon,
+    required this.text,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: KubusSpacing.sm),
+          Expanded(
+            child: Text(
+              text,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.8),
+                  ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
       ),
@@ -1483,9 +1598,9 @@ class _AccountStep extends StatelessWidget {
                 .textTheme
                 .headlineSmall
                 ?.copyWith(fontWeight: FontWeight.w700)),
-        const SizedBox(height: 8),
+        const SizedBox(height: KubusSpacing.sm),
         Text(body, style: Theme.of(context).textTheme.bodyLarge),
-        const SizedBox(height: 4),
+        const SizedBox(height: KubusSpacing.xs),
         Text(
           verifyHint,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -1521,7 +1636,9 @@ class _WelcomeStep extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final compact = constraints.maxHeight < 320;
+        final compact = constraints.maxHeight < 400;
+        final tight = constraints.maxHeight < 220;
+        final isWide = constraints.maxWidth > 500;
         return ClipRect(
           child: Align(
             alignment: Alignment.topLeft,
@@ -1533,32 +1650,76 @@ class _WelcomeStep extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (!compact) ...[
+                      Center(
+                        child: GradientIconCard(
+                          start: const Color(0xFF006064),
+                          end: const Color(0xFF26A69A),
+                          icon: Icons.waving_hand_outlined,
+                          iconSize: isWide ? 36 : 28,
+                          width: isWide ? 72 : 56,
+                          height: isWide ? 72 : 56,
+                          radius: isWide ? 18 : 14,
+                        ),
+                      ),
+                      SizedBox(height: isWide ? KubusSpacing.md : 10),
+                    ],
                     Text(
                       title,
                       style:
                           Theme.of(context).textTheme.headlineSmall?.copyWith(
                                 fontWeight: FontWeight.w700,
-                                fontSize: compact ? 22 : null,
+                                fontSize: compact ? 22 : (isWide ? 28 : null),
                               ),
                     ),
-                    SizedBox(height: compact ? 4 : 6),
+                    SizedBox(height: compact ? KubusSpacing.xs : 6),
                     Text(
                       body,
-                      maxLines: 2,
+                      maxLines: tight ? 1 : 2,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                             color: scheme.onSurface.withValues(alpha: 0.8),
                           ),
                     ),
-                    SizedBox(height: compact ? 8 : 10),
-                    _WelcomeInfoRow(
-                      icon: Icons.person_add_alt_1_outlined,
-                      text: l10n.onboardingFlowWelcomeInfoAccount,
-                    ),
-                    _WelcomeInfoRow(
-                      icon: Icons.palette_outlined,
-                      text: l10n.onboardingFlowWelcomeInfoCreate,
-                    ),
+                    if (!tight) ...[
+                      SizedBox(height: compact ? KubusSpacing.sm : 14),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color:
+                              const Color(0xFF26A69A).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(KubusRadius.sm),
+                        ),
+                        child: Text(
+                          l10n.onboardingFlowWelcomeInfoTime,
+                          style:
+                              Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF80CBC4),
+                                  ),
+                        ),
+                      ),
+                      SizedBox(height: compact ? KubusSpacing.sm : 12),
+                      _WelcomeInfoRow(
+                        icon: Icons.person_add_alt_1_outlined,
+                        text: l10n.onboardingFlowWelcomeInfoAccount,
+                      ),
+                      _WelcomeInfoRow(
+                        icon: Icons.palette_outlined,
+                        text: l10n.onboardingFlowWelcomeInfoCreate,
+                      ),
+                      if (!compact) ...[
+                        _WelcomeInfoRow(
+                          icon: Icons.group_add_outlined,
+                          text: l10n.onboardingFlowWelcomeInfoFollow,
+                        ),
+                        _WelcomeInfoRow(
+                          icon: Icons.shield_outlined,
+                          text: l10n.onboardingFlowPermissionsTitle,
+                        ),
+                      ],
+                    ],
                   ],
                 ),
               ),
@@ -1578,18 +1739,26 @@ class _WelcomeInfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
       child: Row(
         children: [
-          Icon(icon, size: 16, color: scheme.primary),
-          const SizedBox(width: 8),
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(7),
+              color: const Color(0xFF26A69A).withValues(alpha: 0.15),
+            ),
+            child: Icon(icon, size: 15, color: const Color(0xFF80CBC4)),
+          ),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
               text,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.85),
+                    color:
+                        Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85),
                   ),
             ),
           ),
@@ -1694,7 +1863,7 @@ class _InlineVerificationPanelState extends State<_InlineVerificationPanel> {
                 .textTheme
                 .headlineSmall
                 ?.copyWith(fontWeight: FontWeight.w700)),
-        const SizedBox(height: 8),
+        const SizedBox(height: KubusSpacing.sm),
         Text(widget.body, style: Theme.of(context).textTheme.bodyLarge),
         const SizedBox(height: 12),
         if (widget.email.isNotEmpty)
@@ -1729,7 +1898,7 @@ class _InlineVerificationPanelState extends State<_InlineVerificationPanel> {
           ),
         ],
         if ((_inlineMessage ?? '').trim().isNotEmpty) ...[
-          const SizedBox(height: 8),
+          const SizedBox(height: KubusSpacing.sm),
           Text(
             _inlineMessage!,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -1816,7 +1985,7 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
                 .textTheme
                 .headlineSmall
                 ?.copyWith(fontWeight: FontWeight.w700)),
-        const SizedBox(height: 8),
+        const SizedBox(height: KubusSpacing.sm),
         Text(widget.body, style: Theme.of(context).textTheme.bodyLarge),
         const SizedBox(height: 12),
         TextField(
@@ -1983,7 +2152,7 @@ class _RoleStepState extends State<_RoleStep> {
                 .textTheme
                 .headlineSmall
                 ?.copyWith(fontWeight: FontWeight.w700)),
-        const SizedBox(height: 8),
+        const SizedBox(height: KubusSpacing.sm),
         Text(widget.body, style: Theme.of(context).textTheme.bodyLarge),
         const SizedBox(height: 12),
         UserPersonaPickerContent(
@@ -2017,19 +2186,19 @@ class _RoleStepState extends State<_RoleStep> {
           controller: _portfolioController,
           decoration: const InputDecoration(labelText: 'Portfolio URL'),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: KubusSpacing.sm),
         TextField(
           controller: _mediumController,
           decoration: const InputDecoration(labelText: 'Primary medium'),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: KubusSpacing.sm),
         TextField(
           controller: _statementController,
           minLines: 2,
           maxLines: 4,
           decoration: const InputDecoration(labelText: 'DAO statement'),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: KubusSpacing.sm),
         KubusButton(
           onPressed: _submittingDao ? null : _applyDao,
           isLoading: _submittingDao,
@@ -2037,7 +2206,7 @@ class _RoleStepState extends State<_RoleStep> {
           isFullWidth: true,
         ),
         if ((widget.daoMessage ?? '').trim().isNotEmpty) ...[
-          const SizedBox(height: 8),
+          const SizedBox(height: KubusSpacing.sm),
           Text(widget.daoMessage!,
               style: Theme.of(context).textTheme.bodySmall),
         ],
@@ -2087,7 +2256,7 @@ class _PermissionsStep extends StatelessWidget {
                 .textTheme
                 .headlineSmall
                 ?.copyWith(fontWeight: FontWeight.w700)),
-        const SizedBox(height: 8),
+        const SizedBox(height: KubusSpacing.sm),
         Text(body, style: Theme.of(context).textTheme.bodyLarge),
         const SizedBox(height: 12),
         _PermissionTile(
@@ -2173,7 +2342,7 @@ class _ArtworkInlineStep extends StatelessWidget {
                 .textTheme
                 .headlineSmall
                 ?.copyWith(fontWeight: FontWeight.w700)),
-        const SizedBox(height: 8),
+        const SizedBox(height: KubusSpacing.sm),
         Text(
           forceDraftOnly
               ? '$body\n\nDraft-only mode is enabled until DAO approval.'
@@ -2224,7 +2393,7 @@ class _AuthRequiredStep extends StatelessWidget {
                 .textTheme
                 .headlineSmall
                 ?.copyWith(fontWeight: FontWeight.w700)),
-        const SizedBox(height: 8),
+        const SizedBox(height: KubusSpacing.sm),
         Text(body, style: Theme.of(context).textTheme.bodyLarge),
         const SizedBox(height: 12),
         Expanded(
@@ -2268,7 +2437,7 @@ class _FollowStep extends StatelessWidget {
                 .textTheme
                 .headlineSmall
                 ?.copyWith(fontWeight: FontWeight.w700)),
-        const SizedBox(height: 8),
+        const SizedBox(height: KubusSpacing.sm),
         Text(body, style: Theme.of(context).textTheme.bodyLarge),
         const SizedBox(height: 12),
         if (isLoading)
@@ -2278,7 +2447,7 @@ class _FollowStep extends StatelessWidget {
           )
         else if (artists.isEmpty)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: const EdgeInsets.symmetric(vertical: KubusSpacing.sm),
             child: Text(
               l10n.onboardingFlowNoSuggestions,
               style: TextStyle(color: scheme.onSurface.withValues(alpha: 0.75)),
@@ -2323,18 +2492,38 @@ class _DoneStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title,
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w700)),
-        const SizedBox(height: 8),
-        Text(body, style: Theme.of(context).textTheme.bodyLarge),
-        const Spacer(),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxHeight < 320;
+        final isWide = constraints.maxWidth > 500;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (!compact) ...[
+              Center(
+                child: GradientIconCard(
+                  start: const Color(0xFFF57F17),
+                  end: const Color(0xFFFFD54F),
+                  icon: Icons.rocket_launch_outlined,
+                  iconSize: isWide ? 36 : 28,
+                  width: isWide ? 72 : 56,
+                  height: isWide ? 72 : 56,
+                  radius: isWide ? 18 : 14,
+                ),
+              ),
+              SizedBox(height: isWide ? KubusSpacing.md : 10),
+            ],
+            Text(title,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      fontSize: isWide ? 28 : null,
+                    )),
+            const SizedBox(height: KubusSpacing.sm),
+            Text(body, style: Theme.of(context).textTheme.bodyLarge),
+            const Spacer(),
+          ],
+        );
+      },
     );
   }
 }
