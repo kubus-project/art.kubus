@@ -1069,6 +1069,14 @@ class _SettingsScreenState extends State<SettingsScreen>
           },
         ),
         _buildSettingsTile(
+          'Secure account',
+          'Add email + password for recovery',
+          Icons.lock_outline,
+          onTap: () {
+            Navigator.of(context).pushNamed('/secure-account');
+          },
+        ),
+        _buildSettingsTile(
           l10n.settingsEditProfileTileTitle,
           l10n.settingsEditProfileTileSubtitle,
           Icons.person_outline,

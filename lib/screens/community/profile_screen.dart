@@ -41,6 +41,7 @@ import '../art/collection_detail_screen.dart';
 import '../events/event_detail_screen.dart';
 import '../../widgets/artist_badge.dart';
 import '../../widgets/institution_badge.dart';
+import '../../widgets/secure_account_banner_card.dart';
 import '../../models/dao.dart';
 import '../../config/config.dart';
 import 'community_analytics_screen.dart';
@@ -191,6 +192,14 @@ class _ProfileScreenState extends State<ProfileScreen>
                           isArtist: isArtist, isInstitution: isInstitution),
                       const SliverToBoxAdapter(
                           child: SizedBox(height: DetailSpacing.xl)),
+                      const SliverToBoxAdapter(
+                        child: SecureAccountBannerCard(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: DetailSpacing.lg,
+                          ),
+                          bottomSpacing: DetailSpacing.xl,
+                        ),
+                      ),
                       _buildStatsSection(),
                       const SliverToBoxAdapter(
                           child: SizedBox(height: DetailSpacing.xxl)),
