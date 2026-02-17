@@ -1610,11 +1610,17 @@ class BackendApiService
         throw Exception(_rateLimitMessage(key));
       }
       if (response.statusCode == 404) {
-        throw Exception(
-            'Google login endpoint not available on the backend (received 404). Ensure the server is updated and ENABLE_GOOGLE_AUTH=true with GOOGLE_CLIENT_ID configured.');
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: uri.path,
+          body: response.body,
+        );
       }
-      throw Exception(
-          'Google login failed: ${response.statusCode} ${response.body}');
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: uri.path,
+        body: response.body,
+      );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.loginWithGoogle failed: $e');
       rethrow;
@@ -2887,7 +2893,8 @@ class BackendApiService
   @override
   Future<ArtMarker?> updateArtMarkerRecord(
       String markerId, Map<String, dynamic> updates) async {
-    bool markerReflectsUpdates(ArtMarker marker, Map<String, dynamic> requested) {
+    bool markerReflectsUpdates(
+        ArtMarker marker, Map<String, dynamic> requested) {
       final requestedName = requested['name'] ?? requested['title'];
       if (requestedName != null && marker.name != requestedName.toString()) {
         return false;
@@ -2903,23 +2910,35 @@ class BackendApiService
         if (expected.isNotEmpty && marker.category != expected) return false;
       }
 
-      if (requested.containsKey('isPublic') && marker.isPublic != (requested['isPublic'] == true)) {
+      if (requested.containsKey('isPublic') &&
+          marker.isPublic != (requested['isPublic'] == true)) {
         return false;
       }
 
-      if (requested.containsKey('isActive') && marker.isActive != (requested['isActive'] == true)) {
+      if (requested.containsKey('isActive') &&
+          marker.isActive != (requested['isActive'] == true)) {
         return false;
       }
 
-      final latRaw = requested['latitude'] ?? requested['lat'] ?? requested['position']?['lat'];
-      final lngRaw = requested['longitude'] ?? requested['lng'] ?? requested['position']?['lng'];
-      final expectedLat = latRaw is num ? latRaw.toDouble() : double.tryParse(latRaw?.toString() ?? '');
-      final expectedLng = lngRaw is num ? lngRaw.toDouble() : double.tryParse(lngRaw?.toString() ?? '');
+      final latRaw = requested['latitude'] ??
+          requested['lat'] ??
+          requested['position']?['lat'];
+      final lngRaw = requested['longitude'] ??
+          requested['lng'] ??
+          requested['position']?['lng'];
+      final expectedLat = latRaw is num
+          ? latRaw.toDouble()
+          : double.tryParse(latRaw?.toString() ?? '');
+      final expectedLng = lngRaw is num
+          ? lngRaw.toDouble()
+          : double.tryParse(lngRaw?.toString() ?? '');
 
-      if (expectedLat != null && (marker.position.latitude - expectedLat).abs() > 0.000001) {
+      if (expectedLat != null &&
+          (marker.position.latitude - expectedLat).abs() > 0.000001) {
         return false;
       }
-      if (expectedLng != null && (marker.position.longitude - expectedLng).abs() > 0.000001) {
+      if (expectedLng != null &&
+          (marker.position.longitude - expectedLng).abs() > 0.000001) {
         return false;
       }
 
@@ -3004,7 +3023,8 @@ class BackendApiService
         throw BackendApiRequestException(
           statusCode: 409,
           path: uri.path,
-          body: 'Marker update verification failed: response does not match requested changes',
+          body:
+              'Marker update verification failed: response does not match requested changes',
         );
       }
       return refreshed;

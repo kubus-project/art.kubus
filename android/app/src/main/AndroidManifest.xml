@@ -51,16 +51,23 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
 
                 <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/marker/" />
+                <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/m/" />
                 <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/artwork/" />
+                <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/a/" />
                 <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/post/" />
+                <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/p/" />
                 <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/profile/" />
                 <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/user/" />
                 <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/u/" />
                 <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/collection/" />
+                <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/c/" />
                 <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/event/" />
                 <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/events/" />
+                <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/e/" />
                 <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/exhibition/" />
                 <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/exhibitions/" />
+                <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/x/" />
+                <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/n/" />
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.

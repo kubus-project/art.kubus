@@ -18,9 +18,10 @@ class MapDeepLinkIntent {
 }
 
 class MapDeepLinkProvider extends ChangeNotifier {
-  MapDeepLinkIntent? _pending;
+  final List<MapDeepLinkIntent> _pendingQueue = <MapDeepLinkIntent>[];
 
-  MapDeepLinkIntent? get pending => _pending;
+  MapDeepLinkIntent? get pending =>
+      _pendingQueue.isEmpty ? null : _pendingQueue.first;
 
   /// Schedules a marker to be opened by the MapScreen.
   void openMarker({
@@ -28,18 +29,36 @@ class MapDeepLinkProvider extends ChangeNotifier {
     LatLng? center,
     double? zoom,
   }) {
-    _pending = MapDeepLinkIntent(
-      markerId: markerId,
+    final normalizedId = markerId.trim();
+    if (normalizedId.isEmpty) return;
+
+    final next = MapDeepLinkIntent(
+      markerId: normalizedId,
       center: center,
       zoom: zoom,
     );
+
+    if (_pendingQueue.isNotEmpty &&
+        _pendingQueue.last.markerId == normalizedId) {
+      _pendingQueue[_pendingQueue.length - 1] = next;
+    } else {
+      _pendingQueue.add(next);
+    }
     notifyListeners();
   }
 
-  /// Returns and clears the pending intent.
+  /// Returns and removes the oldest pending intent.
   MapDeepLinkIntent? consumePending() {
-    final value = _pending;
-    _pending = null;
-    return value;
+    if (_pendingQueue.isEmpty) return null;
+    return _pendingQueue.removeAt(0);
   }
+
+  /// Clears all pending marker intents.
+  void clear() {
+    if (_pendingQueue.isEmpty) return;
+    _pendingQueue.clear();
+    notifyListeners();
+  }
+
+  int get pendingCount => _pendingQueue.length;
 }
