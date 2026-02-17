@@ -37,6 +37,8 @@ class AuthMethodsPanel extends StatefulWidget {
     this.embedded = false,
     this.onAuthSuccess,
     this.onVerificationRequired,
+    this.onEmailRegistrationAttempted,
+    this.prepareProvisionalProfileBeforeRegister = false,
     this.onError,
     this.onSwitchToSignIn,
   });
@@ -44,6 +46,8 @@ class AuthMethodsPanel extends StatefulWidget {
   final bool embedded;
   final Future<void> Function()? onAuthSuccess;
   final ValueChanged<String>? onVerificationRequired;
+  final ValueChanged<String>? onEmailRegistrationAttempted;
+  final bool prepareProvisionalProfileBeforeRegister;
   final ValueChanged<Object>? onError;
   final VoidCallback? onSwitchToSignIn;
 
@@ -212,16 +216,25 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     unawaited(TelemetryService().trackSignUpAttempt(method: 'email'));
     setState(() => _isSubmitting = true);
     try {
+      String? provisionalWalletAddress;
+      if (widget.prepareProvisionalProfileBeforeRegister) {
+        provisionalWalletAddress = await _prepareProvisionalProfileBeforeRegister(
+          desiredUsername: username,
+        );
+      }
+      widget.onEmailRegistrationAttempted?.call(email);
+
       final api = BackendApiService();
       await api.registerWithEmail(
         email: email,
         password: password,
         username: username.isNotEmpty ? username : null,
+        walletAddress: provisionalWalletAddress,
       );
       if (!mounted) return;
       if (widget.embedded) {
-        // Keep verification as a final onboarding step, but try to establish a
-        // session immediately so the user is not prompted to log in again.
+        // Embedded onboarding handles verification gracefully while we still
+        // attempt immediate sign-in when backend policy permits it.
         widget.onVerificationRequired?.call(email);
         try {
           final loginResult =
@@ -331,7 +344,9 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     }
 
     try {
-      final result = await walletProvider.createWallet();
+      final result = await walletProvider
+          .createWallet()
+          .timeout(const Duration(seconds: 12));
       final mnemonic = result['mnemonic']!;
       address = result['address']!;
       createdFreshWallet = true;
@@ -356,6 +371,57 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     }
 
     return address;
+  }
+
+  Future<String?> _prepareProvisionalProfileBeforeRegister({
+    required String desiredUsername,
+  }) async {
+    String? walletAddress;
+    try {
+      walletAddress = await _ensureWalletProvisioned(
+        null,
+        desiredUsername: null,
+      );
+    } catch (e) {
+      AppConfig.debugPrint(
+        'AuthMethodsPanel._prepareProvisionalProfileBeforeRegister: wallet provisioning failed: $e',
+      );
+    }
+
+    final normalizedWallet = walletAddress?.trim();
+    if (normalizedWallet == null || normalizedWallet.isEmpty) {
+      return null;
+    }
+
+    try {
+      await Provider.of<ProfileProvider>(context, listen: false)
+          .createProfileFromWallet(
+            walletAddress: normalizedWallet,
+            username: desiredUsername.isNotEmpty ? desiredUsername : null,
+          )
+          .timeout(const Duration(seconds: 10));
+    } catch (e) {
+      AppConfig.debugPrint(
+        'AuthMethodsPanel._prepareProvisionalProfileBeforeRegister: createProfileFromWallet failed: $e',
+      );
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('wallet_address', normalizedWallet);
+      await prefs.setString('wallet', normalizedWallet);
+      await prefs.setString('walletAddress', normalizedWallet);
+      await prefs.setBool('has_wallet', true);
+    } catch (e) {
+      AppConfig.debugPrint(
+        'AuthMethodsPanel._prepareProvisionalProfileBeforeRegister: wallet prefs update failed: $e',
+      );
+    }
+
+    // Do not block registration on profile fetch fallback paths (orbit/source
+    // retries can be slow). Provisioning here should stay fast and best-effort.
+
+    return normalizedWallet;
   }
 
   Future<void> _upsertProfileWithUsername(
