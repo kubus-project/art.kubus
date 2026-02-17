@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../config/config.dart';
@@ -63,6 +64,14 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       await BackendApiService().verifyEmail(token: token);
       if (!mounted) return;
       setState(() => _verified = true);
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool(PreferenceKeys.secureAccountEmailVerifiedV1, true);
+        final email = _emailController.text.trim();
+        if (email.isNotEmpty) {
+          await prefs.setString(PreferenceKeys.secureAccountEmail, email);
+        }
+      } catch (_) {}
       final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(content: Text(l10n.authVerifyEmailSuccessToast)),
@@ -108,6 +117,10 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
 
   void _goToSignIn() {
     Navigator.of(context).pushNamedAndRemoveUntil('/sign-in', (_) => false);
+  }
+
+  void _goToMain() {
+    Navigator.of(context).pushNamedAndRemoveUntil('/main', (_) => false);
   }
 
   Widget _buildForm({
@@ -160,21 +173,25 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
         ),
         const SizedBox(height: 12),
         KubusButton(
-          onPressed: _goToSignIn,
-          icon: Icons.login_rounded,
-          label: l10n.commonSignIn,
+          onPressed: _goToMain,
+          icon: Icons.arrow_forward_rounded,
+          label: l10n.commonContinue,
           isFullWidth: true,
         ),
-        if (!_verified) ...[
-          const SizedBox(height: 10),
-          Text(
-            l10n.authVerifyEmailSignInHint,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              color: scheme.onSurface.withValues(alpha: 0.7),
+        const SizedBox(height: 6),
+        Align(
+          alignment: Alignment.center,
+          child: TextButton(
+            onPressed: _goToSignIn,
+            child: Text(
+              l10n.commonSignIn,
+              style: GoogleFonts.inter(
+                color: scheme.onSurface.withValues(alpha: 0.7),
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
-        ],
+        ),
       ],
     );
   }
@@ -212,7 +229,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
         footer: Align(
           alignment: Alignment.centerLeft,
           child: TextButton(
-            onPressed: _goToSignIn,
+            onPressed: _goToMain,
             child: Text(
               l10n.commonBack,
               style: GoogleFonts.inter(

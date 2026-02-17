@@ -23,6 +23,7 @@ import '../services/push_notification_service.dart';
 import '../services/settings_service.dart';
 import '../widgets/platform_aware_widgets.dart';
 import '../widgets/glass_components.dart';
+import '../widgets/email_verification_status_badge.dart';
 import 'onboarding/onboarding_screen.dart';
 import 'web3/wallet/wallet_home.dart' as web3_wallet;
 import 'web3/wallet/connectwallet_screen.dart';
@@ -1072,6 +1073,23 @@ class _SettingsScreenState extends State<SettingsScreen>
           'Secure account',
           'Add email + password for recovery',
           Icons.lock_outline,
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const EmailVerificationStatusBadge(
+                dense: true,
+                alignment: Alignment.centerRight,
+              ),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.chevron_right,
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.45),
+              ),
+            ],
+          ),
           onTap: () {
             Navigator.of(context).pushNamed('/secure-account');
           },
