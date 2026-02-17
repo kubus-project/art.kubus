@@ -54,7 +54,8 @@ class SettingsService {
 
     await prefs.setBool('enableAnalytics', state.analytics);
     await prefs.setBool('enableCrashReporting', state.crashReporting);
-    await prefs.setBool('skipOnboardingForReturningUsers', state.skipOnboarding);
+    await prefs.setBool(
+        'skipOnboardingForReturningUsers', state.skipOnboarding);
 
     await prefs.setString('networkSelection', state.networkSelection);
     await prefs.setBool('autoBackup', state.autoBackup);
@@ -80,7 +81,8 @@ class SettingsService {
   }
 
   /// Clear non-critical caches while preserving wallet credentials.
-  static Future<void> clearNonCriticalCaches({Set<String> preserveKeys = const {}}) async {
+  static Future<void> clearNonCriticalCaches(
+      {Set<String> preserveKeys = const {}}) async {
     final prefs = await SharedPreferences.getInstance();
     final keep = {..._criticalWalletKeys, ...preserveKeys};
     for (final key in prefs.getKeys()) {
@@ -139,7 +141,6 @@ class SettingsService {
       'has_wallet',
       'user_id',
       PreferenceKeys.hasCompletedAuthOnboarding,
-      'completed_onboarding',
       'notification_permission_granted',
       'last_inactive_ts',
       'lock_timeout_seconds',
@@ -148,9 +149,8 @@ class SettingsService {
       await prefs.remove(key);
     }
 
-    // Reset onboarding flags so the app restarts into onboarding
-    await OnboardingStateService.reset(prefs: prefs);
-    await prefs.remove('skipOnboardingForReturningUsers');
+    // Keep onboarding state intact on logout so returning users are not
+    // forced through onboarding again unless they explicitly reset it.
   }
 
   /// Clear as much local state as possible while preserving secure wallet storage.
@@ -272,12 +272,14 @@ class SettingsState {
     );
   }
 
-  factory SettingsState.fromPrefs(SharedPreferences prefs, {String? fallbackNetwork}) {
+  factory SettingsState.fromPrefs(SharedPreferences prefs,
+      {String? fallbackNetwork}) {
     final defaults = SettingsState.defaults(fallbackNetwork: fallbackNetwork);
 
-    final storedAutoLockLabel = prefs.getString('autoLockTime') ?? defaults.autoLockTime;
-    final storedAutoLockSeconds =
-        prefs.getInt('autoLockSeconds') ?? _autoLockSecondsForLabel(storedAutoLockLabel);
+    final storedAutoLockLabel =
+        prefs.getString('autoLockTime') ?? defaults.autoLockTime;
+    final storedAutoLockSeconds = prefs.getInt('autoLockSeconds') ??
+        _autoLockSecondsForLabel(storedAutoLockLabel);
 
     return SettingsState(
       pushNotifications: prefs.getBool('pushNotifications') ??
@@ -289,19 +291,26 @@ class SettingsState {
       marketingEmails: prefs.getBool('marketingEmails') ??
           prefs.getBool('marketing_emails') ??
           defaults.marketingEmails,
-      loginNotifications: prefs.getBool('loginNotifications') ?? defaults.loginNotifications,
-      dataCollection: prefs.getBool('dataCollection') ?? defaults.dataCollection,
-      personalizedAds: prefs.getBool('personalizedAds') ?? defaults.personalizedAds,
-      locationTracking: prefs.getBool('locationTracking') ?? defaults.locationTracking,
+      loginNotifications:
+          prefs.getBool('loginNotifications') ?? defaults.loginNotifications,
+      dataCollection:
+          prefs.getBool('dataCollection') ?? defaults.dataCollection,
+      personalizedAds:
+          prefs.getBool('personalizedAds') ?? defaults.personalizedAds,
+      locationTracking:
+          prefs.getBool('locationTracking') ?? defaults.locationTracking,
       dataRetention: prefs.getString('dataRetention') ?? defaults.dataRetention,
       twoFactorAuth: prefs.getBool('twoFactorAuth') ?? defaults.twoFactorAuth,
-      sessionTimeout: prefs.getBool('sessionTimeout') ?? defaults.sessionTimeout,
+      sessionTimeout:
+          prefs.getBool('sessionTimeout') ?? defaults.sessionTimeout,
       autoLockTime: storedAutoLockLabel,
       autoLockSeconds: storedAutoLockSeconds,
       requirePin: prefs.getBool('requirePin') ?? defaults.requirePin,
       biometricAuth: prefs.getBool('biometricAuth') ?? defaults.biometricAuth,
-      biometricsDeclined: prefs.getBool('biometricsDeclined') ?? defaults.biometricsDeclined,
-      useBiometricsOnUnlock: prefs.getBool('useBiometricsOnUnlock') ?? defaults.useBiometricsOnUnlock,
+      biometricsDeclined:
+          prefs.getBool('biometricsDeclined') ?? defaults.biometricsDeclined,
+      useBiometricsOnUnlock: prefs.getBool('useBiometricsOnUnlock') ??
+          defaults.useBiometricsOnUnlock,
       privacyMode: prefs.getBool('privacyMode') ?? defaults.privacyMode,
       analytics: prefs.getBool('enableAnalytics') ??
           prefs.getBool('analytics') ??
@@ -309,7 +318,8 @@ class SettingsState {
       crashReporting: prefs.getBool('enableCrashReporting') ??
           prefs.getBool('crashReporting') ??
           defaults.crashReporting,
-      skipOnboarding: prefs.getBool('skipOnboardingForReturningUsers') ?? defaults.skipOnboarding,
+      skipOnboarding: prefs.getBool('skipOnboardingForReturningUsers') ??
+          defaults.skipOnboarding,
       networkSelection: prefs.getString('networkSelection') ??
           prefs.getString('selected_network') ??
           defaults.networkSelection,
@@ -317,7 +327,8 @@ class SettingsState {
       profileVisibility: prefs.getString('profileVisibility') ??
           prefs.getString('profile_visibility') ??
           defaults.profileVisibility,
-      showAchievements: prefs.getBool('showAchievements') ?? defaults.showAchievements,
+      showAchievements:
+          prefs.getBool('showAchievements') ?? defaults.showAchievements,
       showFriends: prefs.getBool('showFriends') ?? defaults.showFriends,
       allowMessages: prefs.getBool('allowMessages') ?? defaults.allowMessages,
       accountType: prefs.getString('accountType') ?? defaults.accountType,
@@ -371,7 +382,8 @@ class SettingsState {
       requirePin: requirePin ?? this.requirePin,
       biometricAuth: biometricAuth ?? this.biometricAuth,
       biometricsDeclined: biometricsDeclined ?? this.biometricsDeclined,
-      useBiometricsOnUnlock: useBiometricsOnUnlock ?? this.useBiometricsOnUnlock,
+      useBiometricsOnUnlock:
+          useBiometricsOnUnlock ?? this.useBiometricsOnUnlock,
       privacyMode: privacyMode ?? this.privacyMode,
       analytics: analytics ?? this.analytics,
       crashReporting: crashReporting ?? this.crashReporting,

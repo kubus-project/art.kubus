@@ -59,7 +59,8 @@ class AuthGatingService {
       if (parsed is Map<String, dynamic>) {
         final exp = parsed['exp'];
         if (exp is num) {
-          return DateTime.fromMillisecondsSinceEpoch(exp.toInt() * 1000, isUtc: true);
+          return DateTime.fromMillisecondsSinceEpoch(exp.toInt() * 1000,
+              isUtc: true);
         }
       }
     } catch (_) {
@@ -82,12 +83,17 @@ class AuthGatingService {
   static bool hasLocalAccountSync({
     required SharedPreferences prefs,
   }) {
-    final hasAccessToken = accessTokenKeys.any((key) => _hasNonEmptyPref(prefs, key));
-    final hasRefreshToken = refreshTokenKeys.any((key) => _hasNonEmptyPref(prefs, key));
+    final hasAccessToken =
+        accessTokenKeys.any((key) => _hasNonEmptyPref(prefs, key));
+    final hasRefreshToken =
+        refreshTokenKeys.any((key) => _hasNonEmptyPref(prefs, key));
     final hasAuthOnboarding =
         prefs.getBool(PreferenceKeys.hasCompletedAuthOnboarding) ?? false;
-    final hasAccountRecord = (prefs.getString('user_id') ?? '').trim().isNotEmpty;
-    return hasAccessToken || hasRefreshToken || (hasAuthOnboarding && hasAccountRecord);
+    final hasAccountRecord =
+        (prefs.getString('user_id') ?? '').trim().isNotEmpty;
+    return hasAccessToken ||
+        hasRefreshToken ||
+        (hasAuthOnboarding && hasAccountRecord);
   }
 
   static Future<bool> hasLocalAccount({SharedPreferences? prefs}) async {
@@ -127,8 +133,10 @@ class AuthGatingService {
     final localAccount = hasLocalAccountSync(prefs: resolvedPrefs);
     if (localAccount) return false;
 
-    final state = onboardingState ?? await OnboardingStateService.load(prefs: resolvedPrefs);
-    return !state.hasCompletedOnboarding;
+    final state = onboardingState ??
+        await OnboardingStateService.load(prefs: resolvedPrefs);
+    return state.isFirstLaunch &&
+        !state.hasSeenWelcome &&
+        !state.hasCompletedOnboarding;
   }
 }
-
