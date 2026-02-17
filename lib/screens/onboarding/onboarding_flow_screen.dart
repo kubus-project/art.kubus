@@ -16,7 +16,7 @@ import 'package:art_kubus/services/push_notification_service.dart';
 import 'package:art_kubus/services/telemetry/telemetry_service.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/widgets/auth_methods_panel.dart';
-import 'package:art_kubus/widgets/app_logo.dart';
+import 'package:art_kubus/widgets/auth_title_row.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:art_kubus/widgets/user_persona_picker_content.dart';
@@ -372,7 +372,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     await _persistProgress();
 
     final next = _steps.indexWhere(
-      (s) => !_completed.contains(s) && s != step,
+      (s) => !_completed.contains(s) && !_deferred.contains(s) && s != step,
     );
     if (!mounted) return;
     setState(() {
@@ -481,29 +481,28 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   }
 
   Future<void> _handleEmbeddedVerificationRequired(String email) async {
-    _pendingVerificationEmail = email.trim();
-    _refreshAuthDerivedSteps();
-    if (!mounted) return;
-    final verifyIndex = _steps.indexOf(_OnboardingStep.verifyEmail);
-    if (verifyIndex >= 0) {
-      setState(() {
-        _currentIndex = verifyIndex;
-      });
-    }
-    if (_steps.contains(_OnboardingStep.account)) {
-      await _markCompleted(_OnboardingStep.account);
-    }
+    await _setPendingVerificationAndRoute(
+      email,
+      completeAccountStep: true,
+    );
   }
 
   Future<void> _handleEmbeddedSignInNeedsVerification(String email) async {
+    await _setPendingVerificationAndRoute(
+      email,
+      completeAccountStep: false,
+    );
+  }
+
+  Future<void> _setPendingVerificationAndRoute(
+    String email, {
+    required bool completeAccountStep,
+  }) async {
     _pendingVerificationEmail = email.trim();
     _refreshAuthDerivedSteps();
-    if (!mounted) return;
-    final verifyIndex = _steps.indexOf(_OnboardingStep.verifyEmail);
-    if (verifyIndex >= 0) {
-      setState(() {
-        _currentIndex = verifyIndex;
-      });
+    await _jumpToVerifyStep();
+    if (completeAccountStep && _steps.contains(_OnboardingStep.account)) {
+      await _markCompleted(_OnboardingStep.account);
     }
   }
 
@@ -551,7 +550,11 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   }
 
   Future<void> _jumpToVerifyStep() async {
-    final target = _steps.indexOf(_OnboardingStep.verifyEmail);
+    await _jumpToStepIfPresent(_OnboardingStep.verifyEmail);
+  }
+
+  Future<void> _jumpToStepIfPresent(_OnboardingStep step) async {
+    final target = _steps.indexOf(step);
     if (target < 0 || !mounted) return;
     setState(() {
       _currentIndex = target;
@@ -696,13 +699,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
       return;
     }
     if (_verificationRequired) {
-      final verifyIndex = _steps.indexOf(_OnboardingStep.verifyEmail);
-      if (!mounted) return;
-      setState(() {
-        if (verifyIndex >= 0) {
-          _currentIndex = verifyIndex;
-        }
-      });
+      await _jumpToVerifyStep();
       return;
     }
 
@@ -808,6 +805,14 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     }
   }
 
+  String _headerSkipLabel(AppLocalizations l10n) {
+    final code = Localizations.localeOf(context).languageCode.toLowerCase();
+    if (code == 'sl') {
+      return 'Preskoči za zdaj';
+    }
+    return 'Skip for now';
+  }
+
   Widget _buildHeader(
     AppLocalizations l10n,
     ColorScheme scheme, {
@@ -816,34 +821,24 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   }) {
     final stepNumber = _currentIndex + 1;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
       child: ConstrainedBox(
-        constraints: BoxConstraints(minHeight: _isDesktop ? 96 : 126),
+        constraints: BoxConstraints(minHeight: _isDesktop ? 84 : 92),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              children: [
-                const AppLogo(width: 34, height: 34),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    l10n.onboardingFlowTitle,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: scheme.onSurface,
-                        ),
-                  ),
-                ),
-                Text(
-                  l10n.commonStepOfTotal(stepNumber, _steps.length),
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: scheme.onSurface.withValues(alpha: 0.7),
-                      ),
-                ),
-              ],
+            AuthTitleRow(
+              title: l10n.onboardingFlowTitle,
+              icon: _stepIcon(_currentStep),
+              compact: !_isDesktop,
+              trailing: Text(
+                l10n.commonStepOfTotal(stepNumber, _steps.length),
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.72),
+                    ),
+              ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -894,7 +889,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                 ),
                 TextButton(
                   onPressed: _isSkippingFlow ? null : _skipForNow,
-                  child: Text(l10n.commonSkipForNow),
+                  child: Text(_headerSkipLabel(l10n)),
                 ),
               ],
             ),
@@ -1224,7 +1219,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
               decoration: BoxDecoration(
                 color: scheme.surface.withValues(alpha: 0.22),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: scheme.outline.withValues(alpha: 0.2)),
+                border:
+                    Border.all(color: scheme.outline.withValues(alpha: 0.2)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1269,8 +1265,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
         children: [
           Expanded(
             child: TextButton(
-              onPressed:
-                  _currentStep == _OnboardingStep.done ? null : _deferCurrentStep,
+              onPressed: _currentStep == _OnboardingStep.done
+                  ? null
+                  : _deferCurrentStep,
               child: Text(l10n.commonSkip),
             ),
           ),
@@ -1302,9 +1299,13 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     final bgAccent =
         Color.lerp(stepPalette.accent, accent, 0.4)?.withValues(alpha: 0.64) ??
             accent.withValues(alpha: 0.64);
+    final isWidgetTestBinding = WidgetsBinding.instance.runtimeType
+        .toString()
+        .contains('TestWidgetsFlutterBinding');
 
     if (_isInitializing) {
       return AnimatedGradientBackground(
+        animate: !isWidgetTestBinding,
         colors: [bgStart, bgMid, bgEnd, bgStart],
         intensity: 0.38,
         child: const Scaffold(
@@ -1315,11 +1316,12 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     }
 
     return AnimatedGradientBackground(
+      animate: !isWidgetTestBinding,
       colors: [bgStart, bgMid, bgAccent, bgEnd, bgStart],
       intensity: 0.38,
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        resizeToAvoidBottomInset: true,
+        resizeToAvoidBottomInset: false,
         body: SafeArea(
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -1357,7 +1359,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                                   const SizedBox(height: 10),
                                   Expanded(child: _buildStepCard(l10n, scheme)),
                                   const SizedBox(height: 10),
-                                  _buildBottomActions(l10n, compact: keyboardOpen),
+                                  _buildBottomActions(l10n,
+                                      compact: keyboardOpen),
                                 ],
                               ),
                             ),
@@ -1395,7 +1398,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
       case _OnboardingStep.profile:
         return l10n.commonContinue;
       case _OnboardingStep.permissions:
-        return l10n.onboardingFlowContinueWithoutPermissions;
+        return l10n.commonContinue;
       case _OnboardingStep.artwork:
         return l10n.commonContinue;
       case _OnboardingStep.follow:
@@ -1518,39 +1521,54 @@ class _WelcomeStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title,
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w700)),
-        const SizedBox(height: 8),
-        Text(body,
-            style: Theme.of(context)
-                .textTheme
-                .bodyLarge
-                ?.copyWith(color: scheme.onSurface.withValues(alpha: 0.8))),
-        const SizedBox(height: 16),
-        _WelcomeInfoRow(
-          icon: Icons.person_add_alt_1_outlined,
-          text: AppLocalizations.of(context)!.onboardingFlowWelcomeInfoAccount,
-        ),
-        _WelcomeInfoRow(
-          icon: Icons.palette_outlined,
-          text: AppLocalizations.of(context)!.onboardingFlowWelcomeInfoCreate,
-        ),
-        _WelcomeInfoRow(
-          icon: Icons.group_outlined,
-          text: AppLocalizations.of(context)!.onboardingFlowWelcomeInfoFollow,
-        ),
-        _WelcomeInfoRow(
-          icon: Icons.timer_outlined,
-          text: AppLocalizations.of(context)!.onboardingFlowWelcomeInfoTime,
-        ),
-        const Spacer(),
-      ],
+    final l10n = AppLocalizations.of(context)!;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxHeight < 320;
+        return ClipRect(
+          child: Align(
+            alignment: Alignment.topLeft,
+            child: FittedBox(
+              alignment: Alignment.topLeft,
+              fit: BoxFit.scaleDown,
+              child: SizedBox(
+                width: constraints.maxWidth,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style:
+                          Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                fontSize: compact ? 22 : null,
+                              ),
+                    ),
+                    SizedBox(height: compact ? 4 : 6),
+                    Text(
+                      body,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: scheme.onSurface.withValues(alpha: 0.8),
+                          ),
+                    ),
+                    SizedBox(height: compact ? 8 : 10),
+                    _WelcomeInfoRow(
+                      icon: Icons.person_add_alt_1_outlined,
+                      text: l10n.onboardingFlowWelcomeInfoAccount,
+                    ),
+                    _WelcomeInfoRow(
+                      icon: Icons.palette_outlined,
+                      text: l10n.onboardingFlowWelcomeInfoCreate,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -1565,11 +1583,11 @@ class _WelcomeInfoRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: scheme.primary),
-          const SizedBox(width: 10),
+          Icon(icon, size: 16, color: scheme.primary),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               text,
