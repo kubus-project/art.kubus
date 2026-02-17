@@ -6,8 +6,6 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../widgets/inline_loading.dart';
-import '../../services/push_notification_service.dart';
-import '../../services/notification_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import '../../services/onboarding_state_service.dart';
@@ -42,8 +40,6 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
   // Track permission states
   bool _locationGranted = false;
   bool _cameraGranted = false;
-  bool _notificationsGranted = false;
-  bool _storageGranted = false;
 
   @override
   void initState() {
@@ -54,8 +50,6 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
   Future<void> _checkExistingPermissions() async {
     bool locationGranted = false;
     bool cameraGranted = false;
-    bool notificationsGranted = false;
-    bool storageGranted = false;
 
     try {
       final locationStatus = await Permission.location.status;
@@ -68,28 +62,12 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
         final cameraStatus = await Permission.camera.status;
         cameraGranted = cameraStatus.isGranted;
       }
-
-      if (kIsWeb) {
-        notificationsGranted = await isWebNotificationPermissionGranted();
-      } else {
-        final notificationStatus = await Permission.notification.status;
-        notificationsGranted = notificationStatus.isGranted;
-      }
-
-      if (kIsWeb) {
-        storageGranted = true;
-      } else {
-        final storageStatus = await Permission.photos.status;
-        storageGranted = storageStatus.isGranted;
-      }
     } catch (e, st) {
       if (kDebugMode) {
         debugPrint('PermissionsScreen._checkExistingPermissions: permission status check failed: $e\n$st');
       }
       locationGranted = false;
       cameraGranted = false;
-      notificationsGranted = false;
-      storageGranted = false;
     }
 
     if (!mounted) return;
@@ -97,8 +75,6 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
     setState(() {
       _locationGranted = locationGranted;
       _cameraGranted = cameraGranted;
-      _notificationsGranted = notificationsGranted;
-      _storageGranted = storageGranted;
       _isCheckingPermissions = false;
     });
 
@@ -153,52 +129,12 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       ),
       permissionType: PermissionType.camera,
     ),
-    PermissionPage(
-      title: l10n.permissionsNotificationsTitle,
-      subtitle: l10n.permissionsNotificationsSubtitle,
-      description: l10n.permissionsNotificationsDescription,
-      benefits: [
-        l10n.permissionsNotificationsBenefit1,
-        l10n.permissionsNotificationsBenefit2,
-        l10n.permissionsNotificationsBenefit3,
-        l10n.permissionsNotificationsBenefit4,
-      ],
-      iconData: Icons.notifications_outlined,
-      gradient: LinearGradient(
-        colors: [roles.statAmber, roles.negativeAction],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      permissionType: PermissionType.notifications,
-    ),
-    PermissionPage(
-      title: l10n.permissionsPhotosTitle,
-      subtitle: l10n.permissionsPhotosSubtitle,
-      description: l10n.permissionsPhotosDescription,
-      benefits: [
-        l10n.permissionsPhotosBenefit1,
-        l10n.permissionsPhotosBenefit2,
-        l10n.permissionsPhotosBenefit3,
-        l10n.permissionsPhotosBenefit4,
-      ],
-      iconData: Icons.photo_library_outlined,
-      gradient: LinearGradient(
-        colors: [roles.statCoral, AppColorUtils.shiftLightness(roles.statCoral, -0.12)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      permissionType: PermissionType.storage,
-    ),
     ];
   }
 
-  // Filter pages for the current platform. Do not request storage/photos on web.
-  List<PermissionPage> get _pages => kIsWeb
-      ? _allPages
-        .where((p) => p.permissionType != PermissionType.storage)
-        .where((p) => p.permissionType != PermissionType.camera)
-        .toList()
-      : _allPages;
+  // Only request the core permissions needed for the first-run experience.
+  List<PermissionPage> get _pages =>
+      kIsWeb ? _allPages.where((p) => p.permissionType != PermissionType.camera).toList() : _allPages;
 
   @override
   void dispose() {
@@ -547,25 +483,10 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
         return _locationGranted;
       case PermissionType.camera:
         return _cameraGranted;
-      case PermissionType.notifications:
-        return _notificationsGranted;
-      case PermissionType.storage:
-        return _storageGranted;
     }
   }
 
   Future<void> _requestPermission(PermissionType type) async {
-    // If the permission is not applicable on this platform, skip the request
-    if (type == PermissionType.storage && kIsWeb) {
-      // On web storage/photos are not requested; treat as granted/irrelevant
-      if (mounted) {
-        setState(() {
-          _storageGranted = true;
-        });
-      }
-      return;
-    }
-
     if (type == PermissionType.camera && kIsWeb) {
       // Camera access is intentionally not requested on web.
       if (mounted) {
@@ -585,12 +506,6 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       case PermissionType.camera:
         permission = Permission.camera;
         break;
-      case PermissionType.notifications:
-        permission = Permission.notification;
-        break;
-      case PermissionType.storage:
-        permission = Permission.photos;
-        break;
     }
 
     final l10n = AppLocalizations.of(context)!;
@@ -606,20 +521,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
     }
     if (!mounted) return;
     
-    bool nowGranted = false;
-    if (type == PermissionType.notifications && kIsWeb) {
-      final pn = PushNotificationService();
-      try {
-        nowGranted = await pn.requestPermission();
-      } catch (e, st) {
-        if (kDebugMode) {
-          debugPrint('PermissionsScreen._requestPermission: web notification request failed: $e\n$st');
-        }
-        nowGranted = false;
-      }
-    } else {
-      nowGranted = status.isGranted;
-    }
+    final nowGranted = status.isGranted;
     
     setState(() {
       switch (type) {
@@ -628,12 +530,6 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
           break;
         case PermissionType.camera:
           _cameraGranted = status.isGranted;
-          break;
-        case PermissionType.notifications:
-          _notificationsGranted = nowGranted;
-          break;
-        case PermissionType.storage:
-          _storageGranted = status.isGranted;
           break;
       }
     });
@@ -672,10 +568,6 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
         return l10n.permissionsLocationTitle;
       case PermissionType.camera:
         return l10n.permissionsCameraTitle;
-      case PermissionType.notifications:
-        return l10n.permissionsNotificationsTitle;
-      case PermissionType.storage:
-        return l10n.permissionsPhotosTitle;
     }
   }
 
@@ -834,8 +726,6 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
 enum PermissionType {
   location,
   camera,
-  notifications,
-  storage,
 }
 
 class PermissionPage {
