@@ -67,7 +67,6 @@ import '../../features/map/controller/map_view_preferences_controller.dart';
 import '../../features/map/shared/map_marker_collision_config.dart';
 import '../../features/map/shared/map_screen_constants.dart';
 import '../../features/map/shared/map_artwork_filtering.dart';
-import '../../features/map/shared/map_overlay_sizing.dart';
 import '../../features/map/map_layers_manager.dart';
 import '../../features/map/map_overlay_stack.dart';
 import '../../features/map/controller/kubus_map_controller.dart';
@@ -3889,7 +3888,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     VoidCallback? onNextStacked,
     VoidCallback? onPreviousStacked,
     ValueChanged<int>? onSelectStackIndex,
-    double maxCardWidth = 320.0,
   }) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
@@ -3913,16 +3911,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             ? marker.description
             : (artwork?.description ?? ''))
         .trim();
-    final media = MediaQuery.of(context);
-    final double maxCardHeight = math
-        .max(
-          MapOverlaySizing.minCardHeight,
-          media.size.height -
-              MapOverlaySizing.topSafeInset(media) -
-              MapOverlaySizing.bottomSafeInset(media) -
-              24.0,
-        )
-        .toDouble();
+    final viewportHeight = MediaQuery.of(context).size.height;
+    final safeVerticalPadding = MediaQuery.of(context).padding.vertical;
+    final double maxCardHeight =
+        math.max(240.0, viewportHeight - safeVerticalPadding - 24).toDouble();
 
     final artworkProvider = context.read<ArtworkProvider>();
     final overlayActions = <MarkerOverlayActionSpec>[];
@@ -3977,17 +3969,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     // Keep the card height stable (matches the positioning estimate) so the
     // shared overlay widget can reserve space for its sticky footer.
-    final estimatedCardHeight = MapOverlaySizing.resolveCardHeight(
-      estimatedHeight: maxCardHeight,
-      maxCardHeight: maxCardHeight,
-      isCompactWidth: media.size.width < 960,
-    );
+    final estimatedCardHeight = math.min(360.0, maxCardHeight);
 
     return ConstrainedBox(
-      constraints: BoxConstraints(
-        maxWidth: maxCardWidth,
-        maxHeight: maxCardHeight,
-      ),
+      constraints: BoxConstraints(maxWidth: 280, maxHeight: maxCardHeight),
       child: AnimatedSize(
         duration: const Duration(milliseconds: 220),
         curve: Curves.easeOutCubic,
@@ -4070,21 +4055,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final count = stack.length;
 
     final media = MediaQuery.of(context);
-    final overlayCardWidth =
-        math.min(320.0, math.max(280.0, media.size.width - 32.0)).toDouble();
-    final safeTop = MapOverlaySizing.topSafeInset(media);
-    final safeBottom = MapOverlaySizing.bottomSafeInset(media);
-    final double maxCardHeight = math
-        .max(
-          MapOverlaySizing.minCardHeight,
-          media.size.height - safeTop - safeBottom - 24.0,
-        )
-        .toDouble();
-    final double estimatedCardHeight = MapOverlaySizing.resolveCardHeight(
-      estimatedHeight: maxCardHeight,
-      maxCardHeight: maxCardHeight,
-      isCompactWidth: media.size.width < 960,
-    );
+    final viewportHeight = media.size.height;
+    final safeVerticalPadding = media.padding.vertical;
+    final double maxCardHeight =
+        math.max(240.0, viewportHeight - safeVerticalPadding - 24).toDouble();
+    final double estimatedCardHeight = math.min(360.0, maxCardHeight);
 
     Widget card;
     if (count <= 1) {
@@ -4098,12 +4073,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         themeProvider,
         stackCount: 1,
         stackIndex: 0,
-        maxCardWidth: overlayCardWidth,
       );
     } else {
       card = SizedBox(
         height: estimatedCardHeight,
-        width: overlayCardWidth,
+        width: 280,
         child: PageView.builder(
           controller: _markerStackPageController,
           onPageChanged: _handleMarkerStackPageChanged,
@@ -4134,7 +4108,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 onSelectStackIndex: (i) {
                   unawaited(_animateMarkerStackToIndex(i));
                 },
-                maxCardWidth: overlayCardWidth,
               ),
             );
           },
@@ -4151,39 +4124,20 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       placementStrategy: _markerOverlayMode == _MarkerOverlayMode.centered
           ? KubusMarkerOverlayPlacementStrategy.centered
           : KubusMarkerOverlayPlacementStrategy.anchored,
-      widthResolver: (constraints, mediaQuery) {
-        return MapOverlaySizing.resolveCardWidth(
-          constraints,
-          preferred: overlayCardWidth,
-        );
-      },
+      widthResolver: (constraints, mediaQuery) => 280,
       maxHeightResolver: (constraints, mediaQuery) {
-        return MapOverlaySizing.resolveMaxCardHeight(
-          constraints: constraints,
-          media: mediaQuery,
-        );
+        return math
+            .max(
+                240.0, constraints.maxHeight - mediaQuery.padding.vertical - 24)
+            .toDouble();
       },
       heightResolver: (constraints, mediaQuery, maxHeight) {
-        return MapOverlaySizing.resolveCardHeight(
-          estimatedHeight: estimatedCardHeight,
-          maxCardHeight: maxHeight,
-          isCompactWidth: constraints.maxWidth < 960,
-        );
-      },
-      fallbackAnchorResolver: (constraints) {
-        final safeBottom = MapOverlaySizing.bottomSafeInset(media);
-        final safeHeight = (constraints.maxHeight - safeBottom)
-            .clamp(MapOverlaySizing.minCardHeight, constraints.maxHeight)
-            .toDouble();
-        return Offset(
-          constraints.maxWidth / 2,
-          safeHeight * 0.66,
-        );
+        return math.min(360.0, maxHeight);
       },
       markerOffset: verticalOffset,
-      horizontalPadding: MapOverlaySizing.defaultHorizontalPadding,
-      topPadding: MapOverlaySizing.defaultVerticalPadding,
-      bottomPadding: MapOverlaySizing.defaultVerticalPadding,
+      horizontalPadding: 16,
+      topPadding: 16,
+      bottomPadding: 16,
       animation: const KubusMarkerOverlayAnimationConfig(
         duration: Duration(milliseconds: 220),
         curve: Curves.easeOutCubic,
