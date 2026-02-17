@@ -380,6 +380,11 @@ class PreferenceKeys {
   static const String hasSeenWelcome = 'has_seen_welcome';
   static const String hasCompletedOnboarding = 'has_completed_onboarding';
   static const String hasCompletedAuthOnboarding = 'auth_onboarding_completed';
+  static const String secureAccountEmail = 'secure_account_email';
+  static const String secureAccountEmailVerifiedV1 =
+      'secure_account_email_verified_v1';
+  static const String secureAccountPromptDismissedV1 =
+      'secure_account_prompt_dismissed_v1';
   static const String walletAddress = 'wallet_address';
   /// User persona UX preference (stored per-wallet by ProfileProvider).
   static const String userPersona = 'user_persona';
