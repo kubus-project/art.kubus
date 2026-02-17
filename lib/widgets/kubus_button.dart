@@ -36,7 +36,7 @@ class KubusButton extends StatelessWidget {
       alpha: isEnabled ? (isDark ? 0.82 : 0.88) : (isDark ? 0.62 : 0.70),
     );
     final radius = KubusRadius.circular(KubusRadius.sm);
-    
+
     Widget content = isLoading
         ? SizedBox(
             height: 20,
@@ -46,22 +46,25 @@ class KubusButton extends StatelessWidget {
               valueColor: AlwaysStoppedAnimation<Color>(effectiveForeground),
             ),
           )
-        : Row(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (icon != null) ...[
-                Icon(icon, size: 20),
-                const SizedBox(width: KubusSpacing.sm),
-              ],
-              Text(
-                label,
-                style: KubusTypography.textTheme.labelLarge?.copyWith(
-                  color: effectiveForeground,
-                  fontWeight: FontWeight.bold,
+        : FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (icon != null) ...[
+                  Icon(icon, size: 20),
+                  const SizedBox(width: KubusSpacing.sm),
+                ],
+                Text(
+                  label,
+                  style: KubusTypography.textTheme.labelLarge?.copyWith(
+                    color: effectiveForeground,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
 
     final button = Container(
@@ -84,7 +87,8 @@ class KubusButton extends StatelessWidget {
             foregroundColor: effectiveForeground,
             shadowColor: Colors.transparent,
             disabledBackgroundColor: Colors.transparent,
-            disabledForegroundColor: effectiveForeground.withValues(alpha: 0.55),
+            disabledForegroundColor:
+                effectiveForeground.withValues(alpha: 0.55),
             padding: const EdgeInsets.symmetric(
               horizontal: KubusSpacing.lg,
               vertical: KubusSpacing.md,
@@ -143,24 +147,27 @@ class KubusOutlineButton extends StatelessWidget {
               valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
             ),
           )
-        : Row(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (icon != null) ...[
-                Icon(icon, size: 20),
-                const SizedBox(width: KubusSpacing.sm),
-              ],
-              Text(
-                label,
-                style: KubusTypography.textTheme.labelLarge?.copyWith(
-                  color: colorScheme.primary,
-                  fontWeight: FontWeight.bold,
+        : FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (icon != null) ...[
+                  Icon(icon, size: 20),
+                  const SizedBox(width: KubusSpacing.sm),
+                ],
+                Text(
+                  label,
+                  style: KubusTypography.textTheme.labelLarge?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
-          
+
     final button = Container(
       decoration: BoxDecoration(
         borderRadius: radius,

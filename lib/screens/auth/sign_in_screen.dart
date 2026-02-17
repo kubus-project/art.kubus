@@ -21,6 +21,7 @@ import '../../services/onboarding_state_service.dart';
 import '../../services/security/post_auth_security_setup_service.dart';
 import '../../services/telemetry/telemetry_service.dart';
 import '../../widgets/app_logo.dart';
+import '../../widgets/auth_title_row.dart';
 import '../../widgets/gradient_icon_card.dart';
 import '../../widgets/google_sign_in_button.dart';
 import '../../widgets/google_sign_in_web_button.dart';
@@ -66,6 +67,7 @@ class _SignInScreenState extends State<SignInScreen> {
   bool _didAttemptGoogleAutoSignIn = false;
   String _googleAuthDiagStage = 'idle';
   String? _googleAuthDiagCode;
+  bool _showCompactEmailForm = false;
 
   @override
   void initState() {
@@ -725,7 +727,7 @@ class _SignInScreenState extends State<SignInScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBodyBehindAppBar: true,
-      resizeToAvoidBottomInset: true,
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
@@ -841,7 +843,9 @@ class _SignInScreenState extends State<SignInScreen> {
                   child: AnimatedPadding(
                     duration: const Duration(milliseconds: 180),
                     curve: Curves.easeOut,
-                    padding: EdgeInsets.only(bottom: keyboardInset),
+                    padding: EdgeInsets.only(
+                      bottom: keyboardInset > 140 ? 140 : keyboardInset,
+                    ),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 20, vertical: 12),
@@ -853,7 +857,8 @@ class _SignInScreenState extends State<SignInScreen> {
                               child: ConstrainedBox(
                                 constraints: BoxConstraints(
                                   maxWidth: 520,
-                                  maxHeight: constraints.maxHeight - kToolbarHeight,
+                                  maxHeight:
+                                      constraints.maxHeight - kToolbarHeight,
                                 ),
                                 child: form,
                               ),
@@ -882,61 +887,31 @@ class _SignInScreenState extends State<SignInScreen> {
   }) {
     final l10n = AppLocalizations.of(context)!;
     final roles = KubusColorRoles.of(context);
+    final compactContext = compactMobile || widget.embedded;
+    final compactEmailOpen = compactContext && _showCompactEmailForm;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        if (!isDesktop)
-          SizedBox(
-            width: double.infinity,
-            child: LiquidGlassPanel(
-              padding: EdgeInsets.all(compactMobile ? 14 : 18),
-              borderRadius: BorderRadius.circular(20),
-              child: Column(
-                children: [
-                  GradientIconCard(
-                    start: colorScheme.primary,
-                    end: roles.positiveAction,
-                    icon: Icons.login_rounded,
-                    iconSize: compactMobile ? 40 : 52,
-                    width: compactMobile ? 78 : 100,
-                    height: compactMobile ? 78 : 100,
-                    radius: 20,
-                  ),
-                  SizedBox(height: compactMobile ? 8 : 12),
-                  Text(
-                    l10n.authSignInTitle,
-                    style: GoogleFonts.inter(
-                      fontSize: compactMobile ? 22 : 26,
-                      fontWeight: FontWeight.w800,
-                      color: colorScheme.onSurface,
-                    ),
-                  ),
-                  SizedBox(height: compactMobile ? 6 : 8),
-                  Text(
-                    l10n.authSignInSubtitle,
-                    style: GoogleFonts.inter(
-                      fontSize: compactMobile ? 13 : 14,
-                      color: colorScheme.onSurface.withValues(alpha: 0.85),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
+        if (!isDesktop && !widget.embedded)
+          AuthTitleRow(
+            title: l10n.authSignInTitle,
+            icon: Icons.login_rounded,
+            compact: compactMobile,
           ),
-        if (!isDesktop) SizedBox(height: compactMobile ? 10 : 20),
-        if (enableWallet)
+        if (!isDesktop && !widget.embedded)
+          SizedBox(height: compactMobile ? 10 : 20),
+        if (enableWallet && !compactEmailOpen)
           KubusButton(
             onPressed: _showConnectWalletModal,
-            icon: compactMobile ? null : Icons.account_balance_wallet_outlined,
+            icon: Icons.account_balance_wallet_outlined,
             label: l10n.authConnectWalletButton,
             isFullWidth: true,
           ),
-        if (enableWallet)
-          SizedBox(height: compactMobile ? KubusSpacing.sm : KubusSpacing.md),
+        if (enableWallet && !compactEmailOpen)
+          SizedBox(height: compactContext ? KubusSpacing.sm : KubusSpacing.md),
         KubusCard(
-          padding:
-              EdgeInsets.all(compactMobile ? KubusSpacing.sm : KubusSpacing.md),
+          padding: EdgeInsets.all(
+              compactContext ? KubusSpacing.sm : KubusSpacing.md),
           color: colorScheme.surfaceContainerHighest,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -948,10 +923,23 @@ class _SignInScreenState extends State<SignInScreen> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: KubusSpacing.md),
-              if (enableEmail) _buildEmailForm(colorScheme),
-              if (enableGoogle) ...[
-                const SizedBox(height: KubusSpacing.md),
+              SizedBox(height: compactContext ? 8 : KubusSpacing.md),
+              if (enableEmail)
+                if (compactContext && !_showCompactEmailForm)
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        setState(() => _showCompactEmailForm = true);
+                      },
+                      icon: const Icon(Icons.email_outlined),
+                      label: Text(l10n.authSignInWithEmail),
+                    ),
+                  )
+                else
+                  _buildEmailForm(colorScheme, compact: compactContext),
+              if (enableGoogle && !compactEmailOpen) ...[
+                SizedBox(height: compactContext ? 8 : KubusSpacing.md),
                 if (kIsWeb)
                   GoogleSignInWebButton(
                     colorScheme: colorScheme,
@@ -1020,6 +1008,18 @@ class _SignInScreenState extends State<SignInScreen> {
                     colorScheme: colorScheme,
                   ),
               ],
+              if (compactContext && _showCompactEmailForm) ...[
+                const SizedBox(height: 6),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () {
+                      setState(() => _showCompactEmailForm = false);
+                    },
+                    child: Text(l10n.commonBack),
+                  ),
+                ),
+              ],
               if (!widget.embedded) ...[
                 SizedBox(
                     height: compactMobile ? KubusSpacing.sm : KubusSpacing.md),
@@ -1041,7 +1041,7 @@ class _SignInScreenState extends State<SignInScreen> {
     );
   }
 
-  Widget _buildEmailForm(ColorScheme colorScheme) {
+  Widget _buildEmailForm(ColorScheme colorScheme, {bool compact = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -1053,7 +1053,7 @@ class _SignInScreenState extends State<SignInScreen> {
             border: const OutlineInputBorder(),
           ),
         ),
-        const SizedBox(height: KubusSpacing.sm),
+        SizedBox(height: compact ? 8 : KubusSpacing.sm),
         TextField(
           controller: _passwordController,
           obscureText: true,
@@ -1062,20 +1062,21 @@ class _SignInScreenState extends State<SignInScreen> {
             border: const OutlineInputBorder(),
           ),
         ),
-        Align(
-          alignment: Alignment.centerRight,
-          child: TextButton(
-            onPressed: () {
-              final email = _emailController.text.trim();
-              Navigator.of(context).pushNamed(
-                '/forgot-password',
-                arguments: {'email': email},
-              );
-            },
-            child: Text(AppLocalizations.of(context)!.authForgotPasswordLink),
+        if (!compact)
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () {
+                final email = _emailController.text.trim();
+                Navigator.of(context).pushNamed(
+                  '/forgot-password',
+                  arguments: {'email': email},
+                );
+              },
+              child: Text(AppLocalizations.of(context)!.authForgotPasswordLink),
+            ),
           ),
-        ),
-        const SizedBox(height: KubusSpacing.md),
+        SizedBox(height: compact ? 8 : KubusSpacing.md),
         KubusButton(
           onPressed: _isEmailSubmitting ? null : _submitEmail,
           isLoading: _isEmailSubmitting,

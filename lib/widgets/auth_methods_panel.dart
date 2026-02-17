@@ -17,6 +17,7 @@ import 'package:art_kubus/services/telemetry/telemetry_service.dart';
 import 'package:art_kubus/utils/auth_password_policy.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/widgets/app_logo.dart';
+import 'package:art_kubus/widgets/auth_title_row.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/google_sign_in_button.dart';
 import 'package:art_kubus/widgets/google_sign_in_web_button.dart';
@@ -61,6 +62,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
   String? _emailError;
   String? _passwordError;
   String? _confirmPasswordError;
+  bool _showCompactEmailForm = false;
 
   @override
   void initState() {
@@ -309,7 +311,8 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         }
       }
       try {
-        if (!web3Provider.isConnected || web3Provider.walletAddress != address) {
+        if (!web3Provider.isConnected ||
+            web3Provider.walletAddress != address) {
           unawaited(() async {
             try {
               await web3Provider
@@ -374,7 +377,8 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
           'displayName': effectiveUsername,
         });
       } catch (err) {
-        debugPrint('AuthMethodsPanel: updateProfile username patch failed: $err');
+        debugPrint(
+            'AuthMethodsPanel: updateProfile username patch failed: $err');
       }
     }
   }
@@ -625,7 +629,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBodyBehindAppBar: true,
-      resizeToAvoidBottomInset: true,
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
@@ -666,7 +670,9 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
                   child: AnimatedPadding(
                     duration: const Duration(milliseconds: 180),
                     curve: Curves.easeOut,
-                    padding: EdgeInsets.only(bottom: keyboardInset),
+                    padding: EdgeInsets.only(
+                      bottom: keyboardInset > 140 ? 140 : keyboardInset,
+                    ),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 20, vertical: 12),
@@ -708,55 +714,22 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
   }) {
     final l10n = AppLocalizations.of(context)!;
     final roles = KubusColorRoles.of(context);
+    final compactEmailOpen = compact && _showCompactEmailForm;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         if (!isDesktop && !compact)
-          SizedBox(
-            width: double.infinity,
-            child: LiquidGlassPanel(
-              padding: const EdgeInsets.all(18),
-              borderRadius: BorderRadius.circular(20),
-              child: Column(
-                children: [
-                  GradientIconCard(
-                    start: roles.lockedFeature,
-                    end: roles.likeAction,
-                    icon: Icons.person_add_alt_rounded,
-                    iconSize: 48,
-                    width: 96,
-                    height: 96,
-                    radius: 18,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    l10n.authRegisterTitle,
-                    style: GoogleFonts.inter(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w800,
-                      color: colorScheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    l10n.authSignInSubtitle,
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: colorScheme.onSurface.withValues(alpha: 0.85),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
+          AuthTitleRow(
+            title: l10n.authRegisterTitle,
+            icon: Icons.person_add_alt_rounded,
           ),
         if (!isDesktop && !compact) const SizedBox(height: 20),
-        if (enableWallet)
+        if (enableWallet && !compactEmailOpen)
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
               backgroundColor: colorScheme.primary,
               foregroundColor: colorScheme.onPrimary,
-              minimumSize: Size.fromHeight(compact ? 48 : 56),
+              minimumSize: Size.fromHeight(compact ? 44 : 56),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16)),
               elevation: 2,
@@ -770,10 +743,11 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
                     fontWeight: FontWeight.w700,
                     color: colorScheme.onPrimary)),
           ),
-        if (enableWallet) SizedBox(height: compact ? 10 : 16),
+        if (enableWallet && !compactEmailOpen)
+          SizedBox(height: compact ? 8 : 16),
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(compact ? 12 : 16),
           decoration: BoxDecoration(
             color: colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(18),
@@ -787,10 +761,23 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                       color: colorScheme.onSurface)),
-              const SizedBox(height: 12),
-              if (enableEmail) _buildEmailForm(colorScheme),
-              if (enableGoogle) ...[
-                const SizedBox(height: 12),
+              SizedBox(height: compact ? 8 : 12),
+              if (enableEmail)
+                if (compact && !_showCompactEmailForm)
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        setState(() => _showCompactEmailForm = true);
+                      },
+                      icon: const Icon(Icons.email_outlined),
+                      label: Text(l10n.authContinueWithEmail),
+                    ),
+                  )
+                else
+                  _buildEmailForm(colorScheme, compact: compact),
+              if (enableGoogle && !compactEmailOpen) ...[
+                SizedBox(height: compact ? 8 : 12),
                 if (kIsWeb)
                   GoogleSignInWebButton(
                     colorScheme: colorScheme,
@@ -843,6 +830,18 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
                     colorScheme: colorScheme,
                   ),
               ],
+              if (compact && _showCompactEmailForm) ...[
+                const SizedBox(height: 6),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () {
+                      setState(() => _showCompactEmailForm = false);
+                    },
+                    child: Text(l10n.commonBack),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -850,7 +849,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     );
   }
 
-  Widget _buildEmailForm(ColorScheme colorScheme) {
+  Widget _buildEmailForm(ColorScheme colorScheme, {bool compact = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -863,7 +862,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
             errorText: _emailError,
           ),
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: compact ? 8 : 10),
         TextField(
           controller: _passwordController,
           obscureText: true,
@@ -873,7 +872,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
             errorText: _passwordError,
           ),
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: compact ? 8 : 10),
         TextField(
           controller: _confirmPasswordController,
           obscureText: true,
@@ -883,24 +882,27 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
             errorText: _confirmPasswordError,
           ),
         ),
-        const SizedBox(height: 10),
-        TextField(
-          controller: _usernameController,
-          decoration: InputDecoration(
-            labelText: AppLocalizations.of(context)!.commonUsernameOptional,
-            border: const OutlineInputBorder(),
+        if (!compact) ...[
+          const SizedBox(height: 10),
+          TextField(
+            controller: _usernameController,
+            decoration: InputDecoration(
+              labelText: AppLocalizations.of(context)!.commonUsernameOptional,
+              border: const OutlineInputBorder(),
+            ),
           ),
-        ),
-        const SizedBox(height: 10),
+        ],
+        SizedBox(height: compact ? 8 : 10),
         ElevatedButton.icon(
           style: ElevatedButton.styleFrom(
             backgroundColor: colorScheme.primary,
             foregroundColor: colorScheme.onPrimary,
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+            padding: EdgeInsets.symmetric(
+                vertical: compact ? 12 : 16, horizontal: compact ? 10 : 12),
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             elevation: 1,
-            minimumSize: const Size.fromHeight(54),
+            minimumSize: Size.fromHeight(compact ? 46 : 54),
           ),
           onPressed: _isSubmitting ? null : _registerWithEmail,
           icon: _isSubmitting
