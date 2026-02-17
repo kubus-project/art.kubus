@@ -32,6 +32,7 @@ import '../../../widgets/detail/detail_shell_components.dart';
 import '../../community/profile_screen_methods.dart';
 import '../../../widgets/artist_badge.dart';
 import '../../../widgets/institution_badge.dart';
+import '../../../widgets/secure_account_banner_card.dart';
 import '../../../models/dao.dart';
 import '../../../utils/app_animations.dart';
 import '../components/desktop_widgets.dart';
@@ -176,6 +177,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                         // Profile card with inline stats on wide screens
                         _buildProfileCard(themeProvider, profileProvider, isArtist, isInstitution),
                         const SizedBox(height: DetailSpacing.lg),
+                        const SecureAccountBannerCard(bottomSpacing: DetailSpacing.lg),
                         _buildStatsCards(themeProvider, profileProvider, isLarge),
                         const SizedBox(height: DetailSpacing.xl),
                         // Two-column layout for wide screens

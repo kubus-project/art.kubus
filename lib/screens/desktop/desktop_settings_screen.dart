@@ -2691,6 +2691,15 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             child: Column(
               children: [
                 _buildSettingsRow(
+                  'Secure account',
+                  'Add email + password for recovery',
+                  Icons.verified_user_outlined,
+                  onTap: () {
+                    Navigator.of(context).pushNamed('/secure-account');
+                  },
+                ),
+                const Divider(height: 32),
+                _buildSettingsRow(
                   l10n.settingsChangePasswordTileTitle,
                   l10n.settingsChangePasswordTileSubtitle,
                   Icons.lock_outline,
