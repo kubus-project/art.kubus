@@ -221,72 +221,91 @@ class InteractiveTutorialOverlay extends StatelessWidget {
     final isLast = currentIndex == steps.length - 1;
     final stepLabel = '${currentIndex + 1}/${steps.length}';
 
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Positioned.fill(
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTapUp: (details) {
-              if (highlightRect == null) return;
-              final globalPosition = details.globalPosition;
-              if (!globalPosition.dx.isFinite || !globalPosition.dy.isFinite) {
-                return;
-              }
-              if (!_isInside(highlightRect, globalPosition)) return;
+    void handleTargetTap() {
+      final onTargetTap = step.onTargetTap;
+      final shouldAdvance = step.advanceOnTargetTap && !isLast;
+      if (onTargetTap == null && !shouldAdvance) return;
 
-              final onTargetTap = step.onTargetTap;
-              final shouldAdvance = step.advanceOnTargetTap && !isLast;
-              if (onTargetTap == null && !shouldAdvance) return;
+      // Web pointer dispatch can become unstable if tutorial callbacks
+      // mutate layout synchronously during the active tap sequence.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        onTargetTap?.call();
+        if (shouldAdvance) {
+          onNext();
+        }
+      });
+      WidgetsBinding.instance.scheduleFrame();
+    }
 
-              // Web pointer dispatch can become unstable if tutorial callbacks
-              // mutate layout synchronously during the active tap sequence.
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (!context.mounted) return;
-                onTargetTap?.call();
-                if (shouldAdvance) {
-                  onNext();
-                }
-              });
-            },
-            child: CustomPaint(
-              painter: _CoachMarkPainter(
-                highlightRect: highlightRect,
-                color: Colors.black.withValues(alpha: 0.55),
-                accent: scheme.primary,
+    Offset? lastTapGlobalPosition;
+
+    void handleOverlayTap() {
+      final tapPosition = lastTapGlobalPosition;
+      final activeHighlightRect = highlightRect;
+      if (activeHighlightRect != null && tapPosition != null) {
+        final tappedHighlightedRegion =
+            _isInside(activeHighlightRect, tapPosition);
+        if (tappedHighlightedRegion) {
+          handleTargetTap();
+          return;
+        }
+      }
+
+      // Fall back to default tutorial tap behavior when geometry is unavailable
+      // or the tap is outside the highlight.
+      handleTargetTap();
+    }
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (details) {
+        lastTapGlobalPosition = details.globalPosition;
+      },
+      onTap: handleOverlayTap,
+      child: SizedBox.expand(
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned.fill(
+              child: CustomPaint(
+                painter: _CoachMarkPainter(
+                  highlightRect: highlightRect,
+                  color: Colors.black.withValues(alpha: 0.55),
+                  accent: scheme.primary,
+                ),
               ),
             ),
-          ),
-        ),
 
-        // Skip button
-        Positioned(
-          top: safe.top + 10,
-          right: 12,
-          child: _GlassActionChip(
-            label: skipLabel,
-            onTap: onSkip,
-          ),
-        ),
+            // Skip button
+            Positioned(
+              top: safe.top + 10,
+              right: 12,
+              child: _GlassActionChip(
+                label: skipLabel,
+                onTap: onSkip,
+              ),
+            ),
 
-        // Tooltip
-        Positioned(
-          left: tooltipX,
-          top: tooltipY,
-          width: tooltipWidth,
-          child: _TutorialTooltipCard(
-            title: step.title,
-            body: step.body,
-            icon: step.icon,
-            stepLabel: stepLabel,
-            backLabel: backLabel,
-            nextLabel: isLast ? doneLabel : nextLabel,
-            showBack: currentIndex > 0,
-            onBack: onBack,
-            onNext: onNext,
-          ),
+            // Tooltip
+            Positioned(
+              left: tooltipX,
+              top: tooltipY,
+              width: tooltipWidth,
+              child: _TutorialTooltipCard(
+                title: step.title,
+                body: step.body,
+                icon: step.icon,
+                stepLabel: stepLabel,
+                backLabel: backLabel,
+                nextLabel: isLast ? doneLabel : nextLabel,
+                showBack: currentIndex > 0,
+                onBack: onBack,
+                onNext: onNext,
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

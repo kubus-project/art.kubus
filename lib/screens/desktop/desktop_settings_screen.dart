@@ -306,8 +306,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       _SettingsItem(
           l10n.permissionsNotificationsTitle, Icons.notifications_outlined, 2),
       _SettingsItem(
-          l10n.settingsPrivacySettingsTileTitle, Icons.lock_outline, 3),
-      _SettingsItem(l10n.settingsSecuritySettingsTileTitle, Icons.security, 4),
+        l10n.settingsSecuritySettingsTileTitle, Icons.security, 3),
+      _SettingsItem(
+        l10n.settingsPrivacySettingsTileTitle, Icons.lock_outline, 4),
       _SettingsItem(
           l10n.userProfileAchievementsTitle, Icons.emoji_events_outlined, 5),
       _SettingsItem(l10n.settingsPlatformFeaturesSectionTitle,
@@ -645,9 +646,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       case 2:
         return _buildNotificationSettings(themeProvider);
       case 3:
-        return _buildPrivacySettings(themeProvider);
-      case 4:
         return _buildSecuritySettings(themeProvider);
+      case 4:
+        return _buildPrivacySettings(themeProvider);
       case 5:
         return _buildAchievementsSettings();
       case 6:

@@ -1,4 +1,6 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/providers/locale_provider.dart';
+import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/screens/desktop/desktop_shell.dart';
 import 'package:art_kubus/screens/onboarding/onboarding_flow_screen.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
@@ -8,6 +10,7 @@ import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/gradient_icon_card.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class OnboardingIntroScreen extends StatefulWidget {
   const OnboardingIntroScreen({
@@ -58,7 +61,7 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen> {
     final route = MaterialPageRoute(
       builder: (_) => OnboardingFlowScreen(
         forceDesktop: _isDesktop,
-        initialStepId: 'account',
+        initialStepId: 'role',
       ),
       settings: const RouteSettings(name: '/onboarding/flow'),
     );
@@ -143,6 +146,8 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
+    final localeProvider = Provider.of<LocaleProvider>(context);
+    final themeProvider = Provider.of<ThemeProvider>(context);
     final pages = _pages(l10n, scheme);
     final page = pages[_pageIndex.clamp(0, pages.length - 1)];
     final bgColors = page.backgroundColors;
@@ -167,12 +172,54 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: AppLogo(
-                    width: _isDesktop ? 44 : 38,
-                    height: _isDesktop ? 44 : 38,
-                  ),
+                Row(
+                  children: [
+                    AppLogo(
+                      width: _isDesktop ? 44 : 38,
+                      height: _isDesktop ? 44 : 38,
+                    ),
+                    const Spacer(),
+                    PopupMenuButton<String>(
+                      onSelected: (value) {
+                        localeProvider.setLanguageCode(value);
+                      },
+                      itemBuilder: (context) => [
+                        PopupMenuItem<String>(
+                          value: 'sl',
+                          child: Text(l10n.languageSlovenian),
+                        ),
+                        PopupMenuItem<String>(
+                          value: 'en',
+                          child: Text(l10n.languageEnglish),
+                        ),
+                      ],
+                      child: _TopIconPill(icon: Icons.language, color: scheme.primary),
+                    ),
+                    const SizedBox(width: KubusSpacing.xs),
+                    PopupMenuButton<ThemeMode>(
+                      onSelected: (mode) {
+                        themeProvider.setThemeMode(mode);
+                      },
+                      itemBuilder: (context) => [
+                        PopupMenuItem<ThemeMode>(
+                          value: ThemeMode.light,
+                          child: Text(l10n.settingsThemeModeLight),
+                        ),
+                        PopupMenuItem<ThemeMode>(
+                          value: ThemeMode.dark,
+                          child: Text(l10n.settingsThemeModeDark),
+                        ),
+                        PopupMenuItem<ThemeMode>(
+                          value: ThemeMode.system,
+                          child: Text(l10n.settingsThemeModeSystem),
+                        ),
+                      ],
+                      child: _TopIconPill(
+                        icon: Icons.brightness_6_outlined,
+                        color: scheme.primary,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: KubusSpacing.md),
                 Expanded(
@@ -180,26 +227,15 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen> {
                     child: ConstrainedBox(
                       constraints:
                           BoxConstraints(maxWidth: _isDesktop ? 720 : 520),
-                      child: LiquidGlassPanel(
-                        borderRadius: BorderRadius.circular(KubusRadius.xl),
-                        padding: const EdgeInsets.fromLTRB(
-                          KubusSpacing.lg,
-                          KubusSpacing.lg,
-                          KubusSpacing.lg,
-                          KubusSpacing.lg,
-                        ),
-                        fallbackMinOpacity: 0.28,
-                        backgroundColor: scheme.surface.withValues(alpha: 0.12),
-                        child: PageView.builder(
-                          controller: _pageController,
-                          itemCount: pages.length,
-                          onPageChanged: (index) {
-                            setState(() => _pageIndex = index);
-                          },
-                          itemBuilder: (context, index) {
-                            return _IntroPageView(page: pages[index]);
-                          },
-                        ),
+                      child: PageView.builder(
+                        controller: _pageController,
+                        itemCount: pages.length,
+                        onPageChanged: (index) {
+                          setState(() => _pageIndex = index);
+                        },
+                        itemBuilder: (context, index) {
+                          return _IntroPageView(page: pages[index]);
+                        },
                       ),
                     ),
                   ),
@@ -210,8 +246,8 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen> {
                 KubusButton(
                   onPressed: _goNext,
                   label: l10n.commonContinue,
-                  backgroundColor: Colors.black.withValues(alpha: 0.28),
-                  foregroundColor: Colors.white,
+                  backgroundColor: Colors.white,
+                  foregroundColor: scheme.primary,
                   isFullWidth: true,
                 ),
                 const SizedBox(height: KubusSpacing.xs),
@@ -333,6 +369,27 @@ class _IntroPageView extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _TopIconPill extends StatelessWidget {
+  const _TopIconPill({required this.icon, required this.color});
+
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 40,
+      height: 40,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Icon(icon, size: 18, color: color),
     );
   }
 }

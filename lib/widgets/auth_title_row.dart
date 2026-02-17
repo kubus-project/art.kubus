@@ -58,7 +58,13 @@ class AuthTitleRow extends StatelessWidget {
             ),
             if (trailing != null) ...[
               const SizedBox(width: 8),
-              trailing!,
+              Flexible(
+                fit: FlexFit.loose,
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: trailing!,
+                ),
+              ),
             ],
           ],
         ),

@@ -101,7 +101,10 @@ class MapViewModeControls extends StatelessWidget {
               if (separator != null &&
                   (i < specs.length - 1 ||
                       (appendTrailingSeparator && specs.isNotEmpty)))
-                separator(context),
+                KeyedSubtree(
+                  key: ValueKey<String>('map_view_mode_separator_$i'),
+                  child: separator(context),
+                ),
             ],
           ],
         );

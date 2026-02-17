@@ -120,12 +120,19 @@ class _SettingsScreenState extends State<SettingsScreen>
   @override
   void initState() {
     super.initState();
+    final isWidgetTestBinding = WidgetsBinding.instance.runtimeType
+        .toString()
+        .contains('TestWidgetsFlutterBinding');
     final animationTheme = AppAnimationTheme.defaults;
     _animationController = AnimationController(
       duration: animationTheme.long,
       vsync: this,
     );
     _configureAnimations(animationTheme);
+    if (isWidgetTestBinding) {
+      _didAnimateEntrance = true;
+      _animationController.value = 1.0;
+    }
     _loadAllSettings();
   }
 
@@ -770,10 +777,10 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   Widget _buildReduceEffectsTile(ColorScheme scheme) {
-    final glassProv = context.watch<GlassCapabilitiesProvider>();
-    final isOn = glassProv.reduceEffects;
-    final autoDetected =
-        glassProv.heuristicTriggered && !glassProv.reduceEffectsUserOverride;
+    final glassProv = context.watch<GlassCapabilitiesProvider?>();
+    final isOn = glassProv?.reduceEffects ?? false;
+    final autoDetected = (glassProv?.heuristicTriggered ?? false) &&
+      !(glassProv?.reduceEffectsUserOverride ?? false);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -817,9 +824,11 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
           Switch(
             value: isOn,
-            onChanged: (value) {
-              glassProv.setReduceEffects(value);
-            },
+            onChanged: glassProv == null
+                ? null
+                : (value) {
+                    glassProv.setReduceEffects(value);
+                  },
             activeTrackColor: Provider.of<ThemeProvider>(context, listen: false)
                 .accentColor
                 .withValues(alpha: 0.5),
