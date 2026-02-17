@@ -649,8 +649,7 @@ class _SignInScreenState extends State<SignInScreen> {
     final enableGoogle = AppConfig.enableGoogleAuth;
     final isDesktop =
         MediaQuery.of(context).size.width >= DesktopBreakpoints.medium;
-    final compactMobile =
-        !isDesktop &&
+    final compactMobile = !isDesktop &&
         (MediaQuery.of(context).size.height < 860 ||
             MediaQuery.viewInsetsOf(context).bottom > 0);
 
@@ -834,9 +833,11 @@ class _SignInScreenState extends State<SignInScreen> {
                   child: AnimatedPadding(
                     duration: const Duration(milliseconds: 180),
                     curve: Curves.easeOut,
-                    padding: EdgeInsets.only(bottom: keyboardInset > 0 ? 10 : 0),
+                    padding:
+                        EdgeInsets.only(bottom: keyboardInset > 0 ? 10 : 0),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 12),
                       child: Column(
                         children: [
                           const SizedBox(height: kToolbarHeight + 12),
@@ -845,7 +846,9 @@ class _SignInScreenState extends State<SignInScreen> {
                               child: ConstrainedBox(
                                 constraints: BoxConstraints(
                                   maxWidth: 520,
-                                  maxHeight: constraints.maxHeight - keyboardInset - kToolbarHeight,
+                                  maxHeight: constraints.maxHeight -
+                                      keyboardInset -
+                                      kToolbarHeight,
                                 ),
                                 child: form,
                               ),
@@ -940,7 +943,8 @@ class _SignInScreenState extends State<SignInScreen> {
         if (enableWallet && !compactMobile)
           SizedBox(height: compactMobile ? KubusSpacing.sm : KubusSpacing.md),
         KubusCard(
-          padding: EdgeInsets.all(compactMobile ? KubusSpacing.sm : KubusSpacing.md),
+          padding:
+              EdgeInsets.all(compactMobile ? KubusSpacing.sm : KubusSpacing.md),
           color: colorScheme.surfaceContainerHighest,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -1025,7 +1029,8 @@ class _SignInScreenState extends State<SignInScreen> {
                   ),
               ],
               if (!widget.embedded) ...[
-                SizedBox(height: compactMobile ? KubusSpacing.sm : KubusSpacing.md),
+                SizedBox(
+                    height: compactMobile ? KubusSpacing.sm : KubusSpacing.md),
                 TextButton(
                   onPressed: () => Navigator.of(context).pushNamed('/register'),
                   child: Text(
