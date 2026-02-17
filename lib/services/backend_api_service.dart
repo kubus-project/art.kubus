@@ -1356,6 +1356,8 @@ class BackendApiService
       if (_isRateLimited(key)) {
         throw Exception(_rateLimitMessage(key));
       }
+      final includeAuth =
+          walletAddress != null && walletAddress.trim().isNotEmpty;
       final body = {
         'email': email,
         'password': password,
@@ -1365,8 +1367,8 @@ class BackendApiService
       };
       final response = await _post(
         uri,
-        includeAuth: false,
-        headers: _getHeaders(includeAuth: false),
+        includeAuth: includeAuth,
+        headers: _getHeaders(includeAuth: includeAuth),
         body: jsonEncode(body),
       );
       final data = jsonDecode(response.body) as Map<String, dynamic>;
