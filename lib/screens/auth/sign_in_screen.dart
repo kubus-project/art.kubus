@@ -21,7 +21,6 @@ import '../../services/onboarding_state_service.dart';
 import '../../services/security/post_auth_security_setup_service.dart';
 import '../../services/telemetry/telemetry_service.dart';
 import '../../widgets/app_logo.dart';
-import '../../widgets/auth_title_row.dart';
 import '../../widgets/gradient_icon_card.dart';
 import '../../widgets/google_sign_in_button.dart';
 import '../../widgets/google_sign_in_web_button.dart';
@@ -886,82 +885,128 @@ class _SignInScreenState extends State<SignInScreen> {
     required bool compactMobile,
   }) {
     final l10n = AppLocalizations.of(context)!;
+    final roles = KubusColorRoles.of(context);
     final compactContext = compactMobile || widget.embedded;
     final compactEmailOpen = compactContext && _showCompactEmailForm;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        if (!isDesktop && !widget.embedded)
-          AuthTitleRow(
-            title: l10n.authSignInTitle,
-            icon: Icons.login_rounded,
-            compact: compactMobile,
-          ),
-        if (!isDesktop && !widget.embedded)
-          SizedBox(height: compactMobile ? 10 : 20),
-        if (enableWallet && !compactEmailOpen)
-          KubusButton(
-            onPressed: _showConnectWalletModal,
-            icon: Icons.account_balance_wallet_outlined,
-            label: l10n.authConnectWalletButton,
-            isFullWidth: true,
-          ),
-        if (enableWallet && !compactEmailOpen)
-          SizedBox(height: compactContext ? KubusSpacing.sm : KubusSpacing.md),
-        KubusCard(
-          padding: EdgeInsets.all(
-              compactContext ? KubusSpacing.sm : KubusSpacing.md),
-          color: colorScheme.surfaceContainerHigh,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text(
-                l10n.authOrLogInWithEmailOrUsername,
-                style: KubusTypography.textTheme.titleMedium?.copyWith(
-                  color: colorScheme.onSurface,
-                  fontWeight: FontWeight.bold,
-                ),
+    final panelTint = colorScheme.surface.withValues(
+      alpha: Theme.of(context).brightness == Brightness.dark ? 0.20 : 0.24,
+    );
+    return LiquidGlassPanel(
+      borderRadius: BorderRadius.circular(22),
+      padding: EdgeInsets.all(compactContext ? KubusSpacing.md : KubusSpacing.lg),
+      backgroundColor: panelTint,
+      fallbackMinOpacity: 0.28,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          if (!isDesktop && !widget.embedded) ...[
+            GradientIconCard(
+              start: colorScheme.primary,
+              end: roles.positiveAction,
+              icon: Icons.login_rounded,
+              iconSize: compactMobile ? 34 : 40,
+              width: compactMobile ? 68 : 76,
+              height: compactMobile ? 68 : 76,
+              radius: 18,
+            ),
+            SizedBox(height: compactMobile ? 10 : 12),
+            Text(
+              l10n.authSignInTitle,
+              textAlign: TextAlign.center,
+              style: KubusTypography.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: colorScheme.onSurface,
               ),
-              SizedBox(height: compactContext ? 8 : KubusSpacing.md),
-              if (enableEmail)
-                if (compactContext && !_showCompactEmailForm)
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        setState(() => _showCompactEmailForm = true);
-                      },
-                      icon: const Icon(Icons.email_outlined),
-                      label: Text(l10n.authSignInWithEmail),
-                    ),
-                  )
-                else
-                  _buildEmailForm(colorScheme, compact: compactContext),
-              if (enableGoogle && !compactEmailOpen) ...[
+            ),
+            SizedBox(height: compactMobile ? 12 : 16),
+          ],
+          if (enableWallet && !compactEmailOpen)
+            KubusButton(
+              onPressed: _showConnectWalletModal,
+              icon: Icons.account_balance_wallet_outlined,
+              label: l10n.authConnectWalletButton,
+              isFullWidth: true,
+            ),
+          if (enableWallet && !compactEmailOpen)
+            SizedBox(height: compactContext ? KubusSpacing.sm : KubusSpacing.md),
+          LiquidGlassPanel(
+            borderRadius: BorderRadius.circular(18),
+            padding: EdgeInsets.all(compactContext ? KubusSpacing.sm : KubusSpacing.md),
+            backgroundColor: colorScheme.surface.withValues(alpha: 0.22),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  l10n.authOrLogInWithEmailOrUsername,
+                  style: KubusTypography.textTheme.titleMedium?.copyWith(
+                    color: colorScheme.onSurface,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
                 SizedBox(height: compactContext ? 8 : KubusSpacing.md),
-                if (kIsWeb)
-                  GoogleSignInWebButton(
-                    colorScheme: colorScheme,
-                    isLoading: _isGoogleSubmitting,
-                    onAuthResult: (GoogleAuthResult googleResult) async {
-                      if (mounted) {
-                        setState(() => _isGoogleSubmitting = true);
-                      }
-                      _setGoogleAuthDiagnostics('web_auth_event');
-                      try {
-                        unawaited(
-                          TelemetryService()
-                              .trackSignInAttempt(method: 'google'),
-                        );
-                        await _completeGoogleSignIn(googleResult);
-                        _setGoogleAuthDiagnostics('success');
-                        unawaited(
-                          TelemetryService()
-                              .trackSignInSuccess(method: 'google'),
-                        );
-                      } catch (error) {
+                if (enableEmail)
+                  if (compactContext && !_showCompactEmailForm)
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          setState(() => _showCompactEmailForm = true);
+                        },
+                        icon: const Icon(Icons.email_outlined),
+                        label: Text(l10n.authSignInWithEmail),
+                      ),
+                    )
+                  else
+                    _buildEmailForm(colorScheme, compact: compactContext),
+                if (enableGoogle && !compactEmailOpen) ...[
+                  SizedBox(height: compactContext ? 8 : KubusSpacing.md),
+                  if (kIsWeb)
+                    GoogleSignInWebButton(
+                      colorScheme: colorScheme,
+                      isLoading: _isGoogleSubmitting,
+                      onAuthResult: (GoogleAuthResult googleResult) async {
+                        if (mounted) {
+                          setState(() => _isGoogleSubmitting = true);
+                        }
+                        _setGoogleAuthDiagnostics('web_auth_event');
+                        try {
+                          unawaited(
+                            TelemetryService()
+                                .trackSignInAttempt(method: 'google'),
+                          );
+                          await _completeGoogleSignIn(googleResult);
+                          _setGoogleAuthDiagnostics('success');
+                          unawaited(
+                            TelemetryService()
+                                .trackSignInSuccess(method: 'google'),
+                          );
+                        } catch (error) {
+                          _setGoogleAuthDiagnostics(
+                            'web_error',
+                            code: _googleErrorCode(error),
+                          );
+                          unawaited(
+                            TelemetryService().trackSignInFailure(
+                              method: 'google',
+                              errorClass: error.runtimeType.toString(),
+                            ),
+                          );
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showKubusSnackBar(
+                              SnackBar(
+                                  content: Text(l10n.authGoogleSignInFailed)),
+                            );
+                          }
+                        } finally {
+                          if (mounted) {
+                            setState(() => _isGoogleSubmitting = false);
+                          }
+                        }
+                      },
+                      onAuthError: (Object error) {
                         _setGoogleAuthDiagnostics(
-                          'web_error',
+                          'web_plugin_error',
                           code: _googleErrorCode(error),
                         );
                         unawaited(
@@ -970,73 +1015,51 @@ class _SignInScreenState extends State<SignInScreen> {
                             errorClass: error.runtimeType.toString(),
                           ),
                         );
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showKubusSnackBar(
-                            SnackBar(
-                                content: Text(l10n.authGoogleSignInFailed)),
-                          );
-                        }
-                      } finally {
-                        if (mounted) {
-                          setState(() => _isGoogleSubmitting = false);
-                        }
-                      }
-                    },
-                    onAuthError: (Object error) {
-                      _setGoogleAuthDiagnostics(
-                        'web_plugin_error',
-                        code: _googleErrorCode(error),
-                      );
-                      unawaited(
-                        TelemetryService().trackSignInFailure(
-                          method: 'google',
-                          errorClass: error.runtimeType.toString(),
-                        ),
-                      );
-                      if (!mounted) return;
-                      setState(() => _isGoogleSubmitting = false);
-                      ScaffoldMessenger.of(context).showKubusSnackBar(
-                        SnackBar(content: Text(l10n.authGoogleSignInFailed)),
-                      );
-                    },
-                  )
-                else
-                  GoogleSignInButton(
-                    onPressed: _signInWithGoogle,
-                    isLoading: _isGoogleSubmitting,
-                    colorScheme: colorScheme,
-                  ),
-              ],
-              if (compactContext && _showCompactEmailForm) ...[
-                const SizedBox(height: 6),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () {
-                      setState(() => _showCompactEmailForm = false);
-                    },
-                    child: Text(l10n.commonBack),
-                  ),
-                ),
-              ],
-              if (!widget.embedded) ...[
-                SizedBox(
-                    height: compactMobile ? KubusSpacing.sm : KubusSpacing.md),
-                TextButton(
-                  onPressed: () => Navigator.of(context).pushNamed('/register'),
-                  child: Text(
-                    l10n.authNeedAccountRegister,
-                    style: KubusTypography.textTheme.labelLarge?.copyWith(
-                      color: colorScheme.primary,
-                      fontWeight: FontWeight.bold,
+                        if (!mounted) return;
+                        setState(() => _isGoogleSubmitting = false);
+                        ScaffoldMessenger.of(context).showKubusSnackBar(
+                          SnackBar(content: Text(l10n.authGoogleSignInFailed)),
+                        );
+                      },
+                    )
+                  else
+                    GoogleSignInButton(
+                      onPressed: _signInWithGoogle,
+                      isLoading: _isGoogleSubmitting,
+                      colorScheme: colorScheme,
+                    ),
+                ],
+                if (compactContext && _showCompactEmailForm) ...[
+                  const SizedBox(height: 6),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () {
+                        setState(() => _showCompactEmailForm = false);
+                      },
+                      child: Text(l10n.commonBack),
                     ),
                   ),
-                ),
+                ],
+                if (!widget.embedded) ...[
+                  SizedBox(
+                      height: compactMobile ? KubusSpacing.sm : KubusSpacing.md),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pushNamed('/register'),
+                    child: Text(
+                      l10n.authNeedAccountRegister,
+                      style: KubusTypography.textTheme.labelLarge?.copyWith(
+                        color: colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
