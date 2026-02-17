@@ -635,6 +635,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowWelcomeBody => 'Let’s set things up in under a minute. You can skip anything and continue later.';
 
   @override
+  String get onboardingFlowWelcomeInfoAccount => 'Create your account and choose how you want to sign in.';
+
+  @override
+  String get onboardingFlowWelcomeInfoCreate => 'Set up your profile and publish your first artwork.';
+
+  @override
+  String get onboardingFlowWelcomeInfoFollow => 'Follow artists to personalize your feed.';
+
+  @override
+  String get onboardingFlowWelcomeInfoTime => 'Most people finish this in about 2 minutes.';
+
+  @override
   String get onboardingFlowAccountTitle => 'Create your account';
 
   @override
@@ -648,6 +660,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingFlowOpenVerification => 'Open email verification';
+
+  @override
+  String get onboardingFlowVerifyLastTitle => 'One more last step - verify your email';
+
+  @override
+  String get onboardingFlowVerifyLastBody => 'Check your inbox and open the verification link. Then return here and continue.';
 
   @override
   String get onboardingFlowProfileTitle => 'Create your profile';

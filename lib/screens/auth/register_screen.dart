@@ -31,7 +31,18 @@ import '../../widgets/glass_components.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key});
+  const RegisterScreen({
+    super.key,
+    this.embedded = false,
+    this.onAuthCompleted,
+    this.onVerificationRequired,
+    this.onSwitchToSignIn,
+  });
+
+  final bool embedded;
+  final Future<void> Function()? onAuthCompleted;
+  final ValueChanged<String>? onVerificationRequired;
+  final VoidCallback? onSwitchToSignIn;
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -54,7 +65,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.initState();
     // Best-effort "automatic" sign-in on mobile (silent re-auth for returning users).
     // Note: One Tap is web-only (GIS iframe) and cannot be replicated on native.
-    if (!kIsWeb && AppConfig.enableGoogleAuth) {
+    if (!widget.embedded && !kIsWeb && AppConfig.enableGoogleAuth) {
       unawaited(_attemptGoogleAutoSignIn());
     }
   }
@@ -156,6 +167,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
     }
     if (!mounted) return;
+    if (widget.embedded) {
+      if (widget.onAuthCompleted != null) {
+        await widget.onAuthCompleted!();
+      }
+      return;
+    }
     Navigator.of(context).pushReplacementNamed('/main');
   }
 
@@ -191,10 +208,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
         username: username.isNotEmpty ? username : null,
       );
       if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed(
-        '/verify-email',
-        arguments: {'email': email},
-      );
+      if (widget.embedded) {
+        widget.onVerificationRequired?.call(email);
+      } else {
+        Navigator.of(context).pushReplacementNamed(
+          '/verify-email',
+          arguments: {'email': email},
+        );
+      }
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(content: Text(l10n.authVerifyEmailRegistrationToast)),
       );
@@ -206,10 +227,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
           method: 'email', errorClass: e.runtimeType.toString()));
       if (!mounted) return;
       if (e is BackendApiRequestException && e.statusCode == 409) {
-        Navigator.of(context).pushReplacementNamed(
-          '/sign-in',
-          arguments: {'email': email},
-        );
+        if (widget.embedded) {
+          widget.onSwitchToSignIn?.call();
+        } else {
+          Navigator.of(context).pushReplacementNamed(
+            '/sign-in',
+            arguments: {'email': email},
+          );
+        }
         ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(content: Text(l10n.authAccountAlreadyExistsToast)),
         );
@@ -492,7 +517,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
       enableEmail: enableEmail,
       enableGoogle: enableGoogle,
       isDesktop: isDesktop,
+      compact: widget.embedded,
     );
+
+    if (widget.embedded) {
+      return form;
+    }
 
     if (isDesktop) {
       return DesktopAuthShell(
@@ -607,13 +637,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     required bool enableEmail,
     required bool enableGoogle,
     required bool isDesktop,
+    bool compact = false,
   }) {
     final l10n = AppLocalizations.of(context)!;
     final roles = KubusColorRoles.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        if (!isDesktop)
+        if (!isDesktop && !compact)
           SizedBox(
             width: double.infinity,
             child: LiquidGlassPanel(
@@ -652,13 +683,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
             ),
           ),
-        if (!isDesktop) const SizedBox(height: 20),
+        if (!isDesktop && !compact) const SizedBox(height: 20),
         if (enableWallet)
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
               backgroundColor: colorScheme.primary,
               foregroundColor: colorScheme.onPrimary,
-              minimumSize: const Size.fromHeight(56),
+              minimumSize: Size.fromHeight(compact ? 48 : 56),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16)),
               elevation: 2,
@@ -672,7 +703,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     fontWeight: FontWeight.w700,
                     color: colorScheme.onPrimary)),
           ),
-        if (enableWallet) const SizedBox(height: 16),
+        if (enableWallet) SizedBox(height: compact ? 10 : 16),
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(16),
