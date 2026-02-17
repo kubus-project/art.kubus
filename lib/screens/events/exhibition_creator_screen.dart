@@ -17,8 +17,15 @@ class ExhibitionCreatorScreen extends StatefulWidget {
   /// When `true` the screen omits its own Scaffold / AppBar because the
   /// surrounding shell (e.g. [DesktopSubScreen]) already provides one.
   final bool embedded;
+  final bool forceDraftOnly;
+  final VoidCallback? onCreated;
 
-  const ExhibitionCreatorScreen({super.key, this.embedded = false});
+  const ExhibitionCreatorScreen({
+    super.key,
+    this.embedded = false,
+    this.forceDraftOnly = false,
+    this.onCreated,
+  });
 
   @override
   State<ExhibitionCreatorScreen> createState() =>
@@ -120,110 +127,115 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
         key: _formKey,
         child: ListView(
           children: [
-              // --- Basics section ---
-              CreatorSection(
-                title: l10n.exhibitionCreatorBasicsTitle,
-                children: [
-                  CreatorTextField(
-                    controller: _titleController,
-                    label: l10n.exhibitionCreatorTitleLabel,
-                    validator: (v) {
-                      if ((v ?? '').trim().isEmpty) {
-                        return l10n.exhibitionCreatorTitleValidation;
-                      }
-                      return null;
-                    },
-                  ),
-                  const CreatorFieldSpacing(),
-                  CreatorTextField(
-                    controller: _descriptionController,
-                    label: l10n.exhibitionCreatorDescriptionLabel,
-                    maxLines: 4,
-                  ),
-                  const CreatorFieldSpacing(),
-                  CreatorTextField(
-                    controller: _locationController,
-                    label: l10n.exhibitionCreatorLocationLabel,
-                  ),
-                ],
-              ),
-
-              const CreatorSectionSpacing(),
-
-              // --- Schedule section ---
-              CreatorSection(
-                title: l10n.exhibitionCreatorScheduleTitle,
-                children: [
-                  CreatorDateField(
-                    label: l10n.exhibitionCreatorStartsLabel,
-                    value: _startsAt,
-                    notSetLabel: l10n.exhibitionCreatorNotSetLabel,
-                    onPick: () => _pickDate(isStart: true),
-                    onClear: () => setState(() => _startsAt = null),
-                  ),
-                  const CreatorFieldSpacing(),
-                  CreatorDateField(
-                    label: l10n.exhibitionCreatorEndsLabel,
-                    value: _endsAt,
-                    notSetLabel: l10n.exhibitionCreatorNotSetLabel,
-                    onPick: () => _pickDate(isStart: false),
-                    onClear: () => setState(() => _endsAt = null),
-                  ),
-                ],
-              ),
-
-              const CreatorSectionSpacing(),
-
-              // --- Visibility toggle ---
-              CreatorSwitchTile(
-                title: l10n.exhibitionCreatorPublishTitle,
-                subtitle: _published
-                    ? l10n.exhibitionCreatorPublishVisible
-                    : l10n.exhibitionCreatorPublishDraft,
-                value: _published,
-                onChanged:
-                    _submitting ? null : (v) => setState(() => _published = v),
-              ),
-
-              const CreatorSectionSpacing(),
-
-              // --- Cover Image section ---
-              CreatorSection(
-                title: l10n.commonCoverImage,
-                children: [
-                  CreatorCoverImagePicker(
-                    imageBytes: _coverBytes,
-                    uploadLabel: l10n.commonUpload,
-                    changeLabel: l10n.commonChangeCover,
-                    removeTooltip: l10n.commonRemove,
-                    onPick: _pickCoverImage,
-                    onRemove: () => setState(() {
-                      _coverBytes = null;
-                      _coverFileName = null;
-                    }),
-                    enabled: !_submitting,
-                  ),
-                ],
-              ),
-
-              const CreatorSectionSpacing(),
-
-              // --- Collaboration hint ---
-              if (AppConfig.isFeatureEnabled('collabInvites'))
-                CreatorInfoBox(
-                  text: l10n.exhibitionCreatorCollabHint,
-                  icon: Icons.group_add_outlined,
+            // --- Basics section ---
+            CreatorSection(
+              title: l10n.exhibitionCreatorBasicsTitle,
+              children: [
+                CreatorTextField(
+                  controller: _titleController,
+                  label: l10n.exhibitionCreatorTitleLabel,
+                  validator: (v) {
+                    if ((v ?? '').trim().isEmpty) {
+                      return l10n.exhibitionCreatorTitleValidation;
+                    }
+                    return null;
+                  },
                 ),
+                const CreatorFieldSpacing(),
+                CreatorTextField(
+                  controller: _descriptionController,
+                  label: l10n.exhibitionCreatorDescriptionLabel,
+                  maxLines: 4,
+                ),
+                const CreatorFieldSpacing(),
+                CreatorTextField(
+                  controller: _locationController,
+                  label: l10n.exhibitionCreatorLocationLabel,
+                ),
+              ],
+            ),
 
-              if (AppConfig.isFeatureEnabled('collabInvites'))
-                const CreatorSectionSpacing(),
+            const CreatorSectionSpacing(),
 
-              // --- Create button ---
-              CreatorFooterActions(
-                primaryLabel: l10n.commonCreate,
-                onPrimary: _submit,
-                primaryLoading: _submitting,
+            // --- Schedule section ---
+            CreatorSection(
+              title: l10n.exhibitionCreatorScheduleTitle,
+              children: [
+                CreatorDateField(
+                  label: l10n.exhibitionCreatorStartsLabel,
+                  value: _startsAt,
+                  notSetLabel: l10n.exhibitionCreatorNotSetLabel,
+                  onPick: () => _pickDate(isStart: true),
+                  onClear: () => setState(() => _startsAt = null),
+                ),
+                const CreatorFieldSpacing(),
+                CreatorDateField(
+                  label: l10n.exhibitionCreatorEndsLabel,
+                  value: _endsAt,
+                  notSetLabel: l10n.exhibitionCreatorNotSetLabel,
+                  onPick: () => _pickDate(isStart: false),
+                  onClear: () => setState(() => _endsAt = null),
+                ),
+              ],
+            ),
+
+            const CreatorSectionSpacing(),
+
+            // --- Visibility toggle ---
+            CreatorSwitchTile(
+              title: l10n.exhibitionCreatorPublishTitle,
+              subtitle: widget.forceDraftOnly
+                  ? l10n.exhibitionCreatorPublishDraft
+                  : (_published
+                      ? l10n.exhibitionCreatorPublishVisible
+                      : l10n.exhibitionCreatorPublishDraft),
+              value: widget.forceDraftOnly ? false : _published,
+              onChanged: widget.forceDraftOnly
+                  ? null
+                  : (_submitting
+                      ? null
+                      : (v) => setState(() => _published = v)),
+            ),
+
+            const CreatorSectionSpacing(),
+
+            // --- Cover Image section ---
+            CreatorSection(
+              title: l10n.commonCoverImage,
+              children: [
+                CreatorCoverImagePicker(
+                  imageBytes: _coverBytes,
+                  uploadLabel: l10n.commonUpload,
+                  changeLabel: l10n.commonChangeCover,
+                  removeTooltip: l10n.commonRemove,
+                  onPick: _pickCoverImage,
+                  onRemove: () => setState(() {
+                    _coverBytes = null;
+                    _coverFileName = null;
+                  }),
+                  enabled: !_submitting,
+                ),
+              ],
+            ),
+
+            const CreatorSectionSpacing(),
+
+            // --- Collaboration hint ---
+            if (AppConfig.isFeatureEnabled('collabInvites'))
+              CreatorInfoBox(
+                text: l10n.exhibitionCreatorCollabHint,
+                icon: Icons.group_add_outlined,
               ),
+
+            if (AppConfig.isFeatureEnabled('collabInvites'))
+              const CreatorSectionSpacing(),
+
+            // --- Create button ---
+            CreatorFooterActions(
+              primaryLabel: l10n.commonCreate,
+              onPrimary: _submit,
+              primaryLoading: _submitting,
+            ),
           ],
         ),
       ),
@@ -271,12 +283,9 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
     final description = _descriptionController.text.trim();
     final locationName = _locationController.text.trim();
 
-    if (_endsAt != null &&
-        _startsAt != null &&
-        _endsAt!.isBefore(_startsAt!)) {
+    if (_endsAt != null && _startsAt != null && _endsAt!.isBefore(_startsAt!)) {
       messenger.showKubusSnackBar(
-        SnackBar(
-            content: Text(l10n.exhibitionCreatorEndDateAfterStartError)),
+        SnackBar(content: Text(l10n.exhibitionCreatorEndDateAfterStartError)),
       );
       return;
     }
@@ -305,7 +314,9 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
         if (locationName.isNotEmpty) 'locationName': locationName,
         if (_startsAt != null) 'startsAt': _startsAt!.toIso8601String(),
         if (_endsAt != null) 'endsAt': _endsAt!.toIso8601String(),
-        'status': _published ? 'published' : 'draft',
+        'status': widget.forceDraftOnly
+            ? 'draft'
+            : (_published ? 'published' : 'draft'),
         if (coverUrl != null && coverUrl.isNotEmpty) 'coverUrl': coverUrl,
       };
 
@@ -315,6 +326,11 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
       if (created == null) {
         messenger.showKubusSnackBar(
             SnackBar(content: Text(l10n.exhibitionCreatorCreateFailed)));
+        return;
+      }
+
+      if (widget.onCreated != null) {
+        widget.onCreated!.call();
         return;
       }
 
@@ -329,8 +345,7 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
     } catch (e) {
       if (!mounted) return;
       messenger.showKubusSnackBar(
-        SnackBar(
-            content: Text(l10n.exhibitionCreatorCreateFailedWithError(e))),
+        SnackBar(content: Text(l10n.exhibitionCreatorCreateFailedWithError(e))),
       );
     } finally {
       if (mounted) setState(() => _submitting = false);

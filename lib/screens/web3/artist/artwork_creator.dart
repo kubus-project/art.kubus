@@ -6,6 +6,7 @@ class ArtworkCreator extends StatelessWidget {
   final String draftId;
   final VoidCallback? onCreated;
   final bool showAppBar;
+  final bool forceDraftOnly;
 
   /// When `true` the screen omits its own Scaffold / AppBar because the
   /// surrounding shell (e.g. [DesktopSubScreen]) already provides one.
@@ -17,6 +18,7 @@ class ArtworkCreator extends StatelessWidget {
     this.onCreated,
     this.showAppBar = true,
     this.embedded = false,
+    this.forceDraftOnly = false,
   });
 
   @override
@@ -26,6 +28,7 @@ class ArtworkCreator extends StatelessWidget {
       onCreated: onCreated,
       showAppBar: showAppBar,
       embedded: embedded,
+      forceDraftOnly: forceDraftOnly,
     );
   }
 }
