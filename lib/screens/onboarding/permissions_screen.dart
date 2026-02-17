@@ -16,6 +16,8 @@ import '../../widgets/app_logo.dart';
 import '../../widgets/gradient_icon_card.dart';
 import '../../screens/desktop/desktop_shell.dart';
 import '../../providers/profile_provider.dart';
+import '../../providers/wallet_provider.dart';
+import '../../services/backend_api_service.dart';
 import '../desktop/onboarding/desktop_permissions_screen.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/design_tokens.dart';
@@ -35,6 +37,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
   bool _isCheckingPermissions = true;
+  bool _isCompletingOnboarding = false;
   
   // Track permission states
   bool _locationGranted = false;
@@ -101,9 +104,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
 
     final requiredPermissions = <PermissionType>[
       PermissionType.location,
-      PermissionType.notifications,
       if (!kIsWeb) PermissionType.camera,
-      if (!kIsWeb) PermissionType.storage,
     ];
 
     if (requiredPermissions.every(_isPermissionGranted)) {
@@ -325,7 +326,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
           ),
           // Skip button
           TextButton(
-            onPressed: _completeOnboarding,
+            onPressed: _isCompletingOnboarding ? null : _completeOnboarding,
             child: Text(
               l10n.permissionsSkipAll,
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
@@ -487,18 +488,25 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
               SizedBox(height: effectiveSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
               // Grant permission button
               KubusButton(
-                onPressed: isGranted ? (isLastPage ? _completeOnboarding : _nextPage) : () => _requestPermission(currentPermission),
+                onPressed: _isCompletingOnboarding
+                    ? null
+                    : isGranted
+                        ? (isLastPage ? _completeOnboarding : _nextPage)
+                        : () => _requestPermission(currentPermission),
                 backgroundColor: primaryBg,
                 foregroundColor: primaryFg,
                 label: isGranted 
                     ? (isLastPage ? l10n.permissionsGetStarted : l10n.permissionsNextPermission)
                     : l10n.permissionsGrantPermission,
+                isLoading: _isCompletingOnboarding,
                 isFullWidth: true,
               ),
               SizedBox(height: effectiveSmallScreen ? KubusSpacing.xs : KubusSpacing.sm),
               // Skip button
               TextButton(
-                onPressed: isLastPage ? _completeOnboarding : _nextPage,
+                onPressed: _isCompletingOnboarding
+                    ? null
+                    : (isLastPage ? _completeOnboarding : _nextPage),
                 child: Text(
                   isLastPage ? l10n.commonSkipForNow : l10n.permissionsSkipThisPermission,
                   style: KubusTypography.textTheme.labelLarge?.copyWith(
@@ -730,15 +738,95 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
   }
 
   void _completeOnboarding() async {
-    // Mark onboarding as completed - users will see feature-specific onboarding when accessing Web3 features
-    final prefs = await SharedPreferences.getInstance();
-    await OnboardingStateService.markCompleted(prefs: prefs);
-    await prefs.setBool('has_seen_permissions', true);
-    unawaited(TelemetryService().trackOnboardingComplete(reason: 'permissions_complete'));
-    
-    if (mounted) {
-      final isSignedIn = Provider.of<ProfileProvider>(context, listen: false).isSignedIn;
-      Navigator.of(context).pushReplacementNamed(isSignedIn ? '/main' : '/sign-in');
+    if (_isCompletingOnboarding) return;
+
+    final l10n = AppLocalizations.of(context)!;
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+
+    setState(() => _isCompletingOnboarding = true);
+
+    try {
+      String? walletAddress = walletProvider.currentWalletAddress?.trim();
+      try {
+        if (walletAddress == null || walletAddress.isEmpty) {
+          final created = await walletProvider
+              .createWallet()
+              .timeout(const Duration(seconds: 12));
+          walletAddress = created['address']?.trim();
+        }
+      } catch (e, st) {
+        if (kDebugMode) {
+          debugPrint('PermissionsScreen._completeOnboarding: wallet create failed: $e\n$st');
+        }
+      }
+
+      walletAddress = walletAddress?.trim();
+      if (walletAddress == null || walletAddress.isEmpty) {
+        if (mounted) {
+          messenger.showKubusSnackBar(
+            SnackBar(content: Text(l10n.authRegistrationFailed)),
+          );
+          setState(() => _isCompletingOnboarding = false);
+        }
+        return;
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      try {
+        await prefs.setString('wallet_address', walletAddress);
+        await prefs.setString('wallet', walletAddress);
+        await prefs.setString('walletAddress', walletAddress);
+        await prefs.setBool('has_wallet', true);
+      } catch (_) {}
+
+      // Establish a provisional wallet-backed session first.
+      try {
+        await profileProvider
+            .createProfileFromWallet(walletAddress: walletAddress)
+            .timeout(const Duration(seconds: 10));
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('PermissionsScreen._completeOnboarding: createProfileFromWallet failed: $e');
+        }
+      }
+
+      try {
+        await BackendApiService()
+            .ensureAuthLoaded(walletAddress: walletAddress)
+            .timeout(const Duration(seconds: 10));
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('PermissionsScreen._completeOnboarding: ensureAuthLoaded failed: $e');
+        }
+      }
+
+      try {
+        await profileProvider
+            .loadProfile(walletAddress)
+            .timeout(const Duration(seconds: 8));
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('PermissionsScreen._completeOnboarding: loadProfile failed: $e');
+        }
+      }
+
+      // Mark onboarding completed ONLY after session attempt / fallback profile creation.
+      await OnboardingStateService.markCompleted(prefs: prefs);
+      await prefs.setBool('has_seen_permissions', true);
+      unawaited(
+        TelemetryService()
+            .trackOnboardingComplete(reason: 'permissions_complete'),
+      );
+
+      if (!mounted) return;
+      navigator.pushReplacementNamed('/main');
+    } finally {
+      if (mounted) {
+        setState(() => _isCompletingOnboarding = false);
+      }
     }
   }
 }

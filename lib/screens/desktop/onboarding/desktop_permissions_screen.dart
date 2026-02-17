@@ -13,6 +13,8 @@ import '../../../widgets/app_logo.dart';
 import '../../../widgets/gradient_icon_card.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/profile_provider.dart';
+import '../../../providers/wallet_provider.dart';
+import '../../../services/backend_api_service.dart';
 import '../../../services/push_notification_service.dart';
 import '../../../services/notification_helper.dart';
 import '../../../utils/app_animations.dart';
@@ -35,6 +37,7 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
   bool _isCheckingPermissions = true;
+  bool _isCompletingOnboarding = false;
 
   // Track permission states
   bool _locationGranted = false;
@@ -184,9 +187,7 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
     // If all permissions granted, auto-complete
     final requiredPermissions = <PermissionType>[
       PermissionType.location,
-      PermissionType.notifications,
       if (!kIsWeb) PermissionType.camera,
-      if (!kIsWeb) PermissionType.storage,
     ];
 
     if (requiredPermissions.every(_isPermissionGranted)) {
@@ -362,14 +363,98 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
   }
 
   void _completeOnboarding() async {
-    final prefs = await SharedPreferences.getInstance();
-    await OnboardingStateService.markCompleted(prefs: prefs);
-    await prefs.setBool('has_seen_permissions', true);
-    unawaited(TelemetryService().trackOnboardingComplete(reason: 'permissions_complete'));
+    if (_isCompletingOnboarding) return;
 
-    if (mounted) {
-      final isSignedIn = Provider.of<ProfileProvider>(context, listen: false).isSignedIn;
-      Navigator.of(context).pushReplacementNamed(isSignedIn ? '/main' : '/sign-in');
+    final l10n = AppLocalizations.of(context)!;
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+
+    setState(() => _isCompletingOnboarding = true);
+
+    try {
+      String? walletAddress = walletProvider.currentWalletAddress?.trim();
+      try {
+        if (walletAddress == null || walletAddress.isEmpty) {
+          final created = await walletProvider
+              .createWallet()
+              .timeout(const Duration(seconds: 12));
+          walletAddress = created['address']?.trim();
+        }
+      } catch (e, st) {
+        if (kDebugMode) {
+          debugPrint(
+              'DesktopPermissionsScreen._completeOnboarding: wallet create failed: $e\n$st');
+        }
+      }
+
+      walletAddress = walletAddress?.trim();
+      if (walletAddress == null || walletAddress.isEmpty) {
+        if (mounted) {
+          messenger.showKubusSnackBar(
+            SnackBar(content: Text(l10n.authRegistrationFailed)),
+          );
+        }
+        return;
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      try {
+        await prefs.setString('wallet_address', walletAddress);
+        await prefs.setString('wallet', walletAddress);
+        await prefs.setString('walletAddress', walletAddress);
+        await prefs.setBool('has_wallet', true);
+      } catch (_) {}
+
+      // Establish a provisional wallet-backed session first.
+      try {
+        await profileProvider
+            .createProfileFromWallet(walletAddress: walletAddress)
+            .timeout(const Duration(seconds: 10));
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint(
+              'DesktopPermissionsScreen._completeOnboarding: createProfileFromWallet failed: $e');
+        }
+      }
+
+      try {
+        await BackendApiService()
+            .ensureAuthLoaded(walletAddress: walletAddress)
+            .timeout(const Duration(seconds: 10));
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint(
+              'DesktopPermissionsScreen._completeOnboarding: ensureAuthLoaded failed: $e');
+        }
+      }
+
+      try {
+        await profileProvider
+            .loadProfile(walletAddress)
+            .timeout(const Duration(seconds: 8));
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint(
+              'DesktopPermissionsScreen._completeOnboarding: loadProfile failed: $e');
+        }
+      }
+
+      // Mark onboarding completed ONLY after session attempt / fallback profile creation.
+      await OnboardingStateService.markCompleted(prefs: prefs);
+      await prefs.setBool('has_seen_permissions', true);
+      unawaited(
+        TelemetryService()
+            .trackOnboardingComplete(reason: 'permissions_complete'),
+      );
+
+      if (!mounted) return;
+      navigator.pushReplacementNamed('/main');
+    } finally {
+      if (mounted) {
+        setState(() => _isCompletingOnboarding = false);
+      }
     }
   }
 
@@ -462,7 +547,7 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
         children: [
           const AppLogo(width: 48, height: 48),
           TextButton(
-            onPressed: _completeOnboarding,
+            onPressed: _isCompletingOnboarding ? null : _completeOnboarding,
             style: TextButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
@@ -681,9 +766,11 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
           SizedBox(
             height: 56,
             child: ElevatedButton(
-              onPressed: isGranted
-                  ? (isLastPage ? _completeOnboarding : _nextPage)
-                  : () => _requestPermission(currentPermission),
+              onPressed: _isCompletingOnboarding
+                  ? null
+                  : isGranted
+                      ? (isLastPage ? _completeOnboarding : _nextPage)
+                      : () => _requestPermission(currentPermission),
               style: ElevatedButton.styleFrom(
                 backgroundColor: isGranted
                     ? Theme.of(context).colorScheme.primary
@@ -694,22 +781,35 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
                   borderRadius: BorderRadius.circular(16),
                 ),
               ),
-              child: Text(
-                isGranted
-                    ? (isLastPage ? l10n.permissionsGetStarted : l10n.permissionsNextPermission)
-                    : l10n.permissionsGrantPermission,
-                style: GoogleFonts.inter(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              child: _isCompletingOnboarding
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Text(
+                      isGranted
+                          ? (isLastPage
+                              ? l10n.permissionsGetStarted
+                              : l10n.permissionsNextPermission)
+                          : l10n.permissionsGrantPermission,
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
             ),
           ),
           const SizedBox(height: 12),
           SizedBox(
             height: 56,
             child: OutlinedButton(
-              onPressed: isLastPage ? _completeOnboarding : _nextPage,
+              onPressed: _isCompletingOnboarding
+                  ? null
+                  : (isLastPage ? _completeOnboarding : _nextPage),
               style: OutlinedButton.styleFrom(
                 foregroundColor: Theme.of(context).colorScheme.onSurface,
                 side: BorderSide(
