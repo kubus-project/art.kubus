@@ -5,8 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:provider/provider.dart';
 import '../../../services/notification_helper.dart';
 import '../../../services/onboarding_state_service.dart';
 import '../../../services/push_notification_service.dart';
@@ -14,12 +14,10 @@ import '../../../services/telemetry/telemetry_service.dart';
 import '../../../widgets/app_logo.dart';
 import '../../../widgets/gradient_icon_card.dart';
 import '../../../providers/themeprovider.dart';
-import '../../../providers/profile_provider.dart';
-import '../../../providers/wallet_provider.dart';
-import '../../../services/backend_api_service.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/app_color_utils.dart';
 import '../../../utils/kubus_color_roles.dart';
+import '../../onboarding/onboarding_flow_screen.dart';
 import '../desktop_shell.dart';
 import '../../../widgets/glass_components.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
@@ -34,6 +32,10 @@ class DesktopPermissionsScreen extends StatefulWidget {
 }
 
 class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
+  static const int _onboardingFlowVersion = 2;
+  static const String _welcomeStepId = 'welcome';
+  static const String _permissionsStepId = 'permissions';
+
   final PageController _pageController = PageController();
   int _currentPage = 0;
   bool _isCheckingPermissions = true;
@@ -367,93 +369,47 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
   void _completeOnboarding() async {
     if (_isCompletingOnboarding) return;
 
-    final l10n = AppLocalizations.of(context)!;
     final navigator = Navigator.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final profileProvider =
-        Provider.of<ProfileProvider>(context, listen: false);
 
     setState(() => _isCompletingOnboarding = true);
 
     try {
-      String? walletAddress = walletProvider.currentWalletAddress?.trim();
-      try {
-        if (walletAddress == null || walletAddress.isEmpty) {
-          final created = await walletProvider
-              .createWallet()
-              .timeout(const Duration(seconds: 12));
-          walletAddress = created['address']?.trim();
-        }
-      } catch (e, st) {
-        if (kDebugMode) {
-          debugPrint(
-              'DesktopPermissionsScreen._completeOnboarding: wallet create failed: $e\n$st');
-        }
-      }
-
-      walletAddress = walletAddress?.trim();
-      if (walletAddress == null || walletAddress.isEmpty) {
-        if (mounted) {
-          messenger.showKubusSnackBar(
-            SnackBar(content: Text(l10n.authRegistrationFailed)),
-          );
-        }
-        return;
-      }
-
       final prefs = await SharedPreferences.getInstance();
-      try {
-        await prefs.setString('wallet_address', walletAddress);
-        await prefs.setString('wallet', walletAddress);
-        await prefs.setString('walletAddress', walletAddress);
-        await prefs.setBool('has_wallet', true);
-      } catch (_) {}
-
-      // Establish a provisional wallet-backed session first.
-      try {
-        await profileProvider
-            .createProfileFromWallet(walletAddress: walletAddress)
-            .timeout(const Duration(seconds: 10));
-      } catch (e) {
-        if (kDebugMode) {
-          debugPrint(
-              'DesktopPermissionsScreen._completeOnboarding: createProfileFromWallet failed: $e');
-        }
-      }
-
-      try {
-        await BackendApiService()
-            .ensureAuthLoaded(walletAddress: walletAddress)
-            .timeout(const Duration(seconds: 10));
-      } catch (e) {
-        if (kDebugMode) {
-          debugPrint(
-              'DesktopPermissionsScreen._completeOnboarding: ensureAuthLoaded failed: $e');
-        }
-      }
-
-      try {
-        await profileProvider
-            .loadProfile(walletAddress)
-            .timeout(const Duration(seconds: 8));
-      } catch (e) {
-        if (kDebugMode) {
-          debugPrint(
-              'DesktopPermissionsScreen._completeOnboarding: loadProfile failed: $e');
-        }
-      }
-
-      // Mark onboarding completed ONLY after session attempt / fallback profile creation.
-      await OnboardingStateService.markCompleted(prefs: prefs);
       await prefs.setBool('has_seen_permissions', true);
+      // Legacy desktop permissions now continue into the shared onboarding flow
+      // without provisioning a wallet/profile for guest users.
+      final progress = await OnboardingStateService.loadFlowProgress(
+        prefs: prefs,
+        onboardingVersion: _onboardingFlowVersion,
+      );
+      final completedSteps = <String>{
+        ...progress.completedSteps,
+        _welcomeStepId,
+        _permissionsStepId,
+      };
+      final deferredSteps = <String>{...progress.deferredSteps}
+        ..remove(_permissionsStepId);
+      await OnboardingStateService.saveFlowProgress(
+        prefs: prefs,
+        onboardingVersion: _onboardingFlowVersion,
+        completedSteps: completedSteps,
+        deferredSteps: deferredSteps,
+      );
       unawaited(
         TelemetryService()
-            .trackOnboardingComplete(reason: 'permissions_complete'),
+            .trackOnboardingComplete(reason: 'permissions_continue_flow'),
       );
 
       if (!mounted) return;
-      navigator.pushReplacementNamed('/main');
+      navigator.pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => const OnboardingFlowScreen(
+            forceDesktop: true,
+            initialStepId: 'account',
+          ),
+          settings: const RouteSettings(name: '/onboarding/flow'),
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() => _isCompletingOnboarding = false);
