@@ -33,13 +33,17 @@ class AuthTitleRow extends StatelessWidget {
               width: compact ? 30 : 34,
               height: compact ? 30 : 34,
               decoration: BoxDecoration(
-                color: scheme.primary.withValues(alpha: 0.16),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: scheme.primary.withValues(alpha: 0.34),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    scheme.primary,
+                    scheme.primary.withValues(alpha: 0.7),
+                  ],
                 ),
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, size: compact ? 16 : 18, color: scheme.primary),
+              child: Icon(icon, size: compact ? 16 : 18, color: Colors.white),
             ),
             SizedBox(width: compact ? 8 : 10),
             Expanded(

@@ -838,7 +838,7 @@ class _SignInScreenState extends State<SignInScreen> {
               builder: (BuildContext context, BoxConstraints constraints) {
                 final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
                 return GestureDetector(
-                  behavior: HitTestBehavior.translucent,
+                  behavior: HitTestBehavior.opaque,
                   onTap: () => FocusScope.of(context).unfocus(),
                   child: AnimatedPadding(
                     duration: const Duration(milliseconds: 180),
@@ -886,7 +886,6 @@ class _SignInScreenState extends State<SignInScreen> {
     required bool compactMobile,
   }) {
     final l10n = AppLocalizations.of(context)!;
-    final roles = KubusColorRoles.of(context);
     final compactContext = compactMobile || widget.embedded;
     final compactEmailOpen = compactContext && _showCompactEmailForm;
     return Column(
@@ -912,7 +911,7 @@ class _SignInScreenState extends State<SignInScreen> {
         KubusCard(
           padding: EdgeInsets.all(
               compactContext ? KubusSpacing.sm : KubusSpacing.md),
-          color: colorScheme.surfaceContainerHighest,
+          color: colorScheme.surfaceContainerHigh,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [

@@ -1,4 +1,4 @@
-{
+﻿{
   "@@locale": "en",
   "appTitle": "art.kubus",
   "commonCancel": "Cancel",
@@ -270,6 +270,7 @@
   "onboardingFlowNoSuggestions": "No suggestions yet. You can follow artists from Community anytime.",
   "onboardingFlowUnknownArtist": "Artist",
   "onboardingFlowFollowFailed": "Couldn’t update follow status. Please try again.",
+  "onboardingFlowVerifyContinue": "I verified / Continue",
   "onboardingWelcomeTitle": "Welcome to art.kubus",
   "onboardingWelcomeSubtitle": "Exhibition and community in one place",
   "onboardingWelcomeDescription": "Discover artworks, explore places, and connect with creators. XR and Web3 are optional layers - the core experience works without them.",

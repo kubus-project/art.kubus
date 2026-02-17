@@ -233,6 +233,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBodyBehindAppBar: true,
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
@@ -252,58 +253,75 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
           ),
           SafeArea(
             top: false,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              child: Padding(
-                padding: const EdgeInsets.only(top: kToolbarHeight + 12),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 520),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+                final compact = constraints.maxHeight < 540 || keyboardInset > 0;
+                return AnimatedPadding(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOut,
+                  padding: EdgeInsets.only(
+                    bottom: keyboardInset > 140 ? 140 : keyboardInset,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Column(
-                          children: [
-                            GradientIconCard(
-                              start: scheme.primary,
-                              end: roles.positiveAction,
-                              icon: Icons.mark_email_read_outlined,
-                              iconSize: 52,
-                              width: 100,
-                              height: 100,
-                              radius: 20,
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              l10n.authVerifyEmailTitle,
-                              style: GoogleFonts.inter(
-                                fontSize: 26,
-                                fontWeight: FontWeight.w800,
-                                color: scheme.onSurface,
+                        const SizedBox(height: kToolbarHeight + 12),
+                        Expanded(
+                          child: Center(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 520),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  if (!compact) ...[
+                                    GradientIconCard(
+                                      start: scheme.primary,
+                                      end: roles.positiveAction,
+                                      icon: Icons.mark_email_read_outlined,
+                                      iconSize: 52,
+                                      width: 100,
+                                      height: 100,
+                                      radius: 20,
+                                    ),
+                                    const SizedBox(height: 12),
+                                  ],
+                                  Text(
+                                    l10n.authVerifyEmailTitle,
+                                    style: GoogleFonts.inter(
+                                      fontSize: compact ? 22 : 26,
+                                      fontWeight: FontWeight.w800,
+                                      color: scheme.onSurface,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  SizedBox(height: compact ? 4 : 8),
+                                  Text(
+                                    l10n.authVerifyEmailSubtitle,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      color: scheme.onSurface.withValues(alpha: 0.85),
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  SizedBox(height: compact ? 12 : 20),
+                                  KubusCard(
+                                    padding: EdgeInsets.all(compact ? 12 : 16),
+                                    color: scheme.surfaceContainerHigh,
+                                    child: form,
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              l10n.authVerifyEmailSubtitle,
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                color: scheme.onSurface.withValues(alpha: 0.85),
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        KubusCard(
-                          padding: const EdgeInsets.all(16),
-                          color: scheme.surfaceContainerHighest,
-                          child: form,
+                          ),
                         ),
                       ],
                     ),
                   ),
-                ),
-              ),
+                );
+              },
             ),
           ),
         ],

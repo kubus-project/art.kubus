@@ -270,6 +270,7 @@
   "onboardingFlowNoSuggestions": "Predlogov še ni. Umetnikom lahko vedno slediš v Skupnosti.",
   "onboardingFlowUnknownArtist": "Umetnik",
   "onboardingFlowFollowFailed": "Posodobitev sledenja ni uspela. Poskusi znova.",
+  "onboardingFlowVerifyContinue": "Potrjeno / Nadaljuj",
   "onboardingWelcomeTitle": "Dobrodošel/a v art.kubus",
   "onboardingWelcomeSubtitle": "Razstava in skupnost na enem mestu",
   "onboardingWelcomeDescription": "Odkrij umetnine, raziskuj kraje in se poveži z ustvarjalci. XR in Web3 sta neobvezni plasti, osnovna izkušnja deluje tudi brez njiju.",

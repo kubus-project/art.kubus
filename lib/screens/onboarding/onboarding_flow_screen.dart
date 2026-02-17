@@ -806,11 +806,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   }
 
   String _headerSkipLabel(AppLocalizations l10n) {
-    final code = Localizations.localeOf(context).languageCode.toLowerCase();
-    if (code == 'sl') {
-      return 'Preskoči za zdaj';
-    }
-    return 'Skip for now';
+    return l10n.commonSkipForNow;
   }
 
   Widget _buildHeader(
@@ -1277,6 +1273,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
               onPressed: _onPrimaryAction,
               label: _primaryLabelForStep(l10n),
               isFullWidth: true,
+              backgroundColor: Colors.white,
+              foregroundColor: const Color(0xFF0A0A0A),
             ),
           ),
         ],
@@ -1404,8 +1402,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
       case _OnboardingStep.follow:
         return l10n.commonContinue;
       case _OnboardingStep.verifyEmail:
-        final isSl = Localizations.localeOf(context).languageCode == 'sl';
-        return isSl ? 'Potrjeno / Nadaljuj' : 'I verified / Continue';
+        return l10n.onboardingFlowVerifyContinue;
       case _OnboardingStep.role:
         return l10n.commonContinue;
       case _OnboardingStep.done:

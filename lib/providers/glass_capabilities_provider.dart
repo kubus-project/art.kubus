@@ -70,8 +70,8 @@ class GlassCapabilitiesProvider with ChangeNotifier {
     _isInitialized = true;
     notifyListeners();
 
-    // 4. Schedule a lightweight perf probe after first frame.
-    if (kIsWeb && !_reduceEffectsUser && !_heuristicTriggered) {
+    // 4. Schedule a lightweight perf probe after first frame on all platforms.
+    if (!_reduceEffectsUser && !_heuristicTriggered) {
       SchedulerBinding.instance.addPostFrameCallback((_) => _runPerfProbe());
     }
   }
@@ -119,9 +119,6 @@ class GlassCapabilitiesProvider with ChangeNotifier {
   // ---------------------------------------------------------------------------
 
   bool _evaluateHeuristic() {
-    // On native platforms blur is handled efficiently by the GPU compositor.
-    if (!kIsWeb) return false;
-
     try {
       final view = PlatformDispatcher.instance.implicitView;
       if (view == null) return false;
@@ -130,7 +127,8 @@ class GlassCapabilitiesProvider with ChangeNotifier {
       final logicalSize = view.physicalSize / dpr;
       final logicalArea = logicalSize.width * logicalSize.height;
 
-      // Very small logical area with high DPR: likely a constrained mobile web.
+      // Very small logical area with high DPR: likely a constrained device.
+      // This applies to both web and native mobile.
       if (dpr >= 3.5 && logicalArea < 200000) return true;
 
       // Check platform "prefers-reduced-motion".
