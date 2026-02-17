@@ -459,7 +459,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   }
 
   Future<void> _handleEmbeddedRegistrationSuccess() async {
-    _pendingVerificationEmail = null;
+    // Keep pending verification email (if set) so the final verification step
+    // remains visible even when auto-login succeeds after registration.
     _refreshAuthDerivedSteps();
     await _refreshDaoReview();
     if (!mounted) return;
