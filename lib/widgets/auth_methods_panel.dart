@@ -38,6 +38,7 @@ class AuthMethodsPanel extends StatefulWidget {
     this.onAuthSuccess,
     this.onVerificationRequired,
     this.onEmailRegistrationAttempted,
+    this.onEmailCredentialsCaptured,
     this.prepareProvisionalProfileBeforeRegister = false,
     this.onError,
     this.onSwitchToSignIn,
@@ -47,6 +48,8 @@ class AuthMethodsPanel extends StatefulWidget {
   final Future<void> Function()? onAuthSuccess;
   final ValueChanged<String>? onVerificationRequired;
   final ValueChanged<String>? onEmailRegistrationAttempted;
+  final Future<void> Function(String email, String password)?
+      onEmailCredentialsCaptured;
   final bool prepareProvisionalProfileBeforeRegister;
   final ValueChanged<Object>? onError;
   final VoidCallback? onSwitchToSignIn;
@@ -231,6 +234,9 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         );
       }
       widget.onEmailRegistrationAttempted?.call(email);
+      if (widget.onEmailCredentialsCaptured != null) {
+        await widget.onEmailCredentialsCaptured!(email, password);
+      }
 
       final api = BackendApiService();
       await api

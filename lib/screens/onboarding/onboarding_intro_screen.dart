@@ -381,15 +381,12 @@ class _TopIconPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       width: 40,
       height: 40,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(999),
+      child: Center(
+        child: Icon(icon, size: 18, color: color),
       ),
-      child: Icon(icon, size: 18, color: color),
     );
   }
 }
