@@ -73,6 +73,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   static const int _flowVersion = 3;
   static const String _personaDraftKey = 'onboarding_persona_draft_v3';
   static const String _profileDraftKey = 'onboarding_profile_draft_v3';
+  static const String _verificationEmailDraftKey =
+      'onboarding_verification_email_v3';
 
   List<_OnboardingStep> _steps = const <_OnboardingStep>[];
   final Set<_OnboardingStep> _completed = <_OnboardingStep>{};
@@ -91,6 +93,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   bool _isSkippingFlow = false;
   bool _isSignedIn = false;
   String? _pendingVerificationEmail;
+  String? _pendingVerificationPassword;
   String? _permissionHint;
   UserPersona? _selectedPersona;
   Map<String, String> _localProfileDraft = <String, String>{};
@@ -253,6 +256,12 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     } catch (_) {
       _localProfileDraft = <String, String>{};
     }
+
+    final pendingEmail =
+        (prefs.getString(_verificationEmailDraftKey) ?? '').trim();
+    if (pendingEmail.isNotEmpty) {
+      _pendingVerificationEmail = pendingEmail;
+    }
   }
 
   Future<void> _persistLocalDrafts() async {
@@ -265,9 +274,16 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     }
     if (_localProfileDraft.isEmpty) {
       await prefs.remove(_profileDraftKey);
-      return;
+    } else {
+      await prefs.setString(_profileDraftKey, jsonEncode(_localProfileDraft));
     }
-    await prefs.setString(_profileDraftKey, jsonEncode(_localProfileDraft));
+
+    final pendingEmail = (_pendingVerificationEmail ?? '').trim();
+    if (pendingEmail.isEmpty) {
+      await prefs.remove(_verificationEmailDraftKey);
+    } else {
+      await prefs.setString(_verificationEmailDraftKey, pendingEmail);
+    }
   }
 
   Future<void> _refreshDaoReview() async {
@@ -405,6 +421,13 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   int _nextIncompleteIndex() {
     final index = _steps.indexWhere((step) => !_completed.contains(step));
     return index == -1 ? _steps.length - 1 : index;
+  }
+
+  Future<void> _goBackStep() async {
+    if (!mounted || _currentIndex <= 0) return;
+    setState(() {
+      _currentIndex = (_currentIndex - 1).clamp(0, _steps.length - 1);
+    });
   }
 
   void _refreshAuthDerivedSteps() {
@@ -602,6 +625,14 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     setState(() {
       _pendingVerificationEmail = email.trim();
     });
+    await _persistLocalDrafts();
+  }
+
+  Future<void> _handleEmbeddedEmailCredentialsCaptured(
+      String email, String password) async {
+    _pendingVerificationEmail = email.trim();
+    _pendingVerificationPassword = password;
+    await _persistLocalDrafts();
   }
 
   Future<void> _handleEmbeddedSignInNeedsVerification(String email) async {
@@ -691,16 +722,55 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
 
   Future<void> _confirmVerificationAndContinue() async {
     _refreshAuthDerivedSteps();
+
+    final pendingEmail = (_pendingVerificationEmail ?? '').trim();
+    final pendingPassword = (_pendingVerificationPassword ?? '').trim();
+
+    if (_verificationRequired && !_isSignedIn && pendingEmail.isNotEmpty && pendingPassword.isNotEmpty) {
+      try {
+        final loginResult = await BackendApiService().loginWithEmail(
+          email: pendingEmail,
+          password: pendingPassword,
+        );
+        await _handleEmbeddedSignInSuccess(loginResult);
+      } catch (_) {
+        // Still waiting on verification; continue with fallback checks below.
+      }
+    }
+
     if (_verificationRequired && _isSignedIn) {
       final refreshed = await BackendApiService().refreshAuthTokenFromStorage();
       _refreshAuthDerivedSteps();
       if (refreshed) {
         _pendingVerificationEmail = null;
+        _pendingVerificationPassword = null;
+        await _persistLocalDrafts();
       }
     }
+
+    if (_verificationRequired) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!.authVerifyEmailSignInHint,
+          ),
+        ),
+      );
+      return;
+    }
+
     if (_steps.contains(_OnboardingStep.verifyEmail)) {
       await _markCompleted(_OnboardingStep.verifyEmail);
-    } else if (mounted) {
+    }
+
+    final allDone = _steps.every(_completed.contains);
+    if (allDone) {
+      await _finishOnboarding();
+      return;
+    }
+
+    if (mounted) {
       setState(() {
         _currentIndex = _nextIncompleteIndex();
       });
@@ -955,8 +1025,12 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   }) {
     final stepNumber = _currentIndex + 1;
     return Padding(
-      padding:
-          const EdgeInsets.fromLTRB(KubusSpacing.md, 10, KubusSpacing.md, KubusSpacing.sm),
+      padding: EdgeInsets.fromLTRB(
+        _isDesktop ? KubusSpacing.xl : KubusSpacing.lg,
+        10,
+        _isDesktop ? KubusSpacing.xl : KubusSpacing.lg,
+        KubusSpacing.sm,
+      ),
       child: AuthTitleRow(
         title: l10n.onboardingFlowTitle,
         icon: _stepIcon(_currentStep),
@@ -1092,6 +1166,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
           onVerifyEmail: _jumpToVerifyStep,
           onAuthCompleted: _handleEmbeddedRegistrationSuccess,
           onEmailRegistrationAttempted: _handleEmbeddedEmailRegistrationAttempted,
+          onEmailCredentialsCaptured: _handleEmbeddedEmailCredentialsCaptured,
           onVerificationRequired: _handleEmbeddedVerificationRequired,
         );
       case _OnboardingStep.profile:
@@ -1280,7 +1355,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
       children: [
         Expanded(
           child: TextButton(
-            onPressed: _deferCurrentStep,
+            onPressed: _currentIndex > 0 ? _goBackStep : null,
             style: TextButton.styleFrom(
               foregroundColor: skipForeground,
               backgroundColor: skipBackground,
@@ -1291,7 +1366,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                 vertical: compact ? 10 : 12,
               ),
             ),
-            child: Text(l10n.commonSkip),
+            child: Text(l10n.commonBack),
           ),
         ),
         const SizedBox(width: 10),
@@ -1513,7 +1588,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                   child: Center(
                     child: ConstrainedBox(
                       constraints: BoxConstraints(
-                        maxWidth: _isDesktop ? 1180 : double.infinity,
+                        maxWidth: _isDesktop ? 1280 : double.infinity,
                       ),
                       child: Column(
                         children: [
@@ -1578,20 +1653,12 @@ class _HeaderActionPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Container(
+    return SizedBox(
       width: 40,
       height: 40,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: scheme.surface.withValues(
-          alpha: Theme.of(context).brightness == Brightness.dark ? 0.35 : 0.85,
-        ),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: scheme.outline.withValues(alpha: 0.35),
-        ),
+      child: Center(
+        child: Icon(icon, size: 18, color: scheme.onSurface),
       ),
-      child: Icon(icon, size: 18, color: scheme.onSurface),
     );
   }
 }
@@ -1604,6 +1671,7 @@ class _AccountStep extends StatelessWidget {
     required this.onVerifyEmail,
     required this.onAuthCompleted,
     required this.onEmailRegistrationAttempted,
+    required this.onEmailCredentialsCaptured,
     required this.onVerificationRequired,
   });
 
@@ -1613,6 +1681,8 @@ class _AccountStep extends StatelessWidget {
   final Future<void> Function() onVerifyEmail;
   final Future<void> Function() onAuthCompleted;
   final Future<void> Function(String email) onEmailRegistrationAttempted;
+  final Future<void> Function(String email, String password)
+      onEmailCredentialsCaptured;
   final Future<void> Function(String email) onVerificationRequired;
 
   @override
@@ -1643,6 +1713,9 @@ class _AccountStep extends StatelessWidget {
             prepareProvisionalProfileBeforeRegister: false,
             onEmailRegistrationAttempted: (email) =>
                 unawaited(onEmailRegistrationAttempted(email)),
+            onEmailCredentialsCaptured: (email, password) async {
+              await onEmailCredentialsCaptured(email, password);
+            },
             onVerificationRequired: onVerificationRequired,
             onSwitchToSignIn: onVerifyEmail,
           ),
@@ -1931,31 +2004,14 @@ class _InlineVerificationPanelState extends State<_InlineVerificationPanel> {
                 ),
           ),
         const SizedBox(height: 12),
-        OutlinedButton.icon(
+        KubusButton(
           onPressed: _sending || widget.email.isEmpty ? null : _resend,
-          icon: _sending
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.mark_email_read_outlined),
-          label:
-              Text(AppLocalizations.of(context)!.authVerifyEmailResendButton),
+          isLoading: _sending,
+          label: AppLocalizations.of(context)!.authVerifyEmailResendButton,
+          isFullWidth: true,
+          backgroundColor: scheme.primary,
+          foregroundColor: scheme.onPrimary,
         ),
-        if (!widget.isSignedIn) ...[
-          const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: OutlinedButton.icon(
-              onPressed: () {
-                Navigator.of(context).pushNamed('/sign-in');
-              },
-              icon: const Icon(Icons.login_outlined),
-              label: Text(AppLocalizations.of(context)!.commonSignIn),
-            ),
-          ),
-        ],
         if ((_inlineMessage ?? '').trim().isNotEmpty) ...[
           const SizedBox(height: KubusSpacing.sm),
           Text(
