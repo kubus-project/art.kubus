@@ -782,7 +782,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       if (!mounted) return;
       navigator.pushReplacement(
         MaterialPageRoute(
-          builder: (_) => const OnboardingFlowScreen(initialStepId: 'account'),
+          builder: (_) => const OnboardingFlowScreen(initialStepId: 'role'),
           settings: const RouteSettings(name: '/onboarding/flow'),
         ),
       );

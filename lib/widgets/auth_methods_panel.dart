@@ -134,6 +134,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         (user['username'] ?? _usernameController.text ?? '').toString();
     final userId = user['id'];
     try {
+      AppConfig.debugPrint('AuthMethodsPanel._handleAuthSuccess: ensuring wallet provisioning');
       walletAddress = await _ensureWalletProvisioned(walletAddress?.toString(),
           desiredUsername: usernameFromUser);
     } catch (e) {
@@ -180,11 +181,13 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     }
     if (!mounted) return;
     if (widget.embedded) {
+      AppConfig.debugPrint('AuthMethodsPanel._handleAuthSuccess: embedded flow auth success callback');
       if (widget.onAuthSuccess != null) {
         await widget.onAuthSuccess!();
       }
       return;
     }
+    AppConfig.debugPrint('AuthMethodsPanel._handleAuthSuccess: navigating to /main');
     Navigator.of(context).pushReplacementNamed('/main');
   }
 
@@ -216,29 +219,38 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     unawaited(TelemetryService().trackSignUpAttempt(method: 'email'));
     setState(() => _isSubmitting = true);
     try {
+      AppConfig.debugPrint('AuthMethodsPanel._registerWithEmail: start email registration for $email');
       String? provisionalWalletAddress;
       if (widget.prepareProvisionalProfileBeforeRegister) {
+        AppConfig.debugPrint('AuthMethodsPanel._registerWithEmail: preparing provisional profile');
         provisionalWalletAddress = await _prepareProvisionalProfileBeforeRegister(
           desiredUsername: username,
+        ).timeout(const Duration(seconds: 16));
+        AppConfig.debugPrint(
+          'AuthMethodsPanel._registerWithEmail: provisional wallet resolved=${(provisionalWalletAddress ?? '').isNotEmpty}',
         );
       }
       widget.onEmailRegistrationAttempted?.call(email);
 
       final api = BackendApiService();
-      await api.registerWithEmail(
+      await api
+          .registerWithEmail(
         email: email,
         password: password,
         username: username.isNotEmpty ? username : null,
         walletAddress: provisionalWalletAddress,
-      );
+      )
+          .timeout(const Duration(seconds: 16));
+      AppConfig.debugPrint('AuthMethodsPanel._registerWithEmail: registerWithEmail completed');
       if (!mounted) return;
       if (widget.embedded) {
         // Embedded onboarding handles verification gracefully while we still
         // attempt immediate sign-in when backend policy permits it.
         widget.onVerificationRequired?.call(email);
         try {
-          final loginResult =
-              await api.loginWithEmail(email: email, password: password);
+          final loginResult = await api
+              .loginWithEmail(email: email, password: password)
+              .timeout(const Duration(seconds: 12));
           if (!mounted) return;
           await _handleAuthSuccess(loginResult);
         } catch (_) {
@@ -255,8 +267,15 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         SnackBar(content: Text(l10n.authVerifyEmailRegistrationToast)),
       );
       unawaited(TelemetryService().trackSignUpSuccess(method: 'email'));
+      AppConfig.debugPrint('AuthMethodsPanel._registerWithEmail: success path complete');
       // Note: email registration no longer creates a session until verification.
       // Avoid writing local account/session state here.
+    } on TimeoutException catch (e) {
+      widget.onError?.call(e);
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.commonNetworkErrorToast)),
+      );
     } catch (e) {
       widget.onError?.call(e);
       unawaited(TelemetryService().trackSignUpFailure(
@@ -290,6 +309,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
             SnackBar(content: Text(l10n.authRegistrationFailed)));
       }
     } finally {
+      AppConfig.debugPrint('AuthMethodsPanel._registerWithEmail: clearing submit loading state');
       if (mounted) setState(() => _isSubmitting = false);
     }
   }
@@ -376,6 +396,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
   Future<String?> _prepareProvisionalProfileBeforeRegister({
     required String desiredUsername,
   }) async {
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
     String? walletAddress;
     try {
       walletAddress = await _ensureWalletProvisioned(
@@ -394,7 +415,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     }
 
     try {
-      await Provider.of<ProfileProvider>(context, listen: false)
+      await profileProvider
           .createProfileFromWallet(
             walletAddress: normalizedWallet,
             username: desiredUsername.isNotEmpty ? desiredUsername : null,

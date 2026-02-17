@@ -1,4 +1,4 @@
-import 'package:art_kubus/screens/onboarding/onboarding_intro_screen.dart';
+import 'package:art_kubus/screens/onboarding/onboarding_flow_screen.dart';
 import 'package:flutter/material.dart';
 
 class OnboardingScreen extends StatelessWidget {
@@ -6,6 +6,6 @@ class OnboardingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const OnboardingIntroScreen();
+    return const OnboardingFlowScreen();
   }
 }
