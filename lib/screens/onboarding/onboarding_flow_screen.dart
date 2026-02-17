@@ -52,9 +52,14 @@ class _StepPalette {
 }
 
 class OnboardingFlowScreen extends StatefulWidget {
-  const OnboardingFlowScreen({super.key, this.forceDesktop = false});
+  const OnboardingFlowScreen({
+    super.key,
+    this.forceDesktop = false,
+    this.initialStepId,
+  });
 
   final bool forceDesktop;
+  final String? initialStepId;
 
   @override
   State<OnboardingFlowScreen> createState() => _OnboardingFlowScreenState();
@@ -179,6 +184,20 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
         .map(_stepFromId)
         .whereType<_OnboardingStep>()
         .toSet();
+    final hasSavedProgress = completed.isNotEmpty || deferred.isNotEmpty;
+    final initialStepId = widget.initialStepId?.trim();
+    var seededInitialProgress = false;
+    if (!hasSavedProgress && initialStepId != null && initialStepId.isNotEmpty) {
+      final targetIndex =
+          _steps.indexWhere((step) => _stepId(step) == initialStepId);
+      if (targetIndex > 0) {
+        for (final step in _steps.take(targetIndex)) {
+          if (completed.add(step)) {
+            seededInitialProgress = true;
+          }
+        }
+      }
+    }
 
     setState(() {
       _completed
@@ -190,6 +209,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
       _isInitializing = false;
       _currentIndex = _nextIncompleteIndex();
     });
+    if (seededInitialProgress) {
+      await _persistProgress();
+    }
 
     await _loadPermissionStatuses();
     await _refreshDaoReview();
@@ -243,8 +265,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
 
   bool get _verificationRequired =>
       (_pendingVerificationEmail ?? '').trim().isNotEmpty;
-
-  bool get _canCompleteFlow => _isSignedIn && !_verificationRequired;
 
   Future<void> _loadPermissionStatuses() async {
     var locationEnabled = false;
@@ -689,17 +709,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
 
   Future<void> _finishOnboarding() async {
     _refreshAuthDerivedSteps();
-    if (!_isSignedIn) {
-      final accountIndex = _steps.indexOf(_OnboardingStep.account);
-      if (!mounted) return;
-      setState(() {
-        if (accountIndex >= 0) {
-          _currentIndex = accountIndex;
-        }
-      });
-      return;
-    }
-    if (_verificationRequired) {
+    if (_isSignedIn && _verificationRequired) {
       await _jumpToVerifyStep();
       return;
     }
@@ -717,19 +727,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   Future<void> _skipForNow() async {
     if (_isSkippingFlow) return;
     _refreshAuthDerivedSteps();
-    if (!_canCompleteFlow) {
-      if (_verificationRequired) {
-        await _jumpToVerifyStep();
-      } else {
-        final accountIndex = _steps.indexOf(_OnboardingStep.account);
-        if (accountIndex >= 0 && mounted) {
-          setState(() {
-            _currentIndex = accountIndex;
-          });
-        }
-      }
-      return;
-    }
     setState(() => _isSkippingFlow = true);
 
     try {
