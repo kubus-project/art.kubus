@@ -77,7 +77,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     try {
       await GoogleAuthService().ensureInitialized();
-      final account = await GoogleSignIn.instance.attemptLightweightAuthentication();
+      final account =
+          await GoogleSignIn.instance.attemptLightweightAuthentication();
       if (!mounted) return;
       if (account == null) return;
 
@@ -144,7 +145,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
     if (!mounted) return;
 
-    final ok = await const PostAuthSecuritySetupService().ensurePostAuthSecuritySetup(
+    final ok =
+        await const PostAuthSecuritySetupService().ensurePostAuthSecuritySetup(
       navigator: navigator,
       walletProvider: walletProvider,
       securityGateProvider: gate,
@@ -194,7 +196,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() {
       _emailError = emailLooksValid ? null : l10n.authEnterValidEmailInline;
       _passwordError = passwordOk ? null : l10n.authPasswordPolicyError;
-      _confirmPasswordError = confirmOk ? null : l10n.authPasswordMismatchInline;
+      _confirmPasswordError =
+          confirmOk ? null : l10n.authPasswordMismatchInline;
     });
     if (!emailLooksValid || !passwordOk || !confirmOk) return;
 
@@ -209,7 +212,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
       if (!mounted) return;
       if (widget.embedded) {
+        // Keep verification as a final onboarding step, but try to establish a
+        // session immediately so the user is not prompted to log in again.
         widget.onVerificationRequired?.call(email);
+        try {
+          final loginResult =
+              await api.loginWithEmail(email: email, password: password);
+          if (!mounted) return;
+          await _handleAuthSuccess(loginResult);
+        } catch (_) {
+          // Best-effort only: some backends require verification before email login.
+          // In that case we keep the user in-flow and finish verification later.
+        }
       } else {
         Navigator.of(context).pushReplacementNamed(
           '/verify-email',
@@ -228,7 +242,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (!mounted) return;
       if (e is BackendApiRequestException && e.statusCode == 409) {
         if (widget.embedded) {
-          widget.onSwitchToSignIn?.call();
+          // Existing account: try signing in with provided credentials first to
+          // keep onboarding frictionless. If this fails, fall back to sign-in UI.
+          try {
+            final api = BackendApiService();
+            final loginResult =
+                await api.loginWithEmail(email: email, password: password);
+            if (!mounted) return;
+            await _handleAuthSuccess(loginResult);
+            return;
+          } catch (_) {
+            widget.onSwitchToSignIn?.call();
+          }
         } else {
           Navigator.of(context).pushReplacementNamed(
             '/sign-in',
@@ -239,8 +264,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
           SnackBar(content: Text(l10n.authAccountAlreadyExistsToast)),
         );
       } else {
-        ScaffoldMessenger.of(context)
-            .showKubusSnackBar(SnackBar(content: Text(l10n.authRegistrationFailed)));
+        ScaffoldMessenger.of(context).showKubusSnackBar(
+            SnackBar(content: Text(l10n.authRegistrationFailed)));
       }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
@@ -285,7 +310,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   .connectExistingWallet(address!)
                   .timeout(web3ConnectTimeout);
             } catch (e) {
-              debugPrint('RegisterScreen: connectExistingWallet skipped/failed: $e');
+              debugPrint(
+                  'RegisterScreen: connectExistingWallet skipped/failed: $e');
             }
           }());
         }
@@ -350,8 +376,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _registerWithGoogle() async {
     final l10n = AppLocalizations.of(context)!;
     if (!AppConfig.enableGoogleAuth) {
-      ScaffoldMessenger.of(context)
-          .showKubusSnackBar(SnackBar(content: Text(l10n.authGoogleSignInDisabled)));
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+          SnackBar(content: Text(l10n.authGoogleSignInDisabled)));
       return;
     }
 
@@ -385,8 +411,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       unawaited(TelemetryService().trackSignUpFailure(
           method: 'google', errorClass: e.runtimeType.toString()));
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showKubusSnackBar(SnackBar(content: Text(l10n.authGoogleSignInFailed)));
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+          SnackBar(content: Text(l10n.authGoogleSignInFailed)));
     } finally {
       if (mounted) setState(() => _isGoogleSubmitting = false);
     }
@@ -507,8 +533,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     final bgStart = accentStart.withValues(alpha: 0.55);
     final bgEnd = accentEnd.withValues(alpha: 0.50);
-    final bgMid = (Color.lerp(bgStart, bgEnd, 0.55) ?? bgEnd)
-        .withValues(alpha: 0.52);
+    final bgMid =
+        (Color.lerp(bgStart, bgEnd, 0.55) ?? bgEnd).withValues(alpha: 0.52);
     final bgColors = <Color>[bgStart, bgMid, bgEnd, bgStart];
 
     final form = _buildRegisterForm(
@@ -606,7 +632,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   child: ConstrainedBox(
-                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                    constraints:
+                        BoxConstraints(minHeight: constraints.maxHeight),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -746,10 +773,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         if (!mounted) return;
                         await _handleAuthSuccess(result);
                         unawaited(
-                          TelemetryService().trackSignUpSuccess(method: 'google'),
+                          TelemetryService()
+                              .trackSignUpSuccess(method: 'google'),
                         );
                       } finally {
-                        if (mounted) setState(() => _isGoogleSubmitting = false);
+                        if (mounted)
+                          setState(() => _isGoogleSubmitting = false);
                       }
                     },
                     onAuthError: (Object error) {
