@@ -15,7 +15,6 @@ import '../../widgets/app_logo.dart';
 import '../../widgets/gradient_icon_card.dart';
 import '../../screens/desktop/desktop_shell.dart';
 import '../desktop/onboarding/desktop_permissions_screen.dart';
-import 'onboarding_flow_screen.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
@@ -31,10 +30,6 @@ class PermissionsScreen extends StatefulWidget {
 }
 
 class _PermissionsScreenState extends State<PermissionsScreen> {
-  static const int _onboardingFlowVersion = 2;
-  static const String _welcomeStepId = 'welcome';
-  static const String _permissionsStepId = 'permissions';
-
   final PageController _pageController = PageController();
   int _currentPage = 0;
   bool _isCheckingPermissions = true;
@@ -755,37 +750,14 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('has_seen_permissions', true);
-      // Legacy permissions screen now hands users into the step-based flow.
-      // We persist these steps to avoid repeating the intro + permissions steps.
-      final progress = await OnboardingStateService.loadFlowProgress(
-        prefs: prefs,
-        onboardingVersion: _onboardingFlowVersion,
-      );
-      final completedSteps = <String>{
-        ...progress.completedSteps,
-        _welcomeStepId,
-        _permissionsStepId,
-      };
-      final deferredSteps = <String>{...progress.deferredSteps}
-        ..remove(_permissionsStepId);
-      await OnboardingStateService.saveFlowProgress(
-        prefs: prefs,
-        onboardingVersion: _onboardingFlowVersion,
-        completedSteps: completedSteps,
-        deferredSteps: deferredSteps,
-      );
+      await OnboardingStateService.markCompleted(prefs: prefs);
       unawaited(
         TelemetryService()
-            .trackOnboardingComplete(reason: 'permissions_continue_flow'),
+            .trackOnboardingComplete(reason: 'permissions_complete_to_main'),
       );
 
       if (!mounted) return;
-      navigator.pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => const OnboardingFlowScreen(initialStepId: 'role'),
-          settings: const RouteSettings(name: '/onboarding/flow'),
-        ),
-      );
+      navigator.pushReplacementNamed('/main');
     } finally {
       if (mounted) {
         setState(() => _isCompletingOnboarding = false);

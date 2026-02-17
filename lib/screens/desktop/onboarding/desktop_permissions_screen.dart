@@ -17,7 +17,6 @@ import '../../../providers/themeprovider.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/app_color_utils.dart';
 import '../../../utils/kubus_color_roles.dart';
-import '../../onboarding/onboarding_flow_screen.dart';
 import '../desktop_shell.dart';
 import '../../../widgets/glass_components.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
@@ -32,10 +31,6 @@ class DesktopPermissionsScreen extends StatefulWidget {
 }
 
 class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
-  static const int _onboardingFlowVersion = 2;
-  static const String _welcomeStepId = 'welcome';
-  static const String _permissionsStepId = 'permissions';
-
   final PageController _pageController = PageController();
   int _currentPage = 0;
   bool _isCheckingPermissions = true;
@@ -376,40 +371,14 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('has_seen_permissions', true);
-      // Legacy desktop permissions now continue into the shared onboarding flow
-      // without provisioning a wallet/profile for guest users.
-      final progress = await OnboardingStateService.loadFlowProgress(
-        prefs: prefs,
-        onboardingVersion: _onboardingFlowVersion,
-      );
-      final completedSteps = <String>{
-        ...progress.completedSteps,
-        _welcomeStepId,
-        _permissionsStepId,
-      };
-      final deferredSteps = <String>{...progress.deferredSteps}
-        ..remove(_permissionsStepId);
-      await OnboardingStateService.saveFlowProgress(
-        prefs: prefs,
-        onboardingVersion: _onboardingFlowVersion,
-        completedSteps: completedSteps,
-        deferredSteps: deferredSteps,
-      );
+      await OnboardingStateService.markCompleted(prefs: prefs);
       unawaited(
         TelemetryService()
-            .trackOnboardingComplete(reason: 'permissions_continue_flow'),
+            .trackOnboardingComplete(reason: 'permissions_complete_to_main'),
       );
 
       if (!mounted) return;
-      navigator.pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => const OnboardingFlowScreen(
-            forceDesktop: true,
-            initialStepId: 'account',
-          ),
-          settings: const RouteSettings(name: '/onboarding/flow'),
-        ),
-      );
+      navigator.pushReplacementNamed('/main');
     } finally {
       if (mounted) {
         setState(() => _isCompletingOnboarding = false);
