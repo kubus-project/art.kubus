@@ -1331,6 +1331,30 @@ abstract class AppLocalizations {
   /// **'Let’s set things up in under a minute. You can skip anything and continue later.'**
   String get onboardingFlowWelcomeBody;
 
+  /// No description provided for @onboardingFlowWelcomeInfoAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Create your account and choose how you want to sign in.'**
+  String get onboardingFlowWelcomeInfoAccount;
+
+  /// No description provided for @onboardingFlowWelcomeInfoCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up your profile and publish your first artwork.'**
+  String get onboardingFlowWelcomeInfoCreate;
+
+  /// No description provided for @onboardingFlowWelcomeInfoFollow.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow artists to personalize your feed.'**
+  String get onboardingFlowWelcomeInfoFollow;
+
+  /// No description provided for @onboardingFlowWelcomeInfoTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Most people finish this in about 2 minutes.'**
+  String get onboardingFlowWelcomeInfoTime;
+
   /// No description provided for @onboardingFlowAccountTitle.
   ///
   /// In en, this message translates to:
@@ -1360,6 +1384,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open email verification'**
   String get onboardingFlowOpenVerification;
+
+  /// No description provided for @onboardingFlowVerifyLastTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'One more last step - verify your email'**
+  String get onboardingFlowVerifyLastTitle;
+
+  /// No description provided for @onboardingFlowVerifyLastBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Check your inbox and open the verification link. Then return here and continue.'**
+  String get onboardingFlowVerifyLastBody;
 
   /// No description provided for @onboardingFlowProfileTitle.
   ///

@@ -42,12 +42,14 @@ class SignInScreen extends StatefulWidget {
     this.redirectArguments,
     this.initialEmail,
     this.onAuthSuccess,
+    this.embedded = false,
   });
 
   final String? redirectRoute;
   final Object? redirectArguments;
   final String? initialEmail;
   final FutureOr<void> Function(Map<String, dynamic> payload)? onAuthSuccess;
+  final bool embedded;
 
   @override
   State<SignInScreen> createState() => _SignInScreenState();
@@ -76,7 +78,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
     // Best-effort "automatic" sign-in on mobile (silent re-auth for returning users).
     // Note: One Tap is web-only (GIS iframe) and cannot be replicated on native.
-    if (!kIsWeb && AppConfig.enableGoogleAuth) {
+    if (!widget.embedded && !kIsWeb && AppConfig.enableGoogleAuth) {
       unawaited(_attemptGoogleAutoSignIn());
     }
   }
@@ -222,7 +224,9 @@ class _SignInScreenState extends State<SignInScreen> {
         AppConfig.debugPrint('SignInScreen: onAuthSuccess callback failed: $e');
       }
       if (!mounted) return;
-      Navigator.of(context).pop(true);
+      if (!widget.embedded) {
+        Navigator.of(context).pop(true);
+      }
       return;
     }
 
@@ -659,6 +663,10 @@ class _SignInScreenState extends State<SignInScreen> {
       compactMobile: compactMobile,
     );
 
+    if (widget.embedded) {
+      return form;
+    }
+
     if (isDesktop) {
       return DesktopAuthShell(
         title: l10n.authSignInTitle,
@@ -946,7 +954,7 @@ class _SignInScreenState extends State<SignInScreen> {
               ),
               const SizedBox(height: KubusSpacing.md),
               if (enableEmail) _buildEmailForm(colorScheme),
-              if (enableGoogle && !compactMobile) ...[
+              if (enableGoogle && (!compactMobile || widget.embedded)) ...[
                 const SizedBox(height: KubusSpacing.md),
                 if (kIsWeb)
                   GoogleSignInWebButton(
@@ -1016,17 +1024,19 @@ class _SignInScreenState extends State<SignInScreen> {
                     colorScheme: colorScheme,
                   ),
               ],
+              if (!widget.embedded) ...[
                 SizedBox(height: compactMobile ? KubusSpacing.sm : KubusSpacing.md),
-              TextButton(
-                onPressed: () => Navigator.of(context).pushNamed('/register'),
-                child: Text(
-                  l10n.authNeedAccountRegister,
-                  style: KubusTypography.textTheme.labelLarge?.copyWith(
-                    color: colorScheme.primary,
-                    fontWeight: FontWeight.bold,
+                TextButton(
+                  onPressed: () => Navigator.of(context).pushNamed('/register'),
+                  child: Text(
+                    l10n.authNeedAccountRegister,
+                    style: KubusTypography.textTheme.labelLarge?.copyWith(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-              ),
+              ],
             ],
           ),
         ),

@@ -635,6 +635,18 @@ class AppLocalizationsSl extends AppLocalizations {
   String get onboardingFlowWelcomeBody => 'Vse nastavimo v manj kot minuti. Karkoli lahko preskočiš in dokončaš kasneje.';
 
   @override
+  String get onboardingFlowWelcomeInfoAccount => 'Ustvari račun in izberi način prijave.';
+
+  @override
+  String get onboardingFlowWelcomeInfoCreate => 'Nastavi profil in objavi prvo umetnino.';
+
+  @override
+  String get onboardingFlowWelcomeInfoFollow => 'Sledi umetnikom in prilagodi svoj tok vsebin.';
+
+  @override
+  String get onboardingFlowWelcomeInfoTime => 'Večina uporabnikov to dokonča v približno 2 minutah.';
+
+  @override
   String get onboardingFlowAccountTitle => 'Ustvari račun';
 
   @override
@@ -648,6 +660,12 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get onboardingFlowOpenVerification => 'Odpri potrditev e-pošte';
+
+  @override
+  String get onboardingFlowVerifyLastTitle => 'Še zadnji korak - potrdi e-pošto';
+
+  @override
+  String get onboardingFlowVerifyLastBody => 'Preveri prejeto pošto in odpri potrditveno povezavo. Nato se vrni sem in nadaljuj.';
 
   @override
   String get onboardingFlowProfileTitle => 'Ustvari svoj profil';
