@@ -617,6 +617,102 @@ class AppLocalizationsSl extends AppLocalizations {
   String get authContinueWithEmail => 'Nadaljuj z e-pošto';
 
   @override
+  String get commonEnable => 'Omogoči';
+
+  @override
+  String get commonFollow => 'Sledi';
+
+  @override
+  String get commonFollowing => 'Slediš';
+
+  @override
+  String get onboardingFlowTitle => 'Hitra nastavitev';
+
+  @override
+  String get onboardingFlowWelcomeTitle => 'Dobrodošel/a v art.kubus';
+
+  @override
+  String get onboardingFlowWelcomeBody => 'Vse nastavimo v manj kot minuti. Karkoli lahko preskočiš in dokončaš kasneje.';
+
+  @override
+  String get onboardingFlowAccountTitle => 'Ustvari račun';
+
+  @override
+  String get onboardingFlowAccountBody => 'Račun lahko ustvariš z e-pošto, Google računom ali denarnico.';
+
+  @override
+  String get onboardingFlowAccountVerifyHint => 'Če si se registriral/a z e-pošto, pred prijavo potrdi e-poštni naslov.';
+
+  @override
+  String get onboardingFlowCreateAccount => 'Ustvari račun';
+
+  @override
+  String get onboardingFlowOpenVerification => 'Odpri potrditev e-pošte';
+
+  @override
+  String get onboardingFlowProfileTitle => 'Ustvari svoj profil';
+
+  @override
+  String get onboardingFlowProfileBody => 'Dodaj ime in fotografijo, da te drugi lažje prepoznajo.';
+
+  @override
+  String get onboardingFlowRoleTitle => 'Izberi svojo vlogo';
+
+  @override
+  String get onboardingFlowRoleBody => 'Izberi, kaj te najbolje opiše. Kasneje lahko to spremeniš v Nastavitvah.';
+
+  @override
+  String get onboardingFlowPermissionsTitle => 'Izberi, kaj želiš omogočiti';
+
+  @override
+  String get onboardingFlowPermissionsBody => 'Omogoči lokacijo za umetnost v bližini, obvestila za novosti in kamero za AR.';
+
+  @override
+  String get onboardingFlowContinueWithoutPermissions => 'Nadaljuj';
+
+  @override
+  String get onboardingFlowArtworkTitle => 'Ustvari prvo umetnino';
+
+  @override
+  String get onboardingFlowArtworkBody => 'Začni z eno objavo. Osnutek je čisto v redu — urediš ga lahko kasneje.';
+
+  @override
+  String get onboardingFlowFollowTitle => 'Sledi nekaj umetnikom';
+
+  @override
+  String get onboardingFlowFollowBody => 'Izberi nekaj ustvarjalcev in prilagodi svoj tok vsebin.';
+
+  @override
+  String get onboardingFlowDoneTitle => 'Pripravljeno';
+
+  @override
+  String get onboardingFlowDoneBody => 'Tvoj prostor je pripravljen. Raziskovanje se lahko začne.';
+
+  @override
+  String get onboardingFlowOpenProfile => 'Odpri nastavitev profila';
+
+  @override
+  String get onboardingFlowPermissionLocation => 'Lokacija';
+
+  @override
+  String get onboardingFlowPermissionNotifications => 'Obvestila';
+
+  @override
+  String get onboardingFlowPermissionCamera => 'Kamera';
+
+  @override
+  String get onboardingFlowCreateArtwork => 'Ustvari umetnino';
+
+  @override
+  String get onboardingFlowNoSuggestions => 'Predlogov še ni. Umetnikom lahko vedno slediš v Skupnosti.';
+
+  @override
+  String get onboardingFlowUnknownArtist => 'Umetnik';
+
+  @override
+  String get onboardingFlowFollowFailed => 'Posodobitev sledenja ni uspela. Poskusi znova.';
+
+  @override
   String get onboardingWelcomeTitle => 'Dobrodošel/a v art.kubus';
 
   @override
@@ -4604,15 +4700,6 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get arMarkerScannerLaunchingViewerLabel => 'Zaganjam AR pregledovalnik…';
-
-  @override
-  String get arArtworkCardLaunchFailedToast => 'Zagon AR ni uspel. Poskusi znova.';
-
-  @override
-  String get arArtworkCardUnavailableLabel => 'AR ni na voljo';
-
-  @override
-  String get arArtworkCardGetCloserLabel => 'Približaj se';
 
   @override
   String get artistGalleryTitle => 'Tvoja galerija';

@@ -617,6 +617,102 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authContinueWithEmail => 'Continue with email';
 
   @override
+  String get commonEnable => 'Enable';
+
+  @override
+  String get commonFollow => 'Follow';
+
+  @override
+  String get commonFollowing => 'Following';
+
+  @override
+  String get onboardingFlowTitle => 'Your quick setup';
+
+  @override
+  String get onboardingFlowWelcomeTitle => 'Welcome to art.kubus';
+
+  @override
+  String get onboardingFlowWelcomeBody => 'Let’s set things up in under a minute. You can skip anything and continue later.';
+
+  @override
+  String get onboardingFlowAccountTitle => 'Create your account';
+
+  @override
+  String get onboardingFlowAccountBody => 'Use email, Google, or wallet to create your account.';
+
+  @override
+  String get onboardingFlowAccountVerifyHint => 'If you registered with email, verify your email before signing in.';
+
+  @override
+  String get onboardingFlowCreateAccount => 'Create account';
+
+  @override
+  String get onboardingFlowOpenVerification => 'Open email verification';
+
+  @override
+  String get onboardingFlowProfileTitle => 'Create your profile';
+
+  @override
+  String get onboardingFlowProfileBody => 'Add a name and a photo so people can recognize you.';
+
+  @override
+  String get onboardingFlowRoleTitle => 'Pick your role';
+
+  @override
+  String get onboardingFlowRoleBody => 'Choose what best describes you. You can change this later in Settings.';
+
+  @override
+  String get onboardingFlowPermissionsTitle => 'Choose what to enable';
+
+  @override
+  String get onboardingFlowPermissionsBody => 'Enable location to see nearby art, notifications for updates, and camera for AR.';
+
+  @override
+  String get onboardingFlowContinueWithoutPermissions => 'Continue';
+
+  @override
+  String get onboardingFlowArtworkTitle => 'Create your first artwork';
+
+  @override
+  String get onboardingFlowArtworkBody => 'Start with one piece. Drafts are fine — you can refine it anytime.';
+
+  @override
+  String get onboardingFlowFollowTitle => 'Follow a few artists';
+
+  @override
+  String get onboardingFlowFollowBody => 'Pick a few creators to personalize your feed.';
+
+  @override
+  String get onboardingFlowDoneTitle => 'You’re all set';
+
+  @override
+  String get onboardingFlowDoneBody => 'Your space is ready. Jump in and explore.';
+
+  @override
+  String get onboardingFlowOpenProfile => 'Open profile setup';
+
+  @override
+  String get onboardingFlowPermissionLocation => 'Location';
+
+  @override
+  String get onboardingFlowPermissionNotifications => 'Notifications';
+
+  @override
+  String get onboardingFlowPermissionCamera => 'Camera';
+
+  @override
+  String get onboardingFlowCreateArtwork => 'Create artwork';
+
+  @override
+  String get onboardingFlowNoSuggestions => 'No suggestions yet. You can follow artists from Community anytime.';
+
+  @override
+  String get onboardingFlowUnknownArtist => 'Artist';
+
+  @override
+  String get onboardingFlowFollowFailed => 'Couldn’t update follow status. Please try again.';
+
+  @override
   String get onboardingWelcomeTitle => 'Welcome to art.kubus';
 
   @override
@@ -4590,15 +4686,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get arMarkerScannerLaunchingViewerLabel => 'Launching AR viewer…';
-
-  @override
-  String get arArtworkCardLaunchFailedToast => 'Failed to launch AR. Please try again.';
-
-  @override
-  String get arArtworkCardUnavailableLabel => 'AR unavailable';
-
-  @override
-  String get arArtworkCardGetCloserLabel => 'Get closer';
 
   @override
   String get artistGalleryTitle => 'Your gallery';
