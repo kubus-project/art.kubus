@@ -66,6 +66,7 @@ import 'core/app_route_observer.dart';
 import 'main_app.dart';
 import 'screens/auth/sign_in_screen.dart';
 import 'screens/auth/register_screen.dart';
+import 'screens/auth/secure_account_screen.dart';
 import 'screens/auth/forgot_password_screen.dart';
 import 'screens/auth/reset_password_screen.dart';
 import 'screens/auth/verify_email_screen.dart';
@@ -884,6 +885,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
               return const SignInScreen();
             },
             '/register': (context) => const RegisterScreen(),
+            '/secure-account': (context) => const SecureAccountScreen(),
             '/verify-email': (context) {
               final args = ModalRoute.of(context)?.settings.arguments;
               String? token;
