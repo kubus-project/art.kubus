@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/user_persona.dart';
 import 'package:art_kubus/providers/locale_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
+import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/screens/auth/sign_in_screen.dart';
 import 'package:art_kubus/screens/desktop/desktop_shell.dart';
 import 'package:art_kubus/screens/events/exhibition_creator_screen.dart';
@@ -15,6 +17,7 @@ import 'package:art_kubus/services/onboarding_state_service.dart';
 import 'package:art_kubus/services/push_notification_service.dart';
 import 'package:art_kubus/services/telemetry/telemetry_service.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
+import 'package:art_kubus/utils/media_url_resolver.dart';
 import 'package:art_kubus/widgets/auth_methods_panel.dart';
 import 'package:art_kubus/widgets/auth_title_row.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
@@ -23,6 +26,7 @@ import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:art_kubus/widgets/user_persona_picker_content.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -84,6 +88,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   bool _isLoadingArtists = false;
   bool _isSkippingFlow = false;
   bool _isSignedIn = false;
+  bool _emailRegistrationAttempted = false;
   String? _pendingVerificationEmail;
   String? _permissionHint;
   late final String _inlineArtworkDraftId;
@@ -471,6 +476,12 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     required String displayName,
     required String username,
     required String bio,
+    required String? avatar,
+    required String twitter,
+    required String instagram,
+    required String website,
+    required List<String> fieldOfWork,
+    required int? yearsActive,
   }) async {
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
@@ -482,6 +493,14 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
       displayName: displayName.trim().isEmpty ? null : displayName.trim(),
       username: username.trim().isEmpty ? null : username.trim(),
       bio: bio.trim().isEmpty ? null : bio.trim(),
+      avatar: (avatar ?? '').trim().isEmpty ? null : avatar?.trim(),
+      social: <String, String>{
+        'twitter': twitter.trim(),
+        'instagram': instagram.trim(),
+        'website': website.trim(),
+      },
+      fieldOfWork: fieldOfWork,
+      yearsActive: yearsActive,
     );
 
     if (!mounted) return;
@@ -489,8 +508,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   }
 
   Future<void> _handleEmbeddedRegistrationSuccess() async {
-    // Keep pending verification email (if set) so the final verification step
-    // remains visible even when auto-login succeeds after registration.
+    _emailRegistrationAttempted = true;
     _refreshAuthDerivedSteps();
     await _refreshDaoReview();
     if (!mounted) return;
@@ -501,11 +519,26 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     }
   }
 
-  Future<void> _handleEmbeddedVerificationRequired(String email) async {
-    await _setPendingVerificationAndRoute(
-      email,
-      completeAccountStep: true,
-    );
+  Future<void> _handleEmbeddedVerificationRequired(String _) async {
+    _emailRegistrationAttempted = true;
+    // Email verification remains available from auth screens, but onboarding
+    // should not block progress after registration.
+    _pendingVerificationEmail = null;
+    _refreshAuthDerivedSteps();
+    await _refreshDaoReview();
+    if (!mounted) return;
+    if (_steps.contains(_OnboardingStep.account)) {
+      await _markCompleted(_OnboardingStep.account);
+    } else {
+      setState(() {});
+    }
+  }
+
+  Future<void> _handleEmbeddedEmailRegistrationAttempted(String _) async {
+    if (!mounted) return;
+    setState(() {
+      _emailRegistrationAttempted = true;
+    });
   }
 
   Future<void> _handleEmbeddedSignInNeedsVerification(String email) async {
@@ -724,12 +757,63 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     Navigator.of(context).pushReplacementNamed('/main');
   }
 
+  Future<void> _ensureProvisionalAccountForRegistration() async {
+    if (!_emailRegistrationAttempted) return;
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    var walletAddress = walletProvider.currentWalletAddress?.trim();
+    if (walletAddress == null || walletAddress.isEmpty) {
+      try {
+        final created =
+            await walletProvider.createWallet().timeout(const Duration(seconds: 12));
+        walletAddress = created['address']?.toString().trim();
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint(
+            'OnboardingFlowScreen._ensureProvisionalAccountForRegistration: wallet create failed: $e',
+          );
+        }
+      }
+    }
+
+    if (walletAddress == null || walletAddress.isEmpty) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('wallet_address', walletAddress);
+    await prefs.setString('wallet', walletAddress);
+    await prefs.setString('walletAddress', walletAddress);
+    await prefs.setBool('has_wallet', true);
+
+    try {
+      await profileProvider
+          .createProfileFromWallet(walletAddress: walletAddress)
+          .timeout(const Duration(seconds: 10));
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint(
+          'OnboardingFlowScreen._ensureProvisionalAccountForRegistration: createProfileFromWallet failed: $e',
+        );
+      }
+    }
+    // Keep skip flow fast: avoid profile fetch fallback loops before leaving
+    // onboarding. Profile hydration can happen after landing in main app.
+
+    _refreshAuthDerivedSteps();
+    if (_steps.contains(_OnboardingStep.account) &&
+        !_completed.contains(_OnboardingStep.account)) {
+      await _markCompleted(_OnboardingStep.account);
+    }
+  }
+
   Future<void> _skipForNow() async {
     if (_isSkippingFlow) return;
     _refreshAuthDerivedSteps();
     setState(() => _isSkippingFlow = true);
 
     try {
+      if (_emailRegistrationAttempted && !_isSignedIn) {
+        await _ensureProvisionalAccountForRegistration();
+      }
       final prefs = await SharedPreferences.getInstance();
       await OnboardingStateService.markCompleted(prefs: prefs);
       await _persistProgress();
@@ -815,79 +899,86 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   }) {
     final stepNumber = _currentIndex + 1;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(KubusSpacing.md, 10, KubusSpacing.md, KubusSpacing.sm),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(minHeight: _isDesktop ? 84 : 92),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            AuthTitleRow(
-              title: l10n.onboardingFlowTitle,
-              icon: _stepIcon(_currentStep),
-              compact: !_isDesktop,
-              trailing: Text(
-                l10n.commonStepOfTotal(stepNumber, _steps.length),
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: scheme.onSurface.withValues(alpha: 0.72),
-                    ),
+      padding:
+          const EdgeInsets.fromLTRB(KubusSpacing.md, 10, KubusSpacing.md, KubusSpacing.sm),
+      child: AuthTitleRow(
+        title: l10n.onboardingFlowTitle,
+        icon: _stepIcon(_currentStep),
+        compact: !_isDesktop,
+        trailing: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_isDesktop)
+                Text(
+                  l10n.commonStepOfTotal(stepNumber, _steps.length),
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.72),
+                      ),
+                ),
+              if (_isDesktop) const SizedBox(width: KubusSpacing.xs),
+              PopupMenuButton<String>(
+                onSelected: (value) {
+                  unawaited(localeProvider.setLanguageCode(value));
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem<String>(
+                    value: 'sl',
+                    child: Text(l10n.languageSlovenian),
+                  ),
+                  PopupMenuItem<String>(
+                    value: 'en',
+                    child: Text(l10n.languageEnglish),
+                  ),
+                ],
+                child: _HeaderActionPill(
+                  icon: Icons.language,
+                  label: localeProvider.languageCode.toUpperCase(),
+                ),
               ),
-            ),
-            const SizedBox(height: KubusSpacing.sm),
-            Wrap(
-              spacing: KubusSpacing.sm,
-              runSpacing: KubusSpacing.sm,
-              alignment: WrapAlignment.end,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                PopupMenuButton<String>(
-                  onSelected: (value) {
-                    unawaited(localeProvider.setLanguageCode(value));
-                  },
-                  itemBuilder: (context) => [
-                    PopupMenuItem<String>(
-                      value: 'sl',
-                      child: Text(l10n.languageSlovenian),
-                    ),
-                    PopupMenuItem<String>(
-                      value: 'en',
-                      child: Text(l10n.languageEnglish),
-                    ),
-                  ],
-                  child: _HeaderActionPill(
-                    icon: Icons.language,
-                    label: localeProvider.languageCode.toUpperCase(),
+              const SizedBox(width: KubusSpacing.xs),
+              PopupMenuButton<ThemeMode>(
+                onSelected: (mode) {
+                  unawaited(themeProvider.setThemeMode(mode));
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem<ThemeMode>(
+                    value: ThemeMode.light,
+                    child: Text(_themeModeLabel(l10n, ThemeMode.light)),
                   ),
-                ),
-                PopupMenuButton<ThemeMode>(
-                  onSelected: (mode) {
-                    unawaited(themeProvider.setThemeMode(mode));
-                  },
-                  itemBuilder: (context) => [
-                    PopupMenuItem<ThemeMode>(
-                      value: ThemeMode.light,
-                      child: Text(_themeModeLabel(l10n, ThemeMode.light)),
-                    ),
-                    PopupMenuItem<ThemeMode>(
-                      value: ThemeMode.dark,
-                      child: Text(_themeModeLabel(l10n, ThemeMode.dark)),
-                    ),
-                    PopupMenuItem<ThemeMode>(
-                      value: ThemeMode.system,
-                      child: Text(_themeModeLabel(l10n, ThemeMode.system)),
-                    ),
-                  ],
-                  child: _HeaderActionPill(
-                    icon: Icons.brightness_6_outlined,
-                    label: _themeModeLabel(l10n, themeProvider.themeMode),
+                  PopupMenuItem<ThemeMode>(
+                    value: ThemeMode.dark,
+                    child: Text(_themeModeLabel(l10n, ThemeMode.dark)),
                   ),
+                  PopupMenuItem<ThemeMode>(
+                    value: ThemeMode.system,
+                    child: Text(_themeModeLabel(l10n, ThemeMode.system)),
+                  ),
+                ],
+                child: _HeaderActionPill(
+                  icon: Icons.brightness_6_outlined,
+                  label: _isDesktop
+                      ? _themeModeLabel(l10n, themeProvider.themeMode)
+                      : '',
                 ),
-                TextButton(
-                  onPressed: _isSkippingFlow ? null : _skipForNow,
-                  child: Text(_headerSkipLabel(l10n)),
+              ),
+              const SizedBox(width: KubusSpacing.xs),
+              TextButton(
+                onPressed: _isSkippingFlow ? null : _skipForNow,
+                style: TextButton.styleFrom(
+                  foregroundColor: scheme.onSurface.withValues(alpha: 0.84),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: KubusSpacing.sm,
+                    vertical: KubusSpacing.xs,
+                  ),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-              ],
-            ),
-          ],
+                child: Text(_headerSkipLabel(l10n)),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -947,18 +1038,27 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
           verifyHint: l10n.onboardingFlowAccountVerifyHint,
           onVerifyEmail: _jumpToVerifyStep,
           onAuthCompleted: _handleEmbeddedRegistrationSuccess,
+          onEmailRegistrationAttempted: _handleEmbeddedEmailRegistrationAttempted,
           onVerificationRequired: _handleEmbeddedVerificationRequired,
         );
       case _OnboardingStep.profile:
         if (_isSignedIn) {
           final user =
               Provider.of<ProfileProvider>(context, listen: false).currentUser;
+          final yearsActive = user?.artistInfo?.yearsActive ?? 0;
           content = _InlineProfileStep(
             title: l10n.onboardingFlowProfileTitle,
             body: l10n.onboardingFlowProfileBody,
             initialDisplayName: user?.displayName ?? '',
             initialUsername: user?.username ?? '',
             initialBio: user?.bio ?? '',
+            initialAvatarUrl: user?.avatar ?? '',
+            initialTwitter: user?.social['twitter'] ?? '',
+            initialInstagram: user?.social['instagram'] ?? '',
+            initialWebsite: user?.social['website'] ?? '',
+            initialFieldOfWork: user?.artistInfo?.specialty.join(', ') ?? '',
+            initialYearsActive:
+                yearsActive <= 0 ? '' : yearsActive.toString(),
             onSave: _saveInlineProfile,
           );
         } else {
@@ -1132,187 +1232,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
     }
   }
 
-  String _stepLabel(AppLocalizations l10n, _OnboardingStep step) {
-    switch (step) {
-      case _OnboardingStep.welcome:
-        return l10n.onboardingFlowWelcomeTitle;
-      case _OnboardingStep.account:
-        return l10n.onboardingFlowAccountTitle;
-      case _OnboardingStep.profile:
-        return l10n.onboardingFlowProfileTitle;
-      case _OnboardingStep.role:
-        return l10n.onboardingFlowRoleTitle;
-      case _OnboardingStep.permissions:
-        return l10n.onboardingFlowPermissionsTitle;
-      case _OnboardingStep.artwork:
-        return l10n.onboardingFlowArtworkTitle;
-      case _OnboardingStep.follow:
-        return l10n.onboardingFlowFollowTitle;
-      case _OnboardingStep.verifyEmail:
-        return l10n.onboardingFlowVerifyLastTitle;
-      case _OnboardingStep.done:
-        return l10n.onboardingFlowDoneTitle;
-    }
-  }
-
-  Widget _buildDesktopStepRail(AppLocalizations l10n, ColorScheme scheme) {
-    final activePalette = _paletteForStep(_currentStep);
-    return LiquidGlassPanel(
-      key: const Key('onboarding_desktop_step_rail'),
-      padding: const EdgeInsets.all(KubusSpacing.md),
-      borderRadius: BorderRadius.circular(20),
-      fallbackMinOpacity: 0.28,
-      backgroundColor: activePalette.start.withValues(alpha: 0.08),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              GradientIconCard(
-                start: activePalette.start,
-                end: activePalette.end,
-                icon: Icons.auto_awesome,
-                iconSize: 18,
-                width: 36,
-                height: 36,
-                radius: 10,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  l10n.onboardingFlowTitle,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          ...List.generate(_steps.length, (index) {
-            final step = _steps[index];
-            final active = _currentIndex == index;
-            final done = _completed.contains(step);
-            final palette = _paletteForStep(step);
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              margin: const EdgeInsets.only(bottom: 6),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(KubusRadius.md),
-                color: active
-                    ? palette.accent.withValues(alpha: 0.28)
-                    : done
-                        ? palette.accent.withValues(alpha: 0.12)
-                        : Colors.transparent,
-                border: Border.all(
-                  color: active
-                      ? palette.accent.withValues(alpha: 0.65)
-                      : done
-                          ? palette.accent.withValues(alpha: 0.35)
-                          : scheme.outline.withValues(alpha: 0.12),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(KubusRadius.sm),
-                      gradient: (active || done)
-                          ? LinearGradient(
-                              colors: [palette.start, palette.end],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            )
-                          : null,
-                      color: (active || done)
-                          ? null
-                          : scheme.outline.withValues(alpha: 0.12),
-                    ),
-                    child: Icon(
-                      done ? Icons.check_rounded : _stepIcon(step),
-                      size: 15,
-                      color: (active || done)
-                          ? Colors.white
-                          : scheme.onSurface.withValues(alpha: 0.5),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      _stepLabel(l10n, step),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            color: active
-                                ? scheme.onSurface
-                                : scheme.onSurface
-                                    .withValues(alpha: done ? 0.75 : 0.55),
-                            fontWeight:
-                                active ? FontWeight.w700 : FontWeight.w500,
-                          ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
-          const Spacer(),
-          if (_currentStep == _OnboardingStep.welcome) ...[
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: activePalette.accent.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: activePalette.accent.withValues(alpha: 0.25),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: KubusSpacing.sm, vertical: KubusSpacing.xs),
-                    decoration: BoxDecoration(
-                      color: activePalette.accent.withValues(alpha: 0.18),
-                      borderRadius: BorderRadius.circular(KubusRadius.sm),
-                    ),
-                    child: Text(
-                      l10n.onboardingFlowWelcomeInfoTime,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: activePalette.accent,
-                          ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  _RailInfoItem(
-                    icon: Icons.person_add_alt_1_outlined,
-                    text: l10n.onboardingFlowWelcomeInfoAccount,
-                    color: activePalette.accent,
-                  ),
-                  _RailInfoItem(
-                    icon: Icons.palette_outlined,
-                    text: l10n.onboardingFlowWelcomeInfoCreate,
-                    color: activePalette.accent,
-                  ),
-                  _RailInfoItem(
-                    icon: Icons.group_add_outlined,
-                    text: l10n.onboardingFlowWelcomeInfoFollow,
-                    color: activePalette.accent,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
   Widget _buildBottomActions(AppLocalizations l10n, {required bool compact}) {
     final palette = _paletteForStep(_currentStep);
     return LiquidGlassPanel(
@@ -1407,51 +1326,35 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                     horizontal: _isDesktop ? KubusSpacing.lg : KubusSpacing.md,
                     vertical: 10,
                   ),
-                  child: _isDesktop
-                      ? Row(
-                          children: [
-                            SizedBox(
-                              width: 320,
-                              child: _buildDesktopStepRail(l10n, scheme),
-                            ),
-                            const SizedBox(width: 18),
-                            Expanded(
-                              child: Column(
-                                children: [
-                                  _buildHeader(
-                                    l10n,
-                                    scheme,
-                                    localeProvider: localeProvider,
-                                    themeProvider: themeProvider,
-                                  ),
-                                  const SizedBox(height: KubusSpacing.sm),
-                                  _buildProgress(scheme),
-                                  const SizedBox(height: 10),
-                                  Expanded(child: _buildStepCard(l10n, scheme)),
-                                  const SizedBox(height: 10),
-                                  _buildBottomActions(l10n,
-                                      compact: keyboardOpen),
-                                ],
-                              ),
-                            ),
-                          ],
-                        )
-                      : Column(
-                          children: [
-                            _buildHeader(
-                              l10n,
-                              scheme,
-                              localeProvider: localeProvider,
-                              themeProvider: themeProvider,
-                            ),
-                            SizedBox(height: keyboardOpen ? KubusSpacing.xs : KubusSpacing.sm),
-                            _buildProgress(scheme),
-                            SizedBox(height: keyboardOpen ? KubusSpacing.sm : 12),
-                            Expanded(child: _buildStepCard(l10n, scheme)),
-                            const SizedBox(height: KubusSpacing.sm),
-                            _buildBottomActions(l10n, compact: keyboardOpen),
-                          ],
-                        ),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: _isDesktop ? 1040 : double.infinity,
+                      ),
+                      child: Column(
+                        children: [
+                          _buildHeader(
+                            l10n,
+                            scheme,
+                            localeProvider: localeProvider,
+                            themeProvider: themeProvider,
+                          ),
+                          SizedBox(
+                            height: keyboardOpen
+                                ? KubusSpacing.xs
+                                : KubusSpacing.sm,
+                          ),
+                          _buildProgress(scheme),
+                          SizedBox(
+                            height: keyboardOpen ? KubusSpacing.sm : 12,
+                          ),
+                          Expanded(child: _buildStepCard(l10n, scheme)),
+                          const SizedBox(height: KubusSpacing.sm),
+                          _buildBottomActions(l10n, compact: keyboardOpen),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               );
             },
@@ -1507,59 +1410,23 @@ class _HeaderActionPill extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 16, color: scheme.onSurface),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: scheme.onSurface,
-                  fontWeight: FontWeight.w600,
-                ),
-          ),
+          if (label.trim().isNotEmpty) ...[
+            const SizedBox(width: 6),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: scheme.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ],
           const SizedBox(width: KubusSpacing.xxs),
           Icon(
             Icons.arrow_drop_down,
             size: 18,
             color: scheme.onSurface.withValues(alpha: 0.8),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RailInfoItem extends StatelessWidget {
-  const _RailInfoItem({
-    required this.icon,
-    required this.text,
-    required this.color,
-  });
-
-  final IconData icon;
-  final String text;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: KubusSpacing.sm),
-          Expanded(
-            child: Text(
-              text,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.8),
-                  ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
           ),
         ],
       ),
@@ -1574,6 +1441,7 @@ class _AccountStep extends StatelessWidget {
     required this.verifyHint,
     required this.onVerifyEmail,
     required this.onAuthCompleted,
+    required this.onEmailRegistrationAttempted,
     required this.onVerificationRequired,
   });
 
@@ -1582,6 +1450,7 @@ class _AccountStep extends StatelessWidget {
   final String verifyHint;
   final Future<void> Function() onVerifyEmail;
   final Future<void> Function() onAuthCompleted;
+  final Future<void> Function(String email) onEmailRegistrationAttempted;
   final Future<void> Function(String email) onVerificationRequired;
 
   @override
@@ -1609,6 +1478,9 @@ class _AccountStep extends StatelessWidget {
           child: AuthMethodsPanel(
             embedded: true,
             onAuthSuccess: onAuthCompleted,
+            prepareProvisionalProfileBeforeRegister: true,
+            onEmailRegistrationAttempted: (email) =>
+                unawaited(onEmailRegistrationAttempted(email)),
             onVerificationRequired: onVerificationRequired,
             onSwitchToSignIn: onVerifyEmail,
           ),
@@ -1916,6 +1788,12 @@ class _InlineProfileStep extends StatefulWidget {
     required this.initialDisplayName,
     required this.initialUsername,
     required this.initialBio,
+    required this.initialAvatarUrl,
+    required this.initialTwitter,
+    required this.initialInstagram,
+    required this.initialWebsite,
+    required this.initialFieldOfWork,
+    required this.initialYearsActive,
     required this.onSave,
   });
 
@@ -1924,10 +1802,22 @@ class _InlineProfileStep extends StatefulWidget {
   final String initialDisplayName;
   final String initialUsername;
   final String initialBio;
+  final String initialAvatarUrl;
+  final String initialTwitter;
+  final String initialInstagram;
+  final String initialWebsite;
+  final String initialFieldOfWork;
+  final String initialYearsActive;
   final Future<void> Function({
     required String displayName,
     required String username,
     required String bio,
+    required String? avatar,
+    required String twitter,
+    required String instagram,
+    required String website,
+    required List<String> fieldOfWork,
+    required int? yearsActive,
   }) onSave;
 
   @override
@@ -1938,7 +1828,16 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
   late final TextEditingController _displayName;
   late final TextEditingController _username;
   late final TextEditingController _bio;
+  late final TextEditingController _twitter;
+  late final TextEditingController _instagram;
+  late final TextEditingController _website;
+  late final TextEditingController _fieldOfWork;
+  late final TextEditingController _yearsActive;
+  final ImagePicker _picker = ImagePicker();
+  String? _avatarUrl;
+  Uint8List? _localAvatarBytes;
   bool _saving = false;
+  bool _uploadingAvatar = false;
 
   @override
   void initState() {
@@ -1946,6 +1845,12 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
     _displayName = TextEditingController(text: widget.initialDisplayName);
     _username = TextEditingController(text: widget.initialUsername);
     _bio = TextEditingController(text: widget.initialBio);
+    _twitter = TextEditingController(text: widget.initialTwitter);
+    _instagram = TextEditingController(text: widget.initialInstagram);
+    _website = TextEditingController(text: widget.initialWebsite);
+    _fieldOfWork = TextEditingController(text: widget.initialFieldOfWork);
+    _yearsActive = TextEditingController(text: widget.initialYearsActive);
+    _avatarUrl = widget.initialAvatarUrl;
   }
 
   @override
@@ -1953,17 +1858,108 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
     _displayName.dispose();
     _username.dispose();
     _bio.dispose();
+    _twitter.dispose();
+    _instagram.dispose();
+    _website.dispose();
+    _fieldOfWork.dispose();
+    _yearsActive.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickAvatar() async {
+    if (_uploadingAvatar) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final wallet = (profileProvider.currentUser?.walletAddress ?? '').trim();
+    if (wallet.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('No wallet connected. Sign in first.')),
+      );
+      return;
+    }
+
+    setState(() => _uploadingAvatar = true);
+    try {
+      final image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 768,
+        maxHeight: 768,
+        imageQuality: 85,
+      );
+      if (image == null) return;
+
+      final bytes = await image.readAsBytes();
+      if (!mounted) return;
+      setState(() => _localAvatarBytes = bytes);
+
+      final fileName = image.name.trim().isNotEmpty
+          ? image.name.trim()
+          : 'avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final uploadedUrl = await profileProvider.uploadAvatarBytes(
+        fileBytes: bytes,
+        fileName: fileName,
+        walletAddress: wallet,
+        mimeType: image.mimeType,
+      );
+
+      if (!mounted) return;
+      if (uploadedUrl.trim().isEmpty) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Unable to upload avatar right now.')),
+        );
+        return;
+      }
+
+      setState(() {
+        _avatarUrl = uploadedUrl.trim();
+        _localAvatarBytes = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Unable to upload avatar: $e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _uploadingAvatar = false);
+      }
+    }
+  }
+
+  int? _parseYearsActive() {
+    final raw = _yearsActive.text.trim();
+    if (raw.isEmpty) return null;
+    final parsed = int.tryParse(raw);
+    if (parsed == null || parsed < 0) return -1;
+    return parsed;
   }
 
   Future<void> _save() async {
     if (_saving) return;
+    final yearsActive = _parseYearsActive();
+    if (yearsActive == -1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Years active must be a valid number.')),
+      );
+      return;
+    }
+
     setState(() => _saving = true);
     try {
       await widget.onSave(
         displayName: _displayName.text,
         username: _username.text,
         bio: _bio.text,
+        avatar: _avatarUrl,
+        twitter: _twitter.text,
+        instagram: _instagram.text,
+        website: _website.text,
+        fieldOfWork: _fieldOfWork.text
+            .split(',')
+            .map((value) => value.trim())
+            .where((value) => value.isNotEmpty)
+            .toList(growable: false),
+        yearsActive: yearsActive,
       );
     } finally {
       if (mounted) {
@@ -1972,8 +1968,53 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
     }
   }
 
+  String _resolvedAvatarUrl() {
+    final resolved = MediaUrlResolver.resolveDisplayUrl(_avatarUrl) ??
+        MediaUrlResolver.resolve(_avatarUrl);
+    return (resolved ?? '').trim();
+  }
+
+  Widget _buildAvatarPreview(ColorScheme scheme) {
+    if (_localAvatarBytes != null) {
+      return ClipOval(
+        child: Image.memory(
+          _localAvatarBytes!,
+          width: 88,
+          height: 88,
+          fit: BoxFit.cover,
+        ),
+      );
+    }
+
+    final avatarUrl = _resolvedAvatarUrl();
+    if (avatarUrl.isNotEmpty) {
+      return ClipOval(
+        child: Image.network(
+          avatarUrl,
+          width: 88,
+          height: 88,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Icon(
+            Icons.person_outline,
+            size: 36,
+            color: scheme.onSurface.withValues(alpha: 0.75),
+          ),
+        ),
+      );
+    }
+
+    return Icon(
+      Icons.person_outline,
+      size: 36,
+      color: scheme.onSurface.withValues(alpha: 0.75),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1985,32 +2026,108 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
         const SizedBox(height: KubusSpacing.sm),
         Text(widget.body, style: Theme.of(context).textTheme.bodyLarge),
         const SizedBox(height: 12),
-        TextField(
-          controller: _displayName,
-          decoration: InputDecoration(
-              labelText: AppLocalizations.of(context)!
-                  .desktopSettingsDisplayNameLabel),
-        ),
-        const SizedBox(height: 10),
-        TextField(
-          controller: _username,
-          decoration: InputDecoration(
-              labelText: AppLocalizations.of(context)!.commonUsernameOptional),
-        ),
-        const SizedBox(height: 10),
-        TextField(
-          controller: _bio,
-          minLines: 2,
-          maxLines: 4,
-          decoration: InputDecoration(
-              labelText: AppLocalizations.of(context)!.desktopSettingsBioLabel),
-        ),
-        const SizedBox(height: 10),
-        KubusButton(
-          onPressed: _saving ? null : _save,
-          isLoading: _saving,
-          label: AppLocalizations.of(context)!.commonSave,
-          isFullWidth: true,
+        Expanded(
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Column(
+                    children: [
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        width: 92,
+                        height: 92,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: scheme.surface.withValues(alpha: 0.45),
+                          border: Border.all(
+                            color: scheme.outline.withValues(alpha: 0.32),
+                          ),
+                        ),
+                        child: Center(child: _buildAvatarPreview(scheme)),
+                      ),
+                      const SizedBox(height: 8),
+                      OutlinedButton.icon(
+                        onPressed: (_saving || _uploadingAvatar) ? null : _pickAvatar,
+                        icon: _uploadingAvatar
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.photo_camera_outlined),
+                        label: Text(_uploadingAvatar ? 'Uploading...' : l10n.commonUpload),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: KubusSpacing.sm),
+                TextField(
+                  controller: _displayName,
+                  decoration: InputDecoration(
+                    labelText: l10n.desktopSettingsDisplayNameLabel,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _username,
+                  decoration: InputDecoration(
+                    labelText: l10n.desktopSettingsUsernameLabel,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _bio,
+                  minLines: 2,
+                  maxLines: 4,
+                  decoration: InputDecoration(
+                    labelText: l10n.desktopSettingsBioLabel,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _twitter,
+                  decoration: const InputDecoration(labelText: 'Twitter'),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _instagram,
+                  decoration: const InputDecoration(labelText: 'Instagram'),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _website,
+                  decoration: InputDecoration(
+                    labelText: l10n.desktopSettingsWebsiteLabel,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _fieldOfWork,
+                  decoration: InputDecoration(
+                    labelText: l10n.profileFieldOfWorkLabel,
+                    hintText: 'Painting, AR, Photography',
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _yearsActive,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: l10n.profileYearsActiveLabel,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                KubusButton(
+                  onPressed: (_saving || _uploadingAvatar) ? null : _save,
+                  isLoading: _saving,
+                  label: l10n.commonSave,
+                  isFullWidth: true,
+                ),
+              ],
+            ),
+          ),
         ),
       ],
     );
