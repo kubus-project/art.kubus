@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/user_persona.dart';
 import 'package:art_kubus/providers/locale_provider.dart';
@@ -9,7 +10,6 @@ import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/screens/auth/sign_in_screen.dart';
 import 'package:art_kubus/screens/desktop/desktop_shell.dart';
 import 'package:art_kubus/screens/events/exhibition_creator_screen.dart';
-import 'package:art_kubus/screens/onboarding/permissions_screen.dart';
 import 'package:art_kubus/screens/web3/artist/artwork_creator.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/notification_helper.dart';
@@ -35,6 +35,10 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 enum _OnboardingStep {
   welcome,
+  mapDiscovery,
+  community,
+  arScan,
+  daoGovernance,
   account,
   profile,
   role,
@@ -73,7 +77,7 @@ class OnboardingFlowScreen extends StatefulWidget {
 
 class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     with WidgetsBindingObserver {
-  static const int _flowVersion = 3;
+  static const int _flowVersion = 4;
   static const String _personaDraftKey = 'onboarding_persona_draft_v3';
   static const String _profileDraftKey = 'onboarding_profile_draft_v3';
   static const String _verificationEmailDraftKey =
@@ -109,6 +113,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   String? _pendingVerificationEmail;
   String? _pendingVerificationPassword;
   String? _permissionHint;
+  Permission? _permissionHintPermission;
   UserPersona? _selectedPersona;
   Map<String, String> _localProfileDraft = <String, String>{};
   late final String _inlineArtworkDraftId;
@@ -131,6 +136,30 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           start: Color(0xFF006064),
           end: KubusColors.accentTealLight,
           accent: Color(0xFF26A69A),
+        );
+      case _OnboardingStep.mapDiscovery:
+        return const _StepPalette(
+          start: Color(0xFF0D47A1),
+          end: Color(0xFF1976D2),
+          accent: Color(0xFF64B5F6),
+        );
+      case _OnboardingStep.community:
+        return const _StepPalette(
+          start: Color(0xFF2E7D32),
+          end: Color(0xFF43A047),
+          accent: Color(0xFFA5D6A7),
+        );
+      case _OnboardingStep.arScan:
+        return const _StepPalette(
+          start: Color(0xFFEF6C00),
+          end: Color(0xFFF57C00),
+          accent: Color(0xFFFFCC80),
+        );
+      case _OnboardingStep.daoGovernance:
+        return const _StepPalette(
+          start: Color(0xFF37474F),
+          end: Color(0xFF546E7A),
+          accent: Color(0xFFB0BEC5),
         );
       case _OnboardingStep.account:
         return const _StepPalette(
@@ -246,7 +275,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   Future<void> _bootstrap() async {
     _isSignedIn =
         Provider.of<ProfileProvider>(context, listen: false).isSignedIn;
-    _steps = _buildSteps();
     final isWidgetTestBinding = WidgetsBinding.instance.runtimeType
       .toString()
       .contains('TestWidgetsFlutterBinding');
@@ -254,6 +282,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     final prefs = await SharedPreferences.getInstance();
     _hydrateLocalDrafts(prefs);
     await _restorePendingVerificationSecret();
+    _steps = _buildSteps();
     final progress = await OnboardingStateService.loadFlowProgress(
       prefs: prefs,
       onboardingVersion: _flowVersion,
@@ -448,11 +477,23 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   }
 
   List<_OnboardingStep> _buildSteps() {
-    return const <_OnboardingStep>[
+    final shouldShowArStep = AppConfig.isFeatureEnabled('ar');
+    final shouldShowDaoStep = AppConfig.isFeatureEnabled('web3') &&
+        (AppConfig.isFeatureEnabled('daoOnchainTreasury') ||
+            AppConfig.isFeatureEnabled('daoReviewDecisions'));
+
+    return <_OnboardingStep>[
+      _OnboardingStep.welcome,
+      _OnboardingStep.mapDiscovery,
+      _OnboardingStep.community,
+      if (shouldShowArStep) _OnboardingStep.arScan,
+      if (shouldShowDaoStep) _OnboardingStep.daoGovernance,
       _OnboardingStep.role,
       _OnboardingStep.profile,
       _OnboardingStep.account,
-      _OnboardingStep.verifyEmail,
+      if (_verificationRequired) _OnboardingStep.verifyEmail,
+      _OnboardingStep.permissions,
+      _OnboardingStep.done,
     ];
   }
 
@@ -752,7 +793,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     final step = _currentStep;
     if (step == _OnboardingStep.permissions) {
       await _markCompleted(_OnboardingStep.permissions);
-      await _finishOnboarding();
       return;
     }
     if (step == _OnboardingStep.verifyEmail) {
@@ -823,7 +863,15 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           : l10n.permissionsOpenSettingsDialogContent(
               _permissionLabel(l10n, permission),
             );
+      _permissionHintPermission = granted ? null : permission;
     });
+  }
+
+  String? _hintForPermission(Permission permission) {
+    if (_permissionHintPermission == permission) {
+      return _permissionHint;
+    }
+    return null;
   }
 
   String _permissionLabel(AppLocalizations l10n, Permission permission) {
@@ -1082,12 +1130,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
     await _syncLocalProfileDraftToBackendIfPossible();
 
-    final allDone = _steps.every(_completed.contains);
-    if (allDone) {
-      await _finishOnboarding();
-      return;
-    }
-
     if (mounted) {
       setState(() {
         _currentIndex = _nextIncompleteIndex();
@@ -1298,18 +1340,15 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   Future<void> _finishOnboarding() async {
     await _clearPendingVerificationSecret(clearEmail: true);
     await _persistLocalDrafts();
-    await SharedPreferences.getInstance();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('has_seen_permissions', true);
+    await OnboardingStateService.markCompleted(prefs: prefs);
     await _persistProgress();
     unawaited(TelemetryService()
         .trackOnboardingComplete(reason: 'step_flow_complete'));
 
     if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => const PermissionsScreen(),
-        settings: const RouteSettings(name: '/onboarding/permissions'),
-      ),
-    );
+    Navigator.of(context).pushReplacementNamed('/main');
   }
 
   Future<void> _skipForNow() async {
@@ -1341,9 +1380,23 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       case _OnboardingStep.welcome:
         await _markCompleted(_OnboardingStep.welcome);
         return;
+      case _OnboardingStep.mapDiscovery:
+        await _markCompleted(_OnboardingStep.mapDiscovery);
+        return;
+      case _OnboardingStep.community:
+        await _markCompleted(_OnboardingStep.community);
+        return;
+      case _OnboardingStep.arScan:
+        await _markCompleted(_OnboardingStep.arScan);
+        return;
+      case _OnboardingStep.daoGovernance:
+        await _markCompleted(_OnboardingStep.daoGovernance);
+        return;
       case _OnboardingStep.account:
         if (_isSignedIn) {
           await _markCompleted(_OnboardingStep.account);
+        } else {
+          await _deferCurrentStep();
         }
         return;
       case _OnboardingStep.verifyEmail:
@@ -1352,16 +1405,19 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       case _OnboardingStep.profile:
         if (_completed.contains(_OnboardingStep.profile)) {
           await _markCompleted(_OnboardingStep.profile);
+        } else {
+          await _deferCurrentStep();
         }
         return;
       case _OnboardingStep.role:
         if (_completed.contains(_OnboardingStep.role)) {
           await _markCompleted(_OnboardingStep.role);
+        } else {
+          await _deferCurrentStep();
         }
         return;
       case _OnboardingStep.permissions:
         await _markCompleted(_OnboardingStep.permissions);
-        await _finishOnboarding();
         return;
       case _OnboardingStep.artwork:
         if (_completed.contains(_OnboardingStep.artwork)) {
@@ -1406,21 +1462,22 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     bool compact = false,
   }) {
     final stepNumber = _currentIndex + 1;
+    final headerCompact = compact && MediaQuery.sizeOf(context).height < 680;
     return Padding(
       padding: EdgeInsets.fromLTRB(
         _isDesktop
-            ? 34
-            : (compact ? KubusSpacing.md : KubusSpacing.xl),
-        compact ? KubusSpacing.sm : 16,
+            ? KubusSpacing.xxl
+            : (headerCompact ? KubusSpacing.md : KubusSpacing.xl),
+        headerCompact ? KubusSpacing.sm : KubusSpacing.lg,
         _isDesktop
-            ? 34
-            : (compact ? KubusSpacing.md : KubusSpacing.xl),
-        compact ? KubusSpacing.sm : KubusSpacing.md,
+            ? KubusSpacing.xxl
+            : (headerCompact ? KubusSpacing.md : KubusSpacing.xl),
+        headerCompact ? KubusSpacing.sm : KubusSpacing.md,
       ),
       child: AuthTitleRow(
         title: l10n.onboardingFlowTitle,
         icon: _stepIcon(_currentStep),
-        compact: compact || !_isDesktop,
+        compact: headerCompact,
         trailing: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
@@ -1434,49 +1491,48 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
                       ),
                 ),
               if (_isDesktop) const SizedBox(width: KubusSpacing.xs),
-              if (_isDesktop)
-                PopupMenuButton<String>(
-                  onSelected: (value) {
-                    unawaited(localeProvider.setLanguageCode(value));
-                  },
-                  itemBuilder: (context) => [
-                    PopupMenuItem<String>(
-                      value: 'sl',
-                      child: Text(l10n.languageSlovenian),
-                    ),
-                    PopupMenuItem<String>(
-                      value: 'en',
-                      child: Text(l10n.languageEnglish),
-                    ),
-                  ],
-                  child: _HeaderActionPill(
-                    icon: Icons.language,
+              PopupMenuButton<String>(
+                onSelected: (value) {
+                  unawaited(localeProvider.setLanguageCode(value));
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem<String>(
+                    value: 'sl',
+                    child: Text(l10n.languageSlovenian),
                   ),
-                ),
-                const SizedBox(width: KubusSpacing.xs),
-                PopupMenuButton<ThemeMode>(
-                  onSelected: (mode) {
-                    unawaited(themeProvider.setThemeMode(mode));
-                  },
-                  itemBuilder: (context) => [
-                    PopupMenuItem<ThemeMode>(
-                      value: ThemeMode.light,
-                      child: Text(_themeModeLabel(l10n, ThemeMode.light)),
-                    ),
-                    PopupMenuItem<ThemeMode>(
-                      value: ThemeMode.dark,
-                      child: Text(_themeModeLabel(l10n, ThemeMode.dark)),
-                    ),
-                    PopupMenuItem<ThemeMode>(
-                      value: ThemeMode.system,
-                      child: Text(_themeModeLabel(l10n, ThemeMode.system)),
-                    ),
-                  ],
-                  child: _HeaderActionPill(
-                    icon: Icons.brightness_6_outlined,
+                  PopupMenuItem<String>(
+                    value: 'en',
+                    child: Text(l10n.languageEnglish),
                   ),
+                ],
+                child: const _HeaderActionPill(
+                  icon: Icons.language,
                 ),
-                const SizedBox(width: KubusSpacing.xs),
+              ),
+              const SizedBox(width: KubusSpacing.xs),
+              PopupMenuButton<ThemeMode>(
+                onSelected: (mode) {
+                  unawaited(themeProvider.setThemeMode(mode));
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem<ThemeMode>(
+                    value: ThemeMode.light,
+                    child: Text(_themeModeLabel(l10n, ThemeMode.light)),
+                  ),
+                  PopupMenuItem<ThemeMode>(
+                    value: ThemeMode.dark,
+                    child: Text(_themeModeLabel(l10n, ThemeMode.dark)),
+                  ),
+                  PopupMenuItem<ThemeMode>(
+                    value: ThemeMode.system,
+                    child: Text(_themeModeLabel(l10n, ThemeMode.system)),
+                  ),
+                ],
+                child: const _HeaderActionPill(
+                  icon: Icons.brightness_6_outlined,
+                ),
+              ),
+              const SizedBox(width: KubusSpacing.xs),
               TextButton(
                 onPressed: _isSkippingFlow ? null : _skipForNow,
                 style: TextButton.styleFrom(
@@ -1544,6 +1600,55 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           title: l10n.onboardingFlowWelcomeTitle,
           body: l10n.onboardingFlowWelcomeBody,
         );
+      case _OnboardingStep.mapDiscovery:
+        content = _InfoStep(
+          title: l10n.onboardingExploreTitle,
+          body: l10n.onboardingExploreDescription,
+          icon: Icons.map_outlined,
+          start: palette.start,
+          end: palette.end,
+          permissionTitle: l10n.permissionsLocationTitle,
+          permissionBody: l10n.permissionsLocationSubtitle,
+          permissionEnabled: _locationEnabled,
+          onRequestPermission: () => _requestPermission(Permission.location),
+          hint: _hintForPermission(Permission.location),
+        );
+      case _OnboardingStep.community:
+        content = _InfoStep(
+          title: l10n.onboardingCommunityTitle,
+          body: l10n.onboardingCommunityDescription,
+          icon: Icons.groups_outlined,
+          start: palette.start,
+          end: palette.end,
+          permissionTitle: l10n.permissionsNotificationsTitle,
+          permissionBody: l10n.permissionsNotificationsSubtitle,
+          permissionEnabled: _notificationEnabled,
+          onRequestPermission: () =>
+              _requestPermission(Permission.notification),
+          hint: _hintForPermission(Permission.notification),
+        );
+      case _OnboardingStep.arScan:
+        content = _InfoStep(
+          title: l10n.permissionsCameraSubtitle,
+          body: l10n.permissionsCameraDescription,
+          icon: Icons.view_in_ar_outlined,
+          start: palette.start,
+          end: palette.end,
+          permissionTitle: kIsWeb ? null : l10n.permissionsCameraTitle,
+          permissionBody: kIsWeb ? null : l10n.permissionsCameraSubtitle,
+          permissionEnabled: _cameraEnabled,
+          onRequestPermission:
+              kIsWeb ? null : () => _requestPermission(Permission.camera),
+          hint: kIsWeb ? null : _hintForPermission(Permission.camera),
+        );
+      case _OnboardingStep.daoGovernance:
+        content = _InfoStep(
+          title: l10n.daoTreasuryTitle,
+          body: l10n.daoTreasurySubtitle,
+          icon: Icons.how_to_vote_outlined,
+          start: palette.start,
+          end: palette.end,
+        );
       case _OnboardingStep.account:
         content = _AccountStep(
           title: l10n.onboardingFlowAccountTitle,
@@ -1603,7 +1708,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         );
       case _OnboardingStep.permissions:
         content = _PermissionsStep(
-          title: 'Before we start…',
+          title: 'Before we start...',
           body: l10n.onboardingFlowPermissionsBody,
           hint: _permissionHint,
           locationEnabled: _locationEnabled,
@@ -1712,6 +1817,14 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     switch (step) {
       case _OnboardingStep.welcome:
         return Icons.waving_hand_outlined;
+      case _OnboardingStep.mapDiscovery:
+        return Icons.map_outlined;
+      case _OnboardingStep.community:
+        return Icons.groups_outlined;
+      case _OnboardingStep.arScan:
+        return Icons.view_in_ar_outlined;
+      case _OnboardingStep.daoGovernance:
+        return Icons.how_to_vote_outlined;
       case _OnboardingStep.account:
         return Icons.person_add_alt_1_outlined;
       case _OnboardingStep.profile:
@@ -1777,6 +1890,14 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   Widget _buildDesktopStepRail(AppLocalizations l10n, ColorScheme scheme) {
     final labels = _steps.map((step) {
       switch (step) {
+        case _OnboardingStep.mapDiscovery:
+          return l10n.onboardingExploreTitle;
+        case _OnboardingStep.community:
+          return l10n.onboardingCommunityTitle;
+        case _OnboardingStep.arScan:
+          return l10n.permissionsCameraSubtitle;
+        case _OnboardingStep.daoGovernance:
+          return l10n.daoTreasuryTitle;
         case _OnboardingStep.role:
           return l10n.onboardingFlowRoleTitle;
         case _OnboardingStep.profile:
@@ -2033,6 +2154,10 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
   String _primaryLabelForStep(AppLocalizations l10n) {
     switch (_currentStep) {
+      case _OnboardingStep.mapDiscovery:
+      case _OnboardingStep.community:
+      case _OnboardingStep.arScan:
+      case _OnboardingStep.daoGovernance:
       case _OnboardingStep.account:
       case _OnboardingStep.profile:
       case _OnboardingStep.permissions:
@@ -2056,12 +2181,25 @@ class _HeaderActionPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return SizedBox(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final iconColor = isDark ? Colors.white : Colors.black;
+    final borderColor = isDark
+        ? Colors.white.withValues(alpha: 0.30)
+        : Colors.black.withValues(alpha: 0.20);
+    final bgColor = isDark
+        ? Colors.black.withValues(alpha: 0.20)
+        : Colors.white.withValues(alpha: 0.34);
+
+    return Container(
       width: 44,
       height: 44,
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: borderColor, width: 1),
+      ),
       child: Center(
-        child: Icon(icon, size: 20, color: scheme.onSurface),
+        child: Icon(icon, size: 20, color: iconColor),
       ),
     );
   }
@@ -2281,6 +2419,180 @@ class _WelcomeInfoRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _InfoStep extends StatelessWidget {
+  const _InfoStep({
+    required this.title,
+    required this.body,
+    required this.icon,
+    required this.start,
+    required this.end,
+    this.permissionTitle,
+    this.permissionBody,
+    this.permissionEnabled = false,
+    this.permissionUnsupportedMessage,
+    this.onRequestPermission,
+    this.hint,
+  });
+
+  final String title;
+  final String body;
+  final IconData icon;
+  final Color start;
+  final Color end;
+  final String? permissionTitle;
+  final String? permissionBody;
+  final bool permissionEnabled;
+  final String? permissionUnsupportedMessage;
+  final Future<void> Function()? onRequestPermission;
+  final String? hint;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final hasPermissionPrompt =
+        (permissionTitle ?? '').trim().isNotEmpty &&
+            (permissionBody ?? '').trim().isNotEmpty;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxHeight < 430;
+        final tight = constraints.maxHeight < 350;
+        final isWide = constraints.maxWidth > 520;
+
+        final iconCardSize = tight ? 68.0 : (compact ? 82.0 : 96.0);
+        final iconSize = tight ? 30.0 : (compact ? 36.0 : 42.0);
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (!tight) ...[
+              Center(
+                child: GradientIconCard(
+                  start: start,
+                  end: end,
+                  icon: icon,
+                  iconSize: iconSize,
+                  width: iconCardSize,
+                  height: iconCardSize,
+                  radius: KubusRadius.lg,
+                ),
+              ),
+              SizedBox(height: compact ? KubusSpacing.sm : KubusSpacing.md),
+            ],
+            Text(
+              title,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    fontSize: compact ? 22 : (isWide ? 28 : null),
+                  ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            SizedBox(height: compact ? KubusSpacing.xs : KubusSpacing.sm),
+            Text(
+              body,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.84),
+                    height: 1.35,
+                    fontSize: compact ? 14 : null,
+                  ),
+              maxLines: tight ? 2 : 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+            if (hasPermissionPrompt) ...[
+              SizedBox(height: compact ? KubusSpacing.sm : KubusSpacing.md),
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: compact ? KubusSpacing.sm : KubusSpacing.md,
+                  vertical: compact ? KubusSpacing.sm : KubusSpacing.md,
+                ),
+                decoration: BoxDecoration(
+                  color: scheme.surface.withValues(alpha: 0.26),
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
+                  border: Border.all(
+                    color: scheme.outline.withValues(alpha: 0.22),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      permissionTitle!,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    const SizedBox(height: KubusSpacing.xs),
+                    Text(
+                      onRequestPermission == null
+                          ? (permissionUnsupportedMessage ?? permissionBody!)
+                          : permissionBody!,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: scheme.onSurface.withValues(alpha: 0.76),
+                            height: 1.25,
+                          ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: KubusSpacing.xs),
+                    if (permissionEnabled)
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.check_circle,
+                            size: 16,
+                            color: scheme.primary,
+                          ),
+                          const SizedBox(width: KubusSpacing.xs),
+                          Text(
+                            l10n.permissionsGrantedLabel,
+                            style:
+                                Theme.of(context).textTheme.labelMedium?.copyWith(
+                                      color: scheme.primary,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                          ),
+                        ],
+                      )
+                    else if (onRequestPermission != null)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton(
+                          onPressed: onRequestPermission,
+                          style: TextButton.styleFrom(
+                            foregroundColor: scheme.onSurface,
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: KubusSpacing.sm,
+                              vertical: KubusSpacing.xs,
+                            ),
+                          ),
+                          child: Text(l10n.commonEnable),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+            if ((hint ?? '').trim().isNotEmpty) ...[
+              const SizedBox(height: KubusSpacing.xs),
+              Text(
+                hint!,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.72),
+                    ),
+              ),
+            ],
+            const Spacer(),
+          ],
+        );
+      },
     );
   }
 }
