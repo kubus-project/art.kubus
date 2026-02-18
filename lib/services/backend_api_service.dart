@@ -6054,11 +6054,15 @@ class BackendApiService
       } else if (response.statusCode == 404) {
         return null;
       } else {
-        throw Exception('Failed to submit DAO review: ${response.statusCode}');
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: uri.path,
+          body: response.body,
+        );
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.submitDAOReview failed: $e');
-      return null;
+      rethrow;
     }
   }
 
