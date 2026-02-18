@@ -215,8 +215,11 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   bool get _isDesktop =>
       widget.forceDesktop || DesktopBreakpoints.isDesktop(context);
 
-  _OnboardingStep get _currentStep =>
-      _steps[_currentIndex.clamp(0, _steps.length - 1)];
+  _OnboardingStep get _currentStep {
+    if (_steps.isEmpty) return _OnboardingStep.welcome;
+    final safeIndex = _currentIndex.clamp(0, _steps.length - 1);
+    return _steps[safeIndex];
+  }
 
   @override
   void initState() {
@@ -273,86 +276,112 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   }
 
   Future<void> _bootstrap() async {
-    _isSignedIn =
-        Provider.of<ProfileProvider>(context, listen: false).isSignedIn;
-    final isWidgetTestBinding = WidgetsBinding.instance.runtimeType
-      .toString()
-      .contains('TestWidgetsFlutterBinding');
+    try {
+      _isSignedIn =
+          Provider.of<ProfileProvider>(context, listen: false).isSignedIn;
+      final isWidgetTestBinding = WidgetsBinding.instance.runtimeType
+          .toString()
+          .contains('TestWidgetsFlutterBinding');
 
-    final prefs = await SharedPreferences.getInstance();
-    _hydrateLocalDrafts(prefs);
-    await _restorePendingVerificationSecret();
-    _steps = _buildSteps();
-    final progress = await OnboardingStateService.loadFlowProgress(
-      prefs: prefs,
-      onboardingVersion: _flowVersion,
-    );
+      final prefs = await SharedPreferences.getInstance();
+      _hydrateLocalDrafts(prefs);
+      await _restorePendingVerificationSecret();
+      _steps = _buildSteps();
+      final progress = await OnboardingStateService.loadFlowProgress(
+        prefs: prefs,
+        onboardingVersion: _flowVersion,
+      );
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    final completed = isWidgetTestBinding
-      ? <_OnboardingStep>{}
-      : progress.completedSteps
-        .map(_stepFromId)
-        .whereType<_OnboardingStep>()
-        .toSet();
-    final deferred = isWidgetTestBinding
-      ? <_OnboardingStep>{}
-      : progress.deferredSteps
-        .map(_stepFromId)
-        .whereType<_OnboardingStep>()
-        .toSet();
-    final hasSavedProgress = completed.isNotEmpty || deferred.isNotEmpty;
-    final initialStepId = widget.initialStepId?.trim();
-    var seededInitialProgress = false;
-    if (!hasSavedProgress && initialStepId != null && initialStepId.isNotEmpty) {
-      final targetIndex =
-          _steps.indexWhere((step) => _stepId(step) == initialStepId);
-      if (targetIndex > 0) {
-        for (final step in _steps.take(targetIndex)) {
-          if (completed.add(step)) {
-            seededInitialProgress = true;
+      final completed = isWidgetTestBinding
+          ? <_OnboardingStep>{}
+          : progress.completedSteps
+              .map(_stepFromId)
+              .whereType<_OnboardingStep>()
+              .toSet();
+      final deferred = isWidgetTestBinding
+          ? <_OnboardingStep>{}
+          : progress.deferredSteps
+              .map(_stepFromId)
+              .whereType<_OnboardingStep>()
+              .toSet();
+      final hasSavedProgress = completed.isNotEmpty || deferred.isNotEmpty;
+      final initialStepId = widget.initialStepId?.trim();
+      var seededInitialProgress = false;
+      if (!hasSavedProgress &&
+          initialStepId != null &&
+          initialStepId.isNotEmpty) {
+        final targetIndex =
+            _steps.indexWhere((step) => _stepId(step) == initialStepId);
+        if (targetIndex > 0) {
+          for (final step in _steps.take(targetIndex)) {
+            if (completed.add(step)) {
+              seededInitialProgress = true;
+            }
           }
         }
       }
-    }
 
-    setState(() {
-      _completed
-        ..clear()
-        ..addAll(completed);
-      _deferred
-        ..clear()
-        ..addAll(deferred);
-      _isInitializing = false;
-      _currentIndex = _nextIncompleteIndex();
-    });
-    if (seededInitialProgress) {
-      await _persistProgress();
-    }
+      setState(() {
+        _completed
+          ..clear()
+          ..addAll(completed);
+        _deferred
+          ..clear()
+          ..addAll(deferred);
+        _isInitializing = false;
+        _currentIndex = _nextIncompleteIndex();
+      });
+      if (seededInitialProgress) {
+        await _persistProgress();
+      }
 
-    await _loadPermissionStatuses();
-    await _refreshDaoReview();
-    _syncStepSideEffects();
+      await _loadPermissionStatuses();
+      await _refreshDaoReview();
+      _syncStepSideEffects();
+    } catch (error, stackTrace) {
+      if (kDebugMode) {
+        debugPrint(
+            'OnboardingFlowScreen._bootstrap failed: $error\n$stackTrace');
+      }
+      if (!mounted) return;
+      final fallbackSteps = _buildSteps();
+      setState(() {
+        _steps = fallbackSteps.isEmpty
+            ? const <_OnboardingStep>[_OnboardingStep.welcome]
+            : fallbackSteps;
+        _isInitializing = false;
+        _currentIndex = _nextIncompleteIndex();
+      });
+      _syncStepSideEffects();
+    }
   }
 
   Future<void> _restorePendingVerificationSecret() async {
     if (kIsWeb) return;
     try {
-      final restored = (await _secureStorage.read(
-            key: _verificationPasswordSecureKey,
-            aOptions: _secureStorageAndroidOptions,
-            iOptions: _secureStorageIOSOptions,
-          ) ??
+      final restored = (await _secureStorage
+                  .read(
+                    key: _verificationPasswordSecureKey,
+                    aOptions: _secureStorageAndroidOptions,
+                    iOptions: _secureStorageIOSOptions,
+                  )
+                  .timeout(
+                    const Duration(milliseconds: 800),
+                    onTimeout: () => null,
+                  ) ??
               '')
           .trim();
       final pendingEmail = (_pendingVerificationEmail ?? '').trim();
       if (pendingEmail.isEmpty) {
-        await _secureStorage.delete(
-          key: _verificationPasswordSecureKey,
-          aOptions: _secureStorageAndroidOptions,
-          iOptions: _secureStorageIOSOptions,
-        );
+        await _secureStorage
+            .delete(
+              key: _verificationPasswordSecureKey,
+              aOptions: _secureStorageAndroidOptions,
+              iOptions: _secureStorageIOSOptions,
+            )
+            .timeout(const Duration(milliseconds: 800));
         _pendingVerificationPassword = null;
         return;
       }
@@ -367,19 +396,23 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     final pendingPassword = (_pendingVerificationPassword ?? '').trim();
     try {
       if (pendingPassword.isEmpty) {
-        await _secureStorage.delete(
-          key: _verificationPasswordSecureKey,
-          aOptions: _secureStorageAndroidOptions,
-          iOptions: _secureStorageIOSOptions,
-        );
+        await _secureStorage
+            .delete(
+              key: _verificationPasswordSecureKey,
+              aOptions: _secureStorageAndroidOptions,
+              iOptions: _secureStorageIOSOptions,
+            )
+            .timeout(const Duration(milliseconds: 800));
         return;
       }
-      await _secureStorage.write(
-        key: _verificationPasswordSecureKey,
-        value: pendingPassword,
-        aOptions: _secureStorageAndroidOptions,
-        iOptions: _secureStorageIOSOptions,
-      );
+      await _secureStorage
+          .write(
+            key: _verificationPasswordSecureKey,
+            value: pendingPassword,
+            aOptions: _secureStorageAndroidOptions,
+            iOptions: _secureStorageIOSOptions,
+          )
+          .timeout(const Duration(milliseconds: 800));
     } catch (_) {}
   }
 
@@ -392,11 +425,13 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     }
     if (kIsWeb) return;
     try {
-      await _secureStorage.delete(
-        key: _verificationPasswordSecureKey,
-        aOptions: _secureStorageAndroidOptions,
-        iOptions: _secureStorageIOSOptions,
-      );
+      await _secureStorage
+          .delete(
+            key: _verificationPasswordSecureKey,
+            aOptions: _secureStorageAndroidOptions,
+            iOptions: _secureStorageIOSOptions,
+          )
+          .timeout(const Duration(milliseconds: 800));
     } catch (_) {}
   }
 
@@ -405,15 +440,18 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     _selectedPersona = UserPersonaX.tryParse(rawPersona);
 
     final rawProfile = (prefs.getString(_profileDraftKey) ?? '').trim();
-    if (rawProfile.isEmpty) return;
-    try {
-      final decoded = jsonDecode(rawProfile);
-      if (decoded is Map<String, dynamic>) {
-        _localProfileDraft = decoded.map(
-          (key, value) => MapEntry(key, (value ?? '').toString()),
-        );
+    if (rawProfile.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(rawProfile);
+        if (decoded is Map<String, dynamic>) {
+          _localProfileDraft = decoded.map(
+            (key, value) => MapEntry(key, (value ?? '').toString()),
+          );
+        }
+      } catch (_) {
+        _localProfileDraft = <String, String>{};
       }
-    } catch (_) {
+    } else {
       _localProfileDraft = <String, String>{};
     }
 
@@ -606,9 +644,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   void _startVerificationPollingIfNeeded({bool restartWindow = false}) {
     if (_steps.isEmpty) return;
     final pendingEmail = (_pendingVerificationEmail ?? '').trim();
-    final shouldPoll = _currentStep == _OnboardingStep.verifyEmail &&
-        pendingEmail.isNotEmpty &&
-        !_isSignedIn;
+    final shouldPoll =
+        _currentStep == _OnboardingStep.verifyEmail && pendingEmail.isNotEmpty;
     if (!shouldPoll) {
       _verificationPollTimer?.cancel();
       _verificationPollTimer = null;
@@ -625,7 +662,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       (_) {
         final startedAt = _verificationPollStartedAt;
         if (startedAt != null &&
-            DateTime.now().difference(startedAt) > _verificationPollMaxDuration) {
+            DateTime.now().difference(startedAt) >
+                _verificationPollMaxDuration) {
           _logVerificationRefresh('poll timeout reached; stopping timer');
           _verificationPollTimer?.cancel();
           _verificationPollTimer = null;
@@ -681,8 +719,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         _autoAdvancingVerification = true;
       });
       try {
-        await _clearPendingVerificationSecret(clearEmail: true);
-        await _persistLocalDrafts();
         await _confirmVerificationAndContinue();
       } finally {
         if (mounted) {
@@ -708,7 +744,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   }
 
   Future<void> _syncLocalProfileDraftToBackendIfPossible() async {
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
     final wallet = (profileProvider.currentUser?.walletAddress ?? '').trim();
     if (wallet.isEmpty) return;
 
@@ -1051,7 +1088,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     final fileName = (_pendingAvatarFileName ?? '').trim();
     if (bytes == null || fileName.isEmpty) return;
 
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
     final wallet = (profileProvider.currentUser?.walletAddress ?? '').trim();
     if (wallet.isEmpty) return;
 
@@ -1084,12 +1122,17 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   }
 
   Future<void> _confirmVerificationAndContinue() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
     _refreshAuthDerivedSteps();
 
     final pendingEmail = (_pendingVerificationEmail ?? '').trim();
     final pendingPassword = (_pendingVerificationPassword ?? '').trim();
 
-    if (_verificationRequired && !_isSignedIn && pendingEmail.isNotEmpty && pendingPassword.isNotEmpty) {
+    if (_verificationRequired &&
+        !_isSignedIn &&
+        pendingEmail.isNotEmpty &&
+        pendingPassword.isNotEmpty) {
       try {
         final loginResult = await BackendApiService().loginWithEmail(
           email: pendingEmail,
@@ -1101,28 +1144,45 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       }
     }
 
-    if (_verificationRequired && _isSignedIn) {
-      final refreshed = await BackendApiService().refreshAuthTokenFromStorage();
-      _refreshAuthDerivedSteps();
-      if (refreshed) {
-        await _clearPendingVerificationSecret(clearEmail: true);
-        _emailVerifiedConfirmed = true;
-        await _persistLocalDrafts();
+    if (_verificationRequired) {
+      var verified = _emailVerifiedConfirmed;
+      final emailToCheck = (_pendingVerificationEmail ?? '').trim();
+      if (emailToCheck.isNotEmpty) {
+        try {
+          final status = await BackendApiService()
+              .getEmailVerificationStatus(email: emailToCheck);
+          verified = status['verified'] == true;
+          if (mounted && _emailVerifiedConfirmed != verified) {
+            setState(() {
+              _emailVerifiedConfirmed = verified;
+            });
+          } else {
+            _emailVerifiedConfirmed = verified;
+          }
+        } catch (_) {
+          // Keep local confirmation state when backend is temporarily unavailable.
+        }
       }
+
+      if (!verified) {
+        if (!mounted) return;
+        messenger.showKubusSnackBar(
+          SnackBar(content: Text(l10n.authVerifyEmailSignInHint)),
+          tone: KubusSnackBarTone.warning,
+        );
+        return;
+      }
+
+      if (_isSignedIn) {
+        await BackendApiService().refreshAuthTokenFromStorage();
+        _refreshAuthDerivedSteps();
+      }
+
+      await _clearPendingVerificationSecret(clearEmail: true);
+      await _persistLocalDrafts();
     }
 
-    if (_verificationRequired) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showKubusSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocalizations.of(context)!.authVerifyEmailSignInHint,
-          ),
-        ),
-        tone: KubusSnackBarTone.warning,
-      );
-      return;
-    }
+    if (!mounted) return;
 
     if (_steps.contains(_OnboardingStep.verifyEmail)) {
       await _markCompleted(_OnboardingStep.verifyEmail);
@@ -1159,7 +1219,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     required bool isArtist,
     required bool isInstitution,
   }) async {
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
     _selectedPersona = isInstitution
         ? UserPersona.institution
         : (isArtist ? UserPersona.creator : UserPersona.lover);
@@ -1170,7 +1231,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     );
     final wallet = profileProvider.currentUser?.walletAddress;
     if (wallet != null && wallet.isNotEmpty) {
-      await profileProvider.setUserPersona(_selectedPersona ?? UserPersona.lover);
+      await profileProvider
+          .setUserPersona(_selectedPersona ?? UserPersona.lover);
       await profileProvider.saveProfile(
         walletAddress: wallet,
         isArtist: isArtist,
@@ -1182,7 +1244,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   }
 
   Future<void> _applyPersonaSelection(UserPersona persona) async {
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
     _selectedPersona = persona;
     await _persistLocalDrafts();
     final isArtist = persona == UserPersona.creator;
@@ -1204,8 +1267,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   }) async {
     if (!mounted) return false;
     final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
     if (!isArtist && !isInstitution) {
-      ScaffoldMessenger.of(context).showKubusSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.daoProposalFillRequiredFieldsToast)),
         tone: KubusSnackBarTone.warning,
       );
@@ -1217,8 +1281,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         Provider.of<ProfileProvider>(context, listen: false);
     final wallet = (profileProvider.currentUser?.walletAddress ?? '').trim();
     if (!_isSignedIn || wallet.isEmpty) {
-      ScaffoldMessenger.of(context).showKubusSnackBar(
-        SnackBar(content: Text(l10n.artistStudioApplicationWalletRequiredToast)),
+      messenger.showKubusSnackBar(
+        SnackBar(
+            content: Text(l10n.artistStudioApplicationWalletRequiredToast)),
         tone: KubusSnackBarTone.warning,
       );
       await _jumpToStepIfPresent(_OnboardingStep.account);
@@ -1243,7 +1308,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       );
 
       if (review == null) {
-        ScaffoldMessenger.of(context).showKubusSnackBar(
+        messenger.showKubusSnackBar(
           SnackBar(content: Text(l10n.daoProposalSubmitFailedToast)),
           tone: KubusSnackBarTone.error,
         );
@@ -1256,7 +1321,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         _daoMessage = l10n.artistStudioReviewPendingInfo;
       });
 
-      ScaffoldMessenger.of(context).showKubusSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.artistStudioApplicationSubmittedToast)),
         tone: KubusSnackBarTone.success,
       );
@@ -1275,7 +1340,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         error: error,
         fallback: l10n.daoProposalSubmitFailedToast,
       );
-      ScaffoldMessenger.of(context).showKubusSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(content: Text(message)),
         tone: KubusSnackBarTone.error,
       );
@@ -1565,8 +1630,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           return Expanded(
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              margin:
-                  EdgeInsets.only(right: index == _steps.length - 1 ? 0 : KubusSpacing.xs),
+              margin: EdgeInsets.only(
+                  right: index == _steps.length - 1 ? 0 : KubusSpacing.xs),
               height: 8,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(999),
@@ -1656,12 +1721,14 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           verifyHint: l10n.onboardingFlowAccountVerifyHint,
           onVerifyEmail: _jumpToVerifyStep,
           onAuthCompleted: _handleEmbeddedRegistrationSuccess,
-          onEmailRegistrationAttempted: _handleEmbeddedEmailRegistrationAttempted,
+          onEmailRegistrationAttempted:
+              _handleEmbeddedEmailRegistrationAttempted,
           onEmailCredentialsCaptured: _handleEmbeddedEmailCredentialsCaptured,
           onVerificationRequired: _handleEmbeddedVerificationRequired,
         );
       case _OnboardingStep.profile:
-        final user = Provider.of<ProfileProvider>(context, listen: false).currentUser;
+        final user =
+            Provider.of<ProfileProvider>(context, listen: false).currentUser;
         final yearsActive = user?.artistInfo?.yearsActive ?? 0;
         content = _InlineProfileStep(
           title: l10n.onboardingFlowProfileTitle,
@@ -1691,14 +1758,16 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           onAvatarStaged: _stageAvatarForLaterUpload,
         );
       case _OnboardingStep.role:
-        final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+        final profileProvider =
+            Provider.of<ProfileProvider>(context, listen: false);
         final user = profileProvider.currentUser;
         content = _RoleStep(
           title: l10n.onboardingFlowRoleTitle,
           body: l10n.onboardingFlowRoleBody,
-          artistSelected: user?.isArtist ?? (_selectedPersona == UserPersona.creator),
-          institutionSelected:
-              user?.isInstitution ?? (_selectedPersona == UserPersona.institution),
+          artistSelected:
+              user?.isArtist ?? (_selectedPersona == UserPersona.creator),
+          institutionSelected: user?.isInstitution ??
+              (_selectedPersona == UserPersona.institution),
           selectedPersona: _selectedPersona ?? profileProvider.userPersona,
           onSelectPersona: _applyPersonaSelection,
           onSave: _applyRoleSelection,
@@ -1848,12 +1917,12 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final skipBackground = isDark
-      ? scheme.surface.withValues(alpha: 0.86)
-      : scheme.surface.withValues(alpha: 0.94);
+        ? scheme.surface.withValues(alpha: 0.86)
+        : scheme.surface.withValues(alpha: 0.94);
     final skipForeground = isDark ? scheme.onSurface : scheme.onSurfaceVariant;
     final ctaBackground = isDark
-      ? scheme.primary.withValues(alpha: 0.96)
-      : scheme.primary.withValues(alpha: 0.98);
+        ? scheme.primary.withValues(alpha: 0.96)
+        : scheme.primary.withValues(alpha: 0.98);
     final ctaForeground = scheme.onPrimary;
     return Row(
       children: [
@@ -1956,7 +2025,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           Expanded(
             child: ListView.separated(
               itemCount: labels.length,
-              separatorBuilder: (_, __) => const SizedBox(height: KubusSpacing.xs),
+              separatorBuilder: (_, __) =>
+                  const SizedBox(height: KubusSpacing.xs),
               itemBuilder: (context, index) {
                 final step = _steps[index];
                 final isActive = index == _currentIndex;
@@ -2008,12 +2078,13 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
                           labels[index],
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                color: Colors.white.withValues(alpha: 0.95),
-                                fontWeight: isActive
-                                    ? FontWeight.w700
-                                    : FontWeight.w600,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.labelLarge?.copyWith(
+                                    color: Colors.white.withValues(alpha: 0.95),
+                                    fontWeight: isActive
+                                        ? FontWeight.w700
+                                        : FontWeight.w600,
+                                  ),
                         ),
                       ),
                     ],
@@ -2110,39 +2181,39 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
                       ),
                       child: Column(
                         children: [
-                            _buildHeader(
-                              l10n,
-                              scheme,
-                              localeProvider: localeProvider,
-                              themeProvider: themeProvider,
-                              compact: compactLayout,
-                            ),
+                          _buildHeader(
+                            l10n,
+                            scheme,
+                            localeProvider: localeProvider,
+                            themeProvider: themeProvider,
+                            compact: compactLayout,
+                          ),
+                          SizedBox(
+                            height: compactLayout
+                                ? KubusSpacing.xs
+                                : KubusSpacing.sm,
+                          ),
+                          if (!hideProgress) ...[
+                            _buildProgress(scheme),
                             SizedBox(
-                              height: compactLayout
-                                  ? KubusSpacing.xs
-                                  : KubusSpacing.sm,
+                              height: compactLayout ? KubusSpacing.xs : 12,
                             ),
-                            if (!hideProgress) ...[
-                              _buildProgress(scheme),
-                              SizedBox(
-                                height: compactLayout ? KubusSpacing.xs : 12,
-                              ),
-                            ],
-                            Expanded(
-                              child: _isDesktop
-                                  ? _buildDesktopContent(l10n, scheme)
-                                  : _buildStepCard(l10n, scheme),
-                            ),
-                            SizedBox(
-                              height: compactLayout
-                                  ? KubusSpacing.sm
-                                  : KubusSpacing.md,
-                            ),
-                            _buildBottomActions(l10n, compact: compactLayout),
                           ],
-                        ),
+                          Expanded(
+                            child: _isDesktop
+                                ? _buildDesktopContent(l10n, scheme)
+                                : _buildStepCard(l10n, scheme),
+                          ),
+                          SizedBox(
+                            height: compactLayout
+                                ? KubusSpacing.sm
+                                : KubusSpacing.md,
+                          ),
+                          _buildBottomActions(l10n, compact: compactLayout),
+                        ],
                       ),
                     ),
+                  ),
                 ),
               );
             },
@@ -2412,8 +2483,10 @@ class _WelcomeInfoRow extends StatelessWidget {
             child: Text(
               text,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color:
-                        Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.85),
                   ),
             ),
           ),
@@ -2433,7 +2506,6 @@ class _InfoStep extends StatelessWidget {
     this.permissionTitle,
     this.permissionBody,
     this.permissionEnabled = false,
-    this.permissionUnsupportedMessage,
     this.onRequestPermission,
     this.hint,
   });
@@ -2446,7 +2518,6 @@ class _InfoStep extends StatelessWidget {
   final String? permissionTitle;
   final String? permissionBody;
   final bool permissionEnabled;
-  final String? permissionUnsupportedMessage;
   final Future<void> Function()? onRequestPermission;
   final String? hint;
 
@@ -2454,9 +2525,8 @@ class _InfoStep extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    final hasPermissionPrompt =
-        (permissionTitle ?? '').trim().isNotEmpty &&
-            (permissionBody ?? '').trim().isNotEmpty;
+    final hasPermissionPrompt = (permissionTitle ?? '').trim().isNotEmpty &&
+        (permissionBody ?? '').trim().isNotEmpty;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -2529,9 +2599,7 @@ class _InfoStep extends StatelessWidget {
                     ),
                     const SizedBox(height: KubusSpacing.xs),
                     Text(
-                      onRequestPermission == null
-                          ? (permissionUnsupportedMessage ?? permissionBody!)
-                          : permissionBody!,
+                      permissionBody!,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: scheme.onSurface.withValues(alpha: 0.76),
                             height: 1.25,
@@ -2551,11 +2619,13 @@ class _InfoStep extends StatelessWidget {
                           const SizedBox(width: KubusSpacing.xs),
                           Text(
                             l10n.permissionsGrantedLabel,
-                            style:
-                                Theme.of(context).textTheme.labelMedium?.copyWith(
-                                      color: scheme.primary,
-                                      fontWeight: FontWeight.w700,
-                                    ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelMedium
+                                ?.copyWith(
+                                  color: scheme.primary,
+                                  fontWeight: FontWeight.w700,
+                                ),
                           ),
                         ],
                       )
@@ -2771,8 +2841,10 @@ class _InlineVerificationPanelState extends State<_InlineVerificationPanel> {
               Expanded(
                 child: Text(
                   widget.isVerified
-                      ? AppLocalizations.of(context)!.authVerifyEmailStatusVerified
-                      : AppLocalizations.of(context)!.authVerifyEmailStatusPending,
+                      ? AppLocalizations.of(context)!
+                          .authVerifyEmailStatusVerified
+                      : AppLocalizations.of(context)!
+                          .authVerifyEmailStatusPending,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: widget.isVerified
@@ -3078,15 +3150,19 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
                       ),
                       const SizedBox(height: 8),
                       OutlinedButton.icon(
-                        onPressed: (_saving || _uploadingAvatar) ? null : _pickAvatar,
+                        onPressed:
+                            (_saving || _uploadingAvatar) ? null : _pickAvatar,
                         icon: _uploadingAvatar
                             ? const SizedBox(
                                 width: 14,
                                 height: 14,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
                               )
                             : const Icon(Icons.photo_camera_outlined),
-                        label: Text(_uploadingAvatar ? 'Selecting...' : l10n.commonUpload),
+                        label: Text(_uploadingAvatar
+                            ? 'Selecting...'
+                            : l10n.commonUpload),
                       ),
                     ],
                   ),
@@ -3342,15 +3418,13 @@ class _RoleStepState extends State<_RoleStep> {
           const SizedBox(height: KubusSpacing.xs),
           TextField(
             controller: _portfolioController,
-            onTapOutside: (_) =>
-                FocusManager.instance.primaryFocus?.unfocus(),
+            onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
             decoration: const InputDecoration(labelText: 'Portfolio URL'),
           ),
           const SizedBox(height: KubusSpacing.sm),
           TextField(
             controller: _mediumController,
-            onTapOutside: (_) =>
-                FocusManager.instance.primaryFocus?.unfocus(),
+            onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
             decoration: const InputDecoration(labelText: 'Primary medium'),
           ),
           const SizedBox(height: KubusSpacing.sm),
@@ -3358,8 +3432,7 @@ class _RoleStepState extends State<_RoleStep> {
             controller: _statementController,
             minLines: 2,
             maxLines: 4,
-            onTapOutside: (_) =>
-                FocusManager.instance.primaryFocus?.unfocus(),
+            onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
             decoration: const InputDecoration(labelText: 'DAO statement'),
           ),
           const SizedBox(height: KubusSpacing.sm),
