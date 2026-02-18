@@ -9,6 +9,7 @@ import 'package:art_kubus/widgets/app_logo.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/gradient_icon_card.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
+import 'package:art_kubus/widgets/onboarding_topbar_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -164,18 +165,26 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen> {
             builder: (context, constraints) {
               final compactHeight = constraints.maxHeight < 720;
               final tightHeight = constraints.maxHeight < 620;
+              final narrowWidth = constraints.maxWidth < 380;
               final horizontalPadding = _isDesktop
-                  ? KubusSpacing.xxl
-                  : (compactHeight ? KubusSpacing.md : KubusSpacing.xl);
+                  ? (KubusSpacing.xxl + KubusSpacing.sm)
+                  : (compactHeight
+                      ? KubusSpacing.lg
+                      : (KubusSpacing.xl + KubusSpacing.sm));
+              final safeHorizontalPadding =
+                  narrowWidth ? KubusSpacing.md : horizontalPadding;
+              final topbarActionSpacing =
+                  tightHeight ? KubusSpacing.xs : KubusSpacing.sm;
+              final topbarActionSize = tightHeight ? 44.0 : 48.0;
               final logoSize = tightHeight
                   ? (_isDesktop ? 42.0 : 34.0)
                   : (_isDesktop ? 50.0 : 42.0);
 
               return Padding(
                 padding: EdgeInsets.fromLTRB(
-                  horizontalPadding,
+                  safeHorizontalPadding,
                   compactHeight ? KubusSpacing.sm : KubusSpacing.lg,
-                  horizontalPadding,
+                  safeHorizontalPadding,
                   compactHeight ? KubusSpacing.md : KubusSpacing.lg,
                 ),
                 child: Column(
@@ -189,6 +198,9 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen> {
                         ),
                         const Spacer(),
                         PopupMenuButton<String>(
+                          borderRadius: BorderRadius.circular(999),
+                          padding: EdgeInsets.zero,
+                          splashRadius: topbarActionSize / 2,
                           onSelected: (value) {
                             localeProvider.setLanguageCode(value);
                           },
@@ -202,10 +214,16 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen> {
                               child: Text(l10n.languageEnglish),
                             ),
                           ],
-                          child: const _TopIconPill(icon: Icons.language),
+                          child: OnboardingTopbarIcon(
+                            icon: Icons.language,
+                            tapTargetSize: topbarActionSize,
+                          ),
                         ),
-                        const SizedBox(width: KubusSpacing.xs),
+                        SizedBox(width: topbarActionSpacing),
                         PopupMenuButton<ThemeMode>(
+                          borderRadius: BorderRadius.circular(999),
+                          padding: EdgeInsets.zero,
+                          splashRadius: topbarActionSize / 2,
                           onSelected: (mode) {
                             themeProvider.setThemeMode(mode);
                           },
@@ -223,8 +241,9 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen> {
                               child: Text(l10n.settingsThemeModeSystem),
                             ),
                           ],
-                          child: const _TopIconPill(
+                          child: OnboardingTopbarIcon(
                             icon: Icons.brightness_6_outlined,
+                            tapTargetSize: topbarActionSize,
                           ),
                         ),
                       ],
@@ -390,37 +409,6 @@ class _IntroPageView extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-}
-
-class _TopIconPill extends StatelessWidget {
-  const _TopIconPill({required this.icon});
-
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final iconColor = isDark ? Colors.white : Colors.black;
-    final bgColor = isDark
-        ? Colors.black.withValues(alpha: 0.20)
-        : Colors.white.withValues(alpha: 0.34);
-    final borderColor = isDark
-        ? Colors.white.withValues(alpha: 0.30)
-        : Colors.black.withValues(alpha: 0.20);
-
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: borderColor, width: 1),
-      ),
-      child: Center(
-        child: Icon(icon, size: 20, color: iconColor),
-      ),
     );
   }
 }

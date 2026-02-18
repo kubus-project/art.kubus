@@ -24,7 +24,7 @@ class AuthTitleRow extends StatelessWidget {
       child: LiquidGlassPanel(
         margin: EdgeInsets.zero,
         padding: EdgeInsets.symmetric(
-          horizontal: compact ? 12 : 20,
+          horizontal: compact ? 14 : 24,
           vertical: compact ? 10 : 14,
         ),
         borderRadius: BorderRadius.circular(20),
@@ -48,7 +48,7 @@ class AuthTitleRow extends StatelessWidget {
                 ),
                 child: Icon(icon, size: compact ? 18 : 22, color: Colors.white),
               ),
-              SizedBox(width: compact ? 10 : 12),
+              SizedBox(width: compact ? 12 : 14),
               Expanded(
                 child: Text(
                   title,
@@ -61,7 +61,7 @@ class AuthTitleRow extends StatelessWidget {
                 ),
               ),
               if (trailing != null) ...[
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Flexible(
                   fit: FlexFit.loose,
                   child: Align(

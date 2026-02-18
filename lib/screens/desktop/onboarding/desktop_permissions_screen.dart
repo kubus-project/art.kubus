@@ -3,7 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
+import 'package:flutter/foundation.dart'
+    show kDebugMode, kIsWeb, TargetPlatform, defaultTargetPlatform;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
@@ -30,11 +31,14 @@ class DesktopPermissionsScreen extends StatefulWidget {
       _DesktopPermissionsScreenState();
 }
 
-class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
+class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen>
+    with WidgetsBindingObserver {
   final PageController _pageController = PageController();
   int _currentPage = 0;
   bool _isCheckingPermissions = true;
   bool _isCompletingOnboarding = false;
+  bool _isRequestingPermission = false;
+  int _permissionStatusEpoch = 0;
 
   // Track permission states
   bool _locationGranted = false;
@@ -123,54 +127,149 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _checkExistingPermissions();
   }
 
-  Future<void> _checkExistingPermissions() async {
-    bool locationGranted = false;
-    bool cameraGranted = false;
-    bool notificationsGranted = false;
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    unawaited(_checkExistingPermissions(autoComplete: false));
+  }
 
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _checkExistingPermissions({bool autoComplete = true}) async {
+    final requestEpoch = ++_permissionStatusEpoch;
+    final snapshot = await _readPermissionSnapshot();
+
+    if (!mounted || requestEpoch != _permissionStatusEpoch) return;
+
+    setState(() {
+      _locationGranted = snapshot.locationGranted;
+      _cameraGranted = snapshot.cameraGranted;
+      _notificationsGranted = snapshot.notificationsGranted;
+      _isCheckingPermissions = false;
+    });
+
+    if (autoComplete && _allRequiredPermissionsGranted()) {
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (mounted) _completeOnboarding();
+    }
+  }
+
+  List<PermissionType> get _requiredPermissions => <PermissionType>[
+        PermissionType.location,
+        if (!kIsWeb) PermissionType.camera,
+        if (kIsWeb) PermissionType.notifications,
+      ];
+
+  bool _allRequiredPermissionsGranted() =>
+      _requiredPermissions.every(_isPermissionGranted);
+
+  bool _isStatusBlocked(PermissionStatus status) =>
+      status.isPermanentlyDenied || status.isRestricted;
+
+  Permission _locationPermissionForRequest() {
+    if (!kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.iOS ||
+            defaultTargetPlatform == TargetPlatform.macOS)) {
+      return Permission.locationWhenInUse;
+    }
+    return Permission.location;
+  }
+
+  Future<PermissionStatus> _safePermissionStatus(Permission permission) async {
     try {
-      final locationStatus = await Permission.location.status;
-      locationGranted = locationStatus.isGranted;
-
-      if (kIsWeb) {
-        cameraGranted = true;
-      } else {
-        final cameraStatus = await Permission.camera.status;
-        cameraGranted = cameraStatus.isGranted;
-      }
-
-      if (kIsWeb) {
-        notificationsGranted = await isWebNotificationPermissionGranted();
-      }
+      return await permission.status;
     } catch (e, st) {
       if (kDebugMode) {
         debugPrint(
-            'DesktopPermissionsScreen._checkExistingPermissions: $e\n$st');
+          'DesktopPermissionsScreen._safePermissionStatus($permission) failed: $e\n$st',
+        );
       }
+      return PermissionStatus.denied;
     }
+  }
 
-    if (mounted) {
-      setState(() {
-        _locationGranted = locationGranted;
-        _cameraGranted = cameraGranted;
-        _notificationsGranted = notificationsGranted;
-        _isCheckingPermissions = false;
-      });
-    }
-
-    // If all permissions granted, auto-complete
-    final requiredPermissions = <PermissionType>[
-      PermissionType.location,
-      if (!kIsWeb) PermissionType.camera,
-      if (kIsWeb) PermissionType.notifications,
+  Future<List<PermissionStatus>> _locationStatuses() async {
+    final statuses = <PermissionStatus>[
+      await _safePermissionStatus(Permission.location),
     ];
+    if (!kIsWeb) {
+      statuses.add(await _safePermissionStatus(Permission.locationWhenInUse));
+      statuses.add(await _safePermissionStatus(Permission.locationAlways));
+    }
+    return statuses;
+  }
 
-    if (requiredPermissions.every(_isPermissionGranted)) {
-      await Future.delayed(const Duration(milliseconds: 500));
-      if (mounted) _completeOnboarding();
+  Future<bool> _isLocationGranted() async {
+    final statuses = await _locationStatuses();
+    return statuses.any((status) => status.isGranted);
+  }
+
+  Future<bool> _isLocationBlocked() async {
+    final statuses = await _locationStatuses();
+    if (statuses.any((status) => status.isGranted)) return false;
+    return statuses.any(_isStatusBlocked);
+  }
+
+  Future<bool> _isNotificationGrantedOnWeb() async {
+    try {
+      return await isWebNotificationPermissionGranted();
+    } catch (e, st) {
+      if (kDebugMode) {
+        debugPrint(
+          'DesktopPermissionsScreen._isNotificationGrantedOnWeb failed: $e\n$st',
+        );
+      }
+      return false;
+    }
+  }
+
+  Future<_PermissionStateSnapshot> _readPermissionSnapshot() async {
+    try {
+      final locationGranted = await _isLocationGranted();
+      final cameraGranted = kIsWeb
+          ? true
+          : (await _safePermissionStatus(Permission.camera)).isGranted;
+      final notificationsGranted =
+          kIsWeb ? await _isNotificationGrantedOnWeb() : false;
+      return _PermissionStateSnapshot(
+        locationGranted: locationGranted,
+        cameraGranted: cameraGranted,
+        notificationsGranted: notificationsGranted,
+      );
+    } catch (e, st) {
+      if (kDebugMode) {
+        debugPrint(
+          'DesktopPermissionsScreen._readPermissionSnapshot failed: $e\n$st',
+        );
+      }
+      return const _PermissionStateSnapshot(
+        locationGranted: false,
+        cameraGranted: false,
+        notificationsGranted: false,
+      );
+    }
+  }
+
+  Future<bool> _isPermissionBlocked(PermissionType type) async {
+    switch (type) {
+      case PermissionType.location:
+        return _isLocationBlocked();
+      case PermissionType.camera:
+        return _isStatusBlocked(await _safePermissionStatus(Permission.camera));
+      case PermissionType.notifications:
+        if (kIsWeb) return false;
+        return _isStatusBlocked(
+          await _safePermissionStatus(Permission.notification),
+        );
     }
   }
 
@@ -186,121 +285,92 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
   }
 
   Future<void> _requestPermission(PermissionType type) async {
-    if (type == PermissionType.notifications) {
-      final l10n = AppLocalizations.of(context)!;
-      final messenger = ScaffoldMessenger.of(context);
+    if (_isRequestingPermission || _isCompletingOnboarding) return;
+    if (mounted) {
+      setState(() => _isRequestingPermission = true);
+    } else {
+      _isRequestingPermission = true;
+    }
 
-      bool granted = false;
-      try {
-        granted = await PushNotificationService().requestPermission();
-      } catch (e, st) {
-        if (kDebugMode) {
-          debugPrint(
-            'DesktopPermissionsScreen._requestPermission: notifications request failed: $e\n$st',
-          );
+    try {
+      if (type == PermissionType.notifications) {
+        try {
+          await PushNotificationService().requestPermission();
+        } catch (e, st) {
+          if (kDebugMode) {
+            debugPrint(
+              'DesktopPermissionsScreen._requestPermission: notifications request failed: $e\n$st',
+            );
+          }
         }
-        granted = false;
+      } else if (type == PermissionType.camera && kIsWeb) {
+        // Camera access is intentionally not requested on web.
+      } else {
+        final Permission permission;
+        switch (type) {
+          case PermissionType.location:
+            permission = _locationPermissionForRequest();
+            break;
+          case PermissionType.camera:
+            permission = Permission.camera;
+            break;
+          case PermissionType.notifications:
+            throw StateError('notifications permission is handled separately');
+        }
+
+        try {
+          await permission.request();
+        } catch (e, st) {
+          if (kDebugMode) {
+            debugPrint(
+              'DesktopPermissionsScreen._requestPermission: permission.request failed: $e\n$st',
+            );
+          }
+        }
       }
 
+      await _checkExistingPermissions(autoComplete: false);
       if (!mounted) return;
 
-      setState(() {
-        _notificationsGranted = granted;
-      });
-
-      if (granted) {
-        messenger.showKubusSnackBar(
-          SnackBar(
-            content: Text(
-              l10n.permissionsPermissionGrantedToast(
-                  _getPermissionName(l10n, type)),
-              style: GoogleFonts.inter(),
-            ),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-
+      final nowGranted = _isPermissionGranted(type);
+      if (nowGranted) {
+        _showPermissionGrantedSnackBar(type);
         await Future.delayed(const Duration(milliseconds: 500));
+        if (!mounted) return;
         if (_currentPage < _pages.length - 1) {
           _nextPage();
         }
+        return;
       }
 
-      return;
+      final blocked = await _isPermissionBlocked(type);
+      if (!mounted) return;
+      if (blocked) {
+        _showSettingsDialog(type);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isRequestingPermission = false);
+      } else {
+        _isRequestingPermission = false;
+      }
     }
+  }
 
-    if (type == PermissionType.camera && kIsWeb) {
-      // Camera access is intentionally not requested on web.
-      setState(() => _cameraGranted = true);
-      return;
-    }
-
-    Permission permission;
-    switch (type) {
-      case PermissionType.location:
-        permission = Permission.location;
-        break;
-      case PermissionType.camera:
-        permission = Permission.camera;
-        break;
-      case PermissionType.notifications:
-        throw StateError('notifications permission is handled separately');
-    }
-
+  void _showPermissionGrantedSnackBar(PermissionType type) {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
-    PermissionStatus status;
-    try {
-      status = await permission.request();
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint(
-            'DesktopPermissionsScreen._requestPermission: permission.request failed: $e');
-      }
-      status = PermissionStatus.denied;
-    }
-
-    if (!mounted) return;
-
-    final nowGranted = status.isGranted;
-
-    setState(() {
-      switch (type) {
-        case PermissionType.location:
-          _locationGranted = status.isGranted;
-          break;
-        case PermissionType.camera:
-          _cameraGranted = status.isGranted;
-          break;
-        case PermissionType.notifications:
-          _notificationsGranted = status.isGranted;
-          break;
-      }
-    });
-
-    if (nowGranted) {
-      messenger.showKubusSnackBar(
-        SnackBar(
-          content: Text(
-            l10n.permissionsPermissionGrantedToast(
-                _getPermissionName(l10n, type)),
-            style: GoogleFonts.inter(),
+    messenger.showKubusSnackBar(
+      SnackBar(
+        content: Text(
+          l10n.permissionsPermissionGrantedToast(
+            _getPermissionName(l10n, type),
           ),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
+          style: GoogleFonts.inter(),
         ),
-      );
-
-      await Future.delayed(const Duration(milliseconds: 500));
-      if (_currentPage < _pages.length - 1) {
-        _nextPage();
-      }
-    } else if (status.isPermanentlyDenied) {
-      _showSettingsDialog(type);
-    }
+      ),
+      tone: KubusSnackBarTone.success,
+    );
   }
 
   String _getPermissionName(AppLocalizations l10n, PermissionType type) {
@@ -697,6 +767,8 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
             child: ElevatedButton(
               onPressed: _isCompletingOnboarding
                   ? null
+                  : _isRequestingPermission
+                  ? null
                   : isGranted
                       ? (isLastPage ? _completeOnboarding : _nextPage)
                       : () => _requestPermission(currentPermission),
@@ -711,6 +783,15 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
                 ),
               ),
               child: _isCompletingOnboarding
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : _isRequestingPermission && !isGranted
                   ? const SizedBox(
                       width: 22,
                       height: 22,
@@ -737,6 +818,8 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
             height: 56,
             child: OutlinedButton(
               onPressed: _isCompletingOnboarding
+                  ? null
+                  : _isRequestingPermission
                   ? null
                   : (isLastPage ? _completeOnboarding : _nextPage),
               style: OutlinedButton.styleFrom(
@@ -767,6 +850,18 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
       ),
     );
   }
+}
+
+class _PermissionStateSnapshot {
+  const _PermissionStateSnapshot({
+    required this.locationGranted,
+    required this.cameraGranted,
+    required this.notificationsGranted,
+  });
+
+  final bool locationGranted;
+  final bool cameraGranted;
+  final bool notificationsGranted;
 }
 
 enum PermissionType {

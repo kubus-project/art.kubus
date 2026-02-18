@@ -24,6 +24,7 @@ import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/gradient_icon_card.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import 'package:art_kubus/widgets/onboarding_topbar_icon.dart';
 import 'package:art_kubus/widgets/user_persona_picker_content.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -104,6 +105,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   bool _locationEnabled = false;
   bool _notificationEnabled = false;
   bool _cameraEnabled = false;
+  bool _isRequestingPermission = false;
+  int _permissionStatusEpoch = 0;
 
   List<Map<String, dynamic>> _artists = <Map<String, dynamic>>[];
   final Set<String> _followedArtists = <String>{};
@@ -241,10 +244,14 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.resumed || !mounted) return;
     if (_isInitializing || _steps.isEmpty) return;
-    if (_currentStep != _OnboardingStep.verifyEmail) return;
-    _logVerificationRefresh('resume trigger');
-    _startVerificationPollingIfNeeded(restartWindow: true);
-    unawaited(_pollVerificationStatus(trigger: 'resume'));
+    if (_isPermissionRelatedStep(_currentStep)) {
+      unawaited(_loadPermissionStatuses());
+    }
+    if (_currentStep == _OnboardingStep.verifyEmail) {
+      _logVerificationRefresh('resume trigger');
+      _startVerificationPollingIfNeeded(restartWindow: true);
+      unawaited(_pollVerificationStatus(trigger: 'resume'));
+    }
   }
 
   void _logVerificationRefresh(String message) {
@@ -538,13 +545,92 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   bool get _verificationRequired =>
       (_pendingVerificationEmail ?? '').trim().isNotEmpty;
 
+  bool _isPermissionRelatedStep(_OnboardingStep step) {
+    return step == _OnboardingStep.mapDiscovery ||
+        step == _OnboardingStep.community ||
+        step == _OnboardingStep.arScan ||
+        step == _OnboardingStep.permissions;
+  }
+
+  bool _isStatusBlocked(PermissionStatus status) =>
+      status.isPermanentlyDenied || status.isRestricted;
+
+  Permission _locationPermissionForRequest() {
+    if (!kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.iOS ||
+            defaultTargetPlatform == TargetPlatform.macOS)) {
+      return Permission.locationWhenInUse;
+    }
+    return Permission.location;
+  }
+
+  Future<PermissionStatus> _safePermissionStatus(Permission permission) async {
+    try {
+      return await permission.status;
+    } catch (_) {
+      return PermissionStatus.denied;
+    }
+  }
+
+  Future<List<PermissionStatus>> _locationStatuses() async {
+    final statuses = <PermissionStatus>[
+      await _safePermissionStatus(Permission.location),
+    ];
+    if (!kIsWeb) {
+      statuses.add(await _safePermissionStatus(Permission.locationWhenInUse));
+      statuses.add(await _safePermissionStatus(Permission.locationAlways));
+    }
+    return statuses;
+  }
+
+  Future<bool> _isLocationPermissionGranted() async {
+    final statuses = await _locationStatuses();
+    return statuses.any((status) => status.isGranted);
+  }
+
+  Future<bool> _isLocationPermissionBlocked() async {
+    final statuses = await _locationStatuses();
+    if (statuses.any((status) => status.isGranted)) return false;
+    return statuses.any(_isStatusBlocked);
+  }
+
+  Future<bool> _isPermissionBlocked(Permission permission) async {
+    if (permission == Permission.location) {
+      return _isLocationPermissionBlocked();
+    }
+    if (permission == Permission.notification) {
+      if (kIsWeb) return false;
+      return _isStatusBlocked(
+        await _safePermissionStatus(Permission.notification),
+      );
+    }
+    if (permission == Permission.camera) {
+      if (kIsWeb) return false;
+      return _isStatusBlocked(await _safePermissionStatus(Permission.camera));
+    }
+    return false;
+  }
+
+  bool _isPermissionGrantedFor(Permission permission) {
+    if (permission == Permission.location) {
+      return _locationEnabled;
+    }
+    if (permission == Permission.notification) {
+      return _notificationEnabled;
+    }
+    if (permission == Permission.camera) {
+      return _cameraEnabled;
+    }
+    return false;
+  }
+
   Future<void> _loadPermissionStatuses() async {
+    final requestEpoch = ++_permissionStatusEpoch;
     var locationEnabled = false;
     var notificationEnabled = false;
     var cameraEnabled = false;
     try {
-      final location = await Permission.location.status;
-      locationEnabled = location.isGranted;
+      locationEnabled = await _isLocationPermissionGranted();
     } catch (_) {}
 
     if (kIsWeb) {
@@ -569,7 +655,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       }
     }
 
-    if (!mounted) return;
+    if (!mounted || requestEpoch != _permissionStatusEpoch) return;
     setState(() {
       _locationEnabled = locationEnabled;
       _notificationEnabled = notificationEnabled;
@@ -862,46 +948,69 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   }
 
   Future<void> _requestPermission(Permission permission) async {
+    if (_isRequestingPermission) return;
     final l10n = AppLocalizations.of(context)!;
-    PermissionStatus status = PermissionStatus.denied;
-
-    if (kIsWeb && permission == Permission.notification) {
-      await PushNotificationService().requestPermission();
-    } else if (kIsWeb && permission == Permission.camera) {
-      status = PermissionStatus.granted;
-    } else {
-      try {
-        status = await permission.request();
-      } catch (_) {
-        status = PermissionStatus.denied;
-      }
-      if (status.isPermanentlyDenied || status.isRestricted) {
-        await openAppSettings();
-      }
-    }
-
-    await _loadPermissionStatuses();
-    if (!mounted) return;
-
-    final bool granted;
-    if (permission == Permission.location) {
-      granted = _locationEnabled;
-    } else if (permission == Permission.notification) {
-      granted = _notificationEnabled;
-    } else if (permission == Permission.camera) {
-      granted = _cameraEnabled;
-    } else {
-      granted = status.isGranted;
-    }
+    final messenger = ScaffoldMessenger.of(context);
 
     setState(() {
-      _permissionHint = granted
-          ? null
-          : l10n.permissionsOpenSettingsDialogContent(
-              _permissionLabel(l10n, permission),
-            );
-      _permissionHintPermission = granted ? null : permission;
+      _isRequestingPermission = true;
     });
+
+    try {
+      if (kIsWeb && permission == Permission.notification) {
+        await PushNotificationService().requestPermission();
+      } else if (kIsWeb && permission == Permission.camera) {
+        // Camera permission is not requested from the web onboarding flow.
+      } else {
+        final requestedPermission = permission == Permission.location
+            ? _locationPermissionForRequest()
+            : permission;
+        try {
+          await requestedPermission.request();
+        } catch (_) {}
+      }
+
+      await _loadPermissionStatuses();
+      if (!mounted) return;
+
+      final granted = _isPermissionGrantedFor(permission);
+      if (granted) {
+        messenger.showKubusSnackBar(
+          SnackBar(
+            content: Text(
+              l10n.permissionsPermissionGrantedToast(
+                _permissionLabel(l10n, permission),
+              ),
+            ),
+          ),
+          tone: KubusSnackBarTone.success,
+        );
+      }
+
+      final blocked = granted ? false : await _isPermissionBlocked(permission);
+      if (!mounted) return;
+
+      setState(() {
+        _permissionHint = blocked
+            ? l10n.permissionsOpenSettingsDialogContent(
+                _permissionLabel(l10n, permission),
+              )
+            : null;
+        _permissionHintPermission = blocked ? permission : null;
+      });
+
+      if (blocked) {
+        _showPermissionSettingsDialog(permission);
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRequestingPermission = false;
+        });
+      } else {
+        _isRequestingPermission = false;
+      }
+    }
   }
 
   String? _hintForPermission(Permission permission) {
@@ -922,6 +1031,41 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       return l10n.onboardingFlowPermissionCamera;
     }
     return 'permission';
+  }
+
+  void _showPermissionSettingsDialog(Permission permission) {
+    final l10n = AppLocalizations.of(context)!;
+    showKubusDialog(
+      context: context,
+      builder: (dialogContext) => KubusAlertDialog(
+        backgroundColor: Theme.of(dialogContext).colorScheme.surface,
+        title: Text(
+          l10n.permissionsPermissionRequiredTitle,
+          style: Theme.of(dialogContext).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+        content: Text(
+          l10n.permissionsOpenSettingsDialogContent(
+            _permissionLabel(l10n, permission),
+          ),
+          style: Theme.of(dialogContext).textTheme.bodyMedium,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(l10n.commonCancel),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              unawaited(openAppSettings());
+            },
+            child: Text(l10n.permissionsOpenSettings),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _saveInlineProfile({
@@ -1527,16 +1671,21 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     bool compact = false,
   }) {
     final stepNumber = _currentIndex + 1;
-    final headerCompact = compact && MediaQuery.sizeOf(context).height < 680;
+    final viewportSize = MediaQuery.sizeOf(context);
+    final headerCompact = compact && viewportSize.height < 680;
+    final headerNarrow = viewportSize.width < 380;
+    final horizontalPadding = _isDesktop
+        ? (KubusSpacing.xxl + KubusSpacing.sm)
+        : (headerCompact ? KubusSpacing.lg : (KubusSpacing.xl + KubusSpacing.sm));
+    final safeHorizontalPadding =
+        headerNarrow ? KubusSpacing.md : horizontalPadding;
+    final actionSpacing = headerNarrow ? KubusSpacing.xs : KubusSpacing.sm;
+    final actionTapTarget = headerNarrow ? 44.0 : (headerCompact ? 46.0 : 48.0);
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        _isDesktop
-            ? KubusSpacing.xxl
-            : (headerCompact ? KubusSpacing.md : KubusSpacing.xl),
+        safeHorizontalPadding,
         headerCompact ? KubusSpacing.sm : KubusSpacing.lg,
-        _isDesktop
-            ? KubusSpacing.xxl
-            : (headerCompact ? KubusSpacing.md : KubusSpacing.xl),
+        safeHorizontalPadding,
         headerCompact ? KubusSpacing.sm : KubusSpacing.md,
       ),
       child: AuthTitleRow(
@@ -1557,6 +1706,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
                 ),
               if (_isDesktop) const SizedBox(width: KubusSpacing.xs),
               PopupMenuButton<String>(
+                borderRadius: BorderRadius.circular(999),
+                padding: EdgeInsets.zero,
+                splashRadius: actionTapTarget / 2,
                 onSelected: (value) {
                   unawaited(localeProvider.setLanguageCode(value));
                 },
@@ -1570,12 +1722,16 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
                     child: Text(l10n.languageEnglish),
                   ),
                 ],
-                child: const _HeaderActionPill(
+                child: OnboardingTopbarIcon(
                   icon: Icons.language,
+                  tapTargetSize: actionTapTarget,
                 ),
               ),
-              const SizedBox(width: KubusSpacing.xs),
+              SizedBox(width: actionSpacing),
               PopupMenuButton<ThemeMode>(
+                borderRadius: BorderRadius.circular(999),
+                padding: EdgeInsets.zero,
+                splashRadius: actionTapTarget / 2,
                 onSelected: (mode) {
                   unawaited(themeProvider.setThemeMode(mode));
                 },
@@ -1593,18 +1749,20 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
                     child: Text(_themeModeLabel(l10n, ThemeMode.system)),
                   ),
                 ],
-                child: const _HeaderActionPill(
+                child: OnboardingTopbarIcon(
                   icon: Icons.brightness_6_outlined,
+                  tapTargetSize: actionTapTarget,
                 ),
               ),
-              const SizedBox(width: KubusSpacing.xs),
+              SizedBox(width: actionSpacing),
               TextButton(
                 onPressed: _isSkippingFlow ? null : _skipForNow,
                 style: TextButton.styleFrom(
                   foregroundColor: scheme.onSurface.withValues(alpha: 0.84),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: KubusSpacing.sm,
-                    vertical: KubusSpacing.xs,
+                  padding: EdgeInsets.symmetric(
+                    horizontal:
+                        headerCompact ? KubusSpacing.sm : KubusSpacing.md,
+                    vertical: headerCompact ? KubusSpacing.xs : KubusSpacing.sm,
                   ),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -2242,37 +2400,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       case _OnboardingStep.done:
         return l10n.commonGetStarted;
     }
-  }
-}
-
-class _HeaderActionPill extends StatelessWidget {
-  const _HeaderActionPill({required this.icon});
-
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final iconColor = isDark ? Colors.white : Colors.black;
-    final borderColor = isDark
-        ? Colors.white.withValues(alpha: 0.30)
-        : Colors.black.withValues(alpha: 0.20);
-    final bgColor = isDark
-        ? Colors.black.withValues(alpha: 0.20)
-        : Colors.white.withValues(alpha: 0.34);
-
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: borderColor, width: 1),
-      ),
-      child: Center(
-        child: Icon(icon, size: 20, color: iconColor),
-      ),
-    );
   }
 }
 
@@ -3542,14 +3669,28 @@ class _PermissionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     return ListTile(
       contentPadding: EdgeInsets.zero,
       title: Text(label),
       trailing: enabled
-          ? Icon(Icons.check_circle, color: scheme.primary)
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.check_circle, color: scheme.primary),
+                const SizedBox(width: KubusSpacing.xs),
+                Text(
+                  l10n.permissionsGrantedLabel,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: scheme.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ],
+            )
           : TextButton(
               onPressed: onTap,
-              child: Text(AppLocalizations.of(context)!.commonEnable),
+              child: Text(l10n.commonEnable),
             ),
     );
   }

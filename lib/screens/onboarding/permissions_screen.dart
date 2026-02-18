@@ -3,7 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
+import 'package:flutter/foundation.dart'
+    show kDebugMode, kIsWeb, TargetPlatform, defaultTargetPlatform;
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../widgets/inline_loading.dart';
 import '../../services/notification_helper.dart';
@@ -29,11 +30,14 @@ class PermissionsScreen extends StatefulWidget {
   State<PermissionsScreen> createState() => _PermissionsScreenState();
 }
 
-class _PermissionsScreenState extends State<PermissionsScreen> {
+class _PermissionsScreenState extends State<PermissionsScreen>
+    with WidgetsBindingObserver {
   final PageController _pageController = PageController();
   int _currentPage = 0;
   bool _isCheckingPermissions = true;
   bool _isCompletingOnboarding = false;
+  bool _isRequestingPermission = false;
+  int _permissionStatusEpoch = 0;
 
   // Track permission states
   bool _locationGranted = false;
@@ -43,56 +47,141 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _checkExistingPermissions();
   }
 
-  Future<void> _checkExistingPermissions() async {
-    bool locationGranted = false;
-    bool cameraGranted = false;
-    bool notificationsGranted = false;
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    unawaited(_checkExistingPermissions(autoComplete: false));
+  }
 
-    try {
-      final locationStatus = await Permission.location.status;
-      locationGranted = locationStatus.isGranted;
+  Future<void> _checkExistingPermissions({bool autoComplete = true}) async {
+    final requestEpoch = ++_permissionStatusEpoch;
+    final snapshot = await _readPermissionSnapshot();
 
-      // On web we do not request or check camera permission in onboarding.
-      if (kIsWeb) {
-        cameraGranted = true;
-      } else {
-        final cameraStatus = await Permission.camera.status;
-        cameraGranted = cameraStatus.isGranted;
-      }
-
-      if (kIsWeb) {
-        notificationsGranted = await isWebNotificationPermissionGranted();
-      }
-    } catch (e, st) {
-      if (kDebugMode) {
-        debugPrint(
-            'PermissionsScreen._checkExistingPermissions: permission status check failed: $e\n$st');
-      }
-      locationGranted = false;
-      cameraGranted = false;
-      notificationsGranted = false;
-    }
-
-    if (!mounted) return;
+    if (!mounted || requestEpoch != _permissionStatusEpoch) return;
 
     setState(() {
-      _locationGranted = locationGranted;
-      _cameraGranted = cameraGranted;
-      _notificationsGranted = notificationsGranted;
+      _locationGranted = snapshot.locationGranted;
+      _cameraGranted = snapshot.cameraGranted;
+      _notificationsGranted = snapshot.notificationsGranted;
       _isCheckingPermissions = false;
     });
 
-    final requiredPermissions = <PermissionType>[
-      PermissionType.location,
-      if (!kIsWeb) PermissionType.camera,
-      if (kIsWeb) PermissionType.notifications,
-    ];
-
-    if (requiredPermissions.every(_isPermissionGranted)) {
+    if (autoComplete && _allRequiredPermissionsGranted()) {
       _completeOnboarding();
+    }
+  }
+
+  List<PermissionType> get _requiredPermissions => <PermissionType>[
+        PermissionType.location,
+        if (!kIsWeb) PermissionType.camera,
+        if (kIsWeb) PermissionType.notifications,
+      ];
+
+  bool _allRequiredPermissionsGranted() =>
+      _requiredPermissions.every(_isPermissionGranted);
+
+  bool _isStatusBlocked(PermissionStatus status) =>
+      status.isPermanentlyDenied || status.isRestricted;
+
+  Permission _locationPermissionForRequest() {
+    if (!kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.iOS ||
+            defaultTargetPlatform == TargetPlatform.macOS)) {
+      return Permission.locationWhenInUse;
+    }
+    return Permission.location;
+  }
+
+  Future<PermissionStatus> _safePermissionStatus(Permission permission) async {
+    try {
+      return await permission.status;
+    } catch (e, st) {
+      if (kDebugMode) {
+        debugPrint(
+          'PermissionsScreen._safePermissionStatus($permission) failed: $e\n$st',
+        );
+      }
+      return PermissionStatus.denied;
+    }
+  }
+
+  Future<List<PermissionStatus>> _locationStatuses() async {
+    final statuses = <PermissionStatus>[
+      await _safePermissionStatus(Permission.location),
+    ];
+    if (!kIsWeb) {
+      statuses.add(await _safePermissionStatus(Permission.locationWhenInUse));
+      statuses.add(await _safePermissionStatus(Permission.locationAlways));
+    }
+    return statuses;
+  }
+
+  Future<bool> _isLocationGranted() async {
+    final statuses = await _locationStatuses();
+    return statuses.any((status) => status.isGranted);
+  }
+
+  Future<bool> _isLocationBlocked() async {
+    final statuses = await _locationStatuses();
+    if (statuses.any((status) => status.isGranted)) return false;
+    return statuses.any(_isStatusBlocked);
+  }
+
+  Future<bool> _isNotificationGrantedOnWeb() async {
+    try {
+      return await isWebNotificationPermissionGranted();
+    } catch (e, st) {
+      if (kDebugMode) {
+        debugPrint(
+          'PermissionsScreen._isNotificationGrantedOnWeb failed: $e\n$st',
+        );
+      }
+      return false;
+    }
+  }
+
+  Future<_PermissionStateSnapshot> _readPermissionSnapshot() async {
+    try {
+      final locationGranted = await _isLocationGranted();
+      final cameraGranted = kIsWeb
+          ? true
+          : (await _safePermissionStatus(Permission.camera)).isGranted;
+      final notificationsGranted =
+          kIsWeb ? await _isNotificationGrantedOnWeb() : false;
+      return _PermissionStateSnapshot(
+        locationGranted: locationGranted,
+        cameraGranted: cameraGranted,
+        notificationsGranted: notificationsGranted,
+      );
+    } catch (e, st) {
+      if (kDebugMode) {
+        debugPrint(
+          'PermissionsScreen._readPermissionSnapshot failed: $e\n$st',
+        );
+      }
+      return const _PermissionStateSnapshot(
+        locationGranted: false,
+        cameraGranted: false,
+        notificationsGranted: false,
+      );
+    }
+  }
+
+  Future<bool> _isPermissionBlocked(PermissionType type) async {
+    switch (type) {
+      case PermissionType.location:
+        return _isLocationBlocked();
+      case PermissionType.camera:
+        return _isStatusBlocked(await _safePermissionStatus(Permission.camera));
+      case PermissionType.notifications:
+        if (kIsWeb) return false;
+        return _isStatusBlocked(
+          await _safePermissionStatus(Permission.notification),
+        );
     }
   }
 
@@ -174,6 +263,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _pageController.dispose();
     super.dispose();
   }
@@ -400,6 +490,42 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                     style: titleStyle,
                   ),
                   const SizedBox(height: KubusSpacing.sm),
+                  if (isGranted)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: KubusSpacing.sm),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: KubusSpacing.sm,
+                        vertical: KubusSpacing.xs,
+                      ),
+                      decoration: BoxDecoration(
+                        color: scheme.primary.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(KubusRadius.xl),
+                        border: Border.all(
+                          color: scheme.primary.withValues(alpha: 0.25),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.check_circle,
+                            size: 16,
+                            color: scheme.primary,
+                          ),
+                          const SizedBox(width: KubusSpacing.xs),
+                          Text(
+                            l10n.permissionsGrantedLabel,
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelMedium
+                                ?.copyWith(
+                                  color: scheme.primary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
                   Text(
                     message,
                     textAlign: TextAlign.center,
@@ -463,7 +589,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                       effectiveSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
               // Grant permission button
               KubusButton(
-                onPressed: _isCompletingOnboarding
+                onPressed: (_isCompletingOnboarding || _isRequestingPermission)
                     ? null
                     : isGranted
                         ? (isLastPage ? _completeOnboarding : _nextPage)
@@ -475,7 +601,8 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                         ? l10n.permissionsGetStarted
                         : l10n.permissionsNextPermission)
                     : l10n.permissionsGrantPermission,
-                isLoading: _isCompletingOnboarding,
+                isLoading:
+                    _isCompletingOnboarding || (_isRequestingPermission && !isGranted),
                 isFullWidth: true,
               ),
               SizedBox(
@@ -483,7 +610,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                       effectiveSmallScreen ? KubusSpacing.xs : KubusSpacing.sm),
               // Skip button
               TextButton(
-                onPressed: _isCompletingOnboarding
+                onPressed: (_isCompletingOnboarding || _isRequestingPermission)
                     ? null
                     : (isLastPage ? _completeOnboarding : _nextPage),
                 child: Text(
@@ -540,134 +667,92 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
   }
 
   Future<void> _requestPermission(PermissionType type) async {
-    if (type == PermissionType.notifications) {
-      final l10n = AppLocalizations.of(context)!;
-      final messenger = ScaffoldMessenger.of(context);
+    if (_isRequestingPermission || _isCompletingOnboarding) return;
+    if (mounted) {
+      setState(() => _isRequestingPermission = true);
+    } else {
+      _isRequestingPermission = true;
+    }
 
-      bool granted = false;
-      try {
-        granted = await PushNotificationService().requestPermission();
-      } catch (e, st) {
-        if (kDebugMode) {
-          debugPrint(
-            'PermissionsScreen._requestPermission: notifications request failed: $e\n$st',
-          );
+    try {
+      if (type == PermissionType.notifications) {
+        try {
+          await PushNotificationService().requestPermission();
+        } catch (e, st) {
+          if (kDebugMode) {
+            debugPrint(
+              'PermissionsScreen._requestPermission: notifications request failed: $e\n$st',
+            );
+          }
         }
-        granted = false;
+      } else if (type == PermissionType.camera && kIsWeb) {
+        // Camera access is intentionally not requested on web.
+      } else {
+        final Permission permission;
+        switch (type) {
+          case PermissionType.location:
+            permission = _locationPermissionForRequest();
+            break;
+          case PermissionType.camera:
+            permission = Permission.camera;
+            break;
+          case PermissionType.notifications:
+            throw StateError('notifications permission is handled separately');
+        }
+
+        try {
+          await permission.request();
+        } catch (e, st) {
+          if (kDebugMode) {
+            debugPrint(
+              'PermissionsScreen._requestPermission: permission.request failed: $e\n$st',
+            );
+          }
+        }
       }
 
+      await _checkExistingPermissions(autoComplete: false);
       if (!mounted) return;
 
-      setState(() {
-        _notificationsGranted = granted;
-      });
-
-      if (granted) {
-        messenger.showKubusSnackBar(
-          SnackBar(
-            content: Text(
-              l10n.permissionsPermissionGrantedToast(
-                  _getPermissionName(l10n, type)),
-              style: GoogleFonts.inter(),
-            ),
-            backgroundColor: AppColorUtils.greenAccent,
-            duration: const Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        );
-
+      final nowGranted = _isPermissionGranted(type);
+      if (nowGranted) {
+        _showPermissionGrantedSnackBar(type);
         await Future.delayed(const Duration(milliseconds: 500));
+        if (!mounted) return;
         if (_currentPage < _pages.length - 1) {
           _nextPage();
         }
+        return;
       }
 
-      return;
-    }
-
-    if (type == PermissionType.camera && kIsWeb) {
-      // Camera access is intentionally not requested on web.
+      final blocked = await _isPermissionBlocked(type);
+      if (!mounted) return;
+      if (blocked) {
+        _showSettingsDialog(type);
+      }
+    } finally {
       if (mounted) {
-        setState(() {
-          _cameraGranted = true;
-        });
+        setState(() => _isRequestingPermission = false);
+      } else {
+        _isRequestingPermission = false;
       }
-      return;
     }
+  }
 
-    Permission permission;
-
-    switch (type) {
-      case PermissionType.location:
-        permission = Permission.location;
-        break;
-      case PermissionType.camera:
-        permission = Permission.camera;
-        break;
-      case PermissionType.notifications:
-        throw StateError('notifications permission is handled separately');
-    }
-
+  void _showPermissionGrantedSnackBar(PermissionType type) {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
-    PermissionStatus status;
-    try {
-      status = await permission.request();
-    } catch (e, st) {
-      if (kDebugMode) {
-        debugPrint(
-            'PermissionsScreen._requestPermission: permission.request failed: $e\n$st');
-      }
-      status = PermissionStatus.denied;
-    }
-    if (!mounted) return;
-
-    final nowGranted = status.isGranted;
-
-    setState(() {
-      switch (type) {
-        case PermissionType.location:
-          _locationGranted = status.isGranted;
-          break;
-        case PermissionType.camera:
-          _cameraGranted = status.isGranted;
-          break;
-        case PermissionType.notifications:
-          _notificationsGranted = status.isGranted;
-          break;
-      }
-    });
-
-    if (nowGranted) {
-      // Show success feedback
-      messenger.showKubusSnackBar(
-        SnackBar(
-          content: Text(
-            l10n.permissionsPermissionGrantedToast(
-                _getPermissionName(l10n, type)),
-            style: GoogleFonts.inter(),
+    messenger.showKubusSnackBar(
+      SnackBar(
+        content: Text(
+          l10n.permissionsPermissionGrantedToast(
+            _getPermissionName(l10n, type),
           ),
-          backgroundColor: AppColorUtils.greenAccent,
-          duration: const Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          style: GoogleFonts.inter(),
         ),
-      );
-
-      // Auto-advance after a short delay
-      await Future.delayed(const Duration(milliseconds: 500));
-      if (_currentPage < _pages.length - 1) {
-        _nextPage();
-      }
-    } else if (status.isPermanentlyDenied) {
-      // Show dialog to open settings
-      _showSettingsDialog(type);
-    }
+      ),
+      tone: KubusSnackBarTone.success,
+    );
   }
 
   String _getPermissionName(AppLocalizations l10n, PermissionType type) {
@@ -790,4 +875,16 @@ class PermissionPage {
     required this.gradient,
     required this.permissionType,
   });
+}
+
+class _PermissionStateSnapshot {
+  const _PermissionStateSnapshot({
+    required this.locationGranted,
+    required this.cameraGranted,
+    required this.notificationsGranted,
+  });
+
+  final bool locationGranted;
+  final bool cameraGranted;
+  final bool notificationsGranted;
 }
