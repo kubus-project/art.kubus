@@ -22,51 +22,56 @@ class AuthTitleRow extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       child: LiquidGlassPanel(
+        margin: EdgeInsets.zero,
         padding: EdgeInsets.symmetric(
-          horizontal: compact ? 10 : 12,
-          vertical: compact ? 8 : 10,
+          horizontal: compact ? 12 : 20,
+          vertical: compact ? 10 : 14,
         ),
-        borderRadius: BorderRadius.circular(16),
-        child: Row(
-          children: [
-            Container(
-              width: compact ? 30 : 34,
-              height: compact ? 30 : 34,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    scheme.primary,
-                    scheme.primary.withValues(alpha: 0.7),
-                  ],
+        borderRadius: BorderRadius.circular(20),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: compact ? 52 : 68),
+          child: Row(
+            children: [
+              Container(
+                width: compact ? 34 : 42,
+                height: compact ? 34 : 42,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      scheme.primary,
+                      scheme.primary.withValues(alpha: 0.7),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                borderRadius: BorderRadius.circular(10),
+                child: Icon(icon, size: compact ? 18 : 22, color: Colors.white),
               ),
-              child: Icon(icon, size: compact ? 16 : 18, color: Colors.white),
-            ),
-            SizedBox(width: compact ? 8 : 10),
-            Expanded(
-              child: Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-            ),
-            if (trailing != null) ...[
-              const SizedBox(width: 8),
-              Flexible(
-                fit: FlexFit.loose,
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: trailing!,
+              SizedBox(width: compact ? 10 : 12),
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        fontSize: compact ? 20 : 24,
+                      ),
                 ),
               ),
+              if (trailing != null) ...[
+                const SizedBox(width: 10),
+                Flexible(
+                  fit: FlexFit.loose,
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: trailing!,
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
