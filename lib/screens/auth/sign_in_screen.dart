@@ -836,35 +836,30 @@ class _SignInScreenState extends State<SignInScreen> {
             child: LayoutBuilder(
               builder: (BuildContext context, BoxConstraints constraints) {
                 final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
-                return GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => FocusScope.of(context).unfocus(),
-                  child: AnimatedPadding(
-                    duration: const Duration(milliseconds: 180),
-                    curve: Curves.easeOut,
-                    padding: EdgeInsets.only(
-                      bottom: keyboardInset > 140 ? 140 : keyboardInset,
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 12),
-                      child: Column(
-                        children: [
-                          const SizedBox(height: kToolbarHeight + 12),
-                          Expanded(
-                            child: Center(
-                              child: ConstrainedBox(
-                                constraints: BoxConstraints(
-                                  maxWidth: 520,
-                                  maxHeight:
-                                      constraints.maxHeight - kToolbarHeight,
-                                ),
-                                child: form,
+                return AnimatedPadding(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOut,
+                  padding: EdgeInsets.only(
+                    bottom: keyboardInset > 140 ? 140 : keyboardInset,
+                  ),
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: kToolbarHeight + 12),
+                        Expanded(
+                          child: Center(
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxWidth: 520,
+                                maxHeight: constraints.maxHeight - kToolbarHeight,
                               ),
+                              child: form,
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 );
@@ -1070,6 +1065,7 @@ class _SignInScreenState extends State<SignInScreen> {
         TextField(
           controller: _emailController,
           keyboardType: TextInputType.emailAddress,
+          onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
           decoration: InputDecoration(
             labelText: AppLocalizations.of(context)!.commonEmail,
             border: const OutlineInputBorder(),
@@ -1079,6 +1075,7 @@ class _SignInScreenState extends State<SignInScreen> {
         TextField(
           controller: _passwordController,
           obscureText: true,
+          onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
           decoration: InputDecoration(
             labelText: AppLocalizations.of(context)!.commonPassword,
             border: const OutlineInputBorder(),
