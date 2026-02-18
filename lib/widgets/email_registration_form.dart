@@ -52,6 +52,7 @@ class EmailRegistrationForm extends StatelessWidget {
         TextField(
           controller: emailController,
           keyboardType: TextInputType.emailAddress,
+          onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
           decoration: InputDecoration(
             labelText: l10n.commonEmail,
             border: const OutlineInputBorder(),
@@ -62,6 +63,7 @@ class EmailRegistrationForm extends StatelessWidget {
         TextField(
           controller: passwordController,
           obscureText: true,
+          onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
           decoration: InputDecoration(
             labelText: l10n.commonPassword,
             border: const OutlineInputBorder(),
@@ -72,6 +74,7 @@ class EmailRegistrationForm extends StatelessWidget {
         TextField(
           controller: confirmPasswordController,
           obscureText: true,
+          onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
           decoration: InputDecoration(
             labelText: l10n.commonConfirmPassword,
             border: const OutlineInputBorder(),
@@ -82,6 +85,7 @@ class EmailRegistrationForm extends StatelessWidget {
           const SizedBox(height: 10),
           TextField(
             controller: usernameController,
+            onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
             decoration: InputDecoration(
               labelText: l10n.commonUsernameOptional,
               border: const OutlineInputBorder(),
@@ -124,4 +128,3 @@ class EmailRegistrationForm extends StatelessWidget {
     );
   }
 }
-

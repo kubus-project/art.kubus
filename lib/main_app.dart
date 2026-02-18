@@ -136,6 +136,7 @@ class _MainAppState extends State<MainApp> {
     final scaffold = Scaffold(
       backgroundColor: Colors.transparent,
       extendBody: true,
+      resizeToAvoidBottomInset: false,
       body: IndexedStack(
         index: currentIndex,
         // Keep heavy AR resources out of the tree unless the AR tab is active.
