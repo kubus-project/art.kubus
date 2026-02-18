@@ -220,6 +220,29 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     debugPrint('OnboardingFlowScreen.$message');
   }
 
+  String _extractBackendErrorMessage({
+    required Object error,
+    required String fallback,
+  }) {
+    if (error is BackendApiRequestException) {
+      final rawBody = (error.body ?? '').trim();
+      if (rawBody.isNotEmpty) {
+        try {
+          final decoded = jsonDecode(rawBody);
+          if (decoded is Map<String, dynamic>) {
+            final backendError = (decoded['error'] ?? '').toString().trim();
+            if (backendError.isNotEmpty) return backendError;
+            final backendMessage = (decoded['message'] ?? '').toString().trim();
+            if (backendMessage.isNotEmpty) return backendMessage;
+          }
+        } catch (_) {
+          // Ignore parse errors and fall through to fallback.
+        }
+      }
+    }
+    return fallback;
+  }
+
   Future<void> _bootstrap() async {
     _isSignedIn =
         Provider.of<ProfileProvider>(context, listen: false).isSignedIn;
@@ -1130,40 +1153,92 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     setState(() {});
   }
 
-  Future<void> _submitDaoApplication({
+  Future<bool> _submitDaoApplication({
     required bool isArtist,
     required bool isInstitution,
     required String portfolioUrl,
     required String medium,
     required String statement,
   }) async {
+    if (!mounted) return false;
+    final l10n = AppLocalizations.of(context)!;
+    if (!isArtist && !isInstitution) {
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(content: Text(l10n.daoProposalFillRequiredFieldsToast)),
+        tone: KubusSnackBarTone.warning,
+      );
+      return false;
+    }
+
+    _refreshAuthDerivedSteps();
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
-    final wallet = profileProvider.currentUser?.walletAddress ?? '';
-    if (wallet.trim().isEmpty) return;
+    final wallet = (profileProvider.currentUser?.walletAddress ?? '').trim();
+    if (!_isSignedIn || wallet.isEmpty) {
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(content: Text(l10n.artistStudioApplicationWalletRequiredToast)),
+        tone: KubusSnackBarTone.warning,
+      );
+      await _jumpToStepIfPresent(_OnboardingStep.account);
+      return false;
+    }
 
-    final review = await BackendApiService().submitDAOReview(
-      walletAddress: wallet,
-      portfolioUrl: portfolioUrl,
-      medium: medium,
-      statement: statement,
-      title: isInstitution
-          ? 'Institution onboarding application'
-          : 'Artist onboarding application',
-      metadata: <String, dynamic>{
-        'isArtistApplication': isArtist,
-        'isInstitutionApplication': isInstitution,
-        'source': 'onboarding_flow',
-      },
-    );
+    try {
+      final review = await BackendApiService().submitDAOReview(
+        walletAddress: wallet,
+        portfolioUrl: portfolioUrl.trim(),
+        medium: medium.trim(),
+        statement: statement.trim(),
+        title: isInstitution
+            ? 'Institution onboarding application'
+            : 'Artist onboarding application',
+        metadata: <String, dynamic>{
+          'role': isInstitution ? 'institution' : 'artist',
+          'isArtistApplication': isArtist,
+          'isInstitutionApplication': isInstitution,
+          'source': 'onboarding_flow',
+        },
+      );
 
-    if (!mounted) return;
-    setState(() {
-      _daoReview = review ?? _daoReview;
-      _daoMessage = review == null
-          ? 'Could not submit DAO application right now. You can continue in draft mode.'
-          : 'Application submitted. You can keep creating in draft mode until approval.';
-    });
+      if (review == null) {
+        ScaffoldMessenger.of(context).showKubusSnackBar(
+          SnackBar(content: Text(l10n.daoProposalSubmitFailedToast)),
+          tone: KubusSnackBarTone.error,
+        );
+        return false;
+      }
+      if (!mounted) return false;
+
+      setState(() {
+        _daoReview = review;
+        _daoMessage = l10n.artistStudioReviewPendingInfo;
+      });
+
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(content: Text(l10n.artistStudioApplicationSubmittedToast)),
+        tone: KubusSnackBarTone.success,
+      );
+
+      await _applyRoleSelection(
+        isArtist: isArtist,
+        isInstitution: isInstitution,
+      );
+      return true;
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint('OnboardingFlowScreen._submitDaoApplication failed: $error');
+      }
+      if (!mounted) return false;
+      final message = _extractBackendErrorMessage(
+        error: error,
+        fallback: l10n.daoProposalSubmitFailedToast,
+      );
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(content: Text(message)),
+        tone: KubusSnackBarTone.error,
+      );
+      return false;
+    }
   }
 
   Future<void> _toggleFollow(Map<String, dynamic> artist) async {
@@ -2824,7 +2899,7 @@ class _RoleStep extends StatefulWidget {
     required bool isArtist,
     required bool isInstitution,
   }) onSave;
-  final Future<void> Function({
+  final Future<bool> Function({
     required bool isArtist,
     required bool isInstitution,
     required String portfolioUrl,
@@ -2889,10 +2964,17 @@ class _RoleStepState extends State<_RoleStep> {
 
   Future<void> _applyDao() async {
     if (_submittingDao) return;
+    final l10n = AppLocalizations.of(context)!;
     final portfolio = _portfolioController.text.trim();
     final medium = _mediumController.text.trim();
     final statement = _statementController.text.trim();
-    if (portfolio.isEmpty || medium.isEmpty || statement.isEmpty) return;
+    if (portfolio.isEmpty || medium.isEmpty || statement.isEmpty) {
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(content: Text(l10n.daoProposalFillRequiredFieldsToast)),
+        tone: KubusSnackBarTone.warning,
+      );
+      return;
+    }
 
     setState(() => _submittingDao = true);
     try {
@@ -2975,6 +3057,13 @@ class _RoleStepState extends State<_RoleStep> {
             label: 'Apply for DAO review',
             isFullWidth: true,
           ),
+          if ((widget.daoMessage ?? '').trim().isNotEmpty) ...[
+            const SizedBox(height: KubusSpacing.sm),
+            Text(
+              widget.daoMessage!.trim(),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
         ],
         const Spacer(),
         KubusButton(
