@@ -61,7 +61,7 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen> {
     final route = MaterialPageRoute(
       builder: (_) => OnboardingFlowScreen(
         forceDesktop: _isDesktop,
-        initialStepId: 'role',
+        initialStepId: 'mapDiscovery',
       ),
       settings: const RouteSettings(name: '/onboarding/flow'),
     );
@@ -152,8 +152,6 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen> {
     final page = pages[_pageIndex.clamp(0, pages.length - 1)];
     final bgColors = page.backgroundColors;
 
-    final horizontalPadding = _isDesktop ? KubusSpacing.xl : KubusSpacing.lg;
-
     return AnimatedGradientBackground(
       animate: true,
       intensity: 0.22,
@@ -162,129 +160,152 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen> {
         backgroundColor: Colors.transparent,
         resizeToAvoidBottomInset: false,
         body: SafeArea(
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              horizontalPadding,
-              KubusSpacing.md,
-              horizontalPadding,
-              KubusSpacing.lg,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final compactHeight = constraints.maxHeight < 720;
+              final tightHeight = constraints.maxHeight < 620;
+              final horizontalPadding = _isDesktop
+                  ? KubusSpacing.xxl
+                  : (compactHeight ? KubusSpacing.md : KubusSpacing.xl);
+              final logoSize = tightHeight
+                  ? (_isDesktop ? 42.0 : 34.0)
+                  : (_isDesktop ? 50.0 : 42.0);
+
+              return Padding(
+                padding: EdgeInsets.fromLTRB(
+                  horizontalPadding,
+                  compactHeight ? KubusSpacing.sm : KubusSpacing.lg,
+                  horizontalPadding,
+                  compactHeight ? KubusSpacing.md : KubusSpacing.lg,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    AppLogo(
-                      width: _isDesktop ? 44 : 38,
-                      height: _isDesktop ? 44 : 38,
-                    ),
-                    const Spacer(),
-                    PopupMenuButton<String>(
-                      onSelected: (value) {
-                        localeProvider.setLanguageCode(value);
-                      },
-                      itemBuilder: (context) => [
-                        PopupMenuItem<String>(
-                          value: 'sl',
-                          child: Text(l10n.languageSlovenian),
+                    Row(
+                      children: [
+                        AppLogo(
+                          width: logoSize,
+                          height: logoSize,
                         ),
-                        PopupMenuItem<String>(
-                          value: 'en',
-                          child: Text(l10n.languageEnglish),
+                        const Spacer(),
+                        PopupMenuButton<String>(
+                          onSelected: (value) {
+                            localeProvider.setLanguageCode(value);
+                          },
+                          itemBuilder: (context) => [
+                            PopupMenuItem<String>(
+                              value: 'sl',
+                              child: Text(l10n.languageSlovenian),
+                            ),
+                            PopupMenuItem<String>(
+                              value: 'en',
+                              child: Text(l10n.languageEnglish),
+                            ),
+                          ],
+                          child: const _TopIconPill(icon: Icons.language),
                         ),
-                      ],
-                      child: _TopIconPill(icon: Icons.language, color: scheme.primary),
-                    ),
-                    const SizedBox(width: KubusSpacing.xs),
-                    PopupMenuButton<ThemeMode>(
-                      onSelected: (mode) {
-                        themeProvider.setThemeMode(mode);
-                      },
-                      itemBuilder: (context) => [
-                        PopupMenuItem<ThemeMode>(
-                          value: ThemeMode.light,
-                          child: Text(l10n.settingsThemeModeLight),
-                        ),
-                        PopupMenuItem<ThemeMode>(
-                          value: ThemeMode.dark,
-                          child: Text(l10n.settingsThemeModeDark),
-                        ),
-                        PopupMenuItem<ThemeMode>(
-                          value: ThemeMode.system,
-                          child: Text(l10n.settingsThemeModeSystem),
-                        ),
-                      ],
-                      child: _TopIconPill(
-                        icon: Icons.brightness_6_outlined,
-                        color: scheme.primary,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: KubusSpacing.md),
-                Expanded(
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints:
-                          BoxConstraints(maxWidth: _isDesktop ? 720 : 520),
-                      child: PageView.builder(
-                        controller: _pageController,
-                        itemCount: pages.length,
-                        onPageChanged: (index) {
-                          setState(() => _pageIndex = index);
-                        },
-                        itemBuilder: (context, index) {
-                          return _IntroPageView(page: pages[index]);
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: KubusSpacing.md),
-                _buildDots(count: pages.length),
-                const SizedBox(height: KubusSpacing.md),
-                KubusButton(
-                  onPressed: _goNext,
-                  label: l10n.commonContinue,
-                  backgroundColor: Colors.white,
-                  foregroundColor: scheme.primary,
-                  isFullWidth: true,
-                ),
-                const SizedBox(height: KubusSpacing.xs),
-                Row(
-                  children: [
-                    if (_pageIndex > 0)
-                      TextButton(
-                        onPressed: _goBack,
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          backgroundColor: Colors.white.withValues(alpha: 0.14),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: KubusSpacing.sm,
-                            vertical: KubusSpacing.xs,
+                        const SizedBox(width: KubusSpacing.xs),
+                        PopupMenuButton<ThemeMode>(
+                          onSelected: (mode) {
+                            themeProvider.setThemeMode(mode);
+                          },
+                          itemBuilder: (context) => [
+                            PopupMenuItem<ThemeMode>(
+                              value: ThemeMode.light,
+                              child: Text(l10n.settingsThemeModeLight),
+                            ),
+                            PopupMenuItem<ThemeMode>(
+                              value: ThemeMode.dark,
+                              child: Text(l10n.settingsThemeModeDark),
+                            ),
+                            PopupMenuItem<ThemeMode>(
+                              value: ThemeMode.system,
+                              child: Text(l10n.settingsThemeModeSystem),
+                            ),
+                          ],
+                          child: const _TopIconPill(
+                            icon: Icons.brightness_6_outlined,
                           ),
                         ),
-                        child: Text(l10n.commonBack),
-                      )
-                    else
-                      const SizedBox(width: 72),
-                    const Spacer(),
-                    TextButton(
-                      onPressed: _goToSignIn,
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        backgroundColor: Colors.white.withValues(alpha: 0.14),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: KubusSpacing.sm,
-                          vertical: KubusSpacing.xs,
+                      ],
+                    ),
+                    SizedBox(
+                        height: compactHeight
+                            ? KubusSpacing.sm
+                            : KubusSpacing.md),
+                    Expanded(
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints:
+                              BoxConstraints(maxWidth: _isDesktop ? 760 : 520),
+                          child: PageView.builder(
+                            controller: _pageController,
+                            itemCount: pages.length,
+                            onPageChanged: (index) {
+                              setState(() => _pageIndex = index);
+                            },
+                            itemBuilder: (context, index) {
+                              return _IntroPageView(page: pages[index]);
+                            },
+                          ),
                         ),
                       ),
-                      child: Text(l10n.commonSignIn),
+                    ),
+                    SizedBox(
+                        height: compactHeight
+                            ? KubusSpacing.sm
+                            : KubusSpacing.md),
+                    _buildDots(count: pages.length),
+                    SizedBox(
+                        height: compactHeight
+                            ? KubusSpacing.sm
+                            : KubusSpacing.md),
+                    KubusButton(
+                      onPressed: _goNext,
+                      label: l10n.commonContinue,
+                      backgroundColor: Colors.white,
+                      foregroundColor: scheme.primary,
+                      isFullWidth: true,
+                    ),
+                    const SizedBox(height: KubusSpacing.xs),
+                    Row(
+                      children: [
+                        if (_pageIndex > 0)
+                          TextButton(
+                            onPressed: _goBack,
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              backgroundColor:
+                                  Colors.white.withValues(alpha: 0.14),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: KubusSpacing.sm,
+                                vertical: KubusSpacing.xs,
+                              ),
+                            ),
+                            child: Text(l10n.commonBack),
+                          )
+                        else
+                          const SizedBox(width: 72),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: _goToSignIn,
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor:
+                                Colors.white.withValues(alpha: 0.14),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: KubusSpacing.sm,
+                              vertical: KubusSpacing.xs,
+                            ),
+                          ),
+                          child: Text(l10n.commonSignIn),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
+              );
+            },
           ),
         ),
       ),
@@ -374,18 +395,31 @@ class _IntroPageView extends StatelessWidget {
 }
 
 class _TopIconPill extends StatelessWidget {
-  const _TopIconPill({required this.icon, required this.color});
+  const _TopIconPill({required this.icon});
 
   final IconData icon;
-  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final iconColor = isDark ? Colors.white : Colors.black;
+    final bgColor = isDark
+        ? Colors.black.withValues(alpha: 0.20)
+        : Colors.white.withValues(alpha: 0.34);
+    final borderColor = isDark
+        ? Colors.white.withValues(alpha: 0.30)
+        : Colors.black.withValues(alpha: 0.20);
+
+    return Container(
       width: 44,
       height: 44,
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: borderColor, width: 1),
+      ),
       child: Center(
-        child: Icon(icon, size: 20, color: color),
+        child: Icon(icon, size: 20, color: iconColor),
       ),
     );
   }
