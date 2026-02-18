@@ -233,11 +233,6 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
           'AuthMethodsPanel._registerWithEmail: provisional wallet resolved=${(provisionalWalletAddress ?? '').isNotEmpty}',
         );
       }
-      widget.onEmailRegistrationAttempted?.call(email);
-      if (widget.onEmailCredentialsCaptured != null) {
-        await widget.onEmailCredentialsCaptured!(email, password);
-      }
-
       final api = BackendApiService();
       await api
           .registerWithEmail(
@@ -248,6 +243,10 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       )
           .timeout(const Duration(seconds: 16));
       AppConfig.debugPrint('AuthMethodsPanel._registerWithEmail: registerWithEmail completed');
+      widget.onEmailRegistrationAttempted?.call(email);
+      if (widget.onEmailCredentialsCaptured != null) {
+        await widget.onEmailCredentialsCaptured!(email, password);
+      }
       if (!mounted) return;
       if (widget.embedded) {
         // Embedded onboarding is verification-first: avoid immediate login
@@ -278,31 +277,16 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
           method: 'email', errorClass: e.runtimeType.toString()));
       if (!mounted) return;
       if (e is BackendApiRequestException && e.statusCode == 409) {
-        if (widget.embedded) {
-          // Existing account: try signing in with provided credentials first to
-          // keep onboarding frictionless. If this fails, fall back to sign-in UI.
-          try {
-            final api = BackendApiService();
-            final loginResult =
-                await api.loginWithEmail(email: email, password: password);
-            if (!mounted) return;
-            await _handleAuthSuccess(loginResult);
-            return;
-          } catch (_) {
-            widget.onSwitchToSignIn?.call();
-          }
-        } else {
-          navigator.pushReplacementNamed(
-            '/sign-in',
-            arguments: {'email': email},
-          );
-        }
         messenger.showKubusSnackBar(
           SnackBar(content: Text(l10n.authAccountAlreadyExistsToast)),
+          tone: KubusSnackBarTone.error,
         );
+        return;
       } else {
         messenger.showKubusSnackBar(
-            SnackBar(content: Text(l10n.authRegistrationFailed)));
+          SnackBar(content: Text(l10n.authRegistrationFailed)),
+          tone: KubusSnackBarTone.error,
+        );
       }
     } finally {
       AppConfig.debugPrint('AuthMethodsPanel._registerWithEmail: clearing submit loading state');
@@ -747,35 +731,30 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
             child: LayoutBuilder(
               builder: (BuildContext context, BoxConstraints constraints) {
                 final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
-                return GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => FocusScope.of(context).unfocus(),
-                  child: AnimatedPadding(
-                    duration: const Duration(milliseconds: 180),
-                    curve: Curves.easeOut,
-                    padding: EdgeInsets.only(
-                      bottom: keyboardInset > 140 ? 140 : keyboardInset,
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 12),
-                      child: Column(
-                        children: [
-                          const SizedBox(height: kToolbarHeight + 12),
-                          Expanded(
-                            child: Center(
-                              child: ConstrainedBox(
-                                constraints: BoxConstraints(
-                                  maxWidth: 520,
-                                  maxHeight:
-                                      constraints.maxHeight - kToolbarHeight,
-                                ),
-                                child: form,
+                return AnimatedPadding(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOut,
+                  padding: EdgeInsets.only(
+                    bottom: keyboardInset > 140 ? 140 : keyboardInset,
+                  ),
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: kToolbarHeight + 12),
+                        Expanded(
+                          child: Center(
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxWidth: 520,
+                                maxHeight: constraints.maxHeight - kToolbarHeight,
                               ),
+                              child: form,
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 );
