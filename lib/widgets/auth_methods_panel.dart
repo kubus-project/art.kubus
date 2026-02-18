@@ -299,7 +299,8 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final web3Provider = Provider.of<Web3Provider>(context, listen: false);
     final sanitizedExisting = existingWallet?.trim();
-    String? address = walletProvider.currentWalletAddress;
+    String? address = sanitizedExisting;
+    address ??= walletProvider.currentWalletAddress;
     bool createdFreshWallet = false;
 
     // Keep registration completion offline-friendly.
@@ -307,14 +308,9 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     const walletConnectTimeout = Duration(seconds: 6);
     const web3ConnectTimeout = Duration(seconds: 10);
 
-    if (address == null || address.isEmpty) {
-      if (sanitizedExisting != null && sanitizedExisting.isNotEmpty) {
-        address = sanitizedExisting;
-      }
-    }
-
     if (address != null && address.isNotEmpty) {
-      if ((walletProvider.currentWalletAddress ?? '').isEmpty) {
+      final currentWallet = (walletProvider.currentWalletAddress ?? '').trim();
+      if (currentWallet.isEmpty || currentWallet != address) {
         try {
           await walletProvider
               .connectWalletWithAddress(address)
