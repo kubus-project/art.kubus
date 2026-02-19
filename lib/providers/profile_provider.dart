@@ -21,7 +21,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
   bool _isSignedIn = false;
   bool _isLoading = false;
   String? _error;
-  
+
   // Real data from backend
   int _collectionsCount = 0;
   int _realFollowersCount = 0;
@@ -53,8 +53,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
     if (raw == null) return;
     final trimmed = raw.trim();
     if (trimmed.isEmpty) return;
-    final prefixed =
-        trimmed.startsWith('ProfileProvider') ? trimmed : 'ProfileProvider: $trimmed';
+    final prefixed = trimmed.startsWith('ProfileProvider')
+        ? trimmed
+        : 'ProfileProvider: $trimmed';
     foundation.debugPrint(prefixed);
   }
 
@@ -69,7 +70,13 @@ class ProfileProvider extends foundation.ChangeNotifier {
     final lower = url.toLowerCase();
 
     // DiceBear: Use internal proxy instead of direct dicebear URLs for consistent CORS and caching
-    if (lower.contains('dicebear') && (lower.contains('/svg') || lower.endsWith('.svg') || lower.contains('format=svg') || lower.contains('type=svg') || lower.contains('/identicon/') || lower.contains('/api/'))) {
+    if (lower.contains('dicebear') &&
+        (lower.contains('/svg') ||
+            lower.endsWith('.svg') ||
+            lower.contains('format=svg') ||
+            lower.contains('type=svg') ||
+            lower.contains('/identicon/') ||
+            lower.contains('/api/'))) {
       try {
         // Extract seed from known formats:
         // - https://api.dicebear.com/{style}/svg?seed=FOO
@@ -82,12 +89,18 @@ class ProfileProvider extends foundation.ChangeNotifier {
             seed = uri.queryParameters['seed']!;
             final pathSegments = uri.pathSegments;
             // styles may be in the first segment (e.g., 9.x/identicon or api/identicon)
-            if (pathSegments.isNotEmpty) style = pathSegments.lastWhere((s) => s.isNotEmpty, orElse: () => 'identicon');
+            if (pathSegments.isNotEmpty) {
+              style = pathSegments.lastWhere((s) => s.isNotEmpty,
+                  orElse: () => 'identicon');
+            }
           } else {
             // Try to get seed from last path segment without extension
-            final last = uri.pathSegments.isNotEmpty ? uri.pathSegments.last : '';
+            final last =
+                uri.pathSegments.isNotEmpty ? uri.pathSegments.last : '';
             seed = last.replaceAll('.svg', '');
-            if (uri.pathSegments.length >= 2) style = uri.pathSegments[uri.pathSegments.length - 2];
+            if (uri.pathSegments.length >= 2) {
+              style = uri.pathSegments[uri.pathSegments.length - 2];
+            }
           }
         } catch (_) {
           // Fallback: take last slash segment
@@ -98,7 +111,8 @@ class ProfileProvider extends foundation.ChangeNotifier {
             seed = url;
           }
         }
-        final proxy = '/api/avatar/${Uri.encodeComponent(seed)}?style=$style&format=png&raw=true';
+        final proxy =
+            '/api/avatar/${Uri.encodeComponent(seed)}?style=$style&format=png&raw=true';
         return _resolveUrl(proxy);
       } catch (_) {
         return url;
@@ -116,56 +130,99 @@ class ProfileProvider extends foundation.ChangeNotifier {
   // Try to extract a usable URL from various upload response shapes
   String? _extractUrlFromUploadResult(Map<String, dynamic> resultMap) {
     try {
-      debugPrint('_extractUrlFromUploadResult: resultMap keys = ${resultMap.keys}');
-      
+      debugPrint(
+          '_extractUrlFromUploadResult: resultMap keys = ${resultMap.keys}');
+
       // Direct normalized field from BackendApiService
-      if (resultMap.containsKey('uploadedUrl') && resultMap['uploadedUrl'] != null && resultMap['uploadedUrl'].toString().isNotEmpty) {
+      if (resultMap.containsKey('uploadedUrl') &&
+          resultMap['uploadedUrl'] != null &&
+          resultMap['uploadedUrl'].toString().isNotEmpty) {
         final url = resultMap['uploadedUrl'].toString();
         debugPrint('Found uploadedUrl: $url');
         return url;
       }
 
       // Common: top-level data.avatar (our backend response)
-      if (resultMap.containsKey('data') && resultMap['data'] is Map<String, dynamic>) {
-        final data = Map<String, dynamic>.from(resultMap['data'] as Map<String, dynamic>);
+      if (resultMap.containsKey('data') &&
+          resultMap['data'] is Map<String, dynamic>) {
+        final data = Map<String, dynamic>.from(
+            resultMap['data'] as Map<String, dynamic>);
         debugPrint('data keys: ${data.keys}');
-        
+
         // Check for avatar field first (our backend returns this)
-        if (data.containsKey('avatar') && data['avatar'] != null && (data['avatar'] as String).isNotEmpty) {
+        if (data.containsKey('avatar') &&
+            data['avatar'] != null &&
+            (data['avatar'] as String).isNotEmpty) {
           final url = data['avatar'] as String;
           debugPrint('Found data.avatar: $url');
           return url;
         }
-        
-        if (data.containsKey('url') && (data['url'] as String).isNotEmpty) return data['url'] as String;
-        if (data.containsKey('ipfsUrl') && (data['ipfsUrl'] as String).isNotEmpty) return data['ipfsUrl'] as String;
-        if (data.containsKey('httpUrl') && (data['httpUrl'] as String).isNotEmpty) return data['httpUrl'] as String;
-        if (data.containsKey('fileUrl') && (data['fileUrl'] as String).isNotEmpty) return data['fileUrl'] as String;
-        if (data.containsKey('path') && (data['path'] as String).isNotEmpty) return data['path'] as String;
-        if (data.containsKey('result') && data['result'] is Map<String, dynamic>) {
-          final r = Map<String, dynamic>.from(data['result'] as Map<String, dynamic>);
-          if (r.containsKey('url') && (r['url'] as String).isNotEmpty) return r['url'] as String;
+
+        if (data.containsKey('url') && (data['url'] as String).isNotEmpty) {
+          return data['url'] as String;
+        }
+        if (data.containsKey('ipfsUrl') &&
+            (data['ipfsUrl'] as String).isNotEmpty) {
+          return data['ipfsUrl'] as String;
+        }
+        if (data.containsKey('httpUrl') &&
+            (data['httpUrl'] as String).isNotEmpty) {
+          return data['httpUrl'] as String;
+        }
+        if (data.containsKey('fileUrl') &&
+            (data['fileUrl'] as String).isNotEmpty) {
+          return data['fileUrl'] as String;
+        }
+        if (data.containsKey('path') && (data['path'] as String).isNotEmpty) {
+          return data['path'] as String;
+        }
+        if (data.containsKey('result') &&
+            data['result'] is Map<String, dynamic>) {
+          final r =
+              Map<String, dynamic>.from(data['result'] as Map<String, dynamic>);
+          if (r.containsKey('url') && (r['url'] as String).isNotEmpty) {
+            return r['url'] as String;
+          }
         }
         // IPFS cid
-        if (data.containsKey('cid') && (data['cid'] as String).isNotEmpty) return 'ipfs://${data['cid']}';
+        if (data.containsKey('cid') && (data['cid'] as String).isNotEmpty) {
+          return 'ipfs://${data['cid']}';
+        }
       }
 
       // Some responses may embed raw body under 'raw'
-      if (resultMap.containsKey('raw') && resultMap['raw'] is Map<String, dynamic>) {
-        final raw = Map<String, dynamic>.from(resultMap['raw'] as Map<String, dynamic>);
+      if (resultMap.containsKey('raw') &&
+          resultMap['raw'] is Map<String, dynamic>) {
+        final raw =
+            Map<String, dynamic>.from(resultMap['raw'] as Map<String, dynamic>);
         debugPrint('raw keys: ${raw.keys}');
         if (raw.containsKey('data') && raw['data'] is Map<String, dynamic>) {
-          final d = Map<String, dynamic>.from(raw['data'] as Map<String, dynamic>);
-          if (d.containsKey('avatar') && (d['avatar'] as String).isNotEmpty) return d['avatar'] as String;
-          if (d.containsKey('url') && (d['url'] as String).isNotEmpty) return d['url'] as String;
-          if (d.containsKey('cid') && (d['cid'] as String).isNotEmpty) return 'ipfs://${d['cid']}';
+          final d =
+              Map<String, dynamic>.from(raw['data'] as Map<String, dynamic>);
+          if (d.containsKey('avatar') && (d['avatar'] as String).isNotEmpty) {
+            return d['avatar'] as String;
+          }
+          if (d.containsKey('url') && (d['url'] as String).isNotEmpty) {
+            return d['url'] as String;
+          }
+          if (d.containsKey('cid') && (d['cid'] as String).isNotEmpty) {
+            return 'ipfs://${d['cid']}';
+          }
         }
-        if (raw.containsKey('url') && (raw['url'] as String).isNotEmpty) return raw['url'] as String;
+        if (raw.containsKey('url') && (raw['url'] as String).isNotEmpty) {
+          return raw['url'] as String;
+        }
       }
 
       // Top-level url or path
-      if (resultMap.containsKey('url') && (resultMap['url'] as String).isNotEmpty) return resultMap['url'] as String;
-      if (resultMap.containsKey('path') && (resultMap['path'] as String).isNotEmpty) return resultMap['path'] as String;
+      if (resultMap.containsKey('url') &&
+          (resultMap['url'] as String).isNotEmpty) {
+        return resultMap['url'] as String;
+      }
+      if (resultMap.containsKey('path') &&
+          (resultMap['path'] as String).isNotEmpty) {
+        return resultMap['path'] as String;
+      }
 
       return null;
     } catch (e) {
@@ -182,13 +239,16 @@ class ProfileProvider extends foundation.ChangeNotifier {
 
       // Try HEAD first
       try {
-        final headResp = await http.head(uri).timeout(const Duration(seconds: 5));
+        final headResp =
+            await http.head(uri).timeout(const Duration(seconds: 5));
         if (headResp.statusCode == 200) {
           final ct = headResp.headers['content-type'] ?? '';
           if (ct.toLowerCase().startsWith('image/')) return true;
           // Some hosts don't set content-type correctly; if content-length present and >0, accept
           final cl = headResp.headers['content-length'];
-          if (cl != null && int.tryParse(cl) != null && int.parse(cl) > 0) return true;
+          if (cl != null && int.tryParse(cl) != null && int.parse(cl) > 0) {
+            return true;
+          }
         }
       } catch (_) {
         // ignore and fallback to GET
@@ -207,7 +267,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
       return false;
     }
   }
-  
+
   UserProfile? get currentUser => _currentUser;
   UserProfile? get profile => _currentUser; // Alias for compatibility
   List<UserProfile> get followingUsers => _followingUsers;
@@ -216,20 +276,26 @@ class ProfileProvider extends foundation.ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get hasProfile => _currentUser != null;
-  ProfilePreferences get preferences => _currentUser?.preferences ?? _cachedPreferences ?? _cachedPreferencesFromPrefs();
+  ProfilePreferences get preferences =>
+      _currentUser?.preferences ??
+      _cachedPreferences ??
+      _cachedPreferencesFromPrefs();
 
   String? get _currentWalletAddress {
     final wallet = _currentUser?.walletAddress;
     if (wallet != null && wallet.isNotEmpty) return wallet;
     final prefs = _prefs;
     if (prefs == null) return null;
-    final stored = prefs.getString(PreferenceKeys.walletAddress) ?? prefs.getString('wallet_address');
+    final stored = prefs.getString(PreferenceKeys.walletAddress) ??
+        prefs.getString('wallet_address');
     if (stored != null && stored.isNotEmpty) return stored;
     return null;
   }
 
-  String _personaKeyForWallet(String walletAddress) => '${PreferenceKeys.userPersona}_$walletAddress';
-  String _personaOnboardedKeyForWallet(String walletAddress) => '${PreferenceKeys.userPersonaOnboardedV1}_$walletAddress';
+  String _personaKeyForWallet(String walletAddress) =>
+      '${PreferenceKeys.userPersona}_$walletAddress';
+  String _personaOnboardedKeyForWallet(String walletAddress) =>
+      '${PreferenceKeys.userPersonaOnboardedV1}_$walletAddress';
 
   UserPersona? get userPersona {
     final raw = preferences.persona;
@@ -272,32 +338,35 @@ class ProfileProvider extends foundation.ChangeNotifier {
       await prefs.setBool(_personaOnboardedKeyForWallet(resolved), true);
     } catch (_) {}
   }
-  
+
   // Dynamic getters for profile stats (from backend)
   int get artworksCount => _currentUser?.stats?.artworksDiscovered ?? 0;
-    
+
   int get collectionsCount => _collectionsCount;
-    
+
   int get followersCount => _realFollowersCount;
-    
+
   int get followingCount => _realFollowingCount;
-  
+
   int get postsCount => _realPostsCount;
-    
+
   String get formattedFollowersCount => _formatCount(followersCount);
   String get formattedFollowingCount => _formatCount(followingCount);
   String get formattedArtworksCount => _formatCount(artworksCount);
   String get formattedCollectionsCount => _formatCount(collectionsCount);
   String get formattedPostsCount => _formatCount(postsCount);
-  
+
   void setCurrentUser(UserProfile user) {
     _currentUser = user;
     _isSignedIn = true;
     notifyListeners();
-    try { EventBus().emitProfileUpdated(_currentUser); } catch (_) {}
+    try {
+      EventBus().emitProfileUpdated(_currentUser);
+    } catch (_) {}
   }
 
-  Future<void> setUserPersona(UserPersona persona, {bool persistToBackend = true}) async {
+  Future<void> setUserPersona(UserPersona persona,
+      {bool persistToBackend = true}) async {
     final wallet = _currentWalletAddress;
     if (wallet == null || wallet.isEmpty) return;
 
@@ -314,7 +383,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
     if (_currentUser != null) {
       _currentUser = _currentUser!.copyWith(preferences: nextPrefs);
       notifyListeners();
-      try { EventBus().emitProfileUpdated(_currentUser); } catch (_) {}
+      try {
+        EventBus().emitProfileUpdated(_currentUser);
+      } catch (_) {}
     }
 
     await _persistPreferences(nextPrefs);
@@ -342,28 +413,32 @@ class ProfileProvider extends foundation.ChangeNotifier {
     if (!changed) return;
     _currentUser = updated;
     notifyListeners();
-    try { EventBus().emitProfileUpdated(_currentUser); } catch (_) {}
+    try {
+      EventBus().emitProfileUpdated(_currentUser);
+    } catch (_) {}
   }
-  
+
   // Initialize SharedPreferences and settings
   Future<void> initialize() async {
     final prefs = await _ensurePrefs();
-    
+
     // Try to load existing profile
     final walletAddress = prefs.getString('wallet_address');
     // Initialize persisted user cache for returning users only
     if (walletAddress != null && walletAddress.isNotEmpty) {
-      try { await UserService.initialize(); } catch (_) {}
+      try {
+        await UserService.initialize();
+      } catch (_) {}
     }
     if (walletAddress != null && walletAddress.isNotEmpty) {
       await loadProfile(walletAddress);
       // Load additional stats from backend
       await _loadBackendStats(walletAddress);
     }
-    
+
     notifyListeners();
   }
-  
+
   /// Load additional stats from backend (collections, followers, following)
   Future<void> _loadBackendStats(String walletAddress) async {
     try {
@@ -392,12 +467,17 @@ class ProfileProvider extends foundation.ChangeNotifier {
         _currentUser = _currentUser!.copyWith(
           stats: UserStats(
             artworksDiscovered: existingStats?.artworksDiscovered ?? 0,
-            artworksCreated: snapshot.counters['artworks'] ?? (existingStats?.artworksCreated ?? 0),
-            nftsOwned: snapshot.counters['nftsMinted'] ?? (existingStats?.nftsOwned ?? 0),
+            artworksCreated: snapshot.counters['artworks'] ??
+                (existingStats?.artworksCreated ?? 0),
+            nftsOwned: snapshot.counters['nftsMinted'] ??
+                (existingStats?.nftsOwned ?? 0),
             kub8Balance: existingStats?.kub8Balance ?? 0.0,
-            achievementsUnlocked: snapshot.counters['achievementsUnlocked'] ?? (existingStats?.achievementsUnlocked ?? 0),
-            followersCount: snapshot.counters['followers'] ?? (existingStats?.followersCount ?? 0),
-            followingCount: snapshot.counters['following'] ?? (existingStats?.followingCount ?? 0),
+            achievementsUnlocked: snapshot.counters['achievementsUnlocked'] ??
+                (existingStats?.achievementsUnlocked ?? 0),
+            followersCount: snapshot.counters['followers'] ??
+                (existingStats?.followersCount ?? 0),
+            followingCount: snapshot.counters['following'] ??
+                (existingStats?.followingCount ?? 0),
           ),
         );
       }
@@ -407,7 +487,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
       debugPrint('Error loading backend stats: $e');
     }
   }
-  
+
   /// Load profile by wallet address
   Future<void> loadProfile(String walletAddress) async {
     _isLoading = true;
@@ -431,7 +511,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
 
     try {
       debugPrint('ProfileProvider: Loading profile for wallet: $walletAddress');
-      
+
       // Prefer cached user service profile to avoid extra backend calls
       try {
         final user = await UserService.getUserById(walletAddress);
@@ -462,16 +542,20 @@ class ProfileProvider extends foundation.ChangeNotifier {
           // Fetch authoritative profile fields (preferences, artistInfo, etc.)
           // even when UserService already had a cached lightweight user record.
           try {
-            final profileData = await _apiService.getProfileByWallet(walletAddress);
+            final profileData =
+                await _apiService.getProfileByWallet(walletAddress);
             _currentUser = UserProfile.fromJson(profileData);
           } catch (_) {}
         } else {
-          final profileData = await _apiService.getProfileByWallet(walletAddress);
+          final profileData =
+              await _apiService.getProfileByWallet(walletAddress);
           try {
-            debugPrint('ProfileProvider.loadProfile: profileData keys = ${profileData.keys}');
+            debugPrint(
+                'ProfileProvider.loadProfile: profileData keys = ${profileData.keys}');
             _currentUser = UserProfile.fromJson(profileData);
           } catch (e, st) {
-            debugPrint('ProfileProvider.loadProfile: UserProfile.fromJson failed: $e');
+            debugPrint(
+                'ProfileProvider.loadProfile: UserProfile.fromJson failed: $e');
             debugPrint('Stack trace: $st');
             // Fallback to a minimal profile to avoid crash in the UI
             _currentUser = UserProfile(
@@ -481,9 +565,13 @@ class ProfileProvider extends foundation.ChangeNotifier {
               displayName: _shortWallet(walletAddress),
               bio: profileData['bio']?.toString() ?? '',
               avatar: profileData['avatar']?.toString() ?? '',
-              coverImage: (profileData['coverImage'] ?? profileData['cover_image_url'])?.toString(),
-              isArtist: profileData['isArtist'] == true || profileData['is_artist'] == true,
-              isInstitution: profileData['isInstitution'] == true || profileData['is_institution'] == true,
+              coverImage:
+                  (profileData['coverImage'] ?? profileData['cover_image_url'])
+                      ?.toString(),
+              isArtist: profileData['isArtist'] == true ||
+                  profileData['is_artist'] == true,
+              isInstitution: profileData['isInstitution'] == true ||
+                  profileData['is_institution'] == true,
               createdAt: DateTime.now(),
               updatedAt: DateTime.now(),
             );
@@ -495,26 +583,30 @@ class ProfileProvider extends foundation.ChangeNotifier {
         try {
           final av = _currentUser?.avatar ?? '';
           final resolved = _resolveUrl(av);
-          _currentUser = _currentUser?.copyWith(avatar: _convertSvgToRaster(resolved));
+          _currentUser =
+              _currentUser?.copyWith(avatar: _convertSvgToRaster(resolved));
         } catch (_) {}
         _isSignedIn = true;
         // Merge backend preferences with locally cached toggles for offline continuity
         final mergedPrefs = _mergePreferencesWithLocalPersona(walletAddress);
         _currentUser = _currentUser?.copyWith(preferences: mergedPrefs);
         await _persistPreferences(mergedPrefs);
-        debugPrint('ProfileProvider: Profile loaded from backend: ${_currentUser?.username}');
-        
+        debugPrint(
+            'ProfileProvider: Profile loaded from backend: ${_currentUser?.username}');
+
         // Load additional stats (collections, followers, following)
         await _loadBackendStats(walletAddress);
       } catch (e) {
-        debugPrint('ProfileProvider: Profile not found on backend, auto-registering via auth: $e');
+        debugPrint(
+            'ProfileProvider: Profile not found on backend, auto-registering via auth: $e');
         // Profile doesn't exist — ask auth/register to create user+profile and return token
         try {
           final reg = await _apiService.registerWallet(
             walletAddress: walletAddress,
             username: 'user_${walletAddress.substring(0, 8)}',
           );
-          debugPrint('ProfileProvider: Auto-registration (auth) response: $reg');
+          debugPrint(
+              'ProfileProvider: Auto-registration (auth) response: $reg');
 
           // After registration, prefer cached UserService or fetch profile
           final user = await UserService.getUserById(walletAddress);
@@ -541,32 +633,38 @@ class ProfileProvider extends foundation.ChangeNotifier {
 
             // Fetch authoritative profile fields after registration.
             try {
-              final profileData = await _apiService.getProfileByWallet(walletAddress);
+              final profileData =
+                  await _apiService.getProfileByWallet(walletAddress);
               _currentUser = UserProfile.fromJson(profileData);
             } catch (_) {}
           } else {
-          final profileData = await _apiService.getProfileByWallet(walletAddress);
-          _currentUser = UserProfile.fromJson(profileData);
-          // If profile missing artist flag but DAO review approved, promote to artist
-          try {
-            final review = await _apiService.getDAOReview(idOrWallet: walletAddress);
-            final status = review?['status']?.toString().toLowerCase();
-            if (status == 'approved' && (_currentUser?.isArtist ?? false) == false) {
-              _currentUser = _currentUser?.copyWith(isArtist: true);
-            }
-          } catch (_) {}
-        }
+            final profileData =
+                await _apiService.getProfileByWallet(walletAddress);
+            _currentUser = UserProfile.fromJson(profileData);
+            // If profile missing artist flag but DAO review approved, promote to artist
+            try {
+              final review =
+                  await _apiService.getDAOReview(idOrWallet: walletAddress);
+              final status = review?['status']?.toString().toLowerCase();
+              if (status == 'approved' &&
+                  (_currentUser?.isArtist ?? false) == false) {
+                _currentUser = _currentUser?.copyWith(isArtist: true);
+              }
+            } catch (_) {}
+          }
           try {
             final av = _currentUser?.avatar ?? '';
             final resolved = _resolveUrl(av);
-            _currentUser = _currentUser?.copyWith(avatar: _convertSvgToRaster(resolved));
+            _currentUser =
+                _currentUser?.copyWith(avatar: _convertSvgToRaster(resolved));
           } catch (_) {}
           _isSignedIn = true;
           final mergedPrefs = _mergePreferencesWithLocalPersona(walletAddress);
           _currentUser = _currentUser?.copyWith(preferences: mergedPrefs);
           await _persistPreferences(mergedPrefs);
         } catch (regError) {
-          debugPrint('ProfileProvider: Auto-registration failed: $regError, creating local default');
+          debugPrint(
+              'ProfileProvider: Auto-registration failed: $regError, creating local default');
           // If registration also fails, create local default
           _currentUser = _createDefaultProfile(walletAddress);
           _isSignedIn = true;
@@ -575,7 +673,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
           await _persistPreferences(mergedPrefs);
         }
       }
-      
+
       // Save wallet address
       final prefs = await _ensurePrefs();
       await prefs.setString('wallet_address', walletAddress);
@@ -590,7 +688,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
       notifyListeners();
     }
   }
-  
+
   /// Create or update profile
   Future<bool> saveProfile({
     required String walletAddress,
@@ -613,7 +711,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
 
     try {
       // Ensure persistent user cache is initialized on profile save (wallet registration)
-      try { await UserService.initialize(); } catch (_) {}
+      try {
+        await UserService.initialize();
+      } catch (_) {}
       // If caller omitted profile fields, prefer existing in-memory values
       final rawUsername = username ?? _currentUser?.username;
       // Normalize username: strip any leading '@' characters so stored usernames
@@ -624,10 +724,13 @@ class ProfileProvider extends foundation.ChangeNotifier {
       final effectiveAvatar = avatar ?? _currentUser?.avatar;
       final effectiveCover = coverImage ?? _currentUser?.coverImage;
       final effectiveSocial = social ?? _currentUser?.social;
-      final effectiveFieldOfWork = fieldOfWork ?? _currentUser?.artistInfo?.specialty;
-      final effectiveYearsActive = yearsActive ?? _currentUser?.artistInfo?.yearsActive;
+      final effectiveFieldOfWork =
+          fieldOfWork ?? _currentUser?.artistInfo?.specialty;
+      final effectiveYearsActive =
+          yearsActive ?? _currentUser?.artistInfo?.yearsActive;
       final effectiveIsArtist = isArtist ?? _currentUser?.isArtist;
-      final effectiveIsInstitution = isInstitution ?? _currentUser?.isInstitution;
+      final effectiveIsInstitution =
+          isInstitution ?? _currentUser?.isInstitution;
       final effectivePreferences = preferences;
 
       final profileData = {
@@ -639,14 +742,17 @@ class ProfileProvider extends foundation.ChangeNotifier {
         if (effectiveCover != null) 'coverImage': effectiveCover,
         if (effectiveSocial != null) 'social': effectiveSocial,
         if (effectiveIsArtist != null) 'isArtist': effectiveIsArtist,
-        if (effectiveIsInstitution != null) 'isInstitution': effectiveIsInstitution,
+        if (effectiveIsInstitution != null)
+          'isInstitution': effectiveIsInstitution,
         if ((effectiveIsArtist == true || effectiveIsInstitution == true) &&
             (effectiveFieldOfWork != null || effectiveYearsActive != null))
           'artistInfo': {
             if (effectiveFieldOfWork != null) 'specialty': effectiveFieldOfWork,
-            if (effectiveYearsActive != null) 'yearsActive': effectiveYearsActive,
+            if (effectiveYearsActive != null)
+              'yearsActive': effectiveYearsActive,
           },
-        if (effectivePreferences != null) 'preferences': effectivePreferences.toJson(),
+        if (effectivePreferences != null)
+          'preferences': effectivePreferences.toJson(),
       };
 
       // Always save to backend
@@ -654,28 +760,51 @@ class ProfileProvider extends foundation.ChangeNotifier {
 
       debugPrint('ProfileProvider: raw saveProfile response: $savedProfileRaw');
 
-      // savedProfileRaw is expected to be a Map<String,dynamic> (backend returns data.payload).
-      // Defensively try to convert it; if parsing fails, fall back to merging submitted values.
+      // Backends can return either:
+      // 1) a profile map directly, or
+      // 2) an envelope (e.g. { success: true, data: {...profile...}).
+      // If neither contains a usable wallet, keep identity by falling back to
+      // submitted/current values instead of replacing user with an empty profile.
       Map<String, dynamic> profileJson;
       try {
-        // backend usually returns the profile map directly
-        profileJson = Map<String, dynamic>.from(savedProfileRaw);
+        final raw = Map<String, dynamic>.from(savedProfileRaw);
+        final nested = raw['data'];
+        final candidate = nested is Map<String, dynamic>
+            ? Map<String, dynamic>.from(nested)
+            : raw;
+        final candidateWallet =
+            (candidate['walletAddress'] ?? candidate['wallet_address'] ?? '')
+                .toString()
+                .trim();
+        if (candidateWallet.isEmpty) {
+          throw const FormatException(
+            'saveProfile response missing walletAddress',
+          );
+        }
+        profileJson = candidate;
       } catch (e) {
         debugPrint('ProfileProvider: failed to parse saveProfile response: $e');
-        final fallbackCover = profileData['coverImage'] ?? _currentUser?.coverImage;
+        final fallbackCover =
+            profileData['coverImage'] ?? _currentUser?.coverImage;
         profileJson = {
           'id': _currentUser?.id ?? 'profile_${walletAddress.substring(0, 8)}',
           'walletAddress': walletAddress,
           'username': profileData['username'] ?? _currentUser?.username ?? '',
-          'displayName': profileData['displayName'] ?? _currentUser?.displayName ?? '',
+          'displayName':
+              profileData['displayName'] ?? _currentUser?.displayName ?? '',
           'bio': profileData['bio'] ?? _currentUser?.bio ?? '',
           'avatar': profileData['avatar'] ?? _currentUser?.avatar ?? '',
           if (fallbackCover != null) 'coverImage': fallbackCover,
           'social': profileData['social'] ?? _currentUser?.social ?? {},
-          'isArtist': profileData['isArtist'] ?? _currentUser?.isArtist ?? false,
-          'isInstitution': profileData['isInstitution'] ?? _currentUser?.isInstitution ?? false,
-          if (profileData['preferences'] != null) 'preferences': profileData['preferences'],
-          'createdAt': _currentUser?.createdAt.toIso8601String() ?? DateTime.now().toIso8601String(),
+          'isArtist':
+              profileData['isArtist'] ?? _currentUser?.isArtist ?? false,
+          'isInstitution': profileData['isInstitution'] ??
+              _currentUser?.isInstitution ??
+              false,
+          if (profileData['preferences'] != null)
+            'preferences': profileData['preferences'],
+          'createdAt': _currentUser?.createdAt.toIso8601String() ??
+              DateTime.now().toIso8601String(),
           'updatedAt': DateTime.now().toIso8601String(),
         };
       }
@@ -684,14 +813,15 @@ class ProfileProvider extends foundation.ChangeNotifier {
       try {
         final av = _currentUser?.avatar ?? '';
         final resolved = _resolveUrl(av);
-        _currentUser = _currentUser?.copyWith(avatar: _convertSvgToRaster(resolved));
+        _currentUser =
+            _currentUser?.copyWith(avatar: _convertSvgToRaster(resolved));
       } catch (_) {}
-      
+
       // Reload stats after profile update
       if (reloadStats) {
         await _loadBackendStats(walletAddress);
       }
-      
+
       // Update sign-in state
       _isSignedIn = true;
 
@@ -706,33 +836,36 @@ class ProfileProvider extends foundation.ChangeNotifier {
       final prefs = await _ensurePrefs();
       await prefs.setString('wallet_address', walletAddress);
       await prefs.setString('username', _currentUser!.username);
-      debugPrint('ProfileProvider: Profile saved successfully for wallet: $walletAddress');
-      
+      debugPrint(
+          'ProfileProvider: Profile saved successfully for wallet: $walletAddress');
+
       // Persist to UserService cache (and let ChatProvider be updated via EventBus)
-        try {
-          final u = _currentUser;
-          if (u != null) {
-          UserService.setUsersInCacheAuthoritative([User(
-             id: u.walletAddress,
-             name: u.displayName,
-             username: u.username,
-             bio: u.bio,
-             profileImageUrl: u.avatar,
-             coverImageUrl: MediaUrlResolver.resolve(u.coverImage),
-             fieldOfWork: u.artistInfo?.specialty ?? const <String>[],
-             yearsActive: u.artistInfo?.yearsActive ?? 0,
-             followersCount: u.stats?.followersCount ?? 0,
-             followingCount: u.stats?.followingCount ?? 0,
-             postsCount: u.stats?.artworksCreated ?? 0,
-             isFollowing: false,
-             isVerified: false,
-             joinedDate: u.createdAt.toIso8601String(),
-             achievementProgress: [],
-             isArtist: u.isArtist,
-             isInstitution: u.isInstitution,
-           )]);
-          }
-        } catch (_) {}
+      try {
+        final u = _currentUser;
+        if (u != null) {
+          UserService.setUsersInCacheAuthoritative([
+            User(
+              id: u.walletAddress,
+              name: u.displayName,
+              username: u.username,
+              bio: u.bio,
+              profileImageUrl: u.avatar,
+              coverImageUrl: MediaUrlResolver.resolve(u.coverImage),
+              fieldOfWork: u.artistInfo?.specialty ?? const <String>[],
+              yearsActive: u.artistInfo?.yearsActive ?? 0,
+              followersCount: u.stats?.followersCount ?? 0,
+              followingCount: u.stats?.followingCount ?? 0,
+              postsCount: u.stats?.artworksCreated ?? 0,
+              isFollowing: false,
+              isVerified: false,
+              joinedDate: u.createdAt.toIso8601String(),
+              achievementProgress: [],
+              isArtist: u.isArtist,
+              isInstitution: u.isInstitution,
+            )
+          ]);
+        }
+      } catch (_) {}
       _isLoading = false;
       notifyListeners();
 
@@ -744,7 +877,8 @@ class ProfileProvider extends foundation.ChangeNotifier {
     } catch (e) {
       // Detect 429 response message and provide a friendly error
       final errMsg = e.toString();
-      if (errMsg.contains('429') || errMsg.toLowerCase().contains('too many requests')) {
+      if (errMsg.contains('429') ||
+          errMsg.toLowerCase().contains('too many requests')) {
         _error = 'Too many requests. Please wait a moment and try again.';
       } else {
         _error = 'Failed to save profile: $e';
@@ -755,7 +889,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
       return false;
     }
   }
-  
+
   /// Upload avatar image to backend
   Future<String> uploadAvatar({
     required String imagePath,
@@ -766,14 +900,14 @@ class ProfileProvider extends foundation.ChangeNotifier {
       final file = File(imagePath);
       final fileBytes = await file.readAsBytes();
       final fileName = path.basename(imagePath);
-      
+
       final result = await _apiService.uploadAvatarToProfile(
         fileBytes: fileBytes,
         fileName: fileName,
         fileType: 'avatar',
         metadata: {'walletAddress': walletAddress},
       );
-      
+
       // Normalize response: backend may wrap in { data: { url: ... } }
       final Map<String, dynamic> resultMap = Map<String, dynamic>.from(result);
       debugPrint('ProfileProvider.uploadAvatar: raw upload result: $resultMap');
@@ -799,7 +933,8 @@ class ProfileProvider extends foundation.ChangeNotifier {
       _lastUploadDebug!['verified'] = verified;
       notifyListeners();
       if (!verified) {
-        debugPrint('ProfileProvider.uploadAvatar: uploaded URL not verified as image: $raster');
+        debugPrint(
+            'ProfileProvider.uploadAvatar: uploaded URL not verified as image: $raster');
         // Don't fail the upload if remote verification fails. Accept the URL
         // returned by backend so clients can use backend-hosted avatars even
         // when the URL is not directly reachable from the client (private
@@ -810,7 +945,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
         try {
           _currentUser = _currentUser!.copyWith(avatar: raster);
           notifyListeners();
-          try { EventBus().emitProfileUpdated(_currentUser); } catch (_) {}
+          try {
+            EventBus().emitProfileUpdated(_currentUser);
+          } catch (_) {}
         } catch (_) {}
       }
 
@@ -821,7 +958,6 @@ class ProfileProvider extends foundation.ChangeNotifier {
       return '';
     }
   }
-
 
   /// Upload avatar using raw bytes (works with Android content:// URIs from image_picker)
   Future<String> uploadAvatarBytes({
@@ -836,7 +972,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
       debugPrint('   mimeType: $mimeType');
       debugPrint('   fileBytes length: ${fileBytes.length}');
       debugPrint('   walletAddress: $walletAddress');
-      
+
       // Determine MIME type from file extension if not provided
       String fileType = mimeType ?? 'image/jpeg';
       if (mimeType == null) {
@@ -845,33 +981,30 @@ class ProfileProvider extends foundation.ChangeNotifier {
           fileType = 'image/png';
         } else if (ext == 'jpg' || ext == 'jpeg') {
           fileType = 'image/jpeg';
-
         } else if (ext == 'webp') {
           fileType = 'image/webp';
-        }
-
-        else if (ext == 'gif') {
+        } else if (ext == 'gif') {
           fileType = 'image/gif';
         } else if (ext == 'svg') {
           fileType = 'image/svg+xml';
-          
+        }
       }
-      }
-      
+
       debugPrint('   determined fileType: $fileType');
       debugPrint('   calling API uploadAvatarToProfile...');
-      
+
       final result = await _apiService.uploadAvatarToProfile(
         fileBytes: fileBytes,
         fileName: fileName,
         fileType: fileType,
         metadata: {'walletAddress': walletAddress},
       );
-      
+
       debugPrint('   API call completed successfully');
 
       final Map<String, dynamic> resultMap = Map<String, dynamic>.from(result);
-      debugPrint('ProfileProvider.uploadAvatarBytes: raw upload result: $resultMap');
+      debugPrint(
+          'ProfileProvider.uploadAvatarBytes: raw upload result: $resultMap');
       _lastUploadDebug = {'result': resultMap};
       notifyListeners();
 
@@ -890,7 +1023,8 @@ class ProfileProvider extends foundation.ChangeNotifier {
       _lastUploadDebug!['verified'] = verified;
       notifyListeners();
       if (!verified) {
-        debugPrint('ProfileProvider.uploadAvatarBytes: uploaded URL not verified as image: $raster');
+        debugPrint(
+            'ProfileProvider.uploadAvatarBytes: uploaded URL not verified as image: $raster');
         // Do not throw here; accept the returned URL so the app can display
         // backend-hosted images even if the quick HEAD/GET check fails.
       }
@@ -899,38 +1033,46 @@ class ProfileProvider extends foundation.ChangeNotifier {
         try {
           _currentUser = _currentUser!.copyWith(avatar: raster);
           notifyListeners();
-          try { EventBus().emitProfileUpdated(_currentUser); } catch (_) {}
+          try {
+            EventBus().emitProfileUpdated(_currentUser);
+          } catch (_) {}
         } catch (_) {}
       }
 
       return raster;
     } catch (e, stackTrace) {
-      debugPrint('ProfileProvider.uploadAvatarBytes: error uploading avatar bytes: $e');
+      debugPrint(
+          'ProfileProvider.uploadAvatarBytes: error uploading avatar bytes: $e');
       debugPrint('Stack trace: $stackTrace');
-      _lastUploadDebug = {'error': e.toString(), 'stackTrace': stackTrace.toString()};
+      _lastUploadDebug = {
+        'error': e.toString(),
+        'stackTrace': stackTrace.toString()
+      };
       notifyListeners();
       return '';
     }
   }
-  
+
   /// Create profile when wallet is created
   Future<bool> createProfileFromWallet({
     required String walletAddress,
     String? username,
   }) async {
     debugPrint('ProfileProvider: Creating profile from wallet: $walletAddress');
-    debugPrint('ProfileProvider: Username: ${username ?? _generateUsername(walletAddress)}');
+    debugPrint(
+        'ProfileProvider: Username: ${username ?? _generateUsername(walletAddress)}');
     // Compute effective username once and use it for both username and displayName
     final effectiveUsername = username ?? _generateUsername(walletAddress);
     // Instead of saving profile client-side, call server auth/register so server
     // creates user+profile and returns a JWT. Backend will handle username/avatar defaults.
-    final reg = await _apiService.registerWallet(walletAddress: walletAddress, username: effectiveUsername);
+    final reg = await _apiService.registerWallet(
+        walletAddress: walletAddress, username: effectiveUsername);
     final result = reg['success'] == true || reg['message'] != null;
-    
+
     debugPrint('ProfileProvider: Profile creation result: $result');
     return result;
   }
-  
+
   /// Helper: Create default profile
   UserProfile _createDefaultProfile(String walletAddress) {
     return UserProfile(
@@ -967,15 +1109,23 @@ class ProfileProvider extends foundation.ChangeNotifier {
     try {
       final prefs = _prefs;
       if (prefs == null) {
-        return _currentUser?.preferences ?? _cachedPreferences ?? ProfilePreferences();
+        return _currentUser?.preferences ??
+            _cachedPreferences ??
+            ProfilePreferences();
       }
-      final wallet = prefs.getString(PreferenceKeys.walletAddress) ?? prefs.getString('wallet_address') ?? '';
+      final wallet = prefs.getString(PreferenceKeys.walletAddress) ??
+          prefs.getString('wallet_address') ??
+          '';
       final bool isPrivate = prefs.getBool('private_profile') ?? false;
-      final bool showActivityStatus = prefs.getBool('show_activity_status') ?? true;
-      final bool shareLastVisitedLocation = prefs.getBool('share_last_visited_location') ?? false;
+      final bool showActivityStatus =
+          prefs.getBool('show_activity_status') ?? true;
+      final bool shareLastVisitedLocation =
+          prefs.getBool('share_last_visited_location') ?? false;
       final bool showCollection = prefs.getBool('show_collection') ?? true;
       final bool allowMessages = prefs.getBool('allow_messages') ?? true;
-      final String? persona = wallet.isNotEmpty ? prefs.getString(_personaKeyForWallet(wallet)) : null;
+      final String? persona = wallet.isNotEmpty
+          ? prefs.getString(_personaKeyForWallet(wallet))
+          : null;
       return ProfilePreferences(
         privacy: isPrivate ? 'private' : 'public',
         notifications: true,
@@ -1008,7 +1158,8 @@ class ProfileProvider extends foundation.ChangeNotifier {
 
     final prefs = _prefs;
     if (prefs == null) return existing;
-    final persisted = (prefs.getString(_personaKeyForWallet(walletAddress)) ?? '').trim();
+    final persisted =
+        (prefs.getString(_personaKeyForWallet(walletAddress)) ?? '').trim();
     if (persisted.isEmpty) return existing;
 
     // Mark onboarding complete when we have a persisted persona.
@@ -1020,7 +1171,8 @@ class ProfileProvider extends foundation.ChangeNotifier {
 
   Future<void> _applyDaoReviewRoles(String walletAddress) async {
     try {
-      final reviewPayload = await _apiService.getDAOReview(idOrWallet: walletAddress);
+      final reviewPayload =
+          await _apiService.getDAOReview(idOrWallet: walletAddress);
       if (reviewPayload == null) return;
       final daoReview = DAOReview.fromJson(reviewPayload);
       if (!daoReview.isApproved) return;
@@ -1029,18 +1181,22 @@ class ProfileProvider extends foundation.ChangeNotifier {
       final isInstitutionReview = daoReview.isInstitutionApplication;
 
       final nextArtist = (_currentUser?.isArtist ?? false) || isArtistReview;
-      final nextInstitution = (_currentUser?.isInstitution ?? false) || isInstitutionReview;
+      final nextInstitution =
+          (_currentUser?.isInstitution ?? false) || isInstitutionReview;
 
       final previousArtist = _currentUser?.isArtist ?? false;
       final previousInstitution = _currentUser?.isInstitution ?? false;
 
-      if (nextArtist != previousArtist || nextInstitution != previousInstitution) {
+      if (nextArtist != previousArtist ||
+          nextInstitution != previousInstitution) {
         _currentUser = _currentUser?.copyWith(
           isArtist: nextArtist,
           isInstitution: nextInstitution,
         );
         notifyListeners();
-        try { EventBus().emitProfileUpdated(_currentUser); } catch (_) {}
+        try {
+          EventBus().emitProfileUpdated(_currentUser);
+        } catch (_) {}
       }
     } catch (e) {
       debugPrint('ProfileProvider._applyDaoReviewRoles failed: $e');
@@ -1050,9 +1206,12 @@ class ProfileProvider extends foundation.ChangeNotifier {
   Future<void> _persistPreferences(ProfilePreferences preferences) async {
     try {
       final prefs = await _ensurePrefs();
-      await prefs.setBool('private_profile', preferences.privacy.toLowerCase() == 'private');
-      await prefs.setBool('show_activity_status', preferences.showActivityStatus);
-      await prefs.setBool('share_last_visited_location', preferences.shareLastVisitedLocation);
+      await prefs.setBool(
+          'private_profile', preferences.privacy.toLowerCase() == 'private');
+      await prefs.setBool(
+          'show_activity_status', preferences.showActivityStatus);
+      await prefs.setBool(
+          'share_last_visited_location', preferences.shareLastVisitedLocation);
       await prefs.setBool('show_collection', preferences.showCollection);
       await prefs.setBool('allow_messages', preferences.allowMessages);
       final wallet = _currentWalletAddress;
@@ -1064,7 +1223,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
       _cachedPreferences = preferences;
     } catch (_) {}
   }
-  
+
   // Refresh stats from backend
   Future<void> refreshStats() async {
     if (_currentUser?.walletAddress != null) {
@@ -1082,11 +1241,16 @@ class ProfileProvider extends foundation.ChangeNotifier {
     bool? allowMessages,
   }) async {
     try {
-      final existing = _currentUser?.preferences ?? _cachedPreferencesFromPrefs();
+      final existing =
+          _currentUser?.preferences ?? _cachedPreferencesFromPrefs();
       final next = existing.copyWith(
-        privacy: (privateProfile ?? (existing.privacy.toLowerCase() == 'private')) ? 'private' : 'public',
+        privacy:
+            (privateProfile ?? (existing.privacy.toLowerCase() == 'private'))
+                ? 'private'
+                : 'public',
         showActivityStatus: showActivityStatus ?? existing.showActivityStatus,
-        shareLastVisitedLocation: shareLastVisitedLocation ?? existing.shareLastVisitedLocation,
+        shareLastVisitedLocation:
+            shareLastVisitedLocation ?? existing.shareLastVisitedLocation,
         showCollection: showCollection ?? existing.showCollection,
         allowMessages: allowMessages ?? existing.allowMessages,
       );
@@ -1106,14 +1270,15 @@ class ProfileProvider extends foundation.ChangeNotifier {
             {'preferences': next.toJson()},
           );
         } catch (e) {
-          debugPrint('ProfileProvider.updatePreferences: backend update failed: $e');
+          debugPrint(
+              'ProfileProvider.updatePreferences: backend update failed: $e');
         }
       }
     } catch (e) {
       debugPrint('ProfileProvider.updatePreferences failed: $e');
     }
   }
-  
+
   // Helper method to format large numbers
   String _formatCount(int count) {
     if (count >= 1000000) {
@@ -1131,7 +1296,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
     _isSignedIn = false;
     notifyListeners();
   }
-  
+
   Future<void> followUser(UserProfile user) async {
     try {
       await _apiService.followUser(user.walletAddress);
@@ -1145,11 +1310,12 @@ class ProfileProvider extends foundation.ChangeNotifier {
       rethrow;
     }
   }
-  
+
   Future<void> unfollowUser(String walletAddress) async {
     try {
       await _apiService.unfollowUser(walletAddress);
-      _followingUsers.removeWhere((user) => user.id == walletAddress || user.walletAddress == walletAddress);
+      _followingUsers.removeWhere((user) =>
+          user.id == walletAddress || user.walletAddress == walletAddress);
       _realFollowingCount = _followingUsers.length;
       notifyListeners();
     } catch (e) {
@@ -1157,11 +1323,12 @@ class ProfileProvider extends foundation.ChangeNotifier {
       rethrow;
     }
   }
-  
+
   bool isFollowing(String userId) {
-    return _followingUsers.any((user) => user.id == userId || user.walletAddress == userId);
+    return _followingUsers
+        .any((user) => user.id == userId || user.walletAddress == userId);
   }
-  
+
   Future<bool> checkIsFollowing(String walletAddress) async {
     try {
       return await _apiService.isFollowing(walletAddress);
@@ -1170,19 +1337,19 @@ class ProfileProvider extends foundation.ChangeNotifier {
       return isFollowing(walletAddress);
     }
   }
-  
+
   void addFollower(UserProfile user) {
     if (!_followers.any((u) => u.id == user.id)) {
       _followers.add(user);
       notifyListeners();
     }
   }
-  
+
   void removeFollower(String userId) {
     _followers.removeWhere((user) => user.id == userId);
     notifyListeners();
   }
-  
+
   // Initialize with sample data (deprecated - use loadProfile instead)
   void initializeSampleData() {
     // Create a sample current user with new model
@@ -1191,8 +1358,10 @@ class ProfileProvider extends foundation.ChangeNotifier {
       walletAddress: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
       username: 'current_user',
       displayName: 'Current User',
-      bio: 'Digital artist exploring the intersection of AR, blockchain, and creativity.',
-      avatar: '${_apiService.baseUrl.replaceAll(RegExp(r'/$'), '')}/api/avatar/current?style=avataaars&format=png&raw=true',
+      bio:
+          'Digital artist exploring the intersection of AR, blockchain, and creativity.',
+      avatar:
+          '${_apiService.baseUrl.replaceAll(RegExp(r'/$'), '')}/api/avatar/current?style=avataaars&format=png&raw=true',
       stats: UserStats(
         followersCount: 1250,
         followingCount: 340,
@@ -1203,7 +1372,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
       updatedAt: DateTime.now(),
     );
     _isSignedIn = true;
-    
+
     notifyListeners();
   }
 }

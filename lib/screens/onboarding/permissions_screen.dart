@@ -2,13 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:flutter/foundation.dart'
-    show kDebugMode, kIsWeb, TargetPlatform, defaultTargetPlatform;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../widgets/inline_loading.dart';
 import '../../services/notification_helper.dart';
-import '../../services/push_notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/onboarding_state_service.dart';
 import '../../services/telemetry/telemetry_service.dart';
@@ -38,6 +37,7 @@ class _PermissionsScreenState extends State<PermissionsScreen>
   bool _isCompletingOnboarding = false;
   bool _isRequestingPermission = false;
   int _permissionStatusEpoch = 0;
+  bool _webLocationGrantedOverride = false;
 
   // Track permission states
   bool _locationGranted = false;
@@ -88,12 +88,7 @@ class _PermissionsScreenState extends State<PermissionsScreen>
       status.isPermanentlyDenied || status.isRestricted;
 
   Permission _locationPermissionForRequest() {
-    if (!kIsWeb &&
-        (defaultTargetPlatform == TargetPlatform.iOS ||
-            defaultTargetPlatform == TargetPlatform.macOS)) {
-      return Permission.locationWhenInUse;
-    }
-    return Permission.location;
+    return kIsWeb ? Permission.location : Permission.locationWhenInUse;
   }
 
   Future<PermissionStatus> _safePermissionStatus(Permission permission) async {
@@ -110,22 +105,62 @@ class _PermissionsScreenState extends State<PermissionsScreen>
   }
 
   Future<List<PermissionStatus>> _locationStatuses() async {
-    final statuses = <PermissionStatus>[
+    if (kIsWeb) {
+      return <PermissionStatus>[
+        await _safePermissionStatus(Permission.location),
+      ];
+    }
+    return <PermissionStatus>[
+      await _safePermissionStatus(Permission.locationWhenInUse),
       await _safePermissionStatus(Permission.location),
     ];
-    if (!kIsWeb) {
-      statuses.add(await _safePermissionStatus(Permission.locationWhenInUse));
-      statuses.add(await _safePermissionStatus(Permission.locationAlways));
-    }
-    return statuses;
   }
 
   Future<bool> _isLocationGranted() async {
+    if (kIsWeb) {
+      if (_webLocationGrantedOverride) return true;
+      try {
+        final permission = await Geolocator.checkPermission();
+        final granted = permission == LocationPermission.whileInUse ||
+            permission == LocationPermission.always;
+        if (granted) _webLocationGrantedOverride = true;
+        if (granted) return true;
+      } catch (e, st) {
+        if (kDebugMode) {
+          debugPrint(
+            'PermissionsScreen._isLocationGranted(web) failed: $e\n$st',
+          );
+        }
+      }
+
+      // Fallback: some browsers/plugin combos may report stale/incorrect state
+      // via Geolocator.checkPermission(). Try permission_handler as a secondary
+      // signal (read-only) to keep UI accurate.
+      final status = await _safePermissionStatus(Permission.location);
+      if (status.isGranted) {
+        _webLocationGrantedOverride = true;
+        return true;
+      }
+      return false;
+    }
     final statuses = await _locationStatuses();
     return statuses.any((status) => status.isGranted);
   }
 
   Future<bool> _isLocationBlocked() async {
+    if (kIsWeb) {
+      try {
+        final permission = await Geolocator.checkPermission();
+        // On web, a user "deny" is effectively sticky until changed in browser
+        // site settings; treat both denied and deniedForever as blocked.
+        return permission == LocationPermission.denied ||
+            permission == LocationPermission.deniedForever;
+      } catch (_) {
+        // Fall back to permission_handler's blocked signal (best-effort).
+        final status = await _safePermissionStatus(Permission.location);
+        return _isStatusBlocked(status);
+      }
+    }
     final statuses = await _locationStatuses();
     if (statuses.any((status) => status.isGranted)) return false;
     return statuses.any(_isStatusBlocked);
@@ -178,7 +213,10 @@ class _PermissionsScreenState extends State<PermissionsScreen>
       case PermissionType.camera:
         return _isStatusBlocked(await _safePermissionStatus(Permission.camera));
       case PermissionType.notifications:
-        if (kIsWeb) return false;
+        if (kIsWeb) {
+          final state = await webNotificationPermissionState();
+          return state == 'denied';
+        }
         return _isStatusBlocked(
           await _safePermissionStatus(Permission.notification),
         );
@@ -676,17 +714,36 @@ class _PermissionsScreenState extends State<PermissionsScreen>
 
     try {
       if (type == PermissionType.notifications) {
+        // Web notifications must be requested directly from a user gesture.
+        // Avoid indirect flows that may lose the browser activation.
         try {
-          await PushNotificationService().requestPermission();
+          final before = webNotificationPermissionStateNow();
+          if (before == 'denied') {
+            // Browser won't show the prompt again; guide user to site settings.
+            _showSettingsDialog(type);
+          } else {
+            await requestWebNotificationPermission();
+          }
         } catch (e, st) {
           if (kDebugMode) {
             debugPrint(
-              'PermissionsScreen._requestPermission: notifications request failed: $e\n$st',
+              'PermissionsScreen._requestPermission(web notifications) failed: $e\n$st',
             );
           }
         }
       } else if (type == PermissionType.camera && kIsWeb) {
         // Camera access is intentionally not requested on web.
+      } else if (type == PermissionType.location && kIsWeb) {
+        try {
+          await Geolocator.getCurrentPosition(
+            locationSettings: const LocationSettings(
+              accuracy: LocationAccuracy.low,
+            ),
+          );
+          _webLocationGrantedOverride = true;
+        } catch (_) {
+          // Non-fatal: we re-check below and update UI accordingly.
+        }
       } else {
         final Permission permission;
         switch (type) {
@@ -796,18 +853,29 @@ class _PermissionsScreenState extends State<PermissionsScreen>
               ),
             ),
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              openAppSettings();
-            },
-            child: Text(
-              l10n.permissionsOpenSettings,
-              style: GoogleFonts.inter(
-                color: Colors.white,
+          if (!kIsWeb)
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                openAppSettings();
+              },
+              child: Text(
+                l10n.permissionsOpenSettings,
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                ),
+              ),
+            )
+          else
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                l10n.commonOk,
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                ),
               ),
             ),
-          ),
         ],
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),

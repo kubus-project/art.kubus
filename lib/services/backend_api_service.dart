@@ -1348,6 +1348,7 @@ class BackendApiService
     required String email,
     required String password,
     String? username,
+    String? displayName,
     String? walletAddress,
   }) async {
     try {
@@ -1358,10 +1359,21 @@ class BackendApiService
       }
       final includeAuth =
           walletAddress != null && walletAddress.trim().isNotEmpty;
+      const profileDisplayNameMaxLength = 100;
+      final normalizedDisplayName = displayName
+          ?.replaceAll(RegExp(r'\s+'), ' ')
+          .trim();
+      final sanitizedDisplayName = (normalizedDisplayName == null ||
+              normalizedDisplayName.isEmpty)
+          ? null
+          : (normalizedDisplayName.length > profileDisplayNameMaxLength
+              ? normalizedDisplayName.substring(0, profileDisplayNameMaxLength)
+              : normalizedDisplayName);
       final body = {
         'email': email,
         'password': password,
         if (username != null && username.isNotEmpty) 'username': username,
+        if (sanitizedDisplayName != null) 'displayName': sanitizedDisplayName,
         if (walletAddress != null && walletAddress.isNotEmpty)
           'walletAddress': walletAddress,
       };
@@ -6056,6 +6068,21 @@ class BackendApiService
 
   /// Submit a DAO review/application
   /// POST /api/dao/reviews
+  String _normalizeDaoPortfolioUrl(String rawValue) {
+    final trimmed = rawValue.trim();
+    if (trimmed.isEmpty) return '';
+    final hasScheme =
+        RegExp(r'^[a-zA-Z][a-zA-Z0-9+.-]*:').hasMatch(trimmed);
+    final withScheme = hasScheme
+        ? trimmed
+        : (trimmed.startsWith('//') ? 'https:$trimmed' : 'https://$trimmed');
+    final parsed = Uri.tryParse(withScheme);
+    if (parsed == null) return trimmed;
+    final scheme = parsed.scheme.toLowerCase();
+    if (scheme != 'http' && scheme != 'https') return trimmed;
+    return parsed.toString();
+  }
+
   Future<Map<String, dynamic>?> submitDAOReview({
     required String walletAddress,
     required String portfolioUrl,
@@ -6067,8 +6094,9 @@ class BackendApiService
     try {
       await _ensureAuthBeforeRequest(walletAddress: walletAddress);
       final uri = Uri.parse('$baseUrl/api/dao/reviews');
+      final normalizedPortfolioUrl = _normalizeDaoPortfolioUrl(portfolioUrl);
       final body = jsonEncode({
-        'portfolioUrl': portfolioUrl,
+        'portfolioUrl': normalizedPortfolioUrl,
         'medium': medium,
         'statement': statement,
         if (title != null && title.isNotEmpty) 'title': title,

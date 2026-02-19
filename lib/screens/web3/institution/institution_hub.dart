@@ -17,6 +17,7 @@ import '../../../providers/web3provider.dart';
 import '../../../config/config.dart';
 import '../../../models/dao.dart';
 import '../../../models/user_persona.dart';
+import '../../../utils/dao_role_verification.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../collab/invites_inbox_screen.dart';
 import '../../events/exhibition_list_screen.dart';
@@ -25,8 +26,13 @@ import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class InstitutionHub extends StatefulWidget {
   final ValueChanged<int>? onTabChanged;
+  final bool showVerificationCard;
 
-  const InstitutionHub({super.key, this.onTabChanged});
+  const InstitutionHub({
+    super.key,
+    this.onTabChanged,
+    this.showVerificationCard = true,
+  });
 
   @override
   State<InstitutionHub> createState() => _InstitutionHubState();
@@ -50,7 +56,8 @@ class _InstitutionHubState extends State<InstitutionHub> {
   void initState() {
     super.initState();
     _checkOnboarding();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadInstitutionReviewStatus(forceRefresh: true));
+    WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _loadInstitutionReviewStatus(forceRefresh: true));
   }
 
   @override
@@ -98,8 +105,11 @@ class _InstitutionHubState extends State<InstitutionHub> {
   }
 
   String _resolveWalletAddress({bool listen = false}) {
-    final profileProvider = listen ? context.watch<ProfileProvider>() : context.read<ProfileProvider>();
-    final web3Provider = listen ? context.watch<Web3Provider>() : context.read<Web3Provider>();
+    final profileProvider = listen
+        ? context.watch<ProfileProvider>()
+        : context.read<ProfileProvider>();
+    final web3Provider =
+        listen ? context.watch<Web3Provider>() : context.read<Web3Provider>();
     return WalletUtils.coalesce(
       walletAddress: profileProvider.currentUser?.walletAddress,
       wallet: web3Provider.walletAddress,
@@ -109,7 +119,11 @@ class _InstitutionHubState extends State<InstitutionHub> {
   Future<void> _loadInstitutionReviewStatus({bool forceRefresh = false}) async {
     final wallet = _resolveWalletAddress();
     if (wallet.isEmpty || _reviewLoading) return;
-    if (!forceRefresh && _hasFetchedReviewForWallet && wallet == _lastReviewWallet) return;
+    if (!forceRefresh &&
+        _hasFetchedReviewForWallet &&
+        wallet == _lastReviewWallet) {
+      return;
+    }
 
     final requestedWallet = wallet;
     setState(() {
@@ -118,19 +132,14 @@ class _InstitutionHubState extends State<InstitutionHub> {
     });
     try {
       final daoProvider = context.read<DAOProvider>();
-      final review = await daoProvider.loadReviewForWallet(requestedWallet, forceRefresh: forceRefresh);
+      final review = await daoProvider.loadReviewForWallet(requestedWallet,
+          forceRefresh: forceRefresh);
       if (!mounted || requestedWallet != _lastReviewWallet) return;
       setState(() {
-        _institutionReview = review ?? daoProvider.findReviewForWallet(requestedWallet);
+        _institutionReview =
+            review ?? daoProvider.findReviewForWallet(requestedWallet);
         _hasFetchedReviewForWallet = true;
       });
-      final isInstitutionReview = _institutionReview?.isInstitutionApplication ?? false;
-      final isApproved = isInstitutionReview && (_institutionReview?.status.toLowerCase() == 'approved');
-      if (isApproved) {
-        try {
-          context.read<ProfileProvider>().setRoleFlags(isInstitution: true);
-        } catch (_) {}
-      }
     } catch (_) {
       if (mounted && requestedWallet == _lastReviewWallet) {
         setState(() {
@@ -158,18 +167,20 @@ class _InstitutionHubState extends State<InstitutionHub> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final profileProvider = context.watch<ProfileProvider>();
     final daoProvider = context.watch<DAOProvider>();
     final wallet = _resolveWalletAddress(listen: true);
-    final review = _institutionReview ?? (wallet.isNotEmpty ? daoProvider.findReviewForWallet(wallet) : null);
-    final hasInstitutionBadge = profileProvider.currentUser?.isInstitution ?? false;
-    final hasArtistBadge = profileProvider.currentUser?.isArtist ?? false;
-    final reviewStatus = review?.status.toLowerCase() ?? '';
-    final reviewIsInstitution = review?.isInstitutionApplication ?? false;
-    final reviewIsArtist = review?.isArtistApplication ?? false;
-    final isApprovedInstitution = hasInstitutionBadge || (reviewIsInstitution && reviewStatus == 'approved');
-    final isReviewRejected = reviewStatus == 'rejected';
-    final hasConflictingArtistReview = reviewIsArtist && !isReviewRejected;
+    final review = _institutionReview ??
+        (wallet.isNotEmpty ? daoProvider.findReviewForWallet(wallet) : null);
+    final verification = DaoRoleVerification(
+      walletAddress: wallet,
+      review: review,
+    );
+    final hasInstitutionBadge =
+        verification.isApprovedFor(DaoRoleType.institution);
+    final hasArtistBadge = verification.isApprovedFor(DaoRoleType.artist);
+    final isApprovedInstitution = hasInstitutionBadge;
+    final hasConflictingArtistReview =
+        verification.isPendingFor(DaoRoleType.artist);
     final isCrossRoleBlocked = hasArtistBadge || hasConflictingArtistReview;
 
     final pages = <Widget>[
@@ -199,12 +210,14 @@ class _InstitutionHubState extends State<InstitutionHub> {
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.help_outline, color: Theme.of(context).colorScheme.onSurface),
+            icon: Icon(Icons.help_outline,
+                color: Theme.of(context).colorScheme.onSurface),
             onPressed: _showOnboarding,
           ),
           IconButton(
             tooltip: l10n.manageMarkersTitle,
-            icon: Icon(Icons.place_outlined, color: Theme.of(context).colorScheme.onSurface),
+            icon: Icon(Icons.place_outlined,
+                color: Theme.of(context).colorScheme.onSurface),
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const ManageMarkersScreen()),
@@ -220,10 +233,12 @@ class _InstitutionHubState extends State<InstitutionHub> {
                   children: [
                     IconButton(
                       tooltip: 'Invites',
-                      icon: Icon(Icons.inbox_outlined, color: Theme.of(context).colorScheme.onSurface),
+                      icon: Icon(Icons.inbox_outlined,
+                          color: Theme.of(context).colorScheme.onSurface),
                       onPressed: () {
                         Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const InvitesInboxScreen()),
+                          MaterialPageRoute(
+                              builder: (_) => const InvitesInboxScreen()),
                         );
                       },
                     ),
@@ -252,7 +267,8 @@ class _InstitutionHubState extends State<InstitutionHub> {
               },
             ),
           IconButton(
-            icon: Icon(Icons.notifications, color: Theme.of(context).colorScheme.onSurface),
+            icon: Icon(Icons.notifications,
+                color: Theme.of(context).colorScheme.onSurface),
             onPressed: _showNotifications,
           ),
         ],
@@ -263,14 +279,16 @@ class _InstitutionHubState extends State<InstitutionHub> {
             SliverToBoxAdapter(
               child: Column(
                 children: [
-                  _buildInstitutionHeader(isApprovedInstitution: isApprovedInstitution),
-                  _buildInstitutionApplicationCard(
-                    review,
-                    isApprovedInstitution,
-                    isCrossRoleBlocked: isCrossRoleBlocked,
-                    hasArtistBadge: hasArtistBadge,
-                    hasConflictingArtistReview: hasConflictingArtistReview,
-                  ),
+                  _buildInstitutionHeader(
+                      isApprovedInstitution: isApprovedInstitution),
+                  if (widget.showVerificationCard)
+                    _buildInstitutionApplicationCard(
+                      review,
+                      isApprovedInstitution,
+                      isCrossRoleBlocked: isCrossRoleBlocked,
+                      hasArtistBadge: hasArtistBadge,
+                      hasConflictingArtistReview: hasConflictingArtistReview,
+                    ),
                   if (!isCrossRoleBlocked)
                     _buildNavigationTabs(isApprovedInstitution),
                 ],
@@ -280,7 +298,9 @@ class _InstitutionHubState extends State<InstitutionHub> {
         },
         body: isCrossRoleBlocked
             ? _buildRoleBlockedContent(
-                title: hasArtistBadge ? 'Artist badge active' : 'Artist review in progress',
+                title: hasArtistBadge
+                    ? 'Artist badge active'
+                    : 'Artist review in progress',
                 description: hasArtistBadge
                     ? 'Artist wallets unlock creation tooling. Institution flows need a dedicated wallet without creator approvals.'
                     : 'You have an active artist application. Wait for that decision or reset it before continuing as an institution.',
@@ -299,9 +319,12 @@ class _InstitutionHubState extends State<InstitutionHub> {
     final roles = KubusColorRoles.of(context);
     final persona = context.watch<ProfileProvider>().userPersona;
     final subtitle = switch (persona) {
-      UserPersona.institution => 'Host events, exhibitions, and AR experiences for your visitors',
-      UserPersona.creator => 'Collaborate with institutions and curate exhibitions',
-      UserPersona.lover => 'Discover exhibitions and events curated by institutions',
+      UserPersona.institution =>
+        'Host events, exhibitions, and AR experiences for your visitors',
+      UserPersona.creator =>
+        'Collaborate with institutions and curate exhibitions',
+      UserPersona.lover =>
+        'Discover exhibitions and events curated by institutions',
       null => 'Host events, exhibitions, and AR experiences for your visitors',
     };
     final panelStyle = KubusGlassStyle.resolve(
@@ -378,7 +401,10 @@ class _InstitutionHubState extends State<InstitutionHub> {
                               icon: Icons.add,
                               accent: roles.positiveAction,
                               onTap: () => setState(
-                                () => _selectedIndex = AppConfig.isFeatureEnabled('exhibitions') ? 2 : 1,
+                                () => _selectedIndex =
+                                    AppConfig.isFeatureEnabled('exhibitions')
+                                        ? 2
+                                        : 1,
                               ),
                             ),
                           if (AppConfig.isFeatureEnabled('exhibitions'))
@@ -490,14 +516,14 @@ class _InstitutionHubState extends State<InstitutionHub> {
             ? roles.negativeAction
             : accent;
     final canSubmit = wallet.isNotEmpty &&
-      !_reviewLoading &&
-      (!isPending && !isApprovedInstitution || isRejected);
+        !_reviewLoading &&
+        (!isPending && !isApprovedInstitution || isRejected);
     final ctaLabel = !canSubmit
         ? (isApprovedInstitution
             ? 'Approved by DAO'
             : isPending
                 ? 'Pending DAO review'
-          : 'Connect wallet to apply')
+                : 'Connect wallet to apply')
         : 'Apply for review';
     final IconData ctaIcon = isApprovedInstitution
         ? Icons.verified_outlined
@@ -514,7 +540,8 @@ class _InstitutionHubState extends State<InstitutionHub> {
       padding: EdgeInsets.zero,
       borderRadius: cardRadius,
       showBorder: false,
-      backgroundColor: surface.withValues(alpha: theme.brightness == Brightness.dark ? 0.22 : 0.14),
+      backgroundColor: surface.withValues(
+          alpha: theme.brightness == Brightness.dark ? 0.22 : 0.14),
       child: DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: cardRadius,
@@ -523,136 +550,141 @@ class _InstitutionHubState extends State<InstitutionHub> {
         child: Padding(
           padding: const EdgeInsets.all(KubusSpacing.md),
           child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: KubusSizes.sidebarActionIconBox,
-                height: KubusSizes.sidebarActionIconBox,
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(KubusRadius.md),
-                ),
-                child: Icon(Icons.domain_add_rounded, color: accent),
+              Row(
+                children: [
+                  Container(
+                    width: KubusSizes.sidebarActionIconBox,
+                    height: KubusSizes.sidebarActionIconBox,
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(KubusRadius.md),
+                    ),
+                    child: Icon(Icons.domain_add_rounded, color: accent),
+                  ),
+                  const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Institution application',
+                          style: KubusTextStyles.sectionTitle.copyWith(
+                            color: scheme.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: KubusSpacing.xs),
+                        Text(
+                          'Submit your organization for DAO review and unlock institutional tooling.',
+                          style: KubusTextStyles.actionTileSubtitle.copyWith(
+                            color: scheme.onSurface.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              if (review != null || _reviewLoading) ...[
+                const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
+                Row(
                   children: [
-                    Text(
-                      'Institution application',
-                      style: KubusTextStyles.sectionTitle.copyWith(
-                        color: scheme.onSurface,
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: KubusSpacing.sm +
+                            KubusSpacing.xs -
+                            KubusSpacing.xxs,
+                        vertical: KubusSpacing.xs + KubusSpacing.xxs,
+                      ),
+                      decoration: BoxDecoration(
+                        color: statusColor.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(KubusRadius.md),
+                      ),
+                      child: Text(
+                        statusLabel,
+                        style: KubusTextStyles.badgeCount
+                            .copyWith(color: statusColor),
                       ),
                     ),
-                    const SizedBox(height: KubusSpacing.xs),
-                    Text(
-                      'Submit your organization for DAO review and unlock institutional tooling.',
-                      style: KubusTextStyles.actionTileSubtitle.copyWith(
-                        color: scheme.onSurface.withValues(alpha: 0.7),
+                    const SizedBox(width: KubusSpacing.sm),
+                    if (_reviewLoading)
+                      SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(statusColor),
+                        ),
+                      )
+                    else if (review != null)
+                      Text(
+                        'Status synced from DAO',
+                        style: KubusTextStyles.badgeCount.copyWith(
+                          color: scheme.onSurface.withValues(alpha: 0.6),
+                        ),
                       ),
-                    ),
                   ],
                 ),
-              ),
-            ],
-          ),
-          if (review != null || _reviewLoading) ...[
-            const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: KubusSpacing.sm + KubusSpacing.xs - KubusSpacing.xxs,
-                    vertical: KubusSpacing.xs + KubusSpacing.xxs,
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(KubusRadius.md),
-                  ),
-                  child: Text(
-                    statusLabel,
-                    style: KubusTextStyles.badgeCount.copyWith(color: statusColor),
-                  ),
-                ),
-                const SizedBox(width: KubusSpacing.sm),
-                if (_reviewLoading)
-                  SizedBox(
-                    height: 18,
-                    width: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(statusColor),
-                    ),
-                  )
-                else if (review != null)
+                if ((review?.reviewerNotes ?? '').isNotEmpty) ...[
+                  const SizedBox(height: KubusSpacing.sm),
                   Text(
-                    'Status synced from DAO',
-                    style: KubusTextStyles.badgeCount.copyWith(
-                      color: scheme.onSurface.withValues(alpha: 0.6),
+                    review!.reviewerNotes!,
+                    style: KubusTextStyles.actionTileSubtitle.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.75),
                     ),
                   ),
+                ] else if (review != null) ...[
+                  const SizedBox(height: KubusSpacing.sm),
+                  Text(
+                    isPending
+                        ? 'Your submission is in the DAO review queue.'
+                        : isApprovedInstitution
+                            ? 'Congratulations! Approved for institution tools.'
+                            : isRejected
+                                ? 'Your last submission was rejected. You can resubmit with updates.'
+                                : '',
+                    style: KubusTextStyles.actionTileSubtitle.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
               ],
-            ),
-            if ((review?.reviewerNotes ?? '').isNotEmpty) ...[
-              const SizedBox(height: KubusSpacing.sm),
-              Text(
-                review!.reviewerNotes!,
-                style: KubusTextStyles.actionTileSubtitle.copyWith(
-                  color: scheme.onSurface.withValues(alpha: 0.75),
-                ),
-              ),
-            ] else if (review != null) ...[
-              const SizedBox(height: KubusSpacing.sm),
-              Text(
-                isPending
-                    ? 'Your submission is in the DAO review queue.'
-                    : isApprovedInstitution
-                        ? 'Congratulations! Approved for institution tools.'
-                        : isRejected
-                            ? 'Your last submission was rejected. You can resubmit with updates.'
-                            : '',
-                style: KubusTextStyles.actionTileSubtitle.copyWith(
-                  color: scheme.onSurface.withValues(alpha: 0.7),
+              const SizedBox(height: KubusSpacing.md),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed:
+                      canSubmit ? _showInstitutionApplicationModal : null,
+                  icon: Icon(
+                    ctaIcon,
+                    color: canSubmit
+                        ? accent
+                        : scheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                  label: Text(
+                    ctaLabel,
+                    style: KubusTextStyles.actionTileTitle.copyWith(
+                      color: canSubmit
+                          ? accent
+                          : scheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: accent.withValues(alpha: 0.4)),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: KubusSpacing.sm + KubusSpacing.xs,
+                      horizontal: KubusSpacing.md,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(KubusRadius.md),
+                    ),
+                  ),
                 ),
               ),
             ],
-          ],
-          const SizedBox(height: KubusSpacing.md),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: canSubmit ? _showInstitutionApplicationModal : null,
-              icon: Icon(
-                ctaIcon,
-                color: canSubmit
-                    ? accent
-                    : scheme.onSurface.withValues(alpha: 0.6),
-              ),
-              label: Text(
-                ctaLabel,
-                style: KubusTextStyles.actionTileTitle.copyWith(
-                  color: canSubmit
-                      ? accent
-                      : scheme.onSurface.withValues(alpha: 0.6),
-                ),
-              ),
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(color: accent.withValues(alpha: 0.4)),
-                padding: const EdgeInsets.symmetric(
-                  vertical: KubusSpacing.sm + KubusSpacing.xs,
-                  horizontal: KubusSpacing.md,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(KubusRadius.md),
-                ),
-              ),
-            ),
           ),
-        ],
-      ),
         ),
       ),
     );
@@ -731,7 +763,8 @@ class _InstitutionHubState extends State<InstitutionHub> {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final tintBase = (enabled && (isSelected || isHovered)) ? accent : scheme.surface;
+    final tintBase =
+        (enabled && (isSelected || isHovered)) ? accent : scheme.surface;
     final buttonStyle = KubusGlassStyle.resolve(
       context,
       surfaceType: KubusGlassSurfaceType.button,
@@ -763,7 +796,9 @@ class _InstitutionHubState extends State<InstitutionHub> {
         onTap: enabled
             ? () => _setSelectedIndex(index)
             : () => ScaffoldMessenger.of(context).showKubusSnackBar(
-                  const SnackBar(content: Text('Institution tools unlock after DAO approval.')),
+                  const SnackBar(
+                      content:
+                          Text('Institution tools unlock after DAO approval.')),
                 ),
         padding: const EdgeInsets.symmetric(
           vertical: KubusSpacing.md,
@@ -971,128 +1006,141 @@ class _InstitutionHubState extends State<InstitutionHub> {
               child: Form(
                 key: _applicationFormKey,
                 child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Institution application',
-                    style: KubusTextStyles.screenTitle
-                        .copyWith(color: scheme.onSurface),
-                  ),
-                  const SizedBox(height: KubusSpacing.sm),
-                  Text(
-                    'Share your mission, programming focus, and how you plan to collaborate with the DAO.',
-                    style: KubusTextStyles.actionTileTitle.copyWith(
-                      color: scheme.onSurface.withValues(alpha: 0.7),
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Institution application',
+                      style: KubusTextStyles.screenTitle
+                          .copyWith(color: scheme.onSurface),
                     ),
-                  ),
-                  const SizedBox(height: KubusSpacing.lg),
-                  TextFormField(
-                    controller: _organizationController,
-                    decoration: const InputDecoration(
-                      labelText: 'Organization name',
-                      border: OutlineInputBorder(),
+                    const SizedBox(height: KubusSpacing.sm),
+                    Text(
+                      'Share your mission, programming focus, and how you plan to collaborate with the DAO.',
+                      style: KubusTextStyles.actionTileTitle.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.7),
+                      ),
                     ),
-                    validator: (value) => (value == null || value.trim().isEmpty)
-                        ? 'Please provide your organization name'
-                        : null,
-                  ),
-                  const SizedBox(height: KubusSpacing.md),
-                  TextFormField(
-                    controller: _contactController,
-                    decoration: const InputDecoration(
-                      labelText: 'Website or contact email',
-                      border: OutlineInputBorder(),
+                    const SizedBox(height: KubusSpacing.lg),
+                    TextFormField(
+                      controller: _organizationController,
+                      decoration: const InputDecoration(
+                        labelText: 'Organization name',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) =>
+                          (value == null || value.trim().isEmpty)
+                              ? 'Please provide your organization name'
+                              : null,
                     ),
-                    validator: (value) => (value == null || value.trim().isEmpty)
-                        ? 'Share a website or contact email'
-                        : null,
-                  ),
-                  const SizedBox(height: KubusSpacing.md),
-                  TextFormField(
-                    controller: _focusController,
-                    decoration: const InputDecoration(
-                      labelText: 'Curation focus',
-                      border: OutlineInputBorder(),
+                    const SizedBox(height: KubusSpacing.md),
+                    TextFormField(
+                      controller: _contactController,
+                      decoration: const InputDecoration(
+                        labelText: 'Website or contact email',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) =>
+                          (value == null || value.trim().isEmpty)
+                              ? 'Share a website or contact email'
+                              : null,
                     ),
-                    validator: (value) => (value == null || value.trim().isEmpty)
-                        ? 'Let us know your programming focus'
-                        : null,
-                  ),
-                  const SizedBox(height: KubusSpacing.md),
-                  TextFormField(
-                    controller: _missionController,
-                    maxLines: 4,
-                    decoration: const InputDecoration(
-                      labelText: 'Mission and goals',
-                      alignLabelWithHint: true,
-                      border: OutlineInputBorder(),
+                    const SizedBox(height: KubusSpacing.md),
+                    TextFormField(
+                      controller: _focusController,
+                      decoration: const InputDecoration(
+                        labelText: 'Curation focus',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) =>
+                          (value == null || value.trim().isEmpty)
+                              ? 'Let us know your programming focus'
+                              : null,
                     ),
-                    validator: (value) => (value == null || value.trim().length < 20)
-                        ? 'Describe your mission in at least 20 characters'
-                        : null,
-                  ),
-                  const SizedBox(height: KubusSpacing.lg),
-                  SizedBox(
-                    width: double.infinity,
-                    child: KubusButton(
-                      onPressed: () async {
-                        if (!_applicationFormKey.currentState!.validate()) return;
-                        final profileProvider = context.read<ProfileProvider>();
-                        final web3Provider = context.read<Web3Provider>();
-                        final daoProvider = context.read<DAOProvider>();
-                        final wallet = profileProvider.currentUser?.walletAddress ?? web3Provider.walletAddress;
-                        if (wallet.isEmpty) {
-                          scaffold.showKubusSnackBar(
-                            const SnackBar(content: Text('Connect your wallet before submitting.')),
-                          );
-                          return;
-                        }
-                        Navigator.pop(sheetContext);
-                        try {
-                          final review = await daoProvider.submitInstitutionReview(
-                            walletAddress: wallet,
-                            organization: _organizationController.text.trim(),
-                            contact: _contactController.text.trim(),
-                            focus: _focusController.text.trim(),
-                            mission: _missionController.text.trim(),
-                          );
-                          if (!mounted) return;
-                          if (review != null) {
-                            await _loadInstitutionReviewStatus(forceRefresh: true);
+                    const SizedBox(height: KubusSpacing.md),
+                    TextFormField(
+                      controller: _missionController,
+                      maxLines: 4,
+                      decoration: const InputDecoration(
+                        labelText: 'Mission and goals',
+                        alignLabelWithHint: true,
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) => (value == null ||
+                              value.trim().length < 20)
+                          ? 'Describe your mission in at least 20 characters'
+                          : null,
+                    ),
+                    const SizedBox(height: KubusSpacing.lg),
+                    SizedBox(
+                      width: double.infinity,
+                      child: KubusButton(
+                        onPressed: () async {
+                          if (!_applicationFormKey.currentState!.validate()) {
+                            return;
                           }
-                          if (!mounted) return;
-                          scaffold.showKubusSnackBar(
-                            SnackBar(
-                              content: Text(review != null
-                                  ? 'Application submitted to DAO reviewers.'
-                                  : 'Unable to submit application right now.'),
-                              backgroundColor: review != null
-                                  ? roles.positiveAction
-                                  : roles.negativeAction,
-                            ),
-                          );
-                        } catch (e) {
-                          if (!mounted) return;
-                          scaffold.showKubusSnackBar(
-                            SnackBar(
-                              content: Text('Submission failed: $e'),
-                              backgroundColor: roles.negativeAction,
-                            ),
-                          );
-                        }
-                      },
-                      label: 'Submit application',
-                      isFullWidth: true,
-                      backgroundColor: scheme.primary,
-                      foregroundColor: scheme.onPrimary,
+                          final profileProvider =
+                              context.read<ProfileProvider>();
+                          final web3Provider = context.read<Web3Provider>();
+                          final daoProvider = context.read<DAOProvider>();
+                          final wallet =
+                              profileProvider.currentUser?.walletAddress ??
+                                  web3Provider.walletAddress;
+                          if (wallet.isEmpty) {
+                            scaffold.showKubusSnackBar(
+                              const SnackBar(
+                                  content: Text(
+                                      'Connect your wallet before submitting.')),
+                            );
+                            return;
+                          }
+                          Navigator.pop(sheetContext);
+                          try {
+                            final review =
+                                await daoProvider.submitInstitutionReview(
+                              walletAddress: wallet,
+                              organization: _organizationController.text.trim(),
+                              contact: _contactController.text.trim(),
+                              focus: _focusController.text.trim(),
+                              mission: _missionController.text.trim(),
+                            );
+                            if (!mounted) return;
+                            if (review != null) {
+                              await _loadInstitutionReviewStatus(
+                                  forceRefresh: true);
+                            }
+                            if (!mounted) return;
+                            scaffold.showKubusSnackBar(
+                              SnackBar(
+                                content: Text(review != null
+                                    ? 'Application submitted to DAO reviewers.'
+                                    : 'Unable to submit application right now.'),
+                                backgroundColor: review != null
+                                    ? roles.positiveAction
+                                    : roles.negativeAction,
+                              ),
+                            );
+                          } catch (e) {
+                            if (!mounted) return;
+                            scaffold.showKubusSnackBar(
+                              SnackBar(
+                                content: Text('Submission failed: $e'),
+                                backgroundColor: roles.negativeAction,
+                              ),
+                            );
+                          }
+                        },
+                        label: 'Submit application',
+                        isFullWidth: true,
+                        backgroundColor: scheme.primary,
+                        foregroundColor: scheme.onPrimary,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
-        ),
         );
       },
     );

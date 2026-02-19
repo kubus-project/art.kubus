@@ -170,7 +170,7 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen> {
                   ? (KubusSpacing.xxl + KubusSpacing.sm)
                   : (compactHeight
                       ? KubusSpacing.lg
-                      : (KubusSpacing.xl + KubusSpacing.sm));
+                      : (KubusSpacing.lg + KubusSpacing.xs));
               final safeHorizontalPadding =
                   narrowWidth ? KubusSpacing.md : horizontalPadding;
               final topbarActionSpacing =
@@ -249,9 +249,8 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen> {
                       ],
                     ),
                     SizedBox(
-                        height: compactHeight
-                            ? KubusSpacing.sm
-                            : KubusSpacing.md),
+                        height:
+                            compactHeight ? KubusSpacing.sm : KubusSpacing.md),
                     Expanded(
                       child: Center(
                         child: ConstrainedBox(
@@ -271,14 +270,12 @@ class _OnboardingIntroScreenState extends State<OnboardingIntroScreen> {
                       ),
                     ),
                     SizedBox(
-                        height: compactHeight
-                            ? KubusSpacing.sm
-                            : KubusSpacing.md),
+                        height:
+                            compactHeight ? KubusSpacing.sm : KubusSpacing.md),
                     _buildDots(count: pages.length),
                     SizedBox(
-                        height: compactHeight
-                            ? KubusSpacing.sm
-                            : KubusSpacing.md),
+                        height:
+                            compactHeight ? KubusSpacing.sm : KubusSpacing.md),
                     KubusButton(
                       onPressed: _goNext,
                       label: l10n.commonContinue,

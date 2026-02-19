@@ -39,6 +39,7 @@ class AuthMethodsPanel extends StatefulWidget {
     this.onVerificationRequired,
     this.onEmailRegistrationAttempted,
     this.onEmailCredentialsCaptured,
+    this.preferredEmailGreetingName,
     this.prepareProvisionalProfileBeforeRegister = false,
     this.onError,
     this.onSwitchToSignIn,
@@ -50,6 +51,7 @@ class AuthMethodsPanel extends StatefulWidget {
   final ValueChanged<String>? onEmailRegistrationAttempted;
   final Future<void> Function(String email, String password)?
       onEmailCredentialsCaptured;
+  final String? preferredEmailGreetingName;
   final bool prepareProvisionalProfileBeforeRegister;
   final ValueChanged<Object>? onError;
   final VoidCallback? onSwitchToSignIn;
@@ -207,6 +209,15 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     final password = _passwordController.text;
     final confirm = _confirmPasswordController.text;
     final username = _usernameController.text.trim();
+    const profileDisplayNameMaxLength = 100;
+    final rawGreetingName = (widget.preferredEmailGreetingName ?? '')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    final greetingName = rawGreetingName.isEmpty
+        ? null
+        : (rawGreetingName.length > profileDisplayNameMaxLength
+            ? rawGreetingName.substring(0, profileDisplayNameMaxLength)
+            : rawGreetingName);
     final emailLooksValid = email.contains('@') && email.contains('.');
     final passwordOk = AuthPasswordPolicy.isValid(password);
     final confirmOk = password == confirm;
@@ -239,6 +250,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         email: email,
         password: password,
         username: username.isNotEmpty ? username : null,
+        displayName: greetingName,
         walletAddress: provisionalWalletAddress,
       )
           .timeout(const Duration(seconds: 16));
