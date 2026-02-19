@@ -7,6 +7,8 @@ import 'package:art_kubus/models/user_persona.dart';
 import 'package:art_kubus/providers/locale_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
+import 'package:art_kubus/providers/wallet_provider.dart';
+import 'package:art_kubus/providers/web3provider.dart';
 import 'package:art_kubus/screens/auth/sign_in_screen.dart';
 import 'package:art_kubus/screens/desktop/desktop_shell.dart';
 import 'package:art_kubus/screens/events/exhibition_creator_screen.dart';
@@ -559,6 +561,61 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         Provider.of<ProfileProvider>(context, listen: false);
     await profileProvider.loadProfile(wallet);
     _refreshAuthDerivedSteps();
+  }
+
+  Future<void> _syncWalletSessionIntoProviders({
+    String? preferredWalletAddress,
+    Object? userId,
+  }) async {
+    final sessionWallet = (preferredWalletAddress ?? '').trim().isNotEmpty
+        ? (preferredWalletAddress ?? '').trim()
+        : _currentSessionWalletAddress();
+    if (sessionWallet.isEmpty) return;
+
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final web3Provider = Provider.of<Web3Provider>(context, listen: false);
+    final api = BackendApiService();
+    api.setPreferredWalletAddress(sessionWallet);
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('wallet_address', sessionWallet);
+      await prefs.setString('walletAddress', sessionWallet);
+      await prefs.setString('wallet', sessionWallet);
+      await prefs.setBool('has_wallet', true);
+      final normalizedUserId = (userId ?? '').toString().trim();
+      if (normalizedUserId.isNotEmpty) {
+        await prefs.setString('user_id', normalizedUserId);
+      }
+    } catch (_) {
+      // Keep onboarding completion resilient when local persistence fails.
+    }
+
+    final currentWallet = (walletProvider.currentWalletAddress ?? '').trim();
+    if (currentWallet != sessionWallet) {
+      try {
+        await walletProvider
+            .connectWalletWithAddress(sessionWallet)
+            .timeout(const Duration(seconds: 8));
+      } catch (_) {
+        // The wallet address is already persisted; provider can recover on next app start.
+      }
+    }
+
+    try {
+      if (!web3Provider.isConnected ||
+          web3Provider.walletAddress != sessionWallet) {
+        unawaited(() async {
+          try {
+            await web3Provider
+                .connectExistingWallet(sessionWallet)
+                .timeout(const Duration(seconds: 8));
+          } catch (_) {}
+        }());
+      }
+    } catch (_) {
+      // Best-effort only.
+    }
   }
 
   void _showVerificationSnack(
@@ -1350,6 +1407,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     final data = (payload['data'] as Map<String, dynamic>?) ?? payload;
     final user = (data['user'] as Map<String, dynamic>?) ?? data;
     final signedInEmail = (user['email'] ?? '').toString().trim().toLowerCase();
+    final signedInWallet =
+        (user['walletAddress'] ?? user['wallet_address'] ?? '').toString().trim();
     final pendingEmail = (_pendingVerificationEmail ?? '').trim().toLowerCase();
     var shouldPersistDrafts = false;
     if (pendingEmail.isNotEmpty && signedInEmail == pendingEmail) {
@@ -1368,6 +1427,12 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       }
       return;
     }
+
+    await _syncWalletSessionIntoProviders(
+      preferredWalletAddress:
+          signedInWallet.isEmpty ? null : signedInWallet,
+      userId: user['id'],
+    );
     _refreshAuthDerivedSteps();
     try {
       await _refreshProfileForCurrentSessionWallet();
@@ -1487,6 +1552,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       }
 
       await BackendApiService().refreshAuthTokenFromStorage();
+      await _syncWalletSessionIntoProviders();
       try {
         await _refreshProfileForCurrentSessionWallet();
       } catch (error) {
@@ -1753,6 +1819,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     _clearPendingEmailVerificationState();
     await _persistLocalDrafts();
     await api.refreshAuthTokenFromStorage();
+    await _syncWalletSessionIntoProviders();
     _refreshAuthDerivedSteps();
 
     if (!_isSignedIn) {
