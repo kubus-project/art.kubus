@@ -28,6 +28,7 @@ import 'package:art_kubus/widgets/onboarding_topbar_icon.dart';
 import 'package:art_kubus/widgets/user_persona_picker_content.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
@@ -147,6 +148,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   bool _cameraEnabled = false;
   bool _isRequestingPermission = false;
   int _permissionStatusEpoch = 0;
+  bool _webLocationGrantedOverride = false;
 
   List<Map<String, dynamic>> _artists = <Map<String, dynamic>>[];
   final Set<String> _followedArtists = <String>{};
@@ -473,9 +475,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     final pendingMethod =
         (prefs.getString(_verificationSignupMethodKey) ?? _emailSignupMethod)
             .trim();
-    _pendingVerificationSignupMethod = pendingMethod.isEmpty
-        ? _emailSignupMethod
-        : pendingMethod;
+    _pendingVerificationSignupMethod =
+        pendingMethod.isEmpty ? _emailSignupMethod : pendingMethod;
 
     if (pendingEmail.isNotEmpty) {
       // Legacy migration: old builds persisted only email; treat it as pending.
@@ -533,7 +534,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   }
 
   String _currentSessionEmailLower() {
-    return (BackendApiService().getCurrentAuthEmail() ?? '').trim().toLowerCase();
+    return (BackendApiService().getCurrentAuthEmail() ?? '')
+        .trim()
+        .toLowerCase();
   }
 
   String _currentSessionWalletAddress() {
@@ -552,7 +555,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   Future<void> _refreshProfileForCurrentSessionWallet() async {
     final wallet = _currentSessionWalletAddress();
     if (wallet.isEmpty) return;
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
     await profileProvider.loadProfile(wallet);
     _refreshAuthDerivedSteps();
   }
@@ -620,7 +624,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       _OnboardingStep.profile,
       _OnboardingStep.account,
       if (_verificationRequired) _OnboardingStep.verifyEmail,
-      _OnboardingStep.permissions,
       _OnboardingStep.done,
     ];
   }
@@ -632,20 +635,14 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   bool _isPermissionRelatedStep(_OnboardingStep step) {
     return step == _OnboardingStep.mapDiscovery ||
         step == _OnboardingStep.community ||
-        step == _OnboardingStep.arScan ||
-        step == _OnboardingStep.permissions;
+        step == _OnboardingStep.arScan;
   }
 
   bool _isStatusBlocked(PermissionStatus status) =>
       status.isPermanentlyDenied || status.isRestricted;
 
   Permission _locationPermissionForRequest() {
-    if (!kIsWeb &&
-        (defaultTargetPlatform == TargetPlatform.iOS ||
-            defaultTargetPlatform == TargetPlatform.macOS)) {
-      return Permission.locationWhenInUse;
-    }
-    return Permission.location;
+    return kIsWeb ? Permission.location : Permission.locationWhenInUse;
   }
 
   Future<PermissionStatus> _safePermissionStatus(Permission permission) async {
@@ -657,25 +654,79 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   }
 
   Future<List<PermissionStatus>> _locationStatuses() async {
-    final statuses = <PermissionStatus>[
+    if (kIsWeb) {
+      return <PermissionStatus>[
+        await _safePermissionStatus(Permission.location),
+      ];
+    }
+    return <PermissionStatus>[
+      await _safePermissionStatus(Permission.locationWhenInUse),
       await _safePermissionStatus(Permission.location),
     ];
-    if (!kIsWeb) {
-      statuses.add(await _safePermissionStatus(Permission.locationWhenInUse));
-      statuses.add(await _safePermissionStatus(Permission.locationAlways));
-    }
-    return statuses;
   }
 
   Future<bool> _isLocationPermissionGranted() async {
+    if (kIsWeb) {
+      if (_webLocationGrantedOverride) return true;
+      try {
+        final permission = await Geolocator.checkPermission();
+        final granted = permission == LocationPermission.whileInUse ||
+            permission == LocationPermission.always;
+        if (granted) _webLocationGrantedOverride = true;
+        if (granted) return true;
+      } catch (_) {
+      }
+
+      // Fallback: keep UI accurate if Geolocator.checkPermission() is stale on
+      // some browsers by consulting permission_handler as a secondary signal.
+      final status = await _safePermissionStatus(Permission.location);
+      if (status.isGranted) {
+        _webLocationGrantedOverride = true;
+        return true;
+      }
+      return false;
+    }
     final statuses = await _locationStatuses();
     return statuses.any((status) => status.isGranted);
   }
 
   Future<bool> _isLocationPermissionBlocked() async {
+    if (kIsWeb) {
+      try {
+        final permission = await Geolocator.checkPermission();
+        // On web, a user "deny" is effectively sticky until changed in browser
+        // site settings; treat both denied and deniedForever as blocked.
+        return permission == LocationPermission.denied ||
+            permission == LocationPermission.deniedForever;
+      } catch (_) {
+        final status = await _safePermissionStatus(Permission.location);
+        return _isStatusBlocked(status);
+      }
+    }
     final statuses = await _locationStatuses();
     if (statuses.any((status) => status.isGranted)) return false;
     return statuses.any(_isStatusBlocked);
+  }
+
+  Future<bool> _isNotificationPermissionGranted() async {
+    if (kIsWeb) {
+      try {
+        return await isWebNotificationPermissionGranted();
+      } catch (_) {
+        return false;
+      }
+    }
+
+    final handlerGranted =
+        (await _safePermissionStatus(Permission.notification)).isGranted;
+    if (handlerGranted) return true;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getBool('notification_permission_granted') ?? false;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<bool> _isPermissionBlocked(Permission permission) async {
@@ -683,7 +734,12 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       return _isLocationPermissionBlocked();
     }
     if (permission == Permission.notification) {
-      if (kIsWeb) return false;
+      if (await _isNotificationPermissionGranted()) return false;
+      if (kIsWeb) {
+        // On web, browser won't re-prompt after a deny; treat that as blocked
+        // and guide the user to site settings.
+        return webNotificationPermissionStateNow() == 'denied';
+      }
       return _isStatusBlocked(
         await _safePermissionStatus(Permission.notification),
       );
@@ -718,16 +774,11 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     } catch (_) {}
 
     if (kIsWeb) {
-      try {
-        notificationEnabled = await isWebNotificationPermissionGranted();
-      } catch (_) {
-        notificationEnabled = false;
-      }
+      notificationEnabled = await _isNotificationPermissionGranted();
       cameraEnabled = true;
     } else {
       try {
-        final notifications = await Permission.notification.status;
-        notificationEnabled = notifications.isGranted;
+        notificationEnabled = await _isNotificationPermissionGranted();
       } catch (_) {
         notificationEnabled = false;
       }
@@ -878,6 +929,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       if (_autoAdvancingVerification) return;
 
       if (!_sessionMatchesPendingVerificationEmail()) {
+        _verificationPollTimer?.cancel();
+        _verificationPollTimer = null;
+        _verificationPollStartedAt = null;
         if (!_finishSignInPromptShown) {
           _finishSignInPromptShown = true;
           _showVerificationSnack(
@@ -953,14 +1007,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         .toList(growable: false);
     final yearsActive =
         int.tryParse((_localProfileDraft['yearsActive'] ?? '').trim());
-
     final persona = _selectedPersona;
-    final isArtist = persona == UserPersona.creator
-        ? true
-        : (persona == UserPersona.lover ? false : null);
-    final isInstitution = persona == UserPersona.institution
-        ? true
-        : (persona == UserPersona.lover ? false : null);
 
     await profileProvider.saveProfile(
       walletAddress: wallet,
@@ -971,8 +1018,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       social: social.isEmpty ? null : social,
       fieldOfWork: fieldOfWork.isEmpty ? null : fieldOfWork,
       yearsActive: yearsActive,
-      isArtist: isArtist,
-      isInstitution: isInstitution,
     );
 
     if (persona != null) {
@@ -1053,10 +1098,35 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     });
 
     try {
-      if (kIsWeb && permission == Permission.notification) {
-        await PushNotificationService().requestPermission();
+      if (permission == Permission.notification) {
+        if (kIsWeb) {
+          // Must be requested directly from a user gesture on web.
+          try {
+            if (webNotificationPermissionStateNow() == 'denied') {
+              _showPermissionSettingsDialog(permission);
+            } else {
+              await requestWebNotificationPermission();
+            }
+          } catch (_) {}
+        } else {
+          try {
+            await Permission.notification.request();
+          } catch (_) {}
+          try {
+            await PushNotificationService().requestPermission();
+          } catch (_) {}
+        }
       } else if (kIsWeb && permission == Permission.camera) {
         // Camera permission is not requested from the web onboarding flow.
+      } else if (kIsWeb && permission == Permission.location) {
+        try {
+          await Geolocator.getCurrentPosition(
+            locationSettings: const LocationSettings(
+              accuracy: LocationAccuracy.low,
+            ),
+          );
+          _webLocationGrantedOverride = true;
+        } catch (_) {}
       } else {
         final requestedPermission = permission == Permission.location
             ? _locationPermissionForRequest()
@@ -1152,13 +1222,19 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
             onPressed: () => Navigator.pop(dialogContext),
             child: Text(l10n.commonCancel),
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              unawaited(openAppSettings());
-            },
-            child: Text(l10n.permissionsOpenSettings),
-          ),
+          if (!kIsWeb)
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                unawaited(openAppSettings());
+              },
+              child: Text(l10n.permissionsOpenSettings),
+            )
+          else
+            ElevatedButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(l10n.commonOk),
+            ),
         ],
       ),
     );
@@ -1443,7 +1519,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       _clearPendingEmailVerificationState();
       await _persistLocalDrafts();
       messenger.showKubusSnackBar(
-        const SnackBar(content: Text('Verified account signed in successfully.')),
+        const SnackBar(
+            content: Text('Verified account signed in successfully.')),
         tone: KubusSnackBarTone.success,
       );
     }
@@ -1502,19 +1579,10 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     );
     _daoDraft = nextDaoDraft;
     await _persistLocalDrafts();
-    profileProvider.setRoleFlags(
-      isArtist: isArtist,
-      isInstitution: isInstitution,
-    );
     final wallet = profileProvider.currentUser?.walletAddress;
     if (wallet != null && wallet.isNotEmpty) {
       await profileProvider
           .setUserPersona(_selectedPersona ?? UserPersona.lover);
-      await profileProvider.saveProfile(
-        walletAddress: wallet,
-        isArtist: isArtist,
-        isInstitution: isInstitution,
-      );
     }
     if (!mounted) return;
     await _markCompleted(_OnboardingStep.role);
@@ -1544,12 +1612,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         Provider.of<ProfileProvider>(context, listen: false);
     _selectedPersona = persona;
     await _persistLocalDrafts();
-    final isArtist = persona == UserPersona.creator;
-    final isInstitution = persona == UserPersona.institution;
-    profileProvider.setRoleFlags(
-      isArtist: isArtist,
-      isInstitution: isInstitution,
-    );
+    if ((profileProvider.currentUser?.walletAddress ?? '').trim().isNotEmpty) {
+      await profileProvider.setUserPersona(persona, persistToBackend: true);
+    }
     if (!mounted) return;
     setState(() {});
   }
@@ -1608,7 +1673,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     }
   }
 
-  Future<bool> _submitDaoDraftIfPossible({required bool showFailureToast}) async {
+  Future<bool> _submitDaoDraftIfPossible(
+      {required bool showFailureToast}) async {
     final draft = _daoDraft;
     if (draft == null ||
         !draft.isEligibleRole ||
@@ -1847,7 +1913,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     final headerNarrow = viewportSize.width < 380;
     final horizontalPadding = _isDesktop
         ? (KubusSpacing.xxl + KubusSpacing.sm)
-        : (headerCompact ? KubusSpacing.lg : (KubusSpacing.xl + KubusSpacing.sm));
+        : (headerCompact
+            ? KubusSpacing.lg
+            : (KubusSpacing.lg + KubusSpacing.xs));
     final safeHorizontalPadding =
         headerNarrow ? KubusSpacing.md : horizontalPadding;
     final actionSpacing = headerNarrow ? KubusSpacing.xs : KubusSpacing.sm;
@@ -2043,10 +2111,15 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           end: palette.end,
         );
       case _OnboardingStep.account:
+        final currentProfile =
+            Provider.of<ProfileProvider>(context, listen: false).currentUser;
         content = _AccountStep(
           title: l10n.onboardingFlowAccountTitle,
           body: l10n.onboardingFlowAccountBody,
           verifyHint: l10n.onboardingFlowAccountVerifyHint,
+          profileDisplayName:
+              (_localProfileDraft['displayName'] ?? currentProfile?.displayName ?? '')
+                  .trim(),
           onVerifyEmail: _jumpToVerifyStep,
           onAuthCompleted: _handleEmbeddedRegistrationSuccess,
           onEmailRegistrationAttempted:
@@ -2088,14 +2161,15 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         final profileProvider =
             Provider.of<ProfileProvider>(context, listen: false);
         final user = profileProvider.currentUser;
+        final personaSelection = _selectedPersona ?? profileProvider.userPersona;
         content = _RoleStep(
           title: l10n.onboardingFlowRoleTitle,
           body: l10n.onboardingFlowRoleBody,
           artistSelected:
-              user?.isArtist ?? (_selectedPersona == UserPersona.creator),
-          institutionSelected: user?.isInstitution ??
-              (_selectedPersona == UserPersona.institution),
-          selectedPersona: _selectedPersona ?? profileProvider.userPersona,
+              user?.isArtist == true || personaSelection == UserPersona.creator,
+          institutionSelected: user?.isInstitution == true ||
+              personaSelection == UserPersona.institution,
+          selectedPersona: personaSelection,
           onSelectPersona: _applyPersonaSelection,
           onSave: _applyRoleSelection,
           daoReview: _daoReview,
@@ -2113,10 +2187,16 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         );
       case _OnboardingStep.artwork:
         if (_isSignedIn) {
-          final user =
-              Provider.of<ProfileProvider>(context, listen: false).currentUser;
-          final wantsInstitution = user?.isInstitution == true;
-          final wantsArtist = user?.isArtist == true || !wantsInstitution;
+          final profileProvider =
+              Provider.of<ProfileProvider>(context, listen: false);
+          final user = profileProvider.currentUser;
+          final personaSelection =
+              _selectedPersona ?? profileProvider.userPersona;
+          final wantsInstitution = user?.isInstitution == true ||
+              personaSelection == UserPersona.institution;
+          final wantsArtist = user?.isArtist == true ||
+              personaSelection == UserPersona.creator ||
+              !wantsInstitution;
           final daoApproved = _isDaoApprovedForRole(
             isArtist: wantsArtist,
             isInstitution: wantsInstitution,
@@ -2576,6 +2656,7 @@ class _AccountStep extends StatelessWidget {
     required this.title,
     required this.body,
     required this.verifyHint,
+    required this.profileDisplayName,
     required this.onVerifyEmail,
     required this.onAuthCompleted,
     required this.onEmailRegistrationAttempted,
@@ -2585,6 +2666,7 @@ class _AccountStep extends StatelessWidget {
   final String title;
   final String body;
   final String verifyHint;
+  final String profileDisplayName;
   final Future<void> Function() onVerifyEmail;
   final Future<void> Function() onAuthCompleted;
   final Future<void> Function(String email) onEmailRegistrationAttempted;
@@ -2622,6 +2704,8 @@ class _AccountStep extends StatelessWidget {
               child: AuthMethodsPanel(
                 embedded: true,
                 onAuthSuccess: onAuthCompleted,
+                preferredEmailGreetingName:
+                    profileDisplayName.trim().isEmpty ? null : profileDisplayName.trim(),
                 prepareProvisionalProfileBeforeRegister: false,
                 onEmailRegistrationAttempted: (email) =>
                     unawaited(onEmailRegistrationAttempted(email)),
@@ -3122,17 +3206,22 @@ class _VerifyEmailStep extends StatelessWidget {
             ],
           );
         }
-        return _InlineVerificationPanel(
-          title: title,
-          body: body,
-          email: normalizedEmail,
-          isVerified: isVerified,
-          isSignedIn: isSignedIn,
-          requiresFinishSignIn: requiresFinishSignIn,
-          isRefreshingVerification: isRefreshingVerification,
-          onRefreshVerification: onRefreshVerification,
-          onAuthSuccess: onAuthSuccess,
-          onVerificationRequired: onVerificationRequired,
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: _InlineVerificationPanel(
+              title: title,
+              body: body,
+              email: normalizedEmail,
+              isVerified: isVerified,
+              isSignedIn: isSignedIn,
+              requiresFinishSignIn: requiresFinishSignIn,
+              isRefreshingVerification: isRefreshingVerification,
+              onRefreshVerification: onRefreshVerification,
+              onAuthSuccess: onAuthSuccess,
+              onVerificationRequired: onVerificationRequired,
+            ),
+          ),
         );
       },
     );
@@ -3264,26 +3353,36 @@ class _InlineVerificationPanelState extends State<_InlineVerificationPanel> {
             ],
           ),
         ),
-        const SizedBox(height: 12),
-        KubusButton(
-          onPressed: _sending || widget.email.isEmpty ? null : _resend,
-          isLoading: _sending,
-          label: AppLocalizations.of(context)!.authVerifyEmailResendButton,
-          isFullWidth: true,
-          backgroundColor: scheme.primary,
-          foregroundColor: scheme.onPrimary,
-        ),
-        const SizedBox(height: KubusSpacing.sm),
-        KubusButton(
-          onPressed: widget.isRefreshingVerification || widget.email.isEmpty
-              ? null
-              : () => unawaited(widget.onRefreshVerification()),
-          isLoading: widget.isRefreshingVerification,
-          label: AppLocalizations.of(context)!.onboardingFlowVerifyContinue,
-          isFullWidth: true,
-          backgroundColor: scheme.secondary,
-          foregroundColor: scheme.onSecondary,
-        ),
+        if (!widget.isVerified) ...[
+          const SizedBox(height: 12),
+          KubusButton(
+            onPressed: _sending || widget.email.isEmpty ? null : _resend,
+            isLoading: _sending,
+            label: AppLocalizations.of(context)!.authVerifyEmailResendButton,
+            isFullWidth: true,
+            backgroundColor: scheme.primary,
+            foregroundColor: scheme.onPrimary,
+          ),
+          const SizedBox(height: KubusSpacing.sm),
+          KubusButton(
+            onPressed: widget.isRefreshingVerification || widget.email.isEmpty
+                ? null
+                : () => unawaited(widget.onRefreshVerification()),
+            isLoading: widget.isRefreshingVerification,
+            label: AppLocalizations.of(context)!.onboardingFlowVerifyContinue,
+            isFullWidth: true,
+            backgroundColor: scheme.secondary,
+            foregroundColor: scheme.onSecondary,
+          ),
+        ] else ...[
+          const SizedBox(height: KubusSpacing.sm),
+          Text(
+            'Email confirmed. Continue to finish onboarding.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.76),
+                ),
+          ),
+        ],
         if (widget.requiresFinishSignIn && widget.email.isNotEmpty) ...[
           const SizedBox(height: KubusSpacing.md),
           Text(
@@ -3315,7 +3414,7 @@ class _InlineVerificationPanelState extends State<_InlineVerificationPanel> {
                 ),
           ),
         ],
-        const Spacer(),
+        const SizedBox(height: KubusSpacing.xs),
       ],
     );
   }
@@ -3960,70 +4059,99 @@ class _RoleStepState extends State<_RoleStep> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final reviewStatus = _daoReviewStatusLabel(l10n);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(widget.title,
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w700)),
-        const SizedBox(height: KubusSpacing.sm),
-        Text(widget.body, style: Theme.of(context).textTheme.bodyLarge),
-        const SizedBox(height: 12),
-        UserPersonaPickerContent(
-          selectedPersona: _selectedPersona,
-          onSelect: _selectPersona,
-        ),
-        if (_artist || _institution) ...[
-          const SizedBox(height: KubusSpacing.md),
-          Text(
-            'DAO application draft',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final minContentHeight =
+            constraints.maxHeight > 64 ? constraints.maxHeight - 64 : 0.0;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: minContentHeight),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(widget.title,
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineSmall
+                              ?.copyWith(fontWeight: FontWeight.w700)),
+                      const SizedBox(height: KubusSpacing.sm),
+                      Text(
+                        widget.body,
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                      const SizedBox(height: 12),
+                      UserPersonaPickerContent(
+                        selectedPersona: _selectedPersona,
+                        onSelect: _selectPersona,
+                      ),
+                      if (_artist || _institution) ...[
+                        const SizedBox(height: KubusSpacing.md),
+                        Text(
+                          'DAO application draft',
+                          style:
+                              Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                        ),
+                        const SizedBox(height: KubusSpacing.xs),
+                        Text(
+                          'Saved locally during onboarding and submitted once when you complete setup.',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        const SizedBox(height: KubusSpacing.sm),
+                        TextField(
+                          controller: _portfolioController,
+                          onTapOutside: (_) =>
+                              FocusManager.instance.primaryFocus?.unfocus(),
+                          decoration:
+                              const InputDecoration(labelText: 'Portfolio URL'),
+                        ),
+                        const SizedBox(height: KubusSpacing.sm),
+                        TextField(
+                          controller: _mediumController,
+                          onTapOutside: (_) =>
+                              FocusManager.instance.primaryFocus?.unfocus(),
+                          decoration: const InputDecoration(
+                            labelText: 'Primary medium',
+                          ),
+                        ),
+                        const SizedBox(height: KubusSpacing.sm),
+                        TextField(
+                          controller: _statementController,
+                          minLines: 2,
+                          maxLines: 4,
+                          onTapOutside: (_) =>
+                              FocusManager.instance.primaryFocus?.unfocus(),
+                          decoration:
+                              const InputDecoration(labelText: 'DAO statement'),
+                        ),
+                        if ((reviewStatus ?? '').trim().isNotEmpty) ...[
+                          const SizedBox(height: KubusSpacing.sm),
+                          Text(
+                            reviewStatus!,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ],
+                    ],
+                  ),
                 ),
-          ),
-          const SizedBox(height: KubusSpacing.xs),
-          Text(
-            'Saved locally during onboarding and submitted once when you complete setup.',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          const SizedBox(height: KubusSpacing.sm),
-          TextField(
-            controller: _portfolioController,
-            onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
-            decoration: const InputDecoration(labelText: 'Portfolio URL'),
-          ),
-          const SizedBox(height: KubusSpacing.sm),
-          TextField(
-            controller: _mediumController,
-            onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
-            decoration: const InputDecoration(labelText: 'Primary medium'),
-          ),
-          const SizedBox(height: KubusSpacing.sm),
-          TextField(
-            controller: _statementController,
-            minLines: 2,
-            maxLines: 4,
-            onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
-            decoration: const InputDecoration(labelText: 'DAO statement'),
-          ),
-          if ((reviewStatus ?? '').trim().isNotEmpty) ...[
-            const SizedBox(height: KubusSpacing.sm),
-            Text(
-              reviewStatus!,
-              style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+            KubusButton(
+              onPressed: _saving ? null : _save,
+              isLoading: _saving,
+              label: l10n.commonSave,
+              isFullWidth: true,
             ),
           ],
-        ],
-        const Spacer(),
-        KubusButton(
-          onPressed: _saving ? null : _save,
-          isLoading: _saving,
-          label: l10n.commonSave,
-          isFullWidth: true,
-        ),
-      ],
+        );
+      },
     );
   }
 }

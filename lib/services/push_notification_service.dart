@@ -94,10 +94,12 @@ class PushNotificationService {
 
   /// Request notification permission
   Future<bool> requestPermission() async {
-    if (!_initialized) await initialize();
     // Web: use browser Permission API + fallback
     if (kIsWeb) {
       try {
+        // Important: keep this as "directly called from a user gesture" with no
+        // extra async initialization before Notification.requestPermission(),
+        // otherwise the browser may suppress the prompt.
         final granted = await requestWebNotificationPermission();
         _permissionGranted = granted;
         final prefs = await SharedPreferences.getInstance();
@@ -109,6 +111,8 @@ class PushNotificationService {
         return false;
       }
     }
+
+    if (!_initialized) await initialize();
 
     // Request permission on iOS
     final bool? granted = await _flutterLocalNotificationsPlugin

@@ -14,6 +14,7 @@ import '../../../providers/desktop_dashboard_state_provider.dart';
 import '../../../config/config.dart';
 import '../../../models/dao.dart';
 import '../../../utils/app_animations.dart';
+import '../../../utils/dao_role_verification.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/wallet_utils.dart';
@@ -173,7 +174,8 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
       shellScope.pushScreen(
         DesktopSubScreen(
           title: l10n.artistStudioCreateOptionArtworkTitle,
-          child: ArtworkCreator(draftId: draftId, showAppBar: false, embedded: true),
+          child: ArtworkCreator(
+              draftId: draftId, showAppBar: false, embedded: true),
         ),
       );
     }
@@ -241,13 +243,17 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                       ),
                     ),
                     child: ArtistStudio(
+                      showVerificationCard: false,
                       onOpenArtworkCreator: openArtworkCreator,
                       onOpenCollectionCreator: openCollectionCreator,
                       onOpenExhibitionCreator: openExhibitionCreator,
                       onTabChanged: (tabIndex) {
-                        context.read<DesktopDashboardStateProvider>().updateArtistStudioSectionFromTabIndex(
+                        context
+                            .read<DesktopDashboardStateProvider>()
+                            .updateArtistStudioSectionFromTabIndex(
                               tabIndex: tabIndex,
-                              exhibitionsEnabled: AppConfig.isFeatureEnabled('exhibitions'),
+                              exhibitionsEnabled:
+                                  AppConfig.isFeatureEnabled('exhibitions'),
                             );
                       },
                     ),
@@ -276,16 +282,15 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
     final section = dashboardState.artistStudioSection;
 
     // Compute approval status for gating quick actions
-    final profileProvider = context.watch<ProfileProvider>();
     final daoProvider = context.watch<DAOProvider>();
     final wallet = _resolveWalletAddress(listen: true);
     final review = _artistReview ??
         (wallet.isNotEmpty ? daoProvider.findReviewForWallet(wallet) : null);
-    final hasArtistBadge = profileProvider.currentUser?.isArtist ?? false;
-    final reviewStatus = review?.status.toLowerCase() ?? '';
-    final reviewIsArtist = review?.isArtistApplication ?? false;
-    final isApprovedArtist =
-        hasArtistBadge || (reviewIsArtist && reviewStatus == 'approved');
+    final verification = DaoRoleVerification(
+      walletAddress: wallet,
+      review: review,
+    );
+    final isApprovedArtist = verification.isApprovedFor(DaoRoleType.artist);
 
     String sectionTitle() {
       switch (section) {
@@ -325,224 +330,246 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
         child: ListView(
           padding: const EdgeInsets.all(KubusSpacing.lg),
           children: [
-          // Header
-          Text(
-            sectionTitle(),
-            style: KubusTextStyles.screenTitle.copyWith(color: scheme.onSurface),
-          ),
-          const SizedBox(height: KubusSpacing.lg),
-
-          // Verification status
-          _buildVerificationStatusCard(themeProvider),
-          const SizedBox(height: KubusSpacing.md + KubusSpacing.xs),
-
-          // Contextual sidebar actions
-          Text(
-            l10n.desktopArtistStudioQuickActionsTitle,
-            style: KubusTextStyles.sectionTitle.copyWith(color: scheme.onSurface),
-          ),
-          const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
-          if (AppConfig.isFeatureEnabled('collabInvites'))
-            Consumer<CollabProvider>(
-              builder: (context, collabProvider, _) {
-                final pending = collabProvider.pendingInviteCount;
-                final badge = pending > 0
-                    ? FrostedContainer(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: KubusSpacing.sm,
-                          vertical: KubusSpacing.xs,
-                        ),
-                        borderRadius: BorderRadius.circular(KubusRadius.xl),
-                        showBorder: false,
-                        backgroundColor: scheme.error
-                            .withValues(alpha: isDark ? 0.30 : 0.22),
-                        child: Text(
-                          pending > 99 ? '99+' : pending.toString(),
-                          style: KubusTextStyles.badgeCount
-                              .copyWith(color: scheme.onError),
-                        ),
-                      )
-                    : null;
-
-                return KubusActionSidebarTile(
-                  title: l10n.desktopArtistStudioQuickActionInvitesTitle,
-                  subtitle: pending > 0
-                      ? l10n.desktopArtistStudioQuickActionInvitesPendingSubtitle
-                      : l10n.desktopArtistStudioQuickActionInvitesSubtitle,
-                  icon: Icons.inbox_outlined,
-                  semantic: KubusActionSemantic.invite,
-                  onTap: () {
-                    DesktopShellScope.of(context)?.pushScreen(
-                      DesktopSubScreen(
-                        title: l10n.desktopArtistStudioQuickActionCollaborationInvitesTitle,
-                        child: const InvitesInboxScreen(embedded: true),
-                      ),
-                    );
-                  },
-                  trailing: badge,
-                );
-              },
-            ),
-
-          if (isApprovedArtist && section == DesktopArtistStudioSection.create)
-            KubusActionSidebarTile(
-              title: l10n.desktopArtistStudioQuickActionCreateArtworkTitle,
-              subtitle: l10n.desktopArtistStudioQuickActionCreateArtworkSubtitle,
-              icon: Icons.add_photo_alternate_outlined,
-              semantic: KubusActionSemantic.create,
-              onTap: () {
-                DesktopShellScope.of(context)?.pushScreen(
-                  DesktopSubScreen(
-                    title: l10n.desktopArtistStudioQuickActionCreateArtworkTitle,
-                    child: ArtworkCreator(
-                      draftId: context.read<ArtworkDraftsProvider>().createDraft(),
-                      showAppBar: false,
-                      embedded: true,
-                    ),
-                  ),
-                );
-              },
-            ),
-          if (isApprovedArtist && section == DesktopArtistStudioSection.create)
-            KubusActionSidebarTile(
-              title: l10n.collectionCreatorTitle,
-              subtitle: l10n.artistStudioCreateOptionCollectionSubtitle,
-              icon: Icons.collections_bookmark_outlined,
-              semantic: KubusActionSemantic.create,
-              onTap: () {
-                final shellScope = DesktopShellScope.of(context);
-                if (shellScope == null) return;
-                shellScope.pushScreen(
-                  DesktopSubScreen(
-                    title: l10n.collectionCreatorTitle,
-                    child: CollectionCreator(
-                      embedded: true,
-                      onCreated: (collectionId) {
-                        shellScope.popScreen();
-                        shellScope.pushScreen(
-                          DesktopSubScreen(
-                            title: l10n.userProfileCollectionFallbackTitle,
-                            child: CollectionDetailScreen(
-                              collectionId: collectionId,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                );
-              },
-            ),
-          if (isApprovedArtist && section == DesktopArtistStudioSection.create)
-            KubusActionSidebarTile(
-              title: l10n.manageMarkersTitle,
-              subtitle: l10n.manageMarkersQuickActionSubtitle,
-              icon: Icons.place_outlined,
-              semantic: KubusActionSemantic.manage,
-              onTap: () {
-                DesktopShellScope.of(context)?.pushScreen(
-                  DesktopSubScreen(
-                    title: l10n.manageMarkersTitle,
-                    child: const ManageMarkersScreen(embedded: true),
-                  ),
-                );
-              },
-            ),
-          if (isApprovedArtist && section == DesktopArtistStudioSection.gallery)
-            KubusActionSidebarTile(
-              title: l10n.desktopArtistStudioQuickActionMyGalleryTitle,
-              subtitle: l10n.desktopArtistStudioQuickActionMyGallerySubtitle,
-              icon: Icons.collections_outlined,
-              semantic: KubusActionSemantic.view,
-              onTap: () {
-                final wallet = _resolveWalletAddress(listen: false);
-                DesktopShellScope.of(context)?.pushScreen(
-                  DesktopSubScreen(
-                    title: l10n.desktopArtistStudioQuickActionMyGalleryTitle,
-                    child: ArtistPortfolioScreen(walletAddress: wallet),
-                  ),
-                );
-              },
-            ),
-          if (isApprovedArtist && showExhibitions && section == DesktopArtistStudioSection.exhibitions)
-            KubusActionSidebarTile(
-              title: l10n.desktopArtistStudioQuickActionExhibitionsTitle,
-              subtitle: l10n.desktopArtistStudioQuickActionExhibitionsSubtitle,
-              icon: Icons.collections_bookmark_outlined,
-              semantic: KubusActionSemantic.view,
-              onTap: () {
-                DesktopShellScope.of(context)?.pushScreen(
-                  DesktopSubScreen(
-                    title: l10n.desktopArtistStudioQuickActionExhibitionsTitle,
-                    child: ExhibitionListScreen(
-                      embedded: true,
-                      canCreate: true,
-                      onCreateExhibition: () {
-                        DesktopShellScope.of(context)?.pushScreen(
-                          DesktopSubScreen(
-                            title: l10n.exhibitionCreatorAppBarTitle,
-                            child: const ExhibitionCreatorScreen(embedded: true),
-                          ),
-                        );
-                      },
-                      onOpenExhibition: (exhibition) {
-                        DesktopShellScope.of(context)?.pushScreen(
-                          DesktopSubScreen(
-                            title: exhibition.title,
-                            child: ExhibitionDetailScreen(
-                              exhibitionId: exhibition.id,
-                              initialExhibition: exhibition,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                );
-              },
-            ),
-          if (isApprovedArtist && section == DesktopArtistStudioSection.analytics)
-            KubusActionSidebarTile(
-              title: l10n.desktopArtistStudioQuickActionAnalyticsTitle,
-              subtitle: l10n.desktopArtistStudioQuickActionAnalyticsSubtitle,
-              icon: Icons.analytics_outlined,
-              semantic: KubusActionSemantic.analytics,
-              onTap: () {
-                DesktopShellScope.of(context)?.pushScreen(
-                  DesktopSubScreen(
-                    title: l10n.desktopArtistStudioQuickActionAnalyticsTitle,
-                    child: const ArtistAnalytics(),
-                  ),
-                );
-              },
-            ),
-          if (section == DesktopArtistStudioSection.analytics) ...[
-            const SizedBox(height: KubusSpacing.sm),
-            _buildAnalyticsTimeframeSelector(
-              title: 'Timeframe',
-              value: context.watch<AnalyticsFiltersProvider>().artistTimeframe,
-              onChanged: (v) => context.read<AnalyticsFiltersProvider>().setArtistTimeframe(v),
-            ),
-          ],
-          const SizedBox(height: KubusSpacing.lg),
-
-          // Stats
-          Text(
-            l10n.desktopArtistStudioStatisticsTitle,
-            style: KubusTextStyles.sectionTitle.copyWith(color: scheme.onSurface),
-          ),
-          const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
-          _buildStatsGrid(themeProvider),
-          const SizedBox(height: KubusSpacing.lg),
-
-          if (section == DesktopArtistStudioSection.gallery) ...[
+            // Header
             Text(
-              l10n.desktopArtistStudioRecentActivityTitle,
-              style: KubusTextStyles.sectionTitle.copyWith(color: scheme.onSurface),
+              sectionTitle(),
+              style:
+                  KubusTextStyles.screenTitle.copyWith(color: scheme.onSurface),
+            ),
+            const SizedBox(height: KubusSpacing.lg),
+
+            // Verification status
+            _buildVerificationStatusCard(themeProvider),
+            const SizedBox(height: KubusSpacing.md + KubusSpacing.xs),
+
+            // Contextual sidebar actions
+            Text(
+              l10n.desktopArtistStudioQuickActionsTitle,
+              style: KubusTextStyles.sectionTitle
+                  .copyWith(color: scheme.onSurface),
             ),
             const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
-            _buildRecentActivity(themeProvider),
-          ],
+            if (AppConfig.isFeatureEnabled('collabInvites'))
+              Consumer<CollabProvider>(
+                builder: (context, collabProvider, _) {
+                  final pending = collabProvider.pendingInviteCount;
+                  final badge = pending > 0
+                      ? FrostedContainer(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: KubusSpacing.sm,
+                            vertical: KubusSpacing.xs,
+                          ),
+                          borderRadius: BorderRadius.circular(KubusRadius.xl),
+                          showBorder: false,
+                          backgroundColor: scheme.error
+                              .withValues(alpha: isDark ? 0.30 : 0.22),
+                          child: Text(
+                            pending > 99 ? '99+' : pending.toString(),
+                            style: KubusTextStyles.badgeCount
+                                .copyWith(color: scheme.onError),
+                          ),
+                        )
+                      : null;
+
+                  return KubusActionSidebarTile(
+                    title: l10n.desktopArtistStudioQuickActionInvitesTitle,
+                    subtitle: pending > 0
+                        ? l10n
+                            .desktopArtistStudioQuickActionInvitesPendingSubtitle
+                        : l10n.desktopArtistStudioQuickActionInvitesSubtitle,
+                    icon: Icons.inbox_outlined,
+                    semantic: KubusActionSemantic.invite,
+                    onTap: () {
+                      DesktopShellScope.of(context)?.pushScreen(
+                        DesktopSubScreen(
+                          title: l10n
+                              .desktopArtistStudioQuickActionCollaborationInvitesTitle,
+                          child: const InvitesInboxScreen(embedded: true),
+                        ),
+                      );
+                    },
+                    trailing: badge,
+                  );
+                },
+              ),
+
+            if (isApprovedArtist &&
+                section == DesktopArtistStudioSection.create)
+              KubusActionSidebarTile(
+                title: l10n.desktopArtistStudioQuickActionCreateArtworkTitle,
+                subtitle:
+                    l10n.desktopArtistStudioQuickActionCreateArtworkSubtitle,
+                icon: Icons.add_photo_alternate_outlined,
+                semantic: KubusActionSemantic.create,
+                onTap: () {
+                  DesktopShellScope.of(context)?.pushScreen(
+                    DesktopSubScreen(
+                      title:
+                          l10n.desktopArtistStudioQuickActionCreateArtworkTitle,
+                      child: ArtworkCreator(
+                        draftId:
+                            context.read<ArtworkDraftsProvider>().createDraft(),
+                        showAppBar: false,
+                        embedded: true,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            if (isApprovedArtist &&
+                section == DesktopArtistStudioSection.create)
+              KubusActionSidebarTile(
+                title: l10n.collectionCreatorTitle,
+                subtitle: l10n.artistStudioCreateOptionCollectionSubtitle,
+                icon: Icons.collections_bookmark_outlined,
+                semantic: KubusActionSemantic.create,
+                onTap: () {
+                  final shellScope = DesktopShellScope.of(context);
+                  if (shellScope == null) return;
+                  shellScope.pushScreen(
+                    DesktopSubScreen(
+                      title: l10n.collectionCreatorTitle,
+                      child: CollectionCreator(
+                        embedded: true,
+                        onCreated: (collectionId) {
+                          shellScope.popScreen();
+                          shellScope.pushScreen(
+                            DesktopSubScreen(
+                              title: l10n.userProfileCollectionFallbackTitle,
+                              child: CollectionDetailScreen(
+                                collectionId: collectionId,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  );
+                },
+              ),
+            if (isApprovedArtist &&
+                section == DesktopArtistStudioSection.create)
+              KubusActionSidebarTile(
+                title: l10n.manageMarkersTitle,
+                subtitle: l10n.manageMarkersQuickActionSubtitle,
+                icon: Icons.place_outlined,
+                semantic: KubusActionSemantic.manage,
+                onTap: () {
+                  DesktopShellScope.of(context)?.pushScreen(
+                    DesktopSubScreen(
+                      title: l10n.manageMarkersTitle,
+                      child: const ManageMarkersScreen(embedded: true),
+                    ),
+                  );
+                },
+              ),
+            if (isApprovedArtist &&
+                section == DesktopArtistStudioSection.gallery)
+              KubusActionSidebarTile(
+                title: l10n.desktopArtistStudioQuickActionMyGalleryTitle,
+                subtitle: l10n.desktopArtistStudioQuickActionMyGallerySubtitle,
+                icon: Icons.collections_outlined,
+                semantic: KubusActionSemantic.view,
+                onTap: () {
+                  final wallet = _resolveWalletAddress(listen: false);
+                  DesktopShellScope.of(context)?.pushScreen(
+                    DesktopSubScreen(
+                      title: l10n.desktopArtistStudioQuickActionMyGalleryTitle,
+                      child: ArtistPortfolioScreen(walletAddress: wallet),
+                    ),
+                  );
+                },
+              ),
+            if (isApprovedArtist &&
+                showExhibitions &&
+                section == DesktopArtistStudioSection.exhibitions)
+              KubusActionSidebarTile(
+                title: l10n.desktopArtistStudioQuickActionExhibitionsTitle,
+                subtitle:
+                    l10n.desktopArtistStudioQuickActionExhibitionsSubtitle,
+                icon: Icons.collections_bookmark_outlined,
+                semantic: KubusActionSemantic.view,
+                onTap: () {
+                  DesktopShellScope.of(context)?.pushScreen(
+                    DesktopSubScreen(
+                      title:
+                          l10n.desktopArtistStudioQuickActionExhibitionsTitle,
+                      child: ExhibitionListScreen(
+                        embedded: true,
+                        canCreate: true,
+                        onCreateExhibition: () {
+                          DesktopShellScope.of(context)?.pushScreen(
+                            DesktopSubScreen(
+                              title: l10n.exhibitionCreatorAppBarTitle,
+                              child:
+                                  const ExhibitionCreatorScreen(embedded: true),
+                            ),
+                          );
+                        },
+                        onOpenExhibition: (exhibition) {
+                          DesktopShellScope.of(context)?.pushScreen(
+                            DesktopSubScreen(
+                              title: exhibition.title,
+                              child: ExhibitionDetailScreen(
+                                exhibitionId: exhibition.id,
+                                initialExhibition: exhibition,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  );
+                },
+              ),
+            if (isApprovedArtist &&
+                section == DesktopArtistStudioSection.analytics)
+              KubusActionSidebarTile(
+                title: l10n.desktopArtistStudioQuickActionAnalyticsTitle,
+                subtitle: l10n.desktopArtistStudioQuickActionAnalyticsSubtitle,
+                icon: Icons.analytics_outlined,
+                semantic: KubusActionSemantic.analytics,
+                onTap: () {
+                  DesktopShellScope.of(context)?.pushScreen(
+                    DesktopSubScreen(
+                      title: l10n.desktopArtistStudioQuickActionAnalyticsTitle,
+                      child: const ArtistAnalytics(),
+                    ),
+                  );
+                },
+              ),
+            if (section == DesktopArtistStudioSection.analytics) ...[
+              const SizedBox(height: KubusSpacing.sm),
+              _buildAnalyticsTimeframeSelector(
+                title: 'Timeframe',
+                value:
+                    context.watch<AnalyticsFiltersProvider>().artistTimeframe,
+                onChanged: (v) => context
+                    .read<AnalyticsFiltersProvider>()
+                    .setArtistTimeframe(v),
+              ),
+            ],
+            const SizedBox(height: KubusSpacing.lg),
+
+            // Stats
+            Text(
+              l10n.desktopArtistStudioStatisticsTitle,
+              style: KubusTextStyles.sectionTitle
+                  .copyWith(color: scheme.onSurface),
+            ),
+            const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
+            _buildStatsGrid(themeProvider),
+            const SizedBox(height: KubusSpacing.lg),
+
+            if (section == DesktopArtistStudioSection.gallery) ...[
+              Text(
+                l10n.desktopArtistStudioRecentActivityTitle,
+                style: KubusTextStyles.sectionTitle
+                    .copyWith(color: scheme.onSurface),
+              ),
+              const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
+              _buildRecentActivity(themeProvider),
+            ],
           ],
         ),
       ),
@@ -556,7 +583,10 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
   }) {
     final scheme = Theme.of(context).colorScheme;
     final normalized = value.trim().toLowerCase();
-    final effective = AnalyticsFiltersProvider.allowedTimeframes.contains(normalized) ? normalized : '30d';
+    final effective =
+        AnalyticsFiltersProvider.allowedTimeframes.contains(normalized)
+            ? normalized
+            : '30d';
     String labelFor(String timeframe) {
       switch (timeframe) {
         case '7d':
@@ -616,10 +646,16 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
     final scheme = Theme.of(context).colorScheme;
     final roles = KubusColorRoles.of(context);
     final wallet = _resolveWalletAddress();
-    final status = _artistReview?.status.toLowerCase() ?? '';
-    final isApproved = status == 'approved';
-    final isPending = status == 'pending';
-    final isRejected = status == 'rejected';
+    final daoProvider = context.watch<DAOProvider>();
+    final review = _artistReview ??
+        (wallet.isNotEmpty ? daoProvider.findReviewForWallet(wallet) : null);
+    final verification = DaoRoleVerification(
+      walletAddress: wallet,
+      review: review,
+    );
+    final isApproved = verification.isApprovedFor(DaoRoleType.artist);
+    final isPending = verification.isPendingFor(DaoRoleType.artist);
+    final isRejected = verification.isRejectedFor(DaoRoleType.artist);
 
     Color statusColor = scheme.onSurface.withValues(alpha: 0.6);
     IconData statusIcon = Icons.help_outline;
@@ -740,10 +776,13 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
     final artworks = wallet.isEmpty ? null : (counters['artworks'] ?? 0);
     final views = wallet.isEmpty ? null : (counters['viewsReceived'] ?? 0);
     final likes = wallet.isEmpty ? null : (counters['likesReceived'] ?? 0);
-    final earnedKub8 = wallet.isEmpty ? null : (counters['achievementTokensTotal'] ?? 0);
+    final earnedKub8 =
+        wallet.isEmpty ? null : (counters['achievementTokensTotal'] ?? 0);
 
-    String displayCount(int? value) => isLoading ? '…' : (value?.toString() ?? '—');
-    String displayKub8(int? value) => isLoading ? '…' : (value == null ? '—' : '${value.toString()} KUB8');
+    String displayCount(int? value) =>
+        isLoading ? '…' : (value?.toString() ?? '—');
+    String displayKub8(int? value) =>
+        isLoading ? '…' : (value == null ? '—' : '${value.toString()} KUB8');
 
     return Column(
       children: [

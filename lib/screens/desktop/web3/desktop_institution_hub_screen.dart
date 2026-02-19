@@ -15,6 +15,7 @@ import '../../../config/config.dart';
 import '../../../models/dao.dart';
 import '../../../models/user_persona.dart';
 import '../../../utils/app_animations.dart';
+import '../../../utils/dao_role_verification.dart';
 import '../../../utils/wallet_utils.dart';
 import '../components/desktop_widgets.dart';
 import '../desktop_shell.dart';
@@ -163,10 +164,14 @@ class _DesktopInstitutionHubScreenState
                       ),
                     ),
                     child: InstitutionHub(
+                      showVerificationCard: false,
                       onTabChanged: (tabIndex) {
-                        context.read<DesktopDashboardStateProvider>().updateInstitutionSectionFromTabIndex(
+                        context
+                            .read<DesktopDashboardStateProvider>()
+                            .updateInstitutionSectionFromTabIndex(
                               tabIndex: tabIndex,
-                              exhibitionsEnabled: AppConfig.isFeatureEnabled('exhibitions'),
+                              exhibitionsEnabled:
+                                  AppConfig.isFeatureEnabled('exhibitions'),
                             );
                       },
                     ),
@@ -199,17 +204,16 @@ class _DesktopInstitutionHubScreenState
     final showExhibitions = AppConfig.isFeatureEnabled('exhibitions');
 
     // Compute approval status for gating quick actions
-    final profileProvider = context.watch<ProfileProvider>();
     final daoProvider = context.watch<DAOProvider>();
     final wallet = _resolveWalletAddress(listen: true);
     final review = _institutionReview ??
         (wallet.isNotEmpty ? daoProvider.findReviewForWallet(wallet) : null);
-    final hasInstitutionBadge =
-        profileProvider.currentUser?.isInstitution ?? false;
-    final reviewStatus = review?.status.toLowerCase() ?? '';
-    final reviewIsInstitution = review?.isInstitutionApplication ?? false;
-    final isApprovedInstitution = hasInstitutionBadge ||
-        (reviewIsInstitution && reviewStatus == 'approved');
+    final verification = DaoRoleVerification(
+      walletAddress: wallet,
+      review: review,
+    );
+    final isApprovedInstitution =
+        verification.isApprovedFor(DaoRoleType.institution);
     final sidebarStyle = KubusGlassStyle.resolve(
       context,
       surfaceType: KubusGlassSurfaceType.sidebarBackground,
@@ -251,215 +255,225 @@ class _DesktopInstitutionHubScreenState
         child: ListView(
           padding: const EdgeInsets.all(KubusSpacing.lg),
           children: [
-          // Header
-          Text(
-            sectionTitle(),
-            style: KubusTextStyles.screenTitle.copyWith(color: scheme.onSurface),
-          ),
-          const SizedBox(height: KubusSpacing.lg),
-
-          // Verification status
-          _buildVerificationStatusCard(themeProvider),
-          const SizedBox(height: KubusSpacing.md + KubusSpacing.xs),
-
-          // Quick actions
-          Text(
-            'Quick Actions',
-            style: KubusTextStyles.sectionTitle.copyWith(color: scheme.onSurface),
-          ),
-          const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
-          if (AppConfig.isFeatureEnabled('collabInvites'))
-            Consumer<CollabProvider>(
-              builder: (context, collabProvider, _) {
-                final pending = collabProvider.pendingInviteCount;
-                final badge = pending > 0
-                    ? FrostedContainer(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: KubusSpacing.sm,
-                          vertical: KubusSpacing.xs,
-                        ),
-                        borderRadius: BorderRadius.circular(KubusRadius.xl),
-                        showBorder: false,
-                        backgroundColor:
-                            scheme.error.withValues(alpha: isDark ? 0.30 : 0.22),
-                        child: Text(
-                          pending > 99 ? '99+' : pending.toString(),
-                          style: KubusTextStyles.badgeCount
-                              .copyWith(color: scheme.onError),
-                        ),
-                      )
-                    : null;
-
-                return KubusActionSidebarTile(
-                  title: 'Invites',
-                  subtitle: pending > 0
-                      ? 'You have pending collaboration invites'
-                      : 'View collaboration invites',
-                  icon: Icons.inbox_outlined,
-                  semantic: KubusActionSemantic.invite,
-                  onTap: () {
-                    DesktopShellScope.of(context)?.pushScreen(
-                      DesktopSubScreen(
-                        title: 'Collaboration Invites',
-                        child: const InvitesInboxScreen(embedded: true),
-                      ),
-                    );
-                  },
-                  trailing: badge,
-                );
-              },
-            ),
-          if (section == DesktopInstitutionSection.create &&
-              isApprovedInstitution &&
-              showCreateActions &&
-              AppConfig.isFeatureEnabled('events'))
-            KubusActionSidebarTile(
-              title: 'Create Event',
-              subtitle: 'Schedule a new event',
-              icon: Icons.event_outlined,
-              semantic: KubusActionSemantic.create,
-              onTap: () {
-                DesktopShellScope.of(context)?.pushScreen(
-                  DesktopSubScreen(
-                    title: 'Create Event',
-                    child: const EventCreator(embedded: true),
-                  ),
-                );
-              },
-            ),
-          if (section == DesktopInstitutionSection.create &&
-              isApprovedInstitution &&
-              showCreateActions &&
-              showExhibitions)
-            KubusActionSidebarTile(
-              title: 'Create Exhibition',
-              subtitle: 'Publish a new exhibition',
-              icon: Icons.museum_outlined,
-              semantic: KubusActionSemantic.publish,
-              onTap: () {
-                DesktopShellScope.of(context)?.pushScreen(
-                  DesktopSubScreen(
-                    title: 'Create Exhibition',
-                    child: const ExhibitionCreatorScreen(embedded: true),
-                  ),
-                );
-              },
-            ),
-          if (section == DesktopInstitutionSection.create &&
-              isApprovedInstitution &&
-              showCreateActions)
-            KubusActionSidebarTile(
-              title: 'Manage Markers',
-              subtitle: 'Create, publish, and edit map markers',
-              icon: Icons.place_outlined,
-              semantic: KubusActionSemantic.manage,
-              onTap: () {
-                DesktopShellScope.of(context)?.pushScreen(
-                  DesktopSubScreen(
-                    title: 'Manage Markers',
-                    child: const ManageMarkersScreen(embedded: true),
-                  ),
-                );
-              },
-            ),
-          if (section == DesktopInstitutionSection.events && isApprovedInstitution)
-            KubusActionSidebarTile(
-              title: 'Manage Events',
-              subtitle: 'View all events',
-              icon: Icons.event_note_outlined,
-              semantic: KubusActionSemantic.manage,
-              onTap: () {
-                DesktopShellScope.of(context)?.pushScreen(
-                  DesktopSubScreen(
-                    title: 'Manage Events',
-                    child: const EventManager(embedded: true),
-                  ),
-                );
-              },
-            ),
-          if (section == DesktopInstitutionSection.exhibitions &&
-              isApprovedInstitution &&
-              showExhibitions)
-            KubusActionSidebarTile(
-              title: 'My Exhibitions',
-              subtitle: 'View hosted and collaborating exhibitions',
-              icon: Icons.collections_bookmark_outlined,
-              semantic: KubusActionSemantic.view,
-              onTap: () {
-                DesktopShellScope.of(context)?.pushScreen(
-                  DesktopSubScreen(
-                    title: 'My Exhibitions',
-                    child: ExhibitionListScreen(
-                      embedded: true,
-                      canCreate: true,
-                      onCreateExhibition: () {
-                        DesktopShellScope.of(context)?.pushScreen(
-                          DesktopSubScreen(
-                            title: 'Create Exhibition',
-                            child: const ExhibitionCreatorScreen(embedded: true),
-                          ),
-                        );
-                      },
-                      onOpenExhibition: (exhibition) {
-                        DesktopShellScope.of(context)?.pushScreen(
-                          DesktopSubScreen(
-                            title: exhibition.title,
-                            child: ExhibitionDetailScreen(
-                              exhibitionId: exhibition.id,
-                              initialExhibition: exhibition,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                );
-              },
-            ),
-          if (section == DesktopInstitutionSection.analytics && isApprovedInstitution)
-            KubusActionSidebarTile(
-              title: 'Analytics',
-              subtitle: 'View performance stats',
-              icon: Icons.analytics_outlined,
-              semantic: KubusActionSemantic.analytics,
-              onTap: () {
-                DesktopShellScope.of(context)?.pushScreen(
-                  DesktopSubScreen(
-                    title: 'Analytics',
-                    child: const InstitutionAnalytics(),
-                  ),
-                );
-              },
-            ),
-          if (section == DesktopInstitutionSection.analytics) ...[
-            const SizedBox(height: KubusSpacing.sm),
-            _buildAnalyticsTimeframeSelector(
-              title: 'Timeframe',
-              value: context.watch<AnalyticsFiltersProvider>().institutionTimeframe,
-              onChanged: (v) => context.read<AnalyticsFiltersProvider>().setInstitutionTimeframe(v),
-            ),
-          ],
-          const SizedBox(height: KubusSpacing.lg),
-
-          // Stats
-          Text(
-            'Institution Statistics',
-            style: KubusTextStyles.sectionTitle.copyWith(color: scheme.onSurface),
-          ),
-          const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
-          _buildStatsGrid(themeProvider),
-          const SizedBox(height: KubusSpacing.lg),
-
-          // Upcoming events
-          if (section == DesktopInstitutionSection.events) ...[
+            // Header
             Text(
-              'Upcoming Events',
+              sectionTitle(),
               style:
-                  KubusTextStyles.sectionTitle.copyWith(color: scheme.onSurface),
+                  KubusTextStyles.screenTitle.copyWith(color: scheme.onSurface),
+            ),
+            const SizedBox(height: KubusSpacing.lg),
+
+            // Verification status
+            _buildVerificationStatusCard(themeProvider),
+            const SizedBox(height: KubusSpacing.md + KubusSpacing.xs),
+
+            // Quick actions
+            Text(
+              'Quick Actions',
+              style: KubusTextStyles.sectionTitle
+                  .copyWith(color: scheme.onSurface),
             ),
             const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
-            _buildUpcomingEvents(themeProvider),
-          ],
+            if (AppConfig.isFeatureEnabled('collabInvites'))
+              Consumer<CollabProvider>(
+                builder: (context, collabProvider, _) {
+                  final pending = collabProvider.pendingInviteCount;
+                  final badge = pending > 0
+                      ? FrostedContainer(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: KubusSpacing.sm,
+                            vertical: KubusSpacing.xs,
+                          ),
+                          borderRadius: BorderRadius.circular(KubusRadius.xl),
+                          showBorder: false,
+                          backgroundColor: scheme.error
+                              .withValues(alpha: isDark ? 0.30 : 0.22),
+                          child: Text(
+                            pending > 99 ? '99+' : pending.toString(),
+                            style: KubusTextStyles.badgeCount
+                                .copyWith(color: scheme.onError),
+                          ),
+                        )
+                      : null;
+
+                  return KubusActionSidebarTile(
+                    title: 'Invites',
+                    subtitle: pending > 0
+                        ? 'You have pending collaboration invites'
+                        : 'View collaboration invites',
+                    icon: Icons.inbox_outlined,
+                    semantic: KubusActionSemantic.invite,
+                    onTap: () {
+                      DesktopShellScope.of(context)?.pushScreen(
+                        DesktopSubScreen(
+                          title: 'Collaboration Invites',
+                          child: const InvitesInboxScreen(embedded: true),
+                        ),
+                      );
+                    },
+                    trailing: badge,
+                  );
+                },
+              ),
+            if (section == DesktopInstitutionSection.create &&
+                isApprovedInstitution &&
+                showCreateActions &&
+                AppConfig.isFeatureEnabled('events'))
+              KubusActionSidebarTile(
+                title: 'Create Event',
+                subtitle: 'Schedule a new event',
+                icon: Icons.event_outlined,
+                semantic: KubusActionSemantic.create,
+                onTap: () {
+                  DesktopShellScope.of(context)?.pushScreen(
+                    DesktopSubScreen(
+                      title: 'Create Event',
+                      child: const EventCreator(embedded: true),
+                    ),
+                  );
+                },
+              ),
+            if (section == DesktopInstitutionSection.create &&
+                isApprovedInstitution &&
+                showCreateActions &&
+                showExhibitions)
+              KubusActionSidebarTile(
+                title: 'Create Exhibition',
+                subtitle: 'Publish a new exhibition',
+                icon: Icons.museum_outlined,
+                semantic: KubusActionSemantic.publish,
+                onTap: () {
+                  DesktopShellScope.of(context)?.pushScreen(
+                    DesktopSubScreen(
+                      title: 'Create Exhibition',
+                      child: const ExhibitionCreatorScreen(embedded: true),
+                    ),
+                  );
+                },
+              ),
+            if (section == DesktopInstitutionSection.create &&
+                isApprovedInstitution &&
+                showCreateActions)
+              KubusActionSidebarTile(
+                title: 'Manage Markers',
+                subtitle: 'Create, publish, and edit map markers',
+                icon: Icons.place_outlined,
+                semantic: KubusActionSemantic.manage,
+                onTap: () {
+                  DesktopShellScope.of(context)?.pushScreen(
+                    DesktopSubScreen(
+                      title: 'Manage Markers',
+                      child: const ManageMarkersScreen(embedded: true),
+                    ),
+                  );
+                },
+              ),
+            if (section == DesktopInstitutionSection.events &&
+                isApprovedInstitution)
+              KubusActionSidebarTile(
+                title: 'Manage Events',
+                subtitle: 'View all events',
+                icon: Icons.event_note_outlined,
+                semantic: KubusActionSemantic.manage,
+                onTap: () {
+                  DesktopShellScope.of(context)?.pushScreen(
+                    DesktopSubScreen(
+                      title: 'Manage Events',
+                      child: const EventManager(embedded: true),
+                    ),
+                  );
+                },
+              ),
+            if (section == DesktopInstitutionSection.exhibitions &&
+                isApprovedInstitution &&
+                showExhibitions)
+              KubusActionSidebarTile(
+                title: 'My Exhibitions',
+                subtitle: 'View hosted and collaborating exhibitions',
+                icon: Icons.collections_bookmark_outlined,
+                semantic: KubusActionSemantic.view,
+                onTap: () {
+                  DesktopShellScope.of(context)?.pushScreen(
+                    DesktopSubScreen(
+                      title: 'My Exhibitions',
+                      child: ExhibitionListScreen(
+                        embedded: true,
+                        canCreate: true,
+                        onCreateExhibition: () {
+                          DesktopShellScope.of(context)?.pushScreen(
+                            DesktopSubScreen(
+                              title: 'Create Exhibition',
+                              child:
+                                  const ExhibitionCreatorScreen(embedded: true),
+                            ),
+                          );
+                        },
+                        onOpenExhibition: (exhibition) {
+                          DesktopShellScope.of(context)?.pushScreen(
+                            DesktopSubScreen(
+                              title: exhibition.title,
+                              child: ExhibitionDetailScreen(
+                                exhibitionId: exhibition.id,
+                                initialExhibition: exhibition,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  );
+                },
+              ),
+            if (section == DesktopInstitutionSection.analytics &&
+                isApprovedInstitution)
+              KubusActionSidebarTile(
+                title: 'Analytics',
+                subtitle: 'View performance stats',
+                icon: Icons.analytics_outlined,
+                semantic: KubusActionSemantic.analytics,
+                onTap: () {
+                  DesktopShellScope.of(context)?.pushScreen(
+                    DesktopSubScreen(
+                      title: 'Analytics',
+                      child: const InstitutionAnalytics(),
+                    ),
+                  );
+                },
+              ),
+            if (section == DesktopInstitutionSection.analytics) ...[
+              const SizedBox(height: KubusSpacing.sm),
+              _buildAnalyticsTimeframeSelector(
+                title: 'Timeframe',
+                value: context
+                    .watch<AnalyticsFiltersProvider>()
+                    .institutionTimeframe,
+                onChanged: (v) => context
+                    .read<AnalyticsFiltersProvider>()
+                    .setInstitutionTimeframe(v),
+              ),
+            ],
+            const SizedBox(height: KubusSpacing.lg),
+
+            // Stats
+            Text(
+              'Institution Statistics',
+              style: KubusTextStyles.sectionTitle
+                  .copyWith(color: scheme.onSurface),
+            ),
+            const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
+            _buildStatsGrid(themeProvider),
+            const SizedBox(height: KubusSpacing.lg),
+
+            // Upcoming events
+            if (section == DesktopInstitutionSection.events) ...[
+              Text(
+                'Upcoming Events',
+                style: KubusTextStyles.sectionTitle
+                    .copyWith(color: scheme.onSurface),
+              ),
+              const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
+              _buildUpcomingEvents(themeProvider),
+            ],
           ],
         ),
       ),
@@ -473,7 +487,10 @@ class _DesktopInstitutionHubScreenState
   }) {
     final scheme = Theme.of(context).colorScheme;
     final normalized = value.trim().toLowerCase();
-    final effective = AnalyticsFiltersProvider.allowedTimeframes.contains(normalized) ? normalized : '30d';
+    final effective =
+        AnalyticsFiltersProvider.allowedTimeframes.contains(normalized)
+            ? normalized
+            : '30d';
 
     return LiquidGlassCard(
       padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
@@ -516,15 +533,20 @@ class _DesktopInstitutionHubScreenState
 
   Widget _buildVerificationStatusCard(ThemeProvider themeProvider) {
     final wallet = _resolveWalletAddress();
-    final status = _institutionReview?.status.toLowerCase() ?? '';
-    final isApproved = status == 'approved';
-    final isPending = status == 'pending';
-    final isRejected = status == 'rejected';
+    final daoProvider = context.watch<DAOProvider>();
+    final review = _institutionReview ??
+        (wallet.isNotEmpty ? daoProvider.findReviewForWallet(wallet) : null);
+    final verification = DaoRoleVerification(
+      walletAddress: wallet,
+      review: review,
+    );
+    final isApproved = verification.isApprovedFor(DaoRoleType.institution);
+    final isPending = verification.isPendingFor(DaoRoleType.institution);
+    final isRejected = verification.isRejectedFor(DaoRoleType.institution);
     final roles = KubusColorRoles.of(context);
     final scheme = Theme.of(context).colorScheme;
 
-    Color statusColor =
-        scheme.onSurface.withValues(alpha: 0.6);
+    Color statusColor = scheme.onSurface.withValues(alpha: 0.6);
     IconData statusIcon = Icons.help_outline;
     String statusText = 'Not Applied';
     String statusDescription = 'Apply for institution verification';
@@ -645,12 +667,17 @@ class _DesktopInstitutionHubScreenState
 
     final counters = snapshot?.counters ?? const <String, int>{};
     final events = wallet.isEmpty ? null : (counters['eventsHosted'] ?? 0);
-    final visitors = wallet.isEmpty ? null : (counters['visitorsReceived'] ?? 0);
-    final artworks = wallet.isEmpty ? null : (counters['exhibitionArtworks'] ?? 0);
-    final revenue = wallet.isEmpty ? null : (counters['achievementTokensTotal'] ?? 0);
+    final visitors =
+        wallet.isEmpty ? null : (counters['visitorsReceived'] ?? 0);
+    final artworks =
+        wallet.isEmpty ? null : (counters['exhibitionArtworks'] ?? 0);
+    final revenue =
+        wallet.isEmpty ? null : (counters['achievementTokensTotal'] ?? 0);
 
-    String displayCount(int? value) => isLoading ? '…' : (value?.toString() ?? '—');
-    String displayKub8(int? value) => isLoading ? '…' : (value == null ? '—' : '${value.toString()} KUB8');
+    String displayCount(int? value) =>
+        isLoading ? '…' : (value?.toString() ?? '—');
+    String displayKub8(int? value) =>
+        isLoading ? '…' : (value == null ? '—' : '${value.toString()} KUB8');
 
     return Column(
       children: [

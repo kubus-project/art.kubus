@@ -780,7 +780,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     final glassProv = context.watch<GlassCapabilitiesProvider?>();
     final isOn = glassProv?.reduceEffects ?? false;
     final autoDetected = (glassProv?.heuristicTriggered ?? false) &&
-      !(glassProv?.reduceEffectsUserOverride ?? false);
+        !(glassProv?.reduceEffectsUserOverride ?? false);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1134,6 +1134,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             emailNotificationsState,
           ),
           Icons.manage_accounts,
+          tileKey: const Key('settings_tile_account_management'),
           onTap: () {
             _showAccountManagementDialog();
           },

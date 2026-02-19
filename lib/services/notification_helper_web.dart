@@ -3,10 +3,18 @@ import 'dart:js_interop';
 
 import 'package:web/web.dart' as web;
 
+String webNotificationPermissionStateNow() {
+  try {
+    return web.Notification.permission;
+  } catch (_) {
+    return 'unsupported';
+  }
+}
+
 Future<bool> requestWebNotificationPermission() async {
   try {
     // If already allowed, return true
-    if (web.Notification.permission == 'granted') return true;
+    if (webNotificationPermissionStateNow() == 'granted') return true;
 
     // requestPermission() returns a JS Promise on web. Avoid dart:js_util here so
     // the analyzer doesn't choke on non-web platforms.
@@ -20,8 +28,12 @@ Future<bool> requestWebNotificationPermission() async {
 
 Future<bool> isWebNotificationPermissionGranted() async {
   try {
-    return web.Notification.permission == 'granted';
+    return webNotificationPermissionStateNow() == 'granted';
   } catch (_) {
     return false;
   }
+}
+
+Future<String> webNotificationPermissionState() async {
+  return webNotificationPermissionStateNow();
 }

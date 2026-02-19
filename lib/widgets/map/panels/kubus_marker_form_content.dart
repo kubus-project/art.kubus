@@ -296,7 +296,7 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
             const SizedBox(height: 14),
             DropdownButtonFormField<MarkerSubjectType>(
               isExpanded: true,
-              value: _selectedSubjectType,
+              initialValue: _selectedSubjectType,
               decoration: InputDecoration(
                 labelText: l10n.mapMarkerDialogSubjectTypeLabel,
                 border: OutlineInputBorder(
@@ -326,7 +326,7 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
                   .isNotEmpty)
                 DropdownButtonFormField<MarkerSubjectOption>(
                   isExpanded: true,
-                  value: _selectedSubject,
+                  initialValue: _selectedSubject,
                   decoration: InputDecoration(
                     labelText: l10n.mapMarkerDialogSubjectRequiredLabel(
                       _subjectTypeLabel(l10n, _selectedSubjectType),
@@ -414,7 +414,7 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
               else
                 DropdownButtonFormField<Artwork>(
                   isExpanded: true,
-                  value: _selectedArAsset,
+                  initialValue: _selectedArAsset,
                   decoration: InputDecoration(
                     border: OutlineInputBorder(
                       borderRadius: KubusRadius.circular(8),
@@ -487,7 +487,7 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
             const SizedBox(height: 12),
             DropdownButtonFormField<ArtMarkerType>(
               isExpanded: true,
-              value: _selectedMarkerType,
+              initialValue: _selectedMarkerType,
               decoration: InputDecoration(
                 labelText: l10n.mapMarkerDialogMarkerLayerLabel,
                 border: OutlineInputBorder(

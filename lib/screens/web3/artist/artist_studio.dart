@@ -18,6 +18,7 @@ import '../../../providers/dao_provider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../models/dao.dart';
 import '../../../models/user_persona.dart';
+import '../../../utils/dao_role_verification.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../collab/invites_inbox_screen.dart';
@@ -29,6 +30,7 @@ class ArtistStudio extends StatefulWidget {
   final VoidCallback? onOpenCollectionCreator;
   final VoidCallback? onOpenExhibitionCreator;
   final ValueChanged<int>? onTabChanged;
+  final bool showVerificationCard;
 
   const ArtistStudio({
     super.key,
@@ -36,6 +38,7 @@ class ArtistStudio extends StatefulWidget {
     this.onOpenCollectionCreator,
     this.onOpenExhibitionCreator,
     this.onTabChanged,
+    this.showVerificationCard = true,
   });
 
   @override
@@ -149,14 +152,6 @@ class _ArtistStudioState extends State<ArtistStudio> {
             review ?? daoProvider.findReviewForWallet(requestedWallet);
         _hasFetchedReviewForWallet = true;
       });
-      final isArtistReview = _artistReview?.isArtistApplication ?? false;
-      final isApproved =
-          isArtistReview && (_artistReview?.status.toLowerCase() == 'approved');
-      if (isApproved) {
-        try {
-          context.read<ProfileProvider>().setRoleFlags(isArtist: true);
-        } catch (_) {}
-      }
     } catch (e) {
       // Soft-fail; errors are already logged in DAOProvider
       if (mounted && requestedWallet == _lastReviewWallet) {
@@ -176,22 +171,19 @@ class _ArtistStudioState extends State<ArtistStudio> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final profileProvider = context.watch<ProfileProvider>();
     final daoProvider = context.watch<DAOProvider>();
     final wallet = _resolveWalletAddress(listen: true);
     final review = _artistReview ??
         (wallet.isNotEmpty ? daoProvider.findReviewForWallet(wallet) : null);
-    final hasArtistBadge = profileProvider.currentUser?.isArtist ?? false;
+    final verification = DaoRoleVerification(
+      walletAddress: wallet,
+      review: review,
+    );
+    final isApprovedArtist = verification.isApprovedFor(DaoRoleType.artist);
     final hasInstitutionBadge =
-        profileProvider.currentUser?.isInstitution ?? false;
-    final reviewStatus = review?.status.toLowerCase() ?? '';
-    final reviewIsArtist = review?.isArtistApplication ?? false;
-    final reviewIsInstitution = review?.isInstitutionApplication ?? false;
-    final isApprovedArtist =
-        hasArtistBadge || (reviewIsArtist && reviewStatus == 'approved');
-    final isReviewRejected = reviewStatus == 'rejected';
+        verification.isApprovedFor(DaoRoleType.institution);
     final hasConflictingInstitutionReview =
-        reviewIsInstitution && !isReviewRejected;
+        verification.isPendingFor(DaoRoleType.institution);
     final isCrossRoleBlocked =
         hasInstitutionBadge || hasConflictingInstitutionReview;
 
@@ -294,14 +286,15 @@ class _ArtistStudioState extends State<ArtistStudio> {
               child: Column(
                 children: [
                   _buildStudioHeader(),
-                  _buildArtistApplicationCard(
-                    review,
-                    isApprovedArtist,
-                    isCrossRoleBlocked: isCrossRoleBlocked,
-                    hasInstitutionBadge: hasInstitutionBadge,
-                    hasConflictingInstitutionReview:
-                        hasConflictingInstitutionReview,
-                  ),
+                  if (widget.showVerificationCard)
+                    _buildArtistApplicationCard(
+                      review,
+                      isApprovedArtist,
+                      isCrossRoleBlocked: isCrossRoleBlocked,
+                      hasInstitutionBadge: hasInstitutionBadge,
+                      hasConflictingInstitutionReview:
+                          hasConflictingInstitutionReview,
+                    ),
                   if (!isCrossRoleBlocked)
                     _buildNavigationTabs(isApprovedArtist),
                 ],
@@ -480,143 +473,149 @@ class _ArtistStudioState extends State<ArtistStudio> {
       padding: EdgeInsets.zero,
       borderRadius: cardRadius,
       showBorder: false,
-      backgroundColor:
-          scheme.surface.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.22 : 0.14),
+      backgroundColor: scheme.surface.withValues(
+          alpha: Theme.of(context).brightness == Brightness.dark ? 0.22 : 0.14),
       child: DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: cardRadius,
           border: Border.all(color: studioColor.withValues(alpha: 0.3)),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(KubusSpacing.md + KubusSpacing.xs - KubusSpacing.xxs),
+          padding: const EdgeInsets.all(
+              KubusSpacing.md + KubusSpacing.xs - KubusSpacing.xxs),
           child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: KubusSpacing.xxl,
-                height: KubusSpacing.xxl,
-                decoration: BoxDecoration(
-                  color: studioColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(KubusRadius.md),
-                ),
-                child: Icon(
-                  Icons.brush_rounded,
-                  color: studioColor,
-                  size: KubusSpacing.lg,
-                ),
+              Row(
+                children: [
+                  Container(
+                    width: KubusSpacing.xxl,
+                    height: KubusSpacing.xxl,
+                    decoration: BoxDecoration(
+                      color: studioColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(KubusRadius.md),
+                    ),
+                    child: Icon(
+                      Icons.brush_rounded,
+                      color: studioColor,
+                      size: KubusSpacing.lg,
+                    ),
+                  ),
+                  const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.artistStudioDaoCardTitle,
+                          style: KubusTextStyles.sectionTitle.copyWith(
+                            color: scheme.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: KubusSpacing.xs),
+                        Text(
+                          l10n.artistStudioDaoCardSubtitle,
+                          style: KubusTextStyles.actionTileSubtitle.copyWith(
+                            color: scheme.onSurface.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              if (review != null || _reviewLoading) ...[
+                const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
+                Row(
                   children: [
-                    Text(
-                      l10n.artistStudioDaoCardTitle,
-                      style: KubusTextStyles.sectionTitle.copyWith(
-                        color: scheme.onSurface,
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: KubusSpacing.sm +
+                            KubusSpacing.xs -
+                            KubusSpacing.xxs,
+                        vertical: KubusSpacing.xs + KubusSpacing.xxs,
+                      ),
+                      decoration: BoxDecoration(
+                        color: statusColor.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(KubusRadius.md),
+                      ),
+                      child: Text(
+                        statusLabel,
+                        style: KubusTextStyles.badgeCount
+                            .copyWith(color: statusColor),
                       ),
                     ),
-                    const SizedBox(height: KubusSpacing.xs),
-                    Text(
-                      l10n.artistStudioDaoCardSubtitle,
-                      style: KubusTextStyles.actionTileSubtitle.copyWith(
-                        color: scheme.onSurface.withValues(alpha: 0.7),
+                    const SizedBox(width: KubusSpacing.sm),
+                    if (_reviewLoading)
+                      SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(statusColor),
+                        ),
+                      )
+                    else if (review != null)
+                      Text(
+                        l10n.artistStudioStatusSyncedFromDao,
+                        style: KubusTextStyles.badgeCount.copyWith(
+                          color: scheme.onSurface.withValues(alpha: 0.6),
+                        ),
                       ),
-                    ),
                   ],
                 ),
-              ),
-            ],
-          ),
-          if (review != null || _reviewLoading) ...[
-            const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: KubusSpacing.sm + KubusSpacing.xs - KubusSpacing.xxs,
-                    vertical: KubusSpacing.xs + KubusSpacing.xxs,
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.18),
-                    borderRadius: BorderRadius.circular(KubusRadius.md),
-                  ),
-                  child: Text(
-                    statusLabel,
-                    style: KubusTextStyles.badgeCount
-                        .copyWith(color: statusColor),
-                  ),
-                ),
-                const SizedBox(width: KubusSpacing.sm),
-                if (_reviewLoading)
-                  SizedBox(
-                    height: 18,
-                    width: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(statusColor),
-                    ),
-                  )
-                else if (review != null)
+                if ((review?.reviewerNotes ?? '').isNotEmpty) ...[
+                  const SizedBox(height: KubusSpacing.sm),
                   Text(
-                    l10n.artistStudioStatusSyncedFromDao,
-                    style: KubusTextStyles.badgeCount.copyWith(
-                      color: scheme.onSurface.withValues(alpha: 0.6),
+                    review!.reviewerNotes!,
+                    style: KubusTextStyles.actionTileSubtitle.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.75),
                     ),
                   ),
-              ],
-            ),
-            if ((review?.reviewerNotes ?? '').isNotEmpty) ...[
-              const SizedBox(height: KubusSpacing.sm),
-              Text(
-                review!.reviewerNotes!,
-                style: KubusTextStyles.actionTileSubtitle.copyWith(
-                  color: scheme.onSurface.withValues(alpha: 0.75),
+                ] else if (review != null) ...[
+                  const SizedBox(height: KubusSpacing.sm),
+                  Text(
+                    isPending
+                        ? l10n.artistStudioReviewPendingInfo
+                        : isApproved
+                            ? l10n.artistStudioReviewApprovedInfo
+                            : isRejected
+                                ? l10n.artistStudioReviewRejectedInfo
+                                : '',
+                    style: KubusTextStyles.actionTileSubtitle.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
+              ] else if (!hasWallet) ...[
+                const SizedBox(height: KubusSpacing.sm),
+                Text(
+                  l10n.artistStudioConnectWalletToSubmitForDaoReview,
+                  style: KubusTextStyles.actionTileSubtitle.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.65),
+                  ),
                 ),
-              ),
-            ] else if (review != null) ...[
-              const SizedBox(height: KubusSpacing.sm),
-              Text(
-                isPending
-                    ? l10n.artistStudioReviewPendingInfo
-                    : isApproved
-                        ? l10n.artistStudioReviewApprovedInfo
-                        : isRejected
-                            ? l10n.artistStudioReviewRejectedInfo
-                            : '',
-                style: KubusTextStyles.actionTileSubtitle.copyWith(
-                  color: scheme.onSurface.withValues(alpha: 0.7),
+              ],
+              const SizedBox(height: KubusSpacing.md),
+              SizedBox(
+                width: double.infinity,
+                child: KubusButton(
+                  onPressed:
+                      canSubmit ? () => _showArtistApplicationModal() : null,
+                  label: ctaLabel,
+                  icon: ctaIcon,
+                  isFullWidth: true,
+                  backgroundColor: studioColor,
+                  foregroundColor:
+                      ThemeData.estimateBrightnessForColor(studioColor) ==
+                              Brightness.dark
+                          ? KubusColors.textPrimaryDark
+                          : KubusColors.textPrimaryLight,
                 ),
               ),
             ],
-          ] else if (!hasWallet) ...[
-            const SizedBox(height: KubusSpacing.sm),
-            Text(
-              l10n.artistStudioConnectWalletToSubmitForDaoReview,
-              style: KubusTextStyles.actionTileSubtitle.copyWith(
-                color: scheme.onSurface.withValues(alpha: 0.65),
-              ),
-            ),
-          ],
-          const SizedBox(height: KubusSpacing.md),
-          SizedBox(
-            width: double.infinity,
-            child: KubusButton(
-              onPressed: canSubmit ? () => _showArtistApplicationModal() : null,
-              label: ctaLabel,
-              icon: ctaIcon,
-              isFullWidth: true,
-              backgroundColor: studioColor,
-              foregroundColor: ThemeData.estimateBrightnessForColor(studioColor) ==
-                      Brightness.dark
-                  ? KubusColors.textPrimaryDark
-                  : KubusColors.textPrimaryLight,
-            ),
           ),
-        ],
-      ),
         ),
       ),
     );
@@ -635,76 +634,77 @@ class _ArtistStudioState extends State<ArtistStudio> {
     final radius = BorderRadius.circular(KubusRadius.md);
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        borderRadius: radius,
-        border: Border.all(
-          color: scheme.outline.withValues(alpha: 0.20),
-          width: KubusSizes.hairline,
+        margin: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          borderRadius: radius,
+          border: Border.all(
+            color: scheme.outline.withValues(alpha: 0.20),
+            width: KubusSizes.hairline,
+          ),
         ),
-      ),
-      child: LiquidGlassCard(
-        margin: EdgeInsets.zero,
-        padding: const EdgeInsets.all(KubusSpacing.xs),
-        borderRadius: radius,
-        blurSigma: panelStyle.blurSigma,
-        fallbackMinOpacity: panelStyle.fallbackMinOpacity,
-        showBorder: false,
-        backgroundColor: panelStyle.tintColor,
-        child: Row(
-          children: [
-            Expanded(
-                child: _buildTabButton(l10n.artistStudioTabGallery,
-                    Icons.collections,
-                    0,
-                    isApprovedArtist,
-                    _artistTabAccent(
-                      index: 0,
-                      exhibitionsEnabled: exhibitionsEnabled,
-                      roles: roles,
-                      scheme: scheme,
-                    ))),
-            Expanded(
-                child: _buildTabButton(l10n.artistStudioTabCreate,
-                    Icons.add_circle_outline,
-                    1,
-                    isApprovedArtist,
-                    _artistTabAccent(
-                      index: 1,
-                      exhibitionsEnabled: exhibitionsEnabled,
-                      roles: roles,
-                      scheme: scheme,
-                    ))),
-          if (exhibitionsEnabled)
-            Expanded(
-                child: _buildTabButton(
-                    l10n.artistStudioTabExhibitions,
-                    Icons.collections_bookmark,
-                    2,
-                    isApprovedArtist,
-                    _artistTabAccent(
-                      index: 2,
-                      exhibitionsEnabled: exhibitionsEnabled,
-                      roles: roles,
-                      scheme: scheme,
-                    ))),
-          Expanded(
-              child: _buildTabButton(
-                  l10n.artistStudioTabAnalytics,
-                  Icons.analytics,
-                  exhibitionsEnabled ? 3 : 2,
-                  isApprovedArtist,
-                  _artistTabAccent(
-                    index: exhibitionsEnabled ? 3 : 2,
-                    exhibitionsEnabled: exhibitionsEnabled,
-                    roles: roles,
-                    scheme: scheme,
-                  ))),
-          ],
-        ),
-      )
-    );
+        child: LiquidGlassCard(
+          margin: EdgeInsets.zero,
+          padding: const EdgeInsets.all(KubusSpacing.xs),
+          borderRadius: radius,
+          blurSigma: panelStyle.blurSigma,
+          fallbackMinOpacity: panelStyle.fallbackMinOpacity,
+          showBorder: false,
+          backgroundColor: panelStyle.tintColor,
+          child: Row(
+            children: [
+              Expanded(
+                  child: _buildTabButton(
+                      l10n.artistStudioTabGallery,
+                      Icons.collections,
+                      0,
+                      isApprovedArtist,
+                      _artistTabAccent(
+                        index: 0,
+                        exhibitionsEnabled: exhibitionsEnabled,
+                        roles: roles,
+                        scheme: scheme,
+                      ))),
+              Expanded(
+                  child: _buildTabButton(
+                      l10n.artistStudioTabCreate,
+                      Icons.add_circle_outline,
+                      1,
+                      isApprovedArtist,
+                      _artistTabAccent(
+                        index: 1,
+                        exhibitionsEnabled: exhibitionsEnabled,
+                        roles: roles,
+                        scheme: scheme,
+                      ))),
+              if (exhibitionsEnabled)
+                Expanded(
+                    child: _buildTabButton(
+                        l10n.artistStudioTabExhibitions,
+                        Icons.collections_bookmark,
+                        2,
+                        isApprovedArtist,
+                        _artistTabAccent(
+                          index: 2,
+                          exhibitionsEnabled: exhibitionsEnabled,
+                          roles: roles,
+                          scheme: scheme,
+                        ))),
+              Expanded(
+                  child: _buildTabButton(
+                      l10n.artistStudioTabAnalytics,
+                      Icons.analytics,
+                      exhibitionsEnabled ? 3 : 2,
+                      isApprovedArtist,
+                      _artistTabAccent(
+                        index: exhibitionsEnabled ? 3 : 2,
+                        exhibitionsEnabled: exhibitionsEnabled,
+                        roles: roles,
+                        scheme: scheme,
+                      ))),
+            ],
+          ),
+        ));
   }
 
   Color _artistTabAccent({
@@ -734,7 +734,8 @@ class _ArtistStudioState extends State<ArtistStudio> {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final tintBase = (enabled && (isSelected || isHovered)) ? accent : scheme.surface;
+    final tintBase =
+        (enabled && (isSelected || isHovered)) ? accent : scheme.surface;
     final buttonStyle = KubusGlassStyle.resolve(
       context,
       surfaceType: KubusGlassSurfaceType.button,
@@ -1021,176 +1022,181 @@ class _ArtistStudioState extends State<ArtistStudio> {
               child: SingleChildScrollView(
                 child: BackdropGlassSheet(
                   padding: const EdgeInsets.all(KubusSpacing.lg),
-                  backgroundColor:
-                      colorScheme.surfaceContainerHighest.withValues(alpha: 0.18),
+                  backgroundColor: colorScheme.surfaceContainerHighest
+                      .withValues(alpha: 0.18),
                   child: Form(
                     key: formKey,
                     child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.artistStudioApplicationModalTitle,
-                        style: KubusTextStyles.screenTitle
-                            .copyWith(color: colorScheme.onSurface),
-                      ),
-                      const SizedBox(height: KubusSpacing.sm),
-                      Text(
-                        l10n.artistStudioApplicationModalSubtitle,
-                        style: KubusTextStyles.actionTileTitle.copyWith(
-                          color: colorScheme.onSurface.withValues(alpha: 0.7),
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.artistStudioApplicationModalTitle,
+                          style: KubusTextStyles.screenTitle
+                              .copyWith(color: colorScheme.onSurface),
                         ),
-                      ),
-                      const SizedBox(height: KubusSpacing.lg),
-                      TextFormField(
-                        controller: portfolioController,
-                        decoration: InputDecoration(
-                          labelText:
-                              l10n.artistStudioApplicationFieldPortfolioLabel,
-                          border: const OutlineInputBorder(),
+                        const SizedBox(height: KubusSpacing.sm),
+                        Text(
+                          l10n.artistStudioApplicationModalSubtitle,
+                          style: KubusTextStyles.actionTileTitle.copyWith(
+                            color: colorScheme.onSurface.withValues(alpha: 0.7),
+                          ),
                         ),
-                        validator: (value) => (value == null ||
-                                value.trim().isEmpty)
-                            ? l10n.artistStudioApplicationValidationPortfolio
-                            : null,
-                      ),
-                      const SizedBox(height: KubusSpacing.md),
-                      TextFormField(
-                        controller: mediumController,
-                        decoration: InputDecoration(
-                          labelText:
-                              l10n.artistStudioApplicationFieldMediumLabel,
-                          border: const OutlineInputBorder(),
+                        const SizedBox(height: KubusSpacing.lg),
+                        TextFormField(
+                          controller: portfolioController,
+                          decoration: InputDecoration(
+                            labelText:
+                                l10n.artistStudioApplicationFieldPortfolioLabel,
+                            border: const OutlineInputBorder(),
+                          ),
+                          validator: (value) => (value == null ||
+                                  value.trim().isEmpty)
+                              ? l10n.artistStudioApplicationValidationPortfolio
+                              : null,
                         ),
-                        validator: (value) =>
-                            (value == null || value.trim().isEmpty)
-                                ? l10n.artistStudioApplicationValidationMedium
-                                : null,
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: statementController,
-                        maxLines: 4,
-                        decoration: InputDecoration(
-                          labelText:
-                              l10n.artistStudioApplicationFieldStatementLabel,
-                          alignLabelWithHint: true,
-                          border: const OutlineInputBorder(),
+                        const SizedBox(height: KubusSpacing.md),
+                        TextFormField(
+                          controller: mediumController,
+                          decoration: InputDecoration(
+                            labelText:
+                                l10n.artistStudioApplicationFieldMediumLabel,
+                            border: const OutlineInputBorder(),
+                          ),
+                          validator: (value) =>
+                              (value == null || value.trim().isEmpty)
+                                  ? l10n.artistStudioApplicationValidationMedium
+                                  : null,
                         ),
-                        validator: (value) => (value == null ||
-                                value.trim().length < 20)
-                            ? l10n
-                                .artistStudioApplicationValidationStatementMinChars(
-                                    20)
-                            : null,
-                      ),
-                      const SizedBox(height: 24),
-                      SizedBox(
-                        width: double.infinity,
-                        child: KubusButton(
-                          onPressed: isSubmitting
-                              ? null
-                              : () async {
-                                  if (!formKey.currentState!.validate()) return;
-                                  final profileProvider =
-                                      context.read<ProfileProvider>();
-                                  final web3Provider =
-                                      context.read<Web3Provider>();
-                                  final daoProvider =
-                                      context.read<DAOProvider>();
-                                  final navigator = Navigator.of(sheetContext);
-                                  final roles = KubusColorRoles.of(context);
-                                  final successColor = roles.positiveAction;
-                                  final errorColor = roles.negativeAction;
-                                  final wallet = profileProvider
-                                          .currentUser?.walletAddress ??
-                                      web3Provider.walletAddress;
-                                  if (wallet.isEmpty) {
-                                    scaffold.showKubusSnackBar(
-                                      SnackBar(
-                                          content: Text(l10n
-                                              .artistStudioApplicationWalletRequiredToast)),
-                                    );
-                                    return;
-                                  }
-                                  setModalState(() => isSubmitting = true);
-                                  try {
-                                    final review =
-                                        await daoProvider.submitReview(
-                                      walletAddress: wallet,
-                                      portfolioUrl:
-                                          portfolioController.text.trim(),
-                                      medium: mediumController.text.trim(),
-                                      statement:
-                                          statementController.text.trim(),
-                                      title: l10n
-                                          .artistStudioApplicationReviewTitle,
-                                      metadata: {
-                                        'role': 'artist',
-                                        'source': 'artist_studio',
-                                      },
-                                    );
-                                    if (!mounted) return;
-                                    if (review != null) {
-                                      await _loadArtistReviewStatus(
-                                          forceRefresh: true);
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: statementController,
+                          maxLines: 4,
+                          decoration: InputDecoration(
+                            labelText:
+                                l10n.artistStudioApplicationFieldStatementLabel,
+                            alignLabelWithHint: true,
+                            border: const OutlineInputBorder(),
+                          ),
+                          validator: (value) => (value == null ||
+                                  value.trim().length < 20)
+                              ? l10n
+                                  .artistStudioApplicationValidationStatementMinChars(
+                                      20)
+                              : null,
+                        ),
+                        const SizedBox(height: 24),
+                        SizedBox(
+                          width: double.infinity,
+                          child: KubusButton(
+                            onPressed: isSubmitting
+                                ? null
+                                : () async {
+                                    if (!formKey.currentState!.validate()) {
+                                      return;
+                                    }
+                                    final profileProvider =
+                                        context.read<ProfileProvider>();
+                                    final web3Provider =
+                                        context.read<Web3Provider>();
+                                    final daoProvider =
+                                        context.read<DAOProvider>();
+                                    final navigator =
+                                        Navigator.of(sheetContext);
+                                    final roles = KubusColorRoles.of(context);
+                                    final successColor = roles.positiveAction;
+                                    final errorColor = roles.negativeAction;
+                                    final wallet = profileProvider
+                                            .currentUser?.walletAddress ??
+                                        web3Provider.walletAddress;
+                                    if (wallet.isEmpty) {
+                                      scaffold.showKubusSnackBar(
+                                        SnackBar(
+                                            content: Text(l10n
+                                                .artistStudioApplicationWalletRequiredToast)),
+                                      );
+                                      return;
+                                    }
+                                    setModalState(() => isSubmitting = true);
+                                    try {
+                                      final review =
+                                          await daoProvider.submitReview(
+                                        walletAddress: wallet,
+                                        portfolioUrl:
+                                            portfolioController.text.trim(),
+                                        medium: mediumController.text.trim(),
+                                        statement:
+                                            statementController.text.trim(),
+                                        title: l10n
+                                            .artistStudioApplicationReviewTitle,
+                                        metadata: {
+                                          'role': 'artist',
+                                          'source': 'artist_studio',
+                                        },
+                                      );
                                       if (!mounted) return;
-                                    }
-                                    if (!mounted) return;
-                                    navigator.pop();
-                                    if (!mounted) return;
-                                    scaffold.showKubusSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          review != null
-                                              ? l10n
-                                                  .artistStudioApplicationSubmittedToast
-                                              : l10n
-                                                  .artistStudioApplicationUnableToSubmitToast,
+                                      if (review != null) {
+                                        await _loadArtistReviewStatus(
+                                            forceRefresh: true);
+                                        if (!mounted) return;
+                                      }
+                                      if (!mounted) return;
+                                      navigator.pop();
+                                      if (!mounted) return;
+                                      scaffold.showKubusSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            review != null
+                                                ? l10n
+                                                    .artistStudioApplicationSubmittedToast
+                                                : l10n
+                                                    .artistStudioApplicationUnableToSubmitToast,
+                                          ),
+                                          backgroundColor: review != null
+                                              ? successColor
+                                              : errorColor,
                                         ),
-                                        backgroundColor: review != null
-                                            ? successColor
-                                            : errorColor,
-                                      ),
-                                    );
-                                  } catch (err) {
-                                    if (kDebugMode) {
-                                      debugPrint(
-                                          'ArtistStudio: submission failed: $err');
+                                      );
+                                    } catch (err) {
+                                      if (kDebugMode) {
+                                        debugPrint(
+                                            'ArtistStudio: submission failed: $err');
+                                      }
+                                      if (!mounted) return;
+                                      scaffold.showKubusSnackBar(
+                                        SnackBar(
+                                          content: Text(l10n
+                                              .artistStudioApplicationSubmissionFailedToast),
+                                          backgroundColor: errorColor,
+                                        ),
+                                      );
+                                    } finally {
+                                      if (mounted) {
+                                        setModalState(
+                                            () => isSubmitting = false);
+                                      }
                                     }
-                                    if (!mounted) return;
-                                    scaffold.showKubusSnackBar(
-                                      SnackBar(
-                                        content: Text(l10n
-                                            .artistStudioApplicationSubmissionFailedToast),
-                                        backgroundColor: errorColor,
-                                      ),
-                                    );
-                                  } finally {
-                                    if (mounted) {
-                                      setModalState(() => isSubmitting = false);
-                                    }
-                                  }
-                                },
-                          label: l10n.artistStudioApplicationSubmitButton,
-                          icon: Icons.send_rounded,
-                          isLoading: isSubmitting,
-                          isFullWidth: true,
-                          backgroundColor: KubusColorRoles.of(context)
-                              .web3ArtistStudioAccent,
-                          foregroundColor: ThemeData.estimateBrightnessForColor(
-                                      KubusColorRoles.of(context)
-                                          .web3ArtistStudioAccent) ==
-                                  Brightness.dark
-                              ? KubusColors.textPrimaryDark
-                              : KubusColors.textPrimaryLight,
+                                  },
+                            label: l10n.artistStudioApplicationSubmitButton,
+                            icon: Icons.send_rounded,
+                            isLoading: isSubmitting,
+                            isFullWidth: true,
+                            backgroundColor: KubusColorRoles.of(context)
+                                .web3ArtistStudioAccent,
+                            foregroundColor:
+                                ThemeData.estimateBrightnessForColor(
+                                            KubusColorRoles.of(context)
+                                                .web3ArtistStudioAccent) ==
+                                        Brightness.dark
+                                    ? KubusColors.textPrimaryDark
+                                    : KubusColors.textPrimaryLight,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
             );
           },
         );

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/models/user_profile.dart';
 import 'package:art_kubus/providers/locale_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
@@ -40,6 +41,9 @@ Widget _buildTestApp({
       theme: theme ?? ThemeData.light(useMaterial3: true),
       darkTheme: darkTheme ?? ThemeData.dark(useMaterial3: true),
       themeMode: themeMode,
+      routes: <String, WidgetBuilder>{
+        '/main': (_) => const Scaffold(body: Text('Main shell')),
+      },
       locale: locale,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
@@ -87,6 +91,26 @@ Future<void> _pumpUntilFound(
     await tester.pump(const Duration(milliseconds: 120));
     if (finder.evaluate().isNotEmpty) return;
   }
+}
+
+ProfileProvider _signedInProfileProvider({
+  String walletAddress = 'wallet_test_123',
+}) {
+  final profileProvider = ProfileProvider();
+  profileProvider.setCurrentUser(
+    UserProfile(
+      id: 'user-1',
+      walletAddress: walletAddress,
+      username: 'tester',
+      displayName: 'QA Tester',
+      bio: '',
+      avatar: '',
+      isArtist: true,
+      createdAt: DateTime.utc(2025, 1, 1),
+      updatedAt: DateTime.utc(2025, 1, 1),
+    ),
+  );
+  return profileProvider;
 }
 
 void main() {
@@ -181,6 +205,33 @@ void main() {
   });
 
   testWidgets(
+      'deprecated permissions step id falls back to contextual permissions flow',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 1024));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _buildTestApp(
+        child: const OnboardingFlowScreen(initialStepId: 'permissions'),
+        locale: const Locale('en'),
+        size: const Size(390, 1024),
+      ),
+    );
+    await _pumpOnboardingReady(tester);
+
+    expect(find.text('Before we start...'), findsNothing);
+    expect(find.text('Continue'), findsWidgets);
+
+    await tester.tap(find.text('Continue').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Explore artworks'), findsOneWidget);
+    expect(find.text('Location access'), findsOneWidget);
+    expect(find.byIcon(Icons.notifications), findsNothing);
+    expect(find.byIcon(Icons.notifications_outlined), findsNothing);
+  });
+
+  testWidgets(
       'verification manual check keeps onboarding on verify step while pending',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(390, 1024));
@@ -232,7 +283,7 @@ void main() {
   });
 
   testWidgets(
-      'verification auto-check on app resume advances when backend confirms',
+      'verification auto-check on app resume shows finish sign-in prompt after verify',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(390, 1024));
     addTearDown(() async => tester.binding.setSurfaceSize(null));
@@ -272,17 +323,43 @@ void main() {
     expect(find.text('I verified / Continue'), findsWidgets);
 
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
-    await _pumpUntilFound(tester, find.text('Choose what to enable'));
+    await _pumpUntilFound(tester, find.text('Sign in to finish'));
 
     expect(statusChecks, greaterThanOrEqualTo(2));
-    expect(find.text('I verified / Continue'), findsNothing);
+    expect(find.text('Sign in to finish'), findsOneWidget);
+    expect(find.text('Choose what to enable'), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets(
-      'dao application with missing fields shows warning and stays on role step',
+      'role step stores DAO draft locally and does not submit before onboarding completion',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(390, 1700));
     addTearDown(() async => tester.binding.setSurfaceSize(null));
+
+    var daoSubmitCount = 0;
+    _installBackendMock((request) async {
+      if (request.method == 'POST' && request.url.path == '/api/dao/reviews') {
+        daoSubmitCount += 1;
+        return http.Response(
+          jsonEncode(<String, dynamic>{'success': true}),
+          201,
+          headers: <String, String>{'content-type': 'application/json'},
+        );
+      }
+      if (request.url.path.startsWith('/api/dao/reviews/')) {
+        return http.Response(
+          jsonEncode(<String, dynamic>{'success': true, 'data': null}),
+          404,
+          headers: <String, String>{'content-type': 'application/json'},
+        );
+      }
+      return http.Response(
+        jsonEncode(<String, dynamic>{'success': true}),
+        200,
+        headers: <String, String>{'content-type': 'application/json'},
+      );
+    });
 
     await tester.pumpWidget(
       _buildTestApp(
@@ -296,24 +373,204 @@ void main() {
     expect(find.text('Pick your role'), findsOneWidget);
     await tester.tap(find.text('Artist / collective'));
     await tester.pumpAndSettle();
+    expect(find.text('Apply for DAO review'), findsNothing);
 
-    await tester.dragUntilVisible(
-      find.text('Apply for DAO review'),
-      find.byType(Scrollable).first,
-      const Offset(0, -180),
-    );
-    await tester.tap(find.text('Apply for DAO review'));
+    await tester.enterText(
+        find.byType(TextField).at(0), 'https://portfolio.test');
+    await tester.enterText(find.byType(TextField).at(1), 'Murals');
+    await tester.enterText(
+        find.byType(TextField).at(2), 'Community-led practice');
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 260));
 
-    expect(find.text('Please fill in all required fields'), findsOneWidget);
-    expect(find.text('Pick your role'), findsOneWidget);
-    expect(
-      find.ancestor(
-        of: find.text('Please fill in all required fields'),
-        matching: find.byType(LiquidGlassPanel),
+    await tester.tap(find.text('Save').last);
+    await tester.pumpAndSettle();
+
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('onboarding_dao_application_draft_v1'), isNotNull);
+    expect(daoSubmitCount, 0);
+  });
+
+  testWidgets('DAO draft submits once on completion and clears local draft',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+
+    BackendApiService().setAuthTokenForTesting('qa-auth-token');
+
+    var daoSubmitCount = 0;
+    final seenRequests = <String>[];
+    _installBackendMock((request) async {
+      seenRequests.add('${request.method} ${request.url.path}');
+      if (request.url.path.contains('/api/dao/reviews') &&
+          request.method.toUpperCase() == 'POST') {
+        daoSubmitCount += 1;
+        return http.Response(
+          jsonEncode(<String, dynamic>{
+            'success': true,
+            'data': <String, dynamic>{
+              'id': 'review-1',
+              'status': 'pending',
+            },
+          }),
+          201,
+          headers: <String, String>{'content-type': 'application/json'},
+        );
+      }
+      if (request.url.path.startsWith('/api/dao/reviews/')) {
+        return http.Response(
+          jsonEncode(<String, dynamic>{'success': true, 'data': null}),
+          404,
+          headers: <String, String>{'content-type': 'application/json'},
+        );
+      }
+      return http.Response(
+        jsonEncode(<String, dynamic>{'success': true}),
+        200,
+        headers: <String, String>{'content-type': 'application/json'},
+      );
+    });
+
+    await tester.pumpWidget(
+      _buildTestApp(
+        child: const OnboardingFlowScreen(initialStepId: 'role'),
+        locale: const Locale('en'),
+        profileProvider: _signedInProfileProvider(),
       ),
-      findsWidgets,
+    );
+    await _pumpOnboardingReady(tester);
+
+    await tester.tap(find.text('Artist / collective'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.byType(TextField).at(0), 'https://portfolio.test');
+    await tester.enterText(find.byType(TextField).at(1), 'Street art');
+    await tester.enterText(
+        find.byType(TextField).at(2), 'I create community murals.');
+    await tester.pump();
+    await tester.tap(find.text('Save').last);
+    await tester.pumpAndSettle();
+
+    final prefsBefore = await SharedPreferences.getInstance();
+    expect(
+      prefsBefore.getString('onboarding_dao_application_draft_v1'),
+      isNotNull,
+    );
+    expect(daoSubmitCount, 0);
+
+    for (var i = 0;
+        i < 6 && find.text('Get started').evaluate().isEmpty;
+        i += 1) {
+      final continueButtons = find.text('Continue');
+      if (continueButtons.evaluate().isNotEmpty) {
+        await tester.tap(continueButtons.last);
+      }
+      await tester.pumpAndSettle();
+    }
+
+    await _pumpUntilFound(tester, find.text('Get started'));
+    expect(find.text('Get started'), findsOneWidget);
+    await tester.tap(find.text('Get started').first);
+    await tester.pumpAndSettle();
+
+    final prefs = await SharedPreferences.getInstance();
+    expect(
+      seenRequests.any((request) => request.contains('/api/dao/reviews')),
+      isTrue,
+    );
+    expect(daoSubmitCount, 1);
+    expect(prefs.getString('onboarding_dao_application_draft_v1'), isNull);
+  });
+
+  testWidgets(
+      'DAO draft submission failure keeps local draft and surfaces retry feedback',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+
+    BackendApiService().setAuthTokenForTesting('qa-auth-token');
+
+    var daoSubmitCount = 0;
+    final seenRequests = <String>[];
+    _installBackendMock((request) async {
+      seenRequests.add('${request.method} ${request.url.path}');
+      if (request.url.path.contains('/api/dao/reviews') &&
+          request.method.toUpperCase() == 'POST') {
+        daoSubmitCount += 1;
+        return http.Response(
+          jsonEncode(<String, dynamic>{
+            'success': false,
+            'error': 'DAO temporarily unavailable',
+          }),
+          500,
+          headers: <String, String>{'content-type': 'application/json'},
+        );
+      }
+      if (request.url.path.startsWith('/api/dao/reviews/')) {
+        return http.Response(
+          jsonEncode(<String, dynamic>{'success': true, 'data': null}),
+          404,
+          headers: <String, String>{'content-type': 'application/json'},
+        );
+      }
+      return http.Response(
+        jsonEncode(<String, dynamic>{'success': true}),
+        200,
+        headers: <String, String>{'content-type': 'application/json'},
+      );
+    });
+
+    await tester.pumpWidget(
+      _buildTestApp(
+        child: const OnboardingFlowScreen(initialStepId: 'role'),
+        locale: const Locale('en'),
+        profileProvider: _signedInProfileProvider(),
+      ),
+    );
+    await _pumpOnboardingReady(tester);
+
+    await tester.tap(find.text('Artist / collective'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.byType(TextField).at(0), 'https://portfolio.test');
+    await tester.enterText(find.byType(TextField).at(1), 'Street art');
+    await tester.enterText(
+        find.byType(TextField).at(2), 'I create community murals.');
+    await tester.pump();
+    await tester.tap(find.text('Save').last);
+    await tester.pumpAndSettle();
+
+    final prefsBefore = await SharedPreferences.getInstance();
+    expect(
+      prefsBefore.getString('onboarding_dao_application_draft_v1'),
+      isNotNull,
+    );
+    expect(daoSubmitCount, 0);
+
+    for (var i = 0;
+        i < 6 && find.text('Get started').evaluate().isEmpty;
+        i += 1) {
+      final continueButtons = find.text('Continue');
+      if (continueButtons.evaluate().isNotEmpty) {
+        await tester.tap(continueButtons.last);
+      }
+      await tester.pumpAndSettle();
+    }
+
+    await _pumpUntilFound(tester, find.text('Get started'));
+    expect(find.text('Get started'), findsOneWidget);
+    await tester.tap(find.text('Get started').first);
+    await tester.pumpAndSettle();
+
+    final prefs = await SharedPreferences.getInstance();
+    expect(
+      seenRequests.any((request) => request.contains('/api/dao/reviews')),
+      isTrue,
+    );
+    expect(daoSubmitCount, 1);
+    expect(prefs.getString('onboarding_dao_application_draft_v1'), isNotNull);
+    expect(
+      find.textContaining('Draft kept locally so you can retry later.'),
+      findsOneWidget,
     );
   });
 
