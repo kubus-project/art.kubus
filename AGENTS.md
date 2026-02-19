@@ -5,6 +5,7 @@ Model compatibility: GPT-5.x Codex-compliant agents.
 Mission: keep the Flutter + Node.js stack stable while extending AR, Solana, OrbitDB, and storage features without breaking theme, feature flags, or fallbacks.
 
 Preflight: always review **all** `AGENTS.md` files in this repo (root, `lib/**`, `backend/**`) before making changes.
+Security handbook: `art.kubus-threat-model.md` is the living security baseline and hardening backlog.
 
 ---
 
@@ -351,9 +352,8 @@ Frontend (Flutter)
 - Avoid overlapping polling/timers; gate refresh loops on visibility/feature flags.
 
 Backend (Node)
-- Enforce conversation membership on all messaging routes.
-- Validate notification recipients (no cross-user creation without admin).
-- Do not allow unauthenticated access to achievements stats.
-- Require `JWT_SECRET` in non-dev environments; avoid default fallbacks.
 - Normalize marker ownership (`createdBy` vs wallet) consistently.
-- Analytics ingest should accept `text/plain` payloads and return 204 for filtered/ignored events.
+- Move auth challenge state from in-process memory to shared TTL storage for multi-instance deployments.
+- Add explicit schema/size limits and route-level rate limits for `/api/orbitdb/artworks` writes.
+- Deprecate dynamic `GET /api/upload/:identifier` retrieval in favor of static `/uploads/*` and/or opaque file IDs.
+- Keep alerting on repeated non-member socket joins, invalid upload identifiers, and challenge-cap trigger bursts.
