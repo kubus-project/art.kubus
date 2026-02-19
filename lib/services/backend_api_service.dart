@@ -1504,6 +1504,39 @@ class BackendApiService
     }
   }
 
+  /// Return email/password credential status for the authenticated account.
+  /// GET /api/auth/account-security-status
+  Future<Map<String, dynamic>> getAccountSecurityStatus() async {
+    try {
+      final uri = Uri.parse('$baseUrl/api/auth/account-security-status');
+      final response = await _get(
+        uri,
+        includeAuth: true,
+        headers: _getHeaders(),
+      );
+      if (response.statusCode == 200) {
+        final raw = jsonDecode(response.body) as Map<String, dynamic>;
+        final data = raw['data'] is Map<String, dynamic>
+            ? raw['data'] as Map<String, dynamic>
+            : raw;
+        return {
+          'hasEmail': data['hasEmail'] == true,
+          'hasPassword': data['hasPassword'] == true,
+          'emailAuthEnabled': data['emailAuthEnabled'] != false,
+        };
+      }
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: uri.path,
+        body: response.body,
+      );
+    } catch (e) {
+      AppConfig.debugPrint(
+          'BackendApiService.getAccountSecurityStatus failed: $e');
+      rethrow;
+    }
+  }
+
   /// Verify email
   /// POST /api/auth/verify-email { token }
   Future<Map<String, dynamic>> verifyEmail({required String token}) async {
