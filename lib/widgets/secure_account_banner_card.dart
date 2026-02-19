@@ -23,6 +23,8 @@ class SecureAccountBannerCard extends StatefulWidget {
 }
 
 class _SecureAccountBannerCardState extends State<SecureAccountBannerCard> {
+  static const Duration _statusCacheTtl = Duration(hours: 6);
+
   bool _loaded = false;
   bool _shouldShow = false;
 
@@ -32,40 +34,74 @@ class _SecureAccountBannerCardState extends State<SecureAccountBannerCard> {
     _load();
   }
 
-  String? _extractEmailClaim(String token) {
-    final trimmed = token.trim();
-    if (trimmed.isEmpty) return null;
-    try {
-      final parts = trimmed.split('.');
-      if (parts.length < 2) return null;
-      final payload = base64Url.normalize(parts[1]);
-      final decoded = utf8.decode(base64Url.decode(payload));
-      final parsed = jsonDecode(decoded);
-      if (parsed is Map<String, dynamic>) {
-        final raw = parsed['email'];
-        if (raw is String && raw.trim().isNotEmpty) return raw.trim();
-      }
-    } catch (_) {
-      // Ignore parse failures.
-    }
-    return null;
-  }
-
-  Future<void> _load() async {
+  Future<void> _load({bool forceRefresh = false}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final dismissed =
           prefs.getBool(PreferenceKeys.secureAccountPromptDismissedV1) ?? false;
       final storedEmail =
           (prefs.getString(PreferenceKeys.secureAccountEmail) ?? '').trim();
-      final tokenEmail =
-          _extractEmailClaim((BackendApiService().getAuthToken() ?? '').trim());
+      var hasEmail = false;
+      var hasPassword = false;
+      var emailAuthEnabled = true;
+      var loadedFromCache = false;
 
-      final hasEmail = storedEmail.isNotEmpty || (tokenEmail?.isNotEmpty ?? false);
+      final cachedRaw =
+          (prefs.getString(PreferenceKeys.secureAccountStatusCacheV1) ?? '').trim();
+      final cachedTs =
+          prefs.getInt(PreferenceKeys.secureAccountStatusCacheTsV1) ?? 0;
+      final nowMs = DateTime.now().millisecondsSinceEpoch;
+
+      if (!forceRefresh && cachedRaw.isNotEmpty && cachedTs > 0) {
+        final cacheAgeMs = nowMs - cachedTs;
+        if (cacheAgeMs >= 0 && cacheAgeMs <= _statusCacheTtl.inMilliseconds) {
+          try {
+            final decoded = jsonDecode(cachedRaw);
+            if (decoded is Map<String, dynamic>) {
+              hasEmail = decoded['hasEmail'] == true;
+              hasPassword = decoded['hasPassword'] == true;
+              emailAuthEnabled = decoded['emailAuthEnabled'] != false;
+              loadedFromCache = true;
+            }
+          } catch (_) {
+            // Ignore malformed cache and continue with live fetch.
+          }
+        }
+      }
+
+      if (!loadedFromCache) {
+        try {
+          final status = await BackendApiService().getAccountSecurityStatus();
+          hasEmail = status['hasEmail'] == true;
+          hasPassword = status['hasPassword'] == true;
+          emailAuthEnabled = status['emailAuthEnabled'] != false;
+
+          await prefs.setString(
+            PreferenceKeys.secureAccountStatusCacheV1,
+            jsonEncode({
+              'hasEmail': hasEmail,
+              'hasPassword': hasPassword,
+              'emailAuthEnabled': emailAuthEnabled,
+            }),
+          );
+          await prefs.setInt(
+            PreferenceKeys.secureAccountStatusCacheTsV1,
+            nowMs,
+          );
+        } catch (_) {
+          final tokenEmail =
+              (BackendApiService().getCurrentAuthEmail() ?? '').trim();
+          hasEmail = storedEmail.isNotEmpty || tokenEmail.isNotEmpty;
+          // Legacy backend fallback: if we can only infer email, assume password is set too.
+          hasPassword = hasEmail;
+        }
+      }
+
       if (!mounted) return;
       setState(() {
         _loaded = true;
-        _shouldShow = !dismissed && !hasEmail;
+        _shouldShow =
+            emailAuthEnabled && !dismissed && !(hasEmail && hasPassword);
       });
     } catch (_) {
       if (!mounted) return;
@@ -85,8 +121,10 @@ class _SecureAccountBannerCardState extends State<SecureAccountBannerCard> {
     setState(() => _shouldShow = false);
   }
 
-  void _openSecureAccount() {
-    Navigator.of(context).pushNamed('/secure-account');
+  Future<void> _openSecureAccount() async {
+    await Navigator.of(context).pushNamed('/secure-account');
+    if (!mounted) return;
+    await _load(forceRefresh: true);
   }
 
   @override

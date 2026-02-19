@@ -385,6 +385,10 @@ class PreferenceKeys {
       'secure_account_email_verified_v1';
   static const String secureAccountPromptDismissedV1 =
       'secure_account_prompt_dismissed_v1';
+    static const String secureAccountStatusCacheV1 =
+      'secure_account_status_cache_v1';
+    static const String secureAccountStatusCacheTsV1 =
+      'secure_account_status_cache_ts_v1';
   static const String walletAddress = 'wallet_address';
   /// User persona UX preference (stored per-wallet by ProfileProvider).
   static const String userPersona = 'user_persona';
