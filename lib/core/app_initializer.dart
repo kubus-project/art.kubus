@@ -153,7 +153,25 @@ class _AppInitializerState extends State<AppInitializer> {
           Provider.of<WalletProvider>(context, listen: false);
       await _safeStep<void>('wallet.initialize', walletProvider.initialize,
           timeout: const Duration(seconds: 8));
-      final walletAddress = walletProvider.currentWalletAddress;
+      String? walletAddress = walletProvider.currentWalletAddress;
+      final sessionWalletAddress =
+          (BackendApiService().getCurrentAuthWalletAddress() ?? '').trim();
+      if (sessionWalletAddress.isNotEmpty) {
+        if (sessionWalletAddress != (walletAddress ?? '').trim()) {
+          try {
+            await walletProvider
+                .connectWalletWithAddress(sessionWalletAddress)
+                .timeout(const Duration(seconds: 8));
+          } catch (e) {
+            AppConfig.debugPrint(
+                'AppInitializer: wallet sync to authenticated session failed: $e');
+          }
+        }
+        walletAddress = sessionWalletAddress;
+      }
+      walletAddress = walletAddress?.trim().isNotEmpty == true
+          ? walletAddress!.trim()
+          : null;
       if (!mounted) return;
 
       // Sync Web3Provider with WalletProvider if wallet was restored

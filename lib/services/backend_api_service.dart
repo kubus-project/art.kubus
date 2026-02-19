@@ -1737,6 +1737,37 @@ class BackendApiService
   @override
   String? getAuthToken() => _authToken;
 
+  /// Returns decoded JWT claims for the current in-memory auth token.
+  /// Returns null when token is missing or malformed.
+  Map<String, dynamic>? getCurrentAuthTokenClaims() {
+    final token = (_authToken ?? '').trim();
+    if (token.isEmpty) return null;
+    return _tryDecodeJwtPayload(token);
+  }
+
+  /// Returns normalized email claim from current auth token, if present.
+  String? getCurrentAuthEmail() {
+    final claims = getCurrentAuthTokenClaims();
+    if (claims == null) return null;
+    final email =
+        (claims['email'] ?? claims['emailAddress'] ?? '').toString().trim();
+    return email.isEmpty ? null : email.toLowerCase();
+  }
+
+  /// Returns wallet claim from current auth token, if present.
+  /// This only reads explicit wallet claims and intentionally ignores `id/sub`.
+  String? getCurrentAuthWalletAddress() {
+    final claims = getCurrentAuthTokenClaims();
+    if (claims == null) return null;
+    final wallet = (claims['walletAddress'] ??
+            claims['wallet_address'] ??
+            claims['wallet'] ??
+            '')
+        .toString()
+        .trim();
+    return wallet.isEmpty ? null : wallet;
+  }
+
   /// Get current authenticated profile
   /// GET /api/profiles/me
   Future<Map<String, dynamic>> getMyProfile() async {
