@@ -32,7 +32,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 enum _OnboardingStep {
   welcome,
@@ -128,15 +127,11 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   static const String _daoDraftKey = 'onboarding_dao_application_draft_v1';
   static const String _verificationEmailDraftKey =
       'onboarding_verification_email_v3';
-  static const String _verificationPasswordSecureKey =
-      'onboarding_verification_password_v3';
-  static const AndroidOptions _secureStorageAndroidOptions = AndroidOptions(
-    encryptedSharedPreferences: true,
-    resetOnError: true,
-  );
-  static const IOSOptions _secureStorageIOSOptions = IOSOptions(
-    accessibility: KeychainAccessibility.first_unlock_this_device,
-  );
+  static const String _verificationPendingFlagKey =
+      'onboarding_pending_email_verification_v1';
+  static const String _verificationSignupMethodKey =
+      'onboarding_pending_signup_method_v1';
+  static const String _emailSignupMethod = 'email';
   static const Duration _verificationPollInterval = Duration(seconds: 4);
   static const Duration _verificationPollMaxDuration = Duration(seconds: 75);
 
@@ -158,8 +153,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   bool _isLoadingArtists = false;
   bool _isSkippingFlow = false;
   bool _isSignedIn = false;
+  bool _pendingEmailVerification = false;
   String? _pendingVerificationEmail;
-  String? _pendingVerificationPassword;
+  String _pendingVerificationSignupMethod = _emailSignupMethod;
   String? _permissionHint;
   Permission? _permissionHintPermission;
   UserPersona? _selectedPersona;
@@ -175,7 +171,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   bool _verificationPollInFlight = false;
   bool _emailVerifiedConfirmed = false;
   bool _autoAdvancingVerification = false;
-  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+  bool _finishSignInPromptShown = false;
+  bool _verifiedSigningInMessageShown = false;
 
   _StepPalette _paletteForStep(_OnboardingStep step) {
     switch (step) {
@@ -337,7 +334,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
       final prefs = await SharedPreferences.getInstance();
       _hydrateLocalDrafts(prefs);
-      await _restorePendingVerificationSecret();
       _steps = _buildSteps();
       final progress = await OnboardingStateService.loadFlowProgress(
         prefs: prefs,
@@ -410,81 +406,27 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     }
   }
 
-  Future<void> _restorePendingVerificationSecret() async {
-    if (kIsWeb) return;
-    try {
-      final restored = (await _secureStorage
-                  .read(
-                    key: _verificationPasswordSecureKey,
-                    aOptions: _secureStorageAndroidOptions,
-                    iOptions: _secureStorageIOSOptions,
-                  )
-                  .timeout(
-                    const Duration(milliseconds: 800),
-                    onTimeout: () => null,
-                  ) ??
-              '')
-          .trim();
-      final pendingEmail = (_pendingVerificationEmail ?? '').trim();
-      if (pendingEmail.isEmpty) {
-        await _secureStorage
-            .delete(
-              key: _verificationPasswordSecureKey,
-              aOptions: _secureStorageAndroidOptions,
-              iOptions: _secureStorageIOSOptions,
-            )
-            .timeout(const Duration(milliseconds: 800));
-        _pendingVerificationPassword = null;
-        return;
-      }
-      _pendingVerificationPassword = restored.isEmpty ? null : restored;
-    } catch (_) {
-      _pendingVerificationPassword = null;
-    }
+  void _setPendingEmailVerification(
+    String email, {
+    String signupMethod = _emailSignupMethod,
+  }) {
+    final normalizedEmail = email.trim();
+    if (normalizedEmail.isEmpty) return;
+    _pendingVerificationEmail = normalizedEmail;
+    _pendingEmailVerification = true;
+    _pendingVerificationSignupMethod = signupMethod;
+    _emailVerifiedConfirmed = false;
+    _finishSignInPromptShown = false;
+    _verifiedSigningInMessageShown = false;
   }
 
-  Future<void> _persistPendingVerificationSecret() async {
-    if (kIsWeb) return;
-    final pendingPassword = (_pendingVerificationPassword ?? '').trim();
-    try {
-      if (pendingPassword.isEmpty) {
-        await _secureStorage
-            .delete(
-              key: _verificationPasswordSecureKey,
-              aOptions: _secureStorageAndroidOptions,
-              iOptions: _secureStorageIOSOptions,
-            )
-            .timeout(const Duration(milliseconds: 800));
-        return;
-      }
-      await _secureStorage
-          .write(
-            key: _verificationPasswordSecureKey,
-            value: pendingPassword,
-            aOptions: _secureStorageAndroidOptions,
-            iOptions: _secureStorageIOSOptions,
-          )
-          .timeout(const Duration(milliseconds: 800));
-    } catch (_) {}
-  }
-
-  Future<void> _clearPendingVerificationSecret({
-    bool clearEmail = false,
-  }) async {
-    _pendingVerificationPassword = null;
-    if (clearEmail) {
-      _pendingVerificationEmail = null;
-    }
-    if (kIsWeb) return;
-    try {
-      await _secureStorage
-          .delete(
-            key: _verificationPasswordSecureKey,
-            aOptions: _secureStorageAndroidOptions,
-            iOptions: _secureStorageIOSOptions,
-          )
-          .timeout(const Duration(milliseconds: 800));
-    } catch (_) {}
+  void _clearPendingEmailVerificationState() {
+    _pendingVerificationEmail = null;
+    _pendingEmailVerification = false;
+    _pendingVerificationSignupMethod = _emailSignupMethod;
+    _emailVerifiedConfirmed = false;
+    _finishSignInPromptShown = false;
+    _verifiedSigningInMessageShown = false;
   }
 
   void _hydrateLocalDrafts(SharedPreferences prefs) {
@@ -527,8 +469,29 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
     final pendingEmail =
         (prefs.getString(_verificationEmailDraftKey) ?? '').trim();
+    final pendingFlag = prefs.getBool(_verificationPendingFlagKey) ?? false;
+    final pendingMethod =
+        (prefs.getString(_verificationSignupMethodKey) ?? _emailSignupMethod)
+            .trim();
+    _pendingVerificationSignupMethod = pendingMethod.isEmpty
+        ? _emailSignupMethod
+        : pendingMethod;
+
     if (pendingEmail.isNotEmpty) {
-      _pendingVerificationEmail = pendingEmail;
+      // Legacy migration: old builds persisted only email; treat it as pending.
+      _setPendingEmailVerification(
+        pendingEmail,
+        signupMethod: _pendingVerificationSignupMethod,
+      );
+    } else {
+      _pendingEmailVerification = pendingFlag;
+      if (!_pendingEmailVerification) {
+        _pendingVerificationEmail = null;
+      }
+    }
+
+    if ((_pendingVerificationEmail ?? '').trim().isEmpty) {
+      _pendingEmailVerification = false;
     }
   }
 
@@ -558,6 +521,52 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     } else {
       await prefs.setString(_verificationEmailDraftKey, pendingEmail);
     }
+    await prefs.setBool(_verificationPendingFlagKey, _pendingEmailVerification);
+    if (_pendingVerificationSignupMethod.trim().isEmpty) {
+      await prefs.remove(_verificationSignupMethodKey);
+    } else {
+      await prefs.setString(
+        _verificationSignupMethodKey,
+        _pendingVerificationSignupMethod,
+      );
+    }
+  }
+
+  String _currentSessionEmailLower() {
+    return (BackendApiService().getCurrentAuthEmail() ?? '').trim().toLowerCase();
+  }
+
+  String _currentSessionWalletAddress() {
+    return (BackendApiService().getCurrentAuthWalletAddress() ?? '').trim();
+  }
+
+  bool _sessionMatchesPendingVerificationEmail() {
+    if (!_pendingEmailVerification) return true;
+    final pending = (_pendingVerificationEmail ?? '').trim().toLowerCase();
+    if (pending.isEmpty) return false;
+    final sessionEmail = _currentSessionEmailLower();
+    if (sessionEmail.isEmpty) return false;
+    return sessionEmail == pending;
+  }
+
+  Future<void> _refreshProfileForCurrentSessionWallet() async {
+    final wallet = _currentSessionWalletAddress();
+    if (wallet.isEmpty) return;
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    await profileProvider.loadProfile(wallet);
+    _refreshAuthDerivedSteps();
+  }
+
+  void _showVerificationSnack(
+    String message, {
+    KubusSnackBarTone tone = KubusSnackBarTone.neutral,
+  }) {
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showKubusSnackBar(
+      SnackBar(content: Text(message)),
+      tone: tone,
+    );
   }
 
   Future<void> _refreshDaoReview() async {
@@ -617,6 +626,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   }
 
   bool get _verificationRequired =>
+      _pendingEmailVerification &&
       (_pendingVerificationEmail ?? '').trim().isNotEmpty;
 
   bool _isPermissionRelatedStep(_OnboardingStep step) {
@@ -859,19 +869,31 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         });
       }
 
-      if (!verified || _autoAdvancingVerification) return;
+      if (!verified) {
+        _finishSignInPromptShown = false;
+        _verifiedSigningInMessageShown = false;
+        return;
+      }
 
-      final password = (_pendingVerificationPassword ?? '').trim();
-      if (!_isSignedIn && password.isNotEmpty) {
-        try {
-          final loginResult = await BackendApiService().loginWithEmail(
-            email: email,
-            password: password,
+      if (_autoAdvancingVerification) return;
+
+      if (!_sessionMatchesPendingVerificationEmail()) {
+        if (!_finishSignInPromptShown) {
+          _finishSignInPromptShown = true;
+          _showVerificationSnack(
+            'Verified - please enter password to finish signing in',
+            tone: KubusSnackBarTone.warning,
           );
-          await _handleEmbeddedSignInSuccess(loginResult);
-        } catch (_) {
-          return;
         }
+        return;
+      }
+
+      if (!_verifiedSigningInMessageShown) {
+        _verifiedSigningInMessageShown = true;
+        _showVerificationSnack(
+          'Verified - signing you in...',
+          tone: KubusSnackBarTone.neutral,
+        );
       }
 
       if (!mounted) return;
@@ -1205,8 +1227,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   }
 
   Future<void> _handleEmbeddedVerificationRequired(String email) async {
-    _pendingVerificationEmail = email.trim();
-    _emailVerifiedConfirmed = false;
+    _setPendingEmailVerification(email);
+    await _persistLocalDrafts();
     _refreshAuthDerivedSteps();
     await _refreshDaoReview();
     if (!mounted) return;
@@ -1221,19 +1243,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   Future<void> _handleEmbeddedEmailRegistrationAttempted(String email) async {
     if (!mounted) return;
     setState(() {
-      _pendingVerificationEmail = email.trim();
-      _emailVerifiedConfirmed = false;
+      _setPendingEmailVerification(email);
     });
-    await _persistLocalDrafts();
-    _syncStepSideEffects();
-  }
-
-  Future<void> _handleEmbeddedEmailCredentialsCaptured(
-      String email, String password) async {
-    _pendingVerificationEmail = email.trim();
-    _pendingVerificationPassword = password;
-    _emailVerifiedConfirmed = false;
-    await _persistPendingVerificationSecret();
     await _persistLocalDrafts();
     _syncStepSideEffects();
   }
@@ -1249,14 +1260,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     String email, {
     required bool completeAccountStep,
   }) async {
-    final normalizedEmail = email.trim();
-    final previousPendingEmail = (_pendingVerificationEmail ?? '').trim();
-    if (previousPendingEmail.isNotEmpty &&
-        previousPendingEmail.toLowerCase() != normalizedEmail.toLowerCase()) {
-      await _clearPendingVerificationSecret();
-    }
-    _pendingVerificationEmail = normalizedEmail;
-    _emailVerifiedConfirmed = false;
+    _setPendingEmailVerification(email);
     await _persistLocalDrafts();
     _refreshAuthDerivedSteps();
     await _jumpToVerifyStep();
@@ -1272,15 +1276,28 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     final signedInEmail = (user['email'] ?? '').toString().trim().toLowerCase();
     final pendingEmail = (_pendingVerificationEmail ?? '').trim().toLowerCase();
     var shouldPersistDrafts = false;
-    if (pendingEmail.isNotEmpty &&
-        (signedInEmail.isEmpty || signedInEmail == pendingEmail)) {
-      await _clearPendingVerificationSecret(clearEmail: true);
+    if (pendingEmail.isNotEmpty && signedInEmail == pendingEmail) {
+      _clearPendingEmailVerificationState();
       shouldPersistDrafts = true;
-    } else if (pendingEmail.isEmpty) {
-      _pendingVerificationEmail = null;
+    } else if (pendingEmail.isNotEmpty) {
+      _finishSignInPromptShown = false;
+      _showVerificationSnack(
+        'Sign-in used a different account. Use $pendingEmail to finish verification.',
+        tone: KubusSnackBarTone.warning,
+      );
+      _refreshAuthDerivedSteps();
+      await _persistLocalDrafts();
+      if (mounted) {
+        await _jumpToVerifyStep();
+      }
+      return;
     }
-    await _clearPendingVerificationSecret();
     _refreshAuthDerivedSteps();
+    try {
+      await _refreshProfileForCurrentSessionWallet();
+    } catch (_) {
+      // Keep onboarding resilient; verification flow will retry profile sync.
+    }
     if (shouldPersistDrafts) {
       await _persistLocalDrafts();
     }
@@ -1344,24 +1361,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     final l10n = AppLocalizations.of(context)!;
     _refreshAuthDerivedSteps();
 
-    final pendingEmail = (_pendingVerificationEmail ?? '').trim();
-    final pendingPassword = (_pendingVerificationPassword ?? '').trim();
-
-    if (_verificationRequired &&
-        !_isSignedIn &&
-        pendingEmail.isNotEmpty &&
-        pendingPassword.isNotEmpty) {
-      try {
-        final loginResult = await BackendApiService().loginWithEmail(
-          email: pendingEmail,
-          password: pendingPassword,
-        );
-        await _handleEmbeddedSignInSuccess(loginResult);
-      } catch (_) {
-        // Still waiting on verification; continue with fallback checks below.
-      }
-    }
-
     if (_verificationRequired) {
       var verified = _emailVerifiedConfirmed;
       final emailToCheck = (_pendingVerificationEmail ?? '').trim();
@@ -1391,13 +1390,62 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         return;
       }
 
-      if (_isSignedIn) {
-        await BackendApiService().refreshAuthTokenFromStorage();
-        _refreshAuthDerivedSteps();
+      if (!_sessionMatchesPendingVerificationEmail()) {
+        _finishSignInPromptShown = true;
+        messenger.showKubusSnackBar(
+          const SnackBar(
+            content:
+                Text('Verified - please enter password to finish signing in'),
+          ),
+          tone: KubusSnackBarTone.warning,
+        );
+        return;
       }
 
-      await _clearPendingVerificationSecret(clearEmail: true);
+      if (!_verifiedSigningInMessageShown) {
+        _verifiedSigningInMessageShown = true;
+        messenger.showKubusSnackBar(
+          const SnackBar(content: Text('Verified - signing you in...')),
+          tone: KubusSnackBarTone.neutral,
+        );
+      }
+
+      await BackendApiService().refreshAuthTokenFromStorage();
+      try {
+        await _refreshProfileForCurrentSessionWallet();
+      } catch (error) {
+        if (kDebugMode) {
+          debugPrint(
+              'OnboardingFlowScreen._confirmVerificationAndContinue profile refresh failed: $error');
+        }
+        messenger.showKubusSnackBar(
+          const SnackBar(
+            content: Text(
+              'Signed in, but profile refresh is still syncing. Please continue.',
+            ),
+          ),
+          tone: KubusSnackBarTone.warning,
+        );
+      }
+
+      if (!_sessionMatchesPendingVerificationEmail()) {
+        messenger.showKubusSnackBar(
+          const SnackBar(
+            content: Text(
+              'Sign-in session mismatch. Please sign in with your verified email.',
+            ),
+          ),
+          tone: KubusSnackBarTone.error,
+        );
+        return;
+      }
+
+      _clearPendingEmailVerificationState();
       await _persistLocalDrafts();
+      messenger.showKubusSnackBar(
+        const SnackBar(content: Text('Verified account signed in successfully.')),
+        tone: KubusSnackBarTone.success,
+      );
     }
 
     if (!mounted) return;
@@ -1636,7 +1684,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
     final api = BackendApiService();
-    await _clearPendingVerificationSecret(clearEmail: true);
+    _clearPendingEmailVerificationState();
+    await _persistLocalDrafts();
     await api.refreshAuthTokenFromStorage();
     _refreshAuthDerivedSteps();
 
@@ -1644,9 +1693,11 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       final authToken = (api.getAuthToken() ?? '').trim();
       if (authToken.isNotEmpty) {
         final prefs = await SharedPreferences.getInstance();
-        final storedWallet = (prefs.getString('wallet_address') ??
-                prefs.getString('walletAddress') ??
-                '')
+        final storedWallet = (_currentSessionWalletAddress().isNotEmpty
+                ? _currentSessionWalletAddress()
+                : (prefs.getString('wallet_address') ??
+                    prefs.getString('walletAddress') ??
+                    ''))
             .trim();
         if (storedWallet.isNotEmpty) {
           try {
@@ -1686,7 +1737,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     setState(() => _isSkippingFlow = true);
 
     try {
-      await _clearPendingVerificationSecret(clearEmail: true);
+      _clearPendingEmailVerificationState();
       await _persistLocalDrafts();
       final prefs = await SharedPreferences.getInstance();
       await OnboardingStateService.markCompleted(prefs: prefs);
@@ -2000,7 +2051,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           onAuthCompleted: _handleEmbeddedRegistrationSuccess,
           onEmailRegistrationAttempted:
               _handleEmbeddedEmailRegistrationAttempted,
-          onEmailCredentialsCaptured: _handleEmbeddedEmailCredentialsCaptured,
           onVerificationRequired: _handleEmbeddedVerificationRequired,
         );
       case _OnboardingStep.profile:
@@ -2117,6 +2167,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           email: _pendingVerificationEmail,
           isVerified: _emailVerifiedConfirmed,
           isSignedIn: _isSignedIn,
+          requiresFinishSignIn: _verificationRequired &&
+              _emailVerifiedConfirmed &&
+              !_sessionMatchesPendingVerificationEmail(),
           isRefreshingVerification:
               _verificationPollInFlight || _autoAdvancingVerification,
           onRefreshVerification: _handleManualVerificationRefresh,
@@ -2526,7 +2579,6 @@ class _AccountStep extends StatelessWidget {
     required this.onVerifyEmail,
     required this.onAuthCompleted,
     required this.onEmailRegistrationAttempted,
-    required this.onEmailCredentialsCaptured,
     required this.onVerificationRequired,
   });
 
@@ -2536,8 +2588,6 @@ class _AccountStep extends StatelessWidget {
   final Future<void> Function() onVerifyEmail;
   final Future<void> Function() onAuthCompleted;
   final Future<void> Function(String email) onEmailRegistrationAttempted;
-  final Future<void> Function(String email, String password)
-      onEmailCredentialsCaptured;
   final Future<void> Function(String email) onVerificationRequired;
 
   @override
@@ -2575,9 +2625,6 @@ class _AccountStep extends StatelessWidget {
                 prepareProvisionalProfileBeforeRegister: false,
                 onEmailRegistrationAttempted: (email) =>
                     unawaited(onEmailRegistrationAttempted(email)),
-                onEmailCredentialsCaptured: (email, password) async {
-                  await onEmailCredentialsCaptured(email, password);
-                },
                 onVerificationRequired: onVerificationRequired,
                 onSwitchToSignIn: onVerifyEmail,
               ),
@@ -3028,6 +3075,7 @@ class _VerifyEmailStep extends StatelessWidget {
     required this.email,
     required this.isVerified,
     required this.isSignedIn,
+    required this.requiresFinishSignIn,
     required this.isRefreshingVerification,
     required this.onRefreshVerification,
     required this.onAuthSuccess,
@@ -3039,6 +3087,7 @@ class _VerifyEmailStep extends StatelessWidget {
   final String? email;
   final bool isVerified;
   final bool isSignedIn;
+  final bool requiresFinishSignIn;
   final bool isRefreshingVerification;
   final Future<void> Function() onRefreshVerification;
   final Future<void> Function(Map<String, dynamic>) onAuthSuccess;
@@ -3049,7 +3098,9 @@ class _VerifyEmailStep extends StatelessWidget {
     final normalizedEmail = (email ?? '').trim();
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxHeight < 260 && !isSignedIn) {
+        if (constraints.maxHeight < 260 &&
+            !isSignedIn &&
+            !requiresFinishSignIn) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -3077,6 +3128,7 @@ class _VerifyEmailStep extends StatelessWidget {
           email: normalizedEmail,
           isVerified: isVerified,
           isSignedIn: isSignedIn,
+          requiresFinishSignIn: requiresFinishSignIn,
           isRefreshingVerification: isRefreshingVerification,
           onRefreshVerification: onRefreshVerification,
           onAuthSuccess: onAuthSuccess,
@@ -3094,6 +3146,7 @@ class _InlineVerificationPanel extends StatefulWidget {
     required this.email,
     required this.isVerified,
     required this.isSignedIn,
+    required this.requiresFinishSignIn,
     required this.isRefreshingVerification,
     required this.onRefreshVerification,
     required this.onAuthSuccess,
@@ -3105,6 +3158,7 @@ class _InlineVerificationPanel extends StatefulWidget {
   final String email;
   final bool isVerified;
   final bool isSignedIn;
+  final bool requiresFinishSignIn;
   final bool isRefreshingVerification;
   final Future<void> Function() onRefreshVerification;
   final Future<void> Function(Map<String, dynamic>) onAuthSuccess;
@@ -3230,6 +3284,28 @@ class _InlineVerificationPanelState extends State<_InlineVerificationPanel> {
           backgroundColor: scheme.secondary,
           foregroundColor: scheme.onSecondary,
         ),
+        if (widget.requiresFinishSignIn && widget.email.isNotEmpty) ...[
+          const SizedBox(height: KubusSpacing.md),
+          Text(
+            'Sign in to finish',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: KubusSpacing.xs),
+          Text(
+            'Use your verified email and password to finish onboarding.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.78),
+                ),
+          ),
+          const SizedBox(height: KubusSpacing.sm),
+          _FinishVerificationSignInPanel(
+            email: widget.email,
+            onAuthSuccess: widget.onAuthSuccess,
+            onVerificationRequired: widget.onVerificationRequired,
+          ),
+        ],
         if ((_inlineMessage ?? '').trim().isNotEmpty) ...[
           const SizedBox(height: KubusSpacing.sm),
           Text(
@@ -3241,6 +3317,157 @@ class _InlineVerificationPanelState extends State<_InlineVerificationPanel> {
         ],
         const Spacer(),
       ],
+    );
+  }
+}
+
+class _FinishVerificationSignInPanel extends StatefulWidget {
+  const _FinishVerificationSignInPanel({
+    required this.email,
+    required this.onAuthSuccess,
+    required this.onVerificationRequired,
+  });
+
+  final String email;
+  final Future<void> Function(Map<String, dynamic>) onAuthSuccess;
+  final Future<void> Function(String email) onVerificationRequired;
+
+  @override
+  State<_FinishVerificationSignInPanel> createState() =>
+      _FinishVerificationSignInPanelState();
+}
+
+class _FinishVerificationSignInPanelState
+    extends State<_FinishVerificationSignInPanel> {
+  final TextEditingController _passwordController = TextEditingController();
+  bool _submitting = false;
+  String? _inlineError;
+
+  @override
+  void dispose() {
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_submitting) return;
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final password = _passwordController.text;
+    if (password.length < 8) {
+      setState(() {
+        _inlineError = l10n.authEnterValidEmailPassword;
+      });
+      return;
+    }
+
+    setState(() {
+      _submitting = true;
+      _inlineError = null;
+    });
+    try {
+      final result = await BackendApiService().loginWithEmail(
+        email: widget.email,
+        password: password,
+      );
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        const SnackBar(content: Text('Signed in. Finishing onboarding...')),
+        tone: KubusSnackBarTone.success,
+      );
+      await widget.onAuthSuccess(result);
+    } on BackendApiRequestException catch (error) {
+      if (!mounted) return;
+      var requiresVerification = false;
+      if (error.statusCode == 403) {
+        try {
+          final decoded = jsonDecode((error.body ?? '').trim());
+          if (decoded is Map<String, dynamic>) {
+            requiresVerification = decoded['requiresEmailVerification'] == true;
+          }
+        } catch (_) {
+          requiresVerification = false;
+        }
+      }
+      if (requiresVerification) {
+        await widget.onVerificationRequired(widget.email);
+        if (!mounted) return;
+        setState(() {
+          _inlineError = l10n.authEmailNotVerifiedToast;
+        });
+        return;
+      }
+      setState(() {
+        _inlineError = l10n.authEmailSignInFailed;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _inlineError = l10n.authEmailSignInFailed;
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _submitting = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(KubusSpacing.sm),
+      decoration: BoxDecoration(
+        color: scheme.surface.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: scheme.outline.withValues(alpha: 0.24),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            widget.email,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+          const SizedBox(height: KubusSpacing.sm),
+          TextField(
+            controller: _passwordController,
+            obscureText: true,
+            enableSuggestions: false,
+            autocorrect: false,
+            decoration: InputDecoration(
+              labelText: l10n.commonPassword,
+              border: const OutlineInputBorder(),
+            ),
+          ),
+          if ((_inlineError ?? '').trim().isNotEmpty) ...[
+            const SizedBox(height: KubusSpacing.xs),
+            Text(
+              _inlineError!,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.error,
+                  ),
+            ),
+          ],
+          const SizedBox(height: KubusSpacing.sm),
+          KubusButton(
+            onPressed: _submitting ? null : _submit,
+            isLoading: _submitting,
+            label: l10n.commonSignIn,
+            isFullWidth: true,
+            backgroundColor: scheme.primary,
+            foregroundColor: scheme.onPrimary,
+          ),
+        ],
+      ),
     );
   }
 }

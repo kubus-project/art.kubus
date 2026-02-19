@@ -158,7 +158,7 @@ class _SignInScreenState extends State<SignInScreen> {
   Future<void> _handleAuthSuccess(Map<String, dynamic> payload) async {
     final l10n = AppLocalizations.of(context)!;
     final redirectRoute = widget.redirectRoute?.trim();
-    final isModalReauth = widget.onAuthSuccess != null;
+    final isModalReauth = widget.onAuthSuccess != null && !widget.embedded;
     final navigator = Navigator.of(context);
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final gate = Provider.of<SecurityGateProvider>(context, listen: false);
