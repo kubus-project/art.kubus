@@ -29,6 +29,7 @@ import '../../widgets/kubus_card.dart';
 import '../../widgets/glass_components.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
+import '../../utils/keyboard_inset_resolver.dart';
 import '../web3/wallet/connectwallet_screen.dart';
 import '../desktop/auth/desktop_auth_shell.dart';
 import '../desktop/desktop_shell.dart';
@@ -655,8 +656,7 @@ class _SignInScreenState extends State<SignInScreen> {
     final isDesktop =
         MediaQuery.of(context).size.width >= DesktopBreakpoints.medium;
     final compactMobile = !isDesktop &&
-        (MediaQuery.of(context).size.height < 860 ||
-            MediaQuery.viewInsetsOf(context).bottom > 0);
+        MediaQuery.of(context).size.height < 860;
 
     final form = _buildAuthForm(
       colorScheme: colorScheme,
@@ -831,21 +831,26 @@ class _SignInScreenState extends State<SignInScreen> {
             top: false,
             child: LayoutBuilder(
               builder: (BuildContext context, BoxConstraints constraints) {
-                final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
-                return AnimatedPadding(
-                  duration: const Duration(milliseconds: 180),
-                  curve: Curves.easeOut,
-                  padding: EdgeInsets.only(
-                    bottom: keyboardInset > 140 ? 140 : keyboardInset,
-                  ),
-                  child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    child: Column(
-                      children: [
-                        const SizedBox(height: kToolbarHeight + 12),
-                        Expanded(
-                          child: Center(
+                final keyboardLift = KeyboardInsetResolver.effectiveBottomInset(
+                  context,
+                  maxInset: 140,
+                );
+                return Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: kToolbarHeight + 12),
+                      Expanded(
+                        child: Center(
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            curve: Curves.easeOut,
+                            transform: Matrix4.translationValues(
+                              0,
+                              -keyboardLift,
+                              0,
+                            ),
                             child: ConstrainedBox(
                               constraints: BoxConstraints(
                                 maxWidth: 520,
@@ -855,8 +860,8 @@ class _SignInScreenState extends State<SignInScreen> {
                             ),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 );
               },
