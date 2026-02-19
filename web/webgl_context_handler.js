@@ -157,6 +157,18 @@
     }
     lastContextLoss = now;
 
+    // Notify Flutter immediately on any unexpected context loss so the app can
+    // degrade map rendering gracefully while recovery is in-flight.
+    try {
+      window.dispatchEvent(new CustomEvent('kubus:webgl-lost', {
+        detail: {
+          type: 'context_lost',
+          count: contextLostCount,
+          timestamp: now
+        }
+      }));
+    } catch (_) { }
+
     // If we're losing context too frequently, something is seriously wrong
     if (contextLostCount > MAX_RECOVERY_ATTEMPTS) {
       debugLog('error', 'Excessive WebGL context losses - possible memory issue', {

@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../config/config.dart';
 import '../../utils/kubus_color_roles.dart';
+import '../../utils/keyboard_inset_resolver.dart';
 import '../../widgets/app_logo.dart';
 import '../../widgets/gradient_icon_card.dart';
 import '../../widgets/kubus_button.dart';
@@ -272,21 +273,27 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
             top: false,
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
-                final compact = constraints.maxHeight < 540 || keyboardInset > 0;
-                return AnimatedPadding(
-                  duration: const Duration(milliseconds: 180),
-                  curve: Curves.easeOut,
-                  padding: EdgeInsets.only(
-                    bottom: keyboardInset > 140 ? 140 : keyboardInset,
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    child: Column(
-                      children: [
-                        const SizedBox(height: kToolbarHeight + 12),
-                        Expanded(
-                          child: Center(
+                final keyboardLift = KeyboardInsetResolver.effectiveBottomInset(
+                  context,
+                  maxInset: 140,
+                );
+                final compact = constraints.maxHeight < 540;
+                return Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: kToolbarHeight + 12),
+                      Expanded(
+                        child: Center(
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            curve: Curves.easeOut,
+                            transform: Matrix4.translationValues(
+                              0,
+                              -keyboardLift,
+                              0,
+                            ),
                             child: ConstrainedBox(
                               constraints: const BoxConstraints(maxWidth: 520),
                               child: Column(
@@ -334,8 +341,8 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                             ),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 );
               },

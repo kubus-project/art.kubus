@@ -19,6 +19,7 @@ import 'package:art_kubus/services/onboarding_state_service.dart';
 import 'package:art_kubus/services/push_notification_service.dart';
 import 'package:art_kubus/services/telemetry/telemetry_service.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
+import 'package:art_kubus/utils/keyboard_inset_resolver.dart';
 import 'package:art_kubus/utils/media_url_resolver.dart';
 import 'package:art_kubus/widgets/auth_methods_panel.dart';
 import 'package:art_kubus/widgets/auth_title_row.dart';
@@ -2602,19 +2603,13 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         .contains('TestWidgetsFlutterBinding');
 
     if (_isInitializing) {
-      final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
       return AnimatedGradientBackground(
         animate: !isWidgetTestBinding,
         colors: [bgStart, bgMid, bgEnd, bgStart],
         intensity: 0.48,
         child: Scaffold(
           backgroundColor: Colors.transparent,
-          body: AnimatedPadding(
-            duration: const Duration(milliseconds: 180),
-            curve: Curves.easeOut,
-            padding: EdgeInsets.only(bottom: keyboardInset),
-            child: const Center(child: CircularProgressIndicator()),
-          ),
+          body: const Center(child: CircularProgressIndicator()),
         ),
       );
     }
@@ -2629,62 +2624,75 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         body: SafeArea(
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
-              final keyboardOpen = keyboardInset > 0;
+              final keyboardLift = KeyboardInsetResolver.effectiveBottomInset(
+                context,
+                maxInset: _isDesktop ? 0 : 180,
+              );
               final compactHeight = !_isDesktop && constraints.maxHeight < 760;
-              final compactLayout = keyboardOpen || compactHeight;
-              final hideProgress =
-                  !_isDesktop && constraints.maxHeight < 700 && keyboardOpen;
+              final compactLayout = compactHeight;
+              final hideProgress = !_isDesktop && constraints.maxHeight < 700;
 
-              return AnimatedPadding(
-                duration: const Duration(milliseconds: 180),
-                curve: Curves.easeOut,
-                padding: EdgeInsets.only(bottom: keyboardInset),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: _isDesktop
-                        ? KubusSpacing.lg
-                        : (compactLayout ? KubusSpacing.sm : KubusSpacing.md),
-                    vertical: compactLayout ? 8 : 10,
-                  ),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxWidth: _isDesktop ? 1280 : double.infinity,
-                      ),
-                      child: Column(
-                        children: [
-                          _buildHeader(
-                            l10n,
-                            scheme,
-                            localeProvider: localeProvider,
-                            themeProvider: themeProvider,
-                            compact: compactLayout,
-                          ),
+              return Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: _isDesktop
+                      ? KubusSpacing.lg
+                      : (compactLayout ? KubusSpacing.sm : KubusSpacing.md),
+                  vertical: compactLayout ? 8 : 10,
+                ),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: _isDesktop ? 1280 : double.infinity,
+                    ),
+                    child: Column(
+                      children: [
+                        _buildHeader(
+                          l10n,
+                          scheme,
+                          localeProvider: localeProvider,
+                          themeProvider: themeProvider,
+                          compact: compactLayout,
+                        ),
+                        SizedBox(
+                          height:
+                              compactLayout ? KubusSpacing.xs : KubusSpacing.sm,
+                        ),
+                        if (!hideProgress) ...[
+                          _buildProgress(scheme),
                           SizedBox(
-                            height: compactLayout
-                                ? KubusSpacing.xs
-                                : KubusSpacing.sm,
+                            height: compactLayout ? KubusSpacing.xs : 12,
                           ),
-                          if (!hideProgress) ...[
-                            _buildProgress(scheme),
-                            SizedBox(
-                              height: compactLayout ? KubusSpacing.xs : 12,
-                            ),
-                          ],
-                          Expanded(
-                            child: _isDesktop
-                                ? _buildDesktopContent(l10n, scheme)
-                                : _buildStepCard(l10n, scheme),
-                          ),
-                          SizedBox(
-                            height: compactLayout
-                                ? KubusSpacing.sm
-                                : KubusSpacing.md,
-                          ),
-                          _buildBottomActions(l10n, compact: compactLayout),
                         ],
-                      ),
+                        Expanded(
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            curve: Curves.easeOut,
+                            transform: Matrix4.translationValues(
+                              0,
+                              -keyboardLift,
+                              0,
+                            ),
+                            child: Column(
+                              children: [
+                                Expanded(
+                                  child: _isDesktop
+                                      ? _buildDesktopContent(l10n, scheme)
+                                      : _buildStepCard(l10n, scheme),
+                                ),
+                                SizedBox(
+                                  height: compactLayout
+                                      ? KubusSpacing.sm
+                                      : KubusSpacing.md,
+                                ),
+                                _buildBottomActions(
+                                  l10n,
+                                  compact: compactLayout,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),

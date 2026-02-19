@@ -20,11 +20,15 @@ bool prefersReducedMotion() {
 
 /// Initializes event listeners for WebGL context loss detection.
 ///
-/// When the JS layer dispatches `kubus:webgl-critical` or
+/// When the JS layer dispatches `kubus:webgl-lost`, `kubus:webgl-critical`, or
 /// `kubus:canvaskit-crash`, this helper sets [webGLContextHealthy] to false
 /// so that glass surfaces can switch to a tinted fallback.
 void initWebGLContextHelper() {
   // Listen for the custom events dispatched by webgl_context_handler.js
+  web.window.addEventListener(
+    'kubus:webgl-lost',
+    _onWebGLLost.toJS,
+  );
   web.window.addEventListener(
     'kubus:webgl-critical',
     _onWebGLCritical.toJS,
@@ -44,6 +48,10 @@ void initWebGLContextHelper() {
 }
 
 void _onWebGLCritical(web.Event event) {
+  webGLContextHealthy.value = false;
+}
+
+void _onWebGLLost(web.Event event) {
   webGLContextHealthy.value = false;
 }
 

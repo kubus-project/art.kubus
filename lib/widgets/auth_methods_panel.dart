@@ -16,6 +16,7 @@ import 'package:art_kubus/services/security/post_auth_security_setup_service.dar
 import 'package:art_kubus/services/telemetry/telemetry_service.dart';
 import 'package:art_kubus/utils/auth_password_policy.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
+import 'package:art_kubus/utils/keyboard_inset_resolver.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/widgets/app_logo.dart';
 import 'package:art_kubus/widgets/email_registration_form.dart';
@@ -738,21 +739,26 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
             top: false,
             child: LayoutBuilder(
               builder: (BuildContext context, BoxConstraints constraints) {
-                final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
-                return AnimatedPadding(
-                  duration: const Duration(milliseconds: 180),
-                  curve: Curves.easeOut,
-                  padding: EdgeInsets.only(
-                    bottom: keyboardInset > 140 ? 140 : keyboardInset,
-                  ),
-                  child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    child: Column(
-                      children: [
-                        const SizedBox(height: kToolbarHeight + 12),
-                        Expanded(
-                          child: Center(
+                final keyboardLift = KeyboardInsetResolver.effectiveBottomInset(
+                  context,
+                  maxInset: 140,
+                );
+                return Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: kToolbarHeight + 12),
+                      Expanded(
+                        child: Center(
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            curve: Curves.easeOut,
+                            transform: Matrix4.translationValues(
+                              0,
+                              -keyboardLift,
+                              0,
+                            ),
                             child: ConstrainedBox(
                               constraints: BoxConstraints(
                                 maxWidth: 520,
@@ -762,8 +768,8 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
                             ),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 );
               },

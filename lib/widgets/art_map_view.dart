@@ -9,6 +9,7 @@ import 'package:maplibre_gl/maplibre_gl.dart' as ml;
 
 import '../config/config.dart';
 import '../services/map_style_service.dart';
+import '../services/webgl_context_helper.dart';
 import 'kubus_snackbar.dart';
 
 /// Shared MapLibre layer used by both mobile and desktop map screens.
@@ -109,6 +110,8 @@ class ArtMapView extends StatefulWidget {
 class _ArtMapViewState extends State<ArtMapView> {
   static int _debugLiveInstances = 0;
   static int _debugMapCreateSeq = 0;
+  static const String _webGLRecoveryMessage =
+      'WebGL context lost. Map rendering will resume after recovery.';
 
   Future<String>? _resolvedStyleFuture;
   String? _resolvedStyleString;
@@ -142,6 +145,7 @@ class _ArtMapViewState extends State<ArtMapView> {
   bool _styleFailed = false;
   String? _styleFailureReason;
   Stopwatch? _styleStopwatch;
+  bool _webGLHealthy = true;
 
   @override
   void initState() {
@@ -154,6 +158,10 @@ class _ArtMapViewState extends State<ArtMapView> {
       );
       return true;
     }());
+    if (kIsWeb) {
+      _webGLHealthy = webGLContextHealthy.value;
+      webGLContextHealthy.addListener(_handleWebGLHealthChanged);
+    }
     _refreshStyleFuture();
   }
 
@@ -206,6 +214,9 @@ class _ArtMapViewState extends State<ArtMapView> {
     // State.dispose() disposes the controller when the platform view is
     // removed. Calling dispose again causes "used after being disposed".
     _controller = null;
+    if (kIsWeb) {
+      webGLContextHealthy.removeListener(_handleWebGLHealthChanged);
+    }
     assert(() {
       _debugLiveInstances = math.max(0, _debugLiveInstances - 1);
       AppConfig.debugPrint(
@@ -214,6 +225,32 @@ class _ArtMapViewState extends State<ArtMapView> {
       return true;
     }());
     super.dispose();
+  }
+
+  void _handleWebGLHealthChanged() {
+    if (!mounted || _disposed) return;
+    final healthy = webGLContextHealthy.value;
+    if (_webGLHealthy == healthy) return;
+    _webGLHealthy = healthy;
+
+    if (!healthy) {
+      _markStyleFailure(
+        _webGLRecoveryMessage,
+        force: true,
+      );
+      return;
+    }
+
+    if (_styleFailureReason == _webGLRecoveryMessage) {
+      setState(() {
+        _styleFailed = false;
+        _styleFailureReason = null;
+      });
+      final controller = _controller;
+      if (controller != null && kIsWeb) {
+        _forceResizeWebMapThrottled(controller);
+      }
+    }
   }
 
   void _handleWebLayoutChanged(Size size) {
@@ -301,9 +338,9 @@ class _ArtMapViewState extends State<ArtMapView> {
     _styleStopwatch = Stopwatch()..start();
   }
 
-  void _markStyleFailure(String reason) {
+  void _markStyleFailure(String reason, {bool force = false}) {
     if (!mounted || _disposed) return;
-    if (_styleLoaded) return;
+    if (!force && _styleLoaded) return;
     setState(() {
       _styleFailed = true;
       _styleFailureReason = reason;
@@ -555,7 +592,7 @@ class _ArtMapViewState extends State<ArtMapView> {
                       },
                 trackCameraPosition: true,
               ),
-              if (_styleFailed && !_styleLoaded)
+              if (_styleFailed)
                 Positioned.fill(
                   child: IgnorePointer(
                     ignoring: false,
