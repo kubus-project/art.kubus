@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../../utils/design_tokens.dart';
 import '../../common/kubus_glass_chip.dart';
 import '../../common/kubus_glass_icon_button.dart';
 import '../discovery/kubus_discovery_path_card.dart';
@@ -105,6 +106,7 @@ class KubusDiscoveryCard extends StatelessWidget {
         icon: expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
         tooltip: expanded ? l10n.commonCollapse : l10n.commonExpand,
         size: expandButtonSize,
+        borderRadius: KubusRadius.sm,
         onPressed: onToggleExpanded,
       ),
       titleStyle: titleStyle,

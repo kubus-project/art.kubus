@@ -384,22 +384,12 @@ class KubusMarkerOverlayCard extends StatelessWidget {
                   child: Semantics(
                     label: 'marker_more_info',
                     button: true,
-                    child: FilledButton.icon(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: baseColor,
-                        foregroundColor: actionFg,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
-                        ),
-                      ),
+                    child: _OverlayPrimaryButton(
+                      accent: baseColor,
+                      foregroundColor: actionFg,
                       onPressed: onPrimaryAction,
-                      icon: Icon(primaryActionIcon, size: 18),
-                      label: Text(
-                        primaryActionLabel,
-                        style: KubusTypography.textTheme.labelLarge
-                            ?.copyWith(fontWeight: FontWeight.w700),
-                      ),
+                      icon: primaryActionIcon,
+                      label: primaryActionLabel,
                     ),
                   ),
                 ),
@@ -512,6 +502,7 @@ class _OverlayIconButton extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = scheme.surface.withValues(alpha: isDark ? 0.46 : 0.52);
+    final radius = BorderRadius.circular(KubusRadius.sm);
 
     return Tooltip(
       message: tooltip,
@@ -521,13 +512,13 @@ class _OverlayIconButton extends StatelessWidget {
           mouseCursor: onTap == null
               ? SystemMouseCursors.basic
               : SystemMouseCursors.click,
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: radius,
           onTap: onTap,
           child: Container(
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: radius,
               border: Border.all(
                 color: scheme.outlineVariant.withValues(alpha: 0.35),
               ),
@@ -542,7 +533,7 @@ class _OverlayIconButton extends StatelessWidget {
             child: LiquidGlassPanel(
               padding: EdgeInsets.zero,
               margin: EdgeInsets.zero,
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: radius,
               showBorder: false,
               backgroundColor: bg,
               child: Center(
@@ -776,6 +767,73 @@ class _OverlayPager extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _OverlayPrimaryButton extends StatelessWidget {
+  const _OverlayPrimaryButton({
+    required this.accent,
+    required this.foregroundColor,
+    required this.onPressed,
+    required this.icon,
+    required this.label,
+  });
+
+  final Color accent;
+  final Color foregroundColor;
+  final VoidCallback? onPressed;
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = accent.withValues(alpha: isDark ? 0.30 : 0.22);
+    final border = accent.withValues(alpha: 0.45);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        mouseCursor: onPressed == null
+            ? SystemMouseCursors.basic
+            : SystemMouseCursors.click,
+        borderRadius: BorderRadius.circular(KubusRadius.sm),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(KubusRadius.sm),
+            border: Border.all(color: border),
+          ),
+          child: LiquidGlassPanel(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
+            margin: EdgeInsets.zero,
+            borderRadius: BorderRadius.circular(KubusRadius.sm),
+            showBorder: false,
+            backgroundColor: bg,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 18, color: foregroundColor),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    label,
+                    overflow: TextOverflow.ellipsis,
+                    style: KubusTypography.textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: foregroundColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

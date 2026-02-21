@@ -2111,11 +2111,10 @@ class _MapScreenState extends State<MapScreen>
       final double minMarkerY =
           (topSafe + overlayHeight + 24).clamp(0.0, size.height).toDouble();
 
-        // Keep anchored behavior, but compose the camera so the tapped marker is
-        // lower on screen. This leaves enough room for the anchored card to sit
-        // around the visual middle (instead of too high).
-        final double desiredY = math
-          .max(size.height * 0.80, minMarkerY)
+          // Keep anchored behavior, but compose the camera so the marker sits
+          // closer to center-height while preserving room for the larger card.
+          final double desiredY = math
+            .max(size.height * 0.68, minMarkerY)
           .clamp(0.0, size.height)
           .toDouble();
       final double dy = desiredY - (size.height / 2);
@@ -4014,10 +4013,11 @@ class _MapScreenState extends State<MapScreen>
         anchorListenable: _selectedMarkerAnchorNotifier,
         placementStrategy: KubusMarkerOverlayPlacementStrategy.anchored,
         widthResolver: (constraints, mediaQuery) {
-          return MapOverlaySizing.resolveCardWidth(
-            constraints,
-            preferred: MapOverlaySizing.maxCardWidth,
-          );
+          final availableWidth =
+              math.max(1.0, constraints.maxWidth - (10.0 * 2.0));
+          // Make the overlay slightly wider while still leaving side breathing
+          // room on smaller phones.
+          return math.min(availableWidth, 392.0).toDouble();
         },
         maxHeightResolver: (constraints, mediaQuery) {
           return MapOverlaySizing.resolveMaxCardHeight(
@@ -4044,8 +4044,8 @@ class _MapScreenState extends State<MapScreen>
             safeHeight * (isCompact ? 0.72 : 0.66),
           );
         },
-        markerOffset: 32.0,
-        horizontalPadding: MapOverlaySizing.defaultHorizontalPadding,
+        markerOffset: 40.0,
+        horizontalPadding: 10.0,
         topPadding: MapOverlaySizing.defaultVerticalPadding,
         bottomPadding: MapOverlaySizing.defaultVerticalPadding,
         animation: const KubusMarkerOverlayAnimationConfig(
@@ -4789,37 +4789,140 @@ class _MapScreenState extends State<MapScreen>
       right: 12,
       bottom: bottomOffset,
       child: MapOverlayBlocker(
-        child: KubusMapControls(
-          controller: _kubusMapController,
-          layout: KubusMapPrimaryControlsLayout.mobileRightRail,
-          onCenterOnMe: () => unawaited(_handleCenterOnMeTap()),
-          onCreateMarker: () => unawaited(_handleCurrentLocationTap()),
-          centerOnMeActive: _autoFollow,
-          resetBearingTooltip: l10n.mapResetBearingTooltip,
-          zoomInTooltip: 'Zoom in',
-          zoomOutTooltip: l10n.mapEmptyZoomOutAction,
-          centerOnMeKey: _tutorialCenterButtonKey,
-          centerOnMeTooltip: l10n.mapCenterOnMeTooltip,
-          createMarkerKey: _tutorialAddMarkerButtonKey,
-          createMarkerTooltip: l10n.mapAddMapMarkerTooltip,
-          showTravelModeToggle: AppConfig.isFeatureEnabled('mapTravelMode'),
-          travelModeKey: _tutorialTravelButtonKey,
-          travelModeActive: _travelModeEnabled,
-          onToggleTravelMode: () {
-            unawaited(_setTravelModeEnabled(!_travelModeEnabled));
-          },
-          travelModeTooltipWhenActive: l10n.mapTravelModeDisableTooltip,
-          travelModeTooltipWhenInactive: l10n.mapTravelModeEnableTooltip,
-          showIsometricViewToggle:
-              AppConfig.isFeatureEnabled('mapIsometricView'),
-          isometricViewActive: _isometricViewEnabled,
-          onToggleIsometricView: () {
-            unawaited(_setIsometricViewEnabled(!_isometricViewEnabled));
-          },
-          isometricViewTooltipWhenActive: l10n.mapIsometricViewDisableTooltip,
-          isometricViewTooltipWhenInactive: l10n.mapIsometricViewEnableTooltip,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Tooltip(
+              message: 'Map attributions',
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: _showMapAttributionDialog,
+                  borderRadius: BorderRadius.circular(KubusRadius.sm),
+                  child: SizedBox(
+                    width: 42,
+                    height: 42,
+                    child: LiquidGlassPanel(
+                      padding: EdgeInsets.zero,
+                      margin: EdgeInsets.zero,
+                      borderRadius: BorderRadius.circular(KubusRadius.sm),
+                      showBorder: true,
+                      child: const Center(
+                        child: Icon(
+                          Icons.info_outline,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            KubusMapControls(
+              controller: _kubusMapController,
+              layout: KubusMapPrimaryControlsLayout.mobileRightRail,
+              onCenterOnMe: () => unawaited(_handleCenterOnMeTap()),
+              onCreateMarker: () => unawaited(_handleCurrentLocationTap()),
+              centerOnMeActive: _autoFollow,
+              resetBearingTooltip: l10n.mapResetBearingTooltip,
+              zoomInTooltip: 'Zoom in',
+              zoomOutTooltip: l10n.mapEmptyZoomOutAction,
+              centerOnMeKey: _tutorialCenterButtonKey,
+              centerOnMeTooltip: l10n.mapCenterOnMeTooltip,
+              createMarkerKey: _tutorialAddMarkerButtonKey,
+              createMarkerTooltip: l10n.mapAddMapMarkerTooltip,
+              showTravelModeToggle: AppConfig.isFeatureEnabled('mapTravelMode'),
+              travelModeKey: _tutorialTravelButtonKey,
+              travelModeActive: _travelModeEnabled,
+              onToggleTravelMode: () {
+                unawaited(_setTravelModeEnabled(!_travelModeEnabled));
+              },
+              travelModeTooltipWhenActive: l10n.mapTravelModeDisableTooltip,
+              travelModeTooltipWhenInactive: l10n.mapTravelModeEnableTooltip,
+              showIsometricViewToggle:
+                  AppConfig.isFeatureEnabled('mapIsometricView'),
+              isometricViewActive: _isometricViewEnabled,
+              onToggleIsometricView: () {
+                unawaited(_setIsometricViewEnabled(!_isometricViewEnabled));
+              },
+              isometricViewTooltipWhenActive:
+                  l10n.mapIsometricViewDisableTooltip,
+              isometricViewTooltipWhenInactive:
+                  l10n.mapIsometricViewEnableTooltip,
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  Future<void> _showMapAttributionDialog() async {
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+
+    await showKubusDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        final scheme = Theme.of(dialogContext).colorScheme;
+
+        Widget item(String title, String subtitle) {
+          return Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(
+              horizontal: KubusSpacing.sm,
+              vertical: KubusSpacing.sm,
+            ),
+            decoration: BoxDecoration(
+              color: scheme.primaryContainer.withValues(alpha: 0.50),
+              borderRadius: BorderRadius.circular(KubusRadius.sm),
+              border: Border.all(
+                color: scheme.outline.withValues(alpha: 0.25),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: KubusTypography.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: KubusTypography.textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return KubusAlertDialog(
+          title: const Text('Map attributions'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              item('MapLibre', 'Map rendering engine'),
+              const SizedBox(height: KubusSpacing.sm),
+              item('CARTO', 'Basemap style and cartography'),
+              const SizedBox(height: KubusSpacing.sm),
+              item('OpenStreetMap', 'Map data contributors'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(l10n.commonClose),
+            ),
+          ],
+        );
+      },
     );
   }
 
