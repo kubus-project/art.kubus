@@ -4834,7 +4834,7 @@ class _MapScreenState extends State<MapScreen>
 
   Widget _buildMobileAttributionButton({required double bottomInset}) {
     return Positioned(
-      right: 12,
+      left: 12,
       bottom: bottomInset,
       child: MapOverlayBlocker(
         child: Tooltip(

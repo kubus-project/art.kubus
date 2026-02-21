@@ -1631,12 +1631,24 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               Consumer<TaskProvider>(
                 builder: (context, taskProvider, _) {
                   final activeProgress = taskProvider.getActiveTaskProgress();
-                  if (activeProgress.isEmpty) return const SizedBox.shrink();
                   final leftOffset = (_selectedArtwork != null ||
                           _selectedExhibition != null ||
                           _showFiltersPanel)
                       ? 400.0
                       : 24.0;
+                  
+                  if (activeProgress.isEmpty) {
+                    // No active tasks: show attribution icon standalone in bottom-left
+                    return Positioned(
+                      left: 24,
+                      bottom: 24,
+                      child: MapOverlayBlocker(
+                        child: _buildDesktopAttributionButton(),
+                      ),
+                    );
+                  }
+                  
+                  // Active tasks: show column with attribution + discovery card
                   return Positioned(
                     left: leftOffset,
                     bottom: 24,
