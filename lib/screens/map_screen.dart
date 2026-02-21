@@ -91,6 +91,7 @@ import '../widgets/map/cards/kubus_discovery_card.dart';
 import '../widgets/map/filters/kubus_map_marker_layer_chips.dart';
 import '../widgets/map/controls/kubus_map_primary_controls.dart'
     show KubusMapPrimaryControlsLayout;
+import '../widgets/map/dialogs/kubus_map_attribution_dialog.dart';
 import '../widgets/common/kubus_filter_panel.dart';
 import '../widgets/common/kubus_glass_chip.dart';
 import '../widgets/common/kubus_map_controls.dart';
@@ -3192,13 +3193,6 @@ class _MapScreenState extends State<MapScreen>
         maxZoom: 24.0,
         isDarkMode: isDark,
         styleAsset: styleAsset,
-        attributionButtonPosition: ml.AttributionButtonPosition.bottomLeft,
-        attributionButtonMargins: kIsWeb
-            ? null
-            : math.Point<double>(
-                12.0,
-                math.max(12.0, attributionBottomMargin),
-              ),
         rotateGesturesEnabled: !disableGesturesForOverlays,
         scrollGesturesEnabled: !disableGesturesForOverlays,
         zoomGesturesEnabled: !disableGesturesForOverlays,
@@ -4797,7 +4791,7 @@ class _MapScreenState extends State<MapScreen>
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: _showMapAttributionDialog,
+                  onTap: () => unawaited(showKubusMapAttributionDialog(context)),
                   borderRadius: BorderRadius.circular(KubusRadius.sm),
                   child: SizedBox(
                     width: 42,
@@ -4854,75 +4848,6 @@ class _MapScreenState extends State<MapScreen>
           ],
         ),
       ),
-    );
-  }
-
-  Future<void> _showMapAttributionDialog() async {
-    if (!mounted) return;
-    final l10n = AppLocalizations.of(context)!;
-
-    await showKubusDialog<void>(
-      context: context,
-      builder: (dialogContext) {
-        final scheme = Theme.of(dialogContext).colorScheme;
-
-        Widget item(String title, String subtitle) {
-          return Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(
-              horizontal: KubusSpacing.sm,
-              vertical: KubusSpacing.sm,
-            ),
-            decoration: BoxDecoration(
-              color: scheme.primaryContainer.withValues(alpha: 0.50),
-              borderRadius: BorderRadius.circular(KubusRadius.sm),
-              border: Border.all(
-                color: scheme.outline.withValues(alpha: 0.25),
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: KubusTypography.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: scheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: KubusTypography.textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-
-        return KubusAlertDialog(
-          title: const Text('Map attributions'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              item('MapLibre', 'Map rendering engine'),
-              const SizedBox(height: KubusSpacing.sm),
-              item('CARTO', 'Basemap style and cartography'),
-              const SizedBox(height: KubusSpacing.sm),
-              item('OpenStreetMap', 'Map data contributors'),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(l10n.commonClose),
-            ),
-          ],
-        );
-      },
     );
   }
 
