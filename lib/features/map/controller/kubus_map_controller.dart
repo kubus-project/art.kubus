@@ -1041,6 +1041,29 @@ class KubusMapController {
             m.hasValidPosition && (_markerTypeVisibility[m.type] ?? true))
         .toList(growable: false);
 
+    // Prefer the same coordinate-key grouping used by marker rendering and
+    // same-location cluster behavior. This keeps pager length/order stable
+    // while swiping stacked markers, instead of dropping entries due to strict
+    // per-marker distance checks.
+    final coordinateKey = mapMarkerCoordinateKey(marker.position);
+    final keyedStack = visibleMarkers
+        .where((other) => mapMarkerCoordinateKey(other.position) == coordinateKey)
+        .toList(growable: false);
+
+    if (keyedStack.isNotEmpty) {
+      keyedStack.sort((a, b) => a.id.compareTo(b.id));
+
+      if (pinSelectedFirst) {
+        final idx = keyedStack.indexWhere((m) => m.id == marker.id);
+        if (idx > 0) {
+          final selected = keyedStack.removeAt(idx);
+          keyedStack.insert(0, selected);
+        }
+      }
+
+      return keyedStack;
+    }
+
     final stacked = <ArtMarker>[];
     for (final other in visibleMarkers) {
       final meters = _distance.as(
