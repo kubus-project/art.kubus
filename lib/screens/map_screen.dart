@@ -334,6 +334,8 @@ class _MapScreenState extends State<MapScreen>
   // Discovery and Progress
   bool _isDiscoveryExpanded = false;
   bool _filtersExpanded = false;
+  final GlobalKey _discoveryCardKey = GlobalKey();
+  double _markerOverlayTopPadding = MapOverlaySizing.defaultVerticalPadding;
 
   bool _pendingSafeSetState = false;
   int _debugMarkerTapCount = 0;
@@ -2163,6 +2165,44 @@ class _MapScreenState extends State<MapScreen>
     // Keep shared controller selection state in sync without bumping the
     // selection token.
     _kubusMapController.setSelectedStackIndex(index);
+  }
+
+  void _scheduleMarkerOverlayTopPaddingMeasure({required bool hasDiscovery}) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      if (!hasDiscovery) {
+        if ((_markerOverlayTopPadding - MapOverlaySizing.defaultVerticalPadding)
+                .abs() >
+            1.0) {
+          _safeSetState(() {
+            _markerOverlayTopPadding =
+                MapOverlaySizing.defaultVerticalPadding;
+          });
+        }
+        return;
+      }
+
+      final discoveryContext = _discoveryCardKey.currentContext;
+      final renderObject = discoveryContext?.findRenderObject();
+      if (renderObject is! RenderBox || !renderObject.hasSize) {
+        return;
+      }
+
+      final media = MediaQuery.of(context);
+      final origin = renderObject.localToGlobal(Offset.zero);
+      final cardBottom = origin.dy + renderObject.size.height;
+      final desiredTopPadding = math.max(
+        MapOverlaySizing.defaultVerticalPadding,
+        cardBottom - media.padding.top + 8.0,
+      );
+
+      if ((_markerOverlayTopPadding - desiredTopPadding).abs() > 1.0) {
+        _safeSetState(() {
+          _markerOverlayTopPadding = desiredTopPadding;
+        });
+      }
+    });
   }
 
   void _nextStackedMarker() {
@@ -4050,7 +4090,7 @@ class _MapScreenState extends State<MapScreen>
         },
         markerOffset: 14.0,
         horizontalPadding: 10.0,
-        topPadding: MapOverlaySizing.defaultVerticalPadding,
+        topPadding: _markerOverlayTopPadding,
         bottomPadding: MapOverlaySizing.defaultVerticalPadding,
         animation: const KubusMarkerOverlayAnimationConfig(
           duration: Duration(milliseconds: 220),
@@ -4094,6 +4134,7 @@ class _MapScreenState extends State<MapScreen>
         final state = _mapSearchController.state;
         final hasDiscovery = taskProvider != null &&
             taskProvider.getActiveTaskProgress().isNotEmpty;
+        _scheduleMarkerOverlayTopPaddingMeasure(hasDiscovery: hasDiscovery);
         final hasExtraContent = _filtersExpanded || hasDiscovery;
         return KubusSearchOverlayScaffold(
           layout: KubusSearchOverlayLayout.topOverlay,
@@ -4118,7 +4159,10 @@ class _MapScreenState extends State<MapScreen>
                       _buildFilterPanel(theme),
                       const SizedBox(height: 10),
                     ],
-                    _buildDiscoveryCard(theme, taskProvider),
+                    KeyedSubtree(
+                      key: _discoveryCardKey,
+                      child: _buildDiscoveryCard(theme, taskProvider),
+                    ),
                   ],
                 )
               : null,
