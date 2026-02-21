@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 
@@ -32,27 +31,10 @@ class MapOverlayBlocker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget result = Listener(
-      behavior: enabled ? HitTestBehavior.opaque : HitTestBehavior.deferToChild,
-      onPointerDown: enabled ? (_) {} : null,
-      onPointerMove: enabled ? (_) {} : null,
-      onPointerUp: enabled ? (_) {} : null,
-      onPointerCancel: enabled ? (_) {} : null,
-      onPointerSignal: enabled ? (_) {} : null,
-      child: child,
-    );
-
-    result = MouseRegion(cursor: cursor, child: result);
-
-    // On web, PointerInterceptor can interfere with CSS filters like
-    // BackdropFilter used by glass surfaces. Since we're already blocking
-    // pointer events via Listener, the PointerInterceptor is redundant
-    // for most overlay use cases (especially map overlays with glass).
-    // Disable it to preserve visual fidelity.
-    // if (kIsWeb && enabled && interceptPlatformViews) {
-    //   result = PointerInterceptor(child: result);
-    // }
-
+    // For glass surfaces and visual effects, avoid the Listener wrapper
+    // which can interfere with rendering. Just apply MouseRegion for cursor.
+    // MapLibre platform view still receives events naturally.
+    Widget result = MouseRegion(cursor: cursor, child: child);
     return result;
   }
 }
