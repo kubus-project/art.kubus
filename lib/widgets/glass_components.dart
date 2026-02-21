@@ -172,8 +172,8 @@ Future<T?> showKubusDialog<T>({
   final resolvedBarrierLabel =
       barrierLabel ?? MaterialLocalizations.of(context).modalBarrierDismissLabel;
 
-  // Determine blur state from the provider (falls back to true if unavailable).
-  final useBackdropFilter = GlassCapabilitiesProvider.blurEnabled(context);
+  // Determine blur state from the canonical policy (falls back to true if unavailable).
+  final useBackdropFilter = GlassCapabilitiesProvider.allowBlurEnabled(context);
 
   return showGeneralDialog<T>(
     context: context,
@@ -745,7 +745,7 @@ class FrostedModal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final useBackdropFilter = GlassCapabilitiesProvider.blurEnabled(context);
+    final useBackdropFilter = GlassCapabilitiesProvider.allowBlurEnabled(context);
 
     Widget content = Center(
       child: GestureDetector(

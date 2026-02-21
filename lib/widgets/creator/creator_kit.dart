@@ -1,5 +1,4 @@
 import 'dart:typed_data';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import '../../utils/design_tokens.dart';
@@ -28,17 +27,12 @@ class CreatorGlassBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(
-          sigmaX: KubusGlassEffects.blurSigma * 0.6,
-          sigmaY: KubusGlassEffects.blurSigma * 0.6,
-        ),
-        child: ColoredBox(
-          color: scheme.surface.withValues(alpha: 0.55),
-          child: child,
-        ),
-      ),
+    return GlassSurface(
+      borderRadius: BorderRadius.zero,
+      blurSigma: KubusGlassEffects.blurSigma * 0.6,
+      tintColor: scheme.surface.withValues(alpha: 0.55),
+      showBorder: false,
+      child: child,
     );
   }
 }

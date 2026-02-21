@@ -1,4 +1,6 @@
 
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
@@ -21,22 +23,34 @@ enum GlassMode { blur, tintedFallback }
 /// - Optional lightweight runtime perf probe that measures frame timings.
 class GlassCapabilitiesProvider with ChangeNotifier {
   static const String _reduceEffectsKey = 'kubus_reduce_effects';
+  static const String _autoReduceEffectsOptOutKey =
+      'kubus_reduce_effects_auto_opt_out';
 
   GlassMode _mode = GlassMode.blur;
   bool _reduceEffectsUser = false;
+  bool _autoReduceEffectsOptOut = false;
   bool _heuristicTriggered = false;
   bool _isInitialized = false;
+  Timer? _perfProbeStartTimer;
 
   GlassMode get mode => _mode;
 
-  /// Whether blur is currently enabled.
-  bool get isBlurEnabled => _mode == GlassMode.blur;
+  /// Canonical policy: whether blur is currently allowed.
+  bool get allowBlur => _mode == GlassMode.blur;
+
+  /// Compatibility alias. Prefer [allowBlur].
+  bool get isBlurEnabled => allowBlur;
 
   /// The effective "reduce effects" state, whether user-set or auto-detected.
-  bool get reduceEffects => _reduceEffectsUser || _heuristicTriggered;
+  bool get reduceEffects =>
+      _reduceEffectsUser || (_heuristicTriggered && !_autoReduceEffectsOptOut);
 
   /// Whether the heuristic auto-detected a constrained device.
   bool get heuristicTriggered => _heuristicTriggered;
+
+  /// Whether automatic heuristic-based reduce-effects is currently active.
+  bool get autoReduceEffectsApplied =>
+      _heuristicTriggered && !_reduceEffectsUser && !_autoReduceEffectsOptOut;
 
   /// Whether the user explicitly toggled "Reduce effects".
   bool get reduceEffectsUserOverride => _reduceEffectsUser;
@@ -56,6 +70,8 @@ class GlassCapabilitiesProvider with ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       _reduceEffectsUser = prefs.getBool(_reduceEffectsKey) ?? false;
+      _autoReduceEffectsOptOut =
+          prefs.getBool(_autoReduceEffectsOptOutKey) ?? false;
     } catch (_) {
       // Default: effects enabled.
     }
@@ -70,9 +86,9 @@ class GlassCapabilitiesProvider with ChangeNotifier {
     _isInitialized = true;
     notifyListeners();
 
-    // 4. Schedule a lightweight perf probe after first frame on all platforms.
-    if (!_reduceEffectsUser && !_heuristicTriggered) {
-      SchedulerBinding.instance.addPostFrameCallback((_) => _runPerfProbe());
+    // 4. Schedule a lightweight perf probe after initial loading settles.
+    if (!_reduceEffectsUser && !_heuristicTriggered && !_autoReduceEffectsOptOut) {
+      _schedulePerfProbe();
     }
   }
 
@@ -91,11 +107,22 @@ class GlassCapabilitiesProvider with ChangeNotifier {
 
   /// Toggle the user "Reduce effects" preference.
   Future<void> setReduceEffects(bool value) async {
-    if (_reduceEffectsUser == value) return;
-    _reduceEffectsUser = value;
+    final nextUserSetting = value;
+    final nextAutoOptOut = !value && _heuristicTriggered;
+
+    if (_reduceEffectsUser == nextUserSetting &&
+        _autoReduceEffectsOptOut == nextAutoOptOut) {
+      return;
+    }
+
+    _reduceEffectsUser = nextUserSetting;
+    _autoReduceEffectsOptOut = nextAutoOptOut;
+
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(_reduceEffectsKey, value);
+      await prefs.setBool(_reduceEffectsKey, _reduceEffectsUser);
+      await prefs.setBool(
+          _autoReduceEffectsOptOutKey, _autoReduceEffectsOptOut);
     } catch (_) {}
     _recomputeMode();
     notifyListeners();
@@ -107,7 +134,8 @@ class GlassCapabilitiesProvider with ChangeNotifier {
 
   void _recomputeMode() {
     final healthy = webGLContextHealthy.value;
-    if (_reduceEffectsUser || !healthy || _heuristicTriggered) {
+    final heuristicActive = _heuristicTriggered && !_autoReduceEffectsOptOut;
+    if (_reduceEffectsUser || !healthy || heuristicActive) {
       _mode = GlassMode.tintedFallback;
     } else {
       _mode = GlassMode.blur;
@@ -144,12 +172,23 @@ class GlassCapabilitiesProvider with ChangeNotifier {
   // Perf probe: measure frame timings and degrade if severe jank detected
   // ---------------------------------------------------------------------------
 
+  static const Duration _perfProbeWarmupDelay = Duration(seconds: 8);
   int _probeFrameCount = 0;
   int _jankFrameCount = 0;
-  static const int _probeFrameLimit = 10;
-  static const Duration _jankThreshold = Duration(milliseconds: 32);
+  static const int _probeFrameLimit = 36;
+  static const Duration _jankThreshold = Duration(milliseconds: 48);
+
+  void _schedulePerfProbe() {
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      _perfProbeStartTimer?.cancel();
+      _perfProbeStartTimer = Timer(_perfProbeWarmupDelay, _runPerfProbe);
+    });
+  }
 
   void _runPerfProbe() {
+    if (_reduceEffectsUser || _autoReduceEffectsOptOut || _heuristicTriggered) {
+      return;
+    }
     _probeFrameCount = 0;
     _jankFrameCount = 0;
     SchedulerBinding.instance.addTimingsCallback(_timingsCallback);
@@ -163,7 +202,8 @@ class GlassCapabilitiesProvider with ChangeNotifier {
       }
       if (_probeFrameCount >= _probeFrameLimit) {
         SchedulerBinding.instance.removeTimingsCallback(_timingsCallback);
-        if (_jankFrameCount > _probeFrameLimit ~/ 2) {
+        final severeJank = _jankFrameCount >= (_probeFrameLimit * 2 ~/ 3);
+        if (severeJank && !_autoReduceEffectsOptOut && !_reduceEffectsUser) {
           _heuristicTriggered = true;
           _recomputeMode();
           notifyListeners();
@@ -177,16 +217,19 @@ class GlassCapabilitiesProvider with ChangeNotifier {
   // Static helper for places that cannot use context.watch
   // ---------------------------------------------------------------------------
 
-  /// Read the current blur state without rebuilding.
+  /// Read the current blur policy without rebuilding.
   ///
   /// Falls back to [GlassMode.blur] if the provider is not in the tree.
-  static bool blurEnabled(BuildContext context) {
+  static bool allowBlurEnabled(BuildContext context) {
     try {
-      return context.read<GlassCapabilitiesProvider>().isBlurEnabled;
+      return context.read<GlassCapabilitiesProvider>().allowBlur;
     } catch (_) {
       return true;
     }
   }
+
+  /// Compatibility alias. Prefer [allowBlurEnabled].
+  static bool blurEnabled(BuildContext context) => allowBlurEnabled(context);
 
   // ---------------------------------------------------------------------------
   // Lifecycle
@@ -194,6 +237,8 @@ class GlassCapabilitiesProvider with ChangeNotifier {
 
   @override
   void dispose() {
+    _perfProbeStartTimer?.cancel();
+    SchedulerBinding.instance.removeTimingsCallback(_timingsCallback);
     webGLContextHealthy.removeListener(_onWebGLHealthChanged);
     super.dispose();
   }

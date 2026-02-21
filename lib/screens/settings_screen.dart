@@ -779,8 +779,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   Widget _buildReduceEffectsTile(ColorScheme scheme) {
     final glassProv = context.watch<GlassCapabilitiesProvider?>();
     final isOn = glassProv?.reduceEffects ?? false;
-    final autoDetected = (glassProv?.heuristicTriggered ?? false) &&
-        !(glassProv?.reduceEffectsUserOverride ?? false);
+    final autoDetected = glassProv?.autoReduceEffectsApplied ?? false;
 
     return Container(
       padding: const EdgeInsets.all(16),

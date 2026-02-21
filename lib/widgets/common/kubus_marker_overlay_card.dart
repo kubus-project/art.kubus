@@ -7,6 +7,7 @@ import '../../utils/app_color_utils.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/media_url_resolver.dart';
+import '../artwork_creator_byline.dart';
 import 'kubus_cached_image.dart';
 import '../glass_components.dart';
 
@@ -183,13 +184,28 @@ class KubusMarkerOverlayCard extends StatelessWidget {
                             displayTitle,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: KubusTypography.textTheme.titleSmall
+                            style: KubusTypography.textTheme.titleMedium
                                 ?.copyWith(
+                              fontSize: 20,
                               fontWeight: FontWeight.w700,
                               height: 1.2,
                               color: scheme.onSurface,
                             ),
                           ),
+                          if (artwork != null) ...[
+                            const SizedBox(height: 4),
+                            ArtworkCreatorByline(
+                              artwork: artwork!,
+                              maxLines: 1,
+                              style:
+                                  KubusTypography.textTheme.bodySmall?.copyWith(
+                                color: scheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                                height: 1.15,
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),

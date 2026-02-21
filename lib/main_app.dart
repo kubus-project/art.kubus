@@ -216,6 +216,9 @@ class _MainAppState extends State<MainApp> {
               ],
             ),
             child: LiquidGlassPanel(
+              // Bottom nav blur policy: always use shared glass components.
+              // Do not add a direct BackdropFilter here; GlassSurface applies
+              // canonical reduce-effects fallback via GlassCapabilitiesProvider.
               margin: EdgeInsets.zero,
               padding: EdgeInsets.zero,
               borderRadius: BorderRadius.zero,

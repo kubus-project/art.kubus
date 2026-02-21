@@ -2194,8 +2194,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             builder: (context) {
               final glassProv = context.watch<GlassCapabilitiesProvider>();
               final isOn = glassProv.reduceEffects;
-              final autoDetected = glassProv.heuristicTriggered &&
-                  !glassProv.reduceEffectsUserOverride;
+              final autoDetected = glassProv.autoReduceEffectsApplied;
 
               return DesktopCard(
                 child: Row(
