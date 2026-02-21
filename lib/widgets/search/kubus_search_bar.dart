@@ -32,6 +32,7 @@ class KubusSearchBarStyle {
   final Color focusedBorderColor;
   final double borderWidth;
   final double focusedBorderWidth;
+
   /// If null, falls back to the default blur used by [LiquidGlassPanel].
   final double? blurSigma;
   final EdgeInsets contentPadding;

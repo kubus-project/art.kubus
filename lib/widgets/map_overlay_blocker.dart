@@ -44,11 +44,15 @@ class MapOverlayBlocker extends StatelessWidget {
 
     result = MouseRegion(cursor: cursor, child: result);
 
-    if (kIsWeb && enabled && interceptPlatformViews) {
-      result = PointerInterceptor(child: result);
-    }
+    // On web, PointerInterceptor can interfere with CSS filters like
+    // BackdropFilter used by glass surfaces. Since we're already blocking
+    // pointer events via Listener, the PointerInterceptor is redundant
+    // for most overlay use cases (especially map overlays with glass).
+    // Disable it to preserve visual fidelity.
+    // if (kIsWeb && enabled && interceptPlatformViews) {
+    //   result = PointerInterceptor(child: result);
+    // }
 
     return result;
   }
 }
-
