@@ -3152,6 +3152,9 @@ class _MapScreenState extends State<MapScreen>
                   discoveryProgress,
                   isLoadingArtworks,
                 ),
+                _buildMobileAttributionButton(
+                  bottomInset: attributionBottomMargin,
+                ),
                 _buildTopOverlays(theme, themeProvider, taskProvider),
                 // Keep marker overlay above map UI chrome (controls/search/sheet)
                 // so the selected marker card remains the top interactive layer.
@@ -3922,16 +3925,6 @@ class _MapScreenState extends State<MapScreen>
 
     void goToStackIndex(int index) {
       if (index < 0 || index >= stack.length) return;
-      if (_markerStackPageController.hasClients) {
-        unawaited(
-          _markerStackPageController.animateToPage(
-            index,
-            duration: const Duration(milliseconds: 240),
-            curve: Curves.easeOutCubic,
-          ),
-        );
-        return;
-      }
       _handleMarkerStackPageChanged(index);
     }
 
@@ -4001,20 +3994,25 @@ class _MapScreenState extends State<MapScreen>
         onNextStacked: stack.length > 1 ? _nextStackedMarker : null,
         onPreviousStacked: stack.length > 1 ? _previousStackedMarker : null,
         onSelectStackIndex: stack.length > 1 ? (i) => goToStackIndex(i) : null,
+        onHorizontalDragEnd: stack.length > 1
+            ? (details) {
+                final velocityX =
+                    details.primaryVelocity ?? details.velocity.pixelsPerSecond.dx;
+                if (!velocityX.isFinite || velocityX.abs() < 120) return;
+                if (velocityX < 0) {
+                  _nextStackedMarker();
+                } else {
+                  _previousStackedMarker();
+                }
+              }
+            : null,
       );
     }
 
+    final visibleMarker = stack[stackIndex];
+
     final Widget cardDeck = RepaintBoundary(
-      child: stack.length <= 1
-          ? buildCardForMarker(marker)
-          : PageView.builder(
-              controller: _markerStackPageController,
-              itemCount: stack.length,
-              onPageChanged: _handleMarkerStackPageChanged,
-              itemBuilder: (context, index) {
-                return buildCardForMarker(stack[index]);
-              },
-            ),
+      child: buildCardForMarker(visibleMarker),
     );
 
     return Positioned.fill(
@@ -4798,70 +4796,73 @@ class _MapScreenState extends State<MapScreen>
       right: 12,
       bottom: bottomOffset,
       child: MapOverlayBlocker(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Tooltip(
-              message: 'Map attributions',
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () => unawaited(showKubusMapAttributionDialog(context)),
+        child: KubusMapControls(
+          controller: _kubusMapController,
+          layout: KubusMapPrimaryControlsLayout.mobileRightRail,
+          onCenterOnMe: () => unawaited(_handleCenterOnMeTap()),
+          onCreateMarker: () => unawaited(_handleCurrentLocationTap()),
+          centerOnMeActive: _autoFollow,
+          resetBearingTooltip: l10n.mapResetBearingTooltip,
+          zoomInTooltip: 'Zoom in',
+          zoomOutTooltip: l10n.mapEmptyZoomOutAction,
+          centerOnMeKey: _tutorialCenterButtonKey,
+          centerOnMeTooltip: l10n.mapCenterOnMeTooltip,
+          createMarkerKey: _tutorialAddMarkerButtonKey,
+          createMarkerTooltip: l10n.mapAddMapMarkerTooltip,
+          showTravelModeToggle: AppConfig.isFeatureEnabled('mapTravelMode'),
+          travelModeKey: _tutorialTravelButtonKey,
+          travelModeActive: _travelModeEnabled,
+          onToggleTravelMode: () {
+            unawaited(_setTravelModeEnabled(!_travelModeEnabled));
+          },
+          travelModeTooltipWhenActive: l10n.mapTravelModeDisableTooltip,
+          travelModeTooltipWhenInactive: l10n.mapTravelModeEnableTooltip,
+          showIsometricViewToggle:
+              AppConfig.isFeatureEnabled('mapIsometricView'),
+          isometricViewActive: _isometricViewEnabled,
+          onToggleIsometricView: () {
+            unawaited(_setIsometricViewEnabled(!_isometricViewEnabled));
+          },
+          isometricViewTooltipWhenActive:
+              l10n.mapIsometricViewDisableTooltip,
+          isometricViewTooltipWhenInactive:
+              l10n.mapIsometricViewEnableTooltip,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobileAttributionButton({required double bottomInset}) {
+    return Positioned(
+      right: 12,
+      bottom: bottomInset,
+      child: MapOverlayBlocker(
+        child: Tooltip(
+          message: 'Map attributions',
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => unawaited(showKubusMapAttributionDialog(context)),
+              borderRadius: BorderRadius.circular(KubusRadius.sm),
+              child: SizedBox(
+                width: 42,
+                height: 42,
+                child: LiquidGlassPanel(
+                  padding: EdgeInsets.zero,
+                  margin: EdgeInsets.zero,
                   borderRadius: BorderRadius.circular(KubusRadius.sm),
-                  child: SizedBox(
-                    width: 42,
-                    height: 42,
-                    child: LiquidGlassPanel(
-                      padding: EdgeInsets.zero,
-                      margin: EdgeInsets.zero,
-                      borderRadius: BorderRadius.circular(KubusRadius.sm),
-                      showBorder: true,
-                      child: Center(
-                        child: Icon(
-                          Icons.question_mark_rounded,
-                          size: 20,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
+                  showBorder: true,
+                  child: Center(
+                    child: Icon(
+                      Icons.info_outline,
+                      size: 20,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 8),
-            KubusMapControls(
-              controller: _kubusMapController,
-              layout: KubusMapPrimaryControlsLayout.mobileRightRail,
-              onCenterOnMe: () => unawaited(_handleCenterOnMeTap()),
-              onCreateMarker: () => unawaited(_handleCurrentLocationTap()),
-              centerOnMeActive: _autoFollow,
-              resetBearingTooltip: l10n.mapResetBearingTooltip,
-              zoomInTooltip: 'Zoom in',
-              zoomOutTooltip: l10n.mapEmptyZoomOutAction,
-              centerOnMeKey: _tutorialCenterButtonKey,
-              centerOnMeTooltip: l10n.mapCenterOnMeTooltip,
-              createMarkerKey: _tutorialAddMarkerButtonKey,
-              createMarkerTooltip: l10n.mapAddMapMarkerTooltip,
-              showTravelModeToggle: AppConfig.isFeatureEnabled('mapTravelMode'),
-              travelModeKey: _tutorialTravelButtonKey,
-              travelModeActive: _travelModeEnabled,
-              onToggleTravelMode: () {
-                unawaited(_setTravelModeEnabled(!_travelModeEnabled));
-              },
-              travelModeTooltipWhenActive: l10n.mapTravelModeDisableTooltip,
-              travelModeTooltipWhenInactive: l10n.mapTravelModeEnableTooltip,
-              showIsometricViewToggle:
-                  AppConfig.isFeatureEnabled('mapIsometricView'),
-              isometricViewActive: _isometricViewEnabled,
-              onToggleIsometricView: () {
-                unawaited(_setIsometricViewEnabled(!_isometricViewEnabled));
-              },
-              isometricViewTooltipWhenActive:
-                  l10n.mapIsometricViewDisableTooltip,
-              isometricViewTooltipWhenInactive:
-                  l10n.mapIsometricViewEnableTooltip,
-            ),
-          ],
+          ),
         ),
       ),
     );

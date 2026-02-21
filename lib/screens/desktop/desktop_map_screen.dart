@@ -2848,7 +2848,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   Widget _buildDesktopAttributionButton() {
     return KubusGlassIconButton(
-      icon: Icons.question_mark_rounded,
+      icon: Icons.info_outline,
       tooltip: 'Map attributions',
       borderRadius: KubusRadius.sm,
       iconColor: Theme.of(context).colorScheme.primary,
@@ -3764,6 +3764,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     VoidCallback? onNextStacked,
     VoidCallback? onPreviousStacked,
     ValueChanged<int>? onSelectStackIndex,
+    ValueChanged<DragEndDetails>? onHorizontalDragEnd,
   }) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
@@ -3881,6 +3882,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             onNextStacked: onNextStacked,
             onPreviousStacked: onPreviousStacked,
             onSelectStackIndex: onSelectStackIndex,
+            onHorizontalDragEnd: onHorizontalDragEnd,
             maxHeight: estimatedCardHeight,
           ),
         ),
@@ -3937,59 +3939,47 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         math.max(240.0, viewportHeight - safeVerticalPadding - 24).toDouble();
     final double estimatedCardHeight = math.min(360.0, maxCardHeight);
 
-    Widget card;
-    if (count <= 1) {
-      final single = stack.first;
-      final artwork = single.isExhibitionMarker
-          ? null
-          : artworkProvider.getArtworkById(single.artworkId ?? '');
-      card = _buildMarkerOverlayCard(
-        single,
-        artwork,
-        themeProvider,
-        stackCount: 1,
-        stackIndex: 0,
-      );
-    } else {
-      card = SizedBox(
-        height: estimatedCardHeight,
-        width: 280,
-        child: PageView.builder(
-          controller: _markerStackPageController,
-          onPageChanged: _handleMarkerStackPageChanged,
-          itemCount: count,
-          itemBuilder: (context, index) {
-            final stackedMarker = stack[index];
-            final artwork = stackedMarker.isExhibitionMarker
-                ? null
-                : artworkProvider.getArtworkById(
-                    stackedMarker.artworkId ?? '',
-                  );
-            final onPrev = index > 0
-                ? () => unawaited(_animateMarkerStackToIndex(index - 1))
-                : null;
-            final onNext = index < count - 1
-                ? () => unawaited(_animateMarkerStackToIndex(index + 1))
-                : null;
+    final int stackIndex =
+        selection.stackIndex.clamp(0, math.max(0, count - 1));
+    final ArtMarker visibleMarker = stack[stackIndex];
+    final Artwork? visibleArtwork = visibleMarker.isExhibitionMarker
+        ? null
+        : artworkProvider.getArtworkById(visibleMarker.artworkId ?? '');
 
-            return RepaintBoundary(
-              child: _buildMarkerOverlayCard(
-                stackedMarker,
-                artwork,
-                themeProvider,
-                stackCount: count,
-                stackIndex: index,
-                onPreviousStacked: onPrev,
-                onNextStacked: onNext,
-                onSelectStackIndex: (i) {
+    final card = SizedBox(
+      height: estimatedCardHeight,
+      width: 280,
+      child: RepaintBoundary(
+        child: _buildMarkerOverlayCard(
+          visibleMarker,
+          visibleArtwork,
+          themeProvider,
+          stackCount: count,
+          stackIndex: stackIndex,
+          onPreviousStacked:
+              count > 1 ? () => unawaited(_animateMarkerStackToIndex(stackIndex - 1)) : null,
+          onNextStacked:
+              count > 1 ? () => unawaited(_animateMarkerStackToIndex(stackIndex + 1)) : null,
+          onSelectStackIndex: count > 1
+              ? (i) {
                   unawaited(_animateMarkerStackToIndex(i));
-                },
-              ),
-            );
-          },
+                }
+              : null,
+          onHorizontalDragEnd: count > 1
+              ? (details) {
+                  final velocityX =
+                      details.primaryVelocity ?? details.velocity.pixelsPerSecond.dx;
+                  if (!velocityX.isFinite || velocityX.abs() < 120) return;
+                  if (velocityX < 0) {
+                    unawaited(_animateMarkerStackToIndex(stackIndex + 1));
+                  } else {
+                    unawaited(_animateMarkerStackToIndex(stackIndex - 1));
+                  }
+                }
+              : null,
         ),
-      );
-    }
+      ),
+    );
 
     const baseOffset = 32.0;
     final zoomFactor = (_cameraZoom / 15.0).clamp(0.5, 1.5);
