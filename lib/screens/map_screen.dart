@@ -519,6 +519,17 @@ class _MapScreenState extends State<MapScreen>
         final prevId = prevSelection.selectedMarkerId;
         final tokenChanged = state.selectionToken != prevToken;
         final idChanged = state.selectedMarkerId != prevId;
+        final prevStack = prevSelection.stackedMarkers;
+        final nextStack = state.stackedMarkers;
+        final stackChanged = prevStack.length != nextStack.length ||
+            (() {
+              final minLen = math.min(prevStack.length, nextStack.length);
+              for (var i = 0; i < minLen; i++) {
+                if (prevStack[i].id != nextStack[i].id) return true;
+              }
+              return false;
+            })();
+        final stackIndexChanged = state.stackIndex != prevSelection.stackIndex;
 
         final marker = state.selectedMarker;
         if (marker != null && (tokenChanged || idChanged)) {
@@ -550,6 +561,11 @@ class _MapScreenState extends State<MapScreen>
             if (!marker.isExhibitionMarker) {
               _ensureLinkedArtworkLoaded(marker);
             }
+          } else if (stackChanged || stackIndexChanged) {
+            // Marker payload refresh can update stack order/size without a new
+            // selection token. Keep pager + UI in sync to avoid snap-back.
+            _renderCoordinator.requestStyleUpdate(force: true);
+            _syncMarkerStackPager(state.selectionToken);
           } else {
             // Selection is unchanged; marker instances may have refreshed.
             _renderCoordinator.requestStyleUpdate(force: true);
@@ -3842,68 +3858,67 @@ class _MapScreenState extends State<MapScreen>
     final marker = selection.selectedMarker;
     if (marker == null) return const SizedBox.shrink();
 
-    final artwork = marker.isExhibitionMarker
-        ? null
-        : context
-            .read<ArtworkProvider>()
-            .getArtworkById(marker.artworkId ?? '');
-
-    final l10n = AppLocalizations.of(context)!;
-
-    final primaryExhibition = marker.resolvedExhibitionSummary;
-    final exhibitionsFeatureEnabled = AppConfig.isFeatureEnabled('exhibitions');
-    final exhibitionsApiAvailable = BackendApiService().exhibitionsApiAvailable;
-    final canPresentExhibition = exhibitionsFeatureEnabled &&
-        primaryExhibition != null &&
-        primaryExhibition.id.isNotEmpty &&
-        exhibitionsApiAvailable != false;
-
-    final exhibitionTitle = (primaryExhibition?.title ?? '').trim();
-    final displayTitle = canPresentExhibition && exhibitionTitle.isNotEmpty
-        ? exhibitionTitle
-        : (artwork?.title.isNotEmpty == true ? artwork!.title : marker.name);
-
-    final rawDescription = (marker.description.isNotEmpty
-            ? marker.description
-            : (artwork?.description ?? ''))
-        .trim();
-
-    const int maxPreviewChars = 300;
-    final String visibleDescription = rawDescription.length <= maxPreviewChars
-        ? rawDescription
-        : '${rawDescription.substring(0, maxPreviewChars)}...';
-
-    final distanceText = () {
-      if (_currentPosition == null) return null;
-      final meters = _distanceCalculator.as(
-        LengthUnit.Meter,
-        _currentPosition!,
-        marker.position,
-      );
-      if (meters >= 1000) {
-        return l10n.commonDistanceKm((meters / 1000).toStringAsFixed(1));
-      }
-      return l10n.commonDistanceM(meters.round().toString());
-    }();
-
-    final showChips =
-        _hasMetadataChips(marker, artwork) || canPresentExhibition;
-    final buttonLabel = l10n.commonViewDetails;
-
-    final estimatedHeight = _computeMobileMarkerHeight(
-      title: displayTitle,
-      distanceText: distanceText,
-      description: visibleDescription,
-      hasChips: showChips,
-      buttonLabel: buttonLabel,
-      showTypeLabel: canPresentExhibition,
-    );
-
     final stack = selection.stackedMarkers.isNotEmpty
         ? selection.stackedMarkers
         : <ArtMarker>[marker];
     final int stackIndex =
         selection.stackIndex.clamp(0, math.max(0, stack.length - 1));
+
+    final l10n = AppLocalizations.of(context)!;
+
+    final estimatedHeight = stack.fold<double>(0.0, (maxHeight, entry) {
+      final entryArtwork = entry.isExhibitionMarker
+          ? null
+          : context.read<ArtworkProvider>().getArtworkById(entry.artworkId ?? '');
+      final entryPrimaryExhibition = entry.resolvedExhibitionSummary;
+      final exhibitionsFeatureEnabled = AppConfig.isFeatureEnabled('exhibitions');
+      final exhibitionsApiAvailable = BackendApiService().exhibitionsApiAvailable;
+      final canPresentExhibition = exhibitionsFeatureEnabled &&
+          entryPrimaryExhibition != null &&
+          entryPrimaryExhibition.id.isNotEmpty &&
+          exhibitionsApiAvailable != false;
+
+      final exhibitionTitle = (entryPrimaryExhibition?.title ?? '').trim();
+      final displayTitle = canPresentExhibition && exhibitionTitle.isNotEmpty
+          ? exhibitionTitle
+          : (entryArtwork?.title.isNotEmpty == true
+              ? entryArtwork!.title
+              : entry.name);
+
+      final distanceText = () {
+        if (_currentPosition == null) return null;
+        final meters = _distanceCalculator.as(
+          LengthUnit.Meter,
+          _currentPosition!,
+          entry.position,
+        );
+        if (meters >= 1000) {
+          return l10n.commonDistanceKm((meters / 1000).toStringAsFixed(1));
+        }
+        return l10n.commonDistanceM(meters.round().toString());
+      }();
+
+      final rawDescription =
+          (entry.description.isNotEmpty ? entry.description : (entryArtwork?.description ?? ''))
+              .trim();
+      const int maxPreviewChars = 300;
+      final visibleDescription = rawDescription.length <= maxPreviewChars
+          ? rawDescription
+          : '${rawDescription.substring(0, maxPreviewChars)}...';
+
+      final showChips =
+          _hasMetadataChips(entry, entryArtwork) || canPresentExhibition;
+
+      final entryHeight = _computeMobileMarkerHeight(
+        title: displayTitle,
+        distanceText: distanceText,
+        description: visibleDescription,
+        hasChips: showChips,
+        buttonLabel: l10n.commonViewDetails,
+        showTypeLabel: canPresentExhibition,
+      );
+      return math.max(maxHeight, entryHeight);
+    });
 
     void goToStackIndex(int index) {
       if (index < 0 || index >= stack.length) return;
@@ -4801,10 +4816,11 @@ class _MapScreenState extends State<MapScreen>
                       margin: EdgeInsets.zero,
                       borderRadius: BorderRadius.circular(KubusRadius.sm),
                       showBorder: true,
-                      child: const Center(
+                      child: Center(
                         child: Icon(
-                          Icons.info_outline,
+                          Icons.question_mark_rounded,
                           size: 20,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
                     ),

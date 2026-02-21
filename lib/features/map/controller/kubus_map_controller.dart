@@ -344,7 +344,11 @@ class KubusMapController {
     }
 
     // Recompute stack based on latest marker instance + current visibility.
-    final nextStack = _computeMarkerStack(latest, pinSelectedFirst: false);
+    // Preserve the existing pager order where possible so periodic marker
+    // refreshes do not visually jump users back to a different card.
+    final nextStack = _orderStackByPreviousSelection(
+      _computeMarkerStack(latest, pinSelectedFirst: false),
+    );
     final nextIndex = nextStack.indexWhere((m) => m.id == latest.id);
     final resolvedIndex = nextIndex >= 0 ? nextIndex : 0;
 
@@ -371,6 +375,29 @@ class KubusMapController {
       if (a[i].id != b[i].id) return false;
     }
     return true;
+  }
+
+  List<ArtMarker> _orderStackByPreviousSelection(List<ArtMarker> stack) {
+    if (stack.length <= 1) return stack;
+    if (_selectedMarkerStack.isEmpty) return stack;
+
+    final previousOrder = <String, int>{
+      for (var i = 0; i < _selectedMarkerStack.length; i++)
+        _selectedMarkerStack[i].id: i,
+    };
+
+    final ordered = List<ArtMarker>.of(stack)
+      ..sort((a, b) {
+        final aIndex = previousOrder[a.id];
+        final bIndex = previousOrder[b.id];
+        if (aIndex != null && bIndex != null) {
+          return aIndex.compareTo(bIndex);
+        }
+        if (aIndex != null) return -1;
+        if (bIndex != null) return 1;
+        return a.id.compareTo(b.id);
+      });
+    return ordered;
   }
 
   void setMarkerTypeVisibility(Map<ArtMarkerType, bool> visibility) {
