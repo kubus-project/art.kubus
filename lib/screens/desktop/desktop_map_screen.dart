@@ -86,6 +86,7 @@ import '../../widgets/map/controls/kubus_map_primary_controls.dart'
     show KubusMapPrimaryControlsLayout;
 import '../../widgets/map/cards/kubus_discovery_card.dart';
 import '../../widgets/map/filters/kubus_map_marker_layer_chips.dart';
+import '../../widgets/map/dialogs/kubus_map_attribution_dialog.dart';
 import '../../widgets/common/kubus_filter_panel.dart';
 import '../../widgets/common/kubus_glass_chip.dart';
 import '../../widgets/common/kubus_glass_icon_button.dart';
@@ -1696,8 +1697,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               maxZoom: 24.0,
               isDarkMode: isDark,
               styleAsset: styleAsset,
-              attributionButtonPosition:
-                  ml.AttributionButtonPosition.bottomLeft,
               onMapCreated: _handleMapCreated,
               onStyleLoaded: () {
                 AppConfig.debugPrint(
@@ -2783,52 +2782,66 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   Widget _buildMapControls(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
 
-    return KubusMapControls(
-      controller: _kubusMapController,
-      layout: KubusMapPrimaryControlsLayout.desktopToolbar,
-      accentColor: themeProvider.accentColor,
-      onCenterOnMe: () {
-        _kubusMapController.setAutoFollow(true);
-        _refreshUserLocation(animate: true);
-        if (_userLocation == null) {
-          unawaited(_moveCamera(const LatLng(46.0569, 14.5058), 15.0));
-        }
-      },
-      centerOnMeActive: _autoFollow,
-      centerOnMeTooltip: l10n.mapCenterOnMeTooltip,
-      onCreateMarker: () {
-        if (_rightSidebarContent == _RightSidebarContent.createMarker) {
-          _handleMarkerFormCancel();
-          return;
-        }
-        final target = _pendingMarkerLocation ?? _effectiveCenter;
-        _startMarkerCreationFlow(position: target);
-      },
-      createMarkerTooltip: l10n.mapCreateMarkerHereTooltip,
-      createMarkerHighlighted:
-          _rightSidebarContent == _RightSidebarContent.createMarker,
-      showTravelModeToggle: AppConfig.isFeatureEnabled('mapTravelMode'),
-      travelModeActive: _travelModeEnabled,
-      onToggleTravelMode: () =>
-          unawaited(_setTravelModeEnabled(!_travelModeEnabled)),
-      travelModeKey: _tutorialTravelButtonKey,
-      travelModeTooltip: l10n.mapTravelModeTooltip,
-      showIsometricViewToggle: AppConfig.isFeatureEnabled('mapIsometricView'),
-      isometricViewActive: _isometricViewEnabled,
-      onToggleIsometricView: () =>
-          unawaited(_setIsometricViewEnabled(!_isometricViewEnabled)),
-      isometricViewTooltipWhenActive: l10n.mapIsometricViewDisableTooltip,
-      isometricViewTooltipWhenInactive: l10n.mapIsometricViewEnableTooltip,
-      showNearbyToggle: true,
-      nearbyActive: _isNearbyPanelOpen,
-      onToggleNearby:
-          _isNearbyPanelOpen ? _closeNearbyArtPanel : _openNearbyArtPanel,
-      nearbyKey: _tutorialNearbyButtonKey,
-      nearbyTooltipWhenActive: l10n.commonClose,
-      nearbyTooltipWhenInactive: l10n.arNearbyArtworksTitle,
-      zoomOutTooltip: l10n.mapEmptyZoomOutAction,
-      zoomInTooltip: 'Zoom in',
-      resetBearingTooltip: l10n.mapResetBearingTooltip,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        KubusGlassIconButton(
+          icon: Icons.info_outline,
+          tooltip: 'Map attributions',
+          borderRadius: KubusRadius.sm,
+          onPressed: () => unawaited(showKubusMapAttributionDialog(context)),
+        ),
+        const SizedBox(height: 8),
+        KubusMapControls(
+          controller: _kubusMapController,
+          layout: KubusMapPrimaryControlsLayout.desktopToolbar,
+          accentColor: themeProvider.accentColor,
+          onCenterOnMe: () {
+            _kubusMapController.setAutoFollow(true);
+            _refreshUserLocation(animate: true);
+            if (_userLocation == null) {
+              unawaited(_moveCamera(const LatLng(46.0569, 14.5058), 15.0));
+            }
+          },
+          centerOnMeActive: _autoFollow,
+          centerOnMeTooltip: l10n.mapCenterOnMeTooltip,
+          onCreateMarker: () {
+            if (_rightSidebarContent == _RightSidebarContent.createMarker) {
+              _handleMarkerFormCancel();
+              return;
+            }
+            final target = _pendingMarkerLocation ?? _effectiveCenter;
+            _startMarkerCreationFlow(position: target);
+          },
+          createMarkerTooltip: l10n.mapCreateMarkerHereTooltip,
+          createMarkerHighlighted:
+              _rightSidebarContent == _RightSidebarContent.createMarker,
+          showTravelModeToggle: AppConfig.isFeatureEnabled('mapTravelMode'),
+          travelModeActive: _travelModeEnabled,
+          onToggleTravelMode: () =>
+              unawaited(_setTravelModeEnabled(!_travelModeEnabled)),
+          travelModeKey: _tutorialTravelButtonKey,
+          travelModeTooltip: l10n.mapTravelModeTooltip,
+          showIsometricViewToggle:
+              AppConfig.isFeatureEnabled('mapIsometricView'),
+          isometricViewActive: _isometricViewEnabled,
+          onToggleIsometricView: () =>
+              unawaited(_setIsometricViewEnabled(!_isometricViewEnabled)),
+          isometricViewTooltipWhenActive: l10n.mapIsometricViewDisableTooltip,
+          isometricViewTooltipWhenInactive:
+              l10n.mapIsometricViewEnableTooltip,
+          showNearbyToggle: true,
+          nearbyActive: _isNearbyPanelOpen,
+          onToggleNearby:
+              _isNearbyPanelOpen ? _closeNearbyArtPanel : _openNearbyArtPanel,
+          nearbyKey: _tutorialNearbyButtonKey,
+          nearbyTooltipWhenActive: l10n.commonClose,
+          nearbyTooltipWhenInactive: l10n.arNearbyArtworksTitle,
+          zoomOutTooltip: l10n.mapEmptyZoomOutAction,
+          zoomInTooltip: 'Zoom in',
+          resetBearingTooltip: l10n.mapResetBearingTooltip,
+        ),
+      ],
     );
   }
 
