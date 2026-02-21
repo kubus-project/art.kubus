@@ -1644,7 +1644,15 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                       child: GestureDetector(
                         behavior: HitTestBehavior.opaque,
                         onTap: () {}, // absorb taps
-                        child: _buildDiscoveryCard(taskProvider),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildDesktopAttributionButton(),
+                            const SizedBox(height: 10),
+                            _buildDiscoveryCard(taskProvider),
+                          ],
+                        ),
                       ),
                     ),
                   );
@@ -2785,13 +2793,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        KubusGlassIconButton(
-          icon: Icons.info_outline,
-          tooltip: 'Map attributions',
-          borderRadius: KubusRadius.sm,
-          onPressed: () => unawaited(showKubusMapAttributionDialog(context)),
-        ),
-        const SizedBox(height: 8),
         KubusMapControls(
           controller: _kubusMapController,
           layout: KubusMapPrimaryControlsLayout.desktopToolbar,
@@ -2842,6 +2843,16 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           resetBearingTooltip: l10n.mapResetBearingTooltip,
         ),
       ],
+    );
+  }
+
+  Widget _buildDesktopAttributionButton() {
+    return KubusGlassIconButton(
+      icon: Icons.question_mark_rounded,
+      tooltip: 'Map attributions',
+      borderRadius: KubusRadius.sm,
+      iconColor: Theme.of(context).colorScheme.primary,
+      onPressed: () => unawaited(showKubusMapAttributionDialog(context)),
     );
   }
 
