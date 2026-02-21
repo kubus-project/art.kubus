@@ -1,4 +1,3 @@
-
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -25,9 +24,12 @@ class GlassCapabilitiesProvider with ChangeNotifier {
   static const String _reduceEffectsKey = 'kubus_reduce_effects';
   static const String _autoReduceEffectsOptOutKey =
       'kubus_reduce_effects_auto_opt_out';
+  static const String _reduceEffectsUserTouchedKey =
+      'kubus_reduce_effects_user_touched';
 
   GlassMode _mode = GlassMode.blur;
   bool _reduceEffectsUser = false;
+  bool _reduceEffectsUserTouched = false;
   bool _autoReduceEffectsOptOut = false;
   bool _heuristicTriggered = false;
   bool _isInitialized = false;
@@ -55,6 +57,9 @@ class GlassCapabilitiesProvider with ChangeNotifier {
   /// Whether the user explicitly toggled "Reduce effects".
   bool get reduceEffectsUserOverride => _reduceEffectsUser;
 
+  /// Whether the user explicitly changed the Reduce Effects toggle.
+  bool get reduceEffectsUserTouched => _reduceEffectsUserTouched;
+
   bool get isInitialized => _isInitialized;
 
   GlassCapabilitiesProvider() {
@@ -70,6 +75,8 @@ class GlassCapabilitiesProvider with ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       _reduceEffectsUser = prefs.getBool(_reduceEffectsKey) ?? false;
+      _reduceEffectsUserTouched =
+          prefs.getBool(_reduceEffectsUserTouchedKey) ?? false;
       _autoReduceEffectsOptOut =
           prefs.getBool(_autoReduceEffectsOptOutKey) ?? false;
     } catch (_) {
@@ -87,8 +94,30 @@ class GlassCapabilitiesProvider with ChangeNotifier {
     notifyListeners();
 
     // 4. Schedule a lightweight perf probe after initial loading settles.
-    if (!_reduceEffectsUser && !_heuristicTriggered && !_autoReduceEffectsOptOut) {
+    if (!_reduceEffectsUser &&
+        !_heuristicTriggered &&
+        !_autoReduceEffectsOptOut &&
+        _shouldRunRuntimePerfProbe()) {
       _schedulePerfProbe();
+    }
+  }
+
+  bool _shouldRunRuntimePerfProbe() {
+    // Desktop map startup can cause temporary frame spikes (shader/style warmup)
+    // that are not representative of sustained capability. Running the
+    // automatic jank probe on desktop can therefore incorrectly disable blur
+    // globally for the session. Keep auto-probing on web/mobile, where we
+    // primarily need this safeguard.
+    if (kIsWeb) return true;
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+      case TargetPlatform.iOS:
+        return true;
+      case TargetPlatform.fuchsia:
+      case TargetPlatform.linux:
+      case TargetPlatform.macOS:
+      case TargetPlatform.windows:
+        return false;
     }
   }
 
@@ -116,11 +145,14 @@ class GlassCapabilitiesProvider with ChangeNotifier {
     }
 
     _reduceEffectsUser = nextUserSetting;
+    _reduceEffectsUserTouched = true;
     _autoReduceEffectsOptOut = nextAutoOptOut;
 
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_reduceEffectsKey, _reduceEffectsUser);
+      await prefs.setBool(
+          _reduceEffectsUserTouchedKey, _reduceEffectsUserTouched);
       await prefs.setBool(
           _autoReduceEffectsOptOutKey, _autoReduceEffectsOptOut);
     } catch (_) {}
@@ -135,10 +167,42 @@ class GlassCapabilitiesProvider with ChangeNotifier {
   void _recomputeMode() {
     final healthy = webGLContextHealthy.value;
     final heuristicActive = _heuristicTriggered && !_autoReduceEffectsOptOut;
-    if (_reduceEffectsUser || !healthy || heuristicActive) {
+
+    // If the user explicitly turned Reduce Effects OFF, honor that preference
+    // on desktop-class environments and keep blur enabled. This avoids cases
+    // where safety heuristics/context health flags keep blur disabled even
+    // after the user opted into full effects.
+    final explicitOffForcesBlur = _reduceEffectsUserTouched &&
+        !_reduceEffectsUser &&
+        _isDesktopClassEnvironment();
+
+    if (_reduceEffectsUser) {
+      _mode = GlassMode.tintedFallback;
+      return;
+    }
+
+    if (explicitOffForcesBlur) {
+      _mode = GlassMode.blur;
+      return;
+    }
+
+    if (!healthy || heuristicActive) {
       _mode = GlassMode.tintedFallback;
     } else {
       _mode = GlassMode.blur;
+    }
+  }
+
+  bool _isDesktopClassEnvironment() {
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+      case TargetPlatform.iOS:
+        return false;
+      case TargetPlatform.fuchsia:
+      case TargetPlatform.linux:
+      case TargetPlatform.macOS:
+      case TargetPlatform.windows:
+        return true;
     }
   }
 
