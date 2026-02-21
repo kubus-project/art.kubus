@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -74,9 +75,13 @@ class GlassSurface extends StatelessWidget {
     // (e.g. in a test harness), default to blur enabled.
     final useBlur = _resolveBlurEnabled(context);
 
+    if (kDebugMode) {
+      debugPrint('GlassSurface: useBlur=$useBlur');
+    }
+
     // --- Tint ---
-    final baseTint =
-        tintColor ?? (isDark ? KubusColors.surfaceDark : KubusColors.surfaceLight);
+    final baseTint = tintColor ??
+        (isDark ? KubusColors.surfaceDark : KubusColors.surfaceLight);
 
     // Determine opacity:
     // 1. Explicit tintOpacity always wins.
@@ -127,8 +132,7 @@ class GlassSurface extends StatelessWidget {
           ? null
           : [
               BoxShadow(
-                color: Colors.black
-                    .withValues(alpha: isDark ? 0.25 : 0.08),
+                color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.08),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),

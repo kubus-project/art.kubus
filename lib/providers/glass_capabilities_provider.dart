@@ -79,8 +79,20 @@ class GlassCapabilitiesProvider with ChangeNotifier {
           prefs.getBool(_reduceEffectsUserTouchedKey) ?? false;
       _autoReduceEffectsOptOut =
           prefs.getBool(_autoReduceEffectsOptOutKey) ?? false;
-    } catch (_) {
+      if (kDebugMode) {
+        debugPrint(
+          'GlassCapabilitiesProvider._initialize: loaded from prefs: '
+          '_reduceEffectsUser=$_reduceEffectsUser, '
+          '_reduceEffectsUserTouched=$_reduceEffectsUserTouched, '
+          '_autoReduceEffectsOptOut=$_autoReduceEffectsOptOut',
+        );
+      }
+    } catch (e) {
       // Default: effects enabled.
+      if (kDebugMode) {
+        debugPrint(
+            'GlassCapabilitiesProvider._initialize: error loading prefs: $e');
+      }
     }
 
     // 2. Listen to WebGL context health changes (web only; no-op otherwise).
@@ -88,6 +100,9 @@ class GlassCapabilitiesProvider with ChangeNotifier {
 
     // 3. Run platform capability heuristic.
     _heuristicTriggered = _evaluateHeuristic();
+    if (kDebugMode) {
+      debugPrint('GlassCapabilitiesProvider: _heuristicTriggered=$_heuristicTriggered');
+    }
 
     _recomputeMode();
     _isInitialized = true;
@@ -139,8 +154,18 @@ class GlassCapabilitiesProvider with ChangeNotifier {
     final nextUserSetting = value;
     final nextAutoOptOut = !value && _heuristicTriggered;
 
+    if (kDebugMode) {
+      debugPrint(
+        'GlassCapabilitiesProvider.setReduceEffects: value=$value, '
+        'nextUserSetting=$nextUserSetting, nextAutoOptOut=$nextAutoOptOut',
+      );
+    }
+
     if (_reduceEffectsUser == nextUserSetting &&
         _autoReduceEffectsOptOut == nextAutoOptOut) {
+      if (kDebugMode) {
+        debugPrint('GlassCapabilitiesProvider.setReduceEffects: no change');
+      }
       return;
     }
 
@@ -176,20 +201,47 @@ class GlassCapabilitiesProvider with ChangeNotifier {
         !_reduceEffectsUser &&
         _isDesktopClassEnvironment();
 
+    if (kDebugMode) {
+      debugPrint(
+        'GlassCapabilitiesProvider._recomputeMode: '
+        '_reduceEffectsUser=$_reduceEffectsUser, '
+        '_reduceEffectsUserTouched=$_reduceEffectsUserTouched, '
+        '_heuristicTriggered=$_heuristicTriggered, '
+        '_autoReduceEffectsOptOut=$_autoReduceEffectsOptOut, '
+        'healthy=$healthy, '
+        'heuristicActive=$heuristicActive, '
+        'explicitOffForcesBlur=$explicitOffForcesBlur',
+      );
+    }
+
     if (_reduceEffectsUser) {
       _mode = GlassMode.tintedFallback;
+      if (kDebugMode) {
+        debugPrint('GlassCapabilitiesProvider: mode=tintedFallback (user on)');
+      }
       return;
     }
 
     if (explicitOffForcesBlur) {
       _mode = GlassMode.blur;
+      if (kDebugMode) {
+        debugPrint(
+            'GlassCapabilitiesProvider: mode=blur (explicit user off)');
+      }
       return;
     }
 
     if (!healthy || heuristicActive) {
       _mode = GlassMode.tintedFallback;
+      if (kDebugMode) {
+        debugPrint(
+            'GlassCapabilitiesProvider: mode=tintedFallback (!healthy=${!healthy} OR heuristicActive=$heuristicActive)');
+      }
     } else {
       _mode = GlassMode.blur;
+      if (kDebugMode) {
+        debugPrint('GlassCapabilitiesProvider: mode=blur');
+      }
     }
   }
 
