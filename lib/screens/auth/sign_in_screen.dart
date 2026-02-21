@@ -838,30 +838,27 @@ class _SignInScreenState extends State<SignInScreen> {
                 return Padding(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  child: Column(
-                    children: [
-                      const SizedBox(height: kToolbarHeight + 12),
-                      Expanded(
-                        child: Center(
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 180),
-                            curve: Curves.easeOut,
-                            transform: Matrix4.translationValues(
-                              0,
-                              -keyboardLift,
-                              0,
-                            ),
+                  child: AnimatedPadding(
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeOut,
+                    padding: EdgeInsets.only(bottom: keyboardLift),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: kToolbarHeight + 12),
+                        Expanded(
+                          child: Center(
                             child: ConstrainedBox(
                               constraints: BoxConstraints(
                                 maxWidth: 520,
-                                maxHeight: constraints.maxHeight - kToolbarHeight,
+                                maxHeight:
+                                    constraints.maxHeight - kToolbarHeight,
                               ),
                               child: form,
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 );
               },

@@ -2131,7 +2131,7 @@ class _MapScreenState extends State<MapScreen>
           // Keep anchored behavior, but compose the camera so the marker sits
           // closer to center-height while preserving room for the larger card.
           final double desiredY = math
-            .max(size.height * 0.68, minMarkerY)
+            .max(size.height * 0.74, minMarkerY)
           .clamp(0.0, size.height)
           .toDouble();
       final double dy = desiredY - (size.height / 2);
@@ -3152,9 +3152,7 @@ class _MapScreenState extends State<MapScreen>
                   discoveryProgress,
                   isLoadingArtworks,
                 ),
-                _buildMobileAttributionButton(
-                  bottomInset: attributionBottomMargin,
-                ),
+                _buildMobileAttributionButton(),
                 _buildTopOverlays(theme, themeProvider, taskProvider),
                 // Keep marker overlay above map UI chrome (controls/search/sheet)
                 // so the selected marker card remains the top interactive layer.
@@ -3787,10 +3785,9 @@ class _MapScreenState extends State<MapScreen>
     MapMarkerSelectionState selection,
   ) {
     final marker = selection.selectedMarker;
-    final selectionKey = selection.selectedAt?.millisecondsSinceEpoch ?? 0;
     final animationKey = marker == null
         ? const ValueKey<String>('marker_overlay_empty')
-        : ValueKey<String>('marker_overlay:${marker.id}:$selectionKey');
+        : ValueKey<String>('marker_overlay:selection:${selection.selectionToken}');
     return KubusMapMarkerOverlayLayer(
       content: marker == null
           ? null
@@ -4051,7 +4048,7 @@ class _MapScreenState extends State<MapScreen>
             safeHeight * (isCompact ? 0.72 : 0.66),
           );
         },
-        markerOffset: 40.0,
+        markerOffset: 14.0,
         horizontalPadding: 10.0,
         topPadding: MapOverlaySizing.defaultVerticalPadding,
         bottomPadding: MapOverlaySizing.defaultVerticalPadding,
@@ -4832,38 +4829,57 @@ class _MapScreenState extends State<MapScreen>
     );
   }
 
-  Widget _buildMobileAttributionButton({required double bottomInset}) {
+  Widget _buildMobileAttributionButton() {
     return Positioned(
       left: 12,
-      bottom: bottomInset,
-      child: MapOverlayBlocker(
-        child: Tooltip(
-          message: 'Map attributions',
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: () => unawaited(showKubusMapAttributionDialog(context)),
-              borderRadius: BorderRadius.circular(KubusRadius.sm),
-              child: SizedBox(
-                width: 42,
-                height: 42,
-                child: LiquidGlassPanel(
-                  padding: EdgeInsets.zero,
-                  margin: EdgeInsets.zero,
-                  borderRadius: BorderRadius.circular(KubusRadius.sm),
-                  showBorder: true,
-                  child: Center(
-                    child: Icon(
-                      Icons.info_outline,
-                      size: 20,
-                      color: Theme.of(context).colorScheme.primary,
+      bottom: 0,
+      child: ValueListenableBuilder<double>(
+        valueListenable: _nearbySheetExtentNotifier,
+        builder: (context, sheetExtent, _) {
+          final media = MediaQuery.of(context);
+          final viewportHeight = media.size.height;
+          final safeBottom = MapOverlaySizing.bottomSafeInset(media);
+          final sheetHeight = viewportHeight * sheetExtent;
+          final bottomInset = math
+              .max(
+                sheetHeight + 12.0,
+                safeBottom + 12.0,
+              )
+              .clamp(12.0, math.max(12.0, viewportHeight - 12.0))
+              .toDouble();
+
+          return AnimatedPadding(
+            duration: const Duration(milliseconds: 120),
+            curve: Curves.easeOutCubic,
+            padding: EdgeInsets.only(bottom: bottomInset),
+            child: MapOverlayBlocker(
+              child: Tooltip(
+                message: 'Map attributions',
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => unawaited(showKubusMapAttributionDialog(context)),
+                    borderRadius: BorderRadius.circular(KubusRadius.sm),
+                    child: SizedBox(
+                      width: 42,
+                      height: 42,
+                      child: Center(
+                        child: Icon(
+                          Icons.info_outline,
+                          size: 20,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withValues(alpha: 0.96),
+                        ),
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

@@ -1075,7 +1075,7 @@ class KubusMapController {
     final coordinateKey = mapMarkerCoordinateKey(marker.position);
     final keyedStack = visibleMarkers
         .where((other) => mapMarkerCoordinateKey(other.position) == coordinateKey)
-        .toList(growable: false);
+      .toList(growable: true);
 
     if (keyedStack.isNotEmpty) {
       keyedStack.sort((a, b) => a.id.compareTo(b.id));
@@ -1088,7 +1088,7 @@ class KubusMapController {
         }
       }
 
-      return keyedStack;
+      return List<ArtMarker>.unmodifiable(keyedStack);
     }
 
     final stacked = <ArtMarker>[];
@@ -1115,7 +1115,7 @@ class KubusMapController {
       }
     }
 
-    return stacked;
+    return List<ArtMarker>.unmodifiable(stacked);
   }
 
   List<KubusRenderedMarker> buildRenderedMarkers() {

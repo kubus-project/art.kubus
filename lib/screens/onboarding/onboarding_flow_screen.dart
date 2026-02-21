@@ -2626,52 +2626,49 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
             builder: (context, constraints) {
               final keyboardLift = KeyboardInsetResolver.effectiveBottomInset(
                 context,
-                maxInset: _isDesktop ? 0 : 180,
+                maxInset: _isDesktop ? 0 : double.infinity,
               );
               final compactHeight = !_isDesktop && constraints.maxHeight < 760;
               final compactLayout = compactHeight;
               final hideProgress = !_isDesktop && constraints.maxHeight < 700;
 
-              return Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: _isDesktop
-                      ? KubusSpacing.lg
-                      : (compactLayout ? KubusSpacing.sm : KubusSpacing.md),
-                  vertical: compactLayout ? 8 : 10,
-                ),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: _isDesktop ? 1280 : double.infinity,
-                    ),
-                    child: Column(
-                      children: [
-                        _buildHeader(
-                          l10n,
-                          scheme,
-                          localeProvider: localeProvider,
-                          themeProvider: themeProvider,
-                          compact: compactLayout,
-                        ),
-                        SizedBox(
-                          height:
-                              compactLayout ? KubusSpacing.xs : KubusSpacing.sm,
-                        ),
-                        if (!hideProgress) ...[
-                          _buildProgress(scheme),
-                          SizedBox(
-                            height: compactLayout ? KubusSpacing.xs : 12,
+              return AnimatedPadding(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOut,
+                padding: EdgeInsets.only(bottom: keyboardLift),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: _isDesktop
+                        ? KubusSpacing.lg
+                        : (compactLayout ? KubusSpacing.sm : KubusSpacing.md),
+                    vertical: compactLayout ? 8 : 10,
+                  ),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: _isDesktop ? 1280 : double.infinity,
+                      ),
+                      child: Column(
+                        children: [
+                          _buildHeader(
+                            l10n,
+                            scheme,
+                            localeProvider: localeProvider,
+                            themeProvider: themeProvider,
+                            compact: compactLayout,
                           ),
-                        ],
-                        Expanded(
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 180),
-                            curve: Curves.easeOut,
-                            transform: Matrix4.translationValues(
-                              0,
-                              -keyboardLift,
-                              0,
+                          SizedBox(
+                            height: compactLayout
+                                ? KubusSpacing.xs
+                                : KubusSpacing.sm,
+                          ),
+                          if (!hideProgress) ...[
+                            _buildProgress(scheme),
+                            SizedBox(
+                              height: compactLayout ? KubusSpacing.xs : 12,
                             ),
+                          ],
+                          Expanded(
                             child: Column(
                               children: [
                                 Expanded(
@@ -2691,8 +2688,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
                               ],
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
