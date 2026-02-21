@@ -203,15 +203,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   int _nearbyPanelAutoloadAttempts = 0;
   bool _nearbyPanelAutoloadScheduled = false;
   static const int _maxNearbyPanelAutoloadAttempts = 8;
-  String? _nearbySidebarSignature;
-  bool _nearbySidebarSyncScheduled = false;
-  Timer? _nearbySidebarSyncTimer;
   LatLng? _nearbySidebarAnchor;
-  DateTime? _nearbySidebarLastSyncAt;
-  List<Artwork> _nearbySidebarPendingArtworks = const <Artwork>[];
-  LatLng? _nearbySidebarPendingBasePosition;
-  static const Duration _nearbySidebarSyncCooldown =
-      Duration(milliseconds: 250);
   // Create-marker sidebar state
   MarkerSubjectData? _createMarkerSubjectData;
   Set<MarkerSubjectType>? _createMarkerAllowedTypes;
@@ -770,42 +762,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       return;
     }
 
-    final shellScope = DesktopShellScope.of(context);
-    if (shellScope == null) {
-      // DesktopMapScreen can be opened outside of DesktopShell (e.g. via
-      // MapNavigation). In that case there is no functions sidebar; render the
-      // nearby panel locally inside this screen.
-      _pendingInitialNearbyPanelOpen = false;
-      _openNearbyArtPanel();
-      return;
-    }
-
     _pendingInitialNearbyPanelOpen = false;
     _openNearbyArtPanel();
-  }
-
-  Widget _buildNearbyFunctionsPanelContent(
-    List<Artwork> filteredArtworks, {
-    LatLng? basePosition,
-  }) {
-    // Keep the subtree key stable so rapid updates (like radius changes)
-    // update in-place instead of remounting the whole sidebar.
-    return KeyedSubtree(
-      key: const ValueKey<String>('nearby_sidebar'),
-      child: Builder(
-        builder: (context) {
-          final themeProvider = context.watch<ThemeProvider>();
-          final isLoadingArtworks =
-              context.watch<ArtworkProvider>().isLoading('load_artworks');
-          return _buildNearbyArtSidebar(
-            themeProvider,
-            filteredArtworks,
-            basePosition: basePosition,
-            isLoading: isLoadingArtworks,
-          );
-        },
-      ),
-    );
   }
 
   void _openNearbyArtPanel() {
@@ -813,10 +771,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     _safeSetState(() {
       _rightSidebarContent = _RightSidebarContent.nearby;
-      _nearbySidebarSignature = null;
-      _nearbySidebarSyncScheduled = false;
       _nearbySidebarAnchor = anchor;
-      _nearbySidebarLastSyncAt = null;
       _selectedArtwork = null;
       _selectedExhibition = null;
       _showFiltersPanel = false;
@@ -834,11 +789,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   void _closeNearbyArtPanel() {
     _safeSetState(() {
       _rightSidebarContent = null;
-      _nearbySidebarSyncScheduled = false;
       _nearbySidebarAnchor = null;
-      _nearbySidebarLastSyncAt = null;
     });
-    _nearbySidebarSignature = null;
     // Close the shell panel too in case it was still open from a previous
     // session (defensive).
     DesktopShellScope.of(context)?.closeFunctionsPanel();
@@ -938,103 +890,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       if (!mounted) return;
       unawaited(_applyThemeToMapStyle(themeProvider: themeProvider));
       unawaited(_syncMapMarkersSafe(themeProvider: themeProvider));
-    });
-  }
-
-  String _nearbySidebarSignatureFor(
-    List<Artwork> filteredArtworks, {
-    LatLng? basePosition,
-  }) {
-    final base = basePosition ?? _nearbySidebarAnchor ?? _userLocation;
-    final ids = filteredArtworks.take(30).map((a) => a.id).toList()..sort();
-    final modeSig = _travelModeEnabled
-        ? 'travel'
-        : _effectiveSearchRadiusKm.toStringAsFixed(1);
-    final baseSig = base == null
-        ? 'none'
-        : '${base.latitude.toStringAsFixed(4)},${base.longitude.toStringAsFixed(4)}';
-    return '$modeSig|$baseSig|$_selectedFilter|${filteredArtworks.length}|${ids.join(',')}';
-  }
-
-  void _syncNearbySidebarIfNeeded(
-    ThemeProvider themeProvider,
-    List<Artwork> filteredArtworks, {
-    LatLng? basePosition,
-  }) {
-    if (!_isNearbyPanelOpen) return;
-    if (!mounted) return;
-    final shellScope = DesktopShellScope.of(context);
-    if (shellScope == null) return;
-
-    // Build a compact signature so we only push sidebar updates when something
-    // meaningful changes (avoids setState->build feedback loops).
-    final sig = _nearbySidebarSignatureFor(
-      filteredArtworks,
-      basePosition: basePosition,
-    );
-    if (_nearbySidebarSignature == sig) return;
-    _nearbySidebarSignature = sig;
-
-    // Throttle updates (e.g. radius slider changes) to avoid visible flashing
-    // from repeatedly replacing the desktop shell's functions panel content.
-    final now = DateTime.now();
-    final lastAt = _nearbySidebarLastSyncAt;
-    if (lastAt != null && now.difference(lastAt) < _nearbySidebarSyncCooldown) {
-      _nearbySidebarPendingArtworks = filteredArtworks;
-      _nearbySidebarPendingBasePosition = basePosition;
-      if (_nearbySidebarSyncScheduled) return;
-      _nearbySidebarSyncScheduled = true;
-      final remaining = _nearbySidebarSyncCooldown - now.difference(lastAt);
-      _nearbySidebarSyncTimer?.cancel();
-      _nearbySidebarSyncTimer = Timer(remaining, () {
-        if (!mounted) return;
-        _nearbySidebarSyncScheduled = false;
-        final pending = _nearbySidebarPendingArtworks;
-        final pendingBase = _nearbySidebarPendingBasePosition;
-        _nearbySidebarPendingArtworks = const <Artwork>[];
-        _nearbySidebarPendingBasePosition = null;
-        _nearbySidebarSyncTimer = null;
-        _syncNearbySidebarIfNeeded(
-          themeProvider,
-          pending,
-          basePosition: pendingBase,
-        );
-      });
-      return;
-    }
-    _nearbySidebarLastSyncAt = now;
-
-    // NOTE: This method is now always called from a post-frame callback,
-    // so we can directly update the shell content without another deferral.
-    shellScope.setFunctionsPanelContent(
-      _buildNearbyFunctionsPanelContent(
-        filteredArtworks,
-        basePosition: basePosition,
-      ),
-    );
-  }
-
-  /// Forces an immediate sidebar sync after user actions like filter or radius
-  /// changes. Invalidates the cached signature so the next sync detects a
-  /// change, then schedules the update for the next frame.
-  void _forceNearbySidebarSync() {
-    if (!_isNearbyPanelOpen || !mounted) return;
-    // Invalidate signature so _syncNearbySidebarIfNeeded sees a change.
-    _nearbySidebarSignature = null;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_isNearbyPanelOpen) return;
-      final themeProvider = context.read<ThemeProvider>();
-      final artworkProvider = context.read<ArtworkProvider>();
-      final anchor = _nearbySidebarAnchor ?? _userLocation ?? _effectiveCenter;
-      final filteredArtworks = _getFilteredArtworks(
-        artworkProvider.artworks,
-        basePositionOverride: anchor,
-      );
-      _syncNearbySidebarIfNeeded(
-        themeProvider,
-        filteredArtworks,
-        basePosition: anchor,
-      );
     });
   }
 
@@ -1157,8 +1012,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   void _pausePolling() {
     _mapDataCoordinator.cancelPending();
     _cubeSyncDebouncer.cancel();
-    _nearbySidebarSyncTimer?.cancel();
-    _nearbySidebarSyncTimer = null;
     _mapSearchController.dismissOverlay(unfocus: false);
 
     final createdSub = _markerStreamSub;
@@ -1610,8 +1463,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _registeredMapImages.clear();
     _managedLayerIds.clear();
     _managedSourceIds.clear();
-    _nearbySidebarSyncTimer?.cancel();
-    _nearbySidebarSyncTimer = null;
     _animationController.dispose();
     _perf.controllerDisposed('selection_pop');
     _cubeIconSpinController.dispose();
@@ -1912,8 +1763,16 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   unawaited(_renderCoordinator.updateRenderMode());
                 }
                 if (_isNearbyPanelOpen && _userLocation == null) {
-                  _nearbySidebarAnchor = _effectiveCenter;
-                  _forceNearbySidebarSync();
+                  final nextAnchor = _effectiveCenter;
+                  final currentAnchor = _nearbySidebarAnchor;
+                  final anchorChanged = currentAnchor == null ||
+                      (currentAnchor.latitude - nextAnchor.latitude).abs() >
+                          0.000001 ||
+                      (currentAnchor.longitude - nextAnchor.longitude).abs() >
+                          0.000001;
+                  if (anchorChanged) {
+                    _safeSetState(() => _nearbySidebarAnchor = nextAnchor);
+                  }
                 }
                 _queueMarkerRefresh(fromGesture: false);
               },
@@ -2154,14 +2013,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               borderRadius: 10,
               onPressed: () {
                 setState(() => _selectedFilter = filter);
-                // Reload markers so the nearby panel and
-                // sidebar reflect the new filter immediately.
+                // Reload markers so the nearby panel reflects the new filter.
                 unawaited(_loadMarkersForCurrentView(force: true).then((_) {
                   if (!mounted) return;
                   _requestMarkerVisualSync(force: true);
                 }));
-                // Force immediate sidebar sync for the shell-scope nearby panel.
-                _forceNearbySidebarSync();
               },
             ),
           );
@@ -2757,7 +2613,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                       .setMarkerTypeVisibility(_markerLayerVisibility);
                   _renderCoordinator.requestStyleUpdate(force: true);
                   _requestMarkerVisualSync(force: true);
-                  _forceNearbySidebarSync();
                 },
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
@@ -2775,7 +2630,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   setState(() => _showFiltersPanel = false);
                   _loadMarkersForCurrentView(force: true);
                   _requestMarkerVisualSync(force: true);
-                  _forceNearbySidebarSync();
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: themeProvider.accentColor,
@@ -2831,7 +2685,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                                     force: true,
                                   ),
                                 );
-                                _forceNearbySidebarSync();
                               }
                             },
                           );
@@ -2882,7 +2735,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   .setMarkerTypeVisibility(_markerLayerVisibility);
               _renderCoordinator.requestStyleUpdate(force: true);
               _requestMarkerVisualSync(force: true);
-              _forceNearbySidebarSync();
             },
           ),
           const SizedBox(height: 24),
