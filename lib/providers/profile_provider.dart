@@ -597,6 +597,18 @@ class ProfileProvider extends foundation.ChangeNotifier {
         // Load additional stats (collections, followers, following)
         await _loadBackendStats(walletAddress);
       } catch (e) {
+        final lowerError = e.toString().toLowerCase();
+        final shouldAutoRegister =
+            (e is BackendApiRequestException && e.statusCode == 404) ||
+                lowerError.contains('request failed: 404') ||
+                lowerError.contains('profile not found');
+
+        if (!shouldAutoRegister) {
+          debugPrint(
+              'ProfileProvider: Profile fetch failed (no auto-register): $e');
+          rethrow;
+        }
+
         debugPrint(
             'ProfileProvider: Profile not found on backend, auto-registering via auth: $e');
         // Profile doesn't exist — ask auth/register to create user+profile and return token

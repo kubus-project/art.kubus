@@ -2264,12 +2264,6 @@ class BackendApiService
               .contains(normalized.toLowerCase())) {
         throw Exception('Profile not found');
       }
-      // Validate wallet format to prevent 404s from display names or malformed identifiers
-      if (!WalletUtils.looksLikeWallet(normalized)) {
-        AppConfig.debugPrint(
-            'BackendApiService.getProfileByWallet: rejecting non-wallet identifier: $normalized');
-        throw Exception('Invalid wallet address format');
-      }
       // URL-encode the wallet address for safe path segments
       final encodedWallet = Uri.encodeComponent(normalized);
       final uri = Uri.parse('$baseUrl/api/profiles/$encodedWallet');
