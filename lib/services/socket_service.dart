@@ -158,7 +158,9 @@ class SocketService {
       final token = (api.getAuthToken() ?? '').trim();
       _socketAuthToken = token.isNotEmpty ? token : null;
       final options = <String, dynamic>{
-        'transports': ['websocket'],
+        // Prefer WebSocket but allow polling fallback (some networks/proxies
+        // block WS, which otherwise surfaces as "No transports available").
+        'transports': ['websocket', 'polling'],
         'autoConnect': false,
         'auth': token.isNotEmpty ? {'token': token} : {},
         'extraHeaders': token.isNotEmpty ? {'Authorization': 'Bearer $token'} : {},

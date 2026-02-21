@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -328,23 +329,34 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
           ),
         ),
         body: SafeArea(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 560),
-              child: Padding(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
-                child: KubusCard(
-                  padding: const EdgeInsets.all(16),
-                  color: scheme.surfaceContainerHighest,
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 240),
-                    child: _step == _SecuritySetupStep.pin
-                        ? _buildPinStep(l10n, scheme)
-                        : _buildBiometricsStep(l10n, scheme),
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: math.max(0, constraints.maxHeight - 32),
+                  ),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 560),
+                      child: KubusCard(
+                        padding: const EdgeInsets.all(16),
+                        color: scheme.surfaceContainerHighest,
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 240),
+                          child: _step == _SecuritySetupStep.pin
+                              ? _buildPinStep(l10n, scheme)
+                              : _buildBiometricsStep(l10n, scheme),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
         ),
       ),

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:developer' as dev;
+import 'dart:isolate';
 import 'package:art_kubus/screens/events/event_detail_screen.dart';
 import 'package:art_kubus/screens/events/exhibition_detail_screen.dart';
 import 'package:art_kubus/widgets/app_loading.dart';
@@ -199,6 +200,7 @@ class _UnhandledErrorDedupe {
 }
 
 SemanticsHandle? _webSemanticsHandle;
+RawReceivePort? _isolateErrorPort;
 
 void main() {
   // We'll initialize the bindings inside the runZonedGuarded callback so the
@@ -218,7 +220,15 @@ void main() {
   ErrorWidget.builder = (FlutterErrorDetails details) {
     // Keep message minimal and safe for web debugging
     final message = 'An unexpected error occurred';
-    debugPrint('ErrorWidget caught: ${details.exception}\n${details.stack}');
+    try {
+      _UnhandledErrorDedupe.handle(
+        details.exception,
+        details.stack ?? StackTrace.current,
+        source: 'ErrorWidget',
+      );
+    } catch (_) {
+      // Never crash the fallback builder.
+    }
     return Material(
       child: Center(
         child: Padding(
@@ -284,6 +294,36 @@ void main() {
               source: 'PlatformDispatcher');
           return true;
         };
+
+        // Capture errors from background isolates (best-effort). This helps when
+        // plugins or compute()-style tasks throw outside the UI isolate.
+        if (!kIsWeb) {
+          try {
+            _isolateErrorPort?.close();
+            _isolateErrorPort = RawReceivePort((dynamic pair) {
+              try {
+                // Isolate errors arrive as [error, stackString].
+                if (pair is List && pair.length >= 2) {
+                  final Object err = pair[0] is Object
+                      ? pair[0] as Object
+                      : Exception(pair[0].toString());
+                  final StackTrace st = StackTrace.fromString(pair[1].toString());
+                  _UnhandledErrorDedupe.handle(err, st, source: 'Isolate');
+                  return;
+                }
+                final Object err = pair is Object ? pair : Exception(pair.toString());
+                _UnhandledErrorDedupe.handle(err, StackTrace.current,
+                    source: 'Isolate');
+              } catch (_) {
+                // Ignore listener failures.
+              }
+            });
+
+            Isolate.current.addErrorListener(_isolateErrorPort!.sendPort);
+          } catch (_) {
+            // Some platforms/runtimes may not support isolate error listeners.
+          }
+        }
         // Camera initialization moved to AR screen to avoid early permission requests
       } catch (e) {
         logger.e('App initialization failed: $e');
