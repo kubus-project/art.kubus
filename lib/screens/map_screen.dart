@@ -303,17 +303,21 @@ class _MapScreenState extends State<MapScreen>
   String _artworkFilter = 'all';
   final DraggableScrollableController _sheetController =
       DraggableScrollableController();
+  final ValueNotifier<double> _nearbySheetExtentNotifier =
+      ValueNotifier<double>(_nearbySheetMin);
   bool _isSheetInteracting = false;
   // Only block map gestures in the sheet area when the sheet is expanded.
   // The default collapsed extent should not disable map interactions.
   bool _isSheetBlocking = false;
-  double _nearbySheetExtent = _nearbySheetMin;
   double _markerRadiusKm = 5.0;
   bool _travelModeEnabled = false;
   bool _isometricViewEnabled = false;
 
   static const double _nearbySheetMin = 0.16;
   static const double _nearbySheetMax = 0.85;
+  static const double _nearbySheetBlockingOnThreshold = _nearbySheetMin + 0.02;
+  static const double _nearbySheetBlockingOffThreshold =
+      _nearbySheetMin + 0.008;
 
   // Travel mode is viewport-based (bounds query), not huge-radius.
   double get _effectiveMarkerRadiusKm => _markerRadiusKm;
@@ -332,6 +336,8 @@ class _MapScreenState extends State<MapScreen>
 
   bool _pendingSafeSetState = false;
   int _debugMarkerTapCount = 0;
+  int _debugSheetExtentEventCount = 0;
+  DateTime _debugSheetExtentWindowStart = DateTime.now();
 
   late AnimationController _cubeIconSpinController;
 
@@ -1267,6 +1273,7 @@ class _MapScreenState extends State<MapScreen>
     _perf.controllerDisposed('location_indicator');
     _markerStackPageController.dispose();
     _sheetController.dispose();
+    _nearbySheetExtentNotifier.dispose();
     WidgetsBinding.instance.removeObserver(this);
     _perf.logSummary(
       'dispose',
@@ -2000,12 +2007,60 @@ class _MapScreenState extends State<MapScreen>
     _safeSetState(() => _isSheetInteracting = value);
   }
 
+  void _handleSheetExtentNotification(double extent) {
+    if (kDebugMode && MapPerformanceDebug.isEnabled) {
+      _debugSheetExtentEventCount += 1;
+      final now = DateTime.now();
+      final elapsedMs =
+          now.difference(_debugSheetExtentWindowStart).inMilliseconds;
+      if (elapsedMs >= 1000) {
+        AppConfig.debugPrint(
+          'MapScreen: nearby sheet extent events/s=$_debugSheetExtentEventCount',
+        );
+        _debugSheetExtentEventCount = 0;
+        _debugSheetExtentWindowStart = now;
+      }
+    }
+
+    final clampedExtent = extent.clamp(_nearbySheetMin, _nearbySheetMax);
+    final blocking = _isSheetBlocking
+        ? clampedExtent > _nearbySheetBlockingOffThreshold
+        : clampedExtent > _nearbySheetBlockingOnThreshold;
+    _setSheetBlocking(blocking, clampedExtent);
+  }
+
   void _setSheetBlocking(bool value, double extent) {
-    if (_isSheetBlocking == value && _nearbySheetExtent == extent) return;
-    _safeSetState(() {
-      _isSheetBlocking = value;
-      _nearbySheetExtent = extent;
-    });
+    final normalizedExtent = extent.clamp(_nearbySheetMin, _nearbySheetMax);
+    final previousExtent = _nearbySheetExtentNotifier.value;
+    if ((previousExtent - normalizedExtent).abs() > 0.0001) {
+      _nearbySheetExtentNotifier.value = normalizedExtent;
+      _syncWebAttributionBottomForSheet(normalizedExtent);
+    }
+
+    if (_isSheetBlocking == value) return;
+    _safeSetState(() => _isSheetBlocking = value);
+  }
+
+  void _syncWebAttributionBottomForSheet(double sheetExtent) {
+    if (!kIsWeb || !_mapViewMounted || !mounted) return;
+    final media = MediaQuery.maybeOf(context);
+    if (media == null) return;
+    final viewportHeight = media.size.height;
+    if (!viewportHeight.isFinite || viewportHeight <= 1) return;
+
+    final safeBottom = MapOverlaySizing.bottomSafeInset(media);
+    final sheetHeight = viewportHeight * sheetExtent;
+    final bottomMargin = math
+        .max(
+          sheetHeight + 12.0,
+          safeBottom + 12.0,
+        )
+        .clamp(12.0, math.max(12.0, viewportHeight - 12.0))
+        .toDouble();
+    if ((_lastWebAttributionBottomPx - bottomMargin).abs() <= 1.0) return;
+
+    _lastWebAttributionBottomPx = bottomMargin;
+    MapAttributionHelper.setMobileMapAttributionBottomPx(bottomMargin);
   }
 
   void _dismissSelectedMarker() {
@@ -3021,7 +3076,8 @@ class _MapScreenState extends State<MapScreen>
         return LayoutBuilder(
           builder: (context, constraints) {
             final media = MediaQuery.of(context);
-            final sheetHeight = constraints.maxHeight * _nearbySheetExtent;
+            final sheetExtent = _nearbySheetExtentNotifier.value;
+            final sheetHeight = constraints.maxHeight * sheetExtent;
             final safeBottom = MapOverlaySizing.bottomSafeInset(media);
             final double attributionBottomMargin = math
                 .max(
@@ -3030,15 +3086,7 @@ class _MapScreenState extends State<MapScreen>
                 )
                 .clamp(12.0, math.max(12.0, constraints.maxHeight - 12.0))
                 .toDouble();
-            if (kIsWeb &&
-                _mapViewMounted &&
-                (_lastWebAttributionBottomPx - attributionBottomMargin).abs() >
-                    1.0) {
-              _lastWebAttributionBottomPx = attributionBottomMargin;
-              MapAttributionHelper.setMobileMapAttributionBottomPx(
-                attributionBottomMargin,
-              );
-            }
+            _syncWebAttributionBottomForSheet(sheetExtent);
             return Stack(
               children: [
                 KeyedSubtree(
@@ -3063,10 +3111,18 @@ class _MapScreenState extends State<MapScreen>
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    height: sheetHeight,
-                    child: const AbsorbPointer(
-                      absorbing: true,
-                      child: SizedBox.expand(),
+                    child: ValueListenableBuilder<double>(
+                      valueListenable: _nearbySheetExtentNotifier,
+                      builder: (context, extent, _) {
+                        final blockerHeight = constraints.maxHeight * extent;
+                        return SizedBox(
+                          height: blockerHeight,
+                          child: const AbsorbPointer(
+                            absorbing: true,
+                            child: SizedBox.expand(),
+                          ),
+                        );
+                      },
                     ),
                   ),
                 _buildPrimaryControls(),
@@ -4772,8 +4828,7 @@ class _MapScreenState extends State<MapScreen>
       alignment: Alignment.bottomCenter,
       child: NotificationListener<DraggableScrollableNotification>(
         onNotification: (notification) {
-          final blocking = notification.extent > (_nearbySheetMin + 0.01);
-          _setSheetBlocking(blocking, notification.extent);
+          _handleSheetExtentNotification(notification.extent);
           return false;
         },
         child: DraggableScrollableSheet(
