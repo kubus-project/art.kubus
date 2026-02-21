@@ -855,14 +855,7 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
         onPointerDown: (_) => _setInteracting(true),
         onPointerUp: (_) => _setInteracting(false),
         onPointerCancel: (_) => _setInteracting(false),
-        onPointerSignal: (_) {},
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onHorizontalDragStart: isMobile ? (_) {} : null,
-          onHorizontalDragUpdate: isMobile ? (_) {} : null,
-          onHorizontalDragEnd: isMobile ? (_) {} : null,
-          child: content,
-        ),
+        child: content,
       ),
     );
   }
