@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:latlong2/latlong.dart';
@@ -136,40 +134,31 @@ class MapMarkerDialog extends StatelessWidget {
     final maxHeight = media.size.height * (useSheet ? 0.9 : 0.75);
 
     if (useSheet) {
-      return ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(KubusRadius.xl)),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(
-            sigmaX: KubusGlassEffects.blurSigma,
-            sigmaY: KubusGlassEffects.blurSigma,
-          ),
-          child: Material(
-            color: scheme.surface.withValues(alpha: 0.78),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(KubusRadius.xl)),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                KubusSpacing.md + KubusSpacing.xs,
-                KubusSpacing.md + KubusSpacing.xs,
-                KubusSpacing.md + KubusSpacing.xs,
-                KubusSpacing.sm,
-              ),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: maxHeight),
-                child: KubusMarkerFormContent(
-                  subjectData: subjectData,
-                  onRefreshSubjects: onRefreshSubjects,
-                  initialPosition: initialPosition,
-                  allowManualPosition: allowManualPosition,
-                  mapCenter: mapCenter,
-                  onUseMapCenter: onUseMapCenter,
-                  initialSubjectType: initialSubjectType,
-                  allowedSubjectTypes: allowedSubjectTypes,
-                  blockedArtworkIds: blockedArtworkIds,
-                  onSubmit: (result) => Navigator.of(context).pop(result),
-                  onCancel: () => Navigator.of(context).maybePop(),
-                ),
-              ),
-            ),
+      return BackdropGlassSheet(
+        padding: const EdgeInsets.fromLTRB(
+          KubusSpacing.md + KubusSpacing.xs,
+          KubusSpacing.md + KubusSpacing.xs,
+          KubusSpacing.md + KubusSpacing.xs,
+          KubusSpacing.sm,
+        ),
+        blurSigma: KubusGlassEffects.blurSigma,
+        backgroundColor: scheme.surface.withValues(alpha: 0.78),
+        showBorder: false,
+        showHandle: false,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: KubusMarkerFormContent(
+            subjectData: subjectData,
+            onRefreshSubjects: onRefreshSubjects,
+            initialPosition: initialPosition,
+            allowManualPosition: allowManualPosition,
+            mapCenter: mapCenter,
+            onUseMapCenter: onUseMapCenter,
+            initialSubjectType: initialSubjectType,
+            allowedSubjectTypes: allowedSubjectTypes,
+            blockedArtworkIds: blockedArtworkIds,
+            onSubmit: (result) => Navigator.of(context).pop(result),
+            onCancel: () => Navigator.of(context).maybePop(),
           ),
         ),
       );

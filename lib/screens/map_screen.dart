@@ -2111,8 +2111,11 @@ class _MapScreenState extends State<MapScreen>
       final double minMarkerY =
           (topSafe + overlayHeight + 24).clamp(0.0, size.height).toDouble();
 
-      final double desiredY = math
-          .max(size.height * (2 / 3), minMarkerY)
+        // Keep anchored behavior, but compose the camera so the tapped marker is
+        // lower on screen. This leaves enough room for the anchored card to sit
+        // around the visual middle (instead of too high).
+        final double desiredY = math
+          .max(size.height * 0.80, minMarkerY)
           .clamp(0.0, size.height)
           .toDouble();
       final double dy = desiredY - (size.height / 2);
@@ -3133,8 +3136,10 @@ class _MapScreenState extends State<MapScreen>
                   discoveryProgress,
                   isLoadingArtworks,
                 ),
-                _buildMarkerOverlay(themeProvider, ui.markerSelection),
                 _buildTopOverlays(theme, themeProvider, taskProvider),
+                // Keep marker overlay above map UI chrome (controls/search/sheet)
+                // so the selected marker card remains the top interactive layer.
+                _buildMarkerOverlay(themeProvider, ui.markerSelection),
                 KubusMapTutorialOverlay(
                   visible: showMapTutorial,
                   steps: tutorialSteps,

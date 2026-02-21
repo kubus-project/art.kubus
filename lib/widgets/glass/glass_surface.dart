@@ -161,7 +161,7 @@ class GlassSurface extends StatelessWidget {
   /// Resolve blur state from the provider tree, with a safe fallback.
   bool _resolveBlurEnabled(BuildContext context) {
     try {
-      return context.watch<GlassCapabilitiesProvider>().isBlurEnabled;
+      return context.watch<GlassCapabilitiesProvider>().allowBlur;
     } catch (_) {
       return true;
     }
