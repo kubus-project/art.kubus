@@ -42,8 +42,8 @@ import '../../collab/invites_inbox_screen.dart';
 import '../../activity/view_history_screen.dart';
 import '../../events/event_detail_screen.dart';
 import '../../../config/config.dart';
-import 'desktop_community_analytics_screen.dart';
-import 'desktop_profile_analytics_screen.dart';
+import '../../community/community_analytics_screen.dart';
+import '../../community/profile_analytics_screen.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 
 /// Desktop profile screen with clean card-based layout
@@ -371,7 +371,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (_) => DesktopProfileAnalyticsScreen(
+                                    builder: (_) => ProfileAnalyticsScreen(
                                       walletAddress: wallet,
                                       title: 'Profile analytics',
                                     ),
@@ -387,7 +387,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (_) => DesktopCommunityAnalyticsScreen(
+                                    builder: (_) => CommunityAnalyticsScreen(
                                       walletAddress: wallet,
                                       title: 'Community analytics',
                                     ),
