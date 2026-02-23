@@ -24,6 +24,7 @@ class PortfolioProvider extends ChangeNotifier {
   List<Artwork> _artworks = const <Artwork>[];
   List<CollectionRecord> _collections = const <CollectionRecord>[];
   List<Exhibition> _exhibitions = const <Exhibition>[];
+  List<PortfolioEntry>? _cachedEntries;
 
   String get walletAddress => _walletAddress;
   bool get isLoading => _loading;
@@ -48,6 +49,7 @@ class PortfolioProvider extends ChangeNotifier {
   }
 
   List<PortfolioEntry> get entries {
+    if (_cachedEntries != null) return _cachedEntries!;
     final result = <PortfolioEntry>[
       ..._artworks.where((a) => a.isActive).map(PortfolioEntry.fromArtwork),
       ..._collections.map(PortfolioEntry.fromCollection),
@@ -59,6 +61,7 @@ class PortfolioProvider extends ChangeNotifier {
     }
 
     result.sort((a, b) => sortKey(b).compareTo(sortKey(a)));
+    _cachedEntries = result;
     return result;
   }
 
@@ -120,6 +123,7 @@ class PortfolioProvider extends ChangeNotifier {
     _artworks = const <Artwork>[];
     _collections = const <CollectionRecord>[];
     _exhibitions = const <Exhibition>[];
+    _cachedEntries = null;
     notifyListeners();
 
     if (_walletAddress.isNotEmpty) {
@@ -169,6 +173,7 @@ class PortfolioProvider extends ChangeNotifier {
       _artworks = (results[0] as List<Artwork>);
       _collections = (results[1] as List<CollectionRecord>);
       _exhibitions = (results[2] as List<Exhibition>);
+      _cachedEntries = null;
 
       if (firstError != null) {
         _error = firstError.toString();
@@ -257,6 +262,7 @@ class PortfolioProvider extends ChangeNotifier {
 
     await _api.deleteArtwork(id);
     _artworks = _artworks.where((a) => a.id != id).toList(growable: false);
+    _cachedEntries = null;
     _artworkProvider?.removeArtwork(id);
     notifyListeners();
   }
@@ -270,6 +276,7 @@ class PortfolioProvider extends ChangeNotifier {
     } else {
       _artworks = <Artwork>[artwork, ..._artworks];
     }
+    _cachedEntries = null;
     _artworkProvider?.addOrUpdateArtwork(artwork);
     notifyListeners();
   }
