@@ -55,67 +55,53 @@ class SocketService {
     _log('$eventName -> msg=$messageId, wallet=$wallet, conv=$conversationId');
   }
 
-  /// Add a listener for incoming notifications. Multiple listeners are supported.
-  void addNotificationListener(NotificationCallback cb) {
-    if (!_notificationListeners.contains(cb)) _notificationListeners.add(cb);
-    _log('addNotificationListener: total=${_notificationListeners.length}');
+  void _addToListeners<T>(List<T> list, T cb, String name) {
+    if (!list.contains(cb)) list.add(cb);
+    _log('$name: total=${list.length}');
   }
+
+  void _removeFromListeners<T>(List<T> list, T cb, String name) {
+    list.remove(cb);
+    _log('$name: total=${list.length}');
+  }
+
+  /// Add a listener for incoming notifications. Multiple listeners are supported.
+  void addNotificationListener(NotificationCallback cb) =>
+      _addToListeners(_notificationListeners, cb, 'addNotificationListener');
 
   /// Remove a previously added listener.
-  void removeNotificationListener(NotificationCallback cb) {
-    _notificationListeners.remove(cb);
-    _log('removeNotificationListener: total=${_notificationListeners.length}');
-  }
+  void removeNotificationListener(NotificationCallback cb) =>
+      _removeFromListeners(_notificationListeners, cb, 'removeNotificationListener');
 
-  void addCollabListener(NotificationCallback cb) {
-    if (!_collabListeners.contains(cb)) _collabListeners.add(cb);
-    _log('addCollabListener: total=${_collabListeners.length}');
-  }
+  void addCollabListener(NotificationCallback cb) =>
+      _addToListeners(_collabListeners, cb, 'addCollabListener');
 
-  void removeCollabListener(NotificationCallback cb) {
-    _collabListeners.remove(cb);
-    _log('removeCollabListener: total=${_collabListeners.length}');
-  }
+  void removeCollabListener(NotificationCallback cb) =>
+      _removeFromListeners(_collabListeners, cb, 'removeCollabListener');
 
-  void addMessageListener(NotificationCallback cb) {
-    if (!_messageListeners.contains(cb)) _messageListeners.add(cb);
-    _log('addMessageListener: total=${_messageListeners.length}');
-  }
+  void addMessageListener(NotificationCallback cb) =>
+      _addToListeners(_messageListeners, cb, 'addMessageListener');
 
-  void addMessageReadListener(NotificationCallback cb) {
-    if (!_messageReadListeners.contains(cb)) _messageReadListeners.add(cb);
-    _log('addMessageReadListener: total=${_messageReadListeners.length}');
-  }
+  void addMessageReadListener(NotificationCallback cb) =>
+      _addToListeners(_messageReadListeners, cb, 'addMessageReadListener');
 
-  void removeMessageListener(NotificationCallback cb) {
-    _messageListeners.remove(cb);
-    _log('removeMessageListener: total=${_messageListeners.length}');
-  }
+  void removeMessageListener(NotificationCallback cb) =>
+      _removeFromListeners(_messageListeners, cb, 'removeMessageListener');
 
-  void removeMessageReadListener(NotificationCallback cb) {
-    _messageReadListeners.remove(cb);
-    _log('removeMessageReadListener: total=${_messageReadListeners.length}');
-  }
+  void removeMessageReadListener(NotificationCallback cb) =>
+      _removeFromListeners(_messageReadListeners, cb, 'removeMessageReadListener');
 
-  void addConversationListener(NotificationCallback cb) {
-    if (!_conversationListeners.contains(cb)) _conversationListeners.add(cb);
-    _log('addConversationListener: total=${_conversationListeners.length}');
-  }
+  void addConversationListener(NotificationCallback cb) =>
+      _addToListeners(_conversationListeners, cb, 'addConversationListener');
 
-  void removeConversationListener(NotificationCallback cb) {
-    _conversationListeners.remove(cb);
-    _log('removeConversationListener: total=${_conversationListeners.length}');
-  }
+  void removeConversationListener(NotificationCallback cb) =>
+      _removeFromListeners(_conversationListeners, cb, 'removeConversationListener');
 
-  void addMessageReactionListener(NotificationCallback cb) {
-    if (!_messageReactionListeners.contains(cb)) _messageReactionListeners.add(cb);
-    _log('addMessageReactionListener: total=${_messageReactionListeners.length}');
-  }
+  void addMessageReactionListener(NotificationCallback cb) =>
+      _addToListeners(_messageReactionListeners, cb, 'addMessageReactionListener');
 
-  void removeMessageReactionListener(NotificationCallback cb) {
-    _messageReactionListeners.remove(cb);
-    _log('removeMessageReactionListener: total=${_messageReactionListeners.length}');
-  }
+  void removeMessageReactionListener(NotificationCallback cb) =>
+      _removeFromListeners(_messageReactionListeners, cb, 'removeMessageReactionListener');
 
   /// Connects socket to backend. If `baseUrl` is null uses `BackendApiService().baseUrl`.
   /// Returns true when connected, false on error/timeout.
@@ -241,25 +227,17 @@ class SocketService {
   Stream<Map<String, dynamic>> get onPostCreated => _postController.stream;
   Stream<Map<String, dynamic>> get onMarkerCreated => _markerController.stream;
 
-  void addPostListener(NotificationCallback cb) {
-    if (!_postListeners.contains(cb)) _postListeners.add(cb);
-    _log('addPostListener: total=${_postListeners.length}');
-  }
+  void addPostListener(NotificationCallback cb) =>
+      _addToListeners(_postListeners, cb, 'addPostListener');
 
-  void removePostListener(NotificationCallback cb) {
-    _postListeners.remove(cb);
-    _log('removePostListener: total=${_postListeners.length}');
-  }
+  void removePostListener(NotificationCallback cb) =>
+      _removeFromListeners(_postListeners, cb, 'removePostListener');
 
-  void addMarkerListener(NotificationCallback cb) {
-    if (!_markerListeners.contains(cb)) _markerListeners.add(cb);
-    _log('addMarkerListener: total=${_markerListeners.length}');
-  }
+  void addMarkerListener(NotificationCallback cb) =>
+      _addToListeners(_markerListeners, cb, 'addMarkerListener');
 
-  void removeMarkerListener(NotificationCallback cb) {
-    _markerListeners.remove(cb);
-    _log('removeMarkerListener: total=${_markerListeners.length}');
-  }
+  void removeMarkerListener(NotificationCallback cb) =>
+      _removeFromListeners(_markerListeners, cb, 'removeMarkerListener');
 
   /// Connects and attempts to subscribe, resolving when subscription is confirmed or rejects on timeout/error
   Future<bool> connectAndSubscribe(String baseUrl, String walletAddress, {Duration timeout = const Duration(seconds: 6)}) async {
@@ -309,15 +287,11 @@ class SocketService {
     }
   }
 
-  void addConnectListener(VoidCallback cb) {
-    if (!_connectListeners.contains(cb)) _connectListeners.add(cb);
-    _log('addConnectListener: total=${_connectListeners.length}');
-  }
+  void addConnectListener(VoidCallback cb) =>
+      _addToListeners(_connectListeners, cb, 'addConnectListener');
 
-  void removeConnectListener(VoidCallback cb) {
-    _connectListeners.remove(cb);
-    _log('removeConnectListener: total=${_connectListeners.length}');
-  }
+  void removeConnectListener(VoidCallback cb) =>
+      _removeFromListeners(_connectListeners, cb, 'removeConnectListener');
 
   /// Subscribe to personal user room. Requires server validation with JWT.
   /// Will auto-connect if needed and avoid duplicate subscriptions.
