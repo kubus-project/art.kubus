@@ -13,6 +13,7 @@ import 'saved_items_provider.dart';
 
 class ArtworkProvider extends ChangeNotifier {
   final List<Artwork> _artworks = [];
+  final Map<String, Artwork> _artworkById = <String, Artwork>{};
   final Map<String, List<ArtworkComment>> _comments = {};
   final Map<String, String?> _commentLoadErrors = <String, String?>{};
   final Map<String, String?> _commentSubmitErrors = <String, String?>{};
@@ -48,6 +49,7 @@ class ArtworkProvider extends ChangeNotifier {
         loadArtworks();
       } else {
         _artworks.clear();
+        _artworkById.clear();
         _comments.clear();
         notifyListeners();
       }
@@ -55,13 +57,7 @@ class ArtworkProvider extends ChangeNotifier {
   }
 
   /// Get artwork by ID
-  Artwork? getArtworkById(String id) {
-    try {
-      return _artworks.firstWhere((artwork) => artwork.id == id);
-    } catch (e) {
-      return null;
-    }
-  }
+  Artwork? getArtworkById(String id) => _artworkById[id];
 
   /// Ensure artwork exists locally by fetching from backend if needed
   Future<Artwork?> fetchArtworkIfNeeded(String artworkId) async {
@@ -153,6 +149,7 @@ class ArtworkProvider extends ChangeNotifier {
     } else {
       _artworks.add(artwork);
     }
+    _artworkById[artwork.id] = artwork;
     notifyListeners();
   }
 
@@ -242,6 +239,7 @@ class ArtworkProvider extends ChangeNotifier {
   /// Remove artwork
   void removeArtwork(String artworkId) {
     _artworks.removeWhere((artwork) => artwork.id == artworkId);
+    _artworkById.remove(artworkId);
     _comments.remove(artworkId);
     notifyListeners();
   }
@@ -629,10 +627,12 @@ class ArtworkProvider extends ChangeNotifier {
       _artworks
         ..clear()
         ..addAll(artworks);
+      _artworkById
+        ..clear()
+        ..addEntries(artworks.map((a) => MapEntry(a.id, a)));
       _comments.clear();
 
       notifyListeners();
-      await _simulateApiDelay();
     } catch (e) {
       _setError('Failed to load artworks: $e');
     } finally {
@@ -663,6 +663,7 @@ class ArtworkProvider extends ChangeNotifier {
         } else {
           _artworks.add(artwork);
         }
+        _artworkById[artwork.id] = artwork;
         updated = true;
       }
       _walletsWithPrivateArtworks.add(cacheKey);
@@ -769,10 +770,6 @@ class ArtworkProvider extends ChangeNotifier {
   void _setError(String error) {
     _error = error;
     notifyListeners();
-  }
-
-  Future<void> _simulateApiDelay() async {
-    await Future.delayed(const Duration(milliseconds: 500));
   }
 
   List<ArtworkComment> _nestArtworkComments(List<ArtworkComment> flat) {
