@@ -149,6 +149,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   }
 
   Future<void> _pickAvatar() async {
+    final l10n = AppLocalizations.of(context)!;
     try {
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
@@ -175,7 +176,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             if (!mounted) return;
             ScaffoldMessenger.of(context).showKubusSnackBar(
               SnackBar(
-                content: const Text('No wallet connected. Connect your wallet to upload avatar.'),
+                content: Text(l10n.profileEditNoWalletUploadAvatarToast),
                 backgroundColor: Theme.of(context).colorScheme.error,
               ),
             );
@@ -227,7 +228,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                       await Clipboard.setData(ClipboardData(text: uploadedUrl));
                       if (!mounted) return;
                       ScaffoldMessenger.of(context).showKubusSnackBar(
-                        const SnackBar(content: Text('Copied avatar URL to clipboard'), duration: Duration(seconds: 1)),
+                        SnackBar(
+                          content: Text(l10n.profileEditAvatarCopiedToClipboardToast),
+                          duration: const Duration(seconds: 1),
+                        ),
                       );
                     },
                   ),
@@ -235,7 +239,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               ),
               action: uri != null
                   ? SnackBarAction(
-                      label: 'Open',
+                      label: l10n.commonOpen,
                       onPressed: () async {
                         try {
                           await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -249,7 +253,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(
-              content: Text(saved ? 'Avatar uploaded and saved!' : 'Avatar uploaded locally (save failed)'),
+              content: Text(
+                saved
+                    ? l10n.profileEditAvatarUploadedSavedToast
+                    : l10n.profileEditAvatarUploadedLocalToast,
+              ),
               backgroundColor: saved
                   ? Theme.of(context).colorScheme.primary
                   : Theme.of(context).colorScheme.secondary,
@@ -263,7 +271,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           // Show snackbar
           ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(
-              content: Text('Upload failed: $e'),
+              content: Text(l10n.profileEditAvatarUploadFailedToast(e.toString())),
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
@@ -275,14 +283,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             showKubusDialog<void>(
               context: context,
               builder: (context) => KubusAlertDialog(
-                title: const Text('Upload Debug Info'),
+                title: Text(l10n.profileEditUploadDebugInfoTitle),
                 content: SingleChildScrollView(
                   child: SelectableText(pretty),
                 ),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Close'),
+                    child: Text(l10n.commonClose),
                   ),
                   TextButton(
                     onPressed: () async {
@@ -292,10 +300,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                       if (!mounted) return;
                       navigator.pop();
                       messenger.showKubusSnackBar(
-                        const SnackBar(content: Text('Debug info copied to clipboard')),
+                        SnackBar(content: Text(l10n.profileEditUploadDebugInfoCopiedToast)),
                       );
                     },
-                    child: const Text('Copy'),
+                    child: Text(l10n.commonCopy),
                   ),
                 ],
               ),
@@ -307,7 +315,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
-          content: Text('Error picking image: $e'),
+          content: Text(l10n.profileEditPickImageFailedToast(e.toString())),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -315,6 +323,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   }
 
   Future<void> _pickCoverImage() async {
+    final l10n = AppLocalizations.of(context)!;
     try {
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
@@ -340,7 +349,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             if (!mounted) return;
             ScaffoldMessenger.of(context).showKubusSnackBar(
               SnackBar(
-                content: const Text('No wallet connected. Connect your wallet to upload cover image.'),
+                content: Text(l10n.profileEditNoWalletUploadCoverToast),
                 backgroundColor: Theme.of(context).colorScheme.error,
               ),
             );
@@ -392,7 +401,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(
-              content: Text(saved ? 'Cover image uploaded!' : 'Cover image uploaded locally'),
+              content: Text(
+                saved
+                    ? l10n.profileEditCoverUploadedSavedToast
+                    : l10n.profileEditCoverUploadedLocalToast,
+              ),
               backgroundColor: saved
                   ? Theme.of(context).colorScheme.primary
                   : Theme.of(context).colorScheme.secondary,
@@ -404,7 +417,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(
-              content: Text('Cover upload failed: $e'),
+              content: Text(l10n.profileEditCoverUploadFailedToast(e.toString())),
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
@@ -414,7 +427,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
-          content: Text('Error picking cover image: $e'),
+          content: Text(l10n.profileEditPickImageFailedToast(e.toString())),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -424,6 +437,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final l10n = AppLocalizations.of(context)!;
     setState(() => _isLoading = true);
 
     try {
@@ -468,7 +482,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       if (success) {
         ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
-            content: const Text('Profile updated successfully!'),
+            content: Text(l10n.profileEditProfileUpdatedToast),
             backgroundColor: Theme.of(context).colorScheme.primary,
           ),
         );
@@ -503,13 +517,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           Navigator.pop(context, true);
         }
       } else {
-        throw Exception(profileProvider.error ?? 'Failed to save profile');
+        throw Exception(profileProvider.error ?? l10n.commonActionFailedToast);
       }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
-          content: Text('Error: $e'),
+          content: Text(l10n.profileEditErrorToast(e.toString())),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -602,7 +616,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Edit Profile',
+          l10n.profileEditTitle,
           style: GoogleFonts.inter(
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -625,7 +639,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             TextButton(
               onPressed: _saveProfile,
               child: Text(
-                'Save',
+                l10n.commonSave,
                 style: GoogleFonts.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -655,7 +669,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
               // Cover Image section
-              _buildSectionHeader('Cover Image', Icons.panorama),
+              _buildSectionHeader(l10n.commonCoverImage, Icons.panorama),
               const SizedBox(height: 12),
               GestureDetector(
                 onTap: _pickCoverImage,
@@ -697,7 +711,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Tap to add cover image',
+                              l10n.profileEditCoverImageTapToAdd,
                               style: GoogleFonts.inter(
                                 fontSize: 14,
                                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -722,7 +736,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                     const Icon(Icons.edit, color: Colors.white, size: 16),
                                     const SizedBox(width: 4),
                                     Text(
-                                      'Change',
+                                      l10n.commonChange,
                                       style: GoogleFonts.inter(
                                         fontSize: 12,
                                         color: Colors.white,
@@ -739,7 +753,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               const SizedBox(height: 32),
               
               // Avatar section
-              _buildSectionHeader('Profile Picture', Icons.account_circle),
+              _buildSectionHeader(
+                l10n.profileEditProfilePictureTitle,
+                Icons.account_circle,
+              ),
               const SizedBox(height: 12),
               Center(
                 child: Column(
@@ -793,7 +810,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Tap to change avatar',
+                      l10n.profileEditAvatarTapToChange,
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -805,12 +822,15 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               const SizedBox(height: 32),
               
               // Basic Info Section
-              _buildSectionHeader('Basic Information', Icons.person_outline),
+              _buildSectionHeader(
+                l10n.profileEditBasicInformationTitle,
+                Icons.person_outline,
+              ),
               const SizedBox(height: 16),
 
               // Username
               Text(
-                'Username',
+                l10n.profileEditUsernameLabel,
                 style: GoogleFonts.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -821,7 +841,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               TextFormField(
                 controller: _usernameController,
                 decoration: InputDecoration(
-                  hintText: 'Enter username',
+                  hintText: l10n.profileEditUsernameHint,
                   prefixIcon: const Icon(Icons.alternate_email),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -831,10 +851,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Username is required';
+                    return l10n.profileEditUsernameRequiredError;
                   }
                   if (value.trim().length < 3) {
-                    return 'Username must be at least 3 characters';
+                    return l10n.profileEditUsernameMinLengthError;
                   }
                   return null;
                 },
@@ -843,7 +863,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
               // Display Name
               Text(
-                'Display Name',
+                l10n.profileEditDisplayNameLabel,
                 style: GoogleFonts.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -854,7 +874,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               TextFormField(
                 controller: _displayNameController,
                 decoration: InputDecoration(
-                  hintText: 'Enter display name',
+                  hintText: l10n.profileEditDisplayNameHint,
                   prefixIcon: const Icon(Icons.person_outline),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -864,7 +884,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Display name is required';
+                    return l10n.profileEditDisplayNameRequiredError;
                   }
                   return null;
                 },
@@ -873,7 +893,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
               // Bio
               Text(
-                'Bio',
+                l10n.profileEditBioLabel,
                 style: GoogleFonts.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -886,7 +906,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 maxLines: 4,
                 maxLength: 200,
                 decoration: InputDecoration(
-                  hintText: 'Tell us about yourself...',
+                  hintText: l10n.profileEditBioHint,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -899,7 +919,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
               // Social Links Section
               Text(
-                'Social Links',
+                l10n.profileEditSocialLinksTitle,
                 style: GoogleFonts.inter(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -912,8 +932,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               TextFormField(
                 controller: _twitterController,
                 decoration: InputDecoration(
-                  hintText: '@username',
-                  labelText: 'Twitter',
+                  hintText: l10n.profileEditSocialHandleHint,
+                  labelText: l10n.profileEditSocialTwitterLabel,
                   prefixIcon: const Icon(Icons.alternate_email),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -928,8 +948,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               TextFormField(
                 controller: _instagramController,
                 decoration: InputDecoration(
-                  hintText: '@username',
-                  labelText: 'Instagram',
+                  hintText: l10n.profileEditSocialHandleHint,
+                  labelText: l10n.profileEditSocialInstagramLabel,
                   prefixIcon: const Icon(Icons.camera_alt),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -944,8 +964,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               TextFormField(
                 controller: _websiteController,
                 decoration: InputDecoration(
-                  hintText: 'https://...',
-                  labelText: 'Website',
+                  hintText: l10n.profileEditSocialWebsiteHint,
+                  labelText: l10n.profileEditSocialWebsiteLabel,
                   prefixIcon: const Icon(Icons.language),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -956,7 +976,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 validator: (value) {
                   if (value != null && value.trim().isNotEmpty) {
                     if (!value.startsWith('http://') && !value.startsWith('https://')) {
-                      return 'URL must start with http:// or https://';
+                      return l10n.profileEditSocialUrlInvalidError;
                     }
                   }
                   return null;
@@ -966,12 +986,15 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               
               // Artist-specific section (only shown for verified artists)
               if (_isArtist) ...[
-                _buildSectionHeader('Artist Information', Icons.palette),
+                _buildSectionHeader(
+                  l10n.profileEditArtistInformationTitle,
+                  Icons.palette,
+                ),
                 const SizedBox(height: 16),
                 
                 // Specialty
                 Text(
-                  'Specialties',
+                  l10n.profileEditArtistSpecialtiesLabel,
                   style: GoogleFonts.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -982,8 +1005,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 TextFormField(
                   controller: _specialtyController,
                   decoration: InputDecoration(
-                    hintText: 'e.g., Digital Art, Sculpture, Photography',
-                    helperText: 'Separate multiple specialties with commas',
+                    hintText: l10n.profileEditArtistSpecialtiesHint,
+                    helperText: l10n.profileEditArtistSpecialtiesHelper,
                     prefixIcon: const Icon(Icons.brush),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -996,7 +1019,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 
                 // Years Active
                 Text(
-                  'Years Active',
+                  l10n.profileEditArtistYearsActiveLabel,
                   style: GoogleFonts.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -1008,7 +1031,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                   controller: _yearsActiveController,
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
-                    hintText: 'How many years have you been creating art?',
+                    hintText: l10n.profileEditArtistYearsActiveHint,
                     prefixIcon: const Icon(Icons.calendar_today),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -1020,7 +1043,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                     if (value != null && value.isNotEmpty) {
                       final years = int.tryParse(value);
                       if (years == null || years < 0) {
-                        return 'Please enter a valid number';
+                        return l10n.profileEditArtistYearsActiveInvalidError;
                       }
                     }
                     return null;
@@ -1031,11 +1054,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               
               // Institution-specific section (only shown for verified institutions)
               if (_isInstitution) ...[
-                _buildSectionHeader('Institution Information', Icons.business),
+                _buildSectionHeader(
+                  l10n.profileEditInstitutionInformationTitle,
+                  Icons.business,
+                ),
                 const SizedBox(height: 16),
                 
                 Text(
-                  'About Your Institution',
+                  l10n.profileEditInstitutionAboutTitle,
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
@@ -1060,7 +1086,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Use the bio and social links above to describe your institution. You can manage exhibitions and events from the Institution Hub.',
+                          l10n.profileEditInstitutionAboutBody,
                           style: GoogleFonts.inter(
                             fontSize: 13,
                             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
@@ -1142,7 +1168,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               
               // Role Status (read-only display)
               if (_isArtist || _isInstitution) ...[
-                _buildSectionHeader('Verified Status', Icons.verified),
+                _buildSectionHeader(
+                  l10n.profileEditVerifiedStatusTitle,
+                  Icons.verified,
+                ),
                 const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.all(16),
@@ -1178,7 +1207,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              _isInstitution ? 'Verified Institution' : 'Verified Artist',
+                              _isInstitution
+                                  ? l10n.profileEditVerifiedInstitutionTitle
+                                  : l10n.profileEditVerifiedArtistTitle,
                               style: GoogleFonts.inter(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -1188,8 +1219,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                             const SizedBox(height: 4),
                             Text(
                               _isInstitution 
-                                  ? 'Your institution status is verified by the DAO'
-                                  : 'Your artist status is verified by the DAO',
+                                  ? l10n.profileEditVerifiedInstitutionSubtitle
+                                  : l10n.profileEditVerifiedArtistSubtitle,
                               style: GoogleFonts.inter(
                                 fontSize: 13,
                                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),

@@ -1061,42 +1061,43 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
   }
 
   String _categoryForAchievement(achievement_svc.AchievementDefinition def) {
-    if (def.isPOAP) return 'Events';
+    final l10n = AppLocalizations.of(context)!;
+    if (def.isPOAP) return l10n.userProfileAchievementCategoryEvents;
     switch (def.type) {
       case achievement_svc.AchievementType.firstDiscovery:
       case achievement_svc.AchievementType.artExplorer:
       case achievement_svc.AchievementType.artMaster:
       case achievement_svc.AchievementType.artLegend:
-        return 'Discovery';
+        return l10n.userProfileAchievementCategoryDiscovery;
       case achievement_svc.AchievementType.firstARView:
       case achievement_svc.AchievementType.arEnthusiast:
       case achievement_svc.AchievementType.arPro:
-        return 'AR';
+        return l10n.userProfileAchievementCategoryAr;
       case achievement_svc.AchievementType.firstNFTMint:
       case achievement_svc.AchievementType.nftCollector:
       case achievement_svc.AchievementType.nftTrader:
-        return 'NFT';
+        return l10n.userProfileAchievementCategoryNft;
       case achievement_svc.AchievementType.firstPost:
       case achievement_svc.AchievementType.influencer:
       case achievement_svc.AchievementType.communityBuilder:
-        return 'Community';
+        return l10n.userProfileAchievementCategoryCommunity;
       case achievement_svc.AchievementType.firstLike:
       case achievement_svc.AchievementType.popularCreator:
       case achievement_svc.AchievementType.firstComment:
       case achievement_svc.AchievementType.commentator:
-        return 'Social';
+        return l10n.userProfileAchievementCategorySocial;
       case achievement_svc.AchievementType.firstTrade:
       case achievement_svc.AchievementType.smartTrader:
       case achievement_svc.AchievementType.marketMaster:
-        return 'Trading';
+        return l10n.userProfileAchievementCategoryTrading;
       case achievement_svc.AchievementType.earlyAdopter:
       case achievement_svc.AchievementType.betaTester:
       case achievement_svc.AchievementType.artSupporter:
-        return 'Special';
+        return l10n.userProfileAchievementCategorySpecial;
       case achievement_svc.AchievementType.eventAttendee:
       case achievement_svc.AchievementType.galleryVisitor:
       case achievement_svc.AchievementType.workshopParticipant:
-        return 'Events';
+        return l10n.userProfileAchievementCategoryEvents;
     }
   }
 

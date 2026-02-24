@@ -62,23 +62,7 @@ import 'app_localizations_sl.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale)
-      : localeName = _guardedLocaleName(locale);
-
-  static String _guardedLocaleName(String locale) {
-    final raw = locale.trim().toLowerCase();
-    if (raw.isEmpty || raw == 'null' || raw == 'undefined') {
-      return 'sl';
-    }
-
-    final normalized = intl.Intl.canonicalizedLocale(raw);
-    final languageCode = normalized.split(RegExp('[-_]')).first;
-    if (languageCode == 'en' || languageCode == 'sl') {
-      return normalized;
-    }
-
-    return 'sl';
-  }
+  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -13220,6 +13204,2448 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No artworks available'**
   String get collectionCreatorNoArtworksAvailable;
+
+  /// No description provided for @commonChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Change'**
+  String get commonChange;
+
+  /// No description provided for @commonOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get commonOpen;
+
+  /// No description provided for @commonLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading'**
+  String get commonLoading;
+
+  /// No description provided for @desktopShellNavHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get desktopShellNavHome;
+
+  /// No description provided for @desktopShellNavExplore.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore'**
+  String get desktopShellNavExplore;
+
+  /// No description provided for @desktopShellNavConnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect'**
+  String get desktopShellNavConnect;
+
+  /// No description provided for @desktopShellNavCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'Create'**
+  String get desktopShellNavCreate;
+
+  /// No description provided for @desktopShellNavOrganize.
+  ///
+  /// In en, this message translates to:
+  /// **'Organize'**
+  String get desktopShellNavOrganize;
+
+  /// No description provided for @desktopShellNavGovern.
+  ///
+  /// In en, this message translates to:
+  /// **'Govern'**
+  String get desktopShellNavGovern;
+
+  /// No description provided for @desktopShellNavTrade.
+  ///
+  /// In en, this message translates to:
+  /// **'Trade'**
+  String get desktopShellNavTrade;
+
+  /// No description provided for @desktopShellNavWeb3.
+  ///
+  /// In en, this message translates to:
+  /// **'Web3'**
+  String get desktopShellNavWeb3;
+
+  /// No description provided for @navigationScreenCreateAr.
+  ///
+  /// In en, this message translates to:
+  /// **'Create AR'**
+  String get navigationScreenCreateAr;
+
+  /// No description provided for @navigationScreenExploreMap.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore Map'**
+  String get navigationScreenExploreMap;
+
+  /// No description provided for @navigationScreenCommunity.
+  ///
+  /// In en, this message translates to:
+  /// **'Community'**
+  String get navigationScreenCommunity;
+
+  /// No description provided for @navigationScreenProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get navigationScreenProfile;
+
+  /// No description provided for @navigationScreenMarketplace.
+  ///
+  /// In en, this message translates to:
+  /// **'Marketplace'**
+  String get navigationScreenMarketplace;
+
+  /// No description provided for @navigationScreenWallet.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet'**
+  String get navigationScreenWallet;
+
+  /// No description provided for @navigationScreenAnalytics.
+  ///
+  /// In en, this message translates to:
+  /// **'Analytics'**
+  String get navigationScreenAnalytics;
+
+  /// No description provided for @navigationScreenSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get navigationScreenSettings;
+
+  /// No description provided for @navigationScreenMyStats.
+  ///
+  /// In en, this message translates to:
+  /// **'My Stats'**
+  String get navigationScreenMyStats;
+
+  /// No description provided for @navigationScreenAchievements.
+  ///
+  /// In en, this message translates to:
+  /// **'Achievements'**
+  String get navigationScreenAchievements;
+
+  /// No description provided for @navigationScreenDaoHub.
+  ///
+  /// In en, this message translates to:
+  /// **'DAO Hub'**
+  String get navigationScreenDaoHub;
+
+  /// No description provided for @navigationScreenArtistStudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist Studio'**
+  String get navigationScreenArtistStudio;
+
+  /// No description provided for @navigationScreenInstitutionHub.
+  ///
+  /// In en, this message translates to:
+  /// **'Institution Hub'**
+  String get navigationScreenInstitutionHub;
+
+  /// No description provided for @daoHubAppBarTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'DAO Governance'**
+  String get daoHubAppBarTitle;
+
+  /// No description provided for @daoHubHeaderSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Decentralized governance for the AR art platform'**
+  String get daoHubHeaderSubtitle;
+
+  /// No description provided for @daoHubInfoDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How DAO governance works'**
+  String get daoHubInfoDialogTitle;
+
+  /// No description provided for @daoHubInfoDialogBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The DAO lets the community propose and vote on platform decisions. Voting power is based on your KUB8 balance. You can also delegate your voting power to trusted delegates.'**
+  String get daoHubInfoDialogBody;
+
+  /// No description provided for @daoHubTabActiveProposals.
+  ///
+  /// In en, this message translates to:
+  /// **'Proposals'**
+  String get daoHubTabActiveProposals;
+
+  /// No description provided for @daoHubTabVotingHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Voting history'**
+  String get daoHubTabVotingHistory;
+
+  /// No description provided for @daoHubTabCreateProposal.
+  ///
+  /// In en, this message translates to:
+  /// **'Create'**
+  String get daoHubTabCreateProposal;
+
+  /// No description provided for @daoHubTabTreasury.
+  ///
+  /// In en, this message translates to:
+  /// **'Treasury'**
+  String get daoHubTabTreasury;
+
+  /// No description provided for @daoHubTabDelegation.
+  ///
+  /// In en, this message translates to:
+  /// **'Delegation'**
+  String get daoHubTabDelegation;
+
+  /// No description provided for @daoCreateProposalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create new proposal'**
+  String get daoCreateProposalTitle;
+
+  /// No description provided for @daoCreateProposalSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit a proposal for the community to vote on'**
+  String get daoCreateProposalSubtitle;
+
+  /// No description provided for @daoCreateProposalFieldTitleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Proposal title'**
+  String get daoCreateProposalFieldTitleLabel;
+
+  /// No description provided for @daoCreateProposalFieldTitleHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a clear, descriptive title'**
+  String get daoCreateProposalFieldTitleHint;
+
+  /// No description provided for @daoCreateProposalFieldDescriptionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Provide detailed explanation of your proposal'**
+  String get daoCreateProposalFieldDescriptionHint;
+
+  /// No description provided for @daoCreateProposalFieldVotingPeriodLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Voting period (days)'**
+  String get daoCreateProposalFieldVotingPeriodLabel;
+
+  /// No description provided for @daoCreateProposalFieldVotingPeriodHint.
+  ///
+  /// In en, this message translates to:
+  /// **'How many days should voting be open?'**
+  String get daoCreateProposalFieldVotingPeriodHint;
+
+  /// No description provided for @daoCreateProposalSubmitButtonLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit proposal'**
+  String get daoCreateProposalSubmitButtonLabel;
+
+  /// No description provided for @daoProposalCategoryPlatformUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Platform update'**
+  String get daoProposalCategoryPlatformUpdate;
+
+  /// No description provided for @daoProposalCategoryNewFeature.
+  ///
+  /// In en, this message translates to:
+  /// **'New feature'**
+  String get daoProposalCategoryNewFeature;
+
+  /// No description provided for @daoProposalCategoryPolicyChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Policy change'**
+  String get daoProposalCategoryPolicyChange;
+
+  /// No description provided for @daoProposalCategoryTreasuryAllocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Treasury allocation'**
+  String get daoProposalCategoryTreasuryAllocation;
+
+  /// No description provided for @daoProposalCategoryCommunityInitiative.
+  ///
+  /// In en, this message translates to:
+  /// **'Community initiative'**
+  String get daoProposalCategoryCommunityInitiative;
+
+  /// No description provided for @daoProposalCategoryTechnicalImprovement.
+  ///
+  /// In en, this message translates to:
+  /// **'Technical improvement'**
+  String get daoProposalCategoryTechnicalImprovement;
+
+  /// No description provided for @daoVoteResultPassed.
+  ///
+  /// In en, this message translates to:
+  /// **'Passed'**
+  String get daoVoteResultPassed;
+
+  /// No description provided for @daoVoteResultFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Not passed'**
+  String get daoVoteResultFailed;
+
+  /// No description provided for @daoVotingHistoryInfoDateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get daoVotingHistoryInfoDateLabel;
+
+  /// No description provided for @daoVotingHistoryInfoYourVoteLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Your vote'**
+  String get daoVotingHistoryInfoYourVoteLabel;
+
+  /// No description provided for @daoVotingHistoryInfoParticipationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Participation'**
+  String get daoVotingHistoryInfoParticipationLabel;
+
+  /// No description provided for @daoVotingHistoryInfoYourVotingPowerLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Your voting power'**
+  String get daoVotingHistoryInfoYourVotingPowerLabel;
+
+  /// No description provided for @desktopGovernanceSidebarOverviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'DAO Overview'**
+  String get desktopGovernanceSidebarOverviewTitle;
+
+  /// No description provided for @desktopGovernanceSidebarQuickActionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick Actions'**
+  String get desktopGovernanceSidebarQuickActionsTitle;
+
+  /// No description provided for @desktopGovernanceQuickActionCreateProposalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create proposal'**
+  String get desktopGovernanceQuickActionCreateProposalTitle;
+
+  /// No description provided for @desktopGovernanceQuickActionCreateProposalSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit new governance idea'**
+  String get desktopGovernanceQuickActionCreateProposalSubtitle;
+
+  /// No description provided for @desktopGovernanceQuickActionVoteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Vote on proposals'**
+  String get desktopGovernanceQuickActionVoteTitle;
+
+  /// No description provided for @desktopGovernanceQuickActionVoteSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Participate in governance'**
+  String get desktopGovernanceQuickActionVoteSubtitle;
+
+  /// No description provided for @desktopGovernanceQuickActionAnalyticsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Analytics'**
+  String get desktopGovernanceQuickActionAnalyticsTitle;
+
+  /// No description provided for @desktopGovernanceQuickActionAnalyticsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'View DAO performance'**
+  String get desktopGovernanceQuickActionAnalyticsSubtitle;
+
+  /// No description provided for @desktopGovernanceAnalyticsScreenTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'DAO Analytics'**
+  String get desktopGovernanceAnalyticsScreenTitle;
+
+  /// No description provided for @desktopGovernanceSidebarStatisticsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'DAO Statistics'**
+  String get desktopGovernanceSidebarStatisticsTitle;
+
+  /// No description provided for @desktopGovernanceSidebarRecentActivityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent Activity'**
+  String get desktopGovernanceSidebarRecentActivityTitle;
+
+  /// No description provided for @desktopGovernanceAcquireKub8Hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Acquire KUB8 tokens to participate in governance'**
+  String get desktopGovernanceAcquireKub8Hint;
+
+  /// No description provided for @profileEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit profile'**
+  String get profileEditTitle;
+
+  /// No description provided for @profileEditSaveChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'Save changes'**
+  String get profileEditSaveChanges;
+
+  /// No description provided for @profileEditCoverImageClickToUpload.
+  ///
+  /// In en, this message translates to:
+  /// **'Click to upload cover image'**
+  String get profileEditCoverImageClickToUpload;
+
+  /// No description provided for @profileEditCoverImageTapToAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to add cover image'**
+  String get profileEditCoverImageTapToAdd;
+
+  /// No description provided for @profileEditCoverImageRecommendedSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended size: {size}'**
+  String profileEditCoverImageRecommendedSize(String size);
+
+  /// No description provided for @profileEditAvatarClickToChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Click to change avatar'**
+  String get profileEditAvatarClickToChange;
+
+  /// No description provided for @profileEditAvatarTapToChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to change avatar'**
+  String get profileEditAvatarTapToChange;
+
+  /// No description provided for @profileEditProfilePictureTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile picture'**
+  String get profileEditProfilePictureTitle;
+
+  /// No description provided for @profileEditBasicInformationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Basic information'**
+  String get profileEditBasicInformationTitle;
+
+  /// No description provided for @profileEditPublicProfileDetailsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your public profile details'**
+  String get profileEditPublicProfileDetailsSubtitle;
+
+  /// No description provided for @profileEditUsernameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Username'**
+  String get profileEditUsernameLabel;
+
+  /// No description provided for @profileEditUsernameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter username'**
+  String get profileEditUsernameHint;
+
+  /// No description provided for @profileEditUsernameRequiredError.
+  ///
+  /// In en, this message translates to:
+  /// **'Username is required'**
+  String get profileEditUsernameRequiredError;
+
+  /// No description provided for @profileEditUsernameMinLengthError.
+  ///
+  /// In en, this message translates to:
+  /// **'Username must be at least 3 characters'**
+  String get profileEditUsernameMinLengthError;
+
+  /// No description provided for @profileEditDisplayNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Display name'**
+  String get profileEditDisplayNameLabel;
+
+  /// No description provided for @profileEditDisplayNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter display name'**
+  String get profileEditDisplayNameHint;
+
+  /// No description provided for @profileEditDisplayNameRequiredError.
+  ///
+  /// In en, this message translates to:
+  /// **'Display name is required'**
+  String get profileEditDisplayNameRequiredError;
+
+  /// No description provided for @profileEditBioLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Bio'**
+  String get profileEditBioLabel;
+
+  /// No description provided for @profileEditBioHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell us about yourself...'**
+  String get profileEditBioHint;
+
+  /// No description provided for @profileEditSocialLinksTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Social links'**
+  String get profileEditSocialLinksTitle;
+
+  /// No description provided for @profileEditSocialLinksSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect your social profiles'**
+  String get profileEditSocialLinksSubtitle;
+
+  /// No description provided for @profileEditSocialHandleHint.
+  ///
+  /// In en, this message translates to:
+  /// **'@username'**
+  String get profileEditSocialHandleHint;
+
+  /// No description provided for @profileEditSocialTwitterLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Twitter'**
+  String get profileEditSocialTwitterLabel;
+
+  /// No description provided for @profileEditSocialInstagramLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Instagram'**
+  String get profileEditSocialInstagramLabel;
+
+  /// No description provided for @profileEditSocialWebsiteLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Website'**
+  String get profileEditSocialWebsiteLabel;
+
+  /// No description provided for @profileEditSocialWebsiteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'https://...'**
+  String get profileEditSocialWebsiteHint;
+
+  /// No description provided for @profileEditSocialUrlInvalidError.
+  ///
+  /// In en, this message translates to:
+  /// **'URL must start with http:// or https://'**
+  String get profileEditSocialUrlInvalidError;
+
+  /// No description provided for @profileEditArtistInformationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist information'**
+  String get profileEditArtistInformationTitle;
+
+  /// No description provided for @profileEditArtistSpecialtiesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Specialties'**
+  String get profileEditArtistSpecialtiesLabel;
+
+  /// No description provided for @profileEditArtistSpecialtiesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g., Digital Art, Sculpture, Photography'**
+  String get profileEditArtistSpecialtiesHint;
+
+  /// No description provided for @profileEditArtistSpecialtiesHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Separate multiple specialties with commas'**
+  String get profileEditArtistSpecialtiesHelper;
+
+  /// No description provided for @profileEditArtistYearsActiveLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Years active'**
+  String get profileEditArtistYearsActiveLabel;
+
+  /// No description provided for @profileEditArtistYearsActiveHint.
+  ///
+  /// In en, this message translates to:
+  /// **'How many years have you been creating art?'**
+  String get profileEditArtistYearsActiveHint;
+
+  /// No description provided for @profileEditArtistYearsActiveInvalidError.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid number'**
+  String get profileEditArtistYearsActiveInvalidError;
+
+  /// No description provided for @profileEditInstitutionInformationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Institution information'**
+  String get profileEditInstitutionInformationTitle;
+
+  /// No description provided for @profileEditInstitutionDetailsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Information about your institution'**
+  String get profileEditInstitutionDetailsSubtitle;
+
+  /// No description provided for @profileEditArtistDetailsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Additional details about your artistic practice'**
+  String get profileEditArtistDetailsSubtitle;
+
+  /// No description provided for @profileEditInstitutionFocusAreasLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Focus areas'**
+  String get profileEditInstitutionFocusAreasLabel;
+
+  /// No description provided for @profileEditInstitutionEstablishedYearLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Established year'**
+  String get profileEditInstitutionEstablishedYearLabel;
+
+  /// No description provided for @profileEditPrivacyVisibilityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy & visibility'**
+  String get profileEditPrivacyVisibilityTitle;
+
+  /// No description provided for @profileEditPrivacyVisibilitySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Control who can see your content'**
+  String get profileEditPrivacyVisibilitySubtitle;
+
+  /// No description provided for @profileEditInstitutionAboutTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'About your institution'**
+  String get profileEditInstitutionAboutTitle;
+
+  /// No description provided for @profileEditInstitutionAboutBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Use the bio and social links above to describe your institution. You can manage exhibitions and events from the Institution Hub.'**
+  String get profileEditInstitutionAboutBody;
+
+  /// No description provided for @profileEditVerifiedStatusTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified status'**
+  String get profileEditVerifiedStatusTitle;
+
+  /// No description provided for @profileEditVerifiedArtistTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified artist'**
+  String get profileEditVerifiedArtistTitle;
+
+  /// No description provided for @profileEditVerifiedInstitutionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified institution'**
+  String get profileEditVerifiedInstitutionTitle;
+
+  /// No description provided for @profileEditVerifiedArtistSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your artist status is verified by the DAO'**
+  String get profileEditVerifiedArtistSubtitle;
+
+  /// No description provided for @profileEditVerifiedInstitutionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your institution status is verified by the DAO'**
+  String get profileEditVerifiedInstitutionSubtitle;
+
+  /// No description provided for @profileEditProfileUpdatedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile updated successfully!'**
+  String get profileEditProfileUpdatedToast;
+
+  /// No description provided for @profileEditErrorToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Error: {error}'**
+  String profileEditErrorToast(String error);
+
+  /// No description provided for @profileEditNoWalletUploadAvatarToast.
+  ///
+  /// In en, this message translates to:
+  /// **'No wallet connected. Connect your wallet to upload avatar.'**
+  String get profileEditNoWalletUploadAvatarToast;
+
+  /// No description provided for @profileEditNoWalletUploadCoverToast.
+  ///
+  /// In en, this message translates to:
+  /// **'No wallet connected. Connect your wallet to upload cover image.'**
+  String get profileEditNoWalletUploadCoverToast;
+
+  /// No description provided for @profileEditAvatarCopiedToClipboardToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied avatar URL to clipboard'**
+  String get profileEditAvatarCopiedToClipboardToast;
+
+  /// No description provided for @profileEditAvatarUploadedSavedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Avatar uploaded and saved!'**
+  String get profileEditAvatarUploadedSavedToast;
+
+  /// No description provided for @profileEditAvatarUploadedLocalToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Avatar uploaded locally (save failed)'**
+  String get profileEditAvatarUploadedLocalToast;
+
+  /// No description provided for @profileEditAvatarUploadFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload failed: {error}'**
+  String profileEditAvatarUploadFailedToast(String error);
+
+  /// No description provided for @profileEditCoverUploadedSavedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Cover image uploaded!'**
+  String get profileEditCoverUploadedSavedToast;
+
+  /// No description provided for @profileEditCoverUploadedLocalToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Cover image uploaded locally'**
+  String get profileEditCoverUploadedLocalToast;
+
+  /// No description provided for @profileEditCoverUploadFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Cover upload failed: {error}'**
+  String profileEditCoverUploadFailedToast(String error);
+
+  /// No description provided for @profileEditPickImageFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Error picking image: {error}'**
+  String profileEditPickImageFailedToast(String error);
+
+  /// No description provided for @profileEditUploadDebugInfoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload debug info'**
+  String get profileEditUploadDebugInfoTitle;
+
+  /// No description provided for @profileEditUploadDebugInfoCopiedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Debug info copied to clipboard'**
+  String get profileEditUploadDebugInfoCopiedToast;
+
+  /// No description provided for @desktopCommunityTabDiscover.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover'**
+  String get desktopCommunityTabDiscover;
+
+  /// No description provided for @desktopCommunityTabFollowing.
+  ///
+  /// In en, this message translates to:
+  /// **'Following'**
+  String get desktopCommunityTabFollowing;
+
+  /// No description provided for @desktopCommunityTabGroups.
+  ///
+  /// In en, this message translates to:
+  /// **'Groups'**
+  String get desktopCommunityTabGroups;
+
+  /// No description provided for @desktopCommunityTabArt.
+  ///
+  /// In en, this message translates to:
+  /// **'Art'**
+  String get desktopCommunityTabArt;
+
+  /// No description provided for @desktopCommunityHeaderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Community'**
+  String get desktopCommunityHeaderTitle;
+
+  /// No description provided for @desktopCommunityHeaderSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect with artists and collectors'**
+  String get desktopCommunityHeaderSubtitle;
+
+  /// No description provided for @desktopCommunitySearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search posts, users, tags...'**
+  String get desktopCommunitySearchHint;
+
+  /// No description provided for @desktopCommunitySearchMinCharsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Type at least 2 characters to search'**
+  String get desktopCommunitySearchMinCharsHint;
+
+  /// No description provided for @desktopCommunitySearchNoResults.
+  ///
+  /// In en, this message translates to:
+  /// **'No results found'**
+  String get desktopCommunitySearchNoResults;
+
+  /// No description provided for @desktopCommunityFilterAllPosts.
+  ///
+  /// In en, this message translates to:
+  /// **'All posts'**
+  String get desktopCommunityFilterAllPosts;
+
+  /// No description provided for @desktopCommunityFilterFollowing.
+  ///
+  /// In en, this message translates to:
+  /// **'Following'**
+  String get desktopCommunityFilterFollowing;
+
+  /// No description provided for @desktopCommunityFilterArOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'AR only'**
+  String get desktopCommunityFilterArOnly;
+
+  /// No description provided for @desktopCommunitySortPopularity.
+  ///
+  /// In en, this message translates to:
+  /// **'Popularity'**
+  String get desktopCommunitySortPopularity;
+
+  /// No description provided for @desktopCommunitySortRecent.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent'**
+  String get desktopCommunitySortRecent;
+
+  /// No description provided for @desktopCommunitySortTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort'**
+  String get desktopCommunitySortTitle;
+
+  /// No description provided for @desktopCommunitySortTop.
+  ///
+  /// In en, this message translates to:
+  /// **'Top'**
+  String get desktopCommunitySortTop;
+
+  /// No description provided for @desktopCommunityFollowButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow'**
+  String get desktopCommunityFollowButton;
+
+  /// No description provided for @desktopCommunityFollowingButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Following'**
+  String get desktopCommunityFollowingButton;
+
+  /// No description provided for @desktopCommunityBackToFeedTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to feed'**
+  String get desktopCommunityBackToFeedTooltip;
+
+  /// No description provided for @desktopCommunitySortedByPopularityTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Sorted by popularity'**
+  String get desktopCommunitySortedByPopularityTooltip;
+
+  /// No description provided for @desktopCommunitySortedByRecentTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Sorted by recent'**
+  String get desktopCommunitySortedByRecentTooltip;
+
+  /// No description provided for @desktopCommunityTaggedPostsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} tagged posts'**
+  String desktopCommunityTaggedPostsLabel(String count);
+
+  /// No description provided for @desktopCommunityTagUnavailableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tag unavailable'**
+  String get desktopCommunityTagUnavailableTitle;
+
+  /// No description provided for @desktopCommunityTagUnavailableBody.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not open that tag. It may have been removed or is not available right now.'**
+  String get desktopCommunityTagUnavailableBody;
+
+  /// No description provided for @desktopCommunityPopularForTagTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Popular for #{tag}'**
+  String desktopCommunityPopularForTagTitle(String tag);
+
+  /// No description provided for @desktopCommunityLoadingPostsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading posts...'**
+  String get desktopCommunityLoadingPostsLabel;
+
+  /// No description provided for @desktopCommunityEmptyDiscoverTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No posts yet'**
+  String get desktopCommunityEmptyDiscoverTitle;
+
+  /// No description provided for @desktopCommunityEmptyDiscoverBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Posts from creators around the world will appear here.'**
+  String get desktopCommunityEmptyDiscoverBody;
+
+  /// No description provided for @desktopCommunityEmptySearchBody.
+  ///
+  /// In en, this message translates to:
+  /// **'No posts match your search.'**
+  String get desktopCommunityEmptySearchBody;
+
+  /// No description provided for @desktopCommunityEmptyFollowingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No posts from followed creators'**
+  String get desktopCommunityEmptyFollowingTitle;
+
+  /// No description provided for @desktopCommunityEmptyFollowingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow artists and creators to see their updates here.'**
+  String get desktopCommunityEmptyFollowingBody;
+
+  /// No description provided for @desktopCommunityLoadingNearbyArtLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading nearby art...'**
+  String get desktopCommunityLoadingNearbyArtLabel;
+
+  /// No description provided for @desktopCommunityEmptyNearbyArtTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No nearby art found'**
+  String get desktopCommunityEmptyNearbyArtTitle;
+
+  /// No description provided for @desktopCommunityEmptyNearbyArtBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore your surroundings to discover location-based art.'**
+  String get desktopCommunityEmptyNearbyArtBody;
+
+  /// No description provided for @desktopCommunityEmptySearchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No posts match your search'**
+  String get desktopCommunityEmptySearchTitle;
+
+  /// No description provided for @desktopCommunityEmptySearchSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Try adjusting your keywords to find relevant art posts.'**
+  String get desktopCommunityEmptySearchSubtitle;
+
+  /// No description provided for @desktopCommunityLoadingGroupsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading groups...'**
+  String get desktopCommunityLoadingGroupsLabel;
+
+  /// No description provided for @desktopCommunityEmptyGroupsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No groups yet'**
+  String get desktopCommunityEmptyGroupsTitle;
+
+  /// No description provided for @desktopCommunityEmptyGroupsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Join or create groups to connect with like-minded art enthusiasts.'**
+  String get desktopCommunityEmptyGroupsBody;
+
+  /// No description provided for @desktopCommunityCreateFabLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Create'**
+  String get desktopCommunityCreateFabLabel;
+
+  /// No description provided for @desktopCommunityCreateFabCloseLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get desktopCommunityCreateFabCloseLabel;
+
+  /// No description provided for @desktopCommunityCreateOptionCreateGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Create group'**
+  String get desktopCommunityCreateOptionCreateGroup;
+
+  /// No description provided for @desktopCommunityCreateOptionGroupPost.
+  ///
+  /// In en, this message translates to:
+  /// **'Group post'**
+  String get desktopCommunityCreateOptionGroupPost;
+
+  /// No description provided for @desktopCommunityCreateOptionArtDrop.
+  ///
+  /// In en, this message translates to:
+  /// **'Art drop'**
+  String get desktopCommunityCreateOptionArtDrop;
+
+  /// No description provided for @desktopCommunityCreateOptionPostReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Post review'**
+  String get desktopCommunityCreateOptionPostReview;
+
+  /// No description provided for @desktopCommunityCreateOptionPost.
+  ///
+  /// In en, this message translates to:
+  /// **'Post'**
+  String get desktopCommunityCreateOptionPost;
+
+  /// No description provided for @desktopCommunityComposerTypePostLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Post'**
+  String get desktopCommunityComposerTypePostLabel;
+
+  /// No description provided for @desktopCommunityComposerTypePostDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Share an update with the community'**
+  String get desktopCommunityComposerTypePostDescription;
+
+  /// No description provided for @desktopCommunityComposerTypeArtDropLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Art drop'**
+  String get desktopCommunityComposerTypeArtDropLabel;
+
+  /// No description provided for @desktopCommunityComposerTypeArtDropDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Highlight a location-based activation'**
+  String get desktopCommunityComposerTypeArtDropDescription;
+
+  /// No description provided for @desktopCommunityComposerTypeArtReviewLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Art review'**
+  String get desktopCommunityComposerTypeArtReviewLabel;
+
+  /// No description provided for @desktopCommunityComposerTypeArtReviewDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Share your thoughts on an artwork'**
+  String get desktopCommunityComposerTypeArtReviewDescription;
+
+  /// No description provided for @desktopCommunityComposerTypeEventLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Event'**
+  String get desktopCommunityComposerTypeEventLabel;
+
+  /// No description provided for @desktopCommunityComposerTypeEventDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Announce meetups and gatherings'**
+  String get desktopCommunityComposerTypeEventDescription;
+
+  /// No description provided for @desktopCommunityComposerTypeQuestionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Question'**
+  String get desktopCommunityComposerTypeQuestionLabel;
+
+  /// No description provided for @desktopCommunityComposerTypeQuestionDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask the community for feedback'**
+  String get desktopCommunityComposerTypeQuestionDescription;
+
+  /// No description provided for @desktopNavigationExpandTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Expand navigation'**
+  String get desktopNavigationExpandTooltip;
+
+  /// No description provided for @desktopNavigationCollapseTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse navigation'**
+  String get desktopNavigationCollapseTooltip;
+
+  /// No description provided for @desktopNavigationSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Art platform'**
+  String get desktopNavigationSubtitle;
+
+  /// No description provided for @profilePersonaArtEnthusiast.
+  ///
+  /// In en, this message translates to:
+  /// **'Art Enthusiast'**
+  String get profilePersonaArtEnthusiast;
+
+  /// No description provided for @userProfileAchievementCategoryEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'Events'**
+  String get userProfileAchievementCategoryEvents;
+
+  /// No description provided for @userProfileAchievementCategoryDiscovery.
+  ///
+  /// In en, this message translates to:
+  /// **'Discovery'**
+  String get userProfileAchievementCategoryDiscovery;
+
+  /// No description provided for @userProfileAchievementCategoryAr.
+  ///
+  /// In en, this message translates to:
+  /// **'AR'**
+  String get userProfileAchievementCategoryAr;
+
+  /// No description provided for @userProfileAchievementCategoryNft.
+  ///
+  /// In en, this message translates to:
+  /// **'NFT'**
+  String get userProfileAchievementCategoryNft;
+
+  /// No description provided for @userProfileAchievementCategoryCommunity.
+  ///
+  /// In en, this message translates to:
+  /// **'Community'**
+  String get userProfileAchievementCategoryCommunity;
+
+  /// No description provided for @userProfileAchievementCategorySocial.
+  ///
+  /// In en, this message translates to:
+  /// **'Social'**
+  String get userProfileAchievementCategorySocial;
+
+  /// No description provided for @userProfileAchievementCategoryTrading.
+  ///
+  /// In en, this message translates to:
+  /// **'Trading'**
+  String get userProfileAchievementCategoryTrading;
+
+  /// No description provided for @userProfileAchievementCategorySpecial.
+  ///
+  /// In en, this message translates to:
+  /// **'Special'**
+  String get userProfileAchievementCategorySpecial;
+
+  /// No description provided for @daoHubStatYourVotingPowerLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Your voting power'**
+  String get daoHubStatYourVotingPowerLabel;
+
+  /// No description provided for @daoHubStatActiveProposalsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Active proposals'**
+  String get daoHubStatActiveProposalsLabel;
+
+  /// No description provided for @daoHubStatTotalDelegatesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Total delegates'**
+  String get daoHubStatTotalDelegatesLabel;
+
+  /// No description provided for @daoDelegationCurrentStatusTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your delegation status'**
+  String get daoDelegationCurrentStatusTitle;
+
+  /// No description provided for @daoDelegationDelegatorsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Delegators'**
+  String get daoDelegationDelegatorsLabel;
+
+  /// No description provided for @daoDelegationSelfLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Self'**
+  String get daoDelegationSelfLabel;
+
+  /// No description provided for @commonDialogSemanticLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Dialog'**
+  String get commonDialogSemanticLabel;
+
+  /// No description provided for @commonFailedToLoadLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load'**
+  String get commonFailedToLoadLabel;
+
+  /// No description provided for @commonSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit'**
+  String get commonSubmit;
+
+  /// No description provided for @commonUser.
+  ///
+  /// In en, this message translates to:
+  /// **'User'**
+  String get commonUser;
+
+  /// No description provided for @commonTimeAgoMonths.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1mo ago} other{{count}mo ago}}'**
+  String commonTimeAgoMonths(num count);
+
+  /// No description provided for @commonTimeAgoYears.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1y ago} other{{count}y ago}}'**
+  String commonTimeAgoYears(num count);
+
+  /// No description provided for @postDetailPostUnlikedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Post unliked'**
+  String get postDetailPostUnlikedToast;
+
+  /// No description provided for @communityBookmarkSaveForLaterTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Save for later'**
+  String get communityBookmarkSaveForLaterTooltip;
+
+  /// No description provided for @communityBookmarkRemoveTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove bookmark'**
+  String get communityBookmarkRemoveTooltip;
+
+  /// No description provided for @communityQuickRepostAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick repost'**
+  String get communityQuickRepostAction;
+
+  /// No description provided for @communityRepostWithCommentAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Repost with comment'**
+  String get communityRepostWithCommentAction;
+
+  /// No description provided for @communityRepostWithCommentHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add your thoughts (optional)'**
+  String get communityRepostWithCommentHint;
+
+  /// No description provided for @communityRepostButtonLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Repost'**
+  String get communityRepostButtonLabel;
+
+  /// No description provided for @communityRepostedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Reposted'**
+  String get communityRepostedToast;
+
+  /// No description provided for @communityRepostedWithCommentToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Reposted with comment'**
+  String get communityRepostedWithCommentToast;
+
+  /// No description provided for @desktopCommunityActiveCommunitiesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Active communities'**
+  String get desktopCommunityActiveCommunitiesTitle;
+
+  /// No description provided for @desktopCommunityNoCommunitiesFoundLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'No communities found'**
+  String get desktopCommunityNoCommunitiesFoundLabel;
+
+  /// No description provided for @desktopCommunityViewAllCommunitiesButtonLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'View all {count, plural, =1{1 community} other{{count} communities}}'**
+  String desktopCommunityViewAllCommunitiesButtonLabel(num count);
+
+  /// No description provided for @desktopCommunityGroupJoinedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Joined'**
+  String get desktopCommunityGroupJoinedLabel;
+
+  /// No description provided for @desktopCommunityGroupsSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search groups...'**
+  String get desktopCommunityGroupsSearchHint;
+
+  /// No description provided for @desktopCommunityGroupMembersLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 member} other{{count} members}}'**
+  String desktopCommunityGroupMembersLabel(num count);
+
+  /// No description provided for @desktopCommunityLatestLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest: {timeAgo}'**
+  String desktopCommunityLatestLabel(Object timeAgo);
+
+  /// No description provided for @desktopCommunitySearchMessagesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search messages...'**
+  String get desktopCommunitySearchMessagesHint;
+
+  /// No description provided for @desktopCommunitySelectCommunityDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a community'**
+  String get desktopCommunitySelectCommunityDialogTitle;
+
+  /// No description provided for @desktopCommunitySearchUsersHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search users...'**
+  String get desktopCommunitySearchUsersHint;
+
+  /// No description provided for @desktopCommunitySearchUsersToMessageHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search for users to message'**
+  String get desktopCommunitySearchUsersToMessageHint;
+
+  /// No description provided for @desktopCommunityNewMessageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New message'**
+  String get desktopCommunityNewMessageTitle;
+
+  /// No description provided for @desktopCommunitySearchFailedTryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Search failed. Try again.'**
+  String get desktopCommunitySearchFailedTryAgain;
+
+  /// No description provided for @desktopCommunityMessagesEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No messages yet'**
+  String get desktopCommunityMessagesEmptyTitle;
+
+  /// No description provided for @desktopCommunityMessagesEmptySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Start a conversation with an artist'**
+  String get desktopCommunityMessagesEmptySubtitle;
+
+  /// No description provided for @desktopCommunityMessagesNoMatchesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No matches found'**
+  String get desktopCommunityMessagesNoMatchesTitle;
+
+  /// No description provided for @desktopCommunityMessagesNoResultsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t find any conversations, members, or messages matching \"{query}\".'**
+  String desktopCommunityMessagesNoResultsBody(Object query);
+
+  /// No description provided for @desktopCommunityMessagesSearchResultsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Showing {count, plural, =1{1 result} other{{count} results}} for \"{query}\"'**
+  String desktopCommunityMessagesSearchResultsLabel(num count, Object query);
+
+  /// No description provided for @desktopCommunityAddHandleButtonLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Add handle'**
+  String get desktopCommunityAddHandleButtonLabel;
+
+  /// No description provided for @desktopCommunityAddTagDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add tag'**
+  String get desktopCommunityAddTagDialogTitle;
+
+  /// No description provided for @desktopCommunityAddTagDialogHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter tag (e.g., art, photography)'**
+  String get desktopCommunityAddTagDialogHint;
+
+  /// No description provided for @desktopCommunityAddTagHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add tag'**
+  String get desktopCommunityAddTagHint;
+
+  /// No description provided for @desktopCommunityMentionDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Mention someone'**
+  String get desktopCommunityMentionDialogTitle;
+
+  /// No description provided for @desktopCommunitySearchPeopleHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search artists, collectors, or wallets'**
+  String get desktopCommunitySearchPeopleHint;
+
+  /// No description provided for @desktopCommunityMentionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Mention'**
+  String get desktopCommunityMentionHint;
+
+  /// No description provided for @desktopCommunityBrowseTagsTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse tags'**
+  String get desktopCommunityBrowseTagsTooltip;
+
+  /// No description provided for @desktopCommunityFindProfilesTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Find profiles'**
+  String get desktopCommunityFindProfilesTooltip;
+
+  /// No description provided for @desktopCommunityAddToPostTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to post'**
+  String get desktopCommunityAddToPostTooltip;
+
+  /// No description provided for @desktopCommunityTagLocationButtonLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Tag a location'**
+  String get desktopCommunityTagLocationButtonLabel;
+
+  /// No description provided for @desktopCommunityTagLocationDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tag a location'**
+  String get desktopCommunityTagLocationDialogTitle;
+
+  /// No description provided for @desktopCommunityLocationSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Ljubljana, Slovenia'**
+  String get desktopCommunityLocationSearchHint;
+
+  /// No description provided for @desktopCommunityClearSelectionButtonLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear selection'**
+  String get desktopCommunityClearSelectionButtonLabel;
+
+  /// No description provided for @desktopCommunityTargetCommunityOptionalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Target a community (optional)'**
+  String get desktopCommunityTargetCommunityOptionalTitle;
+
+  /// No description provided for @desktopCommunityTargetCommunityNoGroupHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Posts shared to groups notify members instantly.'**
+  String get desktopCommunityTargetCommunityNoGroupHint;
+
+  /// No description provided for @desktopCommunityTargetCommunityPostingToLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Posting to {groupName}'**
+  String desktopCommunityTargetCommunityPostingToLabel(Object groupName);
+
+  /// No description provided for @desktopCommunityRemoveGroupTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove group'**
+  String get desktopCommunityRemoveGroupTooltip;
+
+  /// No description provided for @desktopCommunityArAttachmentsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AR attachments'**
+  String get desktopCommunityArAttachmentsTitle;
+
+  /// No description provided for @desktopCommunityArAttachmentsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach AR assets from your mobile device to ensure ARCore/ARKit compatibility. You can still tag this post and continue editing here.'**
+  String get desktopCommunityArAttachmentsBody;
+
+  /// No description provided for @desktopCommunityDownloadAppTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Download app'**
+  String get desktopCommunityDownloadAppTitle;
+
+  /// No description provided for @desktopCommunityDownloadAppButtonLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Download app'**
+  String get desktopCommunityDownloadAppButtonLabel;
+
+  /// No description provided for @desktopCommunitySharedPhotoFallbackContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared a photo'**
+  String get desktopCommunitySharedPhotoFallbackContent;
+
+  /// No description provided for @desktopCommunityJoinGroupToPostToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Join a group to post.'**
+  String get desktopCommunityJoinGroupToPostToast;
+
+  /// No description provided for @desktopCommunityPostPublishedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Post published!'**
+  String get desktopCommunityPostPublishedToast;
+
+  /// No description provided for @desktopCommunityPostPublishFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to post.'**
+  String get desktopCommunityPostPublishFailedToast;
+
+  /// No description provided for @desktopCommunityPostCreatedSuccessToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Post created successfully!'**
+  String get desktopCommunityPostCreatedSuccessToast;
+
+  /// No description provided for @desktopCommunityPostCreateFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to create post.'**
+  String get desktopCommunityPostCreateFailedToast;
+
+  /// No description provided for @desktopCommunityCreatePostTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create post'**
+  String get desktopCommunityCreatePostTitle;
+
+  /// No description provided for @desktopCommunityComposerPromptHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Share what you\'re building, discovering, or thinking...'**
+  String get desktopCommunityComposerPromptHint;
+
+  /// No description provided for @desktopCommunityComposerWhatsHappeningHint.
+  ///
+  /// In en, this message translates to:
+  /// **'What\'s happening?'**
+  String get desktopCommunityComposerWhatsHappeningHint;
+
+  /// No description provided for @desktopCommunityComposerPhotoLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo'**
+  String get desktopCommunityComposerPhotoLabel;
+
+  /// No description provided for @desktopCommunityComposerLocationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get desktopCommunityComposerLocationLabel;
+
+  /// No description provided for @desktopCommunityComposerTagLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Tag'**
+  String get desktopCommunityComposerTagLabel;
+
+  /// No description provided for @desktopCommunityComposerMentionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Mention'**
+  String get desktopCommunityComposerMentionLabel;
+
+  /// No description provided for @desktopCommunityComposerAddImageTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Add image'**
+  String get desktopCommunityComposerAddImageTooltip;
+
+  /// No description provided for @desktopCommunityComposerAddArContentTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Add AR content'**
+  String get desktopCommunityComposerAddArContentTooltip;
+
+  /// No description provided for @desktopCommunityComposerAddLocationTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Add location'**
+  String get desktopCommunityComposerAddLocationTooltip;
+
+  /// No description provided for @desktopCommunityComposerMentionUserTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Mention user'**
+  String get desktopCommunityComposerMentionUserTooltip;
+
+  /// No description provided for @desktopCommunityComposerAddEmojiTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Add emoji'**
+  String get desktopCommunityComposerAddEmojiTooltip;
+
+  /// No description provided for @desktopCommunityCreateGroupNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Group name'**
+  String get desktopCommunityCreateGroupNameLabel;
+
+  /// No description provided for @desktopCommunityCreateGroupDescriptionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Description (optional)'**
+  String get desktopCommunityCreateGroupDescriptionLabel;
+
+  /// No description provided for @desktopCommunityArtUseCurrentAreaButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Use current area'**
+  String get desktopCommunityArtUseCurrentAreaButton;
+
+  /// No description provided for @desktopCommunityArtWiderRadiusButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Wider radius'**
+  String get desktopCommunityArtWiderRadiusButton;
+
+  /// No description provided for @desktopCommunityArArtworkLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'AR artwork'**
+  String get desktopCommunityArArtworkLabel;
+
+  /// No description provided for @desktopCommunityArArtworkSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to view in augmented reality'**
+  String get desktopCommunityArArtworkSubtitle;
+
+  /// No description provided for @desktopCommunityTagFeedLoadingPostsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading #{tag} posts...'**
+  String desktopCommunityTagFeedLoadingPostsLabel(Object tag);
+
+  /// No description provided for @desktopCommunityTagFeedEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No posts for #{tag}'**
+  String desktopCommunityTagFeedEmptyTitle(Object tag);
+
+  /// No description provided for @desktopCommunityTagFeedEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Create or discover posts tagged #{tag} to see them here.'**
+  String desktopCommunityTagFeedEmptyBody(Object tag);
+
+  /// No description provided for @desktopCommunityTagFeedNoPostsFoundError.
+  ///
+  /// In en, this message translates to:
+  /// **'No posts found for #{tag}'**
+  String desktopCommunityTagFeedNoPostsFoundError(Object tag);
+
+  /// No description provided for @desktopCommunityTagFeedTopPostsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Top posts for #{tag}'**
+  String desktopCommunityTagFeedTopPostsTitle(Object tag);
+
+  /// No description provided for @desktopCommunityTagFeedSortedByPopularityDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Sorted by popularity (likes, shares, comments, and views).'**
+  String get desktopCommunityTagFeedSortedByPopularityDescription;
+
+  /// No description provided for @desktopCommunityTagFeedTaggedPostsAcrossCommunityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 tagged post across the community} other{{count} tagged posts across the community}}'**
+  String desktopCommunityTagFeedTaggedPostsAcrossCommunityLabel(num count);
+
+  /// No description provided for @desktopCommunityTrendingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Trending'**
+  String get desktopCommunityTrendingTitle;
+
+  /// No description provided for @desktopCommunityTrendingLoadFailedTapToRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load trending topics. Tap to retry.'**
+  String get desktopCommunityTrendingLoadFailedTapToRetry;
+
+  /// No description provided for @desktopCommunityTrendingEmptyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'No trending tags yet. Engage with the community to surface trends.'**
+  String get desktopCommunityTrendingEmptyLabel;
+
+  /// No description provided for @desktopCommunityTrendingBasedOnRecentPostsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Based on recent posts'**
+  String get desktopCommunityTrendingBasedOnRecentPostsLabel;
+
+  /// No description provided for @desktopCommunityWhoToFollowTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Who to follow'**
+  String get desktopCommunityWhoToFollowTitle;
+
+  /// No description provided for @desktopCommunitySuggestionsLoadFailedTapToRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load suggestions. Tap to retry.'**
+  String get desktopCommunitySuggestionsLoadFailedTapToRetry;
+
+  /// No description provided for @desktopCommunitySuggestionsEmptyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow artists to personalize your feed.'**
+  String get desktopCommunitySuggestionsEmptyLabel;
+
+  /// No description provided for @profileInvitesTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Invites'**
+  String get profileInvitesTooltip;
+
+  /// No description provided for @profileConnectWalletToSeeProfileLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect wallet to see profile'**
+  String get profileConnectWalletToSeeProfileLabel;
+
+  /// No description provided for @profileMoreOptionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'More options'**
+  String get profileMoreOptionsTitle;
+
+  /// No description provided for @profileNoBioYetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No bio yet'**
+  String get profileNoBioYetTitle;
+
+  /// No description provided for @profileNoBioYetDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap \"Edit Profile\" to add a short bio about yourself.'**
+  String get profileNoBioYetDescription;
+
+  /// No description provided for @profileNoPostsYetDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Share your perspective with the community to see it here.'**
+  String get profileNoPostsYetDescription;
+
+  /// No description provided for @profileUpcomingEventsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming events'**
+  String get profileUpcomingEventsTitle;
+
+  /// No description provided for @profileUpcomingEventsEmptyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan an event or workshop to engage your audience.'**
+  String get profileUpcomingEventsEmptyLabel;
+
+  /// No description provided for @profileArtistHighlightsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep your artworks and collections front and center.'**
+  String get profileArtistHighlightsSubtitle;
+
+  /// No description provided for @profileArtistArtworksEmptyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload your first artwork to showcase it here.'**
+  String get profileArtistArtworksEmptyLabel;
+
+  /// No description provided for @profileArtistCollectionsEmptyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a collection to curate your story.'**
+  String get profileArtistCollectionsEmptyLabel;
+
+  /// No description provided for @profileInstitutionHighlightsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Promote upcoming programs and featured collections.'**
+  String get profileInstitutionHighlightsSubtitle;
+
+  /// No description provided for @profileInstitutionEventsEmptyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Share your next exhibition or gathering here.'**
+  String get profileInstitutionEventsEmptyLabel;
+
+  /// No description provided for @profileInstitutionCollectionsEmptyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Curate institutional collections to highlight.'**
+  String get profileInstitutionCollectionsEmptyLabel;
+
+  /// No description provided for @profileShowcaseEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No {title}'**
+  String profileShowcaseEmptyTitle(Object title);
+
+  /// No description provided for @profileArtworkMediumFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'Digital art'**
+  String get profileArtworkMediumFallback;
+
+  /// No description provided for @profileCollectionFallbackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New collection'**
+  String get profileCollectionFallbackTitle;
+
+  /// No description provided for @profileCollectionCuratedByYouFooter.
+  ///
+  /// In en, this message translates to:
+  /// **'Curated by you'**
+  String get profileCollectionCuratedByYouFooter;
+
+  /// No description provided for @profileEventFallbackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Event'**
+  String get profileEventFallbackTitle;
+
+  /// No description provided for @profileEventLocationTba.
+  ///
+  /// In en, this message translates to:
+  /// **'TBA'**
+  String get profileEventLocationTba;
+
+  /// No description provided for @profileAchievementsEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No achievements yet'**
+  String get profileAchievementsEmptyTitle;
+
+  /// No description provided for @profilePerformanceSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Performance'**
+  String get profilePerformanceSectionTitle;
+
+  /// No description provided for @profilePerformanceArtworksViewedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Artworks viewed'**
+  String get profilePerformanceArtworksViewedTitle;
+
+  /// No description provided for @profilePerformanceDiscoveriesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Discoveries'**
+  String get profilePerformanceDiscoveriesTitle;
+
+  /// No description provided for @profilePerformanceCreatedOwnedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Created / owned'**
+  String get profilePerformanceCreatedOwnedTitle;
+
+  /// No description provided for @profilePerformanceFollowersFollowingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Followers / following'**
+  String get profilePerformanceFollowersFollowingTitle;
+
+  /// No description provided for @profileMenuSavedItemsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved items'**
+  String get profileMenuSavedItemsTitle;
+
+  /// No description provided for @profileMenuViewHistoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'View history'**
+  String get profileMenuViewHistoryTitle;
+
+  /// No description provided for @profileMenuHelpSupportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Help & support'**
+  String get profileMenuHelpSupportTitle;
+
+  /// No description provided for @profileHelpSupportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Help & support'**
+  String get profileHelpSupportTitle;
+
+  /// No description provided for @profileHelpDocumentationOption.
+  ///
+  /// In en, this message translates to:
+  /// **'Documentation'**
+  String get profileHelpDocumentationOption;
+
+  /// No description provided for @profileHelpContactSupportOption.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact support'**
+  String get profileHelpContactSupportOption;
+
+  /// No description provided for @profileHelpReportBugOption.
+  ///
+  /// In en, this message translates to:
+  /// **'Report a bug'**
+  String get profileHelpReportBugOption;
+
+  /// No description provided for @profileHelpAboutOption.
+  ///
+  /// In en, this message translates to:
+  /// **'About art.kubus'**
+  String get profileHelpAboutOption;
+
+  /// No description provided for @profileHelpOpeningDocumentationToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening documentation...'**
+  String get profileHelpOpeningDocumentationToast;
+
+  /// No description provided for @profileContactSupportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact support'**
+  String get profileContactSupportTitle;
+
+  /// No description provided for @profileContactSupportSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Get help from our support team:'**
+  String get profileContactSupportSubtitle;
+
+  /// No description provided for @profileContactSupportEmailLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get profileContactSupportEmailLabel;
+
+  /// No description provided for @profileContactSupportLiveChatLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Live chat'**
+  String get profileContactSupportLiveChatLabel;
+
+  /// No description provided for @profileContactSupportLiveChatAvailability.
+  ///
+  /// In en, this message translates to:
+  /// **'Available Mon-Fri 9AM-5PM'**
+  String get profileContactSupportLiveChatAvailability;
+
+  /// No description provided for @profileContactSupportWebsiteLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Website'**
+  String get profileContactSupportWebsiteLabel;
+
+  /// No description provided for @profileReportBugTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Report a bug'**
+  String get profileReportBugTitle;
+
+  /// No description provided for @profileReportBugSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe the issue you encountered:'**
+  String get profileReportBugSubtitle;
+
+  /// No description provided for @profileReportBugHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter bug description...'**
+  String get profileReportBugHint;
+
+  /// No description provided for @profileReportBugEmailSubject.
+  ///
+  /// In en, this message translates to:
+  /// **'Bug report'**
+  String get profileReportBugEmailSubject;
+
+  /// No description provided for @profileAnalyticsProfileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile analytics'**
+  String get profileAnalyticsProfileTitle;
+
+  /// No description provided for @profileAnalyticsCommunityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Community analytics'**
+  String get profileAnalyticsCommunityTitle;
+
+  /// No description provided for @profileAboutTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'About art.kubus'**
+  String get profileAboutTitle;
+
+  /// No description provided for @profileAboutVersionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version}'**
+  String profileAboutVersionLabel(Object version);
+
+  /// No description provided for @profileAboutDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'AR art platform connecting artists and institutions through blockchain technology.'**
+  String get profileAboutDescription;
+
+  /// No description provided for @profileAboutCopyright.
+  ///
+  /// In en, this message translates to:
+  /// **'Copyright (c) 2024 kubus Project'**
+  String get profileAboutCopyright;
+
+  /// No description provided for @groupFeedSignInToPostLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to post.'**
+  String get groupFeedSignInToPostLabel;
+
+  /// No description provided for @groupFeedJoinToPostLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Join this group to post.'**
+  String get groupFeedJoinToPostLabel;
+
+  /// No description provided for @analyticsDisabledTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Analytics disabled'**
+  String get analyticsDisabledTitle;
+
+  /// No description provided for @analyticsDisabledDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'This feature is currently turned off.'**
+  String get analyticsDisabledDescription;
+
+  /// No description provided for @analyticsNoProfileSelectedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No profile selected'**
+  String get analyticsNoProfileSelectedTitle;
+
+  /// No description provided for @analyticsNoProfileSelectedDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Missing wallet address.'**
+  String get analyticsNoProfileSelectedDescription;
+
+  /// No description provided for @analyticsPausedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Analytics paused'**
+  String get analyticsPausedTitle;
+
+  /// No description provided for @analyticsPausedDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable analytics in Settings to load charts.'**
+  String get analyticsPausedDescription;
+
+  /// No description provided for @analyticsUnableToLoadTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load'**
+  String get analyticsUnableToLoadTitle;
+
+  /// No description provided for @analyticsUnableToLoadDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Please try again later.'**
+  String get analyticsUnableToLoadDescription;
+
+  /// No description provided for @analyticsNoDataYetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No data yet'**
+  String get analyticsNoDataYetTitle;
+
+  /// No description provided for @analyticsNoDataYetDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'This chart will populate as activity happens.'**
+  String get analyticsNoDataYetDescription;
+
+  /// No description provided for @analyticsTimeframeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Timeframe'**
+  String get analyticsTimeframeLabel;
+
+  /// No description provided for @analyticsMetricLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Metric'**
+  String get analyticsMetricLabel;
+
+  /// No description provided for @analyticsYourAnalyticsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your analytics'**
+  String get analyticsYourAnalyticsTitle;
+
+  /// No description provided for @analyticsPublicAnalyticsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Public analytics'**
+  String get analyticsPublicAnalyticsTitle;
+
+  /// No description provided for @analyticsPostsCreatedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Posts created'**
+  String get analyticsPostsCreatedTitle;
+
+  /// No description provided for @analyticsMetricLikesReceivedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Likes received'**
+  String get analyticsMetricLikesReceivedLabel;
+
+  /// No description provided for @analyticsMetricViewsReceivedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Views received'**
+  String get analyticsMetricViewsReceivedLabel;
+
+  /// No description provided for @analyticsMetricEngagementLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Engagement'**
+  String get analyticsMetricEngagementLabel;
+
+  /// No description provided for @analyticsMetricViewsGivenLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Views given'**
+  String get analyticsMetricViewsGivenLabel;
+
+  /// No description provided for @userProfileCollectionsDesktopSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Curated sets of work'**
+  String get userProfileCollectionsDesktopSubtitle;
+
+  /// No description provided for @userProfileNoCollectionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No collections yet'**
+  String get userProfileNoCollectionsTitle;
+
+  /// No description provided for @desktopProfileHeaderSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage your identity and content'**
+  String get desktopProfileHeaderSubtitle;
+
+  /// No description provided for @desktopProfileShareProfileLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Share profile'**
+  String get desktopProfileShareProfileLabel;
+
+  /// No description provided for @desktopProfilePortfolioTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Portfolio'**
+  String get desktopProfilePortfolioTitle;
+
+  /// No description provided for @desktopProfilePortfolioSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your artworks and creative works'**
+  String get desktopProfilePortfolioSubtitle;
+
+  /// No description provided for @desktopProfileNoCollectionsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Create collections to organize and curate your work.'**
+  String get desktopProfileNoCollectionsDescription;
+
+  /// No description provided for @desktopProfileEventsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Events & Exhibitions'**
+  String get desktopProfileEventsTitle;
+
+  /// No description provided for @desktopProfileEventsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your upcoming and past events'**
+  String get desktopProfileEventsSubtitle;
+
+  /// No description provided for @desktopProfileNoEventsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No events yet'**
+  String get desktopProfileNoEventsTitle;
+
+  /// No description provided for @desktopProfileNoEventsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan exhibitions, workshops, or meetups to engage with collectors.'**
+  String get desktopProfileNoEventsDescription;
+
+  /// No description provided for @desktopProfileInstitutionProgramsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Exhibitions & Programs'**
+  String get desktopProfileInstitutionProgramsTitle;
+
+  /// No description provided for @desktopProfileInstitutionProgramsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your featured exhibitions and events'**
+  String get desktopProfileInstitutionProgramsSubtitle;
+
+  /// No description provided for @desktopProfileNoExhibitionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No exhibitions yet'**
+  String get desktopProfileNoExhibitionsTitle;
+
+  /// No description provided for @desktopProfileNoExhibitionsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Create exhibitions and programs to showcase your institutional activities.'**
+  String get desktopProfileNoExhibitionsDescription;
+
+  /// No description provided for @desktopProfilePermanentCollectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Permanent Collection'**
+  String get desktopProfilePermanentCollectionTitle;
+
+  /// No description provided for @desktopProfilePermanentCollectionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Featured works in your collection'**
+  String get desktopProfilePermanentCollectionSubtitle;
+
+  /// No description provided for @desktopProfilePermanentCollectionEmptyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Curate collections to highlight your institutional holdings.'**
+  String get desktopProfilePermanentCollectionEmptyDescription;
+
+  /// No description provided for @desktopProfileRecentlyViewedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recently Viewed'**
+  String get desktopProfileRecentlyViewedTitle;
+
+  /// No description provided for @desktopProfileRecentlyViewedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Artworks you\'ve discovered'**
+  String get desktopProfileRecentlyViewedSubtitle;
+
+  /// No description provided for @desktopProfileNoViewedArtworksTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No viewed artworks yet'**
+  String get desktopProfileNoViewedArtworksTitle;
+
+  /// No description provided for @desktopProfileNoViewedArtworksDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore the map to discover artworks and build your viewing history.'**
+  String get desktopProfileNoViewedArtworksDescription;
+
+  /// No description provided for @desktopProfilePerformanceSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your activity and engagement metrics'**
+  String get desktopProfilePerformanceSubtitle;
+
+  /// No description provided for @desktopProfilePerformanceCreatedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Created'**
+  String get desktopProfilePerformanceCreatedTitle;
+
+  /// No description provided for @desktopProfilePerformanceNftsOwnedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'NFTs owned'**
+  String get desktopProfilePerformanceNftsOwnedTitle;
+
+  /// No description provided for @desktopProfileAchievementsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your progress and milestones'**
+  String get desktopProfileAchievementsSubtitle;
+
+  /// No description provided for @desktopProfileYourPostsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your posts'**
+  String get desktopProfileYourPostsTitle;
+
+  /// No description provided for @desktopProfileYourPostsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Content you\'ve shared with the community'**
+  String get desktopProfileYourPostsSubtitle;
+
+  /// No description provided for @commonUnknownArtist.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown artist'**
+  String get commonUnknownArtist;
+
+  /// No description provided for @daoAnalyticsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'DAO Analytics'**
+  String get daoAnalyticsTitle;
+
+  /// No description provided for @daoAnalyticsProposalsByTypeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Proposals by Type'**
+  String get daoAnalyticsProposalsByTypeTitle;
+
+  /// No description provided for @daoAnalyticsProposalsByStatusTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Proposals by Status'**
+  String get daoAnalyticsProposalsByStatusTitle;
+
+  /// No description provided for @daoAnalyticsNoProposalsYetLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'No proposals yet.'**
+  String get daoAnalyticsNoProposalsYetLabel;
+
+  /// No description provided for @daoTreasuryTotalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get daoTreasuryTotalLabel;
+
+  /// No description provided for @daoTreasuryTotalValueLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Treasury Value'**
+  String get daoTreasuryTotalValueLabel;
+
+  /// No description provided for @daoDelegationSelectDelegateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a Delegate'**
+  String get daoDelegationSelectDelegateTitle;
+
+  /// No description provided for @daoDelegationSelectDelegateSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a trusted community member to vote on your behalf'**
+  String get daoDelegationSelectDelegateSubtitle;
+
+  /// No description provided for @daoDelegationDelegatorsCountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 delegator} other{{count} delegators}}'**
+  String daoDelegationDelegatorsCountLabel(num count);
+
+  /// No description provided for @daoDelegationParticipationRateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}% participation'**
+  String daoDelegationParticipationRateLabel(Object percent);
+
+  /// No description provided for @daoProposalVotesSupportSummaryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{totalVotes} votes • {supportPct}% support'**
+  String daoProposalVotesSupportSummaryLabel(Object totalVotes, Object supportPct);
+
+  /// No description provided for @commonSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search…'**
+  String get commonSearchHint;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

@@ -89,34 +89,40 @@ class ShareDeepLinkNavigation {
       case ShareEntityType.post:
         tabs?.setIndex(2);
         await PostDetailScreen.openById(context, target.id);
+        if (!context.mounted) return;
         _maybePromptDeferredOnboarding(context);
         return;
       case ShareEntityType.artwork:
         tabs?.setIndex(3);
         await openArtwork(context, target.id, source: 'share_deep_link');
+        if (!context.mounted) return;
         _maybePromptDeferredOnboarding(context);
         return;
       case ShareEntityType.profile:
         tabs?.setIndex(2);
         await UserProfileNavigation.open(context, userId: target.id);
+        if (!context.mounted) return;
         _maybePromptDeferredOnboarding(context);
         return;
       case ShareEntityType.event:
         tabs?.setIndex(3);
         await Navigator.of(context).push(MaterialPageRoute(
             builder: (_) => EventDetailScreen(eventId: target.id)));
+        if (!context.mounted) return;
         _maybePromptDeferredOnboarding(context);
         return;
       case ShareEntityType.exhibition:
         tabs?.setIndex(3);
         await Navigator.of(context).push(MaterialPageRoute(
             builder: (_) => ExhibitionDetailScreen(exhibitionId: target.id)));
+        if (!context.mounted) return;
         _maybePromptDeferredOnboarding(context);
         return;
       case ShareEntityType.collection:
         tabs?.setIndex(3);
         await Navigator.of(context).push(MaterialPageRoute(
             builder: (_) => CollectionDetailScreen(collectionId: target.id)));
+        if (!context.mounted) return;
         _maybePromptDeferredOnboarding(context);
         return;
       case ShareEntityType.marker:
@@ -139,6 +145,7 @@ class ShareDeepLinkNavigation {
             ),
           ),
         );
+        if (!context.mounted) return;
         _maybePromptDeferredOnboarding(context);
         return;
       case ShareEntityType.nft:

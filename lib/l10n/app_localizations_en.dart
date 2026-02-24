@@ -6954,4 +6954,1319 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get collectionCreatorNoArtworksAvailable => 'No artworks available';
+
+  @override
+  String get commonChange => 'Change';
+
+  @override
+  String get commonOpen => 'Open';
+
+  @override
+  String get commonLoading => 'Loading';
+
+  @override
+  String get desktopShellNavHome => 'Home';
+
+  @override
+  String get desktopShellNavExplore => 'Explore';
+
+  @override
+  String get desktopShellNavConnect => 'Connect';
+
+  @override
+  String get desktopShellNavCreate => 'Create';
+
+  @override
+  String get desktopShellNavOrganize => 'Organize';
+
+  @override
+  String get desktopShellNavGovern => 'Govern';
+
+  @override
+  String get desktopShellNavTrade => 'Trade';
+
+  @override
+  String get desktopShellNavWeb3 => 'Web3';
+
+  @override
+  String get navigationScreenCreateAr => 'Create AR';
+
+  @override
+  String get navigationScreenExploreMap => 'Explore Map';
+
+  @override
+  String get navigationScreenCommunity => 'Community';
+
+  @override
+  String get navigationScreenProfile => 'Profile';
+
+  @override
+  String get navigationScreenMarketplace => 'Marketplace';
+
+  @override
+  String get navigationScreenWallet => 'Wallet';
+
+  @override
+  String get navigationScreenAnalytics => 'Analytics';
+
+  @override
+  String get navigationScreenSettings => 'Settings';
+
+  @override
+  String get navigationScreenMyStats => 'My Stats';
+
+  @override
+  String get navigationScreenAchievements => 'Achievements';
+
+  @override
+  String get navigationScreenDaoHub => 'DAO Hub';
+
+  @override
+  String get navigationScreenArtistStudio => 'Artist Studio';
+
+  @override
+  String get navigationScreenInstitutionHub => 'Institution Hub';
+
+  @override
+  String get daoHubAppBarTitle => 'DAO Governance';
+
+  @override
+  String get daoHubHeaderSubtitle => 'Decentralized governance for the AR art platform';
+
+  @override
+  String get daoHubInfoDialogTitle => 'How DAO governance works';
+
+  @override
+  String get daoHubInfoDialogBody => 'The DAO lets the community propose and vote on platform decisions. Voting power is based on your KUB8 balance. You can also delegate your voting power to trusted delegates.';
+
+  @override
+  String get daoHubTabActiveProposals => 'Proposals';
+
+  @override
+  String get daoHubTabVotingHistory => 'Voting history';
+
+  @override
+  String get daoHubTabCreateProposal => 'Create';
+
+  @override
+  String get daoHubTabTreasury => 'Treasury';
+
+  @override
+  String get daoHubTabDelegation => 'Delegation';
+
+  @override
+  String get daoCreateProposalTitle => 'Create new proposal';
+
+  @override
+  String get daoCreateProposalSubtitle => 'Submit a proposal for the community to vote on';
+
+  @override
+  String get daoCreateProposalFieldTitleLabel => 'Proposal title';
+
+  @override
+  String get daoCreateProposalFieldTitleHint => 'Enter a clear, descriptive title';
+
+  @override
+  String get daoCreateProposalFieldDescriptionHint => 'Provide detailed explanation of your proposal';
+
+  @override
+  String get daoCreateProposalFieldVotingPeriodLabel => 'Voting period (days)';
+
+  @override
+  String get daoCreateProposalFieldVotingPeriodHint => 'How many days should voting be open?';
+
+  @override
+  String get daoCreateProposalSubmitButtonLabel => 'Submit proposal';
+
+  @override
+  String get daoProposalCategoryPlatformUpdate => 'Platform update';
+
+  @override
+  String get daoProposalCategoryNewFeature => 'New feature';
+
+  @override
+  String get daoProposalCategoryPolicyChange => 'Policy change';
+
+  @override
+  String get daoProposalCategoryTreasuryAllocation => 'Treasury allocation';
+
+  @override
+  String get daoProposalCategoryCommunityInitiative => 'Community initiative';
+
+  @override
+  String get daoProposalCategoryTechnicalImprovement => 'Technical improvement';
+
+  @override
+  String get daoVoteResultPassed => 'Passed';
+
+  @override
+  String get daoVoteResultFailed => 'Not passed';
+
+  @override
+  String get daoVotingHistoryInfoDateLabel => 'Date';
+
+  @override
+  String get daoVotingHistoryInfoYourVoteLabel => 'Your vote';
+
+  @override
+  String get daoVotingHistoryInfoParticipationLabel => 'Participation';
+
+  @override
+  String get daoVotingHistoryInfoYourVotingPowerLabel => 'Your voting power';
+
+  @override
+  String get desktopGovernanceSidebarOverviewTitle => 'DAO Overview';
+
+  @override
+  String get desktopGovernanceSidebarQuickActionsTitle => 'Quick Actions';
+
+  @override
+  String get desktopGovernanceQuickActionCreateProposalTitle => 'Create proposal';
+
+  @override
+  String get desktopGovernanceQuickActionCreateProposalSubtitle => 'Submit new governance idea';
+
+  @override
+  String get desktopGovernanceQuickActionVoteTitle => 'Vote on proposals';
+
+  @override
+  String get desktopGovernanceQuickActionVoteSubtitle => 'Participate in governance';
+
+  @override
+  String get desktopGovernanceQuickActionAnalyticsTitle => 'Analytics';
+
+  @override
+  String get desktopGovernanceQuickActionAnalyticsSubtitle => 'View DAO performance';
+
+  @override
+  String get desktopGovernanceAnalyticsScreenTitle => 'DAO Analytics';
+
+  @override
+  String get desktopGovernanceSidebarStatisticsTitle => 'DAO Statistics';
+
+  @override
+  String get desktopGovernanceSidebarRecentActivityTitle => 'Recent Activity';
+
+  @override
+  String get desktopGovernanceAcquireKub8Hint => 'Acquire KUB8 tokens to participate in governance';
+
+  @override
+  String get profileEditTitle => 'Edit profile';
+
+  @override
+  String get profileEditSaveChanges => 'Save changes';
+
+  @override
+  String get profileEditCoverImageClickToUpload => 'Click to upload cover image';
+
+  @override
+  String get profileEditCoverImageTapToAdd => 'Tap to add cover image';
+
+  @override
+  String profileEditCoverImageRecommendedSize(String size) {
+    return 'Recommended size: $size';
+  }
+
+  @override
+  String get profileEditAvatarClickToChange => 'Click to change avatar';
+
+  @override
+  String get profileEditAvatarTapToChange => 'Tap to change avatar';
+
+  @override
+  String get profileEditProfilePictureTitle => 'Profile picture';
+
+  @override
+  String get profileEditBasicInformationTitle => 'Basic information';
+
+  @override
+  String get profileEditPublicProfileDetailsSubtitle => 'Your public profile details';
+
+  @override
+  String get profileEditUsernameLabel => 'Username';
+
+  @override
+  String get profileEditUsernameHint => 'Enter username';
+
+  @override
+  String get profileEditUsernameRequiredError => 'Username is required';
+
+  @override
+  String get profileEditUsernameMinLengthError => 'Username must be at least 3 characters';
+
+  @override
+  String get profileEditDisplayNameLabel => 'Display name';
+
+  @override
+  String get profileEditDisplayNameHint => 'Enter display name';
+
+  @override
+  String get profileEditDisplayNameRequiredError => 'Display name is required';
+
+  @override
+  String get profileEditBioLabel => 'Bio';
+
+  @override
+  String get profileEditBioHint => 'Tell us about yourself...';
+
+  @override
+  String get profileEditSocialLinksTitle => 'Social links';
+
+  @override
+  String get profileEditSocialLinksSubtitle => 'Connect your social profiles';
+
+  @override
+  String get profileEditSocialHandleHint => '@username';
+
+  @override
+  String get profileEditSocialTwitterLabel => 'Twitter';
+
+  @override
+  String get profileEditSocialInstagramLabel => 'Instagram';
+
+  @override
+  String get profileEditSocialWebsiteLabel => 'Website';
+
+  @override
+  String get profileEditSocialWebsiteHint => 'https://...';
+
+  @override
+  String get profileEditSocialUrlInvalidError => 'URL must start with http:// or https://';
+
+  @override
+  String get profileEditArtistInformationTitle => 'Artist information';
+
+  @override
+  String get profileEditArtistSpecialtiesLabel => 'Specialties';
+
+  @override
+  String get profileEditArtistSpecialtiesHint => 'e.g., Digital Art, Sculpture, Photography';
+
+  @override
+  String get profileEditArtistSpecialtiesHelper => 'Separate multiple specialties with commas';
+
+  @override
+  String get profileEditArtistYearsActiveLabel => 'Years active';
+
+  @override
+  String get profileEditArtistYearsActiveHint => 'How many years have you been creating art?';
+
+  @override
+  String get profileEditArtistYearsActiveInvalidError => 'Please enter a valid number';
+
+  @override
+  String get profileEditInstitutionInformationTitle => 'Institution information';
+
+  @override
+  String get profileEditInstitutionDetailsSubtitle => 'Information about your institution';
+
+  @override
+  String get profileEditArtistDetailsSubtitle => 'Additional details about your artistic practice';
+
+  @override
+  String get profileEditInstitutionFocusAreasLabel => 'Focus areas';
+
+  @override
+  String get profileEditInstitutionEstablishedYearLabel => 'Established year';
+
+  @override
+  String get profileEditPrivacyVisibilityTitle => 'Privacy & visibility';
+
+  @override
+  String get profileEditPrivacyVisibilitySubtitle => 'Control who can see your content';
+
+  @override
+  String get profileEditInstitutionAboutTitle => 'About your institution';
+
+  @override
+  String get profileEditInstitutionAboutBody => 'Use the bio and social links above to describe your institution. You can manage exhibitions and events from the Institution Hub.';
+
+  @override
+  String get profileEditVerifiedStatusTitle => 'Verified status';
+
+  @override
+  String get profileEditVerifiedArtistTitle => 'Verified artist';
+
+  @override
+  String get profileEditVerifiedInstitutionTitle => 'Verified institution';
+
+  @override
+  String get profileEditVerifiedArtistSubtitle => 'Your artist status is verified by the DAO';
+
+  @override
+  String get profileEditVerifiedInstitutionSubtitle => 'Your institution status is verified by the DAO';
+
+  @override
+  String get profileEditProfileUpdatedToast => 'Profile updated successfully!';
+
+  @override
+  String profileEditErrorToast(String error) {
+    return 'Error: $error';
+  }
+
+  @override
+  String get profileEditNoWalletUploadAvatarToast => 'No wallet connected. Connect your wallet to upload avatar.';
+
+  @override
+  String get profileEditNoWalletUploadCoverToast => 'No wallet connected. Connect your wallet to upload cover image.';
+
+  @override
+  String get profileEditAvatarCopiedToClipboardToast => 'Copied avatar URL to clipboard';
+
+  @override
+  String get profileEditAvatarUploadedSavedToast => 'Avatar uploaded and saved!';
+
+  @override
+  String get profileEditAvatarUploadedLocalToast => 'Avatar uploaded locally (save failed)';
+
+  @override
+  String profileEditAvatarUploadFailedToast(String error) {
+    return 'Upload failed: $error';
+  }
+
+  @override
+  String get profileEditCoverUploadedSavedToast => 'Cover image uploaded!';
+
+  @override
+  String get profileEditCoverUploadedLocalToast => 'Cover image uploaded locally';
+
+  @override
+  String profileEditCoverUploadFailedToast(String error) {
+    return 'Cover upload failed: $error';
+  }
+
+  @override
+  String profileEditPickImageFailedToast(String error) {
+    return 'Error picking image: $error';
+  }
+
+  @override
+  String get profileEditUploadDebugInfoTitle => 'Upload debug info';
+
+  @override
+  String get profileEditUploadDebugInfoCopiedToast => 'Debug info copied to clipboard';
+
+  @override
+  String get desktopCommunityTabDiscover => 'Discover';
+
+  @override
+  String get desktopCommunityTabFollowing => 'Following';
+
+  @override
+  String get desktopCommunityTabGroups => 'Groups';
+
+  @override
+  String get desktopCommunityTabArt => 'Art';
+
+  @override
+  String get desktopCommunityHeaderTitle => 'Community';
+
+  @override
+  String get desktopCommunityHeaderSubtitle => 'Connect with artists and collectors';
+
+  @override
+  String get desktopCommunitySearchHint => 'Search posts, users, tags...';
+
+  @override
+  String get desktopCommunitySearchMinCharsHint => 'Type at least 2 characters to search';
+
+  @override
+  String get desktopCommunitySearchNoResults => 'No results found';
+
+  @override
+  String get desktopCommunityFilterAllPosts => 'All posts';
+
+  @override
+  String get desktopCommunityFilterFollowing => 'Following';
+
+  @override
+  String get desktopCommunityFilterArOnly => 'AR only';
+
+  @override
+  String get desktopCommunitySortPopularity => 'Popularity';
+
+  @override
+  String get desktopCommunitySortRecent => 'Recent';
+
+  @override
+  String get desktopCommunitySortTitle => 'Sort';
+
+  @override
+  String get desktopCommunitySortTop => 'Top';
+
+  @override
+  String get desktopCommunityFollowButton => 'Follow';
+
+  @override
+  String get desktopCommunityFollowingButton => 'Following';
+
+  @override
+  String get desktopCommunityBackToFeedTooltip => 'Back to feed';
+
+  @override
+  String get desktopCommunitySortedByPopularityTooltip => 'Sorted by popularity';
+
+  @override
+  String get desktopCommunitySortedByRecentTooltip => 'Sorted by recent';
+
+  @override
+  String desktopCommunityTaggedPostsLabel(String count) {
+    return '$count tagged posts';
+  }
+
+  @override
+  String get desktopCommunityTagUnavailableTitle => 'Tag unavailable';
+
+  @override
+  String get desktopCommunityTagUnavailableBody => 'We could not open that tag. It may have been removed or is not available right now.';
+
+  @override
+  String desktopCommunityPopularForTagTitle(String tag) {
+    return 'Popular for #$tag';
+  }
+
+  @override
+  String get desktopCommunityLoadingPostsLabel => 'Loading posts...';
+
+  @override
+  String get desktopCommunityEmptyDiscoverTitle => 'No posts yet';
+
+  @override
+  String get desktopCommunityEmptyDiscoverBody => 'Posts from creators around the world will appear here.';
+
+  @override
+  String get desktopCommunityEmptySearchBody => 'No posts match your search.';
+
+  @override
+  String get desktopCommunityEmptyFollowingTitle => 'No posts from followed creators';
+
+  @override
+  String get desktopCommunityEmptyFollowingBody => 'Follow artists and creators to see their updates here.';
+
+  @override
+  String get desktopCommunityLoadingNearbyArtLabel => 'Loading nearby art...';
+
+  @override
+  String get desktopCommunityEmptyNearbyArtTitle => 'No nearby art found';
+
+  @override
+  String get desktopCommunityEmptyNearbyArtBody => 'Explore your surroundings to discover location-based art.';
+
+  @override
+  String get desktopCommunityEmptySearchTitle => 'No posts match your search';
+
+  @override
+  String get desktopCommunityEmptySearchSubtitle => 'Try adjusting your keywords to find relevant art posts.';
+
+  @override
+  String get desktopCommunityLoadingGroupsLabel => 'Loading groups...';
+
+  @override
+  String get desktopCommunityEmptyGroupsTitle => 'No groups yet';
+
+  @override
+  String get desktopCommunityEmptyGroupsBody => 'Join or create groups to connect with like-minded art enthusiasts.';
+
+  @override
+  String get desktopCommunityCreateFabLabel => 'Create';
+
+  @override
+  String get desktopCommunityCreateFabCloseLabel => 'Close';
+
+  @override
+  String get desktopCommunityCreateOptionCreateGroup => 'Create group';
+
+  @override
+  String get desktopCommunityCreateOptionGroupPost => 'Group post';
+
+  @override
+  String get desktopCommunityCreateOptionArtDrop => 'Art drop';
+
+  @override
+  String get desktopCommunityCreateOptionPostReview => 'Post review';
+
+  @override
+  String get desktopCommunityCreateOptionPost => 'Post';
+
+  @override
+  String get desktopCommunityComposerTypePostLabel => 'Post';
+
+  @override
+  String get desktopCommunityComposerTypePostDescription => 'Share an update with the community';
+
+  @override
+  String get desktopCommunityComposerTypeArtDropLabel => 'Art drop';
+
+  @override
+  String get desktopCommunityComposerTypeArtDropDescription => 'Highlight a location-based activation';
+
+  @override
+  String get desktopCommunityComposerTypeArtReviewLabel => 'Art review';
+
+  @override
+  String get desktopCommunityComposerTypeArtReviewDescription => 'Share your thoughts on an artwork';
+
+  @override
+  String get desktopCommunityComposerTypeEventLabel => 'Event';
+
+  @override
+  String get desktopCommunityComposerTypeEventDescription => 'Announce meetups and gatherings';
+
+  @override
+  String get desktopCommunityComposerTypeQuestionLabel => 'Question';
+
+  @override
+  String get desktopCommunityComposerTypeQuestionDescription => 'Ask the community for feedback';
+
+  @override
+  String get desktopNavigationExpandTooltip => 'Expand navigation';
+
+  @override
+  String get desktopNavigationCollapseTooltip => 'Collapse navigation';
+
+  @override
+  String get desktopNavigationSubtitle => 'Art platform';
+
+  @override
+  String get profilePersonaArtEnthusiast => 'Art Enthusiast';
+
+  @override
+  String get userProfileAchievementCategoryEvents => 'Events';
+
+  @override
+  String get userProfileAchievementCategoryDiscovery => 'Discovery';
+
+  @override
+  String get userProfileAchievementCategoryAr => 'AR';
+
+  @override
+  String get userProfileAchievementCategoryNft => 'NFT';
+
+  @override
+  String get userProfileAchievementCategoryCommunity => 'Community';
+
+  @override
+  String get userProfileAchievementCategorySocial => 'Social';
+
+  @override
+  String get userProfileAchievementCategoryTrading => 'Trading';
+
+  @override
+  String get userProfileAchievementCategorySpecial => 'Special';
+
+  @override
+  String get daoHubStatYourVotingPowerLabel => 'Your voting power';
+
+  @override
+  String get daoHubStatActiveProposalsLabel => 'Active proposals';
+
+  @override
+  String get daoHubStatTotalDelegatesLabel => 'Total delegates';
+
+  @override
+  String get daoDelegationCurrentStatusTitle => 'Your delegation status';
+
+  @override
+  String get daoDelegationDelegatorsLabel => 'Delegators';
+
+  @override
+  String get daoDelegationSelfLabel => 'Self';
+
+  @override
+  String get commonDialogSemanticLabel => 'Dialog';
+
+  @override
+  String get commonFailedToLoadLabel => 'Failed to load';
+
+  @override
+  String get commonSubmit => 'Submit';
+
+  @override
+  String get commonUser => 'User';
+
+  @override
+  String commonTimeAgoMonths(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '${count}mo ago',
+      one: '1mo ago',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String commonTimeAgoYears(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '${count}y ago',
+      one: '1y ago',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get postDetailPostUnlikedToast => 'Post unliked';
+
+  @override
+  String get communityBookmarkSaveForLaterTooltip => 'Save for later';
+
+  @override
+  String get communityBookmarkRemoveTooltip => 'Remove bookmark';
+
+  @override
+  String get communityQuickRepostAction => 'Quick repost';
+
+  @override
+  String get communityRepostWithCommentAction => 'Repost with comment';
+
+  @override
+  String get communityRepostWithCommentHint => 'Add your thoughts (optional)';
+
+  @override
+  String get communityRepostButtonLabel => 'Repost';
+
+  @override
+  String get communityRepostedToast => 'Reposted';
+
+  @override
+  String get communityRepostedWithCommentToast => 'Reposted with comment';
+
+  @override
+  String get desktopCommunityActiveCommunitiesTitle => 'Active communities';
+
+  @override
+  String get desktopCommunityNoCommunitiesFoundLabel => 'No communities found';
+
+  @override
+  String desktopCommunityViewAllCommunitiesButtonLabel(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count communities',
+      one: '1 community',
+    );
+    return 'View all $_temp0';
+  }
+
+  @override
+  String get desktopCommunityGroupJoinedLabel => 'Joined';
+
+  @override
+  String get desktopCommunityGroupsSearchHint => 'Search groups...';
+
+  @override
+  String desktopCommunityGroupMembersLabel(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count members',
+      one: '1 member',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String desktopCommunityLatestLabel(Object timeAgo) {
+    return 'Latest: $timeAgo';
+  }
+
+  @override
+  String get desktopCommunitySearchMessagesHint => 'Search messages...';
+
+  @override
+  String get desktopCommunitySelectCommunityDialogTitle => 'Select a community';
+
+  @override
+  String get desktopCommunitySearchUsersHint => 'Search users...';
+
+  @override
+  String get desktopCommunitySearchUsersToMessageHint => 'Search for users to message';
+
+  @override
+  String get desktopCommunityNewMessageTitle => 'New message';
+
+  @override
+  String get desktopCommunitySearchFailedTryAgain => 'Search failed. Try again.';
+
+  @override
+  String get desktopCommunityMessagesEmptyTitle => 'No messages yet';
+
+  @override
+  String get desktopCommunityMessagesEmptySubtitle => 'Start a conversation with an artist';
+
+  @override
+  String get desktopCommunityMessagesNoMatchesTitle => 'No matches found';
+
+  @override
+  String desktopCommunityMessagesNoResultsBody(Object query) {
+    return 'We couldn\'t find any conversations, members, or messages matching \"$query\".';
+  }
+
+  @override
+  String desktopCommunityMessagesSearchResultsLabel(num count, Object query) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count results',
+      one: '1 result',
+    );
+    return 'Showing $_temp0 for \"$query\"';
+  }
+
+  @override
+  String get desktopCommunityAddHandleButtonLabel => 'Add handle';
+
+  @override
+  String get desktopCommunityAddTagDialogTitle => 'Add tag';
+
+  @override
+  String get desktopCommunityAddTagDialogHint => 'Enter tag (e.g., art, photography)';
+
+  @override
+  String get desktopCommunityAddTagHint => 'Add tag';
+
+  @override
+  String get desktopCommunityMentionDialogTitle => 'Mention someone';
+
+  @override
+  String get desktopCommunitySearchPeopleHint => 'Search artists, collectors, or wallets';
+
+  @override
+  String get desktopCommunityMentionHint => 'Mention';
+
+  @override
+  String get desktopCommunityBrowseTagsTooltip => 'Browse tags';
+
+  @override
+  String get desktopCommunityFindProfilesTooltip => 'Find profiles';
+
+  @override
+  String get desktopCommunityAddToPostTooltip => 'Add to post';
+
+  @override
+  String get desktopCommunityTagLocationButtonLabel => 'Tag a location';
+
+  @override
+  String get desktopCommunityTagLocationDialogTitle => 'Tag a location';
+
+  @override
+  String get desktopCommunityLocationSearchHint => 'e.g. Ljubljana, Slovenia';
+
+  @override
+  String get desktopCommunityClearSelectionButtonLabel => 'Clear selection';
+
+  @override
+  String get desktopCommunityTargetCommunityOptionalTitle => 'Target a community (optional)';
+
+  @override
+  String get desktopCommunityTargetCommunityNoGroupHint => 'Posts shared to groups notify members instantly.';
+
+  @override
+  String desktopCommunityTargetCommunityPostingToLabel(Object groupName) {
+    return 'Posting to $groupName';
+  }
+
+  @override
+  String get desktopCommunityRemoveGroupTooltip => 'Remove group';
+
+  @override
+  String get desktopCommunityArAttachmentsTitle => 'AR attachments';
+
+  @override
+  String get desktopCommunityArAttachmentsBody => 'Attach AR assets from your mobile device to ensure ARCore/ARKit compatibility. You can still tag this post and continue editing here.';
+
+  @override
+  String get desktopCommunityDownloadAppTitle => 'Download app';
+
+  @override
+  String get desktopCommunityDownloadAppButtonLabel => 'Download app';
+
+  @override
+  String get desktopCommunitySharedPhotoFallbackContent => 'Shared a photo';
+
+  @override
+  String get desktopCommunityJoinGroupToPostToast => 'Join a group to post.';
+
+  @override
+  String get desktopCommunityPostPublishedToast => 'Post published!';
+
+  @override
+  String get desktopCommunityPostPublishFailedToast => 'Failed to post.';
+
+  @override
+  String get desktopCommunityPostCreatedSuccessToast => 'Post created successfully!';
+
+  @override
+  String get desktopCommunityPostCreateFailedToast => 'Failed to create post.';
+
+  @override
+  String get desktopCommunityCreatePostTitle => 'Create post';
+
+  @override
+  String get desktopCommunityComposerPromptHint => 'Share what you\'re building, discovering, or thinking...';
+
+  @override
+  String get desktopCommunityComposerWhatsHappeningHint => 'What\'s happening?';
+
+  @override
+  String get desktopCommunityComposerPhotoLabel => 'Photo';
+
+  @override
+  String get desktopCommunityComposerLocationLabel => 'Location';
+
+  @override
+  String get desktopCommunityComposerTagLabel => 'Tag';
+
+  @override
+  String get desktopCommunityComposerMentionLabel => 'Mention';
+
+  @override
+  String get desktopCommunityComposerAddImageTooltip => 'Add image';
+
+  @override
+  String get desktopCommunityComposerAddArContentTooltip => 'Add AR content';
+
+  @override
+  String get desktopCommunityComposerAddLocationTooltip => 'Add location';
+
+  @override
+  String get desktopCommunityComposerMentionUserTooltip => 'Mention user';
+
+  @override
+  String get desktopCommunityComposerAddEmojiTooltip => 'Add emoji';
+
+  @override
+  String get desktopCommunityCreateGroupNameLabel => 'Group name';
+
+  @override
+  String get desktopCommunityCreateGroupDescriptionLabel => 'Description (optional)';
+
+  @override
+  String get desktopCommunityArtUseCurrentAreaButton => 'Use current area';
+
+  @override
+  String get desktopCommunityArtWiderRadiusButton => 'Wider radius';
+
+  @override
+  String get desktopCommunityArArtworkLabel => 'AR artwork';
+
+  @override
+  String get desktopCommunityArArtworkSubtitle => 'Tap to view in augmented reality';
+
+  @override
+  String desktopCommunityTagFeedLoadingPostsLabel(Object tag) {
+    return 'Loading #$tag posts...';
+  }
+
+  @override
+  String desktopCommunityTagFeedEmptyTitle(Object tag) {
+    return 'No posts for #$tag';
+  }
+
+  @override
+  String desktopCommunityTagFeedEmptyBody(Object tag) {
+    return 'Create or discover posts tagged #$tag to see them here.';
+  }
+
+  @override
+  String desktopCommunityTagFeedNoPostsFoundError(Object tag) {
+    return 'No posts found for #$tag';
+  }
+
+  @override
+  String desktopCommunityTagFeedTopPostsTitle(Object tag) {
+    return 'Top posts for #$tag';
+  }
+
+  @override
+  String get desktopCommunityTagFeedSortedByPopularityDescription => 'Sorted by popularity (likes, shares, comments, and views).';
+
+  @override
+  String desktopCommunityTagFeedTaggedPostsAcrossCommunityLabel(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count tagged posts across the community',
+      one: '1 tagged post across the community',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get desktopCommunityTrendingTitle => 'Trending';
+
+  @override
+  String get desktopCommunityTrendingLoadFailedTapToRetry => 'Could not load trending topics. Tap to retry.';
+
+  @override
+  String get desktopCommunityTrendingEmptyLabel => 'No trending tags yet. Engage with the community to surface trends.';
+
+  @override
+  String get desktopCommunityTrendingBasedOnRecentPostsLabel => 'Based on recent posts';
+
+  @override
+  String get desktopCommunityWhoToFollowTitle => 'Who to follow';
+
+  @override
+  String get desktopCommunitySuggestionsLoadFailedTapToRetry => 'Unable to load suggestions. Tap to retry.';
+
+  @override
+  String get desktopCommunitySuggestionsEmptyLabel => 'Follow artists to personalize your feed.';
+
+  @override
+  String get profileInvitesTooltip => 'Invites';
+
+  @override
+  String get profileConnectWalletToSeeProfileLabel => 'Connect wallet to see profile';
+
+  @override
+  String get profileMoreOptionsTitle => 'More options';
+
+  @override
+  String get profileNoBioYetTitle => 'No bio yet';
+
+  @override
+  String get profileNoBioYetDescription => 'Tap \"Edit Profile\" to add a short bio about yourself.';
+
+  @override
+  String get profileNoPostsYetDescription => 'Share your perspective with the community to see it here.';
+
+  @override
+  String get profileUpcomingEventsTitle => 'Upcoming events';
+
+  @override
+  String get profileUpcomingEventsEmptyLabel => 'Plan an event or workshop to engage your audience.';
+
+  @override
+  String get profileArtistHighlightsSubtitle => 'Keep your artworks and collections front and center.';
+
+  @override
+  String get profileArtistArtworksEmptyLabel => 'Upload your first artwork to showcase it here.';
+
+  @override
+  String get profileArtistCollectionsEmptyLabel => 'Create a collection to curate your story.';
+
+  @override
+  String get profileInstitutionHighlightsSubtitle => 'Promote upcoming programs and featured collections.';
+
+  @override
+  String get profileInstitutionEventsEmptyLabel => 'Share your next exhibition or gathering here.';
+
+  @override
+  String get profileInstitutionCollectionsEmptyLabel => 'Curate institutional collections to highlight.';
+
+  @override
+  String profileShowcaseEmptyTitle(Object title) {
+    return 'No $title';
+  }
+
+  @override
+  String get profileArtworkMediumFallback => 'Digital art';
+
+  @override
+  String get profileCollectionFallbackTitle => 'New collection';
+
+  @override
+  String get profileCollectionCuratedByYouFooter => 'Curated by you';
+
+  @override
+  String get profileEventFallbackTitle => 'Event';
+
+  @override
+  String get profileEventLocationTba => 'TBA';
+
+  @override
+  String get profileAchievementsEmptyTitle => 'No achievements yet';
+
+  @override
+  String get profilePerformanceSectionTitle => 'Performance';
+
+  @override
+  String get profilePerformanceArtworksViewedTitle => 'Artworks viewed';
+
+  @override
+  String get profilePerformanceDiscoveriesTitle => 'Discoveries';
+
+  @override
+  String get profilePerformanceCreatedOwnedTitle => 'Created / owned';
+
+  @override
+  String get profilePerformanceFollowersFollowingTitle => 'Followers / following';
+
+  @override
+  String get profileMenuSavedItemsTitle => 'Saved items';
+
+  @override
+  String get profileMenuViewHistoryTitle => 'View history';
+
+  @override
+  String get profileMenuHelpSupportTitle => 'Help & support';
+
+  @override
+  String get profileHelpSupportTitle => 'Help & support';
+
+  @override
+  String get profileHelpDocumentationOption => 'Documentation';
+
+  @override
+  String get profileHelpContactSupportOption => 'Contact support';
+
+  @override
+  String get profileHelpReportBugOption => 'Report a bug';
+
+  @override
+  String get profileHelpAboutOption => 'About art.kubus';
+
+  @override
+  String get profileHelpOpeningDocumentationToast => 'Opening documentation...';
+
+  @override
+  String get profileContactSupportTitle => 'Contact support';
+
+  @override
+  String get profileContactSupportSubtitle => 'Get help from our support team:';
+
+  @override
+  String get profileContactSupportEmailLabel => 'Email';
+
+  @override
+  String get profileContactSupportLiveChatLabel => 'Live chat';
+
+  @override
+  String get profileContactSupportLiveChatAvailability => 'Available Mon-Fri 9AM-5PM';
+
+  @override
+  String get profileContactSupportWebsiteLabel => 'Website';
+
+  @override
+  String get profileReportBugTitle => 'Report a bug';
+
+  @override
+  String get profileReportBugSubtitle => 'Describe the issue you encountered:';
+
+  @override
+  String get profileReportBugHint => 'Enter bug description...';
+
+  @override
+  String get profileReportBugEmailSubject => 'Bug report';
+
+  @override
+  String get profileAnalyticsProfileTitle => 'Profile analytics';
+
+  @override
+  String get profileAnalyticsCommunityTitle => 'Community analytics';
+
+  @override
+  String get profileAboutTitle => 'About art.kubus';
+
+  @override
+  String profileAboutVersionLabel(Object version) {
+    return 'Version $version';
+  }
+
+  @override
+  String get profileAboutDescription => 'AR art platform connecting artists and institutions through blockchain technology.';
+
+  @override
+  String get profileAboutCopyright => 'Copyright (c) 2024 kubus Project';
+
+  @override
+  String get groupFeedSignInToPostLabel => 'Sign in to post.';
+
+  @override
+  String get groupFeedJoinToPostLabel => 'Join this group to post.';
+
+  @override
+  String get analyticsDisabledTitle => 'Analytics disabled';
+
+  @override
+  String get analyticsDisabledDescription => 'This feature is currently turned off.';
+
+  @override
+  String get analyticsNoProfileSelectedTitle => 'No profile selected';
+
+  @override
+  String get analyticsNoProfileSelectedDescription => 'Missing wallet address.';
+
+  @override
+  String get analyticsPausedTitle => 'Analytics paused';
+
+  @override
+  String get analyticsPausedDescription => 'Enable analytics in Settings to load charts.';
+
+  @override
+  String get analyticsUnableToLoadTitle => 'Unable to load';
+
+  @override
+  String get analyticsUnableToLoadDescription => 'Please try again later.';
+
+  @override
+  String get analyticsNoDataYetTitle => 'No data yet';
+
+  @override
+  String get analyticsNoDataYetDescription => 'This chart will populate as activity happens.';
+
+  @override
+  String get analyticsTimeframeLabel => 'Timeframe';
+
+  @override
+  String get analyticsMetricLabel => 'Metric';
+
+  @override
+  String get analyticsYourAnalyticsTitle => 'Your analytics';
+
+  @override
+  String get analyticsPublicAnalyticsTitle => 'Public analytics';
+
+  @override
+  String get analyticsPostsCreatedTitle => 'Posts created';
+
+  @override
+  String get analyticsMetricLikesReceivedLabel => 'Likes received';
+
+  @override
+  String get analyticsMetricViewsReceivedLabel => 'Views received';
+
+  @override
+  String get analyticsMetricEngagementLabel => 'Engagement';
+
+  @override
+  String get analyticsMetricViewsGivenLabel => 'Views given';
+
+  @override
+  String get userProfileCollectionsDesktopSubtitle => 'Curated sets of work';
+
+  @override
+  String get userProfileNoCollectionsTitle => 'No collections yet';
+
+  @override
+  String get desktopProfileHeaderSubtitle => 'Manage your identity and content';
+
+  @override
+  String get desktopProfileShareProfileLabel => 'Share profile';
+
+  @override
+  String get desktopProfilePortfolioTitle => 'Portfolio';
+
+  @override
+  String get desktopProfilePortfolioSubtitle => 'Your artworks and creative works';
+
+  @override
+  String get desktopProfileNoCollectionsDescription => 'Create collections to organize and curate your work.';
+
+  @override
+  String get desktopProfileEventsTitle => 'Events & Exhibitions';
+
+  @override
+  String get desktopProfileEventsSubtitle => 'Your upcoming and past events';
+
+  @override
+  String get desktopProfileNoEventsTitle => 'No events yet';
+
+  @override
+  String get desktopProfileNoEventsDescription => 'Plan exhibitions, workshops, or meetups to engage with collectors.';
+
+  @override
+  String get desktopProfileInstitutionProgramsTitle => 'Exhibitions & Programs';
+
+  @override
+  String get desktopProfileInstitutionProgramsSubtitle => 'Your featured exhibitions and events';
+
+  @override
+  String get desktopProfileNoExhibitionsTitle => 'No exhibitions yet';
+
+  @override
+  String get desktopProfileNoExhibitionsDescription => 'Create exhibitions and programs to showcase your institutional activities.';
+
+  @override
+  String get desktopProfilePermanentCollectionTitle => 'Permanent Collection';
+
+  @override
+  String get desktopProfilePermanentCollectionSubtitle => 'Featured works in your collection';
+
+  @override
+  String get desktopProfilePermanentCollectionEmptyDescription => 'Curate collections to highlight your institutional holdings.';
+
+  @override
+  String get desktopProfileRecentlyViewedTitle => 'Recently Viewed';
+
+  @override
+  String get desktopProfileRecentlyViewedSubtitle => 'Artworks you\'ve discovered';
+
+  @override
+  String get desktopProfileNoViewedArtworksTitle => 'No viewed artworks yet';
+
+  @override
+  String get desktopProfileNoViewedArtworksDescription => 'Explore the map to discover artworks and build your viewing history.';
+
+  @override
+  String get desktopProfilePerformanceSubtitle => 'Your activity and engagement metrics';
+
+  @override
+  String get desktopProfilePerformanceCreatedTitle => 'Created';
+
+  @override
+  String get desktopProfilePerformanceNftsOwnedTitle => 'NFTs owned';
+
+  @override
+  String get desktopProfileAchievementsSubtitle => 'Your progress and milestones';
+
+  @override
+  String get desktopProfileYourPostsTitle => 'Your posts';
+
+  @override
+  String get desktopProfileYourPostsSubtitle => 'Content you\'ve shared with the community';
+
+  @override
+  String get commonUnknownArtist => 'Unknown artist';
+
+  @override
+  String get daoAnalyticsTitle => 'DAO Analytics';
+
+  @override
+  String get daoAnalyticsProposalsByTypeTitle => 'Proposals by Type';
+
+  @override
+  String get daoAnalyticsProposalsByStatusTitle => 'Proposals by Status';
+
+  @override
+  String get daoAnalyticsNoProposalsYetLabel => 'No proposals yet.';
+
+  @override
+  String get daoTreasuryTotalLabel => 'Total';
+
+  @override
+  String get daoTreasuryTotalValueLabel => 'Total Treasury Value';
+
+  @override
+  String get daoDelegationSelectDelegateTitle => 'Select a Delegate';
+
+  @override
+  String get daoDelegationSelectDelegateSubtitle => 'Choose a trusted community member to vote on your behalf';
+
+  @override
+  String daoDelegationDelegatorsCountLabel(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count delegators',
+      one: '1 delegator',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String daoDelegationParticipationRateLabel(Object percent) {
+    return '$percent% participation';
+  }
+
+  @override
+  String daoProposalVotesSupportSummaryLabel(Object totalVotes, Object supportPct) {
+    return '$totalVotes votes • $supportPct% support';
+  }
+
+  @override
+  String get commonSearchHint => 'Search…';
 }

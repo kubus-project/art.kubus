@@ -420,7 +420,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         const SizedBox(width: 12),
         if (AppConfig.isFeatureEnabled('analytics')) ...[
           DesktopActionButton(
-            label: 'Analytics',
+            label: l10n.navigationScreenAnalytics,
             icon: Icons.analytics_outlined,
             onPressed: () {
               final wallet = user?.id.toString().trim() ?? '';
@@ -433,7 +433,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                   return KubusAlertDialog(
                     backgroundColor: scheme.surface,
                     title: Text(
-                      'Analytics',
+                      l10n.navigationScreenAnalytics,
                       style: GoogleFonts.inter(fontWeight: FontWeight.w700),
                     ),
                     content: Column(
@@ -441,7 +441,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                       children: [
                         ListTile(
                           leading: Icon(Icons.person_outline, color: scheme.primary),
-                          title: Text('Profile analytics', style: GoogleFonts.inter()),
+                          title: Text(l10n.profileAnalyticsProfileTitle, style: GoogleFonts.inter()),
                           onTap: () {
                             Navigator.pop(dialogContext);
                             Navigator.push(
@@ -449,7 +449,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                               MaterialPageRoute(
                                 builder: (_) => ProfileAnalyticsScreen(
                                   walletAddress: wallet,
-                                  title: 'Profile analytics',
+                                  title: l10n.profileAnalyticsProfileTitle,
                                 ),
                               ),
                             );
@@ -457,7 +457,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                         ),
                         ListTile(
                           leading: Icon(Icons.forum_outlined, color: scheme.secondary),
-                          title: Text('Community analytics', style: GoogleFonts.inter()),
+                          title: Text(l10n.profileAnalyticsCommunityTitle, style: GoogleFonts.inter()),
                           onTap: () {
                             Navigator.pop(dialogContext);
                             Navigator.push(
@@ -465,7 +465,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                               MaterialPageRoute(
                                 builder: (_) => CommunityAnalyticsScreen(
                                   walletAddress: wallet,
-                                  title: 'Community analytics',
+                                  title: l10n.profileAnalyticsCommunityTitle,
                                 ),
                               ),
                             );
@@ -477,7 +477,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                       TextButton(
                         onPressed: () => Navigator.pop(dialogContext),
                         child: Text(
-                          'Close',
+                          l10n.commonClose,
                           style: GoogleFonts.inter(color: scheme.primary),
                         ),
                       ),
@@ -802,12 +802,14 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   }
 
   Widget _buildArtistCollectionsSection(ThemeProvider themeProvider, AppLocalizations l10n) {
+    final name = (user?.name ?? '').trim();
+    final labelName = name.isEmpty ? widget.userId.trim() : name;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         DesktopSectionHeader(
-          title: l10n.userProfileCollectionFallbackTitle,
-          subtitle: 'Curated sets of work',
+          title: l10n.userProfileCollectionsTitle,
+          subtitle: l10n.userProfileCollectionsDesktopSubtitle,
           icon: Icons.collections_outlined,
         ),
         const SizedBox(height: 16),
@@ -823,8 +825,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           DesktopCard(
             child: EmptyStateCard(
               icon: Icons.collections_outlined,
-              title: 'No collections yet',
-              description: 'This creator hasn\'t created any collections.',
+              title: l10n.userProfileNoCollectionsTitle,
+              description: l10n.userProfileNoCollectionsYetLabel(labelName),
             ),
           )
         else

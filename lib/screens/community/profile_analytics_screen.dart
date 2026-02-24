@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:intl/intl.dart';
 
 import '../../config/config.dart';
 import '../../models/stats/stats_models.dart';
@@ -35,6 +37,7 @@ class _ProfileAnalyticsScreenState extends State<ProfileAnalyticsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final roles = KubusColorRoles.of(context);
     final themeProvider = context.watch<ThemeProvider>();
@@ -47,13 +50,13 @@ class _ProfileAnalyticsScreenState extends State<ProfileAnalyticsScreen> {
     final analyticsPreferenceEnabled = context.watch<ConfigProvider>().enableAnalytics;
 
     final allowedMetrics = <String, String>{
-      'followers': 'Followers',
-      'posts': 'Posts',
-      'artworks': 'Artworks',
-      'viewsReceived': 'Views received',
-      'likesReceived': 'Likes received',
-      if (isOwner) 'engagement': 'Engagement',
-      if (isOwner) 'viewsGiven': 'Views given',
+      'followers': l10n.userProfileFollowersStatLabel,
+      'posts': l10n.userProfilePostsStatLabel,
+      'artworks': l10n.userProfileArtworksTitle,
+      'viewsReceived': l10n.analyticsMetricViewsReceivedLabel,
+      'likesReceived': l10n.analyticsMetricLikesReceivedLabel,
+      if (isOwner) 'engagement': l10n.analyticsMetricEngagementLabel,
+      if (isOwner) 'viewsGiven': l10n.analyticsMetricViewsGivenLabel,
     };
 
     if (!allowedMetrics.containsKey(_metric)) {
@@ -68,7 +71,7 @@ class _ProfileAnalyticsScreenState extends State<ProfileAnalyticsScreen> {
         surfaceTintColor: Colors.transparent,
         scrolledUnderElevation: 0,
         title: Text(
-          widget.title ?? 'Profile analytics',
+          widget.title ?? l10n.profileAnalyticsProfileTitle,
           style: GoogleFonts.inter(
             fontSize: 18,
             fontWeight: FontWeight.w700,
@@ -77,7 +80,7 @@ class _ProfileAnalyticsScreenState extends State<ProfileAnalyticsScreen> {
         ),
         actions: [
           IconButton(
-            tooltip: 'Refresh',
+            tooltip: l10n.commonRefresh,
             onPressed: !analyticsFeatureEnabled
                 ? null
                 : () {
@@ -89,11 +92,11 @@ class _ProfileAnalyticsScreenState extends State<ProfileAnalyticsScreen> {
         ],
       ),
       body: !analyticsFeatureEnabled
-          ? const Center(
+          ? Center(
               child: EmptyStateCard(
                 icon: Icons.analytics_outlined,
-                title: 'Analytics disabled',
-                description: 'This feature is currently turned off.',
+                title: l10n.analyticsDisabledTitle,
+                description: l10n.analyticsDisabledDescription,
                 showAction: false,
               ),
             )
@@ -105,11 +108,11 @@ class _ProfileAnalyticsScreenState extends State<ProfileAnalyticsScreen> {
                 );
 
                 if (targetWallet.isEmpty) {
-                  return const Center(
+                  return Center(
                     child: EmptyStateCard(
                       icon: Icons.person_outline,
-                      title: 'No profile selected',
-                      description: 'Missing wallet address.',
+                      title: l10n.analyticsNoProfileSelectedTitle,
+                      description: l10n.analyticsNoProfileSelectedDescription,
                       showAction: false,
                     ),
                   );
@@ -235,10 +238,10 @@ class _ProfileAnalyticsScreenState extends State<ProfileAnalyticsScreen> {
                           ),
                           const SizedBox(height: 12),
                           if (!analyticsPreferenceEnabled)
-                            const EmptyStateCard(
+                            EmptyStateCard(
                               icon: Icons.privacy_tip_outlined,
-                              title: 'Analytics paused',
-                              description: 'Enable analytics in Settings to load charts.',
+                              title: l10n.analyticsPausedTitle,
+                              description: l10n.analyticsPausedDescription,
                               showAction: false,
                             )
                           else if (isLoading)
@@ -263,7 +266,7 @@ class _ProfileAnalyticsScreenState extends State<ProfileAnalyticsScreen> {
                                 },
                                 icon: Icon(Icons.refresh, color: scheme.primary),
                                 label: Text(
-                                  'Retry',
+                                  l10n.commonRetry,
                                   style: GoogleFonts.inter(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
@@ -273,13 +276,13 @@ class _ProfileAnalyticsScreenState extends State<ProfileAnalyticsScreen> {
                               ),
                             )
                           else if (!hasData)
-                            const SizedBox(
+                            SizedBox(
                               height: 200,
                               child: Center(
                                 child: EmptyStateCard(
                                   icon: Icons.insights_outlined,
-                                  title: 'No data yet',
-                                  description: 'This chart will populate as activity happens.',
+                                  title: l10n.analyticsNoDataYetTitle,
+                                  description: l10n.analyticsNoDataYetDescription,
                                   showAction: false,
                                 ),
                               ),
@@ -478,16 +481,17 @@ class _ProfileAnalyticsScreenState extends State<ProfileAnalyticsScreen> {
 
     String labelFor(DateTime bucketStartUtc) {
       final local = bucketStartUtc.toLocal();
+      final materialL10n = MaterialLocalizations.of(context);
       if (bucket == 'hour') {
         return '${local.hour.toString().padLeft(2, '0')}h';
       }
       if (bucket == 'day' && timeframe == '7d') {
-        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-        return days[(local.weekday - 1).clamp(0, 6)];
+        // Locale-aware short weekday label.
+        final locale = Localizations.localeOf(context).toString();
+        return DateFormat.E(locale).format(local);
       }
-      final mm = local.month.toString().padLeft(2, '0');
-      final dd = local.day.toString().padLeft(2, '0');
-      return '$mm/$dd';
+      // Localized month/day formatting.
+      return materialL10n.formatShortMonthDay(local);
     }
 
     return List<String>.generate(
@@ -505,6 +509,7 @@ class _ProfileAnalyticsScreenState extends State<ProfileAnalyticsScreen> {
     required Map<String, String> allowedMetrics,
     required bool isOwner,
   }) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -521,7 +526,7 @@ class _ProfileAnalyticsScreenState extends State<ProfileAnalyticsScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  isOwner ? 'Your analytics' : 'Public analytics',
+                  isOwner ? l10n.analyticsYourAnalyticsTitle : l10n.analyticsPublicAnalyticsTitle,
                   style: GoogleFonts.inter(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
@@ -550,7 +555,7 @@ class _ProfileAnalyticsScreenState extends State<ProfileAnalyticsScreen> {
                     setState(() => _metric = value);
                   },
                   decoration: InputDecoration(
-                    labelText: 'Metric',
+                    labelText: l10n.analyticsMetricLabel,
                     labelStyle: GoogleFonts.inter(fontSize: 11),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -572,7 +577,7 @@ class _ProfileAnalyticsScreenState extends State<ProfileAnalyticsScreen> {
                     setState(() => _timeframe = value);
                   },
                   decoration: InputDecoration(
-                    labelText: 'Timeframe',
+                    labelText: l10n.analyticsTimeframeLabel,
                     labelStyle: GoogleFonts.inter(fontSize: 11),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

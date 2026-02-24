@@ -601,7 +601,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           return Padding(
                             padding: const EdgeInsets.only(right: 12),
                             child: _buildActionCard(
-                              def.name,
+                              def.labelKey.resolve(l10n),
                               def.icon,
                               AppColorUtils.featureColor(
                                 key,
@@ -628,7 +628,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     return Padding(
                       padding: const EdgeInsets.only(right: 12),
                       child: _buildActionCard(
-                        screen.name,
+                        screen.labelKey.resolve(l10n),
                         screen.icon,
                         AppColorUtils.featureColor(
                           screen.key,
@@ -692,7 +692,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     IconData icon,
     Color color,
     bool isSmallScreen, {
-    VoidCallback? onTap,
+    required VoidCallback onTap,
     int visitCount = 0,
   }) {
     final theme = Theme.of(context);
@@ -718,7 +718,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ],
       ),
       child: LiquidGlassPanel(
-        onTap: onTap ?? () => _handleQuickAction(title),
+        onTap: onTap,
         padding: EdgeInsets.symmetric(
           horizontal: isSmallScreen ? 16 : 20,
           vertical: isSmallScreen ? 12 : 16,
@@ -1950,46 +1950,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ],
       ),
     );
-  }
-
-  void _handleQuickAction(String action) {
-    final navigationProvider =
-        Provider.of<NavigationProvider>(context, listen: false);
-
-    switch (action) {
-      case 'Create AR':
-        navigationProvider.trackScreenVisit('ar');
-        DefaultTabController.of(context).animateTo(1);
-        break;
-      case 'Explore Map':
-        navigationProvider.trackScreenVisit('map');
-        // Switch to map tab in main app
-        DefaultTabController.of(context).animateTo(0);
-        break;
-      case 'Connect':
-        navigationProvider.trackScreenVisit('community');
-        // Switch to community tab in main app
-        DefaultTabController.of(context).animateTo(3);
-        break;
-      case 'Profile':
-        navigationProvider.trackScreenVisit('profile');
-        // Switch to profile tab in main app
-        DefaultTabController.of(context).animateTo(4);
-        break;
-      default:
-        // Handle any other actions through navigation provider
-        final screenKey = _getScreenKeyFromName(action);
-        if (screenKey != null) {
-          navigationProvider.navigateToScreen(context, screenKey);
-        }
-    }
-  }
-
-  String? _getScreenKeyFromName(String name) {
-    for (final entry in NavigationProvider.screenDefinitions.entries) {
-      if (entry.value.name == name) return entry.key;
-    }
-    return null;
   }
 
   // Show wallet onboarding for first-time users

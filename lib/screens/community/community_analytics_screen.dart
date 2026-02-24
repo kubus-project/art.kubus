@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:intl/intl.dart';
 
 import '../../config/config.dart';
 import '../../models/stats/stats_models.dart';
@@ -36,6 +38,7 @@ class _CommunityAnalyticsScreenState extends State<CommunityAnalyticsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final roles = KubusColorRoles.of(context);
     final themeProvider = context.watch<ThemeProvider>();
@@ -56,7 +59,7 @@ class _CommunityAnalyticsScreenState extends State<CommunityAnalyticsScreen> {
           backgroundColor: Colors.transparent,
           elevation: 0,
           title: Text(
-            widget.title ?? 'Community analytics',
+            widget.title ?? l10n.profileAnalyticsCommunityTitle,
             style: GoogleFonts.inter(
               fontSize: 18,
               fontWeight: FontWeight.w700,
@@ -65,11 +68,11 @@ class _CommunityAnalyticsScreenState extends State<CommunityAnalyticsScreen> {
           ),
         ),
         body: !analyticsFeatureEnabled
-            ? const Center(
+            ? Center(
                 child: EmptyStateCard(
                   icon: Icons.analytics_outlined,
-                  title: 'Analytics disabled',
-                  description: 'This feature is currently turned off.',
+                  title: l10n.analyticsDisabledTitle,
+                  description: l10n.analyticsDisabledDescription,
                   showAction: false,
                 ),
               )
@@ -81,11 +84,11 @@ class _CommunityAnalyticsScreenState extends State<CommunityAnalyticsScreen> {
                   );
 
                   if (targetWallet.isEmpty) {
-                    return const Center(
+                    return Center(
                       child: EmptyStateCard(
                         icon: Icons.person_outline,
-                        title: 'No profile selected',
-                        description: 'Missing wallet address.',
+                        title: l10n.analyticsNoProfileSelectedTitle,
+                        description: l10n.analyticsNoProfileSelectedDescription,
                         showAction: false,
                       ),
                     );
@@ -280,7 +283,7 @@ class _CommunityAnalyticsScreenState extends State<CommunityAnalyticsScreen> {
                       const SizedBox(height: 16),
                       _chartCard(
                         context,
-                        title: 'Posts created',
+                        title: l10n.analyticsPostsCreatedTitle,
                         accent: themeProvider.accentColor,
                         analyticsPaused: !canFetch,
                         isLoading: postsLoading,
@@ -291,7 +294,7 @@ class _CommunityAnalyticsScreenState extends State<CommunityAnalyticsScreen> {
                       const SizedBox(height: 16),
                       _chartCard(
                         context,
-                        title: 'Likes received',
+                        title: l10n.analyticsMetricLikesReceivedLabel,
                         accent: scheme.secondary,
                         analyticsPaused: !canFetch,
                         isLoading: likesLoading,
@@ -301,25 +304,24 @@ class _CommunityAnalyticsScreenState extends State<CommunityAnalyticsScreen> {
                       ),
                       if (isOwner) ...[
                         const SizedBox(height: 16),
-                        _chartCard(
-                          context,
-                          title: 'Engagement',
-                          accent: scheme.tertiary,
-                          analyticsPaused: !canFetch,
-                          isLoading: engagementLoading,
-                          error: engagementError,
-                          values: engagementValues,
-                          labels: labels,
-                        ),
-                      ],
+                         _chartCard(
+                           context,
+                           title: l10n.analyticsMetricEngagementLabel,
+                           accent: scheme.tertiary,
+                           analyticsPaused: !canFetch,
+                           isLoading: engagementLoading,
+                           error: engagementError,
+                           values: engagementValues,
+                           labels: labels,
+                         ),
+                       ],
                       if (!analyticsPreferenceEnabled)
-                        const Padding(
+                        Padding(
                           padding: EdgeInsets.only(top: 16),
                           child: EmptyStateCard(
                             icon: Icons.privacy_tip_outlined,
-                            title: 'Analytics paused',
-                            description:
-                                'Enable analytics in Settings to load charts.',
+                            title: l10n.analyticsPausedTitle,
+                            description: l10n.analyticsPausedDescription,
                             showAction: false,
                           ),
                         ),
@@ -336,6 +338,7 @@ class _CommunityAnalyticsScreenState extends State<CommunityAnalyticsScreen> {
     required KubusColorRoles roles,
     required ColorScheme scheme,
   }) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -349,7 +352,7 @@ class _CommunityAnalyticsScreenState extends State<CommunityAnalyticsScreen> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Timeframe',
+              l10n.analyticsTimeframeLabel,
               style: GoogleFonts.inter(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
@@ -386,6 +389,7 @@ class _CommunityAnalyticsScreenState extends State<CommunityAnalyticsScreen> {
     required List<double> values,
     required List<String> labels,
   }) {
+    final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
 
     final hasData = values.any((v) => v > 0);
@@ -410,13 +414,13 @@ class _CommunityAnalyticsScreenState extends State<CommunityAnalyticsScreen> {
           ),
           const SizedBox(height: 12),
           if (analyticsPaused)
-            const SizedBox(
+            SizedBox(
               height: 200,
               child: Center(
                 child: EmptyStateCard(
                   icon: Icons.privacy_tip_outlined,
-                  title: 'Analytics paused',
-                  description: 'Enable analytics in Settings to load charts.',
+                  title: l10n.analyticsPausedTitle,
+                  description: l10n.analyticsPausedDescription,
                   showAction: false,
                 ),
               ),
@@ -436,25 +440,25 @@ class _CommunityAnalyticsScreenState extends State<CommunityAnalyticsScreen> {
               ),
             )
           else if (error != null && !hasData)
-            const SizedBox(
+            SizedBox(
               height: 200,
               child: Center(
                 child: EmptyStateCard(
                   icon: Icons.error_outline,
-                  title: 'Unable to load',
-                  description: 'Please try again later.',
+                  title: l10n.analyticsUnableToLoadTitle,
+                  description: l10n.analyticsUnableToLoadDescription,
                   showAction: false,
                 ),
               ),
             )
           else if (!hasData)
-            const SizedBox(
+            SizedBox(
               height: 200,
               child: Center(
                 child: EmptyStateCard(
                   icon: Icons.insights_outlined,
-                  title: 'No data yet',
-                  description: 'This chart will populate as activity happens.',
+                  title: l10n.analyticsNoDataYetTitle,
+                  description: l10n.analyticsNoDataYetDescription,
                   showAction: false,
                 ),
               ),
@@ -617,16 +621,17 @@ class _CommunityAnalyticsScreenState extends State<CommunityAnalyticsScreen> {
 
     String labelFor(DateTime bucketStartUtc) {
       final local = bucketStartUtc.toLocal();
+      final materialL10n = MaterialLocalizations.of(context);
       if (bucket == 'hour') {
         return '${local.hour.toString().padLeft(2, '0')}h';
       }
       if (bucket == 'day' && timeframe == '7d') {
-        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-        return days[(local.weekday - 1).clamp(0, 6)];
+        // Locale-aware short weekday label.
+        final locale = Localizations.localeOf(context).toString();
+        return DateFormat.E(locale).format(local);
       }
-      final mm = local.month.toString().padLeft(2, '0');
-      final dd = local.day.toString().padLeft(2, '0');
-      return '$mm/$dd';
+      // Localized month/day formatting.
+      return materialL10n.formatShortMonthDay(local);
     }
 
     return List<String>.generate(

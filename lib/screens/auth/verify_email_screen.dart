@@ -73,6 +73,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
           await prefs.setString(PreferenceKeys.secureAccountEmail, email);
         }
       } catch (_) {}
+      if (!mounted) return;
       final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(content: Text(l10n.authVerifyEmailSuccessToast)),

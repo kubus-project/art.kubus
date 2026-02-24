@@ -1,8 +1,10 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../utils/wallet_utils.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/design_tokens.dart';
@@ -359,7 +361,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                               children: [
                                 Flexible(
                                   child: Text(
-                                    'Profile',
+                                    AppLocalizations.of(context)!
+                                        .navigationScreenProfile,
                                     style: GoogleFonts.inter(
                                       fontSize: isVerySmallScreen
                                           ? 24
@@ -400,7 +403,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                                         size: isSmallScreen ? 22 : 24,
                                       ),
                                       onPressed: () => _shareProfile(),
-                                      tooltip: 'Share',
+                                      tooltip:
+                                          AppLocalizations.of(context)!.commonShare,
                                     ),
                                     const SizedBox(width: 8),
                                     TopBarIcon(
@@ -421,7 +425,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                                                   const InvitesInboxScreen()),
                                         );
                                       },
-                                      tooltip: 'Invites',
+                                      tooltip: AppLocalizations.of(context)!
+                                          .profileInvitesTooltip,
                                     ),
                                     const SizedBox(width: 8),
                                     if (AppConfig.isFeatureEnabled('analytics')) ...[
@@ -443,6 +448,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                               borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
                                             ),
                                             builder: (sheetContext) {
+                                              final l10n = AppLocalizations.of(sheetContext)!;
                                               final scheme = Theme.of(sheetContext).colorScheme;
                                               return SafeArea(
                                                 child: Padding(
@@ -452,7 +458,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                                     crossAxisAlignment: CrossAxisAlignment.start,
                                                     children: [
                                                       Text(
-                                                        'Analytics',
+                                                        l10n.navigationScreenAnalytics,
                                                         style: GoogleFonts.inter(
                                                           fontSize: 16,
                                                           fontWeight: FontWeight.w700,
@@ -462,7 +468,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                                       const SizedBox(height: 12),
                                                       ListTile(
                                                         leading: Icon(Icons.person_outline, color: scheme.primary),
-                                                        title: Text('Profile analytics', style: GoogleFonts.inter()),
+                                                        title: Text(l10n.profileAnalyticsProfileTitle, style: GoogleFonts.inter()),
                                                         onTap: () {
                                                           Navigator.pop(sheetContext);
                                                           Navigator.push(
@@ -470,7 +476,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                                             MaterialPageRoute(
                                                               builder: (_) => ProfileAnalyticsScreen(
                                                                 walletAddress: wallet,
-                                                                title: 'Profile analytics',
+                                                                title: l10n.profileAnalyticsProfileTitle,
                                                               ),
                                                             ),
                                                           );
@@ -478,7 +484,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                                       ),
                                                       ListTile(
                                                         leading: Icon(Icons.forum_outlined, color: scheme.secondary),
-                                                        title: Text('Community analytics', style: GoogleFonts.inter()),
+                                                        title: Text(l10n.profileAnalyticsCommunityTitle, style: GoogleFonts.inter()),
                                                         onTap: () {
                                                           Navigator.pop(sheetContext);
                                                           Navigator.push(
@@ -486,7 +492,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                                             MaterialPageRoute(
                                                               builder: (_) => CommunityAnalyticsScreen(
                                                                 walletAddress: wallet,
-                                                                title: 'Community analytics',
+                                                                title: l10n.profileAnalyticsCommunityTitle,
                                                               ),
                                                             ),
                                                           );
@@ -499,7 +505,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                             },
                                           );
                                         },
-                                        tooltip: 'Analytics',
+                                        tooltip: AppLocalizations.of(context)!.navigationScreenAnalytics,
                                       ),
                                       const SizedBox(width: 8),
                                     ],
@@ -521,7 +527,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                                                   const SettingsScreen()),
                                         );
                                       },
-                                      tooltip: 'Settings',
+                                      tooltip: AppLocalizations.of(context)!
+                                          .navigationScreenSettings,
                                     ),
                                   ],
                                 ),
@@ -580,7 +587,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                             child: Text(
                               profileProvider.currentUser?.displayName ??
                                   profileProvider.currentUser?.username ??
-                                  'Art Enthusiast',
+                                  AppLocalizations.of(context)!
+                                      .profilePersonaArtEnthusiast,
                               style: GoogleFonts.inter(
                                 fontSize: isVerySmallScreen
                                     ? 20
@@ -673,7 +681,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ),
                     ] else ...[
                       Text(
-                        'Connect wallet to see profile',
+                        AppLocalizations.of(context)!
+                            .profileConnectWalletToSeeProfileLabel,
                         style: GoogleFonts.inter(
                           fontSize: isSmallScreen ? 14 : 16,
                           color: Theme.of(context)
@@ -709,9 +718,11 @@ class _ProfileScreenState extends State<ProfileScreen>
                       Center(
                         child: EmptyStateCard(
                           icon: Icons.person_outline,
-                          title: 'No bio yet',
+                          title:
+                              AppLocalizations.of(context)!.profileNoBioYetTitle,
                           description:
-                              'Tap "Edit Profile" to add a short bio about yourself.',
+                              AppLocalizations.of(context)!
+                                  .profileNoBioYetDescription,
                           showAction: true,
                           actionLabel: AppLocalizations.of(context)!
                               .settingsEditProfileTileTitle,
@@ -778,7 +789,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                                         vertical: isVerySmallScreen ? 14 : 16),
                                   ),
                                   child: Text(
-                                    'More Options',
+                                    AppLocalizations.of(context)!
+                                        .profileMoreOptionsTitle,
                                     style: GoogleFonts.inter(
                                       fontSize: isVerySmallScreen ? 14 : 16,
                                       fontWeight: FontWeight.w600,
@@ -883,12 +895,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                 Row(
                   children: [
                     _buildInlineStat(
-                      label: 'Posts',
+                      label: AppLocalizations.of(context)!.userProfilePostsStatLabel,
                       value: profileProvider.formattedPostsCount,
                       isCompact: isSmallScreen,
                     ),
                     _buildInlineStat(
-                      label: 'Followers',
+                      label: AppLocalizations.of(context)!.userProfileFollowersStatLabel,
                       value: profileProvider.formattedFollowersCount,
                       isCompact: isSmallScreen,
                       onTap: () => ProfileScreenMethods.showFollowers(
@@ -897,7 +909,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ),
                     ),
                     _buildInlineStat(
-                      label: 'Following',
+                      label: AppLocalizations.of(context)!.userProfileFollowingStatLabel,
                       value: profileProvider.formattedFollowingCount,
                       isCompact: isSmallScreen,
                       onTap: () => ProfileScreenMethods.showFollowing(
@@ -912,7 +924,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   children: [
                     Expanded(
                       child: _buildStatCard(
-                        'Artworks',
+                        AppLocalizations.of(context)!.userProfileArtworksTitle,
                         profileProvider.formattedArtworksCount,
                         Icons.palette,
                         isSmallScreen: isSmallScreen,
@@ -922,7 +934,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     const SizedBox(width: 12),
                     Expanded(
                       child: _buildStatCard(
-                        'Collections',
+                        AppLocalizations.of(context)!.userProfileCollectionsTitle,
                         profileProvider.formattedCollectionsCount,
                         Icons.collections,
                         isSmallScreen: isSmallScreen,
@@ -1106,7 +1118,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Posts',
+                  AppLocalizations.of(context)!.userProfilePostsTitle,
                   style: GoogleFonts.inter(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -1115,7 +1127,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
                 const SizedBox(height: 12),
                 _buildErrorCard(
-                  message: 'Could not load your posts.',
+                  message: AppLocalizations.of(context)!
+                      .userProfilePostsLoadFailedDescription,
                   onRetry: () {
                     setState(() {
                       _postsFuture = _loadUserPosts();
@@ -1133,7 +1146,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Posts',
+                  AppLocalizations.of(context)!.userProfilePostsTitle,
                   style: GoogleFonts.inter(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -1142,9 +1155,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
                 const SizedBox(height: 12),
                 _buildEmptyStateCard(
-                  title: 'No posts yet',
+                  title: AppLocalizations.of(context)!.userProfileNoPostsTitle,
                   description:
-                      'Share your perspective with the community to see it here.',
+                      AppLocalizations.of(context)!.profileNoPostsYetDescription,
                   icon: Icons.article,
                 ),
               ],
@@ -1155,7 +1168,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Posts',
+                AppLocalizations.of(context)!.userProfilePostsTitle,
                 style: GoogleFonts.inter(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -1203,7 +1216,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           const SizedBox(height: 8),
           TextButton(
             onPressed: onRetry,
-            child: const Text('Try again'),
+            child: Text(AppLocalizations.of(context)!.commonRetry),
           ),
         ],
       ),
@@ -1215,15 +1228,18 @@ class _ProfileScreenState extends State<ProfileScreen>
     required String description,
     IconData icon = Icons.info_outline,
     bool showAction = false,
-    String actionLabel = 'Retry',
+    String actionLabel = '',
     Future<void> Function()? onActionTap,
   }) {
+    final l10n = AppLocalizations.of(context)!;
+    final effectiveActionLabel =
+        actionLabel.isNotEmpty ? actionLabel : l10n.commonRetry;
     return EmptyStateCard(
       icon: icon,
       title: title,
       description: description,
       showAction: showAction,
-      actionLabel: showAction ? actionLabel : null,
+      actionLabel: showAction ? effectiveActionLabel : null,
       onAction: onActionTap != null ? () => onActionTap() : null,
     );
   }
@@ -1485,7 +1501,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Events',
+            AppLocalizations.of(context)!.userProfileEventsTitle,
             style: GoogleFonts.inter(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -1494,9 +1510,11 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
           const SizedBox(height: 12),
           _buildShowcaseSection(
-            title: 'Upcoming events',
+            title: AppLocalizations.of(context)!.profileUpcomingEventsTitle,
             items: _artistEvents,
-            emptyLabel: 'Plan an event or workshop to engage your audience.',
+            emptyLabel: AppLocalizations.of(context)!
+                .profileUpcomingEventsEmptyLabel,
+            emptyIcon: Icons.event_outlined,
             builder: _buildEventCard,
           ),
         ],
@@ -1511,7 +1529,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Artist Highlights',
+            AppLocalizations.of(context)!.userProfileArtistHighlightsTitle,
             style: GoogleFonts.inter(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -1520,7 +1538,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
           const SizedBox(height: 8),
           Text(
-            'Keep your artworks and collections front and center.',
+            AppLocalizations.of(context)!.profileArtistHighlightsSubtitle,
             style: GoogleFonts.inter(
               fontSize: 14,
               color: Theme.of(context)
@@ -1531,16 +1549,20 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
           const SizedBox(height: 20),
           _buildShowcaseSection(
-            title: 'Artworks',
+            title: AppLocalizations.of(context)!.userProfileArtworksTitle,
             items: _artistArtworks,
-            emptyLabel: 'Upload your first artwork to showcase it here.',
+            emptyLabel:
+                AppLocalizations.of(context)!.profileArtistArtworksEmptyLabel,
+            emptyIcon: Icons.image_outlined,
             builder: _buildArtworkCard,
           ),
           const SizedBox(height: 24),
           _buildShowcaseSection(
-            title: 'Collections',
+            title: AppLocalizations.of(context)!.userProfileCollectionsTitle,
             items: _artistCollections,
-            emptyLabel: 'Create a collection to curate your story.',
+            emptyLabel: AppLocalizations.of(context)!
+                .profileArtistCollectionsEmptyLabel,
+            emptyIcon: Icons.collections_outlined,
             builder: _buildCollectionCard,
           ),
         ],
@@ -1555,7 +1577,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Institution Highlights',
+            AppLocalizations.of(context)!.userProfileInstitutionHighlightsTitle,
             style: GoogleFonts.inter(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -1564,7 +1586,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
           const SizedBox(height: 8),
           Text(
-            'Promote upcoming programs and featured collections.',
+            AppLocalizations.of(context)!
+                .profileInstitutionHighlightsSubtitle,
             style: GoogleFonts.inter(
               fontSize: 14,
               color: Theme.of(context)
@@ -1575,16 +1598,20 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
           const SizedBox(height: 20),
           _buildShowcaseSection(
-            title: 'Events',
+            title: AppLocalizations.of(context)!.userProfileEventsTitle,
             items: _artistEvents,
-            emptyLabel: 'Share your next exhibition or gathering here.',
+            emptyLabel:
+                AppLocalizations.of(context)!.profileInstitutionEventsEmptyLabel,
+            emptyIcon: Icons.event_outlined,
             builder: _buildEventCard,
           ),
           const SizedBox(height: 24),
           _buildShowcaseSection(
-            title: 'Collections',
+            title: AppLocalizations.of(context)!.userProfileCollectionsTitle,
             items: _artistCollections,
-            emptyLabel: 'Curate institutional collections to highlight.',
+            emptyLabel: AppLocalizations.of(context)!
+                .profileInstitutionCollectionsEmptyLabel,
+            emptyIcon: Icons.collections_outlined,
             builder: _buildCollectionCard,
           ),
         ],
@@ -1597,7 +1624,9 @@ class _ProfileScreenState extends State<ProfileScreen>
     required List<Map<String, dynamic>> items,
     required Widget Function(Map<String, dynamic>) builder,
     required String emptyLabel,
+    required IconData emptyIcon,
   }) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1627,20 +1656,9 @@ class _ProfileScreenState extends State<ProfileScreen>
           )
         else if (items.isEmpty)
           _buildEmptyStateCard(
-            title: 'No $title',
+            title: l10n.profileShowcaseEmptyTitle(title),
             description: emptyLabel,
-            icon: (() {
-              final lower = title.toLowerCase();
-              if (lower.contains('artwork')) return Icons.image_outlined;
-              if (lower.contains('collection')) {
-                return Icons.collections_outlined;
-              }
-              if (lower.contains('event')) return Icons.event;
-              if (lower.contains('post') || lower.contains('posts')) {
-                return Icons.article;
-              }
-              return Icons.info_outline;
-            })(),
+            icon: emptyIcon,
           )
         else
           SizedBox(
@@ -1657,13 +1675,18 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildArtworkCard(Map<String, dynamic> data) {
+    final l10n = AppLocalizations.of(context)!;
     final imageUrl = _extractImageUrl(
         data, ['imageUrl', 'image', 'previewUrl', 'coverImage', 'mediaUrl']);
-    final title = (data['title'] ?? data['name'] ?? 'Untitled').toString();
+    final title = (data['title'] ?? data['name'] ?? l10n.commonUntitled)
+        .toString();
     final medium =
-        (data['category'] ?? data['medium'] ?? 'Digital art').toString();
+        (data['category'] ?? data['medium'] ?? l10n.profileArtworkMediumFallback)
+            .toString();
     final artworkId =
         (data['id'] ?? data['artwork_id'] ?? data['artworkId'])?.toString();
+    final likesRaw = data['likesCount'] ?? data['likes'] ?? 0;
+    final likesCount = int.tryParse(likesRaw.toString()) ?? 0;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -1674,12 +1697,13 @@ class _ProfileScreenState extends State<ProfileScreen>
         imageUrl: imageUrl,
         title: title,
         subtitle: medium,
-        footer: '${data['likesCount'] ?? data['likes'] ?? 0} likes',
+        footer: l10n.userProfileLikesLabel(likesCount),
       ),
     );
   }
 
   Widget _buildCollectionCard(Map<String, dynamic> data) {
+    final l10n = AppLocalizations.of(context)!;
     final imageUrl = _extractImageUrl(data, [
       'thumbnailUrl',
       'coverImage',
@@ -1689,8 +1713,10 @@ class _ProfileScreenState extends State<ProfileScreen>
       'cover_url',
       'image',
     ]);
-    final title = (data['name'] ?? 'New Collection').toString();
-    final count = data['artworksCount'] ?? data['artworks_count'] ?? 0;
+    final title =
+        (data['name'] ?? l10n.profileCollectionFallbackTitle).toString();
+    final countRaw = data['artworksCount'] ?? data['artworks_count'] ?? 0;
+    final count = int.tryParse(countRaw.toString()) ?? 0;
     final collectionId =
         (data['id'] ?? data['collection_id'] ?? data['collectionId'])
             ?.toString();
@@ -1711,13 +1737,16 @@ class _ProfileScreenState extends State<ProfileScreen>
       child: _buildShowcaseCard(
         imageUrl: imageUrl,
         title: title,
-        subtitle: '$count artworks',
-        footer: (data['description'] ?? 'Curated by you').toString(),
+        subtitle: l10n.userProfileArtworksCountLabel(count),
+        footer:
+            (data['description'] ?? l10n.profileCollectionCuratedByYouFooter)
+                .toString(),
       ),
     );
   }
 
   Widget _buildEventCard(Map<String, dynamic> data) {
+    final l10n = AppLocalizations.of(context)!;
     final imageUrl = _extractImageUrl(data, [
       'coverUrl',
       'cover_url',
@@ -1725,9 +1754,11 @@ class _ProfileScreenState extends State<ProfileScreen>
       'banner_url',
       'image',
     ]);
-    final title = (data['title'] ?? 'Event').toString();
+    final title =
+        (data['title'] ?? l10n.profileEventFallbackTitle).toString();
     final date = _formatDateLabel(data['startDate'] ?? data['start_date']);
-    final location = (data['location'] ?? 'TBA').toString();
+    final location =
+        (data['location'] ?? l10n.profileEventLocationTba).toString();
     final eventId =
         (data['id'] ?? data['event_id'] ?? data['eventId'])?.toString();
 
@@ -1875,54 +1906,37 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   String _formatDateLabel(dynamic value) {
-    if (value == null) return 'TBA';
+    final l10n = AppLocalizations.of(context)!;
+    if (value == null) return l10n.commonTba;
     try {
       final date = value is DateTime ? value : DateTime.parse(value.toString());
-      return '${_monthShort(date.month)} ${date.day}, ${date.year}';
+      final locale = Localizations.localeOf(context).toLanguageTag();
+      return DateFormat.yMMMd(locale).format(date);
     } catch (_) {
-      return 'TBA';
+      return l10n.commonTba;
     }
   }
 
-  String _monthShort(int month) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec'
-    ];
-    if (month < 1 || month > 12) return '';
-    return months[month - 1];
-  }
-
   String _formatRelativeTime(DateTime timestamp) {
+    final l10n = AppLocalizations.of(context)!;
     final now = DateTime.now();
     final difference = now.difference(timestamp);
 
     if (difference.inDays >= 7) {
-      return '${(difference.inDays / 7).floor()}w ago';
+      return l10n.commonWeeksAgo((difference.inDays / 7).floor());
     } else if (difference.inDays > 0) {
-      return '${difference.inDays}d ago';
+      return l10n.commonDaysAgo(difference.inDays);
     } else if (difference.inHours > 0) {
-      return '${difference.inHours}h ago';
+      return l10n.commonHoursAgo(difference.inHours);
     } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}m ago';
+      return l10n.commonMinutesAgo(difference.inMinutes);
     }
-    return 'Just now';
+    return l10n.commonTimeAgoJustNow;
   }
 
   String _formatCount(num value) {
-    if (value >= 1000000) return '${(value / 1000000).toStringAsFixed(1)}M';
-    if (value >= 1000) return '${(value / 1000).toStringAsFixed(1)}K';
-    return value.toString();
+    final locale = Localizations.localeOf(context).toLanguageTag();
+    return NumberFormat.compact(locale: locale).format(value);
   }
 
   Widget _buildAchievementsSection() {
@@ -1991,7 +2005,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Achievements',
+                    AppLocalizations.of(context)!.userProfileAchievementsTitle,
                     style: GoogleFonts.inter(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -2032,8 +2046,10 @@ class _ProfileScreenState extends State<ProfileScreen>
               const SizedBox(height: 16),
               achievements.isEmpty
                   ? _buildEmptyStateCard(
-                      title: 'No Achievements Yet',
-                      description: 'Start exploring to unlock achievements',
+                      title: AppLocalizations.of(context)!
+                          .profileAchievementsEmptyTitle,
+                      description: AppLocalizations.of(context)!
+                          .userProfileAchievementsEmptyDescription,
                       icon: Icons.emoji_events,
                     )
                   : Wrap(
@@ -2226,7 +2242,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Performance',
+                  AppLocalizations.of(context)!.profilePerformanceSectionTitle,
                   style: GoogleFonts.inter(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -2236,9 +2252,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                 const SizedBox(height: 16),
                 _buildEmptyStateCard(
                   icon: Icons.analytics,
-                  title: 'No Stats Yet',
-                  description:
-                      'Interact with artworks, collections, and community to see insights.',
+                  title: AppLocalizations.of(context)!.homeNoStatsAvailableTitle,
+                  description: AppLocalizations.of(context)!
+                      .homeNoStatsAvailableDescription,
                 ),
               ],
             );
@@ -2248,7 +2264,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Performance',
+                AppLocalizations.of(context)!.profilePerformanceSectionTitle,
                 style: GoogleFonts.inter(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -2256,16 +2272,22 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
               ),
               const SizedBox(height: 16),
-              _buildPerformanceCard('Artworks viewed',
+              _buildPerformanceCard(
+                  AppLocalizations.of(context)!.profilePerformanceArtworksViewedTitle,
                   _formatCount(viewedCount), Icons.visibility, null),
               const SizedBox(height: 12),
               _buildPerformanceCard(
-                  'Discoveries', discoveriesLabel, Icons.location_on, null),
+                  AppLocalizations.of(context)!.profilePerformanceDiscoveriesTitle,
+                  discoveriesLabel,
+                  Icons.location_on,
+                  null),
               const SizedBox(height: 12),
-              _buildPerformanceCard('Created / Owned',
+              _buildPerformanceCard(
+                  AppLocalizations.of(context)!.profilePerformanceCreatedOwnedTitle,
                   '$createdLabel / $ownedLabel', Icons.auto_fix_high, null),
               const SizedBox(height: 12),
-              _buildPerformanceCard('Followers / Following',
+              _buildPerformanceCard(
+                  AppLocalizations.of(context)!.profilePerformanceFollowersFollowingTitle,
                   '$followersLabel / $followingLabel', Icons.group, null),
             ],
           );
@@ -2433,15 +2455,18 @@ class _ProfileScreenState extends State<ProfileScreen>
               ),
             ),
             const SizedBox(height: 24),
-            _buildOptionItem(Icons.bookmark, 'Saved Items', () {
+            _buildOptionItem(
+                Icons.bookmark, AppLocalizations.of(context)!.profileMenuSavedItemsTitle, () {
               Navigator.pop(context);
               _navigateToSavedItems();
             }),
-            _buildOptionItem(Icons.history, 'View History', () {
+            _buildOptionItem(Icons.history,
+                AppLocalizations.of(context)!.profileMenuViewHistoryTitle, () {
               Navigator.pop(context);
               _navigateToViewHistory();
             }),
-            _buildOptionItem(Icons.help, 'Help & Support', () {
+            _buildOptionItem(Icons.help,
+                AppLocalizations.of(context)!.profileMenuHelpSupportTitle, () {
               Navigator.pop(context);
               _navigateToHelpSupport();
             }),
@@ -2508,72 +2533,85 @@ class _ProfileScreenState extends State<ProfileScreen>
   void _navigateToHelpSupport() {
     showKubusDialog(
       context: context,
-      builder: (context) => KubusAlertDialog(
-        title: Text(
-          'Help & Support',
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHelpOption(Icons.description, 'Documentation'),
-            _buildHelpOption(Icons.chat_bubble_outline, 'Contact Support'),
-            _buildHelpOption(Icons.bug_report, 'Report a Bug'),
-            _buildHelpOption(Icons.info_outline, 'About art.kubus'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Close', style: GoogleFonts.inter()),
+      builder: (context) {
+        final l10n = AppLocalizations.of(context)!;
+        return KubusAlertDialog(
+          title: Text(
+            l10n.profileHelpSupportTitle,
+            style: GoogleFonts.inter(fontWeight: FontWeight.bold),
           ),
-        ],
-      ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHelpOption(Icons.description, _ProfileHelpOption.documentation),
+              _buildHelpOption(
+                  Icons.chat_bubble_outline, _ProfileHelpOption.contactSupport),
+              _buildHelpOption(Icons.bug_report, _ProfileHelpOption.reportBug),
+              _buildHelpOption(Icons.info_outline, _ProfileHelpOption.about),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.commonClose, style: GoogleFonts.inter()),
+            ),
+          ],
+        );
+      },
     );
   }
 
-  Widget _buildHelpOption(IconData icon, String title) {
+  Widget _buildHelpOption(IconData icon, _ProfileHelpOption option) {
+    final l10n = AppLocalizations.of(context)!;
     return ListTile(
       leading: Icon(
         icon,
         color: Provider.of<ThemeProvider>(context, listen: false).accentColor,
       ),
       title: Text(
-        title,
+        option.label(l10n),
         style: GoogleFonts.inter(fontSize: 14),
       ),
       dense: true,
       onTap: () {
         Navigator.pop(context);
-        _handleHelpOptionTap(title);
+        _handleHelpOptionTap(option);
       },
     );
   }
 
-  void _handleHelpOptionTap(String option) {
+  void _handleHelpOptionTap(_ProfileHelpOption option) {
+    final l10n = AppLocalizations.of(context)!;
     switch (option) {
-      case 'Documentation':
-        ScaffoldMessenger.of(context).showKubusSnackBar(
-          SnackBar(
-            content: Text('Opening documentation...'),
-            duration: const Duration(seconds: 2),
-            action: SnackBarAction(
-              label: 'Visit',
-              onPressed: () {
-                // In production, open https://docs.kubus.site
-              },
+      case _ProfileHelpOption.documentation:
+        final messenger = ScaffoldMessenger.of(context);
+        // Open docs immediately; avoid a dead SnackBar action.
+        () async {
+          messenger.showKubusSnackBar(
+            SnackBar(
+              content: Text(l10n.profileHelpOpeningDocumentationToast),
+              duration: const Duration(seconds: 2),
             ),
-          ),
-        );
+          );
+          final ok = await launchUrl(
+            Uri.parse('https://docs.kubus.site'),
+            mode: LaunchMode.externalApplication,
+          );
+          if (!ok && mounted) {
+            messenger.showKubusSnackBar(
+              SnackBar(content: Text(l10n.commonActionFailedToast)),
+            );
+          }
+        }();
         break;
-      case 'Contact Support':
+      case _ProfileHelpOption.contactSupport:
         _showContactSupportDialog();
         break;
-      case 'Report a Bug':
+      case _ProfileHelpOption.reportBug:
         _showReportBugDialog();
         break;
-      case 'About art.kubus':
+      case _ProfileHelpOption.about:
         _showAboutDialog();
         break;
     }
@@ -2582,36 +2620,40 @@ class _ProfileScreenState extends State<ProfileScreen>
   void _showContactSupportDialog() {
     showKubusDialog(
       context: context,
-      builder: (context) => KubusAlertDialog(
-        title: Text(
-          'Contact Support',
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Get help from our support team:',
-              style: GoogleFonts.inter(fontSize: 14),
-            ),
-            const SizedBox(height: 16),
-            _buildContactOption(Icons.email, 'Email', 'support@kubus.site'),
-            const SizedBox(height: 12),
-            _buildContactOption(
-                Icons.chat, 'Live Chat', 'Available Mon-Fri 9AM-5PM'),
-            const SizedBox(height: 12),
-            _buildContactOption(
-                Icons.public, 'Website', 'https://art.kubus.site'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Close', style: GoogleFonts.inter()),
+      builder: (context) {
+        final l10n = AppLocalizations.of(context)!;
+        return KubusAlertDialog(
+          title: Text(
+            l10n.profileContactSupportTitle,
+            style: GoogleFonts.inter(fontWeight: FontWeight.bold),
           ),
-        ],
-      ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.profileContactSupportSubtitle,
+                style: GoogleFonts.inter(fontSize: 14),
+              ),
+              const SizedBox(height: 16),
+              _buildContactOption(
+                  Icons.email, l10n.profileContactSupportEmailLabel, 'support@kubus.site'),
+              const SizedBox(height: 12),
+              _buildContactOption(Icons.chat, l10n.profileContactSupportLiveChatLabel,
+                  l10n.profileContactSupportLiveChatAvailability),
+              const SizedBox(height: 12),
+              _buildContactOption(Icons.public, l10n.profileContactSupportWebsiteLabel,
+                  'https://art.kubus.site'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.commonClose, style: GoogleFonts.inter()),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -2655,136 +2697,190 @@ class _ProfileScreenState extends State<ProfileScreen>
 
     showKubusDialog(
       context: context,
-      builder: (context) => KubusAlertDialog(
-        title: Text(
-          'Report a Bug',
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Describe the issue you encountered:',
-              style: GoogleFonts.inter(fontSize: 14),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: bugController,
-              maxLines: 4,
-              decoration: InputDecoration(
-                hintText: 'Enter bug description...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+      builder: (context) {
+        final l10n = AppLocalizations.of(context)!;
+        return KubusAlertDialog(
+          title: Text(
+            l10n.profileReportBugTitle,
+            style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                l10n.profileReportBugSubtitle,
+                style: GoogleFonts.inter(fontSize: 14),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: bugController,
+                maxLines: 4,
+                decoration: InputDecoration(
+                  hintText: l10n.profileReportBugHint,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.commonCancel, style: GoogleFonts.inter()),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor:
+                    Provider.of<ThemeProvider>(context).accentColor,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                final navigator = Navigator.of(context);
+                final body = bugController.text.trim();
+                navigator.pop();
+
+                final uri = Uri(
+                  scheme: 'mailto',
+                  path: 'support@kubus.site',
+                  query: _encodeQueryParameters(<String, String>{
+                    'subject': l10n.profileReportBugEmailSubject,
+                    if (body.isNotEmpty) 'body': body,
+                  }),
+                );
+
+                final ok = await launchUrl(
+                  uri,
+                  mode: LaunchMode.externalApplication,
+                );
+                if (!ok && mounted) {
+                  messenger.showKubusSnackBar(
+                    SnackBar(content: Text(l10n.commonActionFailedToast)),
+                  );
+                }
+              },
+              child: Text(
+                l10n.commonSubmit,
+                style: GoogleFonts.inter(fontWeight: FontWeight.w600),
               ),
             ),
           ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: GoogleFonts.inter()),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Provider.of<ThemeProvider>(context).accentColor,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showKubusSnackBar(
-                const SnackBar(
-                  content: Text('Bug report submitted. Thank you!'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            },
-            child: Text('Submit',
-                style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   void _showAboutDialog() {
     showKubusDialog(
       context: context,
-      builder: (context) => KubusAlertDialog(
-        title: Text(
-          'About art.kubus',
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: Provider.of<ThemeProvider>(context)
-                    .accentColor
-                    .withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(20),
+      builder: (context) {
+        final l10n = AppLocalizations.of(context)!;
+        return KubusAlertDialog(
+          title: Text(
+            l10n.profileAboutTitle,
+            style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: Provider.of<ThemeProvider>(context)
+                      .accentColor
+                      .withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Icon(
+                  Icons.palette,
+                  size: 40,
+                  color: Provider.of<ThemeProvider>(context).accentColor,
+                ),
               ),
-              child: Icon(
-                Icons.palette,
-                size: 40,
-                color: Provider.of<ThemeProvider>(context).accentColor,
+              const SizedBox(height: 16),
+              Text(
+                'art.kubus',
+                style: GoogleFonts.inter(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'art.kubus',
-              style: GoogleFonts.inter(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
+              const SizedBox(height: 8),
+              Text(
+                l10n.profileAboutVersionLabel('1.0.0+1'),
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Version 1.0.0+1',
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.6),
+              const SizedBox(height: 16),
+              Text(
+                l10n.profileAboutDescription,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  height: 1.5,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.8),
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'AR art platform connecting artists and institutions through blockchain technology.',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                height: 1.5,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.8),
+              const SizedBox(height: 16),
+              Text(
+                l10n.profileAboutCopyright,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.5),
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Â© 2024 kubus Project',
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.5),
-              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.commonClose, style: GoogleFonts.inter()),
             ),
           ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Close', style: GoogleFonts.inter()),
-          ),
-        ],
-      ),
+        );
+      },
     );
+  }
+}
+
+String _encodeQueryParameters(Map<String, String> params) {
+  return params.entries
+      .map((e) =>
+          '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
+      .join('&');
+}
+
+enum _ProfileHelpOption {
+  documentation,
+  contactSupport,
+  reportBug,
+  about,
+}
+
+extension _ProfileHelpOptionLabels on _ProfileHelpOption {
+  String label(AppLocalizations l10n) {
+    switch (this) {
+      case _ProfileHelpOption.documentation:
+        return l10n.profileHelpDocumentationOption;
+      case _ProfileHelpOption.contactSupport:
+        return l10n.profileHelpContactSupportOption;
+      case _ProfileHelpOption.reportBug:
+        return l10n.profileHelpReportBugOption;
+      case _ProfileHelpOption.about:
+        return l10n.profileHelpAboutOption;
+    }
   }
 }

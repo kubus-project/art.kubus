@@ -16,11 +16,14 @@ import '../../../utils/wallet_utils.dart';
 import '../../../config/config.dart';
 import '../../../utils/app_color_utils.dart';
 import '../../../utils/kubus_color_roles.dart';
+import '../../../utils/design_tokens.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
  
 
 class GovernanceHub extends StatefulWidget {
-  const GovernanceHub({super.key});
+  final ValueNotifier<int>? selectedIndexNotifier;
+
+  const GovernanceHub({super.key, this.selectedIndexNotifier});
 
   @override
   State<GovernanceHub> createState() => _GovernanceHubState();
@@ -29,9 +32,11 @@ class GovernanceHub extends StatefulWidget {
 class _GovernanceHubState extends State<GovernanceHub>
     with TickerProviderStateMixin {
   int _selectedIndex = 0;
+  int? _hoveredTabIndex;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   String? _reviewActionId;
+  VoidCallback? _selectedIndexListener;
 
   // Proposal creation form controllers
   final _titleController = TextEditingController();
@@ -46,6 +51,7 @@ class _GovernanceHubState extends State<GovernanceHub>
   @override
   void initState() {
     super.initState();
+    _selectedIndex = widget.selectedIndexNotifier?.value ?? 0;
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -62,16 +68,42 @@ class _GovernanceHubState extends State<GovernanceHub>
     // Initialize pages list but don't build widgets yet
     _checkOnboarding();
     _animationController.forward();
+
+    final notifier = widget.selectedIndexNotifier;
+    if (notifier != null) {
+      _selectedIndexListener = () {
+        final next = notifier.value;
+        if (next == _selectedIndex) return;
+        if (!mounted) return;
+        setState(() => _selectedIndex = next);
+      };
+      notifier.addListener(_selectedIndexListener!);
+    }
   }
 
   @override
   void dispose() {
+    if (_selectedIndexListener != null) {
+      widget.selectedIndexNotifier?.removeListener(_selectedIndexListener!);
+      _selectedIndexListener = null;
+    }
     _animationController.dispose();
     _titleController.dispose();
     _descriptionController.dispose();
     _categoryController.dispose();
     _votingPeriodController.dispose();
     super.dispose();
+  }
+
+  void _setSelectedIndex(int next, {bool syncNotifier = true}) {
+    if (next == _selectedIndex) return;
+    setState(() => _selectedIndex = next);
+    if (syncNotifier) {
+      final notifier = widget.selectedIndexNotifier;
+      if (notifier != null && notifier.value != next) {
+        notifier.value = next;
+      }
+    }
   }
 
   Future<void> _checkOnboarding() async {
@@ -99,6 +131,7 @@ class _GovernanceHubState extends State<GovernanceHub>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
@@ -107,7 +140,7 @@ class _GovernanceHubState extends State<GovernanceHub>
         elevation: 0,
         scrolledUnderElevation: 0,
         title: Text(
-          'DAO Governance',
+          l10n.daoHubAppBarTitle,
           style: GoogleFonts.inter(
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -161,6 +194,7 @@ class _GovernanceHubState extends State<GovernanceHub>
   Widget _buildGovernanceHeader() {
     return Consumer2<DAOProvider, Web3Provider>(
       builder: (context, daoProvider, web3Provider, child) {
+        final l10n = AppLocalizations.of(context)!;
         final kub8Balance = web3Provider.kub8Balance;
         final votingPower = '${kub8Balance.toStringAsFixed(2)} KUB8';
         final activeProposals =
@@ -221,7 +255,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Decentralized governance for the AR art platform',
+                          l10n.daoHubHeaderSubtitle,
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             color: Colors.white.withValues(alpha: 0.9),
@@ -235,23 +269,32 @@ class _GovernanceHubState extends State<GovernanceHub>
                 ],
               ),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildStatCard('Your Voting Power', votingPower),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _buildStatCard('Active Proposals', activeProposals),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _buildStatCard('Total Delegates', totalMembers),
-                  ),
-                ],
-              ),
-            ],
-          ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildStatCard(
+                        l10n.daoHubStatYourVotingPowerLabel,
+                        votingPower,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildStatCard(
+                        l10n.daoHubStatActiveProposalsLabel,
+                        activeProposals,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildStatCard(
+                        l10n.daoHubStatTotalDelegatesLabel,
+                        totalMembers,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
         );
       },
     );
@@ -307,36 +350,42 @@ class _GovernanceHubState extends State<GovernanceHub>
   }
 
   Widget _buildNavigationTabs() {
+    final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final radius = BorderRadius.circular(12);
-    final glassTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
+    final panelStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.panelBackground,
+      tintBase: scheme.surface,
+    );
+    final radius = BorderRadius.circular(KubusRadius.md);
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
+      margin: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         borderRadius: radius,
         border: Border.all(
-          color: _daoAccent.withValues(alpha: 0.22),
-          width: 1,
+          color: scheme.outline.withValues(alpha: 0.20),
+          width: KubusSizes.hairline,
         ),
       ),
-      child: LiquidGlassPanel(
-        padding: EdgeInsets.zero,
+      child: LiquidGlassCard(
         margin: EdgeInsets.zero,
+        padding: const EdgeInsets.all(KubusSpacing.xs),
         borderRadius: radius,
+        blurSigma: panelStyle.blurSigma,
+        fallbackMinOpacity: panelStyle.fallbackMinOpacity,
         showBorder: false,
-        backgroundColor: glassTint,
+        backgroundColor: panelStyle.tintColor,
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
-              _buildTabButton('Proposals', Icons.how_to_vote, 0),
-              _buildTabButton('History', Icons.history, 1),
-              _buildTabButton('Create', Icons.add_circle_outline, 2),
-              _buildTabButton('Treasury', Icons.account_balance, 3),
-              _buildTabButton('Delegate', Icons.people, 4),
+              _buildTabButton(l10n.daoHubTabActiveProposals, Icons.how_to_vote, 0),
+              _buildTabButton(l10n.daoHubTabVotingHistory, Icons.history, 1),
+              _buildTabButton(l10n.daoHubTabCreateProposal, Icons.add_circle_outline, 2),
+              _buildTabButton(l10n.daoHubTabTreasury, Icons.account_balance, 3),
+              _buildTabButton(l10n.daoHubTabDelegation, Icons.people, 4),
             ],
           ),
         ),
@@ -346,41 +395,64 @@ class _GovernanceHubState extends State<GovernanceHub>
 
   Widget _buildTabButton(String label, IconData icon, int index) {
     final isSelected = _selectedIndex == index;
-    const daoColor = Color.fromARGB(255, 5, 164, 76);
-    return GestureDetector(
-      onTap: () => setState(() => _selectedIndex = index),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-        margin: const EdgeInsets.symmetric(horizontal: 2),
-        decoration: BoxDecoration(
-          color: isSelected ? daoColor : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
+    final isHovered = _hoveredTabIndex == index;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final accent = _daoAccent;
+    final tintBase = (isSelected || isHovered) ? accent : scheme.surface;
+    final buttonStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.button,
+      tintBase: tintBase,
+    );
+
+    final background = isSelected
+        ? accent.withValues(alpha: isDark ? 0.30 : 0.20)
+        : isHovered
+            ? accent.withValues(alpha: isDark ? 0.18 : 0.12)
+            : scheme.surface.withValues(alpha: isDark ? 0.06 : 0.04);
+    final foreground = isSelected
+        ? scheme.onSurface
+        : isHovered
+            ? accent.withValues(alpha: 0.90)
+            : scheme.onSurface.withValues(alpha: 0.72);
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hoveredTabIndex = index),
+      onExit: (_) {
+        if (_hoveredTabIndex == index) {
+          setState(() => _hoveredTabIndex = null);
+        }
+      },
+      child: LiquidGlassCard(
+        onTap: () => _setSelectedIndex(index),
+        padding: const EdgeInsets.symmetric(
+          vertical: KubusSpacing.md,
+          horizontal: KubusSpacing.sm,
         ),
+        margin: const EdgeInsets.symmetric(horizontal: KubusSpacing.xxs),
+        borderRadius: BorderRadius.circular(KubusRadius.sm),
+        blurSigma: buttonStyle.blurSigma,
+        fallbackMinOpacity: buttonStyle.fallbackMinOpacity,
+        showBorder: false,
+        backgroundColor: background,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               icon,
-              color: isSelected
-                  ? Theme.of(context).colorScheme.onPrimary
-                  : Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.6),
-              size: 22,
+              color: foreground,
+              size: KubusSizes.sidebarActionIcon,
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: KubusSpacing.xxs),
             Text(
               label,
-              style: GoogleFonts.inter(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: isSelected
-                    ? Theme.of(context).colorScheme.onPrimary
-                    : Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.6),
+              style: KubusTypography.textTheme.labelSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: foreground,
               ),
               textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,
@@ -1009,7 +1081,7 @@ class _GovernanceHubState extends State<GovernanceHub>
             proposal.description,
             style: GoogleFonts.inter(
               fontSize: 14,
-              color: Colors.grey[400],
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.78),
               height: 1.4,
             ),
           ),
@@ -1020,10 +1092,13 @@ class _GovernanceHubState extends State<GovernanceHub>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '$totalVotes votes • ${supportPct.toStringAsFixed(1)}% support',
+                    l10n.daoProposalVotesSupportSummaryLabel(
+                      totalVotes,
+                      supportPct.toStringAsFixed(1),
+                    ),
                     style: GoogleFonts.inter(
                       fontSize: 12,
-                      color: Colors.grey[500],
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -1127,12 +1202,15 @@ class _GovernanceHubState extends State<GovernanceHub>
     return Consumer<DAOProvider>(
       builder: (context, daoProvider, child) {
         final l10n = AppLocalizations.of(context)!;
+        final scheme = Theme.of(context).colorScheme;
+        final roles = KubusColorRoles.of(context);
         // Get actual votes from provider - use user's votes if available
         final userVotes = daoProvider.votes.take(10).toList();
 
         // Convert to display format
         final votingHistory = userVotes.map((vote) {
           final proposal = daoProvider.getProposalById(vote.proposalId);
+          final isPassing = proposal?.isPassing == true;
           return {
             'title': proposal?.title ?? l10n.daoVotingHistoryUnknownProposal,
             'date': vote.timestamp.toString().substring(0, 10),
@@ -1141,7 +1219,8 @@ class _GovernanceHubState extends State<GovernanceHub>
                 : vote.choice.name == 'no'
                     ? l10n.daoVoteChoiceNo
                     : l10n.daoVoteChoiceAbstain,
-            'result': proposal?.isPassing == true
+            'isPassing': isPassing,
+            'resultLabel': isPassing
                 ? l10n.daoVotingResultPassing
                 : l10n.daoVotingResultNotPassing,
             'participation': proposal != null && proposal.totalVotes > 0
@@ -1170,13 +1249,22 @@ class _GovernanceHubState extends State<GovernanceHub>
             itemCount: votingHistory.length,
             itemBuilder: (context, index) {
               final vote = votingHistory[index];
+              final title = vote['title']?.toString() ?? '';
+              final resultLabel = vote['resultLabel']?.toString() ?? '';
+              final dateLabel = vote['date']?.toString() ?? '';
+              final yourVoteLabel = vote['vote']?.toString() ?? '';
+              final participationLabel = vote['participation']?.toString() ?? '';
+              final yourPowerLabel = vote['yourPower']?.toString() ?? '';
+              final isPassing = vote['isPassing'] == true;
+              final accent =
+                  isPassing ? roles.positiveAction : roles.negativeAction;
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey[800]!),
+                  border: Border.all(color: scheme.outline.withValues(alpha: 0.25)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1185,7 +1273,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                       children: [
                         Expanded(
                           child: Text(
-                            vote['title']!,
+                            title,
                             style: GoogleFonts.inter(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -1197,24 +1285,18 @@ class _GovernanceHubState extends State<GovernanceHub>
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: vote['result'] == 'Passed'
-                                ? Colors.green.withValues(alpha: 0.1)
-                                : Colors.red.withValues(alpha: 0.1),
+                            color: accent.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: vote['result'] == 'Passed'
-                                  ? Colors.green
-                                  : Colors.red,
+                              color: accent.withValues(alpha: 0.65),
                             ),
                           ),
                           child: Text(
-                            vote['result']!,
+                            resultLabel,
                             style: GoogleFonts.inter(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
-                              color: vote['result'] == 'Passed'
-                                  ? Colors.green
-                                  : Colors.red,
+                              color: accent.withValues(alpha: 0.95),
                             ),
                           ),
                         ),
@@ -1223,16 +1305,19 @@ class _GovernanceHubState extends State<GovernanceHub>
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        _buildHistoryInfo('Date', vote['date']!),
+                        _buildHistoryInfo(l10n.daoVotingHistoryInfoDateLabel, dateLabel),
                         const SizedBox(width: 24),
-                        _buildHistoryInfo('Your Vote', vote['vote']!),
+                        _buildHistoryInfo(l10n.daoVotingHistoryInfoYourVoteLabel, yourVoteLabel),
                         const SizedBox(width: 24),
                         _buildHistoryInfo(
-                            'Participation', vote['participation']!),
+                            l10n.daoVotingHistoryInfoParticipationLabel, participationLabel),
                       ],
                     ),
                     const SizedBox(height: 8),
-                    _buildHistoryInfo('Your Voting Power', vote['yourPower']!),
+                    _buildHistoryInfo(
+                      l10n.daoVotingHistoryInfoYourVotingPowerLabel,
+                      yourPowerLabel,
+                    ),
                   ],
                 ),
               );
@@ -1244,6 +1329,7 @@ class _GovernanceHubState extends State<GovernanceHub>
   }
 
   Widget _buildHistoryInfo(String label, String value) {
+    final scheme = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1251,7 +1337,7 @@ class _GovernanceHubState extends State<GovernanceHub>
           label,
           style: GoogleFonts.inter(
             fontSize: 12,
-            color: Colors.grey[400],
+            color: scheme.onSurface.withValues(alpha: 0.65),
           ),
         ),
         Text(
@@ -1267,6 +1353,8 @@ class _GovernanceHubState extends State<GovernanceHub>
   }
 
   Widget _buildCreateProposal() {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       color: Colors.transparent,
       child: SingleChildScrollView(
@@ -1275,40 +1363,40 @@ class _GovernanceHubState extends State<GovernanceHub>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Create New Proposal',
+              l10n.daoCreateProposalTitle,
               style: GoogleFonts.inter(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
+                color: scheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Submit a proposal for the community to vote on',
+              l10n.daoCreateProposalSubtitle,
               style: GoogleFonts.inter(
                 fontSize: 14,
-                color: Colors.grey[400],
+                color: scheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
             const SizedBox(height: 24),
             _buildFormField(
-              'Proposal Title',
-              'Enter a clear, descriptive title',
+              l10n.daoCreateProposalFieldTitleLabel,
+              l10n.daoCreateProposalFieldTitleHint,
               _titleController,
             ),
             const SizedBox(height: 16),
             _buildCategorySelector(),
             const SizedBox(height: 16),
             _buildFormField(
-              'Description',
-              'Provide detailed explanation of your proposal',
+              l10n.commonDescription,
+              l10n.daoCreateProposalFieldDescriptionHint,
               _descriptionController,
               maxLines: 5,
             ),
             const SizedBox(height: 16),
             _buildFormField(
-              'Voting Period (Days)',
-              'How many days should voting be open?',
+              l10n.daoCreateProposalFieldVotingPeriodLabel,
+              l10n.daoCreateProposalFieldVotingPeriodHint,
               _votingPeriodController,
               keyboardType: TextInputType.number,
             ),
@@ -1320,15 +1408,15 @@ class _GovernanceHubState extends State<GovernanceHub>
               child: ElevatedButton(
                 onPressed: _submitProposal,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF10B981),
-                  foregroundColor: Colors.white,
+                  backgroundColor: _daoAccent,
+                  foregroundColor: scheme.onPrimary,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
                 child: Text(
-                  'Submit Proposal',
+                  l10n.daoCreateProposalSubmitButtonLabel,
                   style: GoogleFonts.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -1349,45 +1437,46 @@ class _GovernanceHubState extends State<GovernanceHub>
     int maxLines = 1,
     TextInputType? keyboardType,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          maxLines: maxLines,
-          keyboardType: keyboardType,
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: TextStyle(color: Colors.grey[500]),
-            filled: true,
-            fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey[800]!),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey[800]!),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.green),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+     final scheme = Theme.of(context).colorScheme;
+     return Column(
+       crossAxisAlignment: CrossAxisAlignment.start,
+       children: [
+         Text(
+           label,
+           style: GoogleFonts.inter(
+             fontSize: 14,
+             fontWeight: FontWeight.w600,
+             color: scheme.onSurface,
+           ),
+         ),
+         const SizedBox(height: 8),
+         TextField(
+           controller: controller,
+           maxLines: maxLines,
+           keyboardType: keyboardType,
+           style: TextStyle(color: scheme.onSurface),
+           decoration: InputDecoration(
+             hintText: hint,
+             hintStyle: TextStyle(color: scheme.onSurface.withValues(alpha: 0.45)),
+             filled: true,
+             fillColor: scheme.surfaceContainerHighest,
+             border: OutlineInputBorder(
+               borderRadius: BorderRadius.circular(12),
+               borderSide: BorderSide(color: scheme.outline.withValues(alpha: 0.25)),
+             ),
+             enabledBorder: OutlineInputBorder(
+               borderRadius: BorderRadius.circular(12),
+               borderSide: BorderSide(color: scheme.outline.withValues(alpha: 0.25)),
+             ),
+             focusedBorder: OutlineInputBorder(
+               borderRadius: BorderRadius.circular(12),
+               borderSide: BorderSide(color: _daoAccent),
+             ),
+           ),
+         ),
+       ],
+     );
+   }
 
   Widget _buildCategorySelector() {
     final l10n = AppLocalizations.of(context)!;
@@ -1586,7 +1675,7 @@ class _GovernanceHubState extends State<GovernanceHub>
       if (proposal == null) return;
 
       _clearForm();
-      setState(() => _selectedIndex = 0);
+      _setSelectedIndex(0);
       messenger.showKubusSnackBar(
         SnackBar(
           content: Text(l10n.daoProposalSubmittedToast),
@@ -1694,7 +1783,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Total Treasury Value',
+                          l10n.daoTreasuryTotalValueLabel,
                           style: GoogleFonts.inter(
                             fontSize: 14,
                             color: Theme.of(context)
@@ -1958,7 +2047,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                 ),
                 const Spacer(),
                 TextButton(
-                  onPressed: () => setState(() => _selectedIndex = 2),
+                  onPressed: () => _setSelectedIndex(2),
                   child: Text(
                     l10n.daoCreateProposalButton,
                     style: TextStyle(color: _daoAccent),
@@ -2014,26 +2103,28 @@ class _GovernanceHubState extends State<GovernanceHub>
   }
 
   Widget _buildCurrentDelegation() {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        color: scheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey[800]!),
+        border: Border.all(color: scheme.outline.withValues(alpha: 0.25)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.person, color: Colors.green, size: 24),
+              Icon(Icons.person, color: _daoAccent, size: 24),
               const SizedBox(width: 12),
               Text(
-                'Your Delegation Status',
+                l10n.daoDelegationCurrentStatusTitle,
                 style: GoogleFonts.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onSurface,
+                  color: scheme.onSurface,
                 ),
               ),
             ],
@@ -2043,16 +2134,19 @@ class _GovernanceHubState extends State<GovernanceHub>
             children: [
               Expanded(
                 child: _buildDelegationInfo(
-                  'Voting Power',
+                  l10n.daoDelegationDetailVotingPowerLabel,
                   '${Provider.of<Web3Provider>(context, listen: false).kub8Balance.toStringAsFixed(2)} KUB8',
                 ),
               ),
               Expanded(
-                child: _buildDelegationInfo('Delegated To', 'Self'),
+                child: _buildDelegationInfo(
+                  l10n.daoDelegationDetailDelegateLabel,
+                  l10n.daoDelegationSelfLabel,
+                ),
               ),
               Expanded(
                 child: _buildDelegationInfo(
-                  'Delegators',
+                  l10n.daoDelegationDelegatorsLabel,
                   Provider.of<DAOProvider>(context, listen: false)
                       .delegates
                       .length
@@ -2067,6 +2161,7 @@ class _GovernanceHubState extends State<GovernanceHub>
   }
 
   Widget _buildDelegationInfo(String label, String value) {
+    final scheme = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2074,7 +2169,7 @@ class _GovernanceHubState extends State<GovernanceHub>
           label,
           style: GoogleFonts.inter(
             fontSize: 12,
-            color: Colors.grey[400],
+            color: scheme.onSurface.withValues(alpha: 0.65),
           ),
         ),
         const SizedBox(height: 4),
@@ -2083,7 +2178,7 @@ class _GovernanceHubState extends State<GovernanceHub>
           style: GoogleFonts.inter(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onSurface,
+            color: scheme.onSurface,
           ),
         ),
       ],
@@ -2166,7 +2261,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                                   ),
                                 ),
                                 Text(
-                                  '${delegate.delegatorCount} delegators • ${(delegate.participationRate * 100).toStringAsFixed(0)}% participation',
+                                  '${l10n.daoDelegationDelegatorsCountLabel(delegate.delegatorCount)} • ${l10n.daoDelegationParticipationRateLabel((delegate.participationRate * 100).toStringAsFixed(0))}',
                                   style: GoogleFonts.inter(
                                     fontSize: 12,
                                     color:
@@ -2184,7 +2279,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                                 style: GoogleFonts.inter(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
-                                  color: AppColorUtils.amberAccent,
+                                  color: scheme.primary,
                                 ),
                               ),
                               Container(
@@ -2318,10 +2413,13 @@ class _GovernanceHubState extends State<GovernanceHub>
         initialChildSize: 0.7,
         maxChildSize: 0.9,
         minChildSize: 0.5,
-        builder: (context, scrollController) => Container(
+        builder: (context, scrollController) {
+          final l10n = AppLocalizations.of(context)!;
+          final scheme = Theme.of(context).colorScheme;
+          return Container(
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            color: scheme.surfaceContainerHighest,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: Column(
             children: [
@@ -2333,26 +2431,26 @@ class _GovernanceHubState extends State<GovernanceHub>
                       width: 40,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: Colors.grey[600],
+                        color: scheme.outline.withValues(alpha: 0.6),
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'Select a Delegate',
+                      l10n.daoDelegationSelectDelegateTitle,
                       style: GoogleFonts.inter(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onSurface,
+                        color: scheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Choose a trusted community member to vote on your behalf',
+                      l10n.daoDelegationSelectDelegateSubtitle,
                       textAlign: TextAlign.center,
                       style: GoogleFonts.inter(
                         fontSize: 14,
-                        color: Colors.grey[400],
+                        color: scheme.onSurface.withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -2377,10 +2475,8 @@ class _GovernanceHubState extends State<GovernanceHub>
                               _delegateVote(delegate.name);
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerHighest,
-                              foregroundColor: Colors.white,
+                              backgroundColor: scheme.surfaceContainerHighest,
+                              foregroundColor: scheme.onSurface,
                               padding: const EdgeInsets.all(16),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -2427,10 +2523,10 @@ class _GovernanceHubState extends State<GovernanceHub>
                                         ),
                                       ),
                                       Text(
-                                        '${delegate.delegatorCount} delegators • ${(delegate.participationRate * 100).toStringAsFixed(0)}% participation',
+                                        '${l10n.daoDelegationDelegatorsCountLabel(delegate.delegatorCount)} • ${l10n.daoDelegationParticipationRateLabel((delegate.participationRate * 100).toStringAsFixed(0))}',
                                         style: GoogleFonts.inter(
                                           fontSize: 12,
-                                          color: Colors.grey[400],
+                                          color: scheme.onSurface.withValues(alpha: 0.7),
                                         ),
                                       ),
                                     ],
@@ -2441,13 +2537,13 @@ class _GovernanceHubState extends State<GovernanceHub>
                                   style: GoogleFonts.inter(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
-                                    color: Colors.green,
+                                    color: scheme.primary,
                                   ),
                                 ),
                                 const SizedBox(width: 8),
                                 Icon(
                                   Icons.arrow_forward_ios,
-                                  color: Colors.grey,
+                                  color: scheme.onSurface.withValues(alpha: 0.55),
                                   size: 16,
                                 ),
                               ],
@@ -2461,7 +2557,8 @@ class _GovernanceHubState extends State<GovernanceHub>
               ),
             ],
           ),
-        ),
+        );
+        },
       ),
     );
   }
@@ -2740,7 +2837,10 @@ class _GovernanceHubState extends State<GovernanceHub>
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
+      builder: (context) {
+        final l10n = AppLocalizations.of(context)!;
+        final scheme = Theme.of(context).colorScheme;
+        return Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -2750,7 +2850,7 @@ class _GovernanceHubState extends State<GovernanceHub>
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'How DAO Governance Works',
+              l10n.daoHubInfoDialogTitle,
               style: GoogleFonts.inter(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -2759,16 +2859,17 @@ class _GovernanceHubState extends State<GovernanceHub>
             ),
             const SizedBox(height: 16),
             Text(
-              'The art.kubus DAO allows community members to vote on platform decisions, new features, and policies. Your voting power is based on your KUB8 token holdings.',
+              l10n.daoHubInfoDialogBody,
               style: GoogleFonts.inter(
                 fontSize: 14,
-                color: Colors.grey[400],
+                color: scheme.onSurface.withValues(alpha: 0.7),
                 height: 1.4,
               ),
             ),
           ],
         ),
-      ),
+      );
+      },
     );
   }
 }
