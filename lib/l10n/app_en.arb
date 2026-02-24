@@ -3108,5 +3108,604 @@
   "collectionCreatorAddArtworksTitle": "Add Artworks",
   "collectionCreatorSearchArtworksLabel": "Search",
   "collectionCreatorSearchArtworksHint": "Search your artworks...",
-  "collectionCreatorNoArtworksAvailable": "No artworks available"
+  "collectionCreatorNoArtworksAvailable": "No artworks available",
+
+  "commonChange": "Change",
+  "commonOpen": "Open",
+  "commonLoading": "Loading",
+
+  "desktopShellNavHome": "Home",
+  "desktopShellNavExplore": "Explore",
+  "desktopShellNavConnect": "Connect",
+  "desktopShellNavCreate": "Create",
+  "desktopShellNavOrganize": "Organize",
+  "desktopShellNavGovern": "Govern",
+  "desktopShellNavTrade": "Trade",
+  "desktopShellNavWeb3": "Web3",
+
+  "navigationScreenCreateAr": "Create AR",
+  "navigationScreenExploreMap": "Explore Map",
+  "navigationScreenCommunity": "Community",
+  "navigationScreenProfile": "Profile",
+  "navigationScreenMarketplace": "Marketplace",
+  "navigationScreenWallet": "Wallet",
+  "navigationScreenAnalytics": "Analytics",
+  "navigationScreenSettings": "Settings",
+  "navigationScreenMyStats": "My Stats",
+  "navigationScreenAchievements": "Achievements",
+  "navigationScreenDaoHub": "DAO Hub",
+  "navigationScreenArtistStudio": "Artist Studio",
+  "navigationScreenInstitutionHub": "Institution Hub",
+
+  "daoHubAppBarTitle": "DAO Governance",
+  "daoHubHeaderSubtitle": "Decentralized governance for the AR art platform",
+  "daoHubInfoDialogTitle": "How DAO governance works",
+  "daoHubInfoDialogBody": "The DAO lets the community propose and vote on platform decisions. Voting power is based on your KUB8 balance. You can also delegate your voting power to trusted delegates.",
+  "daoHubTabActiveProposals": "Proposals",
+  "daoHubTabVotingHistory": "Voting history",
+  "daoHubTabCreateProposal": "Create",
+  "daoHubTabTreasury": "Treasury",
+  "daoHubTabDelegation": "Delegation",
+
+  "daoCreateProposalTitle": "Create new proposal",
+  "daoCreateProposalSubtitle": "Submit a proposal for the community to vote on",
+  "daoCreateProposalFieldTitleLabel": "Proposal title",
+  "daoCreateProposalFieldTitleHint": "Enter a clear, descriptive title",
+  "daoCreateProposalFieldDescriptionHint": "Provide detailed explanation of your proposal",
+  "daoCreateProposalFieldVotingPeriodLabel": "Voting period (days)",
+  "daoCreateProposalFieldVotingPeriodHint": "How many days should voting be open?",
+  "daoCreateProposalSubmitButtonLabel": "Submit proposal",
+  "daoProposalCategoryPlatformUpdate": "Platform update",
+  "daoProposalCategoryNewFeature": "New feature",
+  "daoProposalCategoryPolicyChange": "Policy change",
+  "daoProposalCategoryTreasuryAllocation": "Treasury allocation",
+  "daoProposalCategoryCommunityInitiative": "Community initiative",
+  "daoProposalCategoryTechnicalImprovement": "Technical improvement",
+  "daoVoteResultPassed": "Passed",
+  "daoVoteResultFailed": "Not passed",
+  "daoVotingHistoryInfoDateLabel": "Date",
+  "daoVotingHistoryInfoYourVoteLabel": "Your vote",
+  "daoVotingHistoryInfoParticipationLabel": "Participation",
+  "daoVotingHistoryInfoYourVotingPowerLabel": "Your voting power",
+
+  "desktopGovernanceSidebarOverviewTitle": "DAO Overview",
+  "desktopGovernanceSidebarQuickActionsTitle": "Quick Actions",
+  "desktopGovernanceQuickActionCreateProposalTitle": "Create proposal",
+  "desktopGovernanceQuickActionCreateProposalSubtitle": "Submit new governance idea",
+  "desktopGovernanceQuickActionVoteTitle": "Vote on proposals",
+  "desktopGovernanceQuickActionVoteSubtitle": "Participate in governance",
+  "desktopGovernanceQuickActionAnalyticsTitle": "Analytics",
+  "desktopGovernanceQuickActionAnalyticsSubtitle": "View DAO performance",
+  "desktopGovernanceAnalyticsScreenTitle": "DAO Analytics",
+  "desktopGovernanceSidebarStatisticsTitle": "DAO Statistics",
+  "desktopGovernanceSidebarRecentActivityTitle": "Recent Activity",
+  "desktopGovernanceAcquireKub8Hint": "Acquire KUB8 tokens to participate in governance",
+
+  "profileEditTitle": "Edit profile",
+  "profileEditSaveChanges": "Save changes",
+  "profileEditCoverImageClickToUpload": "Click to upload cover image",
+  "profileEditCoverImageTapToAdd": "Tap to add cover image",
+  "profileEditCoverImageRecommendedSize": "Recommended size: {size}",
+  "@profileEditCoverImageRecommendedSize": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "profileEditAvatarClickToChange": "Click to change avatar",
+  "profileEditAvatarTapToChange": "Tap to change avatar",
+  "profileEditProfilePictureTitle": "Profile picture",
+  "profileEditBasicInformationTitle": "Basic information",
+  "profileEditPublicProfileDetailsSubtitle": "Your public profile details",
+  "profileEditUsernameLabel": "Username",
+  "profileEditUsernameHint": "Enter username",
+  "profileEditUsernameRequiredError": "Username is required",
+  "profileEditUsernameMinLengthError": "Username must be at least 3 characters",
+  "profileEditDisplayNameLabel": "Display name",
+  "profileEditDisplayNameHint": "Enter display name",
+  "profileEditDisplayNameRequiredError": "Display name is required",
+  "profileEditBioLabel": "Bio",
+  "profileEditBioHint": "Tell us about yourself...",
+  "profileEditSocialLinksTitle": "Social links",
+  "profileEditSocialLinksSubtitle": "Connect your social profiles",
+  "profileEditSocialHandleHint": "@username",
+  "profileEditSocialTwitterLabel": "Twitter",
+  "profileEditSocialInstagramLabel": "Instagram",
+  "profileEditSocialWebsiteLabel": "Website",
+  "profileEditSocialWebsiteHint": "https://...",
+  "profileEditSocialUrlInvalidError": "URL must start with http:// or https://",
+  "profileEditArtistInformationTitle": "Artist information",
+  "profileEditArtistSpecialtiesLabel": "Specialties",
+  "profileEditArtistSpecialtiesHint": "e.g., Digital Art, Sculpture, Photography",
+  "profileEditArtistSpecialtiesHelper": "Separate multiple specialties with commas",
+  "profileEditArtistYearsActiveLabel": "Years active",
+  "profileEditArtistYearsActiveHint": "How many years have you been creating art?",
+  "profileEditArtistYearsActiveInvalidError": "Please enter a valid number",
+  "profileEditInstitutionInformationTitle": "Institution information",
+  "profileEditInstitutionDetailsSubtitle": "Information about your institution",
+  "profileEditArtistDetailsSubtitle": "Additional details about your artistic practice",
+  "profileEditInstitutionFocusAreasLabel": "Focus areas",
+  "profileEditInstitutionEstablishedYearLabel": "Established year",
+  "profileEditPrivacyVisibilityTitle": "Privacy & visibility",
+  "profileEditPrivacyVisibilitySubtitle": "Control who can see your content",
+  "profileEditInstitutionAboutTitle": "About your institution",
+  "profileEditInstitutionAboutBody": "Use the bio and social links above to describe your institution. You can manage exhibitions and events from the Institution Hub.",
+  "profileEditVerifiedStatusTitle": "Verified status",
+  "profileEditVerifiedArtistTitle": "Verified artist",
+  "profileEditVerifiedInstitutionTitle": "Verified institution",
+  "profileEditVerifiedArtistSubtitle": "Your artist status is verified by the DAO",
+  "profileEditVerifiedInstitutionSubtitle": "Your institution status is verified by the DAO",
+  "profileEditProfileUpdatedToast": "Profile updated successfully!",
+  "profileEditErrorToast": "Error: {error}",
+  "@profileEditErrorToast": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "profileEditNoWalletUploadAvatarToast": "No wallet connected. Connect your wallet to upload avatar.",
+  "profileEditNoWalletUploadCoverToast": "No wallet connected. Connect your wallet to upload cover image.",
+  "profileEditAvatarCopiedToClipboardToast": "Copied avatar URL to clipboard",
+  "profileEditAvatarUploadedSavedToast": "Avatar uploaded and saved!",
+  "profileEditAvatarUploadedLocalToast": "Avatar uploaded locally (save failed)",
+  "profileEditAvatarUploadFailedToast": "Upload failed: {error}",
+  "@profileEditAvatarUploadFailedToast": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "profileEditCoverUploadedSavedToast": "Cover image uploaded!",
+  "profileEditCoverUploadedLocalToast": "Cover image uploaded locally",
+  "profileEditCoverUploadFailedToast": "Cover upload failed: {error}",
+  "@profileEditCoverUploadFailedToast": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "profileEditPickImageFailedToast": "Error picking image: {error}",
+  "@profileEditPickImageFailedToast": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "profileEditUploadDebugInfoTitle": "Upload debug info",
+  "profileEditUploadDebugInfoCopiedToast": "Debug info copied to clipboard",
+
+  "desktopCommunityTabDiscover": "Discover",
+  "desktopCommunityTabFollowing": "Following",
+  "desktopCommunityTabGroups": "Groups",
+  "desktopCommunityTabArt": "Art",
+  "desktopCommunityHeaderTitle": "Community",
+  "desktopCommunityHeaderSubtitle": "Connect with artists and collectors",
+  "desktopCommunitySearchHint": "Search posts, users, tags...",
+  "desktopCommunitySearchMinCharsHint": "Type at least 2 characters to search",
+  "desktopCommunitySearchNoResults": "No results found",
+  "desktopCommunityFilterAllPosts": "All posts",
+  "desktopCommunityFilterFollowing": "Following",
+  "desktopCommunityFilterArOnly": "AR only",
+  "desktopCommunitySortPopularity": "Popularity",
+  "desktopCommunitySortRecent": "Recent",
+  "desktopCommunitySortTitle": "Sort",
+  "desktopCommunitySortTop": "Top",
+  "desktopCommunityFollowButton": "Follow",
+  "desktopCommunityFollowingButton": "Following",
+  "desktopCommunityBackToFeedTooltip": "Back to feed",
+  "desktopCommunitySortedByPopularityTooltip": "Sorted by popularity",
+  "desktopCommunitySortedByRecentTooltip": "Sorted by recent",
+  "desktopCommunityTaggedPostsLabel": "{count} tagged posts",
+  "@desktopCommunityTaggedPostsLabel": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopCommunityTagUnavailableTitle": "Tag unavailable",
+  "desktopCommunityTagUnavailableBody": "We could not open that tag. It may have been removed or is not available right now.",
+  "desktopCommunityPopularForTagTitle": "Popular for #{tag}",
+  "@desktopCommunityPopularForTagTitle": {
+    "placeholders": {
+      "tag": {
+        "type": "String"
+      }
+    }
+  },
+  "desktopCommunityLoadingPostsLabel": "Loading posts...",
+  "desktopCommunityEmptyDiscoverTitle": "No posts yet",
+  "desktopCommunityEmptyDiscoverBody": "Posts from creators around the world will appear here.",
+  "desktopCommunityEmptySearchBody": "No posts match your search.",
+  "desktopCommunityEmptyFollowingTitle": "No posts from followed creators",
+  "desktopCommunityEmptyFollowingBody": "Follow artists and creators to see their updates here.",
+  "desktopCommunityLoadingNearbyArtLabel": "Loading nearby art...",
+  "desktopCommunityEmptyNearbyArtTitle": "No nearby art found",
+  "desktopCommunityEmptyNearbyArtBody": "Explore your surroundings to discover location-based art.",
+  "desktopCommunityEmptySearchTitle": "No posts match your search",
+  "desktopCommunityEmptySearchSubtitle": "Try adjusting your keywords to find relevant art posts.",
+  "desktopCommunityLoadingGroupsLabel": "Loading groups...",
+  "desktopCommunityEmptyGroupsTitle": "No groups yet",
+  "desktopCommunityEmptyGroupsBody": "Join or create groups to connect with like-minded art enthusiasts.",
+  "desktopCommunityCreateFabLabel": "Create",
+  "desktopCommunityCreateFabCloseLabel": "Close",
+  "desktopCommunityCreateOptionCreateGroup": "Create group",
+  "desktopCommunityCreateOptionGroupPost": "Group post",
+  "desktopCommunityCreateOptionArtDrop": "Art drop",
+  "desktopCommunityCreateOptionPostReview": "Post review",
+  "desktopCommunityCreateOptionPost": "Post",
+
+  "desktopCommunityComposerTypePostLabel": "Post",
+  "desktopCommunityComposerTypePostDescription": "Share an update with the community",
+  "desktopCommunityComposerTypeArtDropLabel": "Art drop",
+  "desktopCommunityComposerTypeArtDropDescription": "Highlight a location-based activation",
+  "desktopCommunityComposerTypeArtReviewLabel": "Art review",
+  "desktopCommunityComposerTypeArtReviewDescription": "Share your thoughts on an artwork",
+  "desktopCommunityComposerTypeEventLabel": "Event",
+  "desktopCommunityComposerTypeEventDescription": "Announce meetups and gatherings",
+  "desktopCommunityComposerTypeQuestionLabel": "Question",
+  "desktopCommunityComposerTypeQuestionDescription": "Ask the community for feedback",
+
+  "desktopNavigationExpandTooltip": "Expand navigation",
+  "desktopNavigationCollapseTooltip": "Collapse navigation",
+  "desktopNavigationSubtitle": "Art platform",
+  "profilePersonaArtEnthusiast": "Art Enthusiast",
+  "userProfileAchievementCategoryEvents": "Events",
+  "userProfileAchievementCategoryDiscovery": "Discovery",
+  "userProfileAchievementCategoryAr": "AR",
+  "userProfileAchievementCategoryNft": "NFT",
+  "userProfileAchievementCategoryCommunity": "Community",
+  "userProfileAchievementCategorySocial": "Social",
+  "userProfileAchievementCategoryTrading": "Trading",
+  "userProfileAchievementCategorySpecial": "Special",
+
+  "daoHubStatYourVotingPowerLabel": "Your voting power",
+  "daoHubStatActiveProposalsLabel": "Active proposals",
+  "daoHubStatTotalDelegatesLabel": "Total delegates",
+
+  "daoDelegationCurrentStatusTitle": "Your delegation status",
+  "daoDelegationDelegatorsLabel": "Delegators",
+  "daoDelegationSelfLabel": "Self",
+
+  "commonDialogSemanticLabel": "Dialog",
+  "commonFailedToLoadLabel": "Failed to load",
+  "commonSubmit": "Submit",
+  "commonUser": "User",
+  "commonTimeAgoMonths": "{count, plural, =1{1mo ago} other{{count}mo ago}}",
+  "@commonTimeAgoMonths": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "commonTimeAgoYears": "{count, plural, =1{1y ago} other{{count}y ago}}",
+  "@commonTimeAgoYears": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+
+  "postDetailPostUnlikedToast": "Post unliked",
+
+  "communityBookmarkSaveForLaterTooltip": "Save for later",
+  "communityBookmarkRemoveTooltip": "Remove bookmark",
+  "communityQuickRepostAction": "Quick repost",
+  "communityRepostWithCommentAction": "Repost with comment",
+  "communityRepostWithCommentHint": "Add your thoughts (optional)",
+  "communityRepostButtonLabel": "Repost",
+  "communityRepostedToast": "Reposted",
+  "communityRepostedWithCommentToast": "Reposted with comment",
+
+  "desktopCommunityActiveCommunitiesTitle": "Active communities",
+  "desktopCommunityNoCommunitiesFoundLabel": "No communities found",
+  "desktopCommunityViewAllCommunitiesButtonLabel": "View all {count, plural, =1{1 community} other{{count} communities}}",
+  "@desktopCommunityViewAllCommunitiesButtonLabel": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "desktopCommunityGroupJoinedLabel": "Joined",
+  "desktopCommunityGroupsSearchHint": "Search groups...",
+  "desktopCommunityGroupMembersLabel": "{count, plural, =1{1 member} other{{count} members}}",
+  "@desktopCommunityGroupMembersLabel": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "desktopCommunityLatestLabel": "Latest: {timeAgo}",
+  "@desktopCommunityLatestLabel": {
+    "placeholders": {
+      "timeAgo": {}
+    }
+  },
+  "desktopCommunitySearchMessagesHint": "Search messages...",
+  "desktopCommunitySelectCommunityDialogTitle": "Select a community",
+  "desktopCommunitySearchUsersHint": "Search users...",
+  "desktopCommunitySearchUsersToMessageHint": "Search for users to message",
+  "desktopCommunityNewMessageTitle": "New message",
+  "desktopCommunitySearchFailedTryAgain": "Search failed. Try again.",
+  "desktopCommunityMessagesEmptyTitle": "No messages yet",
+  "desktopCommunityMessagesEmptySubtitle": "Start a conversation with an artist",
+  "desktopCommunityMessagesNoMatchesTitle": "No matches found",
+  "desktopCommunityMessagesNoResultsBody": "We couldn't find any conversations, members, or messages matching \"{query}\".",
+  "@desktopCommunityMessagesNoResultsBody": {
+    "placeholders": {
+      "query": {}
+    }
+  },
+  "desktopCommunityMessagesSearchResultsLabel": "Showing {count, plural, =1{1 result} other{{count} results}} for \"{query}\"",
+  "@desktopCommunityMessagesSearchResultsLabel": {
+    "placeholders": {
+      "count": {},
+      "query": {}
+    }
+  },
+
+  "desktopCommunityAddHandleButtonLabel": "Add handle",
+  "desktopCommunityAddTagDialogTitle": "Add tag",
+  "desktopCommunityAddTagDialogHint": "Enter tag (e.g., art, photography)",
+  "desktopCommunityAddTagHint": "Add tag",
+  "desktopCommunityMentionDialogTitle": "Mention someone",
+  "desktopCommunitySearchPeopleHint": "Search artists, collectors, or wallets",
+  "desktopCommunityMentionHint": "Mention",
+  "desktopCommunityBrowseTagsTooltip": "Browse tags",
+  "desktopCommunityFindProfilesTooltip": "Find profiles",
+  "desktopCommunityAddToPostTooltip": "Add to post",
+  "desktopCommunityTagLocationButtonLabel": "Tag a location",
+  "desktopCommunityTagLocationDialogTitle": "Tag a location",
+  "desktopCommunityLocationSearchHint": "e.g. Ljubljana, Slovenia",
+  "desktopCommunityClearSelectionButtonLabel": "Clear selection",
+  "desktopCommunityJoinGroupToPostToast": "Join a group to post.",
+
+  "desktopCommunityTargetCommunityOptionalTitle": "Target a community (optional)",
+  "desktopCommunityTargetCommunityNoGroupHint": "Posts shared to groups notify members instantly.",
+  "desktopCommunityTargetCommunityPostingToLabel": "Posting to {groupName}",
+  "@desktopCommunityTargetCommunityPostingToLabel": {
+    "placeholders": {
+      "groupName": {}
+    }
+  },
+  "desktopCommunityRemoveGroupTooltip": "Remove group",
+
+  "desktopCommunityArAttachmentsTitle": "AR attachments",
+  "desktopCommunityArAttachmentsBody": "Attach AR assets from your mobile device to ensure ARCore/ARKit compatibility. You can still tag this post and continue editing here.",
+  "desktopCommunityDownloadAppTitle": "Download app",
+  "desktopCommunityDownloadAppButtonLabel": "Download app",
+  "desktopCommunitySharedPhotoFallbackContent": "Shared a photo",
+
+  "desktopCommunityPostPublishedToast": "Post published!",
+  "desktopCommunityPostPublishFailedToast": "Failed to post.",
+  "desktopCommunityPostCreatedSuccessToast": "Post created successfully!",
+  "desktopCommunityPostCreateFailedToast": "Failed to create post.",
+
+  "desktopCommunityCreatePostTitle": "Create post",
+  "desktopCommunityComposerPromptHint": "Share what you're building, discovering, or thinking...",
+  "desktopCommunityComposerWhatsHappeningHint": "What's happening?",
+  "desktopCommunityComposerPhotoLabel": "Photo",
+  "desktopCommunityComposerLocationLabel": "Location",
+  "desktopCommunityComposerTagLabel": "Tag",
+  "desktopCommunityComposerMentionLabel": "Mention",
+  "desktopCommunityComposerAddImageTooltip": "Add image",
+  "desktopCommunityComposerAddArContentTooltip": "Add AR content",
+  "desktopCommunityComposerAddLocationTooltip": "Add location",
+  "desktopCommunityComposerMentionUserTooltip": "Mention user",
+  "desktopCommunityComposerAddEmojiTooltip": "Add emoji",
+
+  "desktopCommunityCreateGroupNameLabel": "Group name",
+  "desktopCommunityCreateGroupDescriptionLabel": "Description (optional)",
+
+  "desktopCommunityArtUseCurrentAreaButton": "Use current area",
+  "desktopCommunityArtWiderRadiusButton": "Wider radius",
+
+  "desktopCommunityArArtworkLabel": "AR artwork",
+  "desktopCommunityArArtworkSubtitle": "Tap to view in augmented reality",
+
+  "desktopCommunityTagFeedLoadingPostsLabel": "Loading #{tag} posts...",
+  "@desktopCommunityTagFeedLoadingPostsLabel": {
+    "placeholders": {
+      "tag": {}
+    }
+  },
+  "desktopCommunityTagFeedEmptyTitle": "No posts for #{tag}",
+  "@desktopCommunityTagFeedEmptyTitle": {
+    "placeholders": {
+      "tag": {}
+    }
+  },
+  "desktopCommunityTagFeedEmptyBody": "Create or discover posts tagged #{tag} to see them here.",
+  "@desktopCommunityTagFeedEmptyBody": {
+    "placeholders": {
+      "tag": {}
+    }
+  },
+  "desktopCommunityTagFeedNoPostsFoundError": "No posts found for #{tag}",
+  "@desktopCommunityTagFeedNoPostsFoundError": {
+    "placeholders": {
+      "tag": {}
+    }
+  },
+  "desktopCommunityTagFeedTopPostsTitle": "Top posts for #{tag}",
+  "@desktopCommunityTagFeedTopPostsTitle": {
+    "placeholders": {
+      "tag": {}
+    }
+  },
+  "desktopCommunityTagFeedSortedByPopularityDescription": "Sorted by popularity (likes, shares, comments, and views).",
+  "desktopCommunityTagFeedTaggedPostsAcrossCommunityLabel": "{count, plural, =1{1 tagged post across the community} other{{count} tagged posts across the community}}",
+  "@desktopCommunityTagFeedTaggedPostsAcrossCommunityLabel": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+
+  "desktopCommunityTrendingTitle": "Trending",
+  "desktopCommunityTrendingLoadFailedTapToRetry": "Could not load trending topics. Tap to retry.",
+  "desktopCommunityTrendingEmptyLabel": "No trending tags yet. Engage with the community to surface trends.",
+  "desktopCommunityTrendingBasedOnRecentPostsLabel": "Based on recent posts",
+
+  "desktopCommunityWhoToFollowTitle": "Who to follow",
+  "desktopCommunitySuggestionsLoadFailedTapToRetry": "Unable to load suggestions. Tap to retry.",
+  "desktopCommunitySuggestionsEmptyLabel": "Follow artists to personalize your feed.",
+
+  "profileInvitesTooltip": "Invites",
+  "profileConnectWalletToSeeProfileLabel": "Connect wallet to see profile",
+  "profileMoreOptionsTitle": "More options",
+  "profileNoBioYetTitle": "No bio yet",
+  "profileNoBioYetDescription": "Tap \"Edit Profile\" to add a short bio about yourself.",
+  "profileNoPostsYetDescription": "Share your perspective with the community to see it here.",
+  "profileUpcomingEventsTitle": "Upcoming events",
+  "profileUpcomingEventsEmptyLabel": "Plan an event or workshop to engage your audience.",
+  "profileArtistHighlightsSubtitle": "Keep your artworks and collections front and center.",
+  "profileArtistArtworksEmptyLabel": "Upload your first artwork to showcase it here.",
+  "profileArtistCollectionsEmptyLabel": "Create a collection to curate your story.",
+  "profileInstitutionHighlightsSubtitle": "Promote upcoming programs and featured collections.",
+  "profileInstitutionEventsEmptyLabel": "Share your next exhibition or gathering here.",
+  "profileInstitutionCollectionsEmptyLabel": "Curate institutional collections to highlight.",
+
+  "profileShowcaseEmptyTitle": "No {title}",
+  "@profileShowcaseEmptyTitle": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "profileArtworkMediumFallback": "Digital art",
+  "profileCollectionFallbackTitle": "New collection",
+  "profileCollectionCuratedByYouFooter": "Curated by you",
+  "profileEventFallbackTitle": "Event",
+  "profileEventLocationTba": "TBA",
+
+  "profileAchievementsEmptyTitle": "No achievements yet",
+  "profilePerformanceSectionTitle": "Performance",
+  "profilePerformanceArtworksViewedTitle": "Artworks viewed",
+  "profilePerformanceDiscoveriesTitle": "Discoveries",
+  "profilePerformanceCreatedOwnedTitle": "Created / owned",
+  "profilePerformanceFollowersFollowingTitle": "Followers / following",
+
+  "profileMenuSavedItemsTitle": "Saved items",
+  "profileMenuViewHistoryTitle": "View history",
+  "profileMenuHelpSupportTitle": "Help & support",
+
+  "profileHelpSupportTitle": "Help & support",
+  "profileHelpDocumentationOption": "Documentation",
+  "profileHelpContactSupportOption": "Contact support",
+  "profileHelpReportBugOption": "Report a bug",
+  "profileHelpAboutOption": "About art.kubus",
+  "profileHelpOpeningDocumentationToast": "Opening documentation...",
+
+  "profileContactSupportTitle": "Contact support",
+  "profileContactSupportSubtitle": "Get help from our support team:",
+  "profileContactSupportEmailLabel": "Email",
+  "profileContactSupportLiveChatLabel": "Live chat",
+  "profileContactSupportLiveChatAvailability": "Available Mon-Fri 9AM-5PM",
+  "profileContactSupportWebsiteLabel": "Website",
+
+  "profileReportBugTitle": "Report a bug",
+  "profileReportBugSubtitle": "Describe the issue you encountered:",
+  "profileReportBugHint": "Enter bug description...",
+  "profileReportBugEmailSubject": "Bug report",
+
+  "profileAnalyticsProfileTitle": "Profile analytics",
+  "profileAnalyticsCommunityTitle": "Community analytics",
+
+  "profileAboutTitle": "About art.kubus",
+  "profileAboutVersionLabel": "Version {version}",
+  "@profileAboutVersionLabel": {
+    "placeholders": {
+      "version": {}
+    }
+  },
+  "profileAboutDescription": "AR art platform connecting artists and institutions through blockchain technology.",
+  "profileAboutCopyright": "Copyright (c) 2024 kubus Project",
+
+  "groupFeedSignInToPostLabel": "Sign in to post.",
+  "groupFeedJoinToPostLabel": "Join this group to post.",
+
+  "analyticsDisabledTitle": "Analytics disabled",
+  "analyticsDisabledDescription": "This feature is currently turned off.",
+  "analyticsNoProfileSelectedTitle": "No profile selected",
+  "analyticsNoProfileSelectedDescription": "Missing wallet address.",
+  "analyticsPausedTitle": "Analytics paused",
+  "analyticsPausedDescription": "Enable analytics in Settings to load charts.",
+  "analyticsUnableToLoadTitle": "Unable to load",
+  "analyticsUnableToLoadDescription": "Please try again later.",
+  "analyticsNoDataYetTitle": "No data yet",
+  "analyticsNoDataYetDescription": "This chart will populate as activity happens.",
+  "analyticsTimeframeLabel": "Timeframe",
+  "analyticsMetricLabel": "Metric",
+  "analyticsYourAnalyticsTitle": "Your analytics",
+  "analyticsPublicAnalyticsTitle": "Public analytics",
+  "analyticsPostsCreatedTitle": "Posts created",
+  "analyticsMetricLikesReceivedLabel": "Likes received",
+  "analyticsMetricViewsReceivedLabel": "Views received",
+  "analyticsMetricEngagementLabel": "Engagement",
+  "analyticsMetricViewsGivenLabel": "Views given",
+
+  "userProfileCollectionsDesktopSubtitle": "Curated sets of work",
+  "userProfileNoCollectionsTitle": "No collections yet",
+
+  "desktopProfileHeaderSubtitle": "Manage your identity and content",
+  "desktopProfileShareProfileLabel": "Share profile",
+  "desktopProfilePortfolioTitle": "Portfolio",
+  "desktopProfilePortfolioSubtitle": "Your artworks and creative works",
+  "desktopProfileNoCollectionsDescription": "Create collections to organize and curate your work.",
+  "desktopProfileEventsTitle": "Events & Exhibitions",
+  "desktopProfileEventsSubtitle": "Your upcoming and past events",
+  "desktopProfileNoEventsTitle": "No events yet",
+  "desktopProfileNoEventsDescription": "Plan exhibitions, workshops, or meetups to engage with collectors.",
+  "desktopProfileInstitutionProgramsTitle": "Exhibitions & Programs",
+  "desktopProfileInstitutionProgramsSubtitle": "Your featured exhibitions and events",
+  "desktopProfileNoExhibitionsTitle": "No exhibitions yet",
+  "desktopProfileNoExhibitionsDescription": "Create exhibitions and programs to showcase your institutional activities.",
+  "desktopProfilePermanentCollectionTitle": "Permanent Collection",
+  "desktopProfilePermanentCollectionSubtitle": "Featured works in your collection",
+  "desktopProfilePermanentCollectionEmptyDescription": "Curate collections to highlight your institutional holdings.",
+  "desktopProfileRecentlyViewedTitle": "Recently Viewed",
+  "desktopProfileRecentlyViewedSubtitle": "Artworks you've discovered",
+  "desktopProfileNoViewedArtworksTitle": "No viewed artworks yet",
+  "desktopProfileNoViewedArtworksDescription": "Explore the map to discover artworks and build your viewing history.",
+  "desktopProfilePerformanceSubtitle": "Your activity and engagement metrics",
+  "desktopProfilePerformanceCreatedTitle": "Created",
+  "desktopProfilePerformanceNftsOwnedTitle": "NFTs owned",
+  "desktopProfileAchievementsSubtitle": "Your progress and milestones",
+  "desktopProfileYourPostsTitle": "Your posts",
+  "desktopProfileYourPostsSubtitle": "Content you've shared with the community",
+
+  "commonUnknownArtist": "Unknown artist",
+
+  "daoAnalyticsTitle": "DAO Analytics",
+  "daoAnalyticsProposalsByTypeTitle": "Proposals by Type",
+  "daoAnalyticsProposalsByStatusTitle": "Proposals by Status",
+  "daoAnalyticsNoProposalsYetLabel": "No proposals yet.",
+  "daoTreasuryTotalLabel": "Total",
+  "daoTreasuryTotalValueLabel": "Total Treasury Value",
+
+  "daoDelegationSelectDelegateTitle": "Select a Delegate",
+  "daoDelegationSelectDelegateSubtitle": "Choose a trusted community member to vote on your behalf",
+
+  "daoDelegationDelegatorsCountLabel": "{count, plural, =1{1 delegator} other{{count} delegators}}",
+  "@daoDelegationDelegatorsCountLabel": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "daoDelegationParticipationRateLabel": "{percent}% participation",
+  "@daoDelegationParticipationRateLabel": {
+    "placeholders": {
+      "percent": {}
+    }
+  },
+
+  "daoProposalVotesSupportSummaryLabel": "{totalVotes} votes • {supportPct}% support",
+  "@daoProposalVotesSupportSummaryLabel": {
+    "placeholders": {
+      "totalVotes": {},
+      "supportPct": {}
+    }
+  },
+
+  "commonSearchHint": "Search…"
 }

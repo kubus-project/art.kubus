@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/kubus_color_roles.dart';
@@ -521,7 +522,7 @@ class _DesktopActionButtonState extends State<DesktopActionButton> {
 /// search inputs can share a single implementation while keeping existing
 /// call sites stable.
 class DesktopSearchBar extends StatelessWidget {
-  final String hintText;
+  final String? hintText;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
   final TextEditingController? controller;
@@ -530,7 +531,7 @@ class DesktopSearchBar extends StatelessWidget {
 
   const DesktopSearchBar({
     super.key,
-    this.hintText = 'Search...',
+    this.hintText,
     this.onChanged,
     this.onSubmitted,
     this.controller,
@@ -540,6 +541,7 @@ class DesktopSearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final themeProvider = Provider.of<ThemeProvider>(context);
     final animationTheme = context.animationTheme;
     final theme = Theme.of(context);
@@ -550,7 +552,7 @@ class DesktopSearchBar extends StatelessWidget {
     final glassTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
 
     return KubusSearchBar(
-      hintText: hintText,
+      hintText: hintText ?? l10n.commonSearchHint,
       controller: controller,
       focusNode: focusNode,
       autofocus: autofocus,

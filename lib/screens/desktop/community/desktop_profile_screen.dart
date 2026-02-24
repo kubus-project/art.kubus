@@ -294,6 +294,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildHeader(ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -303,22 +304,22 @@ class _ProfileScreenState extends State<ProfileScreen>
               IconButton(
                 onPressed: () => Navigator.of(context).pop(),
                 icon: Icon(
-                  Icons.arrow_back,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-                tooltip: 'Back',
+                   Icons.arrow_back,
+                   color: Theme.of(context).colorScheme.onSurface,
+                 ),
+                tooltip: l10n.commonBack,
               ),
             if (Navigator.of(context).canPop()) const SizedBox(width: DetailSpacing.sm),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Profile',
+                  l10n.navigationScreenProfile,
                   style: DetailTypography.screenTitle(context),
                 ),
                 const SizedBox(height: DetailSpacing.xs),
                 Text(
-                  'Manage your identity and content',
+                  l10n.desktopProfileHeaderSubtitle,
                   style: DetailTypography.caption(context),
                 ),
               ],
@@ -328,14 +329,14 @@ class _ProfileScreenState extends State<ProfileScreen>
         Row(
           children: [
             DesktopActionButton(
-              label: 'Share Profile',
+              label: l10n.desktopProfileShareProfileLabel,
               icon: Icons.share_outlined,
               onPressed: _shareProfile,
               isPrimary: false,
             ),
             const SizedBox(width: DetailSpacing.md),
             DesktopActionButton(
-              label: 'Invites',
+              label: l10n.profileInvitesTooltip,
               icon: Icons.inbox_outlined,
               onPressed: () {
                 Navigator.push(
@@ -348,7 +349,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             const SizedBox(width: DetailSpacing.md),
             if (AppConfig.isFeatureEnabled('analytics')) ...[
               DesktopActionButton(
-                label: 'Analytics',
+                label: l10n.navigationScreenAnalytics,
                 icon: Icons.analytics_outlined,
                 onPressed: () {
                   final wallet = context.read<ProfileProvider>().currentUser?.walletAddress ?? '';
@@ -359,13 +360,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                       final scheme = Theme.of(dialogContext).colorScheme;
                       return KubusAlertDialog(
                         backgroundColor: scheme.surface,
-                        title: Text('Analytics', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                        title: Text(l10n.navigationScreenAnalytics, style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
                         content: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             ListTile(
                               leading: Icon(Icons.person_outline, color: scheme.primary),
-                              title: Text('Profile analytics', style: GoogleFonts.inter()),
+                              title: Text(l10n.profileAnalyticsProfileTitle, style: GoogleFonts.inter()),
                               onTap: () {
                                 Navigator.pop(dialogContext);
                                 Navigator.push(
@@ -373,7 +374,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                   MaterialPageRoute(
                                     builder: (_) => ProfileAnalyticsScreen(
                                       walletAddress: wallet,
-                                      title: 'Profile analytics',
+                                      title: l10n.profileAnalyticsProfileTitle,
                                     ),
                                   ),
                                 );
@@ -381,7 +382,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                             ),
                             ListTile(
                               leading: Icon(Icons.forum_outlined, color: scheme.secondary),
-                              title: Text('Community analytics', style: GoogleFonts.inter()),
+                              title: Text(l10n.profileAnalyticsCommunityTitle, style: GoogleFonts.inter()),
                               onTap: () {
                                 Navigator.pop(dialogContext);
                                 Navigator.push(
@@ -389,7 +390,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                   MaterialPageRoute(
                                     builder: (_) => CommunityAnalyticsScreen(
                                       walletAddress: wallet,
-                                      title: 'Community analytics',
+                                      title: l10n.profileAnalyticsCommunityTitle,
                                     ),
                                   ),
                                 );
@@ -400,7 +401,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(dialogContext),
-                            child: Text('Close', style: GoogleFonts.inter(color: scheme.primary)),
+                            child: Text(l10n.commonClose, style: GoogleFonts.inter(color: scheme.primary)),
                           ),
                         ],
                       );
@@ -412,7 +413,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               const SizedBox(width: DetailSpacing.md),
             ],
             DesktopActionButton(
-              label: 'Settings',
+              label: l10n.navigationScreenSettings,
               icon: Icons.settings_outlined,
               onPressed: () {
                 Navigator.push(
@@ -660,6 +661,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildStatsCards(ThemeProvider themeProvider, ProfileProvider profileProvider, bool isLarge) {
+    final l10n = AppLocalizations.of(context)!;
     final wallet = profileProvider.currentUser?.walletAddress;
     final screenWidth = MediaQuery.of(context).size.width;
     // More columns on wider screens for compact horizontal layout
@@ -672,24 +674,24 @@ class _ProfileScreenState extends State<ProfileScreen>
       spacing: 12,
       children: [
         DesktopStatCard(
-          label: 'Posts',
+          label: l10n.userProfilePostsStatLabel,
           value: profileProvider.formattedPostsCount,
           icon: Icons.article_outlined,
         ),
         DesktopStatCard(
-          label: 'Followers',
+          label: l10n.userProfileFollowersStatLabel,
           value: profileProvider.formattedFollowersCount,
           icon: Icons.people_outline,
           onTap: () => ProfileScreenMethods.showFollowers(context, walletAddress: wallet),
         ),
         DesktopStatCard(
-          label: 'Following',
+          label: l10n.userProfileFollowingStatLabel,
           value: profileProvider.formattedFollowingCount,
           icon: Icons.person_add_outlined,
           onTap: () => ProfileScreenMethods.showFollowing(context, walletAddress: wallet),
         ),
         DesktopStatCard(
-          label: 'Artworks',
+          label: l10n.userProfileArtworksTitle,
           value: profileProvider.formattedArtworksCount,
           icon: Icons.palette_outlined,
           onTap: () => ProfileScreenMethods.showArtworks(context),
@@ -699,18 +701,19 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildArtistPortfolioSection(ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         DesktopSectionHeader(
-          title: 'Portfolio',
-          subtitle: 'Your artworks and creative works',
+          title: l10n.desktopProfilePortfolioTitle,
+          subtitle: l10n.desktopProfilePortfolioSubtitle,
           icon: Icons.palette,
           action: _artistArtworks.isNotEmpty
               ? TextButton.icon(
                   onPressed: () => ProfileScreenMethods.showArtworks(context),
                   icon: const Icon(Icons.arrow_forward, size: 18),
-                  label: Text(AppLocalizations.of(context)!.commonViewAll),
+                  label: Text(l10n.commonViewAll),
                 )
               : null,
         ),
@@ -727,8 +730,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           DesktopCard(
             child: EmptyStateCard(
               icon: Icons.image_outlined,
-              title: 'No artworks yet',
-              description: 'Upload your first artwork to showcase your creative work here.',
+              title: l10n.artistGalleryEmptyTitle,
+              description: l10n.profileArtistArtworksEmptyLabel,
             ),
           )
         else
@@ -746,18 +749,19 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildArtistCollectionsSection(ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         DesktopSectionHeader(
-          title: 'Collections',
-          subtitle: 'Curated sets of your work',
+          title: l10n.userProfileCollectionsTitle,
+          subtitle: l10n.userProfileCollectionsDesktopSubtitle,
           icon: Icons.collections_outlined,
           action: _artistCollections.isNotEmpty
               ? TextButton.icon(
                   onPressed: () => ProfileScreenMethods.showCollections(context),
                   icon: const Icon(Icons.arrow_forward, size: 18),
-                  label: Text(AppLocalizations.of(context)!.commonViewAll),
+                  label: Text(l10n.commonViewAll),
                 )
               : null,
         ),
@@ -774,8 +778,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           DesktopCard(
             child: EmptyStateCard(
               icon: Icons.collections_outlined,
-              title: 'No collections yet',
-              description: 'Create collections to organize and curate your work.',
+              title: l10n.userProfileNoCollectionsTitle,
+              description: l10n.desktopProfileNoCollectionsDescription,
             ),
           )
         else
@@ -793,12 +797,13 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildArtistEventsSection(ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         DesktopSectionHeader(
-          title: 'Events & Exhibitions',
-          subtitle: 'Your upcoming and past events',
+          title: l10n.desktopProfileEventsTitle,
+          subtitle: l10n.desktopProfileEventsSubtitle,
           icon: Icons.event,
         ),
         const SizedBox(height: DetailSpacing.xl),
@@ -814,8 +819,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           DesktopCard(
             child: EmptyStateCard(
               icon: Icons.event_outlined,
-              title: 'No events yet',
-              description: 'Plan exhibitions, workshops, or meetups to engage with collectors.',
+              title: l10n.desktopProfileNoEventsTitle,
+              description: l10n.desktopProfileNoEventsDescription,
             ),
           )
         else
@@ -833,12 +838,13 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildInstitutionEventsSection(ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         DesktopSectionHeader(
-          title: 'Exhibitions & Programs',
-          subtitle: 'Your featured exhibitions and events',
+          title: l10n.desktopProfileInstitutionProgramsTitle,
+          subtitle: l10n.desktopProfileInstitutionProgramsSubtitle,
           icon: Icons.museum,
         ),
         const SizedBox(height: DetailSpacing.xl),
@@ -854,8 +860,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           DesktopCard(
             child: EmptyStateCard(
               icon: Icons.museum_outlined,
-              title: 'No exhibitions yet',
-              description: 'Create exhibitions and programs to showcase your institutional activities.',
+              title: l10n.desktopProfileNoExhibitionsTitle,
+              description: l10n.desktopProfileNoExhibitionsDescription,
             ),
           )
         else
@@ -873,18 +879,19 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildInstitutionCollectionsSection(ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         DesktopSectionHeader(
-          title: 'Permanent Collection',
-          subtitle: 'Featured works in your collection',
+          title: l10n.desktopProfilePermanentCollectionTitle,
+          subtitle: l10n.desktopProfilePermanentCollectionSubtitle,
           icon: Icons.account_balance,
           action: _artistCollections.isNotEmpty
               ? TextButton.icon(
                   onPressed: () => ProfileScreenMethods.showCollections(context),
                   icon: const Icon(Icons.arrow_forward, size: 18),
-                  label: Text(AppLocalizations.of(context)!.commonViewAll),
+                  label: Text(l10n.commonViewAll),
                 )
               : null,
         ),
@@ -901,8 +908,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           DesktopCard(
             child: EmptyStateCard(
               icon: Icons.collections_outlined,
-              title: 'No collections yet',
-              description: 'Curate collections to highlight your institutional holdings.',
+              title: l10n.userProfileNoCollectionsTitle,
+              description: l10n.desktopProfilePermanentCollectionEmptyDescription,
             ),
           )
         else
@@ -922,6 +929,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   Widget _buildViewedArtworksSection(ThemeProvider themeProvider) {
     return Consumer<ArtworkProvider>(
       builder: (context, artworkProvider, _) {
+        final l10n = AppLocalizations.of(context)!;
         final viewHistory = artworkProvider.viewHistoryEntries.take(10).toList();
         
         // Build list of artworks from view history
@@ -943,8 +951,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             DesktopSectionHeader(
-              title: 'Recently Viewed',
-              subtitle: 'Artworks you\'ve discovered',
+              title: l10n.desktopProfileRecentlyViewedTitle,
+              subtitle: l10n.desktopProfileRecentlyViewedSubtitle,
               icon: Icons.history,
               action: viewHistory.isNotEmpty
                   ? TextButton.icon(
@@ -953,10 +961,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                           context,
                           MaterialPageRoute(builder: (_) => const ViewHistoryScreen()),
                         );
-                      },
-                      icon: const Icon(Icons.arrow_forward, size: 18),
-                      label: const Text('View History'),
-                    )
+                       },
+                       icon: const Icon(Icons.arrow_forward, size: 18),
+                       label: Text(l10n.profileMenuViewHistoryTitle),
+                     )
                   : null,
             ),
             const SizedBox(height: DetailSpacing.xl),
@@ -964,8 +972,8 @@ class _ProfileScreenState extends State<ProfileScreen>
               DesktopCard(
                 child: EmptyStateCard(
                   icon: Icons.visibility_outlined,
-                  title: 'No viewed artworks yet',
-                  description: 'Explore the map to discover artworks and build your viewing history.',
+                  title: l10n.desktopProfileNoViewedArtworksTitle,
+                  description: l10n.desktopProfileNoViewedArtworksDescription,
                 ),
               )
             else
@@ -979,8 +987,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                     final artwork = viewedArtworks[index];
                     return _buildShowcaseCard(
                       imageUrl: artwork['imageUrl']?.toString(),
-                      title: artwork['title']?.toString() ?? 'Untitled',
-                      subtitle: artwork['artist']?.toString() ?? 'Unknown artist',
+                      title: artwork['title']?.toString() ?? l10n.commonUntitled,
+                      subtitle: artwork['artist']?.toString() ?? l10n.commonUnknownArtist,
                       artworkId: artwork['id']?.toString(),
                     );
                   },
@@ -995,6 +1003,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   Widget _buildPerformanceStatsSection(ThemeProvider themeProvider) {
     return Consumer3<ProfileProvider, ArtworkProvider, StatsProvider>(
       builder: (context, profileProvider, artworkProvider, statsProvider, _) {
+        final l10n = AppLocalizations.of(context)!;
         final wallet = (profileProvider.currentUser?.walletAddress ?? '').trim();
         final stats = profileProvider.currentUser?.stats;
         final viewHistory = artworkProvider.viewHistoryEntries;
@@ -1079,8 +1088,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             DesktopSectionHeader(
-              title: 'Performance',
-              subtitle: 'Your activity and engagement metrics',
+              title: l10n.profilePerformanceSectionTitle,
+              subtitle: l10n.desktopProfilePerformanceSubtitle,
               icon: Icons.analytics_outlined,
             ),
             const SizedBox(height: DetailSpacing.xl),
@@ -1090,25 +1099,25 @@ class _ProfileScreenState extends State<ProfileScreen>
               childAspectRatio: 2.0,
               children: [
                 _buildPerformanceStatCard(
-                  'Artworks Viewed',
+                  l10n.profilePerformanceArtworksViewedTitle,
                   _formatStatCount(viewedCount),
                   Icons.visibility_outlined,
                   themeProvider,
                 ),
                 _buildPerformanceStatCard(
-                  'Discoveries',
+                  l10n.profilePerformanceDiscoveriesTitle,
                   discoveriesLabel,
                   Icons.explore_outlined,
                   themeProvider,
                 ),
                 _buildPerformanceStatCard(
-                  'Created',
+                  l10n.desktopProfilePerformanceCreatedTitle,
                   createdLabel,
                   Icons.create_outlined,
                   themeProvider,
                 ),
                 _buildPerformanceStatCard(
-                  'NFTs Owned',
+                  l10n.desktopProfilePerformanceNftsOwnedTitle,
                   nftsLabel,
                   Icons.token_outlined,
                   themeProvider,
@@ -1514,6 +1523,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   Widget _buildAchievementsSection(ThemeProvider themeProvider) {
     return Consumer<TaskProvider>(
       builder: (context, taskProvider, _) {
+        final l10n = AppLocalizations.of(context)!;
         final achievements = taskProvider.achievementProgress;
         final progressById = <String, AchievementProgress>{
           for (final progress in achievements) progress.achievementId: progress,
@@ -1527,8 +1537,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             DesktopSectionHeader(
-              title: 'Achievements',
-              subtitle: 'Your progress and milestones',
+              title: l10n.userProfileAchievementsTitle,
+              subtitle: l10n.desktopProfileAchievementsSubtitle,
               icon: Icons.emoji_events_outlined,
               action: TextButton.icon(
                 onPressed: () {
@@ -1538,7 +1548,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   );
                 },
                 icon: const Icon(Icons.arrow_forward, size: 18),
-                label: Text(AppLocalizations.of(context)!.commonViewAll),
+                label: Text(l10n.commonViewAll),
               ),
             ),
             const SizedBox(height: 16),
@@ -1546,8 +1556,8 @@ class _ProfileScreenState extends State<ProfileScreen>
               DesktopCard(
                 child: EmptyStateCard(
                   icon: Icons.emoji_events,
-                  title: 'No Achievements Yet',
-                  description: 'Start exploring to unlock achievements',
+                  title: l10n.profileAchievementsEmptyTitle,
+                  description: l10n.userProfileAchievementsEmptyDescription,
                 ),
               )
             else
@@ -1737,13 +1747,14 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildPostsSection(ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
     final future = _postsFuture ?? _loadUserPosts();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         DesktopSectionHeader(
-          title: 'Your Posts',
-          subtitle: 'Content you\'ve shared with the community',
+          title: l10n.desktopProfileYourPostsTitle,
+          subtitle: l10n.desktopProfileYourPostsSubtitle,
           icon: Icons.article_outlined,
         ),
         const SizedBox(height: 16),
@@ -1764,10 +1775,10 @@ class _ProfileScreenState extends State<ProfileScreen>
               return DesktopCard(
                 child: EmptyStateCard(
                   icon: Icons.error_outline,
-                  title: 'Could not load posts',
-                  description: 'Please try again later',
+                  title: l10n.userProfilePostsLoadFailedTitle,
+                  description: l10n.userProfilePostsLoadFailedDescription,
                   showAction: true,
-                  actionLabel: 'Retry',
+                  actionLabel: l10n.commonRetry,
                   onAction: () => setState(() => _postsFuture = _loadUserPosts()),
                 ),
               );
@@ -1778,8 +1789,8 @@ class _ProfileScreenState extends State<ProfileScreen>
               return DesktopCard(
                 child: EmptyStateCard(
                   icon: Icons.article,
-                  title: 'No posts yet',
-                  description: 'Share your perspective with the community',
+                  title: l10n.userProfileNoPostsTitle,
+                  description: l10n.profileNoPostsYetDescription,
                 ),
               );
             }

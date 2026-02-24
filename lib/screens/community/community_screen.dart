@@ -3478,13 +3478,18 @@ class _CommunityScreenState extends State<CommunityScreen>
                   })
               .toList();
         } else if (currentType == 'screens') {
+          final l10n = AppLocalizations.of(context)!;
           final q = query.toLowerCase();
           list = NavigationProvider.screenDefinitions.entries
-              .where((e) => e.value.name.toLowerCase().contains(q))
+              .map((e) {
+                final label = e.value.labelKey.resolve(l10n);
+                return MapEntry(e.key, (label, e.value.icon));
+              })
+              .where((e) => e.value.$1.toLowerCase().contains(q))
               .map((e) => {
                     'screenKey': e.key,
-                    'name': e.value.name,
-                    'icon': e.value.icon,
+                    'name': e.value.$1,
+                    'icon': e.value.$2,
                   })
               .toList();
         }
@@ -6214,11 +6219,12 @@ class _CommunityScreenState extends State<CommunityScreen>
 
                     final likes = snapshot.data ?? <CommunityLikeUser>[];
                     if (likes.isEmpty) {
+                      final l10n = AppLocalizations.of(context)!;
                       return Center(
                         child: EmptyStateCard(
                           icon: Icons.favorite_border,
-                          title: 'No likes yet',
-                          description: 'Be the first to like this post.',
+                          title: l10n.postDetailNoLikesTitle,
+                          description: l10n.postDetailNoLikesDescription,
                         ),
                       );
                     }
@@ -7174,7 +7180,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Repost',
+                    Text(l10n.postDetailRepostButton,
                         style: GoogleFonts.inter(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,

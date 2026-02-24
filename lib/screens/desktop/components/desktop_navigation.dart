@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/notification_provider.dart';
 import '../../../providers/profile_provider.dart';
@@ -14,17 +15,51 @@ import '../../../utils/app_animations.dart';
 import '../../../utils/design_tokens.dart';
 
 /// Navigation item data model
+enum DesktopNavLabelKey {
+  home,
+  explore,
+  connect,
+  create,
+  organize,
+  govern,
+  trade,
+  web3,
+}
+
+extension DesktopNavLabelKeyX on DesktopNavLabelKey {
+  String resolve(AppLocalizations l10n) {
+    switch (this) {
+      case DesktopNavLabelKey.home:
+        return l10n.desktopShellNavHome;
+      case DesktopNavLabelKey.explore:
+        return l10n.desktopShellNavExplore;
+      case DesktopNavLabelKey.connect:
+        return l10n.desktopShellNavConnect;
+      case DesktopNavLabelKey.create:
+        return l10n.desktopShellNavCreate;
+      case DesktopNavLabelKey.organize:
+        return l10n.desktopShellNavOrganize;
+      case DesktopNavLabelKey.govern:
+        return l10n.desktopShellNavGovern;
+      case DesktopNavLabelKey.trade:
+        return l10n.desktopShellNavTrade;
+      case DesktopNavLabelKey.web3:
+        return l10n.desktopShellNavWeb3;
+    }
+  }
+}
+
 class DesktopNavItem {
   final IconData icon;
   final IconData activeIcon;
-  final String label;
+  final DesktopNavLabelKey labelKey;
   final String route;
   final int badgeCount;
 
   const DesktopNavItem({
     required this.icon,
     required this.activeIcon,
-    required this.label,
+    required this.labelKey,
     required this.route,
     this.badgeCount = 0,
   });
@@ -77,6 +112,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final themeProvider = Provider.of<ThemeProvider>(context);
     final animationTheme = context.animationTheme;
 
@@ -88,7 +124,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
     return Column(
       children: [
         // App logo and branding header
-        _buildHeader(themeProvider),
+        _buildHeader(themeProvider, l10n),
 
         const SizedBox(height: 8),
 
@@ -103,6 +139,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
               index,
               themeProvider,
               animationTheme,
+              l10n,
             ),
           ),
         ),
@@ -117,7 +154,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
     );
   }
 
-  Widget _buildHeader(ThemeProvider themeProvider) {
+  Widget _buildHeader(ThemeProvider themeProvider, AppLocalizations l10n) {
     // When collapsed, use a column layout to prevent overflow
     if (!widget.isExpanded) {
       return Container(
@@ -137,7 +174,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                     .withValues(alpha: 0.6),
                 size: 20,
               ),
-              tooltip: 'Expand navigation',
+              tooltip: l10n.desktopNavigationExpandTooltip,
               constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
               padding: EdgeInsets.zero,
             ),
@@ -166,15 +203,15 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
-                  Text(
-                    'Art Platform',
-                    style: KubusTypography.textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.6),
-                    ),
-                  ),
+                   Text(
+                     l10n.desktopNavigationSubtitle,
+                     style: KubusTypography.textTheme.bodySmall?.copyWith(
+                       color: Theme.of(context)
+                           .colorScheme
+                           .onSurface
+                           .withValues(alpha: 0.6),
+                     ),
+                   ),
                 ],
               ),
             ),
@@ -189,7 +226,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                   .withValues(alpha: 0.6),
               size: 20,
             ),
-            tooltip: 'Collapse navigation',
+            tooltip: l10n.desktopNavigationCollapseTooltip,
             constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
             padding: EdgeInsets.zero,
           ),
@@ -203,6 +240,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
     int index,
     ThemeProvider themeProvider,
     AppAnimationTheme animationTheme,
+    AppLocalizations l10n,
   ) {
     final isSelected = widget.selectedIndex == index;
     final isHovered = _hoveredIndex == index;
@@ -264,7 +302,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                           opacity: widget.expandAnimation.value,
                           duration: const Duration(milliseconds: 150),
                           child: Text(
-                            item.label,
+                            item.labelKey.resolve(l10n),
                             style: KubusTypography.textTheme.bodyMedium?.copyWith(
                               fontWeight: isSelected
                                   ? FontWeight.w600
@@ -662,18 +700,18 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                             Row(
                               children: [
                                 Icon(
-                                  Icons.account_balance_wallet,
-                                  color: Colors.white,
-                                  size: 16,
-                                ),
-                                const SizedBox(width: 5),
-                                Text(
-                                  'My Wallet',
-                                  style: KubusTypography.textTheme.labelSmall?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white.withValues(alpha: 0.9),
-                                  ),
-                                ),
+                                   Icons.account_balance_wallet,
+                                   color: Colors.white,
+                                   size: 16,
+                                 ),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    AppLocalizations.of(context)!.walletHomeTitle,
+                                    style: KubusTypography.textTheme.labelSmall?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white.withValues(alpha: 0.9),
+                                    ),
+                                 ),
                               ],
                             ),
                             const SizedBox(height: 5),
@@ -796,7 +834,8 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              user?.displayName ?? 'Art Enthusiast',
+                              user?.displayName ??
+                                  AppLocalizations.of(context)!.profilePersonaArtEnthusiast,
                               style: GoogleFonts.inter(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,

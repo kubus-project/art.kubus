@@ -213,6 +213,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
   }
 
   Widget _buildHeader(ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
       decoration: BoxDecoration(
@@ -233,11 +234,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
               Icons.arrow_back,
               color: Theme.of(context).colorScheme.onSurface,
             ),
-            tooltip: 'Back',
+            tooltip: l10n.commonBack,
           ),
           const SizedBox(width: 16),
           Text(
-            'Edit Profile',
+            l10n.profileEditTitle,
             style: GoogleFonts.inter(
               fontSize: 28,
               fontWeight: FontWeight.bold,
@@ -257,14 +258,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
             )
           else ...[
             DesktopActionButton(
-              label: 'Cancel',
+              label: l10n.commonCancel,
               icon: Icons.close,
               onPressed: () => Navigator.of(context).pop(),
               isPrimary: false,
             ),
             const SizedBox(width: 12),
             DesktopActionButton(
-              label: 'Save Changes',
+              label: l10n.profileEditSaveChanges,
               icon: Icons.check,
               onPressed: _saveProfile,
               isPrimary: true,
@@ -276,6 +277,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
   }
 
   Widget _buildCoverImageSection(ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
     return DesktopCard(
       padding: EdgeInsets.zero,
       child: Column(
@@ -284,8 +286,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
           Padding(
             padding: const EdgeInsets.all(24),
             child: DesktopSectionHeader(
-              title: 'Cover Image',
-              subtitle: 'Recommended size: 1920x1080px',
+              title: l10n.commonCoverImage,
+              subtitle: l10n.profileEditCoverImageRecommendedSize('1920x1080px'),
               icon: Icons.panorama,
             ),
           ),
@@ -331,14 +333,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
                               color: themeProvider.accentColor.withValues(alpha: 0.6),
                             ),
                             const SizedBox(height: 12),
-                            Text(
-                              'Click to upload cover image',
-                              style: GoogleFonts.inter(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w500,
-                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                              ),
-                            ),
+                             Text(
+                               l10n.profileEditCoverImageClickToUpload,
+                               style: GoogleFonts.inter(
+                                 fontSize: 15,
+                                 fontWeight: FontWeight.w500,
+                                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                               ),
+                             ),
                           ],
                         )
                       : Container(
@@ -355,14 +357,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
                               children: [
                                 const Icon(Icons.edit, color: Colors.white, size: 18),
                                 const SizedBox(width: 8),
-                                Text(
-                                  'Change Cover',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.white,
-                                  ),
-                                ),
+                                 Text(
+                                   l10n.commonChangeCover,
+                                   style: GoogleFonts.inter(
+                                     fontSize: 14,
+                                     fontWeight: FontWeight.w500,
+                                     color: Colors.white,
+                                   ),
+                                 ),
                               ],
                             ),
                           ),
@@ -377,13 +379,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
   }
 
   Widget _buildAvatarSection(ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
     return DesktopCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           DesktopSectionHeader(
-            title: 'Profile Picture',
-            subtitle: 'Recommended size: 512x512px',
+            title: l10n.profileEditProfilePictureTitle,
+            subtitle: l10n.profileEditCoverImageRecommendedSize('512x512px'),
             icon: Icons.account_circle,
           ),
           const SizedBox(height: 24),
@@ -449,7 +452,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
           const SizedBox(height: 16),
           Center(
             child: Text(
-              'Click to change avatar',
+              l10n.profileEditAvatarClickToChange,
               style: GoogleFonts.inter(
                 fontSize: 14,
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -462,49 +465,50 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
   }
 
   Widget _buildBasicInfoSection(ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
     return DesktopCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           DesktopSectionHeader(
-            title: 'Basic Information',
-            subtitle: 'Your public profile details',
+            title: l10n.profileEditBasicInformationTitle,
+            subtitle: l10n.profileEditPublicProfileDetailsSubtitle,
             icon: Icons.person_outline,
           ),
           const SizedBox(height: 24),
           _buildTextField(
-            label: 'Username',
+            label: l10n.profileEditUsernameLabel,
             controller: _usernameController,
-            hint: 'Enter username',
+            hint: l10n.profileEditUsernameHint,
             icon: Icons.alternate_email,
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
-                return 'Username is required';
+                return l10n.profileEditUsernameRequiredError;
               }
               if (value.trim().length < 3) {
-                return 'Username must be at least 3 characters';
+                return l10n.profileEditUsernameMinLengthError;
               }
               return null;
             },
           ),
           const SizedBox(height: 20),
           _buildTextField(
-            label: 'Display Name',
+            label: l10n.profileEditDisplayNameLabel,
             controller: _displayNameController,
-            hint: 'Enter display name',
+            hint: l10n.profileEditDisplayNameHint,
             icon: Icons.person_outline,
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
-                return 'Display name is required';
+                return l10n.profileEditDisplayNameRequiredError;
               }
               return null;
             },
           ),
           const SizedBox(height: 20),
           _buildTextField(
-            label: 'Bio',
+            label: l10n.profileEditBioLabel,
             controller: _bioController,
-            hint: 'Tell us about yourself',
+            hint: l10n.profileEditBioHint,
             icon: Icons.info_outline,
             maxLines: 4,
             maxLength: 500,
@@ -515,34 +519,35 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
   }
 
   Widget _buildSocialLinksSection(ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
     return DesktopCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           DesktopSectionHeader(
-            title: 'Social Links',
-            subtitle: 'Connect your social profiles',
+            title: l10n.profileEditSocialLinksTitle,
+            subtitle: l10n.profileEditSocialLinksSubtitle,
             icon: Icons.link,
           ),
           const SizedBox(height: 24),
           _buildTextField(
-            label: 'Twitter',
+            label: l10n.profileEditSocialTwitterLabel,
             controller: _twitterController,
-            hint: 'username',
+            hint: l10n.profileEditSocialHandleHint,
             icon: Icons.alternate_email,
           ),
           const SizedBox(height: 20),
           _buildTextField(
-            label: 'Instagram',
+            label: l10n.profileEditSocialInstagramLabel,
             controller: _instagramController,
-            hint: 'username',
+            hint: l10n.profileEditSocialHandleHint,
             icon: Icons.camera_alt_outlined,
           ),
           const SizedBox(height: 20),
           _buildTextField(
-            label: 'Website',
+            label: l10n.profileEditSocialWebsiteLabel,
             controller: _websiteController,
-            hint: 'https://example.com',
+            hint: l10n.profileEditSocialWebsiteHint,
             icon: Icons.language,
           ),
         ],
@@ -551,20 +556,25 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
   }
 
   Widget _buildArtistInfoSection(ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
     return DesktopCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           DesktopSectionHeader(
-            title: _isInstitution ? 'Institution Details' : 'Artist Information',
+            title: _isInstitution
+                ? l10n.profileEditInstitutionInformationTitle
+                : l10n.profileEditArtistInformationTitle,
             subtitle: _isInstitution
-                ? 'Information about your institution'
-                : 'Additional details about your artistic practice',
+                ? l10n.profileEditInstitutionDetailsSubtitle
+                : l10n.profileEditArtistDetailsSubtitle,
             icon: _isInstitution ? Icons.business : Icons.palette,
           ),
           const SizedBox(height: 24),
           _buildTextField(
-            label: _isInstitution ? 'Focus Areas' : 'Specialties',
+            label: _isInstitution
+                ? l10n.profileEditInstitutionFocusAreasLabel
+                : l10n.profileEditArtistSpecialtiesLabel,
             controller: _specialtyController,
             hint: _isInstitution
                 ? 'Contemporary Art, Digital Media'
@@ -573,7 +583,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
           ),
           const SizedBox(height: 20),
           _buildTextField(
-            label: _isInstitution ? 'Established Year' : 'Years Active',
+            label: _isInstitution
+                ? l10n.profileEditInstitutionEstablishedYearLabel
+                : l10n.profileEditArtistYearsActiveLabel,
             controller: _yearsActiveController,
             hint: '2020',
             icon: Icons.calendar_today_outlined,
@@ -591,8 +603,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           DesktopSectionHeader(
-            title: 'Privacy & Visibility',
-            subtitle: 'Control who can see your content',
+            title: l10n.profileEditPrivacyVisibilityTitle,
+            subtitle: l10n.profileEditPrivacyVisibilitySubtitle,
             icon: Icons.privacy_tip_outlined,
           ),
           const SizedBox(height: 24),
@@ -797,6 +809,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
   }
 
   Future<void> _pickAvatar() async {
+    final l10n = AppLocalizations.of(context)!;
     try {
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
@@ -822,7 +835,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
             if (!mounted) return;
             ScaffoldMessenger.of(context).showKubusSnackBar(
               SnackBar(
-                content: const Text('No wallet connected. Connect your wallet to upload avatar.'),
+                content: Text(l10n.profileEditNoWalletUploadAvatarToast),
                 backgroundColor: Theme.of(context).colorScheme.error,
               ),
             );
@@ -869,7 +882,12 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
                       await Clipboard.setData(ClipboardData(text: uploadedUrl));
                       if (!mounted) return;
                       ScaffoldMessenger.of(context).showKubusSnackBar(
-                        const SnackBar(content: Text('Copied avatar URL to clipboard'), duration: Duration(seconds: 1)),
+                        SnackBar(
+                          content: Text(
+                            l10n.profileEditAvatarCopiedToClipboardToast,
+                          ),
+                          duration: const Duration(seconds: 1),
+                        ),
                       );
                     },
                   ),
@@ -877,7 +895,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
               ),
               action: uri != null
                   ? SnackBarAction(
-                      label: 'Open',
+                      label: l10n.commonOpen,
                       onPressed: () async {
                         try {
                           await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -891,7 +909,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
           if (!mounted) return;
           ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(
-              content: Text(saved ? 'Avatar uploaded and saved!' : 'Avatar uploaded locally (save failed)'),
+              content: Text(
+                saved
+                    ? l10n.profileEditAvatarUploadedSavedToast
+                    : l10n.profileEditAvatarUploadedLocalToast,
+              ),
               backgroundColor: saved
                   ? Theme.of(context).colorScheme.primary
                   : Theme.of(context).colorScheme.secondary,
@@ -904,7 +926,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
           final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
           ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(
-              content: Text('Upload failed: $e'),
+              content: Text(
+                l10n.profileEditAvatarUploadFailedToast(e.toString()),
+              ),
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
@@ -915,14 +939,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
             showKubusDialog<void>(
               context: context,
               builder: (context) => KubusAlertDialog(
-                title: const Text('Upload Debug Info'),
+                title: Text(l10n.profileEditUploadDebugInfoTitle),
                 content: SingleChildScrollView(
                   child: SelectableText(pretty),
                 ),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Close'),
+                    child: Text(l10n.commonClose),
                   ),
                   TextButton(
                     onPressed: () async {
@@ -932,10 +956,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
                       if (!mounted) return;
                       navigator.pop();
                       messenger.showKubusSnackBar(
-                        const SnackBar(content: Text('Debug info copied to clipboard')),
+                        SnackBar(
+                          content: Text(
+                            l10n.profileEditUploadDebugInfoCopiedToast,
+                          ),
+                        ),
                       );
                     },
-                    child: const Text('Copy'),
+                    child: Text(l10n.commonCopy),
                   ),
                 ],
               ),
@@ -947,7 +975,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
       if (!mounted) return;
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
-          content: Text('Error picking image: $e'),
+          content: Text(l10n.profileEditPickImageFailedToast(e.toString())),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -955,6 +983,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
   }
 
   Future<void> _pickCoverImage() async {
+    final l10n = AppLocalizations.of(context)!;
     try {
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
@@ -980,7 +1009,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
             if (!mounted) return;
             ScaffoldMessenger.of(context).showKubusSnackBar(
               SnackBar(
-                content: const Text('No wallet connected. Connect your wallet to upload cover image.'),
+                content: Text(l10n.profileEditNoWalletUploadCoverToast),
                 backgroundColor: Theme.of(context).colorScheme.error,
               ),
             );
@@ -1030,7 +1059,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
           if (!mounted) return;
           ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(
-              content: Text(saved ? 'Cover image uploaded!' : 'Cover image uploaded locally'),
+              content: Text(
+                saved
+                    ? l10n.profileEditCoverUploadedSavedToast
+                    : l10n.profileEditCoverUploadedLocalToast,
+              ),
               backgroundColor: saved
                   ? Theme.of(context).colorScheme.primary
                   : Theme.of(context).colorScheme.secondary,
@@ -1042,7 +1075,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
           if (!mounted) return;
           ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(
-              content: Text('Cover upload failed: $e'),
+              content: Text(
+                l10n.profileEditCoverUploadFailedToast(e.toString()),
+              ),
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
@@ -1052,7 +1087,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
       if (!mounted) return;
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
-          content: Text('Error picking cover image: $e'),
+          content: Text(l10n.profileEditPickImageFailedToast(e.toString())),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -1066,6 +1101,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final l10n = AppLocalizations.of(context)!;
     setState(() => _isSaving = true);
 
     try {
@@ -1109,7 +1145,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
       if (success) {
         ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
-            content: const Text('Profile updated successfully!'),
+            content: Text(l10n.profileEditProfileUpdatedToast),
             backgroundColor: Theme.of(context).colorScheme.primary,
           ),
         );
@@ -1143,13 +1179,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
           Navigator.pop(context, true);
         }
       } else {
-        throw Exception(profileProvider.error ?? 'Failed to save profile');
+        throw Exception(profileProvider.error ?? l10n.commonActionFailedToast);
       }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
-          content: Text('Error: $e'),
+          content: Text(l10n.profileEditErrorToast(e.toString())),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );

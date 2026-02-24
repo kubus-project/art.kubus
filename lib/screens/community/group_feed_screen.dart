@@ -224,13 +224,13 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'Sign in to post.',
+                l10n.groupFeedSignInToPostLabel,
                 style: GoogleFonts.inter(color: scheme.onSurface.withValues(alpha: 0.8)),
               ),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pushNamed('/sign-in'),
-              child: const Text('Sign in'),
+              child: Text(l10n.commonSignIn),
             ),
           ],
         ),
@@ -250,7 +250,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'Join this group to post.',
+                l10n.groupFeedJoinToPostLabel,
                 style: GoogleFonts.inter(color: scheme.onSurface.withValues(alpha: 0.8)),
               ),
             ),
@@ -899,6 +899,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                 child: FutureBuilder<List<CommunityLikeUser>>(
                   future: future,
                   builder: (context, snapshot) {
+                    final l10n = AppLocalizations.of(context)!;
                     if (snapshot.connectionState != ConnectionState.done) {
                       return Center(
                         child: SizedBox(
@@ -927,7 +928,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                               ),
                               const SizedBox(height: 12),
                               Text(
-                                'Failed to load likes',
+                                l10n.postDetailLoadLikesFailedMessage,
                                 style: GoogleFonts.inter(
                                   fontSize: 14,
                                   color: theme.colorScheme.onSurface,
@@ -951,11 +952,11 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
 
                     final likes = snapshot.data ?? <CommunityLikeUser>[];
                     if (likes.isEmpty) {
-                      return const Center(
+                      return Center(
                         child: EmptyStateCard(
                           icon: Icons.favorite_border,
-                          title: 'No likes yet',
-                          description: 'Be the first to like this post',
+                          title: l10n.postDetailNoLikesTitle,
+                          description: l10n.postDetailNoLikesDescription,
                         ),
                       );
                     }
@@ -965,7 +966,6 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                       itemCount: likes.length,
                       separatorBuilder: (_, __) => const Divider(height: 1),
                       itemBuilder: (context, index) {
-                        final l10n = AppLocalizations.of(context)!;
                         final user = likes[index];
                         final rawUsername = (user.username ?? '').trim();
                         final username = rawUsername.startsWith('@')
@@ -1067,10 +1067,11 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
             Expanded(
               child: FutureBuilder<List<Map<String, dynamic>>>(
                 future: BackendApiService().getPostReposts(postId: post.id),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
+                  builder: (context, snapshot) {
+                    final l10n = AppLocalizations.of(context)!;
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
                   if (snapshot.hasError) {
                     return Center(
                       child: Text(

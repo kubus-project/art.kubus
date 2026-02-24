@@ -1,6 +1,7 @@
 import "package:flutter/material.dart";
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../providers/dao_provider.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../widgets/charts/stats_interactive_bar_chart.dart';
@@ -30,6 +31,7 @@ class DAOAnalytics extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
@@ -38,7 +40,7 @@ class DAOAnalytics extends StatelessWidget {
         surfaceTintColor: Colors.transparent,
         scrolledUnderElevation: 0,
         title: Text(
-          'DAO Analytics',
+          l10n.daoAnalyticsTitle,
           style: GoogleFonts.inter(
             fontSize: 22,
             fontWeight: FontWeight.bold,
@@ -78,9 +80,9 @@ class DAOAnalytics extends StatelessWidget {
           final statusLabels = _categoryLabels(byStatus);
 
           final treasuryMap = <String, int>{
-            'Total': treasuryAmount.round(),
-            'Inflow': inflow.round(),
-            'Outflow': outflow.round(),
+            l10n.daoTreasuryTotalLabel: treasuryAmount.round(),
+            l10n.daoTreasuryInflowLabel: inflow.round(),
+            l10n.daoTreasuryOutflowLabel: outflow.round(),
           };
           final treasuryEntries = _categoryEntries(treasuryMap);
           final treasuryLabels = _categoryLabels(treasuryMap);
@@ -94,14 +96,14 @@ class DAOAnalytics extends StatelessWidget {
                 const SizedBox(height: 20),
                 _sectionCard(
                   context,
-                  title: 'Proposals by Type',
+                  title: l10n.daoAnalyticsProposalsByTypeTitle,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: byType.entries
                         .isEmpty
                         ? [
                             Text(
-                              'No proposals yet.',
+                              l10n.daoAnalyticsNoProposalsYetLabel,
                               style: GoogleFonts.inter(
                                 fontSize: 13,
                                 color: scheme.onSurface.withValues(alpha: 0.7),
@@ -128,14 +130,14 @@ class DAOAnalytics extends StatelessWidget {
                 const SizedBox(height: 16),
                 _sectionCard(
                   context,
-                  title: 'Proposals by Status',
+                  title: l10n.daoAnalyticsProposalsByStatusTitle,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: byStatus.entries
                         .isEmpty
                         ? [
                             Text(
-                              'No proposals yet.',
+                              l10n.daoAnalyticsNoProposalsYetLabel,
                               style: GoogleFonts.inter(
                                 fontSize: 13,
                                 color: scheme.onSurface.withValues(alpha: 0.7),
@@ -162,7 +164,7 @@ class DAOAnalytics extends StatelessWidget {
                 const SizedBox(height: 16),
                 _sectionCard(
                   context,
-                  title: 'Treasury',
+                  title: l10n.daoHubTabTreasury,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -177,11 +179,11 @@ class DAOAnalytics extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      _rowStat(context, 'Total', '${treasuryAmount.toStringAsFixed(2)} KUB8'),
+                      _rowStat(context, l10n.daoTreasuryTotalLabel, '${treasuryAmount.toStringAsFixed(2)} KUB8'),
                       const SizedBox(height: 8),
-                      _rowStat(context, 'Inflow', '${inflow.toStringAsFixed(2)} KUB8'),
+                      _rowStat(context, l10n.daoTreasuryInflowLabel, '${inflow.toStringAsFixed(2)} KUB8'),
                       const SizedBox(height: 8),
-                      _rowStat(context, 'Outflow', '${outflow.toStringAsFixed(2)} KUB8'),
+                      _rowStat(context, l10n.daoTreasuryOutflowLabel, '${outflow.toStringAsFixed(2)} KUB8'),
                     ],
                   ),
                 ),

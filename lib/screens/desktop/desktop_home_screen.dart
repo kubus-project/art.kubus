@@ -1161,7 +1161,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                   children: suggestedKeys.map((key) {
                     final def = NavigationProvider.screenDefinitions[key]!;
                     return _buildQuickActionCard(
-                      def.name,
+                      def.labelKey.resolve(l10n),
                       def.icon,
                       _getScreenColor(key, Theme.of(context).colorScheme),
                       () => _handleQuickAction(key),
@@ -1180,7 +1180,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                 return Padding(
                   padding: const EdgeInsets.only(right: DetailSpacing.md),
                   child: _buildQuickActionCard(
-                    screen.name,
+                    screen.labelKey.resolve(l10n),
                     screen.icon,
                     _getScreenColor(screen.key, Theme.of(context).colorScheme),
                     () => _handleQuickAction(screen.key),

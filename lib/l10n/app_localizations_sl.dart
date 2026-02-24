@@ -6978,4 +6978,1325 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get collectionCreatorNoArtworksAvailable => 'Ni razpoložljivih umetnin';
+
+  @override
+  String get commonChange => 'Spremeni';
+
+  @override
+  String get commonOpen => 'Odpri';
+
+  @override
+  String get commonLoading => 'Nalagam';
+
+  @override
+  String get desktopShellNavHome => 'Domov';
+
+  @override
+  String get desktopShellNavExplore => 'Raziskuj';
+
+  @override
+  String get desktopShellNavConnect => 'Poveži';
+
+  @override
+  String get desktopShellNavCreate => 'Ustvari';
+
+  @override
+  String get desktopShellNavOrganize => 'Organiziraj';
+
+  @override
+  String get desktopShellNavGovern => 'Upravljaj';
+
+  @override
+  String get desktopShellNavTrade => 'Trguj';
+
+  @override
+  String get desktopShellNavWeb3 => 'Web3';
+
+  @override
+  String get navigationScreenCreateAr => 'Ustvari AR';
+
+  @override
+  String get navigationScreenExploreMap => 'Raziskuj zemljevid';
+
+  @override
+  String get navigationScreenCommunity => 'Skupnost';
+
+  @override
+  String get navigationScreenProfile => 'Profil';
+
+  @override
+  String get navigationScreenMarketplace => 'Tržnica';
+
+  @override
+  String get navigationScreenWallet => 'Denarnica';
+
+  @override
+  String get navigationScreenAnalytics => 'Analitika';
+
+  @override
+  String get navigationScreenSettings => 'Nastavitve';
+
+  @override
+  String get navigationScreenMyStats => 'Moja statistika';
+
+  @override
+  String get navigationScreenAchievements => 'Dosežki';
+
+  @override
+  String get navigationScreenDaoHub => 'DAO središče';
+
+  @override
+  String get navigationScreenArtistStudio => 'Umetniški studio';
+
+  @override
+  String get navigationScreenInstitutionHub => 'Institucijsko središče';
+
+  @override
+  String get daoHubAppBarTitle => 'DAO upravljanje';
+
+  @override
+  String get daoHubHeaderSubtitle => 'Decentralizirano upravljanje za AR umetniško platformo';
+
+  @override
+  String get daoHubInfoDialogTitle => 'Kako deluje DAO upravljanje';
+
+  @override
+  String get daoHubInfoDialogBody => 'DAO omogoča skupnosti, da predlaga in glasuje o odločitvah platforme. Glasovalna moč temelji na tvojem stanju KUB8. Glasovalno moč lahko tudi delegiraš zaupanja vrednim delegatom.';
+
+  @override
+  String get daoHubTabActiveProposals => 'Predlogi';
+
+  @override
+  String get daoHubTabVotingHistory => 'Zgodovina glasovanja';
+
+  @override
+  String get daoHubTabCreateProposal => 'Ustvari';
+
+  @override
+  String get daoHubTabTreasury => 'Zakladnica';
+
+  @override
+  String get daoHubTabDelegation => 'Delegiranje';
+
+  @override
+  String get daoCreateProposalTitle => 'Ustvari nov predlog';
+
+  @override
+  String get daoCreateProposalSubtitle => 'Oddaj predlog, o katerem bo skupnost glasovala';
+
+  @override
+  String get daoCreateProposalFieldTitleLabel => 'Naslov predloga';
+
+  @override
+  String get daoCreateProposalFieldTitleHint => 'Vnesi jasen, opisni naslov';
+
+  @override
+  String get daoCreateProposalFieldDescriptionHint => 'Dodaj podrobno razlago predloga';
+
+  @override
+  String get daoCreateProposalFieldVotingPeriodLabel => 'Obdobje glasovanja (dni)';
+
+  @override
+  String get daoCreateProposalFieldVotingPeriodHint => 'Koliko dni naj bo glasovanje odprto?';
+
+  @override
+  String get daoCreateProposalSubmitButtonLabel => 'Oddaj predlog';
+
+  @override
+  String get daoProposalCategoryPlatformUpdate => 'Posodobitev platforme';
+
+  @override
+  String get daoProposalCategoryNewFeature => 'Nova funkcija';
+
+  @override
+  String get daoProposalCategoryPolicyChange => 'Sprememba pravil';
+
+  @override
+  String get daoProposalCategoryTreasuryAllocation => 'Razporeditev zakladnice';
+
+  @override
+  String get daoProposalCategoryCommunityInitiative => 'Skupnostna pobuda';
+
+  @override
+  String get daoProposalCategoryTechnicalImprovement => 'Tehnična izboljšava';
+
+  @override
+  String get daoVoteResultPassed => 'Sprejeto';
+
+  @override
+  String get daoVoteResultFailed => 'Ni sprejeto';
+
+  @override
+  String get daoVotingHistoryInfoDateLabel => 'Datum';
+
+  @override
+  String get daoVotingHistoryInfoYourVoteLabel => 'Tvoj glas';
+
+  @override
+  String get daoVotingHistoryInfoParticipationLabel => 'Udeležba';
+
+  @override
+  String get daoVotingHistoryInfoYourVotingPowerLabel => 'Tvoja glasovalna moč';
+
+  @override
+  String get desktopGovernanceSidebarOverviewTitle => 'Pregled DAO';
+
+  @override
+  String get desktopGovernanceSidebarQuickActionsTitle => 'Hitre akcije';
+
+  @override
+  String get desktopGovernanceQuickActionCreateProposalTitle => 'Ustvari predlog';
+
+  @override
+  String get desktopGovernanceQuickActionCreateProposalSubtitle => 'Oddaj novo idejo za upravljanje';
+
+  @override
+  String get desktopGovernanceQuickActionVoteTitle => 'Glasuj o predlogih';
+
+  @override
+  String get desktopGovernanceQuickActionVoteSubtitle => 'Sodeluj pri upravljanju';
+
+  @override
+  String get desktopGovernanceQuickActionAnalyticsTitle => 'Analitika';
+
+  @override
+  String get desktopGovernanceQuickActionAnalyticsSubtitle => 'Oglej si uspešnost DAO';
+
+  @override
+  String get desktopGovernanceAnalyticsScreenTitle => 'DAO analitika';
+
+  @override
+  String get desktopGovernanceSidebarStatisticsTitle => 'DAO statistika';
+
+  @override
+  String get desktopGovernanceSidebarRecentActivityTitle => 'Nedavna aktivnost';
+
+  @override
+  String get desktopGovernanceAcquireKub8Hint => 'Pridobi KUB8 žetone za sodelovanje pri upravljanju';
+
+  @override
+  String get profileEditTitle => 'Uredi profil';
+
+  @override
+  String get profileEditSaveChanges => 'Shrani spremembe';
+
+  @override
+  String get profileEditCoverImageClickToUpload => 'Klikni za nalaganje naslovne slike';
+
+  @override
+  String get profileEditCoverImageTapToAdd => 'Tapni za dodajanje naslovne slike';
+
+  @override
+  String profileEditCoverImageRecommendedSize(String size) {
+    return 'Priporočena velikost: $size';
+  }
+
+  @override
+  String get profileEditAvatarClickToChange => 'Klikni za spremembo avatarja';
+
+  @override
+  String get profileEditAvatarTapToChange => 'Tapni za spremembo avatarja';
+
+  @override
+  String get profileEditProfilePictureTitle => 'Profilna slika';
+
+  @override
+  String get profileEditBasicInformationTitle => 'Osnovni podatki';
+
+  @override
+  String get profileEditPublicProfileDetailsSubtitle => 'Podrobnosti javnega profila';
+
+  @override
+  String get profileEditUsernameLabel => 'Uporabniško ime';
+
+  @override
+  String get profileEditUsernameHint => 'Vnesi uporabniško ime';
+
+  @override
+  String get profileEditUsernameRequiredError => 'Uporabniško ime je obvezno';
+
+  @override
+  String get profileEditUsernameMinLengthError => 'Uporabniško ime mora imeti vsaj 3 znake';
+
+  @override
+  String get profileEditDisplayNameLabel => 'Prikazno ime';
+
+  @override
+  String get profileEditDisplayNameHint => 'Vnesi prikazno ime';
+
+  @override
+  String get profileEditDisplayNameRequiredError => 'Prikazno ime je obvezno';
+
+  @override
+  String get profileEditBioLabel => 'Bio';
+
+  @override
+  String get profileEditBioHint => 'Povej nekaj o sebi...';
+
+  @override
+  String get profileEditSocialLinksTitle => 'Družabne povezave';
+
+  @override
+  String get profileEditSocialLinksSubtitle => 'Poveži svoje družabne profile';
+
+  @override
+  String get profileEditSocialHandleHint => '@uporabniskoIme';
+
+  @override
+  String get profileEditSocialTwitterLabel => 'Twitter';
+
+  @override
+  String get profileEditSocialInstagramLabel => 'Instagram';
+
+  @override
+  String get profileEditSocialWebsiteLabel => 'Spletna stran';
+
+  @override
+  String get profileEditSocialWebsiteHint => 'https://...';
+
+  @override
+  String get profileEditSocialUrlInvalidError => 'URL mora začeti z http:// ali https://';
+
+  @override
+  String get profileEditArtistInformationTitle => 'Podatki o umetniku';
+
+  @override
+  String get profileEditArtistSpecialtiesLabel => 'Specialnosti';
+
+  @override
+  String get profileEditArtistSpecialtiesHint => 'npr. digitalna umetnost, kiparstvo, fotografija';
+
+  @override
+  String get profileEditArtistSpecialtiesHelper => 'Več specialnosti loči z vejicami';
+
+  @override
+  String get profileEditArtistYearsActiveLabel => 'Leta delovanja';
+
+  @override
+  String get profileEditArtistYearsActiveHint => 'Koliko let ustvarjaš umetnost?';
+
+  @override
+  String get profileEditArtistYearsActiveInvalidError => 'Vnesi veljavno število';
+
+  @override
+  String get profileEditInstitutionInformationTitle => 'Podatki o instituciji';
+
+  @override
+  String get profileEditInstitutionDetailsSubtitle => 'Podrobnosti o tvoji instituciji';
+
+  @override
+  String get profileEditArtistDetailsSubtitle => 'Dodatne podrobnosti o tvoji umetniški praksi';
+
+  @override
+  String get profileEditInstitutionFocusAreasLabel => 'Področja fokusa';
+
+  @override
+  String get profileEditInstitutionEstablishedYearLabel => 'Leto ustanovitve';
+
+  @override
+  String get profileEditPrivacyVisibilityTitle => 'Zasebnost in vidnost';
+
+  @override
+  String get profileEditPrivacyVisibilitySubtitle => 'Nadziraj, kdo lahko vidi tvojo vsebino';
+
+  @override
+  String get profileEditInstitutionAboutTitle => 'O instituciji';
+
+  @override
+  String get profileEditInstitutionAboutBody => 'Uporabi bio in družabne povezave zgoraj za opis institucije. Razstave in dogodke lahko upravljaš v Institucijskem središču.';
+
+  @override
+  String get profileEditVerifiedStatusTitle => 'Preverjen status';
+
+  @override
+  String get profileEditVerifiedArtistTitle => 'Preverjen umetnik';
+
+  @override
+  String get profileEditVerifiedInstitutionTitle => 'Preverjena institucija';
+
+  @override
+  String get profileEditVerifiedArtistSubtitle => 'Tvoj status umetnika potrdi DAO';
+
+  @override
+  String get profileEditVerifiedInstitutionSubtitle => 'Tvoj status institucije potrdi DAO';
+
+  @override
+  String get profileEditProfileUpdatedToast => 'Profil uspešno posodobljen!';
+
+  @override
+  String profileEditErrorToast(String error) {
+    return 'Napaka: $error';
+  }
+
+  @override
+  String get profileEditNoWalletUploadAvatarToast => 'Denarnica ni povezana. Poveži denarnico za nalaganje avatarja.';
+
+  @override
+  String get profileEditNoWalletUploadCoverToast => 'Denarnica ni povezana. Poveži denarnico za nalaganje naslovne slike.';
+
+  @override
+  String get profileEditAvatarCopiedToClipboardToast => 'URL avatarja kopiran v odložišče';
+
+  @override
+  String get profileEditAvatarUploadedSavedToast => 'Avatar naložen in shranjen!';
+
+  @override
+  String get profileEditAvatarUploadedLocalToast => 'Avatar naložen lokalno (shranjevanje ni uspelo)';
+
+  @override
+  String profileEditAvatarUploadFailedToast(String error) {
+    return 'Nalaganje ni uspelo: $error';
+  }
+
+  @override
+  String get profileEditCoverUploadedSavedToast => 'Naslovna slika naložena!';
+
+  @override
+  String get profileEditCoverUploadedLocalToast => 'Naslovna slika naložena lokalno';
+
+  @override
+  String profileEditCoverUploadFailedToast(String error) {
+    return 'Nalaganje naslovne slike ni uspelo: $error';
+  }
+
+  @override
+  String profileEditPickImageFailedToast(String error) {
+    return 'Napaka pri izbiri slike: $error';
+  }
+
+  @override
+  String get profileEditUploadDebugInfoTitle => 'Razhroščevalni podatki nalaganja';
+
+  @override
+  String get profileEditUploadDebugInfoCopiedToast => 'Razhroščevalni podatki kopirani v odložišče';
+
+  @override
+  String get desktopCommunityTabDiscover => 'Odkrij';
+
+  @override
+  String get desktopCommunityTabFollowing => 'Slediš';
+
+  @override
+  String get desktopCommunityTabGroups => 'Skupine';
+
+  @override
+  String get desktopCommunityTabArt => 'Umetnost';
+
+  @override
+  String get desktopCommunityHeaderTitle => 'Skupnost';
+
+  @override
+  String get desktopCommunityHeaderSubtitle => 'Poveži se z umetniki in zbiratelji';
+
+  @override
+  String get desktopCommunitySearchHint => 'Išči objave, uporabnike, oznake...';
+
+  @override
+  String get desktopCommunitySearchMinCharsHint => 'Za iskanje vpiši vsaj 2 znaka';
+
+  @override
+  String get desktopCommunitySearchNoResults => 'Ni rezultatov';
+
+  @override
+  String get desktopCommunityFilterAllPosts => 'Vse objave';
+
+  @override
+  String get desktopCommunityFilterFollowing => 'Slediš';
+
+  @override
+  String get desktopCommunityFilterArOnly => 'Samo AR';
+
+  @override
+  String get desktopCommunitySortPopularity => 'Priljubljenost';
+
+  @override
+  String get desktopCommunitySortRecent => 'Najnovejše';
+
+  @override
+  String get desktopCommunitySortTitle => 'Razvrsti';
+
+  @override
+  String get desktopCommunitySortTop => 'Top';
+
+  @override
+  String get desktopCommunityFollowButton => 'Sledi';
+
+  @override
+  String get desktopCommunityFollowingButton => 'Slediš';
+
+  @override
+  String get desktopCommunityBackToFeedTooltip => 'Nazaj na objave';
+
+  @override
+  String get desktopCommunitySortedByPopularityTooltip => 'Razvrščeno po priljubljenosti';
+
+  @override
+  String get desktopCommunitySortedByRecentTooltip => 'Razvrščeno po najnovejših';
+
+  @override
+  String desktopCommunityTaggedPostsLabel(String count) {
+    return '$count objav z oznako';
+  }
+
+  @override
+  String get desktopCommunityTagUnavailableTitle => 'Oznaka ni na voljo';
+
+  @override
+  String get desktopCommunityTagUnavailableBody => 'Te oznake ni bilo mogoče odpreti. Morda je bila odstranjena ali trenutno ni na voljo.';
+
+  @override
+  String desktopCommunityPopularForTagTitle(String tag) {
+    return 'Priljubljeno za #$tag';
+  }
+
+  @override
+  String get desktopCommunityLoadingPostsLabel => 'Nalagam objave...';
+
+  @override
+  String get desktopCommunityEmptyDiscoverTitle => 'Še ni objav';
+
+  @override
+  String get desktopCommunityEmptyDiscoverBody => 'Objave ustvarjalcev z vsega sveta se bodo prikazale tukaj.';
+
+  @override
+  String get desktopCommunityEmptySearchBody => 'Nobena objava se ne ujema z iskanjem.';
+
+  @override
+  String get desktopCommunityEmptyFollowingTitle => 'Ni objav ustvarjalcev, ki jim slediš';
+
+  @override
+  String get desktopCommunityEmptyFollowingBody => 'Sledi umetnikom in ustvarjalcem, da se njihove objave prikažejo tukaj.';
+
+  @override
+  String get desktopCommunityLoadingNearbyArtLabel => 'Nalagam bližnjo umetnost...';
+
+  @override
+  String get desktopCommunityEmptyNearbyArtTitle => 'Ni bližnje umetnosti';
+
+  @override
+  String get desktopCommunityEmptyNearbyArtBody => 'Razišči okolico in odkrij lokacijsko vezano umetnost.';
+
+  @override
+  String get desktopCommunityEmptySearchTitle => 'Nobena objava se ne ujema z iskanjem';
+
+  @override
+  String get desktopCommunityEmptySearchSubtitle => 'Poskusi z drugačnimi ključnimi besedami.';
+
+  @override
+  String get desktopCommunityLoadingGroupsLabel => 'Nalagam skupine...';
+
+  @override
+  String get desktopCommunityEmptyGroupsTitle => 'Še ni skupin';
+
+  @override
+  String get desktopCommunityEmptyGroupsBody => 'Pridruži se ali ustvari skupine za povezovanje z ljubitelji umetnosti.';
+
+  @override
+  String get desktopCommunityCreateFabLabel => 'Ustvari';
+
+  @override
+  String get desktopCommunityCreateFabCloseLabel => 'Zapri';
+
+  @override
+  String get desktopCommunityCreateOptionCreateGroup => 'Ustvari skupino';
+
+  @override
+  String get desktopCommunityCreateOptionGroupPost => 'Objava v skupini';
+
+  @override
+  String get desktopCommunityCreateOptionArtDrop => 'Umetniški drop';
+
+  @override
+  String get desktopCommunityCreateOptionPostReview => 'Ocena objave';
+
+  @override
+  String get desktopCommunityCreateOptionPost => 'Objava';
+
+  @override
+  String get desktopCommunityComposerTypePostLabel => 'Objava';
+
+  @override
+  String get desktopCommunityComposerTypePostDescription => 'Deli novost s skupnostjo';
+
+  @override
+  String get desktopCommunityComposerTypeArtDropLabel => 'Umetniški drop';
+
+  @override
+  String get desktopCommunityComposerTypeArtDropDescription => 'Izpostavi lokacijsko aktivacijo';
+
+  @override
+  String get desktopCommunityComposerTypeArtReviewLabel => 'Ocena umetnine';
+
+  @override
+  String get desktopCommunityComposerTypeArtReviewDescription => 'Deli svoje mnenje o umetnini';
+
+  @override
+  String get desktopCommunityComposerTypeEventLabel => 'Dogodek';
+
+  @override
+  String get desktopCommunityComposerTypeEventDescription => 'Najavi srečanja in druženja';
+
+  @override
+  String get desktopCommunityComposerTypeQuestionLabel => 'Vprašanje';
+
+  @override
+  String get desktopCommunityComposerTypeQuestionDescription => 'Vprašaj skupnost za povratne informacije';
+
+  @override
+  String get desktopNavigationExpandTooltip => 'Razširi navigacijo';
+
+  @override
+  String get desktopNavigationCollapseTooltip => 'Skrči navigacijo';
+
+  @override
+  String get desktopNavigationSubtitle => 'Umetniška platforma';
+
+  @override
+  String get profilePersonaArtEnthusiast => 'Ljubitelj umetnosti';
+
+  @override
+  String get userProfileAchievementCategoryEvents => 'Dogodki';
+
+  @override
+  String get userProfileAchievementCategoryDiscovery => 'Odkritja';
+
+  @override
+  String get userProfileAchievementCategoryAr => 'AR';
+
+  @override
+  String get userProfileAchievementCategoryNft => 'NFT';
+
+  @override
+  String get userProfileAchievementCategoryCommunity => 'Skupnost';
+
+  @override
+  String get userProfileAchievementCategorySocial => 'Družabno';
+
+  @override
+  String get userProfileAchievementCategoryTrading => 'Trgovanje';
+
+  @override
+  String get userProfileAchievementCategorySpecial => 'Posebno';
+
+  @override
+  String get daoHubStatYourVotingPowerLabel => 'Tvoja glasovalna moč';
+
+  @override
+  String get daoHubStatActiveProposalsLabel => 'Aktivni predlogi';
+
+  @override
+  String get daoHubStatTotalDelegatesLabel => 'Skupaj delegatov';
+
+  @override
+  String get daoDelegationCurrentStatusTitle => 'Tvoj status delegiranja';
+
+  @override
+  String get daoDelegationDelegatorsLabel => 'Delegatorji';
+
+  @override
+  String get daoDelegationSelfLabel => 'Jaz';
+
+  @override
+  String get commonDialogSemanticLabel => 'Dialog';
+
+  @override
+  String get commonFailedToLoadLabel => 'Failed to load';
+
+  @override
+  String get commonSubmit => 'Pošlji';
+
+  @override
+  String get commonUser => 'User';
+
+  @override
+  String commonTimeAgoMonths(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'pred $count mes.',
+      one: 'pred 1 mes.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String commonTimeAgoYears(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'pred $count let',
+      one: 'pred 1 leto',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get postDetailPostUnlikedToast => 'Všeček odstranjen';
+
+  @override
+  String get communityBookmarkSaveForLaterTooltip => 'Save for later';
+
+  @override
+  String get communityBookmarkRemoveTooltip => 'Remove bookmark';
+
+  @override
+  String get communityQuickRepostAction => 'Hitro ponovno objavi';
+
+  @override
+  String get communityRepostWithCommentAction => 'Ponovno objavi s komentarjem';
+
+  @override
+  String get communityRepostWithCommentHint => 'Dodaj svoje misli (neobvezno)';
+
+  @override
+  String get communityRepostButtonLabel => 'Ponovno objavi';
+
+  @override
+  String get communityRepostedToast => 'Ponovno objavljeno';
+
+  @override
+  String get communityRepostedWithCommentToast => 'Ponovno objavljeno s komentarjem';
+
+  @override
+  String get desktopCommunityActiveCommunitiesTitle => 'Aktivne skupnosti';
+
+  @override
+  String get desktopCommunityNoCommunitiesFoundLabel => 'Ni najdenih skupnosti';
+
+  @override
+  String desktopCommunityViewAllCommunitiesButtonLabel(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count skupnosti',
+      one: '1 skupnost',
+    );
+    return 'Prikaži vse $_temp0';
+  }
+
+  @override
+  String get desktopCommunityGroupJoinedLabel => 'Joined';
+
+  @override
+  String get desktopCommunityGroupsSearchHint => 'Išči skupine...';
+
+  @override
+  String desktopCommunityGroupMembersLabel(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count članov',
+      few: '$count člani',
+      two: '2 člana',
+      one: '1 član',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String desktopCommunityLatestLabel(Object timeAgo) {
+    return 'Latest: $timeAgo';
+  }
+
+  @override
+  String get desktopCommunitySearchMessagesHint => 'Išči sporočila...';
+
+  @override
+  String get desktopCommunitySelectCommunityDialogTitle => 'Izberi skupnost';
+
+  @override
+  String get desktopCommunitySearchUsersHint => 'Search users...';
+
+  @override
+  String get desktopCommunitySearchUsersToMessageHint => 'Search for users to message';
+
+  @override
+  String get desktopCommunityNewMessageTitle => 'New message';
+
+  @override
+  String get desktopCommunitySearchFailedTryAgain => 'Search failed. Try again.';
+
+  @override
+  String get desktopCommunityMessagesEmptyTitle => 'Še ni sporočil';
+
+  @override
+  String get desktopCommunityMessagesEmptySubtitle => 'Začni pogovor z umetnikom';
+
+  @override
+  String get desktopCommunityMessagesNoMatchesTitle => 'No matches found';
+
+  @override
+  String desktopCommunityMessagesNoResultsBody(Object query) {
+    return 'We couldn\'t find any conversations, members, or messages matching \"$query\".';
+  }
+
+  @override
+  String desktopCommunityMessagesSearchResultsLabel(num count, Object query) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count results',
+      one: '1 result',
+    );
+    return 'Showing $_temp0 for \"$query\"';
+  }
+
+  @override
+  String get desktopCommunityAddHandleButtonLabel => 'Add handle';
+
+  @override
+  String get desktopCommunityAddTagDialogTitle => 'Dodaj oznako';
+
+  @override
+  String get desktopCommunityAddTagDialogHint => 'Vnesi oznako (npr. art, fotografija)';
+
+  @override
+  String get desktopCommunityAddTagHint => 'Add tag';
+
+  @override
+  String get desktopCommunityMentionDialogTitle => 'Mention someone';
+
+  @override
+  String get desktopCommunitySearchPeopleHint => 'Search artists, collectors, or wallets';
+
+  @override
+  String get desktopCommunityMentionHint => 'Mention';
+
+  @override
+  String get desktopCommunityBrowseTagsTooltip => 'Browse tags';
+
+  @override
+  String get desktopCommunityFindProfilesTooltip => 'Find profiles';
+
+  @override
+  String get desktopCommunityAddToPostTooltip => 'Add to post';
+
+  @override
+  String get desktopCommunityTagLocationButtonLabel => 'Tag a location';
+
+  @override
+  String get desktopCommunityTagLocationDialogTitle => 'Označi lokacijo';
+
+  @override
+  String get desktopCommunityLocationSearchHint => 'npr. Ljubljana, Slovenija';
+
+  @override
+  String get desktopCommunityClearSelectionButtonLabel => 'Počisti izbor';
+
+  @override
+  String get desktopCommunityTargetCommunityOptionalTitle => 'Target a community (optional)';
+
+  @override
+  String get desktopCommunityTargetCommunityNoGroupHint => 'Posts shared to groups notify members instantly.';
+
+  @override
+  String desktopCommunityTargetCommunityPostingToLabel(Object groupName) {
+    return 'Posting to $groupName';
+  }
+
+  @override
+  String get desktopCommunityRemoveGroupTooltip => 'Remove group';
+
+  @override
+  String get desktopCommunityArAttachmentsTitle => 'AR priloge';
+
+  @override
+  String get desktopCommunityArAttachmentsBody => 'Dodaj AR sredstva iz mobilne naprave, da zagotoviš združljivost z ARCore/ARKit. Objavo lahko še vedno označiš in nadaljuješ z urejanjem tukaj.';
+
+  @override
+  String get desktopCommunityDownloadAppTitle => 'Prenesi aplikacijo';
+
+  @override
+  String get desktopCommunityDownloadAppButtonLabel => 'Prenesi aplikacijo';
+
+  @override
+  String get desktopCommunitySharedPhotoFallbackContent => 'Delil(-a) fotografijo';
+
+  @override
+  String get desktopCommunityJoinGroupToPostToast => 'Pridruži se skupini za objavo.';
+
+  @override
+  String get desktopCommunityPostPublishedToast => 'Post published!';
+
+  @override
+  String get desktopCommunityPostPublishFailedToast => 'Failed to post.';
+
+  @override
+  String get desktopCommunityPostCreatedSuccessToast => 'Post created successfully!';
+
+  @override
+  String get desktopCommunityPostCreateFailedToast => 'Failed to create post.';
+
+  @override
+  String get desktopCommunityCreatePostTitle => 'Create post';
+
+  @override
+  String get desktopCommunityComposerPromptHint => 'Share what you\'re building, discovering, or thinking...';
+
+  @override
+  String get desktopCommunityComposerWhatsHappeningHint => 'What\'s happening?';
+
+  @override
+  String get desktopCommunityComposerPhotoLabel => 'Photo';
+
+  @override
+  String get desktopCommunityComposerLocationLabel => 'Location';
+
+  @override
+  String get desktopCommunityComposerTagLabel => 'Tag';
+
+  @override
+  String get desktopCommunityComposerMentionLabel => 'Mention';
+
+  @override
+  String get desktopCommunityComposerAddImageTooltip => 'Add image';
+
+  @override
+  String get desktopCommunityComposerAddArContentTooltip => 'Add AR content';
+
+  @override
+  String get desktopCommunityComposerAddLocationTooltip => 'Add location';
+
+  @override
+  String get desktopCommunityComposerMentionUserTooltip => 'Mention user';
+
+  @override
+  String get desktopCommunityComposerAddEmojiTooltip => 'Add emoji';
+
+  @override
+  String get desktopCommunityCreateGroupNameLabel => 'Ime skupine';
+
+  @override
+  String get desktopCommunityCreateGroupDescriptionLabel => 'Opis (neobvezno)';
+
+  @override
+  String get desktopCommunityArtUseCurrentAreaButton => 'Uporabi trenutno območje';
+
+  @override
+  String get desktopCommunityArtWiderRadiusButton => 'Širši radij';
+
+  @override
+  String get desktopCommunityArArtworkLabel => 'AR artwork';
+
+  @override
+  String get desktopCommunityArArtworkSubtitle => 'Tap to view in augmented reality';
+
+  @override
+  String desktopCommunityTagFeedLoadingPostsLabel(Object tag) {
+    return 'Nalagam objave za #$tag...';
+  }
+
+  @override
+  String desktopCommunityTagFeedEmptyTitle(Object tag) {
+    return 'Ni objav za #$tag';
+  }
+
+  @override
+  String desktopCommunityTagFeedEmptyBody(Object tag) {
+    return 'Ustvari ali odkrij objave z oznako #$tag, da se prikažejo tukaj.';
+  }
+
+  @override
+  String desktopCommunityTagFeedNoPostsFoundError(Object tag) {
+    return 'No posts found for #$tag';
+  }
+
+  @override
+  String desktopCommunityTagFeedTopPostsTitle(Object tag) {
+    return 'Najboljše objave za #$tag';
+  }
+
+  @override
+  String get desktopCommunityTagFeedSortedByPopularityDescription => 'Razvrščeno po priljubljenosti (všečki, delitve, komentarji in ogledi).';
+
+  @override
+  String desktopCommunityTagFeedTaggedPostsAcrossCommunityLabel(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count objav z oznako v skupnosti',
+      few: '$count objave z oznako v skupnosti',
+      two: '2 objavi z oznako v skupnosti',
+      one: '1 objava z oznako v skupnosti',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get desktopCommunityTrendingTitle => 'Trendi';
+
+  @override
+  String get desktopCommunityTrendingLoadFailedTapToRetry => 'Trendov ni bilo mogoče naložiti. Tapni za ponovni poskus.';
+
+  @override
+  String get desktopCommunityTrendingEmptyLabel => 'Še ni trendovskih oznak. Sodeluj v skupnosti, da se pojavijo trendi.';
+
+  @override
+  String get desktopCommunityTrendingBasedOnRecentPostsLabel => 'Na podlagi nedavnih objav';
+
+  @override
+  String get desktopCommunityWhoToFollowTitle => 'Komu slediti';
+
+  @override
+  String get desktopCommunitySuggestionsLoadFailedTapToRetry => 'Predlogov ni bilo mogoče naložiti. Tapni za ponovni poskus.';
+
+  @override
+  String get desktopCommunitySuggestionsEmptyLabel => 'Sledi umetnikom, da prilagodiš svoj feed.';
+
+  @override
+  String get profileInvitesTooltip => 'Vabila';
+
+  @override
+  String get profileConnectWalletToSeeProfileLabel => 'Connect wallet to see profile';
+
+  @override
+  String get profileMoreOptionsTitle => 'More options';
+
+  @override
+  String get profileNoBioYetTitle => 'No bio yet';
+
+  @override
+  String get profileNoBioYetDescription => 'Tap \"Edit Profile\" to add a short bio about yourself.';
+
+  @override
+  String get profileNoPostsYetDescription => 'Deli svoj pogled s skupnostjo, da se prikaže tukaj.';
+
+  @override
+  String get profileUpcomingEventsTitle => 'Upcoming events';
+
+  @override
+  String get profileUpcomingEventsEmptyLabel => 'Plan an event or workshop to engage your audience.';
+
+  @override
+  String get profileArtistHighlightsSubtitle => 'Keep your artworks and collections front and center.';
+
+  @override
+  String get profileArtistArtworksEmptyLabel => 'Naloži svojo prvo umetnino, da jo predstaviš tukaj.';
+
+  @override
+  String get profileArtistCollectionsEmptyLabel => 'Create a collection to curate your story.';
+
+  @override
+  String get profileInstitutionHighlightsSubtitle => 'Promote upcoming programs and featured collections.';
+
+  @override
+  String get profileInstitutionEventsEmptyLabel => 'Share your next exhibition or gathering here.';
+
+  @override
+  String get profileInstitutionCollectionsEmptyLabel => 'Curate institutional collections to highlight.';
+
+  @override
+  String profileShowcaseEmptyTitle(Object title) {
+    return 'Ni $title';
+  }
+
+  @override
+  String get profileArtworkMediumFallback => 'Digitalna umetnost';
+
+  @override
+  String get profileCollectionFallbackTitle => 'Nova zbirka';
+
+  @override
+  String get profileCollectionCuratedByYouFooter => 'Kurirano od tebe';
+
+  @override
+  String get profileEventFallbackTitle => 'Dogodek';
+
+  @override
+  String get profileEventLocationTba => 'Še ni določeno';
+
+  @override
+  String get profileAchievementsEmptyTitle => 'Še ni dosežkov';
+
+  @override
+  String get profilePerformanceSectionTitle => 'Uspešnost';
+
+  @override
+  String get profilePerformanceArtworksViewedTitle => 'Ogledane umetnine';
+
+  @override
+  String get profilePerformanceDiscoveriesTitle => 'Odkritja';
+
+  @override
+  String get profilePerformanceCreatedOwnedTitle => 'Created / owned';
+
+  @override
+  String get profilePerformanceFollowersFollowingTitle => 'Followers / following';
+
+  @override
+  String get profileMenuSavedItemsTitle => 'Saved items';
+
+  @override
+  String get profileMenuViewHistoryTitle => 'Zgodovina ogledov';
+
+  @override
+  String get profileMenuHelpSupportTitle => 'Help & support';
+
+  @override
+  String get profileHelpSupportTitle => 'Pomoč in podpora';
+
+  @override
+  String get profileHelpDocumentationOption => 'Dokumentacija';
+
+  @override
+  String get profileHelpContactSupportOption => 'Kontaktiraj podporo';
+
+  @override
+  String get profileHelpReportBugOption => 'Prijavi napako';
+
+  @override
+  String get profileHelpAboutOption => 'O art.kubus';
+
+  @override
+  String get profileHelpOpeningDocumentationToast => 'Odpiram dokumentacijo...';
+
+  @override
+  String get profileContactSupportTitle => 'Kontaktiraj podporo';
+
+  @override
+  String get profileContactSupportSubtitle => 'Pomoč naše podpore:';
+
+  @override
+  String get profileContactSupportEmailLabel => 'E-pošta';
+
+  @override
+  String get profileContactSupportLiveChatLabel => 'Klepet v živo';
+
+  @override
+  String get profileContactSupportLiveChatAvailability => 'Na voljo Pon-Pet 9:00-17:00';
+
+  @override
+  String get profileContactSupportWebsiteLabel => 'Spletna stran';
+
+  @override
+  String get profileReportBugTitle => 'Prijavi napako';
+
+  @override
+  String get profileReportBugSubtitle => 'Opiši težavo, na katero si naletel:';
+
+  @override
+  String get profileReportBugHint => 'Vnesi opis napake...';
+
+  @override
+  String get profileReportBugEmailSubject => 'Prijava napake';
+
+  @override
+  String get profileAnalyticsProfileTitle => 'Analitika profila';
+
+  @override
+  String get profileAnalyticsCommunityTitle => 'Analitika skupnosti';
+
+  @override
+  String get profileAboutTitle => 'O art.kubus';
+
+  @override
+  String profileAboutVersionLabel(Object version) {
+    return 'Različica $version';
+  }
+
+  @override
+  String get profileAboutDescription => 'AR umetniška platforma, ki povezuje umetnike in institucije prek tehnologije veriženja blokov.';
+
+  @override
+  String get profileAboutCopyright => 'Avtorske pravice (c) 2024 kubus Project';
+
+  @override
+  String get groupFeedSignInToPostLabel => 'Prijavi se za objavo.';
+
+  @override
+  String get groupFeedJoinToPostLabel => 'Pridruži se tej skupini za objavo.';
+
+  @override
+  String get analyticsDisabledTitle => 'Analitika onemogočena';
+
+  @override
+  String get analyticsDisabledDescription => 'Ta funkcija je trenutno izklopljena.';
+
+  @override
+  String get analyticsNoProfileSelectedTitle => 'Profil ni izbran';
+
+  @override
+  String get analyticsNoProfileSelectedDescription => 'Manjka naslov denarnice.';
+
+  @override
+  String get analyticsPausedTitle => 'Analitika začasno ustavljena';
+
+  @override
+  String get analyticsPausedDescription => 'Omogoči analitiko v nastavitvah za prikaz grafov.';
+
+  @override
+  String get analyticsUnableToLoadTitle => 'Ni bilo mogoče naložiti';
+
+  @override
+  String get analyticsUnableToLoadDescription => 'Poskusi znova pozneje.';
+
+  @override
+  String get analyticsNoDataYetTitle => 'Za zdaj ni podatkov';
+
+  @override
+  String get analyticsNoDataYetDescription => 'Graf se bo zapolnil, ko bo aktivnost na voljo.';
+
+  @override
+  String get analyticsTimeframeLabel => 'Obdobje';
+
+  @override
+  String get analyticsMetricLabel => 'Meritev';
+
+  @override
+  String get analyticsYourAnalyticsTitle => 'Tvoja analitika';
+
+  @override
+  String get analyticsPublicAnalyticsTitle => 'Javna analitika';
+
+  @override
+  String get analyticsPostsCreatedTitle => 'Ustvarjene objave';
+
+  @override
+  String get analyticsMetricLikesReceivedLabel => 'Prejeti všečki';
+
+  @override
+  String get analyticsMetricViewsReceivedLabel => 'Prejeti ogledi';
+
+  @override
+  String get analyticsMetricEngagementLabel => 'Vključenost';
+
+  @override
+  String get analyticsMetricViewsGivenLabel => 'Oddani ogledi';
+
+  @override
+  String get userProfileCollectionsDesktopSubtitle => 'Kurirani izbori del';
+
+  @override
+  String get userProfileNoCollectionsTitle => 'Še ni zbirk';
+
+  @override
+  String get desktopProfileHeaderSubtitle => 'Upravljaj svojo identiteto in vsebino';
+
+  @override
+  String get desktopProfileShareProfileLabel => 'Deli profil';
+
+  @override
+  String get desktopProfilePortfolioTitle => 'Portfelj';
+
+  @override
+  String get desktopProfilePortfolioSubtitle => 'Tvoje umetnine in ustvarjalno delo';
+
+  @override
+  String get desktopProfileNoCollectionsDescription => 'Ustvari zbirke za organizacijo in kuriranje svojega dela.';
+
+  @override
+  String get desktopProfileEventsTitle => 'Dogodki in razstave';
+
+  @override
+  String get desktopProfileEventsSubtitle => 'Tvoji prihajajoči in pretekli dogodki';
+
+  @override
+  String get desktopProfileNoEventsTitle => 'Še ni dogodkov';
+
+  @override
+  String get desktopProfileNoEventsDescription => 'Načrtuj razstave, delavnice ali srečanja za povezovanje z zbiratelji.';
+
+  @override
+  String get desktopProfileInstitutionProgramsTitle => 'Razstave in programi';
+
+  @override
+  String get desktopProfileInstitutionProgramsSubtitle => 'Tvoje izpostavljene razstave in dogodki';
+
+  @override
+  String get desktopProfileNoExhibitionsTitle => 'Še ni razstav';
+
+  @override
+  String get desktopProfileNoExhibitionsDescription => 'Ustvari razstave in programe za predstavitev institucionalnih aktivnosti.';
+
+  @override
+  String get desktopProfilePermanentCollectionTitle => 'Stalna zbirka';
+
+  @override
+  String get desktopProfilePermanentCollectionSubtitle => 'Izpostavljena dela v tvoji zbirki';
+
+  @override
+  String get desktopProfilePermanentCollectionEmptyDescription => 'Kuriraj zbirke za poudarek institucionalnih del.';
+
+  @override
+  String get desktopProfileRecentlyViewedTitle => 'Nedavno ogledano';
+
+  @override
+  String get desktopProfileRecentlyViewedSubtitle => 'Umetnine, ki si jih odkril(-a)';
+
+  @override
+  String get desktopProfileNoViewedArtworksTitle => 'Še ni ogledanih umetnin';
+
+  @override
+  String get desktopProfileNoViewedArtworksDescription => 'Raziskuj zemljevid, odkrij umetnine in zgradi zgodovino ogledov.';
+
+  @override
+  String get desktopProfilePerformanceSubtitle => 'Tvoja aktivnost in metrika vključenosti';
+
+  @override
+  String get desktopProfilePerformanceCreatedTitle => 'Ustvarjeno';
+
+  @override
+  String get desktopProfilePerformanceNftsOwnedTitle => 'NFT-ji v lasti';
+
+  @override
+  String get desktopProfileAchievementsSubtitle => 'Tvoj napredek in mejniki';
+
+  @override
+  String get desktopProfileYourPostsTitle => 'Tvoje objave';
+
+  @override
+  String get desktopProfileYourPostsSubtitle => 'Vsebina, ki si jo delil s skupnostjo';
+
+  @override
+  String get commonUnknownArtist => 'Neznan umetnik';
+
+  @override
+  String get daoAnalyticsTitle => 'DAO analitika';
+
+  @override
+  String get daoAnalyticsProposalsByTypeTitle => 'Predlogi po vrsti';
+
+  @override
+  String get daoAnalyticsProposalsByStatusTitle => 'Predlogi po statusu';
+
+  @override
+  String get daoAnalyticsNoProposalsYetLabel => 'Še ni predlogov.';
+
+  @override
+  String get daoTreasuryTotalLabel => 'Skupaj';
+
+  @override
+  String get daoTreasuryTotalValueLabel => 'Skupna vrednost zakladnice';
+
+  @override
+  String get daoDelegationSelectDelegateTitle => 'Izberi delegata';
+
+  @override
+  String get daoDelegationSelectDelegateSubtitle => 'Izberi zaupanja vrednega člana skupnosti, ki bo glasoval v tvojem imenu';
+
+  @override
+  String daoDelegationDelegatorsCountLabel(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count delegatorjev',
+      few: '$count delegatorji',
+      two: '2 delegatorja',
+      one: '1 delegator',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String daoDelegationParticipationRateLabel(Object percent) {
+    return '$percent% udeležbe';
+  }
+
+  @override
+  String daoProposalVotesSupportSummaryLabel(Object totalVotes, Object supportPct) {
+    return '$totalVotes glasov • $supportPct% podpore';
+  }
+
+  @override
+  String get commonSearchHint => 'Išči…';
 }

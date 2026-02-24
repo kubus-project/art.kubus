@@ -18,25 +18,74 @@ import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 @immutable
 class ScreenDefinition {
-  final String name;
+  final NavigationScreenLabelKey labelKey;
   final IconData icon;
 
   const ScreenDefinition({
-    required this.name,
+    required this.labelKey,
     required this.icon,
   });
+}
+
+enum NavigationScreenLabelKey {
+  createAr,
+  exploreMap,
+  community,
+  profile,
+  marketplace,
+  wallet,
+  analytics,
+  settings,
+  myStats,
+  achievements,
+  daoHub,
+  artistStudio,
+  institutionHub,
+}
+
+extension NavigationScreenLabelKeyX on NavigationScreenLabelKey {
+  String resolve(AppLocalizations l10n) {
+    switch (this) {
+      case NavigationScreenLabelKey.createAr:
+        return l10n.navigationScreenCreateAr;
+      case NavigationScreenLabelKey.exploreMap:
+        return l10n.navigationScreenExploreMap;
+      case NavigationScreenLabelKey.community:
+        return l10n.navigationScreenCommunity;
+      case NavigationScreenLabelKey.profile:
+        return l10n.navigationScreenProfile;
+      case NavigationScreenLabelKey.marketplace:
+        return l10n.navigationScreenMarketplace;
+      case NavigationScreenLabelKey.wallet:
+        return l10n.navigationScreenWallet;
+      case NavigationScreenLabelKey.analytics:
+        return l10n.navigationScreenAnalytics;
+      case NavigationScreenLabelKey.settings:
+        return l10n.navigationScreenSettings;
+      case NavigationScreenLabelKey.myStats:
+        return l10n.navigationScreenMyStats;
+      case NavigationScreenLabelKey.achievements:
+        return l10n.navigationScreenAchievements;
+      case NavigationScreenLabelKey.daoHub:
+        return l10n.navigationScreenDaoHub;
+      case NavigationScreenLabelKey.artistStudio:
+        return l10n.navigationScreenArtistStudio;
+      case NavigationScreenLabelKey.institutionHub:
+        return l10n.navigationScreenInstitutionHub;
+    }
+  }
 }
 
 @immutable
 class QuickActionScreen {
   final String key;
-  final String name;
+  final NavigationScreenLabelKey labelKey;
   final IconData icon;
   final int visitCount;
 
   const QuickActionScreen({
     required this.key,
-    required this.name,
+    required this.labelKey,
     required this.icon,
     required this.visitCount,
   });
@@ -56,19 +105,19 @@ class NavigationProvider with ChangeNotifier {
 
   // Screen definitions with their display names and navigation actions
   static const Map<String, ScreenDefinition> screenDefinitions = {
-    'ar': ScreenDefinition(name: 'Create AR', icon: Icons.add_box),
-    'map': ScreenDefinition(name: 'Explore Map', icon: Icons.explore),
-    'community': ScreenDefinition(name: 'Community', icon: Icons.people),
-    'profile': ScreenDefinition(name: 'Profile', icon: Icons.person),
-    'marketplace': ScreenDefinition(name: 'Marketplace', icon: Icons.store),
-    'wallet': ScreenDefinition(name: 'Wallet', icon: Icons.account_balance_wallet),
-    'analytics': ScreenDefinition(name: 'Analytics', icon: Icons.analytics),
-    'settings': ScreenDefinition(name: 'Settings', icon: Icons.settings),
-    'stats': ScreenDefinition(name: 'My Stats', icon: Icons.bar_chart),
-    'achievements': ScreenDefinition(name: 'Achievements', icon: Icons.emoji_events),
-    'dao_hub': ScreenDefinition(name: 'DAO Hub', icon: Icons.how_to_vote),
-    'studio': ScreenDefinition(name: 'Artist Studio', icon: Icons.palette),
-    'institution_hub': ScreenDefinition(name: 'Institution Hub', icon: Icons.location_city),
+    'ar': ScreenDefinition(labelKey: NavigationScreenLabelKey.createAr, icon: Icons.add_box),
+    'map': ScreenDefinition(labelKey: NavigationScreenLabelKey.exploreMap, icon: Icons.explore),
+    'community': ScreenDefinition(labelKey: NavigationScreenLabelKey.community, icon: Icons.people),
+    'profile': ScreenDefinition(labelKey: NavigationScreenLabelKey.profile, icon: Icons.person),
+    'marketplace': ScreenDefinition(labelKey: NavigationScreenLabelKey.marketplace, icon: Icons.store),
+    'wallet': ScreenDefinition(labelKey: NavigationScreenLabelKey.wallet, icon: Icons.account_balance_wallet),
+    'analytics': ScreenDefinition(labelKey: NavigationScreenLabelKey.analytics, icon: Icons.analytics),
+    'settings': ScreenDefinition(labelKey: NavigationScreenLabelKey.settings, icon: Icons.settings),
+    'stats': ScreenDefinition(labelKey: NavigationScreenLabelKey.myStats, icon: Icons.bar_chart),
+    'achievements': ScreenDefinition(labelKey: NavigationScreenLabelKey.achievements, icon: Icons.emoji_events),
+    'dao_hub': ScreenDefinition(labelKey: NavigationScreenLabelKey.daoHub, icon: Icons.how_to_vote),
+    'studio': ScreenDefinition(labelKey: NavigationScreenLabelKey.artistStudio, icon: Icons.palette),
+    'institution_hub': ScreenDefinition(labelKey: NavigationScreenLabelKey.institutionHub, icon: Icons.location_city),
   };
 
   Future<void> initialize() async {
@@ -222,7 +271,7 @@ class NavigationProvider with ChangeNotifier {
       final definition = screenDefinitions[screenKey]!;
       return QuickActionScreen(
         key: screenKey,
-        name: definition.name,
+        labelKey: definition.labelKey,
         icon: definition.icon,
         visitCount: _visitCounts[screenKey] ?? 0,
       );
@@ -249,7 +298,7 @@ class NavigationProvider with ChangeNotifier {
       final definition = screenDefinitions[key]!;
       return QuickActionScreen(
         key: key,
-        name: definition.name,
+        labelKey: definition.labelKey,
         icon: definition.icon,
         visitCount: _visitCounts[key] ?? 0,
       );
@@ -311,7 +360,13 @@ class NavigationProvider with ChangeNotifier {
     if (definition == null) return;
     final l10n = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).showKubusSnackBar(
-      SnackBar(content: Text(l10n.navigationUnableToNavigateToScreen(definition.name))),
+      SnackBar(
+        content: Text(
+          l10n.navigationUnableToNavigateToScreen(
+            definition.labelKey.resolve(l10n),
+          ),
+        ),
+      ),
     );
   }
 

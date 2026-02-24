@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/dao_provider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../models/dao.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/kubus_color_roles.dart';
+import '../../../widgets/kubus_action_sidebar.dart';
 import '../../../widgets/glass_components.dart';
 import '../components/desktop_widgets.dart';
 import '../desktop_shell.dart';
@@ -27,6 +29,7 @@ class DesktopGovernanceHubScreen extends StatefulWidget {
 class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
     with TickerProviderStateMixin {
   late AnimationController _animationController;
+  final ValueNotifier<int> _hubSelectedIndex = ValueNotifier<int>(0);
 
   @override
   void initState() {
@@ -41,6 +44,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
   @override
   void dispose() {
     _animationController.dispose();
+    _hubSelectedIndex.dispose();
     super.dispose();
   }
 
@@ -78,7 +82,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
                         ),
                       ),
                     ),
-                    child: const GovernanceHub(),
+                    child: GovernanceHub(selectedIndexNotifier: _hubSelectedIndex),
                   ),
                 ),
 
@@ -100,7 +104,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final roles = KubusColorRoles.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Container(
       decoration: BoxDecoration(
@@ -123,14 +127,14 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
           padding: const EdgeInsets.all(24),
           children: [
           // Header
-          Text(
-            'DAO Overview',
-            style: GoogleFonts.inter(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
+           Text(
+             l10n.desktopGovernanceSidebarOverviewTitle,
+             style: GoogleFonts.inter(
+               fontSize: 20,
+               fontWeight: FontWeight.bold,
+               color: Theme.of(context).colorScheme.onSurface,
+             ),
+           ),
           const SizedBox(height: 24),
 
           // Voting power card
@@ -138,71 +142,67 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
           const SizedBox(height: 20),
 
           // Quick actions
-          Text(
-            'Quick Actions',
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: 12),
-          _buildQuickActionTile(
-            'Create Proposal',
-            'Submit new governance idea',
-            Icons.add_box_outlined,
-            Theme.of(context).colorScheme.primary,
-            () {
-              // Handled by mobile view's create proposal tab
-            },
-          ),
-          _buildQuickActionTile(
-            'Vote on Proposals',
-            'Participate in governance',
-            Icons.how_to_vote_outlined,
-            roles.statTeal,
-            () {
-              // Navigate to proposals tab in mobile view
-            },
-          ),
-          _buildQuickActionTile(
-            'Analytics',
-            'View DAO performance',
-            Icons.analytics_outlined,
-            roles.statCoral,
-            () {
-              DesktopShellScope.of(context)?.pushScreen(
-                DesktopSubScreen(
-                  title: 'DAO Analytics',
-                  child: const DAOAnalytics(),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 24),
+           Text(
+             l10n.desktopGovernanceSidebarQuickActionsTitle,
+             style: GoogleFonts.inter(
+               fontSize: 16,
+               fontWeight: FontWeight.w600,
+               color: Theme.of(context).colorScheme.onSurface,
+             ),
+           ),
+           const SizedBox(height: 12),
+           KubusActionSidebarTile(
+             title: l10n.desktopGovernanceQuickActionCreateProposalTitle,
+             subtitle: l10n.desktopGovernanceQuickActionCreateProposalSubtitle,
+             icon: Icons.add_box_outlined,
+             semantic: KubusActionSemantic.create,
+             onTap: () => _hubSelectedIndex.value = 2,
+           ),
+           KubusActionSidebarTile(
+             title: l10n.desktopGovernanceQuickActionVoteTitle,
+             subtitle: l10n.desktopGovernanceQuickActionVoteSubtitle,
+             icon: Icons.how_to_vote_outlined,
+             semantic: KubusActionSemantic.manage,
+             onTap: () => _hubSelectedIndex.value = 0,
+           ),
+           KubusActionSidebarTile(
+             title: l10n.desktopGovernanceQuickActionAnalyticsTitle,
+             subtitle: l10n.desktopGovernanceQuickActionAnalyticsSubtitle,
+             icon: Icons.analytics_outlined,
+             semantic: KubusActionSemantic.analytics,
+             onTap: () {
+               DesktopShellScope.of(context)?.pushScreen(
+                 DesktopSubScreen(
+                   title: l10n.desktopGovernanceAnalyticsScreenTitle,
+                   child: const DAOAnalytics(),
+                 ),
+               );
+             },
+           ),
+           const SizedBox(height: 24),
 
           // DAO Stats
-          Text(
-            'DAO Statistics',
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
+           Text(
+             l10n.desktopGovernanceSidebarStatisticsTitle,
+             style: GoogleFonts.inter(
+               fontSize: 16,
+               fontWeight: FontWeight.w600,
+               color: Theme.of(context).colorScheme.onSurface,
+             ),
+           ),
           const SizedBox(height: 12),
           _buildDAOStatsGrid(themeProvider),
           const SizedBox(height: 24),
 
           // Recent governance activity
-          Text(
-            'Recent Activity',
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
+           Text(
+             l10n.desktopGovernanceSidebarRecentActivityTitle,
+             style: GoogleFonts.inter(
+               fontSize: 16,
+               fontWeight: FontWeight.w600,
+               color: Theme.of(context).colorScheme.onSurface,
+             ),
+           ),
           const SizedBox(height: 12),
           _buildRecentActivity(themeProvider),
           ],
@@ -214,6 +214,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
   Widget _buildVotingPowerCard(ThemeProvider themeProvider) {
     return Consumer<Web3Provider>(
       builder: (context, web3Provider, _) {
+        final l10n = AppLocalizations.of(context)!;
         final daoAccent = KubusColorRoles.of(context).web3DaoAccent;
         final roles = KubusColorRoles.of(context);
         final votingPower = web3Provider.kub8Balance;
@@ -285,7 +286,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Acquire KUB8 tokens to participate in governance',
+                          l10n.desktopGovernanceAcquireKub8Hint,
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             color: Theme.of(context)
@@ -303,83 +304,6 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
           ),
         );
       },
-    );
-  }
-
-  Widget _buildQuickActionTile(
-    String title,
-    String subtitle,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final radius = BorderRadius.circular(12);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: LiquidGlassPanel(
-        padding: EdgeInsets.zero,
-        borderRadius: radius,
-        showBorder: false,
-        backgroundColor: color.withValues(alpha: isDark ? 0.16 : 0.10),
-        onTap: onTap,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: radius,
-            border: Border.all(color: color.withValues(alpha: 0.20)),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(icon, color: color, size: 20),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                      Text(
-                        subtitle,
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.6),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.4),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 

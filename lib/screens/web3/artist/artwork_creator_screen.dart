@@ -1100,46 +1100,38 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               ),
             ),
           ),
-          RadioListTile<ArtworkPoapMode>(
-            value: ArtworkPoapMode.none,
-            groupValue: draft.poapMode,
-            onChanged: draft.isSubmitting
-                ? null
-                : (v) {
-                    if (v == null) return;
-                    drafts.updateOptionalFeatures(
-                        draftId: widget.draftId, poapMode: v);
-                  },
-            title: const Text('No badge'),
-            subtitle: const Text('Publish without attendance rewards.'),
-          ),
-          RadioListTile<ArtworkPoapMode>(
-            value: ArtworkPoapMode.existingPoap,
-            groupValue: draft.poapMode,
-            onChanged: draft.isSubmitting
-                ? null
-                : (v) {
-                    if (v == null) return;
-                    drafts.updateOptionalFeatures(
-                        draftId: widget.draftId, poapMode: v);
-                  },
-            title: const Text('Use existing POAP'),
-            subtitle: const Text(
-                'Paste an Event ID or claim link from an existing POAP drop.'),
-          ),
-          RadioListTile<ArtworkPoapMode>(
-            value: ArtworkPoapMode.kubusPoap,
-            groupValue: draft.poapMode,
-            onChanged: draft.isSubmitting
-                ? null
-                : (v) {
-                    if (v == null) return;
-                    drafts.updateOptionalFeatures(
-                        draftId: widget.draftId, poapMode: v);
-                  },
-            title: const Text('Create with kubus'),
-            subtitle: const Text(
-                'kubus generates a simple claim link automatically (no POAP setup required).'),
+          IgnorePointer(
+            ignoring: draft.isSubmitting,
+            child: RadioGroup<ArtworkPoapMode>(
+              groupValue: draft.poapMode,
+              onChanged: (v) {
+                if (v == null) return;
+                drafts.updateOptionalFeatures(
+                    draftId: widget.draftId, poapMode: v);
+              },
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  RadioListTile<ArtworkPoapMode>(
+                    value: ArtworkPoapMode.none,
+                    title: Text('No badge'),
+                    subtitle: Text('Publish without attendance rewards.'),
+                  ),
+                  RadioListTile<ArtworkPoapMode>(
+                    value: ArtworkPoapMode.existingPoap,
+                    title: Text('Use existing POAP'),
+                    subtitle: Text(
+                        'Paste an Event ID or claim link from an existing POAP drop.'),
+                  ),
+                  RadioListTile<ArtworkPoapMode>(
+                    value: ArtworkPoapMode.kubusPoap,
+                    title: Text('Create with kubus'),
+                    subtitle: Text(
+                        'kubus generates a simple claim link automatically (no POAP setup required).'),
+                  ),
+                ],
+              ),
+            ),
           ),
           if (draft.poapMode == ArtworkPoapMode.existingPoap) ...[
             const CreatorFieldSpacing(),
