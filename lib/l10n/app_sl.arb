@@ -3601,5 +3601,12 @@
   "profilePerformanceCreatedOwnedTitle": "Ustvarjeno / v lasti",
   "profilePerformanceFollowersFollowingTitle": "Sledilci / sledenje",
   "profileMenuSavedItemsTitle": "Shranjene vsebine",
-  "profileMenuHelpSupportTitle": "Pomoč in podpora"
+  "profileMenuHelpSupportTitle": "Pomoč in podpora",
+
+  "onboardingWelcomeDiscoverTitle": "Odkrij umetnost okoli sebe",
+  "onboardingWelcomeDiscoverBody": "Raziskuj umetnine, razstave in ustvarjalne prostore na interaktivnem zemljevidu.",
+  "onboardingWelcomeCreateTitle": "Ustvarjaj in zbiraj",
+  "onboardingWelcomeCreateBody": "Kovaj svojo umetnost, gradi portfolijo in zbiraj dela umetnikov z vsega sveta.",
+  "onboardingWelcomeJoinTitle": "Pripravljen/a?",
+  "onboardingWelcomeJoinBody": "Začni raziskovati ali ustvari račun."
 }

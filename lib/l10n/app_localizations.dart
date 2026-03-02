@@ -15658,6 +15658,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Search…'**
   String get commonSearchHint;
+
+  /// No description provided for @onboardingWelcomeDiscoverTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover art around you'**
+  String get onboardingWelcomeDiscoverTitle;
+
+  /// No description provided for @onboardingWelcomeDiscoverBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore artworks, exhibitions, and creative spaces on an interactive map.'**
+  String get onboardingWelcomeDiscoverBody;
+
+  /// No description provided for @onboardingWelcomeCreateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create & collect'**
+  String get onboardingWelcomeCreateTitle;
+
+  /// No description provided for @onboardingWelcomeCreateBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Mint your art, build your portfolio, and collect pieces from artists worldwide.'**
+  String get onboardingWelcomeCreateBody;
+
+  /// No description provided for @onboardingWelcomeJoinTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready to begin?'**
+  String get onboardingWelcomeJoinTitle;
+
+  /// No description provided for @onboardingWelcomeJoinBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Start exploring or create your account.'**
+  String get onboardingWelcomeJoinBody;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

@@ -8275,4 +8275,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get commonSearchHint => 'Search…';
+
+  @override
+  String get onboardingWelcomeDiscoverTitle => 'Discover art around you';
+
+  @override
+  String get onboardingWelcomeDiscoverBody => 'Explore artworks, exhibitions, and creative spaces on an interactive map.';
+
+  @override
+  String get onboardingWelcomeCreateTitle => 'Create & collect';
+
+  @override
+  String get onboardingWelcomeCreateBody => 'Mint your art, build your portfolio, and collect pieces from artists worldwide.';
+
+  @override
+  String get onboardingWelcomeJoinTitle => 'Ready to begin?';
+
+  @override
+  String get onboardingWelcomeJoinBody => 'Start exploring or create your account.';
 }

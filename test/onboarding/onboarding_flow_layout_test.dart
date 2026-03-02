@@ -123,8 +123,8 @@ void main() {
 
     // Welcome wizard should show page view with dot indicators
     expect(find.byType(PageView), findsOneWidget);
-    // Should show explore title from welcome pages
-    expect(find.text('Explore artworks'), findsOneWidget);
+    // Should show discover title from welcome pages
+    expect(find.text('Discover art around you'), findsOneWidget);
     // Branch buttons should be visible
     expect(find.text('Create an account'), findsOneWidget);
     expect(find.text('Discover art'), findsOneWidget);
