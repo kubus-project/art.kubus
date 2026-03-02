@@ -3709,5 +3709,12 @@
     }
   },
 
-  "commonSearchHint": "Search…"
+  "commonSearchHint": "Search…",
+
+  "onboardingWelcomeDiscoverTitle": "Discover art around you",
+  "onboardingWelcomeDiscoverBody": "Explore artworks, exhibitions, and creative spaces on an interactive map.",
+  "onboardingWelcomeCreateTitle": "Create & collect",
+  "onboardingWelcomeCreateBody": "Mint your art, build your portfolio, and collect pieces from artists worldwide.",
+  "onboardingWelcomeJoinTitle": "Ready to begin?",
+  "onboardingWelcomeJoinBody": "Start exploring or create your account."
 }

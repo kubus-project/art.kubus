@@ -8305,4 +8305,22 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get commonSearchHint => 'Išči…';
+
+  @override
+  String get onboardingWelcomeDiscoverTitle => 'Odkrij umetnost okoli sebe';
+
+  @override
+  String get onboardingWelcomeDiscoverBody => 'Raziskuj umetnine, razstave in ustvarjalne prostore na interaktivnem zemljevidu.';
+
+  @override
+  String get onboardingWelcomeCreateTitle => 'Ustvarjaj in zbiraj';
+
+  @override
+  String get onboardingWelcomeCreateBody => 'Kovaj svojo umetnost, gradi portfolijo in zbiraj dela umetnikov z vsega sveta.';
+
+  @override
+  String get onboardingWelcomeJoinTitle => 'Pripravljen/a?';
+
+  @override
+  String get onboardingWelcomeJoinBody => 'Začni raziskovati ali ustvari račun.';
 }

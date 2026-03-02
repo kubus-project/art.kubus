@@ -1963,7 +1963,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 260),
-      padding: const EdgeInsets.fromLTRB(22, 18, 22, 18),
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(KubusRadius.xl),
         color: scheme.surface.withValues(alpha: 0.16),
@@ -2019,42 +2019,37 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   Widget _buildBottomActions(AppLocalizations l10n, {required bool compact}) {
     final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final skipBackground = isDark
-        ? scheme.surface.withValues(alpha: 0.86)
-        : scheme.surface.withValues(alpha: 0.94);
-    final skipForeground = isDark ? scheme.onSurface : scheme.onSurfaceVariant;
     final ctaBackground = isDark
         ? scheme.primary.withValues(alpha: 0.96)
         : scheme.primary.withValues(alpha: 0.98);
     final ctaForeground = scheme.onPrimary;
-    return Row(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Expanded(
-          child: TextButton(
-            onPressed: _currentIndex > 0 ? _goBackStep : null,
-            style: TextButton.styleFrom(
-              foregroundColor: skipForeground,
-              backgroundColor: skipBackground,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+        KubusButton(
+          onPressed: _onPrimaryAction,
+          label: _primaryLabelForStep(l10n),
+          isFullWidth: true,
+          backgroundColor: ctaBackground,
+          foregroundColor: ctaForeground,
+        ),
+        if (_currentIndex > 0)
+          Padding(
+            padding: EdgeInsets.only(top: compact ? 6 : 8),
+            child: TextButton(
+              onPressed: _goBackStep,
+              style: TextButton.styleFrom(
+                foregroundColor: scheme.onSurface.withValues(alpha: 0.7),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: KubusSpacing.lg,
+                  vertical: KubusSpacing.sm,
+                ),
+                minimumSize: const Size(48, 44),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
-              padding: EdgeInsets.symmetric(
-                vertical: compact ? 10 : 12,
-              ),
+              child: Text(l10n.commonBack),
             ),
-            child: Text(l10n.commonBack),
           ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: KubusButton(
-            onPressed: _onPrimaryAction,
-            label: _primaryLabelForStep(l10n),
-            isFullWidth: true,
-            backgroundColor: ctaBackground,
-            foregroundColor: ctaForeground,
-          ),
-        ),
       ],
     );
   }
@@ -2199,20 +2194,20 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     final pages = <_WelcomeWizardPage>[
       _WelcomeWizardPage(
         icon: Icons.explore_outlined,
-        title: l10n.onboardingExploreTitle,
-        body: l10n.onboardingExploreDescription,
+        title: l10n.onboardingWelcomeDiscoverTitle,
+        body: l10n.onboardingWelcomeDiscoverBody,
         gradient: const [Color(0xFF006064), Color(0xFF26A69A)],
       ),
       _WelcomeWizardPage(
         icon: Icons.palette_outlined,
-        title: l10n.onboardingFlowRoleTitle,
-        body: l10n.onboardingFlowRoleBody,
+        title: l10n.onboardingWelcomeCreateTitle,
+        body: l10n.onboardingWelcomeCreateBody,
         gradient: const [Color(0xFFE65100), Color(0xFFFFB74D)],
       ),
       _WelcomeWizardPage(
         icon: Icons.groups_outlined,
-        title: l10n.onboardingCommunityTitle,
-        body: l10n.onboardingCommunityDescription,
+        title: l10n.onboardingWelcomeJoinTitle,
+        body: l10n.onboardingWelcomeJoinBody,
         gradient: const [Color(0xFF2E7D32), Color(0xFFA5D6A7)],
       ),
     ];
@@ -2467,6 +2462,8 @@ class _AccountStep extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                     fontSize: compact ? 22 : null,
                   ),
+              maxLines: 3,
+              overflow: TextOverflow.visible,
             ),
             SizedBox(height: compact ? KubusSpacing.xs : KubusSpacing.sm),
             Text(body, style: Theme.of(context).textTheme.bodyLarge),
@@ -2551,6 +2548,8 @@ class _WelcomePageView extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
             textAlign: TextAlign.center,
+            maxLines: 3,
+            overflow: TextOverflow.visible,
           ),
           const SizedBox(height: KubusSpacing.sm),
           Text(
@@ -2559,8 +2558,8 @@ class _WelcomePageView extends StatelessWidget {
                   color: scheme.onSurface.withValues(alpha: 0.8),
                 ),
             textAlign: TextAlign.center,
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
+            maxLines: 4,
+            overflow: TextOverflow.visible,
           ),
         ],
       ),
@@ -2580,7 +2579,6 @@ class _WelcomeBranchPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
       child: Column(
@@ -2592,19 +2590,10 @@ class _WelcomeBranchPage extends StatelessWidget {
             isFullWidth: true,
           ),
           const SizedBox(height: KubusSpacing.sm),
-          OutlinedButton(
+          KubusOutlineButton(
             onPressed: () => unawaited(onSelectGuest()),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: scheme.onSurface.withValues(alpha: 0.85),
-              side: BorderSide(
-                color: scheme.onSurface.withValues(alpha: 0.35),
-              ),
-              minimumSize: const Size(double.infinity, 48),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
-            child: Text(l10n.commonDiscoverArt),
+            label: l10n.commonDiscoverArt,
+            isFullWidth: true,
           ),
         ],
       ),
@@ -2654,6 +2643,8 @@ class _VerifyEmailStep extends StatelessWidget {
                     .textTheme
                     .headlineSmall
                     ?.copyWith(fontWeight: FontWeight.w700),
+                maxLines: 3,
+                overflow: TextOverflow.visible,
               ),
               const SizedBox(height: KubusSpacing.sm),
               Text(body, style: Theme.of(context).textTheme.bodyLarge),
@@ -2759,7 +2750,9 @@ class _InlineVerificationPanelState extends State<_InlineVerificationPanel> {
             style: Theme.of(context)
                 .textTheme
                 .headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w700)),
+                ?.copyWith(fontWeight: FontWeight.w700),
+            maxLines: 3,
+            overflow: TextOverflow.visible),
         const SizedBox(height: KubusSpacing.sm),
         Text(widget.body, style: Theme.of(context).textTheme.bodyLarge),
         const SizedBox(height: 12),
@@ -3371,7 +3364,9 @@ class _RoleStepState extends State<_RoleStep> {
                           style: Theme.of(context)
                               .textTheme
                               .headlineSmall
-                              ?.copyWith(fontWeight: FontWeight.w700)),
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                          maxLines: 3,
+                          overflow: TextOverflow.visible),
                       const SizedBox(height: KubusSpacing.sm),
                       Text(
                         widget.body,
@@ -3433,7 +3428,9 @@ class _PermissionsStep extends StatelessWidget {
             style: Theme.of(context)
                 .textTheme
                 .headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w700)),
+                ?.copyWith(fontWeight: FontWeight.w700),
+            maxLines: 3,
+            overflow: TextOverflow.visible),
         const SizedBox(height: KubusSpacing.sm),
         Text(body, style: Theme.of(context).textTheme.bodyLarge),
         const SizedBox(height: 12),
@@ -3500,8 +3497,21 @@ class _PermissionTile extends StatelessWidget {
                 ),
               ],
             )
-          : TextButton(
+          : OutlinedButton(
               onPressed: onTap,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: scheme.onSurface,
+                side: BorderSide(
+                  color: scheme.onSurface.withValues(alpha: 0.4),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: KubusSpacing.md,
+                  vertical: KubusSpacing.sm,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(KubusRadius.sm),
+                ),
+              ),
               child: Text(l10n.commonEnable),
             ),
     );
@@ -3544,7 +3554,9 @@ class _DoneStep extends StatelessWidget {
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                       fontSize: isWide ? 28 : null,
-                    )),
+                    ),
+                maxLines: 3,
+                overflow: TextOverflow.visible),
             const SizedBox(height: KubusSpacing.sm),
             Text(body, style: Theme.of(context).textTheme.bodyLarge),
             const Spacer(),
