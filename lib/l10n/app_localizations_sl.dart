@@ -200,6 +200,12 @@ class AppLocalizationsSl extends AppLocalizations {
   String get commonGetStarted => 'Začnimo';
 
   @override
+  String get commonCreateAccount => 'Ustvari račun';
+
+  @override
+  String get commonDiscoverArt => 'Odkrij umetnost';
+
+  @override
   String get commonWorking => 'V teku…';
 
   @override
@@ -7600,13 +7606,13 @@ class AppLocalizationsSl extends AppLocalizations {
   String get commonDialogSemanticLabel => 'Dialog';
 
   @override
-  String get commonFailedToLoadLabel => 'Failed to load';
+  String get commonFailedToLoadLabel => 'Nalaganje ni uspelo';
 
   @override
   String get commonSubmit => 'Pošlji';
 
   @override
-  String get commonUser => 'User';
+  String get commonUser => 'Uporabnik';
 
   @override
   String commonTimeAgoMonths(num count) {
@@ -7634,10 +7640,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get postDetailPostUnlikedToast => 'Všeček odstranjen';
 
   @override
-  String get communityBookmarkSaveForLaterTooltip => 'Save for later';
+  String get communityBookmarkSaveForLaterTooltip => 'Shrani za pozneje';
 
   @override
-  String get communityBookmarkRemoveTooltip => 'Remove bookmark';
+  String get communityBookmarkRemoveTooltip => 'Odstrani zaznamek';
 
   @override
   String get communityQuickRepostAction => 'Hitro ponovno objavi';
@@ -7675,7 +7681,7 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
-  String get desktopCommunityGroupJoinedLabel => 'Joined';
+  String get desktopCommunityGroupJoinedLabel => 'Pridruženo';
 
   @override
   String get desktopCommunityGroupsSearchHint => 'Išči skupine...';
@@ -7695,7 +7701,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String desktopCommunityLatestLabel(Object timeAgo) {
-    return 'Latest: $timeAgo';
+    return 'Najnovejše: $timeAgo';
   }
 
   @override
@@ -7705,16 +7711,16 @@ class AppLocalizationsSl extends AppLocalizations {
   String get desktopCommunitySelectCommunityDialogTitle => 'Izberi skupnost';
 
   @override
-  String get desktopCommunitySearchUsersHint => 'Search users...';
+  String get desktopCommunitySearchUsersHint => 'Išči uporabnike...';
 
   @override
-  String get desktopCommunitySearchUsersToMessageHint => 'Search for users to message';
+  String get desktopCommunitySearchUsersToMessageHint => 'Išči uporabnike za sporočila';
 
   @override
-  String get desktopCommunityNewMessageTitle => 'New message';
+  String get desktopCommunityNewMessageTitle => 'Novo sporočilo';
 
   @override
-  String get desktopCommunitySearchFailedTryAgain => 'Search failed. Try again.';
+  String get desktopCommunitySearchFailedTryAgain => 'Iskanje ni uspelo. Poskusi znova.';
 
   @override
   String get desktopCommunityMessagesEmptyTitle => 'Še ni sporočil';
@@ -7723,11 +7729,11 @@ class AppLocalizationsSl extends AppLocalizations {
   String get desktopCommunityMessagesEmptySubtitle => 'Začni pogovor z umetnikom';
 
   @override
-  String get desktopCommunityMessagesNoMatchesTitle => 'No matches found';
+  String get desktopCommunityMessagesNoMatchesTitle => 'Ni zadetkov';
 
   @override
   String desktopCommunityMessagesNoResultsBody(Object query) {
-    return 'We couldn\'t find any conversations, members, or messages matching \"$query\".';
+    return 'Nismo našli nobenih pogovorov, članov ali sporočil, ki bi se ujemali z \"$query\".';
   }
 
   @override
@@ -7735,14 +7741,14 @@ class AppLocalizationsSl extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count results',
-      one: '1 result',
+      other: '$count rezultatov',
+      one: '1 rezultat',
     );
-    return 'Showing $_temp0 for \"$query\"';
+    return 'Prikazujem $_temp0 za \"$query\"';
   }
 
   @override
-  String get desktopCommunityAddHandleButtonLabel => 'Add handle';
+  String get desktopCommunityAddHandleButtonLabel => 'Dodaj handle';
 
   @override
   String get desktopCommunityAddTagDialogTitle => 'Dodaj oznako';
@@ -7751,28 +7757,28 @@ class AppLocalizationsSl extends AppLocalizations {
   String get desktopCommunityAddTagDialogHint => 'Vnesi oznako (npr. art, fotografija)';
 
   @override
-  String get desktopCommunityAddTagHint => 'Add tag';
+  String get desktopCommunityAddTagHint => 'Dodaj oznako';
 
   @override
-  String get desktopCommunityMentionDialogTitle => 'Mention someone';
+  String get desktopCommunityMentionDialogTitle => 'Omeni nekoga';
 
   @override
-  String get desktopCommunitySearchPeopleHint => 'Search artists, collectors, or wallets';
+  String get desktopCommunitySearchPeopleHint => 'Išči umetnike, zbiratelje ali denarnice';
 
   @override
-  String get desktopCommunityMentionHint => 'Mention';
+  String get desktopCommunityMentionHint => 'Omeni';
 
   @override
-  String get desktopCommunityBrowseTagsTooltip => 'Browse tags';
+  String get desktopCommunityBrowseTagsTooltip => 'Prebrskaj oznake';
 
   @override
-  String get desktopCommunityFindProfilesTooltip => 'Find profiles';
+  String get desktopCommunityFindProfilesTooltip => 'Poišči profile';
 
   @override
-  String get desktopCommunityAddToPostTooltip => 'Add to post';
+  String get desktopCommunityAddToPostTooltip => 'Dodaj objavi';
 
   @override
-  String get desktopCommunityTagLocationButtonLabel => 'Tag a location';
+  String get desktopCommunityTagLocationButtonLabel => 'Označi lokacijo';
 
   @override
   String get desktopCommunityTagLocationDialogTitle => 'Označi lokacijo';
@@ -7784,18 +7790,21 @@ class AppLocalizationsSl extends AppLocalizations {
   String get desktopCommunityClearSelectionButtonLabel => 'Počisti izbor';
 
   @override
-  String get desktopCommunityTargetCommunityOptionalTitle => 'Target a community (optional)';
+  String get desktopCommunityJoinGroupToPostToast => 'Pridruži se skupini za objavo.';
 
   @override
-  String get desktopCommunityTargetCommunityNoGroupHint => 'Posts shared to groups notify members instantly.';
+  String get desktopCommunityTargetCommunityOptionalTitle => 'Izberi skupnost (neobvezno)';
+
+  @override
+  String get desktopCommunityTargetCommunityNoGroupHint => 'Objave deljene v skupine takoj obvestijo člane.';
 
   @override
   String desktopCommunityTargetCommunityPostingToLabel(Object groupName) {
-    return 'Posting to $groupName';
+    return 'Objavljaš v $groupName';
   }
 
   @override
-  String get desktopCommunityRemoveGroupTooltip => 'Remove group';
+  String get desktopCommunityRemoveGroupTooltip => 'Odstrani skupino';
 
   @override
   String get desktopCommunityArAttachmentsTitle => 'AR priloge';
@@ -7813,55 +7822,52 @@ class AppLocalizationsSl extends AppLocalizations {
   String get desktopCommunitySharedPhotoFallbackContent => 'Delil(-a) fotografijo';
 
   @override
-  String get desktopCommunityJoinGroupToPostToast => 'Pridruži se skupini za objavo.';
+  String get desktopCommunityPostPublishedToast => 'Objava objavljena!';
 
   @override
-  String get desktopCommunityPostPublishedToast => 'Post published!';
+  String get desktopCommunityPostPublishFailedToast => 'Objave ni bilo mogoče objaviti.';
 
   @override
-  String get desktopCommunityPostPublishFailedToast => 'Failed to post.';
+  String get desktopCommunityPostCreatedSuccessToast => 'Objava uspešno ustvarjena!';
 
   @override
-  String get desktopCommunityPostCreatedSuccessToast => 'Post created successfully!';
+  String get desktopCommunityPostCreateFailedToast => 'Ustvarjanje objave ni uspelo.';
 
   @override
-  String get desktopCommunityPostCreateFailedToast => 'Failed to create post.';
+  String get desktopCommunityCreatePostTitle => 'Ustvari objavo';
 
   @override
-  String get desktopCommunityCreatePostTitle => 'Create post';
+  String get desktopCommunityComposerPromptHint => 'Deli, kaj gradiš, odkrivaš ali o čem razmišljaš...';
 
   @override
-  String get desktopCommunityComposerPromptHint => 'Share what you\'re building, discovering, or thinking...';
+  String get desktopCommunityComposerWhatsHappeningHint => 'Kaj se dogaja?';
 
   @override
-  String get desktopCommunityComposerWhatsHappeningHint => 'What\'s happening?';
+  String get desktopCommunityComposerPhotoLabel => 'Fotografija';
 
   @override
-  String get desktopCommunityComposerPhotoLabel => 'Photo';
+  String get desktopCommunityComposerLocationLabel => 'Lokacija';
 
   @override
-  String get desktopCommunityComposerLocationLabel => 'Location';
+  String get desktopCommunityComposerTagLabel => 'Oznaka';
 
   @override
-  String get desktopCommunityComposerTagLabel => 'Tag';
+  String get desktopCommunityComposerMentionLabel => 'Omeni';
 
   @override
-  String get desktopCommunityComposerMentionLabel => 'Mention';
+  String get desktopCommunityComposerAddImageTooltip => 'Dodaj sliko';
 
   @override
-  String get desktopCommunityComposerAddImageTooltip => 'Add image';
+  String get desktopCommunityComposerAddArContentTooltip => 'Dodaj AR vsebino';
 
   @override
-  String get desktopCommunityComposerAddArContentTooltip => 'Add AR content';
+  String get desktopCommunityComposerAddLocationTooltip => 'Dodaj lokacijo';
 
   @override
-  String get desktopCommunityComposerAddLocationTooltip => 'Add location';
+  String get desktopCommunityComposerMentionUserTooltip => 'Omeni uporabnika';
 
   @override
-  String get desktopCommunityComposerMentionUserTooltip => 'Mention user';
-
-  @override
-  String get desktopCommunityComposerAddEmojiTooltip => 'Add emoji';
+  String get desktopCommunityComposerAddEmojiTooltip => 'Dodaj emoji';
 
   @override
   String get desktopCommunityCreateGroupNameLabel => 'Ime skupine';
@@ -7876,10 +7882,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get desktopCommunityArtWiderRadiusButton => 'Širši radij';
 
   @override
-  String get desktopCommunityArArtworkLabel => 'AR artwork';
+  String get desktopCommunityArArtworkLabel => 'AR umetnina';
 
   @override
-  String get desktopCommunityArArtworkSubtitle => 'Tap to view in augmented reality';
+  String get desktopCommunityArArtworkSubtitle => 'Tapni za ogled v razširjeni resničnosti';
 
   @override
   String desktopCommunityTagFeedLoadingPostsLabel(Object tag) {
@@ -7898,7 +7904,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String desktopCommunityTagFeedNoPostsFoundError(Object tag) {
-    return 'No posts found for #$tag';
+    return 'Ni objav za #$tag';
   }
 
   @override
@@ -7947,43 +7953,43 @@ class AppLocalizationsSl extends AppLocalizations {
   String get profileInvitesTooltip => 'Vabila';
 
   @override
-  String get profileConnectWalletToSeeProfileLabel => 'Connect wallet to see profile';
+  String get profileConnectWalletToSeeProfileLabel => 'Poveži denarnico za ogled profila';
 
   @override
-  String get profileMoreOptionsTitle => 'More options';
+  String get profileMoreOptionsTitle => 'Več možnosti';
 
   @override
-  String get profileNoBioYetTitle => 'No bio yet';
+  String get profileNoBioYetTitle => 'Brez opisa';
 
   @override
-  String get profileNoBioYetDescription => 'Tap \"Edit Profile\" to add a short bio about yourself.';
+  String get profileNoBioYetDescription => 'Tapni \"Uredi profil\" za dodajanje kratkega opisa.';
 
   @override
   String get profileNoPostsYetDescription => 'Deli svoj pogled s skupnostjo, da se prikaže tukaj.';
 
   @override
-  String get profileUpcomingEventsTitle => 'Upcoming events';
+  String get profileUpcomingEventsTitle => 'Prihajajoči dogodki';
 
   @override
-  String get profileUpcomingEventsEmptyLabel => 'Plan an event or workshop to engage your audience.';
+  String get profileUpcomingEventsEmptyLabel => 'Načrtuj dogodek ali delavnico in vključi svoje občinstvo.';
 
   @override
-  String get profileArtistHighlightsSubtitle => 'Keep your artworks and collections front and center.';
+  String get profileArtistHighlightsSubtitle => 'Naj bodo tvoje umetnine in zbirke vedno v ospredju.';
 
   @override
   String get profileArtistArtworksEmptyLabel => 'Naloži svojo prvo umetnino, da jo predstaviš tukaj.';
 
   @override
-  String get profileArtistCollectionsEmptyLabel => 'Create a collection to curate your story.';
+  String get profileArtistCollectionsEmptyLabel => 'Ustvari zbirko za kuriranje svoje zgodbe.';
 
   @override
-  String get profileInstitutionHighlightsSubtitle => 'Promote upcoming programs and featured collections.';
+  String get profileInstitutionHighlightsSubtitle => 'Promoviraj prihajajoče programe in izpostavljene zbirke.';
 
   @override
-  String get profileInstitutionEventsEmptyLabel => 'Share your next exhibition or gathering here.';
+  String get profileInstitutionEventsEmptyLabel => 'Tukaj deli svojo naslednjo razstavo ali srečanje.';
 
   @override
-  String get profileInstitutionCollectionsEmptyLabel => 'Curate institutional collections to highlight.';
+  String get profileInstitutionCollectionsEmptyLabel => 'Kuratiraj institucionalne zbirke za izpostavitev.';
 
   @override
   String profileShowcaseEmptyTitle(Object title) {
@@ -8018,19 +8024,19 @@ class AppLocalizationsSl extends AppLocalizations {
   String get profilePerformanceDiscoveriesTitle => 'Odkritja';
 
   @override
-  String get profilePerformanceCreatedOwnedTitle => 'Created / owned';
+  String get profilePerformanceCreatedOwnedTitle => 'Ustvarjeno / v lasti';
 
   @override
-  String get profilePerformanceFollowersFollowingTitle => 'Followers / following';
+  String get profilePerformanceFollowersFollowingTitle => 'Sledilci / sledenje';
 
   @override
-  String get profileMenuSavedItemsTitle => 'Saved items';
+  String get profileMenuSavedItemsTitle => 'Shranjene vsebine';
 
   @override
   String get profileMenuViewHistoryTitle => 'Zgodovina ogledov';
 
   @override
-  String get profileMenuHelpSupportTitle => 'Help & support';
+  String get profileMenuHelpSupportTitle => 'Pomoč in podpora';
 
   @override
   String get profileHelpSupportTitle => 'Pomoč in podpora';

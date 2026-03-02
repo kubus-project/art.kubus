@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/user_persona.dart';
 import 'package:art_kubus/providers/locale_provider.dart';
@@ -9,10 +8,7 @@ import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/providers/web3provider.dart';
-import 'package:art_kubus/screens/auth/sign_in_screen.dart';
 import 'package:art_kubus/screens/desktop/desktop_shell.dart';
-import 'package:art_kubus/screens/events/exhibition_creator_screen.dart';
-import 'package:art_kubus/screens/web3/artist/artwork_creator.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/notification_helper.dart';
 import 'package:art_kubus/services/onboarding_state_service.dart';
@@ -38,19 +34,27 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 enum _OnboardingStep {
-  welcome,
-  mapDiscovery,
-  community,
-  arScan,
-  daoGovernance,
+  // Phase 1: Welcome wizard (swipeable, dot indicators, no progress bar)
+  welcomeDiscover,
+  welcomeCreate,
+  welcomeJoin,
+
+  // Phase 2a: Guest branch
+  guestPermissions,
+
+  // Phase 2b: Account branch
   account,
-  profile,
-  role,
-  permissions,
-  artwork,
-  follow,
   verifyEmail,
+  role,
+  profile,
+  accountPermissions,
   done,
+}
+
+enum _OnboardingBranch {
+  none,
+  guest,
+  account,
 }
 
 class _StepPalette {
@@ -143,9 +147,13 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   final Set<_OnboardingStep> _completed = <_OnboardingStep>{};
   final Set<_OnboardingStep> _deferred = <_OnboardingStep>{};
 
+  _OnboardingBranch _branch = _OnboardingBranch.none;
+  late final PageController _welcomePageController;
+  int _welcomePageIndex = 0;
+  bool _isFinishingOnboarding = false;
+
   int _currentIndex = 0;
   bool _isInitializing = true;
-  bool _isBusy = false;
   bool _locationEnabled = false;
   bool _notificationEnabled = false;
   bool _cameraEnabled = false;
@@ -153,20 +161,14 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   int _permissionStatusEpoch = 0;
   bool _webLocationGrantedOverride = false;
 
-  List<Map<String, dynamic>> _artists = <Map<String, dynamic>>[];
-  final Set<String> _followedArtists = <String>{};
-  bool _isLoadingArtists = false;
   bool _isSkippingFlow = false;
   bool _isSignedIn = false;
   bool _pendingEmailVerification = false;
   String? _pendingVerificationEmail;
   String _pendingVerificationSignupMethod = _emailSignupMethod;
   String? _permissionHint;
-  Permission? _permissionHintPermission;
   UserPersona? _selectedPersona;
   Map<String, String> _localProfileDraft = <String, String>{};
-  late final String _inlineArtworkDraftId;
-  Map<String, dynamic>? _daoReview;
   _DaoApplicationDraftRecord? _daoDraft;
   Uint8List? _pendingAvatarBytes;
   String? _pendingAvatarFileName;
@@ -181,35 +183,29 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
   _StepPalette _paletteForStep(_OnboardingStep step) {
     switch (step) {
-      case _OnboardingStep.welcome:
+      case _OnboardingStep.welcomeDiscover:
         return const _StepPalette(
           start: Color(0xFF006064),
           end: KubusColors.accentTealLight,
           accent: Color(0xFF26A69A),
         );
-      case _OnboardingStep.mapDiscovery:
+      case _OnboardingStep.welcomeCreate:
         return const _StepPalette(
-          start: Color(0xFF0D47A1),
-          end: Color(0xFF1976D2),
-          accent: Color(0xFF64B5F6),
+          start: Color(0xFFE65100),
+          end: KubusColors.accentOrangeDark,
+          accent: Color(0xFFFFB74D),
         );
-      case _OnboardingStep.community:
+      case _OnboardingStep.welcomeJoin:
         return const _StepPalette(
           start: Color(0xFF2E7D32),
           end: Color(0xFF43A047),
           accent: Color(0xFFA5D6A7),
         );
-      case _OnboardingStep.arScan:
+      case _OnboardingStep.guestPermissions:
         return const _StepPalette(
-          start: Color(0xFFEF6C00),
-          end: Color(0xFFF57C00),
-          accent: Color(0xFFFFCC80),
-        );
-      case _OnboardingStep.daoGovernance:
-        return const _StepPalette(
-          start: Color(0xFF37474F),
-          end: Color(0xFF546E7A),
-          accent: Color(0xFFB0BEC5),
+          start: Color(0xFF00695C),
+          end: Color(0xFF26A69A),
+          accent: Color(0xFF80CBC4),
         );
       case _OnboardingStep.account:
         return const _StepPalette(
@@ -217,11 +213,11 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           end: Color(0xFF42A5F5),
           accent: KubusColors.accentBlue,
         );
-      case _OnboardingStep.profile:
+      case _OnboardingStep.verifyEmail:
         return const _StepPalette(
-          start: Color(0xFF00796B),
-          end: Color(0xFF4DB6AC),
-          accent: KubusColors.accentTealDark,
+          start: Color(0xFF2E7D32),
+          end: KubusColors.successDark,
+          accent: Color(0xFFA5D6A7),
         );
       case _OnboardingStep.role:
         return const _StepPalette(
@@ -229,29 +225,17 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           end: KubusColors.accentOrangeDark,
           accent: Color(0xFFFFB74D),
         );
-      case _OnboardingStep.permissions:
+      case _OnboardingStep.profile:
+        return const _StepPalette(
+          start: Color(0xFF00796B),
+          end: Color(0xFF4DB6AC),
+          accent: KubusColors.accentTealDark,
+        );
+      case _OnboardingStep.accountPermissions:
         return const _StepPalette(
           start: Color(0xFF00695C),
           end: Color(0xFF26A69A),
           accent: Color(0xFF80CBC4),
-        );
-      case _OnboardingStep.artwork:
-        return const _StepPalette(
-          start: Color(0xFFC62828),
-          end: KubusColors.errorDark,
-          accent: Color(0xFFFF8A80),
-        );
-      case _OnboardingStep.follow:
-        return const _StepPalette(
-          start: KubusColors.primary,
-          end: Color(0xFF4DD0E1),
-          accent: Color(0xFF80DEEA),
-        );
-      case _OnboardingStep.verifyEmail:
-        return const _StepPalette(
-          start: Color(0xFF2E7D32),
-          end: KubusColors.successDark,
-          accent: Color(0xFFA5D6A7),
         );
       case _OnboardingStep.done:
         return const _StepPalette(
@@ -266,17 +250,18 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       widget.forceDesktop || DesktopBreakpoints.isDesktop(context);
 
   _OnboardingStep get _currentStep {
-    if (_steps.isEmpty) return _OnboardingStep.welcome;
+    if (_steps.isEmpty) return _OnboardingStep.welcomeDiscover;
     final safeIndex = _currentIndex.clamp(0, _steps.length - 1);
     return _steps[safeIndex];
   }
+
+  bool get _isWelcomePhase => _branch == _OnboardingBranch.none;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _inlineArtworkDraftId =
-        'onboarding_inline_${DateTime.now().microsecondsSinceEpoch}';
+    _welcomePageController = PageController();
     unawaited(_bootstrap());
   }
 
@@ -284,6 +269,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _verificationPollTimer?.cancel();
+    _welcomePageController.dispose();
     super.dispose();
   }
 
@@ -306,29 +292,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     debugPrint('OnboardingFlowScreen.$message');
   }
 
-  String _extractBackendErrorMessage({
-    required Object error,
-    required String fallback,
-  }) {
-    if (error is BackendApiRequestException) {
-      final rawBody = (error.body ?? '').trim();
-      if (rawBody.isNotEmpty) {
-        try {
-          final decoded = jsonDecode(rawBody);
-          if (decoded is Map<String, dynamic>) {
-            final backendError = (decoded['error'] ?? '').toString().trim();
-            if (backendError.isNotEmpty) return backendError;
-            final backendMessage = (decoded['message'] ?? '').toString().trim();
-            if (backendMessage.isNotEmpty) return backendMessage;
-          }
-        } catch (_) {
-          // Ignore parse errors and fall through to fallback.
-        }
-      }
-    }
-    return fallback;
-  }
-
   Future<void> _bootstrap() async {
     try {
       _isSignedIn =
@@ -339,6 +302,28 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
       final prefs = await SharedPreferences.getInstance();
       _hydrateLocalDrafts(prefs);
+
+      // Infer branch from initialStepId so that tests and deep-links can jump
+      // directly into account or guest steps without going through the welcome
+      // wizard.
+      final initialStepId = widget.initialStepId?.trim();
+      if (initialStepId != null && initialStepId.isNotEmpty) {
+        const accountStepIds = {
+          'account',
+          'verifyEmail',
+          'role',
+          'profile',
+          'accountPermissions',
+          'done',
+        };
+        const guestStepIds = {'guestPermissions'};
+        if (accountStepIds.contains(initialStepId)) {
+          _branch = _OnboardingBranch.account;
+        } else if (guestStepIds.contains(initialStepId)) {
+          _branch = _OnboardingBranch.guest;
+        }
+      }
+
       _steps = _buildSteps();
       final progress = await OnboardingStateService.loadFlowProgress(
         prefs: prefs,
@@ -360,7 +345,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
               .whereType<_OnboardingStep>()
               .toSet();
       final hasSavedProgress = completed.isNotEmpty || deferred.isNotEmpty;
-      final initialStepId = widget.initialStepId?.trim();
       var seededInitialProgress = false;
       if (!hasSavedProgress &&
           initialStepId != null &&
@@ -391,7 +375,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       }
 
       await _loadPermissionStatuses();
-      await _refreshDaoReview();
       _syncStepSideEffects();
     } catch (error, stackTrace) {
       if (kDebugMode) {
@@ -402,7 +385,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       final fallbackSteps = _buildSteps();
       setState(() {
         _steps = fallbackSteps.isEmpty
-            ? const <_OnboardingStep>[_OnboardingStep.welcome]
+            ? const <_OnboardingStep>[_OnboardingStep.welcomeDiscover]
             : fallbackSteps;
         _isInitializing = false;
         _currentIndex = _nextIncompleteIndex();
@@ -631,59 +614,30 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     );
   }
 
-  Future<void> _refreshDaoReview() async {
-    final wallet = Provider.of<ProfileProvider>(context, listen: false)
-            .currentUser
-            ?.walletAddress
-            .trim() ??
-        '';
-    if (wallet.isEmpty) return;
-    try {
-      final review = await BackendApiService().getDAOReview(idOrWallet: wallet);
-      if (!mounted) return;
-      setState(() {
-        _daoReview = review;
-      });
-    } catch (_) {
-      // Soft-fail: onboarding flow should remain usable even if DAO endpoints
-      // are temporarily unavailable.
-    }
-  }
-
-  bool _isDaoApprovedForRole({
-    required bool isArtist,
-    required bool isInstitution,
-  }) {
-    final review = _daoReview;
-    if (review == null) return false;
-    final status = (review['status'] ?? '').toString().toLowerCase();
-    final approvedFlag = review['isApproved'] == true || status == 'approved';
-    if (!approvedFlag) return false;
-    final reviewArtist = review['isArtistApplication'] == true;
-    final reviewInstitution = review['isInstitutionApplication'] == true;
-    if (isInstitution) return reviewInstitution;
-    if (isArtist) return reviewArtist;
-    return false;
-  }
-
   List<_OnboardingStep> _buildSteps() {
-    final shouldShowArStep = AppConfig.isFeatureEnabled('ar');
-    final shouldShowDaoStep = AppConfig.isFeatureEnabled('web3') &&
-        (AppConfig.isFeatureEnabled('daoOnchainTreasury') ||
-            AppConfig.isFeatureEnabled('daoReviewDecisions'));
-
-    return <_OnboardingStep>[
-      _OnboardingStep.welcome,
-      _OnboardingStep.mapDiscovery,
-      _OnboardingStep.community,
-      if (shouldShowArStep) _OnboardingStep.arScan,
-      if (shouldShowDaoStep) _OnboardingStep.daoGovernance,
-      _OnboardingStep.role,
-      _OnboardingStep.profile,
-      _OnboardingStep.account,
-      if (_verificationRequired) _OnboardingStep.verifyEmail,
-      _OnboardingStep.done,
-    ];
+    switch (_branch) {
+      case _OnboardingBranch.none:
+        // Welcome wizard phase - not shown in step list
+        return const <_OnboardingStep>[
+          _OnboardingStep.welcomeDiscover,
+          _OnboardingStep.welcomeCreate,
+          _OnboardingStep.welcomeJoin,
+        ];
+      case _OnboardingBranch.guest:
+        return const <_OnboardingStep>[
+          _OnboardingStep.guestPermissions,
+          _OnboardingStep.done,
+        ];
+      case _OnboardingBranch.account:
+        return <_OnboardingStep>[
+          _OnboardingStep.account,
+          if (_verificationRequired) _OnboardingStep.verifyEmail,
+          _OnboardingStep.role,
+          _OnboardingStep.profile,
+          _OnboardingStep.accountPermissions,
+          _OnboardingStep.done,
+        ];
+    }
   }
 
   bool get _verificationRequired =>
@@ -691,9 +645,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       (_pendingVerificationEmail ?? '').trim().isNotEmpty;
 
   bool _isPermissionRelatedStep(_OnboardingStep step) {
-    return step == _OnboardingStep.mapDiscovery ||
-        step == _OnboardingStep.community ||
-        step == _OnboardingStep.arScan;
+    return step == _OnboardingStep.guestPermissions ||
+        step == _OnboardingStep.accountPermissions;
   }
 
   bool _isStatusBlocked(PermissionStatus status) =>
@@ -854,36 +807,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       _notificationEnabled = notificationEnabled;
       _cameraEnabled = cameraEnabled;
     });
-  }
-
-  Future<void> _loadArtists() async {
-    if (_isLoadingArtists) return;
-    setState(() => _isLoadingArtists = true);
-    try {
-      final api = BackendApiService();
-      final featured =
-          await api.listArtists(featured: true, limit: 12, offset: 0);
-      final all = await api.listArtists(limit: 12, offset: 0);
-      final merged = <String, Map<String, dynamic>>{};
-      for (final artist in [...featured, ...all]) {
-        final wallet = (artist['walletAddress'] ?? '').toString().trim();
-        if (wallet.isEmpty) continue;
-        merged[wallet] = <String, dynamic>{...artist, 'walletAddress': wallet};
-      }
-      if (!mounted) return;
-      setState(() {
-        _artists = merged.values.take(6).toList(growable: false);
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _artists = <Map<String, dynamic>>[];
-      });
-    } finally {
-      if (mounted) {
-        setState(() => _isLoadingArtists = false);
-      }
-    }
   }
 
   _OnboardingStep? _stepFromId(String raw) {
@@ -1113,8 +1036,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
   Future<void> _deferCurrentStep() async {
     final step = _currentStep;
-    if (step == _OnboardingStep.permissions) {
-      await _markCompleted(_OnboardingStep.permissions);
+    if (step == _OnboardingStep.guestPermissions ||
+        step == _OnboardingStep.accountPermissions) {
+      await _markCompleted(step);
       return;
     }
     if (step == _OnboardingStep.verifyEmail) {
@@ -1138,12 +1062,24 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
   void _syncStepSideEffects() {
     _startVerificationPollingIfNeeded();
-    if (_currentStep == _OnboardingStep.follow &&
-        _isSignedIn &&
-        _artists.isEmpty &&
-        !_isLoadingArtists) {
-      unawaited(_loadArtists());
-    }
+  }
+
+  Future<void> _selectGuestBranch() async {
+    setState(() {
+      _branch = _OnboardingBranch.guest;
+      _steps = _buildSteps();
+      _currentIndex = 0;
+    });
+    await _persistProgress();
+  }
+
+  Future<void> _selectAccountBranch() async {
+    setState(() {
+      _branch = _OnboardingBranch.account;
+      _steps = _buildSteps();
+      _currentIndex = 0;
+    });
+    await _persistProgress();
   }
 
   Future<void> _requestPermission(Permission permission) async {
@@ -1220,7 +1156,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
                 _permissionLabel(l10n, permission),
               )
             : null;
-        _permissionHintPermission = blocked ? permission : null;
       });
 
       if (blocked) {
@@ -1235,13 +1170,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         _isRequestingPermission = false;
       }
     }
-  }
-
-  String? _hintForPermission(Permission permission) {
-    if (_permissionHintPermission == permission) {
-      return _permissionHint;
-    }
-    return null;
   }
 
   String _permissionLabel(AppLocalizations l10n, Permission permission) {
@@ -1303,11 +1231,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     required String username,
     required String bio,
     required String? avatar,
-    required String twitter,
-    required String instagram,
-    required String website,
-    required List<String> fieldOfWork,
-    required int? yearsActive,
   }) async {
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
@@ -1317,11 +1240,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       'username': username.trim(),
       'bio': bio.trim(),
       'avatar': (avatar ?? '').trim(),
-      'twitter': twitter.trim(),
-      'instagram': instagram.trim(),
-      'website': website.trim(),
-      'fieldOfWork': fieldOfWork.join(', '),
-      'yearsActive': yearsActive?.toString() ?? '',
     };
     await _persistLocalDrafts();
 
@@ -1332,13 +1250,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         username: username.trim().isEmpty ? null : username.trim(),
         bio: bio.trim().isEmpty ? null : bio.trim(),
         avatar: (avatar ?? '').trim().isEmpty ? null : avatar?.trim(),
-        social: <String, String>{
-          'twitter': twitter.trim(),
-          'instagram': instagram.trim(),
-          'website': website.trim(),
-        },
-        fieldOfWork: fieldOfWork,
-        yearsActive: yearsActive,
       );
       await _flushPendingAvatarUploadIfPossible();
     }
@@ -1349,7 +1260,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
   Future<void> _handleEmbeddedRegistrationSuccess() async {
     _refreshAuthDerivedSteps();
-    await _refreshDaoReview();
     await _syncLocalProfileDraftToBackendIfPossible();
     await _flushPendingAvatarUploadIfPossible();
     if (!mounted) return;
@@ -1364,7 +1274,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     _setPendingEmailVerification(email);
     await _persistLocalDrafts();
     _refreshAuthDerivedSteps();
-    await _refreshDaoReview();
     if (!mounted) return;
     if (_steps.contains(_OnboardingStep.account)) {
       await _markCompleted(_OnboardingStep.account);
@@ -1443,7 +1352,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     if (shouldPersistDrafts) {
       await _persistLocalDrafts();
     }
-    await _refreshDaoReview();
     await _syncLocalProfileDraftToBackendIfPossible();
     await _flushPendingAvatarUploadIfPossible();
     if (!mounted) return;
@@ -1628,23 +1536,12 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   Future<void> _applyRoleSelection({
     required bool isArtist,
     required bool isInstitution,
-    String? daoPortfolioUrl,
-    String? daoMedium,
-    String? daoStatement,
   }) async {
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
     _selectedPersona = isInstitution
         ? UserPersona.institution
         : (isArtist ? UserPersona.creator : UserPersona.lover);
-    final nextDaoDraft = _buildDaoDraft(
-      isArtist: isArtist,
-      isInstitution: isInstitution,
-      portfolioUrl: daoPortfolioUrl,
-      medium: daoMedium,
-      statement: daoStatement,
-    );
-    _daoDraft = nextDaoDraft;
     await _persistLocalDrafts();
     final wallet = profileProvider.currentUser?.walletAddress;
     if (wallet != null && wallet.isNotEmpty) {
@@ -1653,25 +1550,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     }
     if (!mounted) return;
     await _markCompleted(_OnboardingStep.role);
-  }
-
-  _DaoApplicationDraftRecord? _buildDaoDraft({
-    required bool isArtist,
-    required bool isInstitution,
-    String? portfolioUrl,
-    String? medium,
-    String? statement,
-  }) {
-    if (!isArtist && !isInstitution) return null;
-    final draft = _DaoApplicationDraftRecord(
-      isArtist: isArtist,
-      isInstitution: isInstitution,
-      portfolioUrl: (portfolioUrl ?? '').trim(),
-      medium: (medium ?? '').trim(),
-      statement: (statement ?? '').trim(),
-    );
-    if (!draft.hasContent) return null;
-    return draft;
   }
 
   Future<void> _applyPersonaSelection(UserPersona persona) async {
@@ -1686,183 +1564,64 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     setState(() {});
   }
 
-  Future<void> _toggleFollow(Map<String, dynamic> artist) async {
-    final artistWallet = (artist['walletAddress'] ?? '').toString().trim();
-    if (artistWallet.isEmpty || _isBusy) return;
-    if (!_isSignedIn) {
-      await _jumpToVerifyStep();
-      return;
-    }
+  Future<void> _finishOnboarding() async {
+    if (_isFinishingOnboarding) return;
+    setState(() => _isFinishingOnboarding = true);
 
-    final wasFollowed = _followedArtists.contains(artistWallet);
-    setState(() {
-      _isBusy = true;
-      if (wasFollowed) {
-        _followedArtists.remove(artistWallet);
-      } else {
-        _followedArtists.add(artistWallet);
-      }
-    });
     try {
+      final profileProvider =
+          Provider.of<ProfileProvider>(context, listen: false);
       final api = BackendApiService();
-      if (wasFollowed) {
-        await api.unfollowUser(artistWallet);
-      } else {
-        await api.followUser(artistWallet);
-      }
-      if (_followedArtists.isNotEmpty &&
-          _steps.contains(_OnboardingStep.follow) &&
-          !_completed.contains(_OnboardingStep.follow)) {
-        await _markCompleted(_OnboardingStep.follow);
-      }
-      if (mounted) {
-        setState(() {});
-      }
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        if (wasFollowed) {
-          _followedArtists.add(artistWallet);
-        } else {
-          _followedArtists.remove(artistWallet);
+      _clearPendingEmailVerificationState();
+      await _persistLocalDrafts();
+      await api.refreshAuthTokenFromStorage();
+      await _syncWalletSessionIntoProviders();
+      _refreshAuthDerivedSteps();
+
+      if (!_isSignedIn) {
+        final authToken = (api.getAuthToken() ?? '').trim();
+        if (authToken.isNotEmpty) {
+          final prefs = await SharedPreferences.getInstance();
+          final storedWallet = (_currentSessionWalletAddress().isNotEmpty
+                  ? _currentSessionWalletAddress()
+                  : (prefs.getString('wallet_address') ??
+                      prefs.getString('walletAddress') ??
+                      ''))
+              .trim();
+          if (storedWallet.isNotEmpty) {
+            try {
+              await profileProvider
+                  .loadProfile(storedWallet)
+                  .timeout(const Duration(seconds: 6));
+            } catch (_) {
+              // Keep onboarding completion resilient even when profile hydration
+              // is temporarily unavailable.
+            }
+            _refreshAuthDerivedSteps();
+          }
         }
-      });
-      ScaffoldMessenger.of(context).showKubusSnackBar(
-        SnackBar(
-            content:
-                Text(AppLocalizations.of(context)!.onboardingFlowFollowFailed)),
-        tone: KubusSnackBarTone.error,
-      );
+      }
+
+      if (_isSignedIn) {
+        await _syncLocalProfileDraftToBackendIfPossible();
+        await _flushPendingAvatarUploadIfPossible();
+      }
+
+      await _persistLocalDrafts();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('has_seen_permissions', true);
+      await OnboardingStateService.markCompleted(prefs: prefs);
+      await _persistProgress();
+      unawaited(TelemetryService()
+          .trackOnboardingComplete(reason: 'step_flow_complete'));
+
+      if (!mounted) return;
+      Navigator.of(context).pushReplacementNamed('/main');
     } finally {
       if (mounted) {
-        setState(() => _isBusy = false);
+        setState(() => _isFinishingOnboarding = false);
       }
     }
-  }
-
-  Future<bool> _submitDaoDraftIfPossible(
-      {required bool showFailureToast}) async {
-    final draft = _daoDraft;
-    if (draft == null ||
-        !draft.isEligibleRole ||
-        !draft.hasContent ||
-        !draft.isSubmittable) {
-      return true;
-    }
-
-    _refreshAuthDerivedSteps();
-    final profileProvider =
-        Provider.of<ProfileProvider>(context, listen: false);
-    final wallet = (profileProvider.currentUser?.walletAddress ?? '').trim();
-    if (!_isSignedIn || wallet.isEmpty) {
-      return true;
-    }
-
-    final l10n = AppLocalizations.of(context)!;
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      final review = await BackendApiService().submitDAOReview(
-        walletAddress: wallet,
-        portfolioUrl: draft.portfolioUrl,
-        medium: draft.medium,
-        statement: draft.statement,
-        title: draft.isInstitution
-            ? 'Institution onboarding application'
-            : 'Artist onboarding application',
-        metadata: <String, dynamic>{
-          'role': draft.isInstitution ? 'institution' : 'artist',
-          'isArtistApplication': draft.isArtist,
-          'isInstitutionApplication': draft.isInstitution,
-          'source': 'onboarding_flow_complete',
-        },
-      );
-
-      if (review == null) {
-        throw StateError('DAO review submission returned an empty payload.');
-      }
-      _daoDraft = null;
-      if (mounted) {
-        setState(() {
-          _daoReview = review;
-        });
-      } else {
-        _daoReview = review;
-      }
-      await _persistLocalDrafts();
-      return true;
-    } catch (error) {
-      if (kDebugMode) {
-        debugPrint(
-          'OnboardingFlowScreen._submitDaoDraftIfPossible failed: $error',
-        );
-      }
-      if (!showFailureToast || !mounted) return false;
-      final message = _extractBackendErrorMessage(
-        error: error,
-        fallback: l10n.daoProposalSubmitFailedToast,
-      );
-      messenger.showKubusSnackBar(
-        SnackBar(
-          content: Text(
-            '$message Draft kept locally so you can retry later.',
-          ),
-        ),
-        tone: KubusSnackBarTone.warning,
-      );
-      return false;
-    }
-  }
-
-  Future<void> _finishOnboarding() async {
-    final profileProvider =
-        Provider.of<ProfileProvider>(context, listen: false);
-    final api = BackendApiService();
-    _clearPendingEmailVerificationState();
-    await _persistLocalDrafts();
-    await api.refreshAuthTokenFromStorage();
-    await _syncWalletSessionIntoProviders();
-    _refreshAuthDerivedSteps();
-
-    if (!_isSignedIn) {
-      final authToken = (api.getAuthToken() ?? '').trim();
-      if (authToken.isNotEmpty) {
-        final prefs = await SharedPreferences.getInstance();
-        final storedWallet = (_currentSessionWalletAddress().isNotEmpty
-                ? _currentSessionWalletAddress()
-                : (prefs.getString('wallet_address') ??
-                    prefs.getString('walletAddress') ??
-                    ''))
-            .trim();
-        if (storedWallet.isNotEmpty) {
-          try {
-            await profileProvider
-                .loadProfile(storedWallet)
-                .timeout(const Duration(seconds: 6));
-          } catch (_) {
-            // Keep onboarding completion resilient even when profile hydration
-            // is temporarily unavailable.
-          }
-          _refreshAuthDerivedSteps();
-        }
-      }
-    }
-
-    if (_isSignedIn) {
-      await _syncLocalProfileDraftToBackendIfPossible();
-      await _flushPendingAvatarUploadIfPossible();
-      await _submitDaoDraftIfPossible(showFailureToast: true);
-    }
-
-    await _persistLocalDrafts();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('has_seen_permissions', true);
-    await OnboardingStateService.markCompleted(prefs: prefs);
-    await _persistProgress();
-    unawaited(TelemetryService()
-        .trackOnboardingComplete(reason: 'step_flow_complete'));
-
-    if (!mounted) return;
-    Navigator.of(context).pushReplacementNamed('/main');
   }
 
   Future<void> _skipForNow() async {
@@ -1891,20 +1650,13 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
   Future<void> _onPrimaryAction() async {
     switch (_currentStep) {
-      case _OnboardingStep.welcome:
-        await _markCompleted(_OnboardingStep.welcome);
+      case _OnboardingStep.welcomeDiscover:
+      case _OnboardingStep.welcomeCreate:
+      case _OnboardingStep.welcomeJoin:
+        // Welcome phase is handled by welcome wizard buttons
         return;
-      case _OnboardingStep.mapDiscovery:
-        await _markCompleted(_OnboardingStep.mapDiscovery);
-        return;
-      case _OnboardingStep.community:
-        await _markCompleted(_OnboardingStep.community);
-        return;
-      case _OnboardingStep.arScan:
-        await _markCompleted(_OnboardingStep.arScan);
-        return;
-      case _OnboardingStep.daoGovernance:
-        await _markCompleted(_OnboardingStep.daoGovernance);
+      case _OnboardingStep.guestPermissions:
+        await _markCompleted(_OnboardingStep.guestPermissions);
         return;
       case _OnboardingStep.account:
         if (_isSignedIn) {
@@ -1916,13 +1668,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       case _OnboardingStep.verifyEmail:
         await _confirmVerificationAndContinue();
         return;
-      case _OnboardingStep.profile:
-        if (_completed.contains(_OnboardingStep.profile)) {
-          await _markCompleted(_OnboardingStep.profile);
-        } else {
-          await _deferCurrentStep();
-        }
-        return;
       case _OnboardingStep.role:
         if (_completed.contains(_OnboardingStep.role)) {
           await _markCompleted(_OnboardingStep.role);
@@ -1930,22 +1675,15 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           await _deferCurrentStep();
         }
         return;
-      case _OnboardingStep.permissions:
-        await _markCompleted(_OnboardingStep.permissions);
-        return;
-      case _OnboardingStep.artwork:
-        if (_completed.contains(_OnboardingStep.artwork)) {
-          await _markCompleted(_OnboardingStep.artwork);
+      case _OnboardingStep.profile:
+        if (_completed.contains(_OnboardingStep.profile)) {
+          await _markCompleted(_OnboardingStep.profile);
         } else {
           await _deferCurrentStep();
         }
         return;
-      case _OnboardingStep.follow:
-        if (_followedArtists.isNotEmpty) {
-          await _markCompleted(_OnboardingStep.follow);
-        } else {
-          await _deferCurrentStep();
-        }
+      case _OnboardingStep.accountPermissions:
+        await _markCompleted(_OnboardingStep.accountPermissions);
         return;
       case _OnboardingStep.done:
         await _finishOnboarding();
@@ -2125,58 +1863,23 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
     Widget content;
     switch (step) {
-      case _OnboardingStep.welcome:
-        content = _WelcomeStep(
-          title: l10n.onboardingFlowWelcomeTitle,
-          body: l10n.onboardingFlowWelcomeBody,
-        );
-      case _OnboardingStep.mapDiscovery:
-        content = _InfoStep(
-          title: l10n.onboardingExploreTitle,
-          body: l10n.onboardingExploreDescription,
-          icon: Icons.map_outlined,
-          start: palette.start,
-          end: palette.end,
-          permissionTitle: l10n.permissionsLocationTitle,
-          permissionBody: l10n.permissionsLocationSubtitle,
-          permissionEnabled: _locationEnabled,
-          onRequestPermission: () => _requestPermission(Permission.location),
-          hint: _hintForPermission(Permission.location),
-        );
-      case _OnboardingStep.community:
-        content = _InfoStep(
-          title: l10n.onboardingCommunityTitle,
-          body: l10n.onboardingCommunityDescription,
-          icon: Icons.groups_outlined,
-          start: palette.start,
-          end: palette.end,
-          permissionTitle: l10n.permissionsNotificationsTitle,
-          permissionBody: l10n.permissionsNotificationsSubtitle,
-          permissionEnabled: _notificationEnabled,
-          onRequestPermission: () =>
+      case _OnboardingStep.welcomeDiscover:
+      case _OnboardingStep.welcomeCreate:
+      case _OnboardingStep.welcomeJoin:
+        // Welcome phase uses the wizard, not the step card
+        content = const SizedBox.shrink();
+      case _OnboardingStep.guestPermissions:
+        content = _PermissionsStep(
+          title: l10n.onboardingFlowPermissionsTitle,
+          body: l10n.onboardingFlowPermissionsBody,
+          hint: _permissionHint,
+          locationEnabled: _locationEnabled,
+          cameraEnabled: _cameraEnabled,
+          notificationEnabled: _notificationEnabled,
+          onRequestLocation: () => _requestPermission(Permission.location),
+          onRequestCamera: () => _requestPermission(Permission.camera),
+          onRequestNotification: () =>
               _requestPermission(Permission.notification),
-          hint: _hintForPermission(Permission.notification),
-        );
-      case _OnboardingStep.arScan:
-        content = _InfoStep(
-          title: l10n.permissionsCameraSubtitle,
-          body: l10n.permissionsCameraDescription,
-          icon: Icons.view_in_ar_outlined,
-          start: palette.start,
-          end: palette.end,
-          permissionTitle: kIsWeb ? null : l10n.permissionsCameraTitle,
-          permissionBody: kIsWeb ? null : l10n.permissionsCameraSubtitle,
-          permissionEnabled: _cameraEnabled,
-          onRequestPermission:
-              kIsWeb ? null : () => _requestPermission(Permission.camera),
-          hint: kIsWeb ? null : _hintForPermission(Permission.camera),
-        );
-      case _OnboardingStep.daoGovernance:
-        content = _DaoTreasuryStep(
-          title: l10n.daoTreasuryTitle,
-          body: l10n.daoTreasurySubtitle,
-          start: palette.start,
-          end: palette.end,
         );
       case _OnboardingStep.account:
         final currentProfile =
@@ -2194,120 +1897,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
               _handleEmbeddedEmailRegistrationAttempted,
           onVerificationRequired: _handleEmbeddedVerificationRequired,
         );
-      case _OnboardingStep.profile:
-        final user =
-            Provider.of<ProfileProvider>(context, listen: false).currentUser;
-        final yearsActive = user?.artistInfo?.yearsActive ?? 0;
-        content = _InlineProfileStep(
-          title: l10n.onboardingFlowProfileTitle,
-          body: l10n.onboardingFlowProfileBody,
-          persona: _selectedPersona,
-          initialDisplayName:
-              (user?.displayName ?? _localProfileDraft['displayName'] ?? ''),
-          initialUsername:
-              (user?.username ?? _localProfileDraft['username'] ?? ''),
-          initialBio: (user?.bio ?? _localProfileDraft['bio'] ?? ''),
-          initialAvatarUrl:
-              (user?.avatar ?? _localProfileDraft['avatar'] ?? ''),
-          initialTwitter:
-              (user?.social['twitter'] ?? _localProfileDraft['twitter'] ?? ''),
-          initialInstagram: (user?.social['instagram'] ??
-              _localProfileDraft['instagram'] ??
-              ''),
-          initialWebsite:
-              (user?.social['website'] ?? _localProfileDraft['website'] ?? ''),
-          initialFieldOfWork: (user?.artistInfo?.specialty.join(', ') ??
-              _localProfileDraft['fieldOfWork'] ??
-              ''),
-          initialYearsActive: yearsActive > 0
-              ? yearsActive.toString()
-              : (_localProfileDraft['yearsActive'] ?? ''),
-          onSave: _saveInlineProfile,
-          onAvatarStaged: _stageAvatarForLaterUpload,
-        );
-      case _OnboardingStep.role:
-        final profileProvider =
-            Provider.of<ProfileProvider>(context, listen: false);
-        final user = profileProvider.currentUser;
-        final personaSelection = _selectedPersona ?? profileProvider.userPersona;
-        content = _RoleStep(
-          title: l10n.onboardingFlowRoleTitle,
-          body: l10n.onboardingFlowRoleBody,
-          artistSelected:
-              user?.isArtist == true || personaSelection == UserPersona.creator,
-          institutionSelected: user?.isInstitution == true ||
-              personaSelection == UserPersona.institution,
-          selectedPersona: personaSelection,
-          onSelectPersona: _applyPersonaSelection,
-          onSave: _applyRoleSelection,
-          daoReview: _daoReview,
-          daoDraft: _daoDraft,
-        );
-      case _OnboardingStep.permissions:
-        content = _PermissionsStep(
-          title: 'Before we start...',
-          body: l10n.onboardingFlowPermissionsBody,
-          hint: _permissionHint,
-          locationEnabled: _locationEnabled,
-          cameraEnabled: _cameraEnabled,
-          onRequestLocation: () => _requestPermission(Permission.location),
-          onRequestCamera: () => _requestPermission(Permission.camera),
-        );
-      case _OnboardingStep.artwork:
-        if (_isSignedIn) {
-          final profileProvider =
-              Provider.of<ProfileProvider>(context, listen: false);
-          final user = profileProvider.currentUser;
-          final personaSelection =
-              _selectedPersona ?? profileProvider.userPersona;
-          final wantsInstitution = user?.isInstitution == true ||
-              personaSelection == UserPersona.institution;
-          final wantsArtist = user?.isArtist == true ||
-              personaSelection == UserPersona.creator ||
-              !wantsInstitution;
-          final daoApproved = _isDaoApprovedForRole(
-            isArtist: wantsArtist,
-            isInstitution: wantsInstitution,
-          );
-          content = _ArtworkInlineStep(
-            title: l10n.onboardingFlowArtworkTitle,
-            body: l10n.onboardingFlowArtworkBody,
-            draftId: _inlineArtworkDraftId,
-            onCreated: () => unawaited(_markCompleted(_OnboardingStep.artwork)),
-            institutionMode: wantsInstitution,
-            forceDraftOnly: !daoApproved,
-          );
-        } else {
-          content = _AuthRequiredStep(
-            title: l10n.onboardingFlowArtworkTitle,
-            body: l10n.onboardingFlowArtworkBody,
-            onAuthSuccess: _handleEmbeddedSignInSuccess,
-            onVerificationRequired: _handleEmbeddedSignInNeedsVerification,
-          );
-        }
-      case _OnboardingStep.follow:
-        if (_isSignedIn) {
-          content = _FollowStep(
-            title: l10n.onboardingFlowFollowTitle,
-            body: l10n.onboardingFlowFollowBody,
-            artists: _artists,
-            followedArtists: _followedArtists,
-            isLoading: _isLoadingArtists,
-            onToggleFollow: _toggleFollow,
-          );
-        } else {
-          content = _AuthRequiredStep(
-            title: l10n.onboardingFlowFollowTitle,
-            body: l10n.onboardingFlowFollowBody,
-            onAuthSuccess: _handleEmbeddedSignInSuccess,
-            onVerificationRequired: _handleEmbeddedSignInNeedsVerification,
-          );
-        }
-      case _OnboardingStep.done:
-        content = _DoneStep(
-          title: l10n.onboardingFlowDoneTitle,
-          body: l10n.onboardingFlowDoneBody,
-        );
       case _OnboardingStep.verifyEmail:
         content = _VerifyEmailStep(
           title: l10n.onboardingFlowVerifyLastTitle,
@@ -2323,6 +1912,52 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           onRefreshVerification: _handleManualVerificationRefresh,
           onAuthSuccess: _handleEmbeddedSignInSuccess,
           onVerificationRequired: _handleEmbeddedSignInNeedsVerification,
+        );
+      case _OnboardingStep.role:
+        final profileProvider =
+            Provider.of<ProfileProvider>(context, listen: false);
+        final personaSelection = _selectedPersona ?? profileProvider.userPersona;
+        content = _RoleStep(
+          title: l10n.onboardingFlowRoleTitle,
+          body: l10n.onboardingFlowRoleBody,
+          selectedPersona: personaSelection,
+          onSelectPersona: _applyPersonaSelection,
+          onSave: _applyRoleSelection,
+        );
+      case _OnboardingStep.profile:
+        final user =
+            Provider.of<ProfileProvider>(context, listen: false).currentUser;
+        content = _InlineProfileStep(
+          title: l10n.onboardingFlowProfileTitle,
+          body: l10n.onboardingFlowProfileBody,
+          persona: _selectedPersona,
+          initialDisplayName:
+              (user?.displayName ?? _localProfileDraft['displayName'] ?? ''),
+          initialUsername:
+              (user?.username ?? _localProfileDraft['username'] ?? ''),
+          initialBio: (user?.bio ?? _localProfileDraft['bio'] ?? ''),
+          initialAvatarUrl:
+              (user?.avatar ?? _localProfileDraft['avatar'] ?? ''),
+          onSave: _saveInlineProfile,
+          onAvatarStaged: _stageAvatarForLaterUpload,
+        );
+      case _OnboardingStep.accountPermissions:
+        content = _PermissionsStep(
+          title: l10n.onboardingFlowPermissionsTitle,
+          body: l10n.onboardingFlowPermissionsBody,
+          hint: _permissionHint,
+          locationEnabled: _locationEnabled,
+          cameraEnabled: _cameraEnabled,
+          notificationEnabled: _notificationEnabled,
+          onRequestLocation: () => _requestPermission(Permission.location),
+          onRequestCamera: () => _requestPermission(Permission.camera),
+          onRequestNotification: () =>
+              _requestPermission(Permission.notification),
+        );
+      case _OnboardingStep.done:
+        content = _DoneStep(
+          title: l10n.onboardingFlowDoneTitle,
+          body: l10n.onboardingFlowDoneBody,
         );
     }
 
@@ -2358,30 +1993,24 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
   IconData _stepIcon(_OnboardingStep step) {
     switch (step) {
-      case _OnboardingStep.welcome:
-        return Icons.waving_hand_outlined;
-      case _OnboardingStep.mapDiscovery:
-        return Icons.map_outlined;
-      case _OnboardingStep.community:
+      case _OnboardingStep.welcomeDiscover:
+        return Icons.explore_outlined;
+      case _OnboardingStep.welcomeCreate:
+        return Icons.palette_outlined;
+      case _OnboardingStep.welcomeJoin:
         return Icons.groups_outlined;
-      case _OnboardingStep.arScan:
-        return Icons.view_in_ar_outlined;
-      case _OnboardingStep.daoGovernance:
-        return Icons.how_to_vote_outlined;
+      case _OnboardingStep.guestPermissions:
+        return Icons.shield_outlined;
       case _OnboardingStep.account:
         return Icons.person_add_alt_1_outlined;
-      case _OnboardingStep.profile:
-        return Icons.badge_outlined;
-      case _OnboardingStep.role:
-        return Icons.tune_outlined;
-      case _OnboardingStep.permissions:
-        return Icons.shield_outlined;
-      case _OnboardingStep.artwork:
-        return Icons.palette_outlined;
-      case _OnboardingStep.follow:
-        return Icons.group_add_outlined;
       case _OnboardingStep.verifyEmail:
         return Icons.mark_email_read_outlined;
+      case _OnboardingStep.role:
+        return Icons.tune_outlined;
+      case _OnboardingStep.profile:
+        return Icons.badge_outlined;
+      case _OnboardingStep.accountPermissions:
+        return Icons.shield_outlined;
       case _OnboardingStep.done:
         return Icons.rocket_launch_outlined;
     }
@@ -2433,30 +2062,24 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   Widget _buildDesktopStepRail(AppLocalizations l10n, ColorScheme scheme) {
     final labels = _steps.map((step) {
       switch (step) {
-        case _OnboardingStep.mapDiscovery:
+        case _OnboardingStep.welcomeDiscover:
           return l10n.onboardingExploreTitle;
-        case _OnboardingStep.community:
-          return l10n.onboardingCommunityTitle;
-        case _OnboardingStep.arScan:
-          return l10n.permissionsCameraSubtitle;
-        case _OnboardingStep.daoGovernance:
-          return l10n.daoTreasuryTitle;
-        case _OnboardingStep.role:
+        case _OnboardingStep.welcomeCreate:
           return l10n.onboardingFlowRoleTitle;
-        case _OnboardingStep.profile:
-          return l10n.onboardingFlowProfileTitle;
+        case _OnboardingStep.welcomeJoin:
+          return l10n.onboardingCommunityTitle;
+        case _OnboardingStep.guestPermissions:
+          return l10n.onboardingFlowPermissionsTitle;
         case _OnboardingStep.account:
           return l10n.onboardingFlowAccountTitle;
         case _OnboardingStep.verifyEmail:
           return l10n.onboardingFlowVerifyLastTitle;
-        case _OnboardingStep.permissions:
+        case _OnboardingStep.role:
+          return l10n.onboardingFlowRoleTitle;
+        case _OnboardingStep.profile:
+          return l10n.onboardingFlowProfileTitle;
+        case _OnboardingStep.accountPermissions:
           return l10n.onboardingFlowPermissionsTitle;
-        case _OnboardingStep.welcome:
-          return l10n.onboardingFlowWelcomeTitle;
-        case _OnboardingStep.artwork:
-          return l10n.onboardingFlowArtworkTitle;
-        case _OnboardingStep.follow:
-          return l10n.onboardingFlowFollowTitle;
         case _OnboardingStep.done:
           return l10n.onboardingFlowDoneTitle;
       }
@@ -2572,6 +2195,76 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     );
   }
 
+  Widget _buildWelcomeWizard(AppLocalizations l10n, ColorScheme scheme) {
+    final pages = <_WelcomeWizardPage>[
+      _WelcomeWizardPage(
+        icon: Icons.explore_outlined,
+        title: l10n.onboardingExploreTitle,
+        body: l10n.onboardingExploreDescription,
+        gradient: const [Color(0xFF006064), Color(0xFF26A69A)],
+      ),
+      _WelcomeWizardPage(
+        icon: Icons.palette_outlined,
+        title: l10n.onboardingFlowRoleTitle,
+        body: l10n.onboardingFlowRoleBody,
+        gradient: const [Color(0xFFE65100), Color(0xFFFFB74D)],
+      ),
+      _WelcomeWizardPage(
+        icon: Icons.groups_outlined,
+        title: l10n.onboardingCommunityTitle,
+        body: l10n.onboardingCommunityDescription,
+        gradient: const [Color(0xFF2E7D32), Color(0xFFA5D6A7)],
+      ),
+    ];
+
+    return Column(
+      children: [
+        Expanded(
+          child: PageView.builder(
+            controller: _welcomePageController,
+            itemCount: pages.length,
+            onPageChanged: (index) {
+              setState(() => _welcomePageIndex = index);
+            },
+            itemBuilder: (context, index) {
+              final page = pages[index];
+              return _WelcomePageView(
+                icon: page.icon,
+                title: page.title,
+                body: page.body,
+                gradient: page.gradient,
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: KubusSpacing.md),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(pages.length, (index) {
+            final isActive = index == _welcomePageIndex;
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              width: isActive ? 12 : 8,
+              height: 8,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(4),
+                color: isActive
+                    ? scheme.primary
+                    : scheme.onSurface.withValues(alpha: 0.3),
+              ),
+            );
+          }),
+        ),
+        const SizedBox(height: KubusSpacing.lg),
+        _WelcomeBranchPage(
+          onSelectGuest: _selectGuestBranch,
+          onSelectAccount: _selectAccountBranch,
+        ),
+      ],
+    );
+  }
+
   Widget _buildDesktopContent(AppLocalizations l10n, ColorScheme scheme) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2631,6 +2324,24 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
               final compactHeight = !_isDesktop && constraints.maxHeight < 760;
               final compactLayout = compactHeight;
               final hideProgress = !_isDesktop && constraints.maxHeight < 700;
+
+              // Show welcome wizard during welcome phase
+              if (_isWelcomePhase) {
+                return AnimatedPadding(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOut,
+                  padding: EdgeInsets.only(bottom: keyboardLift),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: _isDesktop
+                          ? KubusSpacing.lg
+                          : (compactLayout ? KubusSpacing.sm : KubusSpacing.md),
+                      vertical: compactLayout ? 8 : 10,
+                    ),
+                    child: _buildWelcomeWizard(l10n, scheme),
+                  ),
+                );
+              }
 
               return AnimatedPadding(
                 duration: const Duration(milliseconds: 180),
@@ -2703,17 +2414,14 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
   String _primaryLabelForStep(AppLocalizations l10n) {
     switch (_currentStep) {
-      case _OnboardingStep.mapDiscovery:
-      case _OnboardingStep.community:
-      case _OnboardingStep.arScan:
-      case _OnboardingStep.daoGovernance:
+      case _OnboardingStep.welcomeDiscover:
+      case _OnboardingStep.welcomeCreate:
+      case _OnboardingStep.welcomeJoin:
+      case _OnboardingStep.guestPermissions:
       case _OnboardingStep.account:
-      case _OnboardingStep.profile:
-      case _OnboardingStep.permissions:
-      case _OnboardingStep.artwork:
-      case _OnboardingStep.follow:
       case _OnboardingStep.role:
-      case _OnboardingStep.welcome:
+      case _OnboardingStep.profile:
+      case _OnboardingStep.accountPermissions:
         return l10n.commonContinue;
       case _OnboardingStep.verifyEmail:
         return l10n.onboardingFlowVerifyContinue;
@@ -2792,148 +2500,67 @@ class _AccountStep extends StatelessWidget {
   }
 }
 
-class _WelcomeStep extends StatelessWidget {
-  const _WelcomeStep({
+class _WelcomeWizardPage {
+  const _WelcomeWizardPage({
+    required this.icon,
     required this.title,
     required this.body,
+    required this.gradient,
   });
 
+  final IconData icon;
   final String title;
   final String body;
+  final List<Color> gradient;
+}
+
+class _WelcomePageView extends StatelessWidget {
+  const _WelcomePageView({
+    required this.icon,
+    required this.title,
+    required this.body,
+    required this.gradient,
+  });
+
+  final IconData icon;
+  final String title;
+  final String body;
+  final List<Color> gradient;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context)!;
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final compact = constraints.maxHeight < 400;
-        final tight = constraints.maxHeight < 220;
-        final isWide = constraints.maxWidth > 500;
-        return ClipRect(
-          child: Align(
-            alignment: Alignment.topLeft,
-            child: FittedBox(
-              alignment: Alignment.topLeft,
-              fit: BoxFit.scaleDown,
-              child: SizedBox(
-                width: constraints.maxWidth,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (!compact) ...[
-                      Center(
-                        child: GradientIconCard(
-                          start: const Color(0xFF006064),
-                          end: const Color(0xFF26A69A),
-                          icon: Icons.waving_hand_outlined,
-                          iconSize: isWide ? 36 : 28,
-                          width: isWide ? 72 : 56,
-                          height: isWide ? 72 : 56,
-                          radius: isWide ? 18 : 14,
-                        ),
-                      ),
-                      SizedBox(height: isWide ? KubusSpacing.md : 10),
-                    ],
-                    Text(
-                      title,
-                      style:
-                          Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                fontSize: compact ? 22 : (isWide ? 28 : null),
-                              ),
-                    ),
-                    SizedBox(height: compact ? KubusSpacing.xs : 6),
-                    Text(
-                      body,
-                      maxLines: tight ? 1 : 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: scheme.onSurface.withValues(alpha: 0.8),
-                          ),
-                    ),
-                    if (!tight) ...[
-                      SizedBox(height: compact ? KubusSpacing.sm : 14),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color:
-                              const Color(0xFF26A69A).withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(KubusRadius.sm),
-                        ),
-                        child: Text(
-                          l10n.onboardingFlowWelcomeInfoTime,
-                          style:
-                              Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF80CBC4),
-                                  ),
-                        ),
-                      ),
-                      SizedBox(height: compact ? KubusSpacing.sm : 12),
-                      _WelcomeInfoRow(
-                        icon: Icons.person_add_alt_1_outlined,
-                        text: l10n.onboardingFlowWelcomeInfoAccount,
-                      ),
-                      _WelcomeInfoRow(
-                        icon: Icons.palette_outlined,
-                        text: l10n.onboardingFlowWelcomeInfoCreate,
-                      ),
-                      if (!compact) ...[
-                        _WelcomeInfoRow(
-                          icon: Icons.group_add_outlined,
-                          text: l10n.onboardingFlowWelcomeInfoFollow,
-                        ),
-                        _WelcomeInfoRow(
-                          icon: Icons.shield_outlined,
-                          text: l10n.onboardingFlowPermissionsTitle,
-                        ),
-                      ],
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _WelcomeInfoRow extends StatelessWidget {
-  const _WelcomeInfoRow({required this.icon, required this.text});
-
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
-      child: Row(
+      padding: const EdgeInsets.all(KubusSpacing.md),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(7),
-              color: const Color(0xFF26A69A).withValues(alpha: 0.15),
-            ),
-            child: Icon(icon, size: 15, color: const Color(0xFF80CBC4)),
+          GradientIconCard(
+            start: gradient.first,
+            end: gradient.last,
+            icon: icon,
+            iconSize: 48,
+            width: 96,
+            height: 96,
+            radius: KubusRadius.xl,
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              text,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.85),
-                  ),
-            ),
+          const SizedBox(height: KubusSpacing.lg),
+          Text(
+            title,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: KubusSpacing.sm),
+          Text(
+            body,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.8),
+                ),
+            textAlign: TextAlign.center,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -2941,285 +2568,46 @@ class _WelcomeInfoRow extends StatelessWidget {
   }
 }
 
-class _InfoStep extends StatelessWidget {
-  const _InfoStep({
-    required this.title,
-    required this.body,
-    required this.icon,
-    required this.start,
-    required this.end,
-    this.permissionTitle,
-    this.permissionBody,
-    this.permissionEnabled = false,
-    this.onRequestPermission,
-    this.hint,
+class _WelcomeBranchPage extends StatelessWidget {
+  const _WelcomeBranchPage({
+    required this.onSelectGuest,
+    required this.onSelectAccount,
   });
 
-  final String title;
-  final String body;
-  final IconData icon;
-  final Color start;
-  final Color end;
-  final String? permissionTitle;
-  final String? permissionBody;
-  final bool permissionEnabled;
-  final Future<void> Function()? onRequestPermission;
-  final String? hint;
+  final Future<void> Function() onSelectGuest;
+  final Future<void> Function() onSelectAccount;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    final hasPermissionPrompt = (permissionTitle ?? '').trim().isNotEmpty &&
-        (permissionBody ?? '').trim().isNotEmpty;
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final compact = constraints.maxHeight < 430;
-        final tight = constraints.maxHeight < 350;
-        final isWide = constraints.maxWidth > 520;
-
-        final iconCardSize = tight ? 68.0 : (compact ? 82.0 : 96.0);
-        final iconSize = tight ? 30.0 : (compact ? 36.0 : 42.0);
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (!tight) ...[
-              Center(
-                child: GradientIconCard(
-                  start: start,
-                  end: end,
-                  icon: icon,
-                  iconSize: iconSize,
-                  width: iconCardSize,
-                  height: iconCardSize,
-                  radius: KubusRadius.lg,
-                ),
-              ),
-              SizedBox(height: compact ? KubusSpacing.sm : KubusSpacing.md),
-            ],
-            Text(
-              title,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    fontSize: compact ? 22 : (isWide ? 28 : null),
-                  ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            SizedBox(height: compact ? KubusSpacing.xs : KubusSpacing.sm),
-            Text(
-              body,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.84),
-                    height: 1.35,
-                    fontSize: compact ? 14 : null,
-                  ),
-              maxLines: tight ? 2 : 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-            if (hasPermissionPrompt) ...[
-              SizedBox(height: compact ? KubusSpacing.sm : KubusSpacing.md),
-              Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: compact ? KubusSpacing.sm : KubusSpacing.md,
-                  vertical: compact ? KubusSpacing.sm : KubusSpacing.md,
-                ),
-                decoration: BoxDecoration(
-                  color: scheme.surface.withValues(alpha: 0.26),
-                  borderRadius: BorderRadius.circular(KubusRadius.md),
-                  border: Border.all(
-                    color: scheme.outline.withValues(alpha: 0.22),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      permissionTitle!,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                    const SizedBox(height: KubusSpacing.xs),
-                    Text(
-                      permissionBody!,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: scheme.onSurface.withValues(alpha: 0.76),
-                            height: 1.25,
-                          ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: KubusSpacing.xs),
-                    if (permissionEnabled)
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.check_circle,
-                            size: 16,
-                            color: scheme.primary,
-                          ),
-                          const SizedBox(width: KubusSpacing.xs),
-                          Text(
-                            l10n.permissionsGrantedLabel,
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelMedium
-                                ?.copyWith(
-                                  color: scheme.primary,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                          ),
-                        ],
-                      )
-                    else if (onRequestPermission != null)
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: TextButton(
-                          onPressed: onRequestPermission,
-                          style: TextButton.styleFrom(
-                            foregroundColor: scheme.onSurface,
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: KubusSpacing.sm,
-                              vertical: KubusSpacing.xs,
-                            ),
-                          ),
-                          child: Text(l10n.commonEnable),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-            if ((hint ?? '').trim().isNotEmpty) ...[
-              const SizedBox(height: KubusSpacing.xs),
-              Text(
-                hint!,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurface.withValues(alpha: 0.72),
-                    ),
-              ),
-            ],
-            const Spacer(),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _DaoTreasuryStep extends StatelessWidget {
-  const _DaoTreasuryStep({
-    required this.title,
-    required this.body,
-    required this.start,
-    required this.end,
-  });
-
-  final String title;
-  final String body;
-  final Color start;
-  final Color end;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final cards = <Map<String, String>>[
-      <String, String>{
-        'title': 'What the treasury is',
-        'body':
-            'A community fund used for grants, curation programs, infrastructure, and creator support.',
-      },
-      <String, String>{
-        'title': 'What it funds',
-        'body':
-            'Platform improvements, artist initiatives, exhibitions, moderation operations, and ecosystem growth.',
-      },
-      <String, String>{
-        'title': 'What applying means',
-        'body':
-            'You prepare a DAO application draft with your portfolio, medium, and statement aligned with your role.',
-      },
-      <String, String>{
-        'title': 'What happens after onboarding',
-        'body':
-            'If you are signed in when onboarding completes, the draft is submitted once to DAO review. If submission fails, the draft remains stored locally for retry.',
-      },
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Center(
-          child: GradientIconCard(
-            start: start,
-            end: end,
-            icon: Icons.account_balance_wallet_outlined,
-            iconSize: 38,
-            width: 88,
-            height: 88,
-            radius: KubusRadius.lg,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          KubusButton(
+            onPressed: onSelectAccount,
+            label: l10n.commonCreateAccount,
+            isFullWidth: true,
           ),
-        ),
-        const SizedBox(height: KubusSpacing.md),
-        Text(
-          title,
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w700,
+          const SizedBox(height: KubusSpacing.sm),
+          OutlinedButton(
+            onPressed: () => unawaited(onSelectGuest()),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: scheme.onSurface.withValues(alpha: 0.85),
+              side: BorderSide(
+                color: scheme.onSurface.withValues(alpha: 0.35),
               ),
-        ),
-        const SizedBox(height: KubusSpacing.sm),
-        Text(
-          body,
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: scheme.onSurface.withValues(alpha: 0.84),
+              minimumSize: const Size(double.infinity, 48),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
               ),
-        ),
-        const SizedBox(height: KubusSpacing.sm),
-        Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              children: cards
-                  .map(
-                    (card) => Container(
-                      width: double.infinity,
-                      margin: const EdgeInsets.only(bottom: KubusSpacing.sm),
-                      padding: const EdgeInsets.all(KubusSpacing.md),
-                      decoration: BoxDecoration(
-                        color: scheme.surface.withValues(alpha: 0.26),
-                        borderRadius: BorderRadius.circular(KubusRadius.md),
-                        border: Border.all(
-                          color: scheme.outline.withValues(alpha: 0.22),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            card['title'] ?? '',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleSmall
-                                ?.copyWith(fontWeight: FontWeight.w700),
-                          ),
-                          const SizedBox(height: KubusSpacing.xs),
-                          Text(
-                            card['body'] ?? '',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                  .toList(growable: false),
             ),
+            child: Text(l10n.commonDiscoverArt),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -3652,11 +3040,6 @@ class _InlineProfileStep extends StatefulWidget {
     required this.initialUsername,
     required this.initialBio,
     required this.initialAvatarUrl,
-    required this.initialTwitter,
-    required this.initialInstagram,
-    required this.initialWebsite,
-    required this.initialFieldOfWork,
-    required this.initialYearsActive,
     required this.onSave,
     required this.onAvatarStaged,
   });
@@ -3668,11 +3051,6 @@ class _InlineProfileStep extends StatefulWidget {
   final String initialUsername;
   final String initialBio;
   final String initialAvatarUrl;
-  final String initialTwitter;
-  final String initialInstagram;
-  final String initialWebsite;
-  final String initialFieldOfWork;
-  final String initialYearsActive;
   final Future<void> Function({
     required Uint8List bytes,
     required String fileName,
@@ -3683,11 +3061,6 @@ class _InlineProfileStep extends StatefulWidget {
     required String username,
     required String bio,
     required String? avatar,
-    required String twitter,
-    required String instagram,
-    required String website,
-    required List<String> fieldOfWork,
-    required int? yearsActive,
   }) onSave;
 
   @override
@@ -3698,11 +3071,6 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
   late final TextEditingController _displayName;
   late final TextEditingController _username;
   late final TextEditingController _bio;
-  late final TextEditingController _twitter;
-  late final TextEditingController _instagram;
-  late final TextEditingController _website;
-  late final TextEditingController _fieldOfWork;
-  late final TextEditingController _yearsActive;
   final ImagePicker _picker = ImagePicker();
   String? _avatarUrl;
   Uint8List? _localAvatarBytes;
@@ -3715,11 +3083,6 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
     _displayName = TextEditingController(text: widget.initialDisplayName);
     _username = TextEditingController(text: widget.initialUsername);
     _bio = TextEditingController(text: widget.initialBio);
-    _twitter = TextEditingController(text: widget.initialTwitter);
-    _instagram = TextEditingController(text: widget.initialInstagram);
-    _website = TextEditingController(text: widget.initialWebsite);
-    _fieldOfWork = TextEditingController(text: widget.initialFieldOfWork);
-    _yearsActive = TextEditingController(text: widget.initialYearsActive);
     _avatarUrl = widget.initialAvatarUrl;
   }
 
@@ -3728,11 +3091,6 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
     _displayName.dispose();
     _username.dispose();
     _bio.dispose();
-    _twitter.dispose();
-    _instagram.dispose();
-    _website.dispose();
-    _fieldOfWork.dispose();
-    _yearsActive.dispose();
     super.dispose();
   }
 
@@ -3773,25 +3131,8 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
     }
   }
 
-  int? _parseYearsActive() {
-    final raw = _yearsActive.text.trim();
-    if (raw.isEmpty) return null;
-    final parsed = int.tryParse(raw);
-    if (parsed == null || parsed < 0) return -1;
-    return parsed;
-  }
-
   Future<void> _save() async {
     if (_saving) return;
-    final yearsActive = _parseYearsActive();
-    if (yearsActive == -1) {
-      ScaffoldMessenger.of(context).showKubusSnackBar(
-        const SnackBar(content: Text('Years active must be a valid number.')),
-        tone: KubusSnackBarTone.error,
-      );
-      return;
-    }
-
     setState(() => _saving = true);
     try {
       await widget.onSave(
@@ -3799,15 +3140,6 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
         username: _username.text,
         bio: _bio.text,
         avatar: _avatarUrl,
-        twitter: _twitter.text,
-        instagram: _instagram.text,
-        website: _website.text,
-        fieldOfWork: _fieldOfWork.text
-            .split(',')
-            .map((value) => value.trim())
-            .where((value) => value.isNotEmpty)
-            .toList(growable: false),
-        yearsActive: yearsActive,
       );
     } finally {
       if (mounted) {
@@ -3864,9 +3196,6 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    final persona = widget.persona;
-    final creatorSelected = persona == UserPersona.creator;
-    final institutionSelected = persona == UserPersona.institution;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -3875,7 +3204,9 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
             style: Theme.of(context)
                 .textTheme
                 .headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w700)),
+                ?.copyWith(fontWeight: FontWeight.w700),
+            maxLines: 3,
+            overflow: TextOverflow.visible),
         const SizedBox(height: KubusSpacing.sm),
         Text(widget.body, style: Theme.of(context).textTheme.bodyLarge),
         const SizedBox(height: 12),
@@ -3948,55 +3279,6 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
                     labelText: l10n.desktopSettingsBioLabel,
                   ),
                 ),
-                if (creatorSelected) ...[
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: _twitter,
-                    onTapOutside: (_) =>
-                        FocusManager.instance.primaryFocus?.unfocus(),
-                    decoration: const InputDecoration(labelText: 'Twitter'),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: _instagram,
-                    onTapOutside: (_) =>
-                        FocusManager.instance.primaryFocus?.unfocus(),
-                    decoration: const InputDecoration(labelText: 'Instagram'),
-                  ),
-                ],
-                if (creatorSelected || institutionSelected) ...[
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: _website,
-                    onTapOutside: (_) =>
-                        FocusManager.instance.primaryFocus?.unfocus(),
-                    decoration: InputDecoration(
-                      labelText: l10n.desktopSettingsWebsiteLabel,
-                    ),
-                  ),
-                ],
-                if (creatorSelected) ...[
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: _fieldOfWork,
-                    onTapOutside: (_) =>
-                        FocusManager.instance.primaryFocus?.unfocus(),
-                    decoration: InputDecoration(
-                      labelText: l10n.profileFieldOfWorkLabel,
-                      hintText: 'Painting, AR, Photography',
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: _yearsActive,
-                    keyboardType: TextInputType.number,
-                    onTapOutside: (_) =>
-                        FocusManager.instance.primaryFocus?.unfocus(),
-                    decoration: InputDecoration(
-                      labelText: l10n.profileYearsActiveLabel,
-                    ),
-                  ),
-                ],
                 const SizedBox(height: 14),
                 KubusButton(
                   onPressed: (_saving || _uploadingAvatar) ? null : _save,
@@ -4017,29 +3299,18 @@ class _RoleStep extends StatefulWidget {
   const _RoleStep({
     required this.title,
     required this.body,
-    required this.artistSelected,
-    required this.institutionSelected,
     required this.selectedPersona,
     required this.onSelectPersona,
     required this.onSave,
-    required this.daoReview,
-    required this.daoDraft,
   });
 
   final String title;
   final String body;
-  final bool artistSelected;
-  final bool institutionSelected;
   final UserPersona? selectedPersona;
-  final Map<String, dynamic>? daoReview;
-  final _DaoApplicationDraftRecord? daoDraft;
   final Future<void> Function(UserPersona persona) onSelectPersona;
   final Future<void> Function({
     required bool isArtist,
     required bool isInstitution,
-    String? daoPortfolioUrl,
-    String? daoMedium,
-    String? daoStatement,
   }) onSave;
 
   @override
@@ -4047,44 +3318,13 @@ class _RoleStep extends StatefulWidget {
 }
 
 class _RoleStepState extends State<_RoleStep> {
-  late bool _artist;
-  late bool _institution;
   UserPersona? _selectedPersona;
   bool _saving = false;
-  final TextEditingController _portfolioController = TextEditingController();
-  final TextEditingController _mediumController = TextEditingController();
-  final TextEditingController _statementController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _artist = widget.artistSelected;
-    _institution = widget.institutionSelected;
     _selectedPersona = widget.selectedPersona;
-    if (_selectedPersona == UserPersona.creator) {
-      _artist = true;
-      _institution = false;
-    } else if (_selectedPersona == UserPersona.institution) {
-      _artist = false;
-      _institution = true;
-    } else if (_selectedPersona == UserPersona.lover) {
-      _artist = false;
-      _institution = false;
-    }
-    final draft = widget.daoDraft;
-    if (draft != null) {
-      _portfolioController.text = draft.portfolioUrl;
-      _mediumController.text = draft.medium;
-      _statementController.text = draft.statement;
-    }
-  }
-
-  @override
-  void dispose() {
-    _portfolioController.dispose();
-    _mediumController.dispose();
-    _statementController.dispose();
-    super.dispose();
   }
 
   Future<void> _save() async {
@@ -4092,11 +3332,8 @@ class _RoleStepState extends State<_RoleStep> {
     setState(() => _saving = true);
     try {
       await widget.onSave(
-        isArtist: _artist,
-        isInstitution: _institution,
-        daoPortfolioUrl: _portfolioController.text.trim(),
-        daoMedium: _mediumController.text.trim(),
-        daoStatement: _statementController.text.trim(),
+        isArtist: _selectedPersona == UserPersona.creator,
+        isInstitution: _selectedPersona == UserPersona.institution,
       );
     } finally {
       if (mounted) {
@@ -4105,24 +3342,9 @@ class _RoleStepState extends State<_RoleStep> {
     }
   }
 
-  String? _daoReviewStatusLabel(AppLocalizations l10n) {
-    final review = widget.daoReview;
-    if (review == null) return null;
-    final status = (review['status'] ?? '').toString().trim().toLowerCase();
-    if (status == 'approved') {
-      return 'DAO review approved.';
-    }
-    if (status == 'rejected') {
-      return 'DAO review needs updates before approval.';
-    }
-    return l10n.artistStudioReviewPendingInfo;
-  }
-
   Future<void> _selectPersona(UserPersona persona) async {
     setState(() {
       _selectedPersona = persona;
-      _artist = persona == UserPersona.creator;
-      _institution = persona == UserPersona.institution;
     });
     await widget.onSelectPersona(persona);
   }
@@ -4130,7 +3352,6 @@ class _RoleStepState extends State<_RoleStep> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final reviewStatus = _daoReviewStatusLabel(l10n);
     return LayoutBuilder(
       builder: (context, constraints) {
         final minContentHeight =
@@ -4161,55 +3382,6 @@ class _RoleStepState extends State<_RoleStep> {
                         selectedPersona: _selectedPersona,
                         onSelect: _selectPersona,
                       ),
-                      if (_artist || _institution) ...[
-                        const SizedBox(height: KubusSpacing.md),
-                        Text(
-                          'DAO application draft',
-                          style:
-                              Theme.of(context).textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                        ),
-                        const SizedBox(height: KubusSpacing.xs),
-                        Text(
-                          'Saved locally during onboarding and submitted once when you complete setup.',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                        const SizedBox(height: KubusSpacing.sm),
-                        TextField(
-                          controller: _portfolioController,
-                          onTapOutside: (_) =>
-                              FocusManager.instance.primaryFocus?.unfocus(),
-                          decoration:
-                              const InputDecoration(labelText: 'Portfolio URL'),
-                        ),
-                        const SizedBox(height: KubusSpacing.sm),
-                        TextField(
-                          controller: _mediumController,
-                          onTapOutside: (_) =>
-                              FocusManager.instance.primaryFocus?.unfocus(),
-                          decoration: const InputDecoration(
-                            labelText: 'Primary medium',
-                          ),
-                        ),
-                        const SizedBox(height: KubusSpacing.sm),
-                        TextField(
-                          controller: _statementController,
-                          minLines: 2,
-                          maxLines: 4,
-                          onTapOutside: (_) =>
-                              FocusManager.instance.primaryFocus?.unfocus(),
-                          decoration:
-                              const InputDecoration(labelText: 'DAO statement'),
-                        ),
-                        if ((reviewStatus ?? '').trim().isNotEmpty) ...[
-                          const SizedBox(height: KubusSpacing.sm),
-                          Text(
-                            reviewStatus!,
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ],
-                      ],
                     ],
                   ),
                 ),
@@ -4235,8 +3407,10 @@ class _PermissionsStep extends StatelessWidget {
     required this.hint,
     required this.locationEnabled,
     required this.cameraEnabled,
+    required this.notificationEnabled,
     required this.onRequestLocation,
     required this.onRequestCamera,
+    required this.onRequestNotification,
   });
 
   final String title;
@@ -4244,8 +3418,10 @@ class _PermissionsStep extends StatelessWidget {
   final String? hint;
   final bool locationEnabled;
   final bool cameraEnabled;
+  final bool notificationEnabled;
   final Future<void> Function() onRequestLocation;
   final Future<void> Function() onRequestCamera;
+  final Future<void> Function() onRequestNotification;
 
   @override
   Widget build(BuildContext context) {
@@ -4266,10 +3442,16 @@ class _PermissionsStep extends StatelessWidget {
           enabled: locationEnabled,
           onTap: onRequestLocation,
         ),
+        if (!kIsWeb)
+          _PermissionTile(
+            label: l10n.onboardingFlowPermissionCamera,
+            enabled: cameraEnabled,
+            onTap: onRequestCamera,
+          ),
         _PermissionTile(
-          label: l10n.onboardingFlowPermissionCamera,
-          enabled: cameraEnabled,
-          onTap: onRequestCamera,
+          label: l10n.onboardingFlowPermissionNotifications,
+          enabled: notificationEnabled,
+          onTap: onRequestNotification,
         ),
         if ((hint ?? '').trim().isNotEmpty)
           Padding(
@@ -4322,185 +3504,6 @@ class _PermissionTile extends StatelessWidget {
               onPressed: onTap,
               child: Text(l10n.commonEnable),
             ),
-    );
-  }
-}
-
-class _ArtworkInlineStep extends StatelessWidget {
-  const _ArtworkInlineStep({
-    required this.title,
-    required this.body,
-    required this.draftId,
-    required this.onCreated,
-    required this.institutionMode,
-    required this.forceDraftOnly,
-  });
-
-  final String title;
-  final String body;
-  final String draftId;
-  final VoidCallback onCreated;
-  final bool institutionMode;
-  final bool forceDraftOnly;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title,
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w700)),
-        const SizedBox(height: KubusSpacing.sm),
-        Text(
-          forceDraftOnly
-              ? '$body\n\nDraft-only mode is enabled until DAO approval.'
-              : body,
-          style: Theme.of(context).textTheme.bodyLarge,
-        ),
-        const SizedBox(height: 12),
-        Expanded(
-          child: institutionMode
-              ? ExhibitionCreatorScreen(
-                  embedded: true,
-                  forceDraftOnly: forceDraftOnly,
-                  onCreated: onCreated,
-                )
-              : ArtworkCreator(
-                  draftId: draftId,
-                  embedded: true,
-                  showAppBar: false,
-                  onCreated: onCreated,
-                  forceDraftOnly: forceDraftOnly,
-                ),
-        ),
-      ],
-    );
-  }
-}
-
-class _AuthRequiredStep extends StatelessWidget {
-  const _AuthRequiredStep({
-    required this.title,
-    required this.body,
-    required this.onAuthSuccess,
-    required this.onVerificationRequired,
-  });
-
-  final String title;
-  final String body;
-  final Future<void> Function(Map<String, dynamic>) onAuthSuccess;
-  final Future<void> Function(String email) onVerificationRequired;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title,
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w700)),
-        const SizedBox(height: KubusSpacing.sm),
-        Text(body, style: Theme.of(context).textTheme.bodyLarge),
-        const SizedBox(height: 12),
-        Expanded(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              if (constraints.maxHeight < 260) {
-                return Align(
-                  alignment: Alignment.topLeft,
-                  child: Text(
-                    AppLocalizations.of(context)!.commonSignIn,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                );
-              }
-              return SignInScreen(
-                embedded: true,
-                onAuthSuccess: onAuthSuccess,
-                onVerificationRequired: onVerificationRequired,
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _FollowStep extends StatelessWidget {
-  const _FollowStep({
-    required this.title,
-    required this.body,
-    required this.artists,
-    required this.followedArtists,
-    required this.isLoading,
-    required this.onToggleFollow,
-  });
-
-  final String title;
-  final String body;
-  final List<Map<String, dynamic>> artists;
-  final Set<String> followedArtists;
-  final bool isLoading;
-  final Future<void> Function(Map<String, dynamic> artist) onToggleFollow;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title,
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w700)),
-        const SizedBox(height: KubusSpacing.sm),
-        Text(body, style: Theme.of(context).textTheme.bodyLarge),
-        const SizedBox(height: 12),
-        if (isLoading)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 14),
-            child: Center(child: CircularProgressIndicator()),
-          )
-        else if (artists.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: KubusSpacing.sm),
-            child: Text(
-              l10n.onboardingFlowNoSuggestions,
-              style: TextStyle(color: scheme.onSurface.withValues(alpha: 0.75)),
-            ),
-          )
-        else
-          ...artists.map((artist) {
-            final id = (artist['walletAddress'] ?? '').toString().trim();
-            final name = (artist['displayName'] ??
-                    artist['name'] ??
-                    artist['username'] ??
-                    '')
-                .toString();
-            final isFollowed = followedArtists.contains(id);
-            return ListTile(
-              contentPadding: EdgeInsets.zero,
-              title:
-                  Text(name.isEmpty ? l10n.onboardingFlowUnknownArtist : name),
-              subtitle: Text((artist['bio'] ?? '').toString(),
-                  maxLines: 1, overflow: TextOverflow.ellipsis),
-              trailing: OutlinedButton(
-                onPressed: () => onToggleFollow(artist),
-                child:
-                    Text(isFollowed ? l10n.commonFollowing : l10n.commonFollow),
-              ),
-            );
-          }),
-        const Spacer(),
-      ],
     );
   }
 }

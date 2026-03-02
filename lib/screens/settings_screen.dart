@@ -24,7 +24,7 @@ import '../services/settings_service.dart';
 import '../widgets/platform_aware_widgets.dart';
 import '../widgets/glass_components.dart';
 import '../widgets/email_verification_status_badge.dart';
-import 'onboarding/onboarding_screen.dart';
+import 'onboarding/onboarding_flow_screen.dart';
 import 'web3/wallet/wallet_home.dart' as web3_wallet;
 import 'web3/wallet/connectwallet_screen.dart';
 import 'onboarding_reset_screen.dart';
@@ -2957,7 +2957,7 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   void _restartToOnboarding() {
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+      MaterialPageRoute(builder: (_) => const OnboardingFlowScreen()),
       (route) => false,
     );
   }

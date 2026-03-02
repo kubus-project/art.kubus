@@ -473,6 +473,18 @@ abstract class AppLocalizations {
   /// **'Get started'**
   String get commonGetStarted;
 
+  /// No description provided for @commonCreateAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Create an account'**
+  String get commonCreateAccount;
+
+  /// No description provided for @commonDiscoverArt.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover art'**
+  String get commonDiscoverArt;
+
   /// No description provided for @commonWorking.
   ///
   /// In en, this message translates to:
@@ -14693,6 +14705,12 @@ abstract class AppLocalizations {
   /// **'Clear selection'**
   String get desktopCommunityClearSelectionButtonLabel;
 
+  /// No description provided for @desktopCommunityJoinGroupToPostToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Join a group to post.'**
+  String get desktopCommunityJoinGroupToPostToast;
+
   /// No description provided for @desktopCommunityTargetCommunityOptionalTitle.
   ///
   /// In en, this message translates to:
@@ -14746,12 +14764,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Shared a photo'**
   String get desktopCommunitySharedPhotoFallbackContent;
-
-  /// No description provided for @desktopCommunityJoinGroupToPostToast.
-  ///
-  /// In en, this message translates to:
-  /// **'Join a group to post.'**
-  String get desktopCommunityJoinGroupToPostToast;
 
   /// No description provided for @desktopCommunityPostPublishedToast.
   ///
