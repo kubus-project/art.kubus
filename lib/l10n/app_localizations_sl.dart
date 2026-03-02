@@ -2622,7 +2622,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get mapLocationUnavailableToast => 'Vaše lokacije ni mogoče določiti.';
 
   @override
-  String get mapMarkerCreateWalletRequired => 'Poveži denarnico in ustvari AR-pripravljeno umetnino, da lahko postaviš označevalec.';
+  String get mapMarkerCreateWalletRequired => 'Poveži denarnico in ustvari umetnino, da lahko postaviš označevalec.';
 
   @override
   String get mapMarkerCreateNoArArtworks => 'Za tvojo denarnico ni AR-pripravljenih umetnin. Najprej ustvari eno, nato lahko postaviš označevalec.';

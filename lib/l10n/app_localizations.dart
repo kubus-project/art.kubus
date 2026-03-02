@@ -5204,13 +5204,13 @@ abstract class AppLocalizations {
   /// No description provided for @mapMarkerCreateWalletRequired.
   ///
   /// In en, this message translates to:
-  /// **'Connect your wallet and create an AR-ready artwork to place a marker.'**
+  /// **'Connect your wallet and create an artwork to place a marker.'**
   String get mapMarkerCreateWalletRequired;
 
   /// No description provided for @mapMarkerCreateNoArArtworks.
   ///
   /// In en, this message translates to:
-  /// **'No AR-ready artworks found for your wallet. Create one first to place a marker.'**
+  /// **'No artworks found for your wallet. Create one first to place a marker.'**
   String get mapMarkerCreateNoArArtworks;
 
   /// No description provided for @mapMarkerDialogTitle.
