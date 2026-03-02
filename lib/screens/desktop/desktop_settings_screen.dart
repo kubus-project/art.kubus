@@ -25,7 +25,7 @@ import '../../utils/app_animations.dart';
 import 'components/desktop_widgets.dart';
 import '../web3/wallet/wallet_home.dart';
 import '../web3/wallet/mnemonic_reveal_screen.dart';
-import '../onboarding/onboarding_screen.dart';
+import '../onboarding/onboarding_flow_screen.dart';
 import '../../../config/config.dart';
 import '../../providers/locale_provider.dart';
 import '../../utils/app_color_utils.dart';
@@ -1926,7 +1926,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
 
   void _restartToOnboarding() {
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+      MaterialPageRoute(builder: (_) => const OnboardingFlowScreen()),
       (route) => false,
     );
   }

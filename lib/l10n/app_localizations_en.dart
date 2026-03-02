@@ -200,6 +200,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonGetStarted => 'Get started';
 
   @override
+  String get commonCreateAccount => 'Create an account';
+
+  @override
+  String get commonDiscoverArt => 'Discover art';
+
+  @override
   String get commonWorking => 'Working…';
 
   @override
@@ -7758,6 +7764,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopCommunityClearSelectionButtonLabel => 'Clear selection';
 
   @override
+  String get desktopCommunityJoinGroupToPostToast => 'Join a group to post.';
+
+  @override
   String get desktopCommunityTargetCommunityOptionalTitle => 'Target a community (optional)';
 
   @override
@@ -7785,9 +7794,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get desktopCommunitySharedPhotoFallbackContent => 'Shared a photo';
-
-  @override
-  String get desktopCommunityJoinGroupToPostToast => 'Join a group to post.';
 
   @override
   String get desktopCommunityPostPublishedToast => 'Post published!';

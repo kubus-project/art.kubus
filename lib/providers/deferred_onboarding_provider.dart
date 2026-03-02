@@ -1,8 +1,7 @@
 import 'package:art_kubus/screens/desktop/desktop_shell.dart';
 import 'package:flutter/material.dart';
 
-import '../screens/desktop/onboarding/desktop_onboarding_screen.dart';
-import '../screens/onboarding/onboarding_screen.dart';
+import '../screens/onboarding/onboarding_flow_screen.dart';
 
 /// Session-scoped onboarding deferral.
 ///
@@ -56,8 +55,8 @@ class DeferredOnboardingProvider extends ChangeNotifier {
 
     navigator.pushReplacement(
       MaterialPageRoute(
-        builder: (_) => isDesktop ? const DesktopOnboardingScreen() : const OnboardingScreen(),
-        settings: RouteSettings(name: isDesktop ? '/onboarding/desktop' : '/onboarding'),
+        builder: (_) => OnboardingFlowScreen(forceDesktop: isDesktop),
+        settings: const RouteSettings(name: '/onboarding'),
       ),
     );
     return true;

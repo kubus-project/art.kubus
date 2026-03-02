@@ -26,8 +26,7 @@ import '../services/app_bootstrap_service.dart';
 import '../services/onboarding_state_service.dart';
 import '../services/auth_gating_service.dart';
 import '../services/auth/auth_deep_link_parser.dart';
-import '../screens/onboarding/onboarding_screen.dart';
-import '../screens/desktop/onboarding/desktop_onboarding_screen.dart';
+import '../screens/onboarding/onboarding_flow_screen.dart';
 import '../screens/desktop/desktop_shell.dart';
 import '../widgets/app_loading.dart';
 import 'app_navigator.dart';
@@ -67,11 +66,8 @@ class _AppInitializerState extends State<AppInitializer> {
       _didNavigate = true;
       navigator.pushReplacement(
         MaterialPageRoute(
-          builder: (_) => isDesktop
-              ? const DesktopOnboardingScreen()
-              : const OnboardingScreen(),
-          settings: RouteSettings(
-              name: isDesktop ? '/onboarding/desktop' : '/onboarding'),
+          builder: (_) => OnboardingFlowScreen(forceDesktop: isDesktop),
+          settings: const RouteSettings(name: '/onboarding'),
         ),
       );
     });
@@ -424,30 +420,16 @@ class _AppInitializerState extends State<AppInitializer> {
       } else if (shouldShowFirstRunOnboarding) {
         // First-time user - show onboarding (no wallet required)
         await OnboardingStateService.markWelcomeSeen(prefs: prefs);
-        // Use desktop onboarding for desktop layouts
-        if (isDesktop) {
-          if (kDebugMode) {
-            debugPrint('AppInitializer: route -> DesktopOnboardingScreen');
-          }
-          _didNavigate = true;
-          navigator.pushReplacement(
-            MaterialPageRoute(
-              builder: (context) => const DesktopOnboardingScreen(),
-              settings: const RouteSettings(name: '/onboarding/desktop'),
-            ),
-          );
-        } else {
-          if (kDebugMode) {
-            debugPrint('AppInitializer: route -> OnboardingScreen');
-          }
-          _didNavigate = true;
-          navigator.pushReplacement(
-            MaterialPageRoute(
-              builder: (context) => const OnboardingScreen(),
-              settings: const RouteSettings(name: '/onboarding'),
-            ),
-          );
+        if (kDebugMode) {
+          debugPrint('AppInitializer: route -> OnboardingFlowScreen');
         }
+        _didNavigate = true;
+        navigator.pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => OnboardingFlowScreen(forceDesktop: isDesktop),
+            settings: const RouteSettings(name: '/onboarding'),
+          ),
+        );
       } else {
         // Returning user who completed onboarding - go to main app (wallet optional)
         if (kDebugMode) {
@@ -466,11 +448,8 @@ class _AppInitializerState extends State<AppInitializer> {
       _didNavigate = true;
       navigator.pushReplacement(
         MaterialPageRoute(
-          builder: (_) => isDesktop
-              ? const DesktopOnboardingScreen()
-              : const OnboardingScreen(),
-          settings: RouteSettings(
-              name: isDesktop ? '/onboarding/desktop' : '/onboarding'),
+          builder: (_) => OnboardingFlowScreen(forceDesktop: isDesktop),
+          settings: const RouteSettings(name: '/onboarding'),
         ),
       );
     } finally {
@@ -700,7 +679,7 @@ class WalletPromptScreen extends StatelessWidget {
             }
             Navigator.of(context).pop();
             Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+              MaterialPageRoute(builder: (context) => const OnboardingFlowScreen()),
             );
           },
           icon: const Icon(Icons.arrow_forward),
