@@ -2622,10 +2622,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapLocationUnavailableToast => 'Unable to determine your location.';
 
   @override
-  String get mapMarkerCreateWalletRequired => 'Connect your wallet and create an AR-ready artwork to place a marker.';
+  String get mapMarkerCreateWalletRequired => 'Connect your wallet and create an artwork to place a marker.';
 
   @override
-  String get mapMarkerCreateNoArArtworks => 'No AR-ready artworks found for your wallet. Create one first to place a marker.';
+  String get mapMarkerCreateNoArArtworks => 'No artworks found for your wallet. Create one first to place a marker.';
 
   @override
   String get mapMarkerDialogTitle => 'Create marker';
