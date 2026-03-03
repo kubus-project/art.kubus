@@ -1,12 +1,10 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:intl/intl.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import '../../../config/config.dart';
 import '../../../l10n/app_localizations.dart';
@@ -19,7 +17,6 @@ import '../../../providers/app_refresh_provider.dart';
 import '../../../providers/community_subject_provider.dart';
 import '../../../community/community_interactions.dart';
 import '../../../models/community_group.dart';
-import '../../../models/community_subject.dart';
 import '../../../models/conversation.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../services/block_list_service.dart';
@@ -28,7 +25,6 @@ import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
 import '../../../widgets/avatar_widget.dart';
 import '../../../widgets/empty_state_card.dart';
-import '../../../widgets/inline_loading.dart';
 import '../../../widgets/user_activity_status_line.dart';
 import '../../../widgets/community/community_post_card.dart';
 import '../../../widgets/community/community_author_role_badges.dart';
@@ -36,6 +32,7 @@ import '../../../widgets/community/community_post_options_sheet.dart';
 import '../../../widgets/community/community_subject_picker.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/app_color_utils.dart';
+import '../../../utils/community_screen_utils.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../utils/kubus_color_roles.dart';
@@ -45,8 +42,12 @@ import '../../../utils/wallet_utils.dart';
 import '../../../utils/user_identity_display.dart';
 import '../../../utils/community_subject_navigation.dart';
 import '../../../widgets/glass_components.dart';
+import '../../../widgets/community/community_composer_controls.dart';
 import '../components/desktop_widgets.dart';
 import '../desktop_shell.dart';
+import '../../../widgets/community/community_expandable_fab.dart';
+import '../../../widgets/community/community_group_picker_content.dart';
+import '../../../widgets/community/community_likes_sheet.dart';
 import '../../community/group_feed_screen.dart';
 import '../../community/conversation_screen.dart';
 import 'desktop_user_profile_screen.dart';
@@ -54,6 +55,7 @@ import '../../community/post_detail_screen.dart';
 import '../../download_app_screen.dart';
 import '../../map_screen.dart';
 import '../../season0/season0_screen.dart';
+import '../../../widgets/community/community_season0_banner.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class _ComposerImagePayload {
@@ -93,33 +95,6 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   bool _isFetchingSearch = false;
   String _searchQuery = '';
   bool _showSearchOverlay = false;
-  static const List<_ComposerCategoryOption> _composerCategories = [
-    _ComposerCategoryOption(
-      value: 'post',
-      i18nKey: _ComposerCategoryI18nKey.post,
-      icon: Icons.edit_outlined,
-    ),
-    _ComposerCategoryOption(
-      value: 'art_drop',
-      i18nKey: _ComposerCategoryI18nKey.artDrop,
-      icon: Icons.view_in_ar_outlined,
-    ),
-    _ComposerCategoryOption(
-      value: 'art_review',
-      i18nKey: _ComposerCategoryI18nKey.artReview,
-      icon: Icons.rate_review_outlined,
-    ),
-    _ComposerCategoryOption(
-      value: 'event',
-      i18nKey: _ComposerCategoryI18nKey.event,
-      icon: Icons.event_outlined,
-    ),
-    _ComposerCategoryOption(
-      value: 'question',
-      i18nKey: _ComposerCategoryI18nKey.question,
-      icon: Icons.help_outline,
-    ),
-  ];
   bool _showComposeDialog = false;
   bool _showMessagesPanel = false;
   bool _isComposerExpanded = false;
@@ -204,8 +179,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       unawaited(_syncFollowingWallets());
 
       try {
-        _appRefreshProvider = Provider.of<AppRefreshProvider>(context, listen: false);
-        _lastCommunityRefreshVersion = _appRefreshProvider?.communityVersion ?? 0;
+        _appRefreshProvider =
+            Provider.of<AppRefreshProvider>(context, listen: false);
+        _lastCommunityRefreshVersion =
+            _appRefreshProvider?.communityVersion ?? 0;
         _lastGlobalRefreshVersion = _appRefreshProvider?.globalVersion ?? 0;
         _appRefreshProvider?.addListener(_onAppRefreshTriggered);
       } catch (_) {}
@@ -240,7 +217,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       final wallets = await UserService.getFollowingUsers();
       if (!mounted) return;
       setState(() {
-        _followingWallets = wallets.map(WalletUtils.canonical).where((w) => w.isNotEmpty).toSet();
+        _followingWallets = wallets
+            .map(WalletUtils.canonical)
+            .where((w) => w.isNotEmpty)
+            .toSet();
       });
     } catch (_) {}
   }
@@ -728,8 +708,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                         margin: EdgeInsets.zero,
                         borderRadius: BorderRadius.zero,
                         showBorder: false,
-                        backgroundColor:
-                            scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10),
+                        backgroundColor: scheme.surface
+                            .withValues(alpha: isDark ? 0.16 : 0.10),
                         child: _buildRightSidebar(themeProvider),
                       ),
                     ),
@@ -839,7 +819,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       case _PaneViewType.postDetail:
         final post = route.post;
         child = post == null
-          ? const SizedBox.shrink()
+            ? const SizedBox.shrink()
             : _buildPostDetailPane(post, initialAction: route.initialAction);
         break;
       case _PaneViewType.conversation:
@@ -1133,7 +1113,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                         ),
                       ),
                       Text(
-                        l10n.desktopCommunityTaggedPostsLabel(tagCount.toInt().toString()),
+                        l10n.desktopCommunityTaggedPostsLabel(
+                            tagCount.toInt().toString()),
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           color: scheme.onSurface.withValues(alpha: 0.6),
@@ -1743,7 +1724,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           const SizedBox(width: 12),
           buildChip(l10n.desktopCommunitySortRecent, 'recent', Icons.schedule),
           const SizedBox(width: 8),
-          buildChip(l10n.desktopCommunitySortTop, 'popularity', Icons.trending_up),
+          buildChip(
+              l10n.desktopCommunitySortTop, 'popularity', Icons.trending_up),
         ],
       ),
     );
@@ -1957,7 +1939,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         _sortPosts(_filterPostsForQuery(_discoverPosts), _discoverSortMode);
 
     if (_isLoadingDiscover && _discoverPosts.isEmpty) {
-      return _buildLoadingState(themeProvider, l10n.desktopCommunityLoadingPostsLabel);
+      return _buildLoadingState(
+          themeProvider, l10n.desktopCommunityLoadingPostsLabel);
     }
 
     if (_discoverError != null && _discoverPosts.isEmpty) {
@@ -1998,85 +1981,28 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   }
 
   Widget _buildSeason0Banner(ThemeProvider themeProvider) {
-    final scheme = Theme.of(context).colorScheme;
-    final accent = themeProvider.accentColor;
     final l10n = AppLocalizations.of(context)!;
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: () {
-          final shellScope = DesktopShellScope.of(context);
-          if (shellScope != null) {
-            shellScope.pushScreen(
-              DesktopSubScreen(
-                title: l10n.season0ScreenTitle,
-                child: const Season0Screen(),
-              ),
-            );
-          } else {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const Season0Screen()),
-            );
-          }
-        },
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 16),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                accent.withValues(alpha: 0.12),
-                scheme.primaryContainer.withValues(alpha: 0.3)
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+    return CommunitySeason0Banner(
+      title: l10n.season0BannerTitle,
+      subtitle: l10n.season0BannerTap,
+      accentColor: themeProvider.accentColor,
+      variant: CommunitySeason0BannerVariant.desktop,
+      onTap: () {
+        final shellScope = DesktopShellScope.of(context);
+        if (shellScope != null) {
+          shellScope.pushScreen(
+            DesktopSubScreen(
+              title: l10n.season0ScreenTitle,
+              child: const Season0Screen(),
             ),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: accent.withValues(alpha: 0.25)),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child:
-                    Icon(Icons.rocket_launch_outlined, color: accent, size: 26),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.season0BannerTitle,
-                      style: GoogleFonts.inter(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: scheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      l10n.season0BannerTap,
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        color: scheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right,
-                  color: scheme.onSurface.withValues(alpha: 0.35)),
-            ],
-          ),
-        ),
-      ),
+          );
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const Season0Screen()),
+          );
+        }
+      },
     );
   }
 
@@ -2086,7 +2012,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         _sortPosts(_filterPostsForQuery(_followingPosts), _followingSortMode);
 
     if (_isLoadingFollowing && _followingPosts.isEmpty) {
-      return _buildLoadingState(themeProvider, l10n.desktopCommunityLoadingPostsLabel);
+      return _buildLoadingState(
+          themeProvider, l10n.desktopCommunityLoadingPostsLabel);
     }
 
     if (_followingError != null && _followingPosts.isEmpty) {
@@ -2212,7 +2139,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                             );
                           },
                           icon: const Icon(Icons.my_location),
-                          label: Text(l10n.desktopCommunityArtUseCurrentAreaButton),
+                          label: Text(
+                              l10n.desktopCommunityArtUseCurrentAreaButton),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: themeProvider.accentColor,
                             foregroundColor: Colors.white,
@@ -2232,7 +2160,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                             );
                           },
                           icon: const Icon(Icons.travel_explore),
-                          label: Text(l10n.desktopCommunityArtWiderRadiusButton),
+                          label:
+                              Text(l10n.desktopCommunityArtWiderRadiusButton),
                         ),
                       ],
                     ),
@@ -2276,14 +2205,14 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     );
   }
 
-  List<_FabOption> _getFabOptions(
+  List<CommunityFabOption> _getFabOptions(
     int tabIndex, {
     required AppLocalizations l10n,
   }) {
     switch (tabIndex) {
       case 2: // Groups
         return [
-          _FabOption(
+          CommunityFabOption(
             icon: Icons.group_add_outlined,
             label: l10n.desktopCommunityCreateOptionCreateGroup,
             onTap: () {
@@ -2292,7 +2221,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   Provider.of<ThemeProvider>(context, listen: false));
             },
           ),
-          _FabOption(
+          CommunityFabOption(
             icon: Icons.post_add_outlined,
             label: l10n.desktopCommunityCreateOptionGroupPost,
             onTap: () {
@@ -2305,7 +2234,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         ];
       case 3: // Art
         return [
-          _FabOption(
+          CommunityFabOption(
             icon: Icons.place_outlined,
             label: l10n.desktopCommunityCreateOptionArtDrop,
             onTap: () {
@@ -2316,7 +2245,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               _showARAttachmentInfo();
             },
           ),
-          _FabOption(
+          CommunityFabOption(
             icon: Icons.rate_review_outlined,
             label: l10n.desktopCommunityCreateOptionPostReview,
             onTap: () {
@@ -2329,7 +2258,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         ];
       default:
         return [
-          _FabOption(
+          CommunityFabOption(
             icon: Icons.edit_outlined,
             label: l10n.desktopCommunityCreateOptionPost,
             onTap: () {
@@ -2349,108 +2278,24 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     required AppAnimationTheme animationTheme,
     required IconData mainIcon,
     required String mainLabel,
-    required List<_FabOption> options,
+    required List<CommunityFabOption> options,
   }) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        AnimatedSize(
-          duration: animationTheme.medium,
-          curve: animationTheme.emphasisCurve,
-          child: _isFabExpanded
-              ? Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: options.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final option = entry.value;
-                    return TweenAnimationBuilder<double>(
-                      tween: Tween(begin: 0.0, end: 1.0),
-                      duration: Duration(
-                        milliseconds:
-                            animationTheme.medium.inMilliseconds + (index * 50),
-                      ),
-                      curve: animationTheme.emphasisCurve,
-                      builder: (context, value, child) {
-                        return Transform.translate(
-                          offset: Offset(0, 16 * (1 - value)),
-                          child: Opacity(opacity: value, child: child),
-                        );
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: scheme.surface,
-                                borderRadius: BorderRadius.circular(10),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.08),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Text(
-                                option.label,
-                                style: GoogleFonts.inter(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: scheme.onSurface,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            FloatingActionButton.small(
-                              heroTag:
-                                  'desktop_comm_fab_option_${option.label}',
-                              onPressed: () {
-                                setState(() => _isFabExpanded = false);
-                                option.onTap();
-                              },
-                              backgroundColor: scheme.primaryContainer,
-                              foregroundColor: scheme.onSurface,
-                              child: Icon(option.icon, size: 20),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                )
-              : const SizedBox.shrink(),
-        ),
-        const SizedBox(height: 8),
-        FloatingActionButton.extended(
-          heroTag: 'desktop_comm_fab_main',
-          onPressed: () => setState(() => _isFabExpanded = !_isFabExpanded),
-          backgroundColor: _isFabExpanded
-              ? scheme.surfaceContainerHighest
-              : themeProvider.accentColor,
-          foregroundColor: _isFabExpanded ? scheme.onSurface : scheme.onPrimary,
-          icon: AnimatedRotation(
-            turns: _isFabExpanded ? 0.125 : 0,
-            duration: animationTheme.short,
-            child: Icon(_isFabExpanded ? Icons.close : mainIcon),
-          ),
-          label: AnimatedSwitcher(
-            duration: animationTheme.short,
-            child: Text(
-              _isFabExpanded
-                  ? AppLocalizations.of(context)!
-                      .desktopCommunityCreateFabCloseLabel
-                  : mainLabel,
-              key: ValueKey(_isFabExpanded),
-              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-            ),
-          ),
-        ),
-      ],
+    return CommunityExpandableFab(
+      isExpanded: _isFabExpanded,
+      accentColor: themeProvider.accentColor,
+      scheme: scheme,
+      animationTheme: animationTheme,
+      mainIcon: mainIcon,
+      mainLabel: mainLabel,
+      closeLabel:
+          AppLocalizations.of(context)!.desktopCommunityCreateFabCloseLabel,
+      mainHeroTag: 'desktop_comm_fab_main',
+      optionHeroTagPrefix: 'desktop_comm_fab_option_',
+      options: options,
+      variant: CommunityExpandableFabVariant.desktop,
+      onExpandedChanged: (expanded) {
+        setState(() => _isFabExpanded = expanded);
+      },
     );
   }
 
@@ -2470,7 +2315,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         final error = communityProvider.groupsError;
 
         if (isLoading && groups.isEmpty) {
-          return _buildLoadingState(themeProvider, l10n.desktopCommunityLoadingGroupsLabel);
+          return _buildLoadingState(
+              themeProvider, l10n.desktopCommunityLoadingGroupsLabel);
         }
 
         if (error != null && groups.isEmpty) {
@@ -2665,7 +2511,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                           ? ClipRRect(
                               borderRadius: BorderRadius.circular(12),
                               child: Image.network(
-                                MediaUrlResolver.resolveDisplayUrl(group.coverImage) ??
+                                MediaUrlResolver.resolveDisplayUrl(
+                                        group.coverImage) ??
                                     group.coverImage!,
                                 fit: BoxFit.cover,
                                 errorBuilder: (_, __, ___) => Icon(
@@ -2961,367 +2808,37 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   }
 
   Widget _buildPostCard(CommunityPost post, ThemeProvider themeProvider) {
-    if (MediaQuery.of(context).size.width >= 0) {
-      return CommunityPostCard(
-        post: post,
-        accentColor: themeProvider.accentColor,
-        onOpenPostDetail: _openPostDetail,
-        onOpenAuthorProfile: () => unawaited(
-          _openUserProfileModal(
-            userId: post.authorId,
-            username: post.authorUsername,
-          ),
+    return CommunityPostCard(
+      post: post,
+      accentColor: themeProvider.accentColor,
+      onOpenPostDetail: _openPostDetail,
+      onOpenAuthorProfile: () => unawaited(
+        _openUserProfileModal(
+          userId: post.authorId,
+          username: post.authorUsername,
         ),
-        onToggleLike: () => _togglePostLike(post),
-        onOpenComments: () => _openPostDetail(post),
-        onRepost: () => _handleRepostTap(post),
-        onShare: () => _showShareDialog(post),
-        onToggleBookmark: () => _toggleBookmark(post),
-        onMoreOptions: () => _showPostOptionsForPost(post),
-        onShowLikes: () => _showPostLikes(post.id),
-        onShowReposts: () => _viewRepostsList(post),
-        onTagTap: (tag) => unawaited(_openTagFeed(tag)),
-        onMentionTap: (mention) => unawaited(
-          _openUserProfileModal(
-            userId: mention,
-            username: mention,
-          ),
-        ),
-        onOpenLocation: _openLocationOnMap,
-        onOpenGroup: _openGroupFromPost,
-        onOpenSubject: (preview) => CommunitySubjectNavigation.open(
-          context,
-          subject: preview.ref,
-          titleOverride: preview.title,
-        ),
-      );
-    }
-
-    return DesktopCard(
-      onTap: () => _openPostDetail(post),
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Author row
-          Row(
-            children: [
-              AvatarWidget(
-                avatarUrl: post.authorAvatar,
-                wallet: post.authorId,
-                radius: 22,
-                allowFabricatedFallback: true,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          fit: FlexFit.loose,
-                          child: Text(
-                            post.authorName,
-                            style: GoogleFonts.inter(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                            CommunityAuthorRoleBadges(
-                              post: post,
-                              fontSize: 9,
-                              iconOnly: false,
-                            ),
-                      ],
-                    ),
-                    Text(
-                      _formatTimeAgo(post.timestamp),
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.5),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                onPressed: () {
-                  // Show more options
-                },
-                icon: Icon(
-                  Icons.more_horiz,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.5),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // Content
-          Text(
-            post.content,
-            style: GoogleFonts.inter(
-              fontSize: 15,
-              height: 1.5,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-
-          // Tags
-          if (post.tags.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: post.tags
-                  .map((tag) => Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: KubusColorRoles.of(context)
-                              .tagChipBackground
-                              .withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          '#$tag',
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            color: KubusColorRoles.of(context).tagChipBackground,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ))
-                  .toList(),
-            ),
-          ],
-
-          // Media preview
-          if (post.imageUrl != null) ...[
-            const SizedBox(height: 16),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                height: 280,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      themeProvider.accentColor.withValues(alpha: 0.3),
-                      themeProvider.accentColor.withValues(alpha: 0.1),
-                    ],
-                  ),
-                ),
-                child: const Center(
-                  child: Icon(
-                    Icons.image,
-                    size: 48,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-          ],
-
-          // AR artwork link
-          if (post.artwork != null) ...[
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .outline
-                      .withValues(alpha: 0.1),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: themeProvider.accentColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      Icons.view_in_ar,
-                      color: themeProvider.accentColor,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          AppLocalizations.of(context)!
-                              .desktopCommunityArArtworkLabel,
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                        ),
-                        Text(
-                          AppLocalizations.of(context)!
-                              .desktopCommunityArArtworkSubtitle,
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.6),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    Icons.arrow_forward_ios,
-                    size: 16,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.4),
-                  ),
-                ],
-              ),
-            ),
-          ],
-
-          const SizedBox(height: 16),
-
-          // Action row
-          Row(
-            children: [
-              _buildActionButton(
-                icon: post.isLiked ? Icons.favorite : Icons.favorite_border,
-                label: _formatTrendingCount(post.likeCount),
-                themeProvider: themeProvider,
-                isActive: post.isLiked,
-                activeColor: AppColorUtils.coralAccent,
-                onPressed: () => _togglePostLike(post),
-              ),
-              const SizedBox(width: 24),
-              _buildActionButton(
-                icon: Icons.chat_bubble_outline,
-                label: _formatTrendingCount(post.commentCount),
-                themeProvider: themeProvider,
-                activeColor: Theme.of(context).colorScheme.secondary,
-                onPressed: () => _openPostDetail(post),
-              ),
-              const SizedBox(width: 24),
-              _buildActionButton(
-                icon: Icons.repeat,
-                label: _formatTrendingCount(post.shareCount),
-                themeProvider: themeProvider,
-                activeColor: Theme.of(context).colorScheme.tertiary,
-                onPressed: () => _showRepostOptions(post),
-              ),
-              const Spacer(),
-              IconButton(
-                tooltip:
-                    post.isBookmarked
-                        ? AppLocalizations.of(context)!
-                            .communityBookmarkRemoveTooltip
-                        : AppLocalizations.of(context)!
-                            .communityBookmarkSaveForLaterTooltip,
-                onPressed: () => _toggleBookmark(post),
-                icon: Icon(
-                  post.isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                  color: post.isBookmarked
-                      ? themeProvider.accentColor
-                      : Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.5),
-                ),
-              ),
-              IconButton(
-                tooltip: AppLocalizations.of(context)!.commonShare,
-                onPressed: () => _showShareDialog(post),
-                icon: Icon(
-                  Icons.share_outlined,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.5),
-                ),
-              ),
-            ],
-          ),
-        ],
       ),
-    );
-  }
-
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required ThemeProvider themeProvider,
-    required VoidCallback onPressed,
-    bool isActive = false,
-    VoidCallback? onLabelTap,
-    Color? activeColor,
-  }) {
-    final scheme = Theme.of(context).colorScheme;
-    final effectiveActiveColor = activeColor ?? themeProvider.accentColor;
-    final color = isActive
-        ? effectiveActiveColor
-        : scheme.onSurface.withValues(alpha: label.isEmpty ? 0.5 : 0.65);
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(20),
-        hoverColor: effectiveActiveColor.withValues(alpha: 0.08),
-        splashColor: effectiveActiveColor.withValues(alpha: 0.12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AnimatedScale(
-                scale: isActive ? 1.15 : 1.0,
-                duration: const Duration(milliseconds: 180),
-                curve: Curves.easeOut,
-                child: Icon(icon, size: 18, color: color),
-              ),
-              if (label.isNotEmpty) ...[
-                const SizedBox(width: 6),
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: onLabelTap ?? onPressed,
-                  child: Text(
-                    label,
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-                      color: color,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
+      onToggleLike: () => _togglePostLike(post),
+      onOpenComments: () => _openPostDetail(post),
+      onRepost: () => _handleRepostTap(post),
+      onShare: () => _showShareDialog(post),
+      onToggleBookmark: () => _toggleBookmark(post),
+      onMoreOptions: () => _showPostOptionsForPost(post),
+      onShowLikes: () => _showPostLikes(post.id),
+      onShowReposts: () => _viewRepostsList(post),
+      onTagTap: (tag) => unawaited(_openTagFeed(tag)),
+      onMentionTap: (mention) => unawaited(
+        _openUserProfileModal(
+          userId: mention,
+          username: mention,
         ),
+      ),
+      onOpenLocation: _openLocationOnMap,
+      onOpenGroup: _openGroupFromPost,
+      onOpenSubject: (preview) => CommunitySubjectNavigation.open(
+        context,
+        subject: preview.ref,
+        titleOverride: preview.title,
       ),
     );
   }
@@ -3341,7 +2858,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       messenger.showKubusSnackBar(
         SnackBar(
           content: Text(
-            wasLiked ? l10n.postDetailPostUnlikedToast : l10n.postDetailPostLikedToast,
+            wasLiked
+                ? l10n.postDetailPostUnlikedToast
+                : l10n.postDetailPostLikedToast,
           ),
           duration: const Duration(milliseconds: 1300),
         ),
@@ -3403,7 +2922,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       if (_isComposerExpanded) return;
       setState(() {
         _isComposerExpanded = true;
-        _selectedCategory = hub.draft.category.isNotEmpty ? hub.draft.category : _selectedCategory;
+        _selectedCategory = hub.draft.category.isNotEmpty
+            ? hub.draft.category
+            : _selectedCategory;
       });
     });
   }
@@ -3441,7 +2962,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   ),
                   child: Row(
                     children: [
-                      Icon(icon, size: 18, color: iconColor ?? scheme.onSurface),
+                      Icon(icon,
+                          size: 18, color: iconColor ?? scheme.onSurface),
                       const SizedBox(width: KubusSpacing.md),
                       Expanded(child: Text(label)),
                     ],
@@ -3633,14 +3155,13 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   }
 
   void _openLocationOnMap(CommunityLocation location) {
-    final lat = location.lat;
-    final lng = location.lng;
-    if (lat == null || lng == null) return;
+    final target = communityLocationToLatLng(location);
+    if (target == null) return;
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => MapScreen(
-          initialCenter: LatLng(lat, lng),
+          initialCenter: target,
           initialZoom: 15,
           autoFollow: false,
         ),
@@ -3649,19 +3170,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   }
 
   void _openGroupFromPost(CommunityGroupReference group) {
-    final summary = CommunityGroupSummary(
-      id: group.id,
-      name: group.name,
-      slug: group.slug,
-      coverImage: group.coverImage,
-      description: group.description,
-      isPublic: true,
-      ownerWallet: '',
-      memberCount: 0,
-      isMember: false,
-      isOwner: false,
-    );
-
+    final summary = communityGroupSummaryFromReference(group);
     final shellScope = DesktopShellScope.of(context);
     if (shellScope != null) {
       shellScope.pushScreen(
@@ -3672,7 +3181,6 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       );
       return;
     }
-
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => GroupFeedScreen(group: summary)),
@@ -3683,7 +3191,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final currentWallet = walletProvider.currentWalletAddress;
     final authorWallet = post.authorWallet ?? post.authorId;
-    if (post.postType == 'repost' && WalletUtils.equals(authorWallet, currentWallet)) {
+    if (post.postType == 'repost' &&
+        WalletUtils.equals(authorWallet, currentWallet)) {
       unawaited(_showUnrepostOptions(post));
       return;
     }
@@ -3724,7 +3233,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   ),
                   child: Row(
                     children: [
-                      Icon(icon, size: 18, color: iconColor ?? scheme.onSurface),
+                      Icon(icon,
+                          size: 18, color: iconColor ?? scheme.onSurface),
                       const SizedBox(width: KubusSpacing.md),
                       Expanded(
                         child: Text(
@@ -3777,7 +3287,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
         title: Text(l10n.communityUnrepostTitle, style: GoogleFonts.inter()),
-        content: Text(l10n.communityUnrepostConfirmBody, style: GoogleFonts.inter()),
+        content:
+            Text(l10n.communityUnrepostConfirmBody, style: GoogleFonts.inter()),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
@@ -3788,7 +3299,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             style: TextButton.styleFrom(
               foregroundColor: Theme.of(dialogContext).colorScheme.error,
             ),
-            child: Text(l10n.communityUnrepostAction, style: GoogleFonts.inter()),
+            child:
+                Text(l10n.communityUnrepostAction, style: GoogleFonts.inter()),
           ),
         ],
       ),
@@ -3806,10 +3318,12 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
       await Future.wait([_loadDiscoverFeed(), _loadFollowingFeed()]);
       if (!mounted) return;
-      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.communityRepostRemovedToast)));
+      messenger.showKubusSnackBar(
+          SnackBar(content: Text(l10n.communityRepostRemovedToast)));
     } catch (e) {
       if (!mounted) return;
-      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.communityUnrepostFailedToast)));
+      messenger.showKubusSnackBar(
+          SnackBar(content: Text(l10n.communityUnrepostFailedToast)));
     }
   }
 
@@ -3825,141 +3339,16 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     required String title,
     required Future<List<CommunityLikeUser>> Function() loader,
   }) {
-    if (!mounted) return;
-    final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final future = loader();
-
-    showModalBottomSheet(
+    showCommunityLikesSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      title: title,
+      loader: loader,
+      formatTimeAgo: (likedAt) => _formatTimeAgo(likedAt),
+      errorMessage: l10n.postDetailLoadLikesFailedMessage,
+      unnamedUserLabel: l10n.commonUnnamed,
       isScrollControlled: true,
-      builder: (sheetContext) {
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.6,
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.outline,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      title,
-                      style: GoogleFonts.inter(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.onSurface,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      color: theme.colorScheme.onSurface,
-                      onPressed: () => Navigator.of(sheetContext).pop(),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: FutureBuilder<List<CommunityLikeUser>>(
-                  future: future,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState != ConnectionState.done) {
-                      return Center(
-                        child: SizedBox(
-                          width: 32,
-                          height: 32,
-                          child: InlineLoading(
-                            expand: true,
-                            shape: BoxShape.circle,
-                            tileSize: 4.0,
-                          ),
-                        ),
-                      );
-                    }
-
-                    if (snapshot.hasError) {
-                      return Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Text(
-                            l10n.postDetailLoadLikesFailedMessage,
-                            style: GoogleFonts.inter(color: theme.colorScheme.onSurface),
-                          ),
-                        ),
-                      );
-                    }
-
-                    final likes = snapshot.data ?? <CommunityLikeUser>[];
-                    if (likes.isEmpty) {
-                      return Center(
-                        child: EmptyStateCard(
-                          icon: Icons.favorite_border,
-                          title: l10n.postDetailNoLikesTitle,
-                          description: l10n.postDetailNoLikesDescription,
-                        ),
-                      );
-                    }
-
-                    return ListView.separated(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      itemCount: likes.length,
-                      separatorBuilder: (_, __) => Divider(
-                        color: theme.colorScheme.outline.withValues(alpha: 0.3),
-                      ),
-                      itemBuilder: (context, index) {
-                        final user = likes[index];
-                        final subtitleParts = <String>[];
-                        if (user.username != null && user.username!.isNotEmpty) {
-                          subtitleParts.add('@${user.username}');
-                        }
-                        if (user.likedAt != null) {
-                          subtitleParts.add(_formatTimeAgo(user.likedAt));
-                        }
-                        return ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: AvatarWidget(
-                            wallet: user.walletAddress ?? user.userId,
-                            avatarUrl: user.avatarUrl,
-                            radius: 20,
-                            enableProfileNavigation: true,
-                          ),
-                          title: Text(
-                            user.displayName.isNotEmpty ? user.displayName : l10n.commonUnnamed,
-                            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-                          ),
-                          subtitle: subtitleParts.isNotEmpty
-                              ? Text(
-                                  subtitleParts.join(' • '),
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                                  ),
-                                )
-                              : null,
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+      enableProfileNavigation: true,
     );
   }
 
@@ -4042,31 +3431,41 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     itemBuilder: (ctx, idx) {
                       final repost = reposts[idx];
                       final user = repost['user'] as Map<String, dynamic>?;
-                        final rawUsername = (user?['username'] ?? '').toString().trim();
-                        final username = rawUsername.startsWith('@')
-                            ? rawUsername.substring(1).trim()
-                            : rawUsername;
-                        final wallet = WalletUtils.coalesce(
-                          walletAddress: user?['walletAddress']?.toString(),
-                          wallet: user?['wallet_address']?.toString() ?? user?['wallet']?.toString(),
-                          userId: user?['id']?.toString(),
-                          fallback: '',
-                        );
-                        final displayName = (user?['displayName'] ?? user?['display_name'])?.toString().trim();
+                      final rawUsername =
+                          (user?['username'] ?? '').toString().trim();
+                      final username = rawUsername.startsWith('@')
+                          ? rawUsername.substring(1).trim()
+                          : rawUsername;
+                      final wallet = WalletUtils.coalesce(
+                        walletAddress: user?['walletAddress']?.toString(),
+                        wallet: user?['wallet_address']?.toString() ??
+                            user?['wallet']?.toString(),
+                        userId: user?['id']?.toString(),
+                        fallback: '',
+                      );
+                      final displayName =
+                          (user?['displayName'] ?? user?['display_name'])
+                              ?.toString()
+                              .trim();
                       final avatar = user?['avatar'];
                       final comment = repost['repostComment'] as String?;
-                      final createdAt = DateTime.tryParse(repost['createdAt'] ?? '');
+                      final createdAt =
+                          DateTime.tryParse(repost['createdAt'] ?? '');
 
-                        final formatted = CreatorDisplayFormat.format(
-                          fallbackLabel: l10n.commonUnknown,
-                          displayName: displayName,
-                          username: username,
-                          wallet: wallet,
-                        );
+                      final formatted = CreatorDisplayFormat.format(
+                        fallbackLabel: l10n.commonUnknown,
+                        displayName: displayName,
+                        username: username,
+                        wallet: wallet,
+                      );
 
                       return ListTile(
                         leading: AvatarWidget(
-                          wallet: wallet.isNotEmpty ? wallet : (username.isNotEmpty ? username : l10n.commonUnknown),
+                          wallet: wallet.isNotEmpty
+                              ? wallet
+                              : (username.isNotEmpty
+                                  ? username
+                                  : l10n.commonUnknown),
                           avatarUrl: avatar,
                           radius: 20,
                           allowFabricatedFallback: false,
@@ -4079,9 +3478,11 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             if (formatted.secondary != null)
-                              Text(formatted.secondary!, style: GoogleFonts.inter(fontSize: 12))
+                              Text(formatted.secondary!,
+                                  style: GoogleFonts.inter(fontSize: 12))
                             else if (wallet.isNotEmpty)
-                              Text(maskWallet(wallet), style: GoogleFonts.inter(fontSize: 12)),
+                              Text(maskWallet(wallet),
+                                  style: GoogleFonts.inter(fontSize: 12)),
                             if (comment != null && comment.isNotEmpty) ...[
                               const SizedBox(height: 4),
                               Text(
@@ -4098,7 +3499,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                 _formatTimeAgo(createdAt),
                                 style: GoogleFonts.inter(
                                   fontSize: 11,
-                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                                  color: theme.colorScheme.onSurface
+                                      .withValues(alpha: 0.5),
                                 ),
                               )
                             : null,
@@ -4136,60 +3538,60 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
-          // Sidebar tabs
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .outline
-                      .withValues(alpha: 0.1),
-                ),
+        // Sidebar tabs
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: Theme.of(context)
+                    .colorScheme
+                    .outline
+                    .withValues(alpha: 0.1),
               ),
             ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _buildSidebarTab(
-                    l10n.commonFeed,
-                    Icons.dynamic_feed,
-                    !_showMessagesPanel,
-                    () => _handleSidebarTabChange(false),
-                    themeProvider,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildSidebarTab(
-                    l10n.messagesTitle,
-                    Icons.mail_outline,
-                    _showMessagesPanel,
-                    () => _handleSidebarTabChange(true),
-                    themeProvider,
-                  ),
-                ),
-              ],
-            ),
           ),
-          // Content
-          Expanded(
-            child: _showMessagesPanel
-                ? _buildMessagesPanel(themeProvider)
-                : ListView(
-                    padding: const EdgeInsets.all(24),
-                    children: [
-                      _buildCreatePostPrompt(themeProvider),
-                      const SizedBox(height: 24),
-                      _buildTrendingSection(themeProvider),
-                      const SizedBox(height: 24),
-                      _buildWhoToFollowSection(themeProvider),
-                      const SizedBox(height: 24),
-                      _buildActiveCommunitiesSection(themeProvider),
-                    ],
-                  ),
+          child: Row(
+            children: [
+              Expanded(
+                child: _buildSidebarTab(
+                  l10n.commonFeed,
+                  Icons.dynamic_feed,
+                  !_showMessagesPanel,
+                  () => _handleSidebarTabChange(false),
+                  themeProvider,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildSidebarTab(
+                  l10n.messagesTitle,
+                  Icons.mail_outline,
+                  _showMessagesPanel,
+                  () => _handleSidebarTabChange(true),
+                  themeProvider,
+                ),
+              ),
+            ],
           ),
+        ),
+        // Content
+        Expanded(
+          child: _showMessagesPanel
+              ? _buildMessagesPanel(themeProvider)
+              : ListView(
+                  padding: const EdgeInsets.all(24),
+                  children: [
+                    _buildCreatePostPrompt(themeProvider),
+                    const SizedBox(height: 24),
+                    _buildTrendingSection(themeProvider),
+                    const SizedBox(height: 24),
+                    _buildWhoToFollowSection(themeProvider),
+                    const SizedBox(height: 24),
+                    _buildActiveCommunitiesSection(themeProvider),
+                  ],
+                ),
+        ),
       ],
     );
   }
@@ -4348,8 +3750,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                               prefixIcon: Icon(
                                 Icons.search,
                                 size: 20,
-                                color:
-                                    scheme.onSurface.withValues(alpha: 0.45),
+                                color: scheme.onSurface.withValues(alpha: 0.45),
                               ),
                               prefixIconConstraints: const BoxConstraints(
                                 minWidth: 40,
@@ -4457,10 +3858,13 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         showSearchContext && (searchHighlight?.isNotEmpty ?? false);
 
     final bool isOneToOne = conversation.isGroup != true;
-    final String otherWallet = isOneToOne ? _resolveConversationOtherWallet(conversation) : '';
+    final String otherWallet =
+        isOneToOne ? _resolveConversationOtherWallet(conversation) : '';
     final String avatarWallet = isOneToOne && otherWallet.isNotEmpty
         ? otherWallet
-        : (conversation.memberWallets.isNotEmpty ? conversation.memberWallets.first : '');
+        : (conversation.memberWallets.isNotEmpty
+            ? conversation.memberWallets.first
+            : '');
 
     final List<Widget> subtitleLines = [];
     if (isOneToOne && otherWallet.isNotEmpty) {
@@ -4477,7 +3881,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     }
 
     if (highlightActive) {
-      if (subtitleLines.isNotEmpty) subtitleLines.add(const SizedBox(height: 2));
+      if (subtitleLines.isNotEmpty) {
+        subtitleLines.add(const SizedBox(height: 2));
+      }
       subtitleLines.add(
         Text(
           searchHighlight!,
@@ -4491,7 +3897,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         ),
       );
     } else if ((conversation.lastMessage ?? '').trim().isNotEmpty) {
-      if (subtitleLines.isNotEmpty) subtitleLines.add(const SizedBox(height: 2));
+      if (subtitleLines.isNotEmpty) {
+        subtitleLines.add(const SizedBox(height: 2));
+      }
       subtitleLines.add(
         Text(
           conversation.lastMessage!,
@@ -4618,7 +4026,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     for (final w in conversation.memberWallets) {
       final candidate = w.trim();
       if (candidate.isEmpty) continue;
-      if (myWallet.isNotEmpty && WalletUtils.equals(candidate, myWallet)) continue;
+      if (myWallet.isNotEmpty && WalletUtils.equals(candidate, myWallet)) {
+        continue;
+      }
       return candidate;
     }
 
@@ -4673,7 +4083,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           ),
           const SizedBox(height: 16),
           Text(
-            AppLocalizations.of(context)!.desktopCommunityMessagesNoMatchesTitle,
+            AppLocalizations.of(context)!
+                .desktopCommunityMessagesNoMatchesTitle,
             style: GoogleFonts.inter(
               fontSize: 16,
               fontWeight: FontWeight.w600,
@@ -4790,7 +4201,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     final title = (conversation.title ?? conversation.rawTitle ?? '').trim();
     final titlePreview = _matchField(title, queryVariants);
     if (titlePreview != null) {
-      register(4.0, 'Title match • $titlePreview');
+      register(4.0, 'Title match � $titlePreview');
     }
 
     final preloaded =
@@ -4840,7 +4251,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     for (final name in memberNames) {
       final snippet = _matchField(name, queryVariants);
       if (snippet != null) {
-        register(3.2, 'Member • $snippet');
+        register(3.2, 'Member � $snippet');
         break;
       }
     }
@@ -4856,7 +4267,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     final lastMessageSnippet =
         _matchField(conversation.lastMessage, queryVariants);
     if (lastMessageSnippet != null) {
-      register(2.6, 'Latest message • â€œ$lastMessageSnippetâ€');
+      register(2.6, 'Latest message � “$lastMessageSnippet”');
     }
 
     final cachedMessages = chatProvider.messages[conversation.id];
@@ -4868,8 +4279,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   message.senderUsername ??
                   message.senderWallet)
               .trim();
-          final prefix = sender.isNotEmpty ? '$sender • ' : '';
-          register(2.4, 'Message • $prefixâ€œ$snippetâ€');
+          final prefix = sender.isNotEmpty ? '$sender � ' : '';
+          register(2.4, 'Message � $prefix“$snippet”');
           break;
         }
       }
@@ -4907,7 +4318,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     for (final variant in queryVariants) {
       if (variant.isEmpty) continue;
       if (lower.contains(variant)) {
-        return 'Wallet match • ${_shortenWallet(normalized)}';
+        return 'Wallet match � ${_shortenWallet(normalized)}';
       }
     }
     return null;
@@ -4917,8 +4328,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     const radius = 18;
     final start = math.max(0, matchStart - radius);
     final end = math.min(value.length, matchStart + matchLength + radius);
-    final prefix = start > 0 ? 'â€¦' : '';
-    final suffix = end < value.length ? 'â€¦' : '';
+    final prefix = start > 0 ? '…' : '';
+    final suffix = end < value.length ? '…' : '';
     final snippet = value.substring(start, end).trim();
     if (snippet.isEmpty) return value;
     return '$prefix$snippet$suffix';
@@ -4952,18 +4363,16 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             }
             messenger.showKubusSnackBar(
               SnackBar(
-                content: Text(
-                    AppLocalizations.of(context)!
-                        .userProfileConversationOpenGenericErrorToast),
+                content: Text(AppLocalizations.of(context)!
+                    .userProfileConversationOpenGenericErrorToast),
               ),
             );
           } catch (e) {
             if (!mounted) return;
             messenger.showKubusSnackBar(
               SnackBar(
-                content: Text(
-                    AppLocalizations.of(context)!
-                        .userProfileConversationOpenGenericErrorToast),
+                content: Text(AppLocalizations.of(context)!
+                    .userProfileConversationOpenGenericErrorToast),
               ),
             );
           }
@@ -5302,13 +4711,15 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             children: [
               _buildCompactActionButton(
                 Icons.image_outlined,
-                AppLocalizations.of(context)!.desktopCommunityComposerPhotoLabel,
+                AppLocalizations.of(context)!
+                    .desktopCommunityComposerPhotoLabel,
                 themeProvider,
                 onTap: _pickImage,
               ),
               _buildCompactActionButton(
                 Icons.location_on_outlined,
-                AppLocalizations.of(context)!.desktopCommunityComposerLocationLabel,
+                AppLocalizations.of(context)!
+                    .desktopCommunityComposerLocationLabel,
                 themeProvider,
                 onTap: _pickLocation,
               ),
@@ -5320,7 +4731,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               ),
               _buildCompactActionButton(
                 Icons.alternate_email_outlined,
-                AppLocalizations.of(context)!.desktopCommunityComposerMentionLabel,
+                AppLocalizations.of(context)!
+                    .desktopCommunityComposerMentionLabel,
                 themeProvider,
                 onTap: () => _showMentionPicker(hub),
               ),
@@ -5615,10 +5027,12 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
   bool _isCurrentUserPost(CommunityPost post) {
     try {
-      final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+      final walletProvider =
+          Provider.of<WalletProvider>(context, listen: false);
       final currentWallet = walletProvider.currentWalletAddress;
       if (currentWallet == null || currentWallet.trim().isEmpty) return false;
-      return WalletUtils.equals(post.authorWallet ?? post.authorId, currentWallet);
+      return WalletUtils.equals(
+          post.authorWallet ?? post.authorId, currentWallet);
     } catch (_) {
       return false;
     }
@@ -5633,9 +5047,12 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         context: context,
         post: post,
         isOwner: isOwner,
-        onReport: () => _openPostDetailWithAction(post, PostDetailInitialAction.report),
-        onEdit: () => _openPostDetailWithAction(post, PostDetailInitialAction.edit),
-        onDelete: () => _openPostDetailWithAction(post, PostDetailInitialAction.delete),
+        onReport: () =>
+            _openPostDetailWithAction(post, PostDetailInitialAction.report),
+        onEdit: () =>
+            _openPostDetailWithAction(post, PostDetailInitialAction.edit),
+        onDelete: () =>
+            _openPostDetailWithAction(post, PostDetailInitialAction.delete),
       ),
     );
   }
@@ -5683,7 +5100,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   results = parsed;
                   isLoading = false;
                   errorMessage = parsed.isEmpty
-                      ? AppLocalizations.of(context)!.desktopCommunitySearchNoResults
+                      ? AppLocalizations.of(context)!
+                          .desktopCommunitySearchNoResults
                       : null;
                 });
               } catch (e) {
@@ -5691,8 +5109,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 setDialogState(() {
                   isLoading = false;
                   results = <Map<String, dynamic>>[];
-                  errorMessage =
-                      AppLocalizations.of(context)!.desktopCommunitySearchFailedTryAgain;
+                  errorMessage = AppLocalizations.of(context)!
+                      .desktopCommunitySearchFailedTryAgain;
                 });
               }
             }
@@ -5702,7 +5120,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16)),
               title: Text(
-                AppLocalizations.of(context)!.desktopCommunityMentionDialogTitle,
+                AppLocalizations.of(context)!
+                    .desktopCommunityMentionDialogTitle,
                 style: GoogleFonts.inter(fontWeight: FontWeight.w600),
               ),
               content: SizedBox(
@@ -5714,8 +5133,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                       controller: controller,
                       autofocus: true,
                       decoration: InputDecoration(
-                        hintText:
-                            AppLocalizations.of(context)!.desktopCommunitySearchPeopleHint,
+                        hintText: AppLocalizations.of(context)!
+                            .desktopCommunitySearchPeopleHint,
                         prefixIcon: const Icon(Icons.search),
                         suffixIcon: controller.text.isEmpty
                             ? null
@@ -5856,9 +5275,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                       ? null
                       : () => Navigator.of(dialogContext)
                           .pop(_sanitizeHandle(controller.text)),
-                  child: Text(
-                      AppLocalizations.of(context)!
-                          .desktopCommunityAddHandleButtonLabel),
+                  child: Text(AppLocalizations.of(context)!
+                      .desktopCommunityAddHandleButtonLabel),
                 ),
               ],
             );
@@ -5943,7 +5361,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
         ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!.desktopCommunityPostPublishedToast),
+            content: Text(AppLocalizations.of(context)!
+                .desktopCommunityPostPublishedToast),
             behavior: SnackBarBehavior.floating,
             backgroundColor:
                 Provider.of<ThemeProvider>(context, listen: false).accentColor,
@@ -5955,7 +5374,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         setState(() => _isPosting = false);
         ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!.desktopCommunityPostPublishFailedToast),
+            content: Text(AppLocalizations.of(context)!
+                .desktopCommunityPostPublishFailedToast),
             behavior: SnackBarBehavior.floating,
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
@@ -6011,15 +5431,15 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   Icons.error_outline,
                   color: Theme.of(context).colorScheme.error,
                 ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      l10n.desktopCommunityTrendingLoadFailedTapToRetry,
-                      style: GoogleFonts.inter(
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    l10n.desktopCommunityTrendingLoadFailedTapToRetry,
+                    style: GoogleFonts.inter(
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
+                ),
               ],
             ),
           )
@@ -6034,14 +5454,14 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                       .onSurface
                       .withValues(alpha: 0.4),
                 ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      l10n.desktopCommunityTrendingEmptyLabel,
-                      style: GoogleFonts.inter(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    l10n.desktopCommunityTrendingEmptyLabel,
+                    style: GoogleFonts.inter(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
                           .withValues(alpha: 0.7),
                     ),
                   ),
@@ -6117,14 +5537,14 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                 overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 4),
-                                Text(
-                                  AppLocalizations.of(context)!
-                                      .desktopCommunityTaggedPostsLabel(
-                                          count.toInt().toString()),
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    color: Theme.of(context)
-                                        .colorScheme
+                              Text(
+                                AppLocalizations.of(context)!
+                                    .desktopCommunityTaggedPostsLabel(
+                                        count.toInt().toString()),
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: Theme.of(context)
+                                      .colorScheme
                                       .onSurface
                                       .withValues(alpha: 0.6),
                                 ),
@@ -6335,12 +5755,6 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     }).toList();
   }
 
-  String _formatTrendingCount(num? count) {
-    final value = count ?? 0;
-    final locale = Localizations.localeOf(context).toLanguageTag();
-    return NumberFormat.compact(locale: locale).format(value);
-  }
-
   List<Map<String, dynamic>> _dedupeSuggestedProfiles(
       List<Map<String, dynamic>> source,
       {int take = 8}) {
@@ -6410,15 +5824,15 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   Icons.error_outline,
                   color: Theme.of(context).colorScheme.error,
                 ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      l10n.desktopCommunitySuggestionsLoadFailedTapToRetry,
-                      style: GoogleFonts.inter(
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    l10n.desktopCommunitySuggestionsLoadFailedTapToRetry,
+                    style: GoogleFonts.inter(
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
+                ),
               ],
             ),
           )
@@ -6433,14 +5847,14 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                       .onSurface
                       .withValues(alpha: 0.5),
                 ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      l10n.desktopCommunitySuggestionsEmptyLabel,
-                      style: GoogleFonts.inter(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    l10n.desktopCommunitySuggestionsEmptyLabel,
+                    style: GoogleFonts.inter(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
                           .withValues(alpha: 0.7),
                     ),
                   ),
@@ -6469,13 +5883,14 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   (artist['walletAddress'] ?? artist['wallet'])?.toString();
               final profileId = walletAddress ?? handle;
               final canonicalWallet = WalletUtils.canonical(walletAddress);
-              final currentWallet =
-                  WalletUtils.canonical(context.read<WalletProvider>().currentWalletAddress);
+              final currentWallet = WalletUtils.canonical(
+                  context.read<WalletProvider>().currentWalletAddress);
               final canFollow = canonicalWallet.isNotEmpty &&
                   !WalletUtils.equals(canonicalWallet, currentWallet);
-              final isFollowing = canFollow && _followingWallets.contains(canonicalWallet);
-              final isFollowBusy =
-                  canFollow && _followRequestsInFlight.contains(canonicalWallet);
+              final isFollowing =
+                  canFollow && _followingWallets.contains(canonicalWallet);
+              final isFollowBusy = canFollow &&
+                  _followRequestsInFlight.contains(canonicalWallet);
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: DesktopCard(
@@ -6678,7 +6093,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(12),
                         child: Image.network(
-                          MediaUrlResolver.resolveDisplayUrl(group.coverImage) ??
+                          MediaUrlResolver.resolveDisplayUrl(
+                                  group.coverImage) ??
                               group.coverImage!,
                           fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) => Icon(
@@ -6710,8 +6126,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      AppLocalizations.of(context)!.desktopCommunityGroupMembersLabel(
-                          group.memberCount),
+                      AppLocalizations.of(context)!
+                          .desktopCommunityGroupMembersLabel(group.memberCount),
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         color: Theme.of(context)
@@ -6821,7 +6237,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          AppLocalizations.of(context)!.desktopCommunityCreatePostTitle,
+                          AppLocalizations.of(context)!
+                              .desktopCommunityCreatePostTitle,
                           style: GoogleFonts.inter(
                             fontSize: 18,
                             fontWeight: FontWeight.w600,
@@ -7068,7 +6485,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           ? image.name.trim()
           : 'post-image-${DateTime.now().millisecondsSinceEpoch}.jpg';
       setState(() {
-        _selectedImages.add(_ComposerImagePayload(bytes: bytes, fileName: fileName));
+        _selectedImages
+            .add(_ComposerImagePayload(bytes: bytes, fileName: fileName));
       });
     }
   }
@@ -7141,7 +6559,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   }
 
   void _showEmojiPicker() {
-    const emojis = ['ðŸŽ¨', 'ðŸ”¥', 'âœ¨', 'ðŸ›°ï¸', 'ðŸ–¼ï¸', 'ðŸŒ', 'ðŸ’«', 'ðŸš€'];
+    const emojis = ['🎨', '🔥', '✨', '🛰️', '🖼️', '🌐', '💫', '🚀'];
     showModalBottomSheet(
       context: context,
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -7182,62 +6600,20 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
   Widget _buildCategorySelector(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: _composerCategories.map((option) {
-          final isSelected = option.value == _selectedCategory;
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ChoiceChip(
-              label: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    option.icon,
-                    size: 16,
-                    color: isSelected
-                        ? themeProvider.accentColor
-                        : Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.6),
-                  ),
-                   const SizedBox(width: 6),
-                   Text(option.i18nKey.label(l10n)),
-                 ],
-               ),
-              selected: isSelected,
-              showCheckmark: false,
-              onSelected: (_) {
-                setState(() => _selectedCategory = option.value);
-                Provider.of<CommunityHubProvider>(context, listen: false)
-                    .setDraftCategory(option.value);
-              },
-              selectedColor: themeProvider.accentColor.withValues(alpha: 0.14),
-              backgroundColor: Theme.of(context)
-                  .colorScheme
-                  .surfaceContainerHighest
-                  .withValues(alpha: 0.5),
-              side: BorderSide(
-                color: isSelected
-                    ? themeProvider.accentColor.withValues(alpha: 0.5)
-                    : Colors.transparent,
-              ),
-              labelStyle: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                color: isSelected
-                    ? themeProvider.accentColor
-                    : Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.75),
-              ),
-            ),
-          );
-        }).toList(),
+    return CommunityComposerCategorySelector(
+      options: buildCommunityComposerCategoryOptions(
+        l10n: l10n,
+        variant: CommunityComposerCategoryLabelVariant.desktop,
       ),
+      selectedValue: _selectedCategory,
+      accentColor: themeProvider.accentColor,
+      animationTheme: context.animationTheme,
+      variant: CommunityComposerCategorySelectorVariant.desktop,
+      onSelected: (value) {
+        setState(() => _selectedCategory = value);
+        Provider.of<CommunityHubProvider>(context, listen: false)
+            .setDraftCategory(value);
+      },
     );
   }
 
@@ -7326,83 +6702,44 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     final scheme = Theme.of(context).colorScheme;
     final group = hub.draft.targetGroup;
     final animationTheme = context.animationTheme;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () async {
-          final selection = await _showGroupPicker();
-          if (selection != null) {
-            hub.setDraftGroup(selection);
-          }
-        },
-        child: AnimatedContainer(
-          duration: animationTheme.short,
-          curve: animationTheme.defaultCurve,
-          decoration: BoxDecoration(
-            color: group != null
-                ? scheme.primaryContainer.withValues(alpha: 0.2)
-                : scheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: group != null
-                  ? themeProvider.accentColor.withValues(alpha: 0.4)
-                  : scheme.outline.withValues(alpha: 0.2),
-            ),
-          ),
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Icon(Icons.groups_3_outlined,
-                  color: scheme.onSurface.withValues(alpha: 0.8)),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      group?.name ??
-                          AppLocalizations.of(context)!
-                              .desktopCommunityTargetCommunityOptionalTitle,
-                      style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      group == null
-                          ? AppLocalizations.of(context)!
-                              .desktopCommunityTargetCommunityNoGroupHint
-                          : (group.description?.isNotEmpty == true
-                              ? group.description!
-                              : AppLocalizations.of(context)!
-                                  .desktopCommunityTargetCommunityPostingToLabel(
-                                      group.name)),
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: scheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              if (group != null)
-                IconButton(
-                  tooltip: AppLocalizations.of(context)!
-                      .desktopCommunityRemoveGroupTooltip,
-                  onPressed: () => hub.setDraftGroup(null),
-                  icon: const Icon(Icons.close),
-                )
-              else
-                Icon(
-                  Icons.add_circle_outline,
-                  color: themeProvider.accentColor,
-                ),
-            ],
-          ),
-        ),
+    final l10n = AppLocalizations.of(context)!;
+    return CommunityComposerAttachmentCard(
+      onTap: () async {
+        final selection = await _showGroupPicker();
+        if (selection != null) {
+          hub.setDraftGroup(selection);
+        }
+      },
+      leading: Icon(
+        Icons.groups_3_outlined,
+        color: scheme.onSurface.withValues(alpha: 0.8),
       ),
+      title: group?.name ?? l10n.desktopCommunityTargetCommunityOptionalTitle,
+      subtitle: group == null
+          ? l10n.desktopCommunityTargetCommunityNoGroupHint
+          : (group.description?.isNotEmpty == true
+              ? group.description!
+              : l10n.desktopCommunityTargetCommunityPostingToLabel(group.name)),
+      trailing: group != null
+          ? IconButton(
+              tooltip: l10n.desktopCommunityRemoveGroupTooltip,
+              onPressed: () => hub.setDraftGroup(null),
+              icon: const Icon(Icons.close),
+            )
+          : Icon(
+              Icons.add_circle_outline,
+              color: themeProvider.accentColor,
+            ),
+      backgroundColor: group != null
+          ? scheme.primaryContainer.withValues(alpha: 0.2)
+          : scheme.surfaceContainerHighest,
+      borderColor: group != null
+          ? themeProvider.accentColor.withValues(alpha: 0.4)
+          : scheme.outline.withValues(alpha: 0.2),
+      duration: animationTheme.short,
+      curve: animationTheme.defaultCurve,
+      borderRadius: 16,
+      subtitleMaxLines: 2,
     );
   }
 
@@ -7412,192 +6749,102 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     final l10n = AppLocalizations.of(context)!;
     final subjectProvider = context.read<CommunitySubjectProvider>();
     final animationTheme = context.animationTheme;
-
-    CommunitySubjectPreview? preview;
-    final type = (hub.draft.subjectType ?? '').trim();
-    final id = (hub.draft.subjectId ?? '').trim();
-    if (type.isNotEmpty && id.isNotEmpty) {
-      preview = subjectProvider.previewFor(
-        CommunitySubjectRef(type: type, id: id),
-      );
-    }
-    if (preview == null && hub.draft.artwork != null) {
-      preview = CommunitySubjectPreview(
-        ref: CommunitySubjectRef(type: 'artwork', id: hub.draft.artwork!.id),
-        title: hub.draft.artwork!.title,
-        imageUrl: MediaUrlResolver.resolve(hub.draft.artwork!.imageUrl) ??
-            hub.draft.artwork!.imageUrl,
-      );
-    }
-
-    final previewValue = preview;
-    final bool hasSubject = previewValue != null;
-    final String label;
-    final String title;
-    final IconData subjectIcon;
-    final String? imageUrl;
-    if (previewValue == null) {
-      label = l10n.communitySubjectSelectPrompt;
-      title = l10n.communitySubjectSelectTitle;
-      subjectIcon = Icons.link;
-      imageUrl = null;
-    } else {
-      label = l10n.communitySubjectLinkedLabel(
-        _subjectTypeLabel(l10n, previewValue.ref.normalizedType),
-      );
-      title = previewValue.title;
-      subjectIcon = _subjectTypeIcon(previewValue.ref.normalizedType);
-      imageUrl = previewValue.imageUrl;
-    }
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () async {
-          final selection =
-              await CommunitySubjectPicker.pick(context, initialType: hub.draft.subjectType);
-          if (selection == null) return;
-          if (selection.cleared) {
-            hub.setDraftSubject();
-            hub.setDraftArtwork(null);
-            return;
-          }
-          final selected = selection.preview;
-          if (selected == null) return;
-          subjectProvider.upsertPreview(selected);
-          hub.setDraftSubject(type: selected.ref.normalizedType, id: selected.ref.id);
-          if (selected.ref.normalizedType == 'artwork') {
-            hub.setDraftArtwork(
-              CommunityArtworkReference(
-                id: selected.ref.id,
-                title: selected.title,
-                imageUrl: selected.imageUrl,
-              ),
-            );
-          } else {
-            hub.setDraftArtwork(null);
-          }
-        },
-        child: AnimatedContainer(
-          duration: animationTheme.short,
-          curve: animationTheme.defaultCurve,
-          decoration: BoxDecoration(
-            color: hasSubject
-                ? scheme.primaryContainer.withValues(alpha: 0.2)
-                : scheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: hasSubject
-                  ? themeProvider.accentColor.withValues(alpha: 0.35)
-                  : scheme.outline.withValues(alpha: 0.2),
+    final subjectRef = communityDraftSubjectRef(hub.draft);
+    final previewValue = resolveCommunityDraftSubjectPreview(
+      draft: hub.draft,
+      providerPreview:
+          subjectRef == null ? null : subjectProvider.previewFor(subjectRef),
+    );
+    final hasSubject = previewValue != null;
+    final label = previewValue == null
+        ? l10n.communitySubjectSelectPrompt
+        : l10n.communitySubjectLinkedLabel(
+            communitySubjectTypeLabel(l10n, previewValue.ref.normalizedType),
+          );
+    final title = previewValue?.title ?? l10n.communitySubjectSelectTitle;
+    final subjectIcon = previewValue == null
+        ? Icons.link
+        : communitySubjectTypeIcon(previewValue.ref.normalizedType);
+    final imageUrl = previewValue?.imageUrl;
+    return CommunityComposerAttachmentCard(
+      onTap: () async {
+        final selection = await CommunitySubjectPicker.pick(context,
+            initialType: hub.draft.subjectType);
+        if (selection == null) return;
+        if (selection.cleared) {
+          hub.setDraftSubject();
+          hub.setDraftArtwork(null);
+          return;
+        }
+        final selected = selection.preview;
+        if (selected == null) return;
+        subjectProvider.upsertPreview(selected);
+        hub.setDraftSubject(
+            type: selected.ref.normalizedType, id: selected.ref.id);
+        if (selected.ref.normalizedType == 'artwork') {
+          hub.setDraftArtwork(
+            CommunityArtworkReference(
+              id: selected.ref.id,
+              title: selected.title,
+              imageUrl: selected.imageUrl,
             ),
-          ),
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              if (previewValue != null &&
-                  imageUrl != null &&
-                  imageUrl.isNotEmpty)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.network(
-                    MediaUrlResolver.resolveDisplayUrl(imageUrl) ?? imageUrl,
-                    width: 48,
-                    height: 48,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Icon(
-                      subjectIcon,
-                      color: themeProvider.accentColor,
-                    ),
-                  ),
-                )
-              else
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: themeProvider.accentColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    subjectIcon,
-                    color: themeProvider.accentColor,
-                  ),
-                ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      label,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: scheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              if (hasSubject)
-                IconButton(
-                  tooltip: l10n.communitySubjectRemoveTooltip,
-                  onPressed: () {
-                    hub.setDraftSubject();
-                    hub.setDraftArtwork(null);
-                  },
-                  icon: const Icon(Icons.close),
-                )
-              else
-                Icon(
-                  Icons.add_circle_outline,
+          );
+        } else {
+          hub.setDraftArtwork(null);
+        }
+      },
+      leading: previewValue != null && imageUrl != null && imageUrl.isNotEmpty
+          ? ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                MediaUrlResolver.resolveDisplayUrl(imageUrl) ?? imageUrl,
+                width: 48,
+                height: 48,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Icon(
+                  subjectIcon,
                   color: themeProvider.accentColor,
                 ),
-            ],
-          ),
-        ),
-      ),
+              ),
+            )
+          : Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: themeProvider.accentColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                subjectIcon,
+                color: themeProvider.accentColor,
+              ),
+            ),
+      title: title,
+      subtitle: label,
+      trailing: hasSubject
+          ? IconButton(
+              tooltip: l10n.communitySubjectRemoveTooltip,
+              onPressed: () {
+                hub.setDraftSubject();
+                hub.setDraftArtwork(null);
+              },
+              icon: const Icon(Icons.close),
+            )
+          : Icon(
+              Icons.add_circle_outline,
+              color: themeProvider.accentColor,
+            ),
+      backgroundColor: hasSubject
+          ? scheme.primaryContainer.withValues(alpha: 0.2)
+          : scheme.surfaceContainerHighest,
+      borderColor: hasSubject
+          ? themeProvider.accentColor.withValues(alpha: 0.35)
+          : scheme.outline.withValues(alpha: 0.2),
+      duration: animationTheme.short,
+      curve: animationTheme.defaultCurve,
+      borderRadius: 16,
+      subtitleMaxLines: 2,
     );
-  }
-
-  String _subjectTypeLabel(AppLocalizations l10n, String type) {
-    switch (type.toLowerCase()) {
-      case 'artwork':
-        return l10n.commonArtwork;
-      case 'exhibition':
-        return l10n.commonExhibition;
-      case 'collection':
-        return l10n.commonCollection;
-      case 'institution':
-        return l10n.commonInstitution;
-      default:
-        return l10n.commonDetails;
-    }
-  }
-
-  IconData _subjectTypeIcon(String type) {
-    switch (type.toLowerCase()) {
-      case 'artwork':
-        return Icons.view_in_ar;
-      case 'exhibition':
-        return Icons.event_outlined;
-      case 'collection':
-        return Icons.collections_bookmark_outlined;
-      case 'institution':
-        return Icons.apartment_outlined;
-      default:
-        return Icons.info_outline;
-    }
   }
 
   Widget _buildLocationAttachmentCard(
@@ -7619,9 +6866,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 key: const ValueKey('location_add'),
                 onPressed: _pickLocation,
                 icon: const Icon(Icons.location_on_outlined),
-                label: Text(
-                    AppLocalizations.of(context)!
-                        .desktopCommunityTagLocationButtonLabel),
+                label: Text(AppLocalizations.of(context)!
+                    .desktopCommunityTagLocationButtonLabel),
               ),
             )
           : Container(
@@ -7685,18 +6931,18 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       }
     }
     if (!mounted) return null;
-      final groups = hub.groups.where((g) => g.isMember || g.isOwner).toList();
-      if (groups.isEmpty) {
-        if (!mounted) return null;
-        ScaffoldMessenger.of(context).showKubusSnackBar(
-          SnackBar(
-            content: Text(
-                AppLocalizations.of(context)!.desktopCommunityJoinGroupToPostToast),
+    final groups = hub.groups.where((g) => g.isMember || g.isOwner).toList();
+    if (groups.isEmpty) {
+      if (!mounted) return null;
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!.desktopCommunityJoinGroupToPostToast,
           ),
-        );
-        return null;
-      }
-
+        ),
+      );
+      return null;
+    }
     return showKubusDialog<CommunityGroupSummary>(
       context: context,
       builder: (dialogContext) {
@@ -7708,116 +6954,41 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 520, maxHeight: 560),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
-                  child: Row(
-                    children: [
-                      Text(
-                        l10n.desktopCommunitySelectCommunityDialogTitle,
-                        style: GoogleFonts.inter(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        onPressed: () => Navigator.of(dialogContext).pop(),
-                        icon: const Icon(Icons.close),
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(height: 1),
-                Expanded(
-                  child: ListView.separated(
-                    padding: const EdgeInsets.all(24),
-                    itemCount: groups.length,
-                    itemBuilder: (context, index) {
-                      final group = groups[index];
-                      return ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(
-                          group.name,
-                          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (group.description?.isNotEmpty == true)
-                              Text(
-                                group.description!,
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.7),
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              )
-                            else
-                              Text(
-                                l10n.desktopCommunityGroupMembersLabel(
-                                    group.memberCount),
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.6),
-                                ),
-                              ),
-                          ],
-                        ),
-                        trailing: Icon(
-                          Icons.chevron_right,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.4),
-                        ),
-                        onTap: () => Navigator.of(dialogContext).pop(group),
-                      );
-                    },
-                    separatorBuilder: (_, __) => Divider(
-                      height: 1,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .outline
-                          .withValues(alpha: 0.1),
+            child: CommunityGroupPickerContent(
+              title: l10n.desktopCommunitySelectCommunityDialogTitle,
+              groups: groups,
+              subtitleBuilder: (group) => group.description?.isNotEmpty == true
+                  ? group.description!
+                  : l10n.desktopCommunityGroupMembersLabel(group.memberCount),
+              onSelect: (group) => Navigator.of(dialogContext).pop(group),
+              headerTrailing: IconButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                icon: const Icon(Icons.close),
+              ),
+              footer: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+                child: Row(
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(dialogContext).pop(),
+                      child: Text(l10n.commonCancel),
                     ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-                  child: Row(
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.of(dialogContext).pop(),
-                        child: Text(l10n.commonCancel),
+                    const Spacer(),
+                    TextButton(
+                      onPressed: () => Navigator.of(dialogContext).pop(null),
+                      child: Text(
+                        l10n.desktopCommunityClearSelectionButtonLabel,
                       ),
-                      const Spacer(),
-                      TextButton(
-                        onPressed: () => Navigator.of(dialogContext).pop(null),
-                        child:
-                            Text(l10n.desktopCommunityClearSelectionButtonLabel),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         );
       },
     );
   }
-
 
   Widget _buildChip(
       String label, ThemeProvider themeProvider, VoidCallback onRemove) {
@@ -7921,7 +7092,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
       final mediaUrls = await _uploadComposerMedia();
       if (!mounted) return;
-      final postType = mediaUrls.isNotEmpty ? 'image' : 'text';
+      final postType =
+          communityComposerPostType(hasImage: mediaUrls.isNotEmpty);
       var content = rawContent;
       if (content.isEmpty && mediaUrls.isNotEmpty) {
         content = l10n.desktopCommunitySharedPhotoFallbackContent;
@@ -7977,8 +7149,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
         ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
-            content: Text(
-                AppLocalizations.of(context)!.desktopCommunityPostCreatedSuccessToast),
+            content: Text(AppLocalizations.of(context)!
+                .desktopCommunityPostCreatedSuccessToast),
             backgroundColor:
                 Provider.of<ThemeProvider>(context, listen: false).accentColor,
             behavior: SnackBarBehavior.floating,
@@ -7993,8 +7165,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         setState(() => _isPosting = false);
         ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
-            content:
-                Text(AppLocalizations.of(context)!.desktopCommunityPostCreateFailedToast),
+            content: Text(AppLocalizations.of(context)!
+                .desktopCommunityPostCreateFailedToast),
             backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
           ),
@@ -8094,55 +7266,6 @@ class _NewConversationDialog extends StatefulWidget {
 
   @override
   State<_NewConversationDialog> createState() => _NewConversationDialogState();
-}
-
-class _FabOption {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  const _FabOption({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-}
-
-class _ComposerCategoryOption {
-  final String value;
-  final _ComposerCategoryI18nKey i18nKey;
-  final IconData icon;
-
-  const _ComposerCategoryOption({
-    required this.value,
-    required this.i18nKey,
-    required this.icon,
-  });
-}
-
-enum _ComposerCategoryI18nKey {
-  post,
-  artDrop,
-  artReview,
-  event,
-  question,
-}
-
-extension _ComposerCategoryI18nKeyX on _ComposerCategoryI18nKey {
-  String label(AppLocalizations l10n) {
-    switch (this) {
-      case _ComposerCategoryI18nKey.post:
-        return l10n.desktopCommunityComposerTypePostLabel;
-      case _ComposerCategoryI18nKey.artDrop:
-        return l10n.desktopCommunityComposerTypeArtDropLabel;
-      case _ComposerCategoryI18nKey.artReview:
-        return l10n.desktopCommunityComposerTypeArtReviewLabel;
-      case _ComposerCategoryI18nKey.event:
-        return l10n.desktopCommunityComposerTypeEventLabel;
-      case _ComposerCategoryI18nKey.question:
-        return l10n.desktopCommunityComposerTypeQuestionLabel;
-    }
-  }
 }
 
 class _NewConversationDialogState extends State<_NewConversationDialog> {
@@ -8273,7 +7396,10 @@ class _NewConversationDialogState extends State<_NewConversationDialog> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.18),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .outline
+                      .withValues(alpha: 0.18),
                 ),
               ),
               child: LiquidGlassPanel(
@@ -8281,14 +7407,12 @@ class _NewConversationDialogState extends State<_NewConversationDialog> {
                 margin: EdgeInsets.zero,
                 borderRadius: BorderRadius.circular(12),
                 showBorder: false,
-                backgroundColor: Theme.of(context)
-                    .colorScheme
-                    .surface
-                    .withValues(
-                      alpha: Theme.of(context).brightness == Brightness.dark
-                          ? 0.22
-                          : 0.26,
-                    ),
+                backgroundColor:
+                    Theme.of(context).colorScheme.surface.withValues(
+                          alpha: Theme.of(context).brightness == Brightness.dark
+                              ? 0.22
+                              : 0.26,
+                        ),
                 child: SizedBox(
                   height: 44,
                   child: TextField(
@@ -8371,11 +7495,15 @@ class _NewConversationDialogState extends State<_NewConversationDialog> {
                                         user['id'])
                                     ?.toString() ??
                                 '';
-                            final rawUsername = (user['username'] ?? '').toString().trim();
+                            final rawUsername =
+                                (user['username'] ?? '').toString().trim();
                             final username = rawUsername.startsWith('@')
                                 ? rawUsername.substring(1).trim()
                                 : rawUsername;
-                            final displayName = (user['displayName'] ?? user['display_name'])?.toString().trim();
+                            final displayName =
+                                (user['displayName'] ?? user['display_name'])
+                                    ?.toString()
+                                    .trim();
                             final formatted = CreatorDisplayFormat.format(
                               fallbackLabel: wallet.isNotEmpty
                                   ? maskWallet(wallet)
@@ -8384,7 +7512,8 @@ class _NewConversationDialogState extends State<_NewConversationDialog> {
                               username: username,
                               wallet: wallet,
                             );
-                            final subtitle = formatted.secondary ?? (wallet.isNotEmpty ? maskWallet(wallet) : null);
+                            final subtitle = formatted.secondary ??
+                                (wallet.isNotEmpty ? maskWallet(wallet) : null);
                             final avatarUrl = user['avatar'] ??
                                 user['avatar_url'] ??
                                 user['profileImageUrl'] ??

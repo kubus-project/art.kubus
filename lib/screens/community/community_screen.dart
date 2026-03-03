@@ -1,4 +1,4 @@
-﻿// NOTE: use_build_context_synchronously lint handled per-instance; avoid file-level ignore
+// NOTE: use_build_context_synchronously lint handled per-instance; avoid file-level ignore
 
 import 'package:art_kubus/widgets/glass_components.dart';
 // NOTE: use_build_context_synchronously lint handled per-instance; avoid file-level ignore
@@ -40,7 +40,6 @@ import '../../providers/community_hub_provider.dart';
 import '../../providers/community_comments_provider.dart';
 import '../../providers/community_subject_provider.dart';
 import '../../models/community_group.dart';
-import '../../models/community_subject.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
@@ -61,11 +60,16 @@ import '../../providers/saved_items_provider.dart';
 import '../../providers/navigation_provider.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/artwork_navigation.dart';
-import '../../widgets/community/community_author_role_badges.dart';
+import '../../utils/community_screen_utils.dart';
+import '../../widgets/community/community_composer_controls.dart';
+import '../../widgets/community/community_expandable_fab.dart';
+import '../../widgets/community/community_group_picker_content.dart';
+import '../../widgets/community/community_likes_sheet.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/community_subject_navigation.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/media_url_resolver.dart';
+import '../../widgets/community/community_season0_banner.dart';
 import '../season0/season0_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
@@ -74,22 +78,7 @@ enum CommunityFeedType {
   discover,
 }
 
-class _ComposerCategoryOption {
-  final String value;
-  final String label;
-  final IconData icon;
-  final String description;
-
-  const _ComposerCategoryOption({
-    required this.value,
-    required this.label,
-    required this.icon,
-    required this.description,
-  });
-}
-
 class CommunityScreen extends StatefulWidget {
-
   const CommunityScreen({super.key});
 
   @override
@@ -97,7 +86,7 @@ class CommunityScreen extends StatefulWidget {
 }
 
 class _CommunityScreenState extends State<CommunityScreen>
-  with TickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -113,39 +102,6 @@ class _CommunityScreenState extends State<CommunityScreen>
   late TabController _tabController;
 
   static const int _tabCount = 4;
-
-  List<_ComposerCategoryOption> _composerCategories(AppLocalizations l10n) => [
-    _ComposerCategoryOption(
-      value: 'post',
-      label: l10n.communityComposerCategoryPostLabel,
-      icon: Icons.edit_outlined,
-      description: l10n.communityComposerCategoryPostDescription,
-    ),
-    _ComposerCategoryOption(
-      value: 'art_drop',
-      label: l10n.communityComposerCategoryArtDropLabel,
-      icon: Icons.view_in_ar_outlined,
-      description: l10n.communityComposerCategoryArtDropDescription,
-    ),
-    _ComposerCategoryOption(
-      value: 'art_review',
-      label: l10n.communityComposerCategoryArtReviewLabel,
-      icon: Icons.rate_review_outlined,
-      description: l10n.communityComposerCategoryArtReviewDescription,
-    ),
-    _ComposerCategoryOption(
-      value: 'event',
-      label: l10n.communityComposerCategoryEventLabel,
-      icon: Icons.event_outlined,
-      description: l10n.communityComposerCategoryEventDescription,
-    ),
-    _ComposerCategoryOption(
-      value: 'question',
-      label: l10n.communityComposerCategoryQuestionLabel,
-      icon: Icons.help_outline,
-      description: l10n.communityComposerCategoryQuestionDescription,
-    ),
-  ];
 
   // Community data
   List<CommunityPost> _communityPosts = [];
@@ -198,7 +154,7 @@ class _CommunityScreenState extends State<CommunityScreen>
   int _lastGlobalRefreshVersion = 0;
   bool _communityReloadInFlight = false;
   bool _combinedFeedLoadInFlight = false;
-  
+
   // Expandable FAB state
   bool _isFabExpanded = false;
 
@@ -388,7 +344,8 @@ class _CommunityScreenState extends State<CommunityScreen>
     String? walletAddress,
   }) async {
     final backendApi = BackendApiService();
-    final subjectProvider = Provider.of<CommunitySubjectProvider>(context, listen: false);
+    final subjectProvider =
+        Provider.of<CommunitySubjectProvider>(context, listen: false);
     final posts = await backendApi.getCommunityPosts(
       page: 1,
       limit: 50,
@@ -413,7 +370,8 @@ class _CommunityScreenState extends State<CommunityScreen>
     }).toList();
   }
 
-  Future<void> _loadInitialFeeds({bool force = false, String? walletAddress}) async {
+  Future<void> _loadInitialFeeds(
+      {bool force = false, String? walletAddress}) async {
     if (_combinedFeedLoadInFlight && !force) return;
     _combinedFeedLoadInFlight = true;
     final resolvedWallet = walletAddress ?? _currentWalletAddress();
@@ -438,7 +396,8 @@ class _CommunityScreenState extends State<CommunityScreen>
             followingOnly: true,
             walletAddress: resolvedWallet,
           );
-          debugPrint('ðŸ“¥ Loaded ${followingPosts?.length ?? 0} following posts');
+          debugPrint(
+              '📥 Loaded ${followingPosts?.length ?? 0} following posts');
         } catch (e) {
           debugPrint('Error loading following feed: $e');
         }
@@ -449,7 +408,7 @@ class _CommunityScreenState extends State<CommunityScreen>
             followingOnly: false,
             walletAddress: resolvedWallet,
           );
-          debugPrint('ðŸ“¥ Loaded ${discoverPosts?.length ?? 0} discover posts');
+          debugPrint('📥 Loaded ${discoverPosts?.length ?? 0} discover posts');
         } catch (e) {
           debugPrint('Error loading discover feed: $e');
         }
@@ -517,7 +476,8 @@ class _CommunityScreenState extends State<CommunityScreen>
     _combinedFeedLoadInFlight = false;
   }
 
-  Future<void> _loadCommunityData({bool? followingOnly, bool force = false}) async {
+  Future<void> _loadCommunityData(
+      {bool? followingOnly, bool force = false}) async {
     final bool targetFollowing =
         followingOnly ?? (_activeFeed == CommunityFeedType.following);
     final bool isActiveFeed =
@@ -552,7 +512,8 @@ class _CommunityScreenState extends State<CommunityScreen>
         followingOnly: targetFollowing,
         walletAddress: walletAddress,
       );
-      debugPrint('ðŸ“¥ Loaded ${posts.length} ${targetFollowing ? 'following' : 'discover'} posts');
+      debugPrint(
+          '📥 Loaded ${posts.length} ${targetFollowing ? 'following' : 'discover'} posts');
     } catch (e) {
       debugPrint('Error loading community data: $e');
     }
@@ -583,17 +544,20 @@ class _CommunityScreenState extends State<CommunityScreen>
 
     if (posts == null || posts.isEmpty) {
       if (isActiveFeed && _communityPosts.isEmpty) {
-        final alternative = targetFollowing ? _discoverFeedPosts : _followingFeedPosts;
+        final alternative =
+            targetFollowing ? _discoverFeedPosts : _followingFeedPosts;
         if (alternative.isNotEmpty) {
           final fallbackFeed = targetFollowing
               ? CommunityFeedType.discover
               : CommunityFeedType.following;
-          _showSnack('Showing ${fallbackFeed == CommunityFeedType.following ? 'Following' : 'Discover'} feed while we retry.');
+          _showSnack(
+              'Showing ${fallbackFeed == CommunityFeedType.following ? 'Following' : 'Discover'} feed while we retry.');
           setState(() {
             _activeFeed = fallbackFeed;
             _communityPosts = alternative;
             try {
-              _tabController.animateTo(fallbackFeed == CommunityFeedType.following ? 0 : 1);
+              _tabController.animateTo(
+                  fallbackFeed == CommunityFeedType.following ? 0 : 1);
             } catch (_) {}
           });
         }
@@ -671,7 +635,8 @@ class _CommunityScreenState extends State<CommunityScreen>
         try {
           await BackendApiService().ensureAuthLoaded(walletAddress: normalized);
         } catch (e) {
-          debugPrint('CommunityScreen: ensureAuthLoaded failed for $normalized: $e');
+          debugPrint(
+              'CommunityScreen: ensureAuthLoaded failed for $normalized: $e');
         }
       }
 
@@ -688,15 +653,14 @@ class _CommunityScreenState extends State<CommunityScreen>
     if (!mounted || _appRefreshProvider == null) return;
     final communityVersion = _appRefreshProvider!.communityVersion;
     final globalVersion = _appRefreshProvider!.globalVersion;
-    final shouldRefresh =
-        communityVersion != _lastCommunityRefreshVersion ||
+    final shouldRefresh = communityVersion != _lastCommunityRefreshVersion ||
         globalVersion != _lastGlobalRefreshVersion;
     _lastCommunityRefreshVersion = communityVersion;
     _lastGlobalRefreshVersion = globalVersion;
     if (!shouldRefresh) return;
     try {
-      _lastWalletAddress =
-          Provider.of<WalletProvider>(context, listen: false).currentWalletAddress;
+      _lastWalletAddress = Provider.of<WalletProvider>(context, listen: false)
+          .currentWalletAddress;
     } catch (_) {}
     _reloadCommunityFeedsForWallet(
       walletAddress: _lastWalletAddress,
@@ -735,16 +699,17 @@ class _CommunityScreenState extends State<CommunityScreen>
     _communityPosts = _followingFeedPosts;
     _activeFeed = CommunityFeedType.following;
     try {
-      _lastWalletAddress =
-          Provider.of<WalletProvider>(context, listen: false).currentWalletAddress;
+      _lastWalletAddress = Provider.of<WalletProvider>(context, listen: false)
+          .currentWalletAddress;
     } catch (_) {}
     _loadInitialFeeds();
-    
+
     // Track this screen visit for quick actions
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<NavigationProvider>(context, listen: false).trackScreenVisit('community');
+      Provider.of<NavigationProvider>(context, listen: false)
+          .trackScreenVisit('community');
     });
-    
+
     // Listen for tab changes to load appropriate content
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) return;
@@ -896,7 +861,8 @@ class _CommunityScreenState extends State<CommunityScreen>
       );
       _messageScale = Tween<double>(begin: 1.0, end: 1.12).animate(
           CurvedAnimation(
-              parent: _messagePulseController, curve: animationTheme.defaultCurve));
+              parent: _messagePulseController,
+              curve: animationTheme.defaultCurve));
 
       _animationController.forward();
     }
@@ -916,7 +882,7 @@ class _CommunityScreenState extends State<CommunityScreen>
   }
 
   // Helper to get user avatar from backend
-  // _getUserAvatar removed (unused) â€” avatars are now resolved via UserService and ChatProvider caching
+  // _getUserAvatar removed (unused) — avatars are now resolved via UserService and ChatProvider caching
 
   @override
   void dispose() {
@@ -1052,16 +1018,17 @@ class _CommunityScreenState extends State<CommunityScreen>
     bool matches(CommunityPost existing) {
       final sameAuthor = existing.authorId == candidate.authorId;
       final sameContent = existing.content == candidate.content;
-      final timestampDiff = existing.timestamp.difference(candidate.timestamp).abs();
+      final timestampDiff =
+          existing.timestamp.difference(candidate.timestamp).abs();
       final existingPostType = (existing.postType ?? '').toLowerCase();
       final candidatePostType = (candidate.postType ?? '').toLowerCase();
-      final isRepost = candidatePostType == 'repost' || existingPostType == 'repost';
-      final sameRepostSource =
-          candidatePostType == 'repost' &&
-              existingPostType == 'repost' &&
-              candidate.originalPostId != null &&
-              candidate.originalPostId == existing.originalPostId &&
-              sameAuthor;
+      final isRepost =
+          candidatePostType == 'repost' || existingPostType == 'repost';
+      final sameRepostSource = candidatePostType == 'repost' &&
+          existingPostType == 'repost' &&
+          candidate.originalPostId != null &&
+          candidate.originalPostId == existing.originalPostId &&
+          sameAuthor;
 
       if (existing.id == candidate.id) return true;
       if (sameRepostSource) return true;
@@ -1090,12 +1057,12 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   void _onWalletProviderChanged() async {
     try {
-        final walletProvider =
+      final walletProvider =
           Provider.of<WalletProvider>(context, listen: false);
-        final currentWallet = walletProvider.currentWalletAddress ?? '';
-        final normalized = WalletUtils.normalize(currentWallet);
-        final previous = WalletUtils.normalize(_lastWalletAddress);
-        final hasChanged = previous != normalized;
+      final currentWallet = walletProvider.currentWalletAddress ?? '';
+      final normalized = WalletUtils.normalize(currentWallet);
+      final previous = WalletUtils.normalize(_lastWalletAddress);
+      final hasChanged = previous != normalized;
 
       if (hasChanged) {
         _lastWalletAddress = normalized;
@@ -1123,7 +1090,7 @@ class _CommunityScreenState extends State<CommunityScreen>
   Widget build(BuildContext context) {
     final hub = context.watch<CommunityHubProvider>();
     _maybeHandleComposerOpenRequest(hub);
-    
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SafeArea(
@@ -1270,7 +1237,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                       return Transform.translate(
                         offset: Offset(
                           0,
-                          (1 - slideCurve.value) * MediaQuery.of(context).size.height,
+                          (1 - slideCurve.value) *
+                              MediaQuery.of(context).size.height,
                         ),
                         child: FadeTransition(
                           opacity: fadeCurve,
@@ -1376,7 +1344,8 @@ class _CommunityScreenState extends State<CommunityScreen>
               fontSize: isSmallScreen ? 9 : 10,
               fontWeight: FontWeight.w600,
             ),
-            unselectedLabelStyle: KubusTypography.textTheme.labelSmall?.copyWith(
+            unselectedLabelStyle:
+                KubusTypography.textTheme.labelSmall?.copyWith(
               fontSize: isSmallScreen ? 9 : 10,
               fontWeight: FontWeight.normal,
             ),
@@ -1456,13 +1425,15 @@ class _CommunityScreenState extends State<CommunityScreen>
               24,
               24 + KubusLayout.mainBottomNavBarHeight,
             ),
-            itemCount: _communityPosts.length + (AppConfig.isFeatureEnabled('season0') ? 1 : 0),
+            itemCount: _communityPosts.length +
+                (AppConfig.isFeatureEnabled('season0') ? 1 : 0),
             itemBuilder: (context, index) {
               // Season 0 banner at the top if enabled
               if (AppConfig.isFeatureEnabled('season0') && index == 0) {
                 return _buildSeason0Banner();
               }
-              final postIndex = AppConfig.isFeatureEnabled('season0') ? index - 1 : index;
+              final postIndex =
+                  AppConfig.isFeatureEnabled('season0') ? index - 1 : index;
               return _buildPostCard(postIndex);
             },
           ),
@@ -1506,64 +1477,18 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   Widget _buildSeason0Banner() {
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
     final accent = context.watch<ThemeProvider>().accentColor;
-    return GestureDetector(
+    return CommunitySeason0Banner(
+      title: l10n.season0BannerTitle,
+      subtitle: l10n.season0BannerTap,
+      accentColor: accent,
+      variant: CommunitySeason0BannerVariant.mobile,
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const Season0Screen()),
         );
       },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: KubusSpacing.md),
-        padding: const EdgeInsets.all(KubusSpacing.md),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [accent.withValues(alpha: 0.15), scheme.primaryContainer.withValues(alpha: 0.4)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: KubusRadius.circular(KubusRadius.md),
-          border: Border.all(color: accent.withValues(alpha: 0.3)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.18),
-                borderRadius: KubusRadius.circular(KubusRadius.sm),
-              ),
-              child: Icon(Icons.rocket_launch_outlined, color: accent, size: 22),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.season0BannerTitle,
-                    style: KubusTypography.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: scheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    l10n.season0BannerTap,
-                    style: KubusTypography.textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurface.withValues(alpha: 0.65),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(Icons.chevron_right, color: scheme.onSurface.withValues(alpha: 0.4)),
-          ],
-        ),
-      ),
     );
   }
 
@@ -1595,16 +1520,14 @@ class _CommunityScreenState extends State<CommunityScreen>
                 child: EmptyStateCard(
                   icon: Icons.groups_outlined,
                   title: l10n.communityGroupsEmptyTitle,
-                  description:
-                      hub.currentGroupSearchQuery.isEmpty
-                          ? l10n.communityGroupsEmptyDescription
-                          : l10n.communityGroupsEmptySearchDescription(
-                              hub.currentGroupSearchQuery,
-                            ),
+                  description: hub.currentGroupSearchQuery.isEmpty
+                      ? l10n.communityGroupsEmptyDescription
+                      : l10n.communityGroupsEmptySearchDescription(
+                          hub.currentGroupSearchQuery,
+                        ),
                 ),
               ),
-            if (hasGroups)
-              ...hub.groups.map((group) => _buildGroupCard(group)),
+            if (hasGroups) ...hub.groups.map((group) => _buildGroupCard(group)),
             if (hub.groupsLoading && hasGroups)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 24),
@@ -1685,14 +1608,15 @@ class _CommunityScreenState extends State<CommunityScreen>
         hintText: l10n.communityGroupsSearchHint,
         filled: true,
         fillColor: Theme.of(context)
-          .colorScheme
-          .surfaceContainerHighest
-          .withValues(alpha: 0.4),
+            .colorScheme
+            .surfaceContainerHighest
+            .withValues(alpha: 0.4),
         border: OutlineInputBorder(
           borderRadius: KubusRadius.circular(KubusRadius.lg),
           borderSide: BorderSide.none,
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: KubusSpacing.md, vertical: 0),
+        contentPadding: const EdgeInsets.symmetric(
+            horizontal: KubusSpacing.md, vertical: 0),
       ),
     );
   }
@@ -1735,10 +1659,10 @@ class _CommunityScreenState extends State<CommunityScreen>
     final l10n = AppLocalizations.of(context)!;
     final isProcessing = _groupActionsInFlight.contains(group.id);
     final membershipLabel = group.isOwner
-      ? l10n.commonOwner
-      : group.isMember
-        ? l10n.commonJoined
-        : l10n.commonJoin;
+        ? l10n.commonOwner
+        : group.isMember
+            ? l10n.commonJoined
+            : l10n.commonJoin;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 18),
@@ -1795,9 +1719,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                   backgroundColor: group.isMember
                       ? scheme.surface
                       : themeProvider.accentColor,
-                  foregroundColor: group.isMember
-                      ? scheme.onSurface
-                      : scheme.onPrimary,
+                  foregroundColor:
+                      group.isMember ? scheme.onSurface : scheme.onPrimary,
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   textStyle: KubusTypography.textTheme.labelMedium,
@@ -1815,7 +1738,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                   group.isPublic ? Icons.public : Icons.lock,
                   size: 16,
                 ),
-                label: Text(group.isPublic ? l10n.commonPublic : l10n.commonPrivate),
+                label: Text(
+                    group.isPublic ? l10n.commonPublic : l10n.commonPrivate),
               ),
               Chip(
                 avatar: const Icon(Icons.people_alt, size: 16),
@@ -1843,7 +1767,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    group.latestPost?.content ?? 'â€”',
+                    group.latestPost?.content ?? '—',
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                     style: KubusTypography.textTheme.bodySmall?.copyWith(
@@ -1921,8 +1845,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                   shape: BoxShape.circle,
                   tileSize: 4,
                   progress: null,
-                  color:
-                      Provider.of<ThemeProvider>(context, listen: false).accentColor,
+                  color: Provider.of<ThemeProvider>(context, listen: false)
+                      .accentColor,
                 ),
               ),
             ),
@@ -1938,11 +1862,10 @@ class _CommunityScreenState extends State<CommunityScreen>
         .artFeedRadiusKm;
     String subtitle;
     if (_artFeedLatitude != null && _artFeedLongitude != null) {
-      subtitle =
-          l10n.communityArtFeedCenterSubtitle(
-            _artFeedLatitude!.toStringAsFixed(3),
-            _artFeedLongitude!.toStringAsFixed(3),
-          );
+      subtitle = l10n.communityArtFeedCenterSubtitle(
+        _artFeedLatitude!.toStringAsFixed(3),
+        _artFeedLongitude!.toStringAsFixed(3),
+      );
     } else {
       subtitle = l10n.communityArtFeedEnablePreciseLocationHint;
     }
@@ -2043,8 +1966,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon,
-              size: 42, color: Theme.of(context).colorScheme.onSurface),
+          Icon(icon, size: 42, color: Theme.of(context).colorScheme.onSurface),
           const SizedBox(height: 12),
           Text(
             title,
@@ -2079,8 +2001,8 @@ class _CommunityScreenState extends State<CommunityScreen>
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
-    final rawImageUrl =
-        post.imageUrl ?? (post.mediaUrls.isNotEmpty ? post.mediaUrls.first : null);
+    final rawImageUrl = post.imageUrl ??
+        (post.mediaUrls.isNotEmpty ? post.mediaUrls.first : null);
     final imageUrl = MediaUrlResolver.resolveDisplayUrl(rawImageUrl) ??
         MediaUrlResolver.resolve(rawImageUrl) ??
         rawImageUrl;
@@ -2104,10 +2026,11 @@ class _CommunityScreenState extends State<CommunityScreen>
             ),
             title: Text(
               post.authorName,
-              style: KubusTypography.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+              style: KubusTypography.textTheme.titleSmall
+                  ?.copyWith(fontWeight: FontWeight.w700),
             ),
             subtitle: Text(
-              '${_getTimeAgo(post.timestamp)} • ${post.category}',
+              '${_getTimeAgo(post.timestamp)} � ${post.category}',
               style: KubusTypography.textTheme.labelSmall,
             ),
             trailing: IconButton(
@@ -2115,7 +2038,8 @@ class _CommunityScreenState extends State<CommunityScreen>
               onPressed: () {
                 ShareService().showShareSheet(
                   context,
-                  target: ShareTarget.post(postId: post.id, title: post.content),
+                  target:
+                      ShareTarget.post(postId: post.id, title: post.content),
                   sourceScreen: 'community_art_feed',
                 );
               },
@@ -2156,8 +2080,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                 errorBuilder: (_, __, ___) => Container(
                   height: 220,
                   color: themeProvider.accentColor.withValues(alpha: 0.15),
-                  child: Icon(Icons.image_not_supported,
-                      color: scheme.onPrimary),
+                  child:
+                      Icon(Icons.image_not_supported, color: scheme.onPrimary),
                 ),
               ),
             ),
@@ -2179,16 +2103,18 @@ class _CommunityScreenState extends State<CommunityScreen>
                     children: [
                       Icon(Icons.place,
                           size: 18,
-                          color: themeProvider.accentColor.withValues(alpha: 0.9)),
+                          color:
+                              themeProvider.accentColor.withValues(alpha: 0.9)),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           [
                             post.location?.name,
                             post.distanceKm != null
-                                ? l10n.commonDistanceKmAway(post.distanceKm!.toStringAsFixed(1))
+                                ? l10n.commonDistanceKmAway(
+                                    post.distanceKm!.toStringAsFixed(1))
                                 : null,
-                          ].whereType<String>().join(' • '),
+                          ].whereType<String>().join(' � '),
                           style: KubusTypography.textTheme.labelSmall?.copyWith(
                             color: scheme.onSurface.withValues(alpha: 0.6),
                           ),
@@ -2204,7 +2130,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                     children: post.tags.map((tag) {
                       final roles = KubusColorRoles.of(context);
                       return Chip(
-                        backgroundColor: roles.tagChipBackground.withValues(alpha: 0.1),
+                        backgroundColor:
+                            roles.tagChipBackground.withValues(alpha: 0.1),
                         side: BorderSide.none,
                         label: Text(
                           '#$tag',
@@ -2263,758 +2190,46 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   Widget _buildPostCard(int index) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-
-    // Use actual post data from backend
     if (index >= _communityPosts.length) {
       return const SizedBox.shrink();
     }
-
     final post = _communityPosts[index];
-
-    if (MediaQuery.of(context).size.width >= 0) {
-      return CommunityPostCard(
-        post: post,
-        accentColor: themeProvider.accentColor,
-        onOpenPostDetail: (target) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => PostDetailScreen(post: target)),
-          );
-        },
-        onOpenAuthorProfile: () => _viewUserProfile(post.authorId),
-        onToggleLike: () => _toggleLike(index),
-        onOpenComments: () => _showComments(index),
-        onRepost: () {
-          final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-          final currentWallet = walletProvider.currentWalletAddress;
-          if (post.postType == 'repost' && post.authorWallet == currentWallet) {
-            _showRepostOptions(post);
-          } else {
-            _showRepostModal(post);
-          }
-        },
-        onShare: () => _sharePost(index),
-        onToggleBookmark: () => _toggleBookmark(index),
-        onMoreOptions: () => _showPostOptionsForPost(post),
-        onShowLikes: () => _showPostLikes(post.id),
-        onShowReposts: () => _viewRepostsList(post),
-        onTagTap: _filterByTag,
-        onMentionTap: _searchMention,
-        onOpenLocation: _openLocationOnMap,
-        onOpenGroup: _openGroupFromPost,
-        onOpenSubject: (preview) => CommunitySubjectNavigation.open(
-          context,
-          subject: preview.ref,
-          titleOverride: preview.title,
-        ),
-      );
-    }
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isSmallScreen = constraints.maxWidth < 375;
-
-        return Container(
-            margin: const EdgeInsets.only(bottom: 20),
-            child: GestureDetector(
-                onTap: () => _viewPostDetail(index),
-                child: Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                          color: Theme.of(context).colorScheme.outline),
-                    ),
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // (Removed repost indicator: top-level repost label and icon were redundant)
-                          Row(
-                            children: [
-                              AvatarWidget(
-                                // Always show reposter's avatar on the top-level post card
-                                wallet: (post.authorWallet ?? post.authorId),
-                                avatarUrl: post.authorAvatar,
-                                radius: 20,
-                                allowFabricatedFallback: true,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: () => _viewUserProfile(post.authorId),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Flexible(
-                                            fit: FlexFit.loose,
-                                            child: Text(
-                                              post.authorName,
-                                              style: GoogleFonts.inter(
-                                                fontSize: isSmallScreen ? 14 : 16,
-                                                fontWeight: FontWeight.bold,
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .onSurface,
-                                              ),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                              CommunityAuthorRoleBadges(
-                                                post: post,
-                                                fontSize: isSmallScreen ? 8.5 : 9.5,
-                                                iconOnly: false,
-                                              ),
-                                        ],
-                                      ),
-                                      if ((post.authorUsername ?? '').trim().isNotEmpty)
-                                        Text(
-                                          '@${post.authorUsername!.trim()}',
-                                          style: GoogleFonts.inter(
-                                            fontSize: isSmallScreen ? 12 : 14,
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSurface
-                                                .withValues(alpha: 0.6),
-                                          ),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                                    ),
-                              Text(
-                                _getTimeAgo(post.timestamp),
-                                style: GoogleFonts.inter(
-                                  fontSize: isSmallScreen ? 10 : 12,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.5),
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Repost comment (if exists)
-                          if (post.postType == 'repost' &&
-                              post.content.isNotEmpty) ...[
-                            const SizedBox(height: 6),
-                            Text(
-                              post.content,
-                              style: GoogleFonts.inter(
-                                fontSize: isSmallScreen ? 13 : 15,
-                                height: 1.5,
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Divider(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .outline
-                                    .withValues(alpha: 0.5)),
-                            const SizedBox(height: 12),
-                          ],
-                          // Category badge and post type indicator
-                          if (post.category.isNotEmpty && post.category != 'post') ...[
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              margin: const EdgeInsets.only(bottom: 12),
-                              decoration: BoxDecoration(
-                                color: themeProvider.accentColor.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    _getCategoryIcon(post.category),
-                                    size: 14,
-                                    color: themeProvider.accentColor,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    _formatCategoryLabel(post.category),
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: themeProvider.accentColor,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                          // If this is a repost - show original post in its own inner card
-                          if (post.postType == 'repost' &&
-                              post.originalPost != null) ...[
-                            _buildRepostInnerCard(post.originalPost!),
-                          ] else ...[
-                            Text(
-                              post.content,
-                              style: GoogleFonts.inter(
-                                fontSize: isSmallScreen ? 13 : 15,
-                                height: 1.5,
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
-                            ),
-                          ],
-                          if ((post.postType == 'repost' &&
-                                  post.originalPost?.imageUrl != null) ||
-                              (post.postType != 'repost' &&
-                                  post.imageUrl != null)) ...[
-                            const SizedBox(height: 16),
-                            GestureDetector(
-                              onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (context) => PostDetailScreen(
-                                          post: (post.postType == 'repost' &&
-                                                  post.originalPost != null)
-                                              ? post.originalPost
-                                              : post))),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: Image.network(
-                                  MediaUrlResolver.resolveDisplayUrl(
-                                        (post.postType == 'repost' &&
-                                                post.originalPost != null)
-                                            ? post.originalPost!.imageUrl
-                                            : post.imageUrl,
-                                      ) ??
-                                      ((post.postType == 'repost' &&
-                                              post.originalPost != null)
-                                          ? post.originalPost!.imageUrl!
-                                          : post.imageUrl!),
-                                  height: 200,
-                                  width: double.infinity,
-                                  fit: BoxFit.cover,
-                                  loadingBuilder:
-                                      (context, child, loadingProgress) {
-                                    if (loadingProgress == null) return child;
-                                    return Container(
-                                      height: 200,
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            themeProvider.accentColor
-                                                .withValues(alpha: 0.3),
-                                            themeProvider.accentColor
-                                                .withValues(alpha: 0.1),
-                                          ],
-                                        ),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Center(
-                                        child: SizedBox(
-                                            width: 36,
-                                            height: 36,
-                                            child: InlineLoading(
-                                                expand: true,
-                                                shape: BoxShape.circle,
-                                                tileSize: 4.0,
-                                                progress: loadingProgress
-                                                            .expectedTotalBytes !=
-                                                        null
-                                                    ? (loadingProgress
-                                                            .cumulativeBytesLoaded /
-                                                        loadingProgress
-                                                            .expectedTotalBytes!)
-                                                    : null)),
-                                      ),
-                                    );
-                                  },
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Container(
-                                      height: 200,
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            themeProvider.accentColor
-                                                .withValues(alpha: 0.3),
-                                            themeProvider.accentColor
-                                                .withValues(alpha: 0.1),
-                                          ],
-                                        ),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Center(
-                                        child: Icon(Icons.image_not_supported,
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onPrimary,
-                                            size: 60),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ),
-                          ],
-                          // Post metadata section: tags, mentions, location, artwork, group
-                          if (post.postType != 'repost') ...[
-                            // Tags
-                            if (post.tags.isNotEmpty) ...[
-                              const SizedBox(height: 14),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 6,
-                                children: post.tags.map((tag) {
-                                  final roles = KubusColorRoles.of(context);
-                                  return GestureDetector(
-                                    onTap: () => _filterByTag(tag),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 10, vertical: 5),
-                                      decoration: BoxDecoration(
-                                        color: roles.tagChipBackground
-                                            .withValues(alpha: 0.1),
-                                        borderRadius: BorderRadius.circular(14),
-                                      ),
-                                      child: Text(
-                                        '#$tag',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w500,
-                                          color: roles.tagChipBackground,
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                }).toList(),
-                              ),
-                            ],
-                            // Mentions
-                            if (post.mentions.isNotEmpty) ...[
-                              const SizedBox(height: 10),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 6,
-                                children: post.mentions.map((mention) => GestureDetector(
-                                  onTap: () => _searchMention(mention),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                    decoration: BoxDecoration(
-                                      color: Theme.of(context).colorScheme.secondaryContainer.withValues(alpha: 0.6),
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
-                                    child: Text(
-                                      '@$mention',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                        color: Theme.of(context).colorScheme.onSecondaryContainer,
-                                      ),
-                                    ),
-                                  ),
-                                )).toList(),
-                              ),
-                            ],
-                            // Location
-                            if (post.location != null && (post.location!.name?.isNotEmpty == true || post.location!.lat != null)) ...[
-                              const SizedBox(height: 12),
-                              GestureDetector(
-                                onTap: post.location!.lat != null && post.location!.lng != null
-                                    ? () => _openLocationOnMap(post.location!)
-                                    : null,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context).colorScheme.tertiaryContainer.withValues(alpha: 0.4),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.location_on,
-                                        size: 16,
-                                        color: Theme.of(context).colorScheme.tertiary,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Flexible(
-                                        child: Text(
-                                          post.location!.name ?? '${post.location!.lat!.toStringAsFixed(4)}, ${post.location!.lng!.toStringAsFixed(4)}',
-                                          style: GoogleFonts.inter(
-                                            fontSize: 12,
-                                            color: Theme.of(context).colorScheme.onTertiaryContainer,
-                                          ),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                      if (post.distanceKm != null) ...[
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          '• ${post.distanceKm!.toStringAsFixed(1)} km',
-                                          style: GoogleFonts.inter(
-                                            fontSize: 11,
-                                            color: Theme.of(context).colorScheme.onTertiaryContainer.withValues(alpha: 0.7),
-                                          ),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                            // Artwork reference
-                            if (post.artwork != null) ...[
-                              const SizedBox(height: 12),
-                              GestureDetector(
-                                onTap: () => _openArtworkDetail(post.artwork!),
-                                child: Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context).colorScheme.primaryContainer,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
-                                    ),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        width: 44,
-                                        height: 44,
-                                        decoration: BoxDecoration(
-                                          color: themeProvider.accentColor.withValues(alpha: 0.15),
-                                          borderRadius: BorderRadius.circular(10),
-                                        ),
-                                        child: Builder(
-                                          builder: (context) {
-                                            final rawCoverUrl =
-                                                post.artwork?.imageUrl;
-                                            final coverUrl =
-                                                MediaUrlResolver.resolveDisplayUrl(
-                                                      rawCoverUrl,
-                                                    ) ??
-                                                    MediaUrlResolver.resolve(
-                                                      rawCoverUrl,
-                                                    ) ??
-                                                    rawCoverUrl;
-                                            if (coverUrl == null || coverUrl.isEmpty) {
-                                              return Icon(
-                                                Icons.view_in_ar,
-                                                color: themeProvider.accentColor,
-                                                size: 22,
-                                              );
-                                            }
-                                            return ClipRRect(
-                                              borderRadius: BorderRadius.circular(10),
-                                              child: Image.network(
-                                                coverUrl,
-                                                fit: BoxFit.cover,
-                                                errorBuilder: (_, __, ___) => Icon(
-                                                  Icons.view_in_ar,
-                                                  color: themeProvider.accentColor,
-                                                  size: 22,
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              post.artwork!.title,
-                                              style: GoogleFonts.inter(
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w600,
-                                                color: Theme.of(context).colorScheme.onSurface,
-                                              ),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                            Text(
-                                              'Linked artwork',
-                                              style: GoogleFonts.inter(
-                                                fontSize: 11,
-                                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      Icon(
-                                        Icons.chevron_right,
-                                        size: 20,
-                                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                            // Group reference
-                            if (post.group != null) ...[
-                              const SizedBox(height: 12),
-                              GestureDetector(
-                                onTap: () => _openGroupFromPost(post.group!),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.groups_2,
-                                        size: 16,
-                                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Flexible(
-                                        child: Text(
-                                          post.group!.name,
-                                          style: GoogleFonts.inter(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
-                                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                          ),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Expanded(
-	                                child: _buildInteractionButton(
-	                                  post.isLiked
-	                                      ? Icons.favorite
-	                                      : Icons.favorite_border,
-	                                  '${post.likeCount}',
-	                                  onTap: () => _toggleLike(index),
-	                                  onCountTap: () => _showPostLikes(post.id),
-	                                  isActive: post.isLiked,
-                                    color: post.isLiked
-                                        ? KubusColorRoles.of(context).likeAction
-                                        : Theme.of(context)
-                                            .colorScheme
-                                            .onSurface
-                                            .withValues(alpha: 0.6),
-	                                ),
-	                              ),
-                              Expanded(
-                                child: _buildInteractionButton(
-                                  Icons.comment_outlined,
-                                  '${post.commentCount}',
-                                  onTap: () => _showComments(index),
-                                ),
-                              ),
-                              Expanded(
-                                child: _buildInteractionButton(
-                                  Icons.repeat,
-                                  '${post.shareCount}',
-                                  onTap: () {
-                                    final walletProvider =
-                                        Provider.of<WalletProvider>(context,
-                                            listen: false);
-                                    final currentWallet =
-                                        walletProvider.currentWalletAddress;
-                                    if (post.postType == 'repost' &&
-                                        post.authorWallet == currentWallet) {
-                                      _showRepostOptions(post);
-                                    } else {
-                                      _showRepostModal(post);
-                                    }
-                                  },
-                                  onCountTap: post.shareCount > 0
-                                      ? () => _viewRepostsList(post)
-                                      : null,
-                                ),
-                              ),
-                              Expanded(
-                                child: _buildInteractionButton(
-                                  Icons.share_outlined,
-                                  '',
-                                  onTap: () => _sharePost(index),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              IconButton(
-                                onPressed: () => _toggleBookmark(index),
-                                icon: Icon(
-                                  post.isBookmarked
-                                      ? Icons.bookmark
-                                      : Icons.bookmark_border,
-                                  color: post.isBookmarked
-                                      ? Theme.of(context).colorScheme.primary
-                                      : Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withValues(alpha: 0.6),
-                                  size: 20,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ]))));
-      },
-    );
-  }
-
-  Widget _buildInteractionButton(IconData icon, String label,
-      {VoidCallback? onTap, bool isActive = false, VoidCallback? onCountTap, Color? color}) {
-    final scheme = Theme.of(context).colorScheme;
-    final accent = Provider.of<ThemeProvider>(context, listen: false).accentColor;
-    final finalColor = color ?? (isActive
-        ? accent
-        : scheme.onSurface.withValues(alpha: label.isEmpty ? 0.5 : 0.65));
-    final animationTheme = context.animationTheme;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedScale(
-              scale: isActive ? 1.18 : 1.0,
-              duration: animationTheme.short,
-              curve: animationTheme.emphasisCurve,
-              child: Icon(icon, color: finalColor, size: 20),
-            ),
-            if (label.isNotEmpty) ...[
-              const SizedBox(width: 8),
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: onCountTap ?? onTap,
-                child: AnimatedDefaultTextStyle(
-                  duration: animationTheme.short,
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    color: finalColor,
-                    fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                  ),
-                  child: Text(label, textAlign: TextAlign.center),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRepostInnerCard(CommunityPost originalPost) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final scheme = Theme.of(context).colorScheme;
-    final originalHandle = (originalPost.authorUsername ?? '').trim();
-
-    return GestureDetector(
-      onTap: () => Navigator.push(
+    return CommunityPostCard(
+      post: post,
+      accentColor: themeProvider.accentColor,
+      onOpenPostDetail: (target) {
+        Navigator.push(
           context,
           MaterialPageRoute(
-              builder: (context) => PostDetailScreen(post: originalPost))),
-      child: Container(
-        margin: const EdgeInsets.only(top: 8),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: scheme.outline),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                AvatarWidget(
-                  wallet: originalPost.authorWallet ?? originalPost.authorId,
-                  avatarUrl: originalPost.authorAvatar,
-                  radius: 16,
-                  allowFabricatedFallback: true,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            fit: FlexFit.loose,
-                            child: Text(
-                              originalPost.authorName,
-                              style: GoogleFonts.inter(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                  color: scheme.onSurface),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          CommunityAuthorRoleBadges(
-                            post: originalPost,
-                            fontSize: 8,
-                            iconOnly: false,
-                          ),
-                        ],
-                      ),
-                      if (originalHandle.isNotEmpty)
-                        Text(
-                          '@$originalHandle',
-                          style: GoogleFonts.inter(
-                              fontSize: 12,
-                              color: scheme.onSurface
-                                  .withValues(alpha: 0.6)),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                    ],
-                  ),
-                ),
-                Text(
-                  _getTimeAgo(originalPost.timestamp),
-                  style: GoogleFonts.inter(
-                      fontSize: 11,
-                      color: scheme.onSurface.withValues(alpha: 0.5)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              originalPost.content,
-              style: GoogleFonts.inter(fontSize: 13, color: scheme.onSurface),
-            ),
-            if (originalPost.imageUrl != null) ...[
-              const SizedBox(height: 10),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  MediaUrlResolver.resolveDisplayUrl(originalPost.imageUrl) ??
-                      originalPost.imageUrl!,
-                  height: 140,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    height: 140,
-                    color: themeProvider.accentColor.withValues(alpha: 0.1),
-                    child: Icon(Icons.image_not_supported,
-                        color: themeProvider.accentColor),
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
+              builder: (context) => PostDetailScreen(post: target)),
+        );
+      },
+      onOpenAuthorProfile: () => _viewUserProfile(post.authorId),
+      onToggleLike: () => _toggleLike(index),
+      onOpenComments: () => _showComments(index),
+      onRepost: () {
+        final walletProvider =
+            Provider.of<WalletProvider>(context, listen: false);
+        final currentWallet = walletProvider.currentWalletAddress;
+        if (post.postType == 'repost' && post.authorWallet == currentWallet) {
+          _showRepostOptions(post);
+        } else {
+          _showRepostModal(post);
+        }
+      },
+      onShare: () => _sharePost(index),
+      onToggleBookmark: () => _toggleBookmark(index),
+      onMoreOptions: () => _showPostOptionsForPost(post),
+      onShowLikes: () => _showPostLikes(post.id),
+      onShowReposts: () => _viewRepostsList(post),
+      onTagTap: _filterByTag,
+      onMentionTap: _searchMention,
+      onOpenLocation: _openLocationOnMap,
+      onOpenGroup: _openGroupFromPost,
+      onOpenSubject: (preview) => CommunitySubjectNavigation.open(
+        context,
+        subject: preview.ref,
+        titleOverride: preview.title,
       ),
     );
   }
@@ -3035,12 +2250,12 @@ class _CommunityScreenState extends State<CommunityScreen>
         mainIcon: Icons.add,
         mainLabel: l10n.commonCreate,
         options: [
-          _ExpandableFabOption(
+          CommunityFabOption(
             icon: Icons.group_add_outlined,
             label: l10n.communityFabCreateGroup,
             onTap: () => _showCreateGroupSheet(),
           ),
-          _ExpandableFabOption(
+          CommunityFabOption(
             icon: Icons.post_add_outlined,
             label: l10n.communityFabGroupPost,
             onTap: () {
@@ -3057,15 +2272,16 @@ class _CommunityScreenState extends State<CommunityScreen>
         mainIcon: Icons.add,
         mainLabel: l10n.commonCreate,
         options: [
-          _ExpandableFabOption(
+          CommunityFabOption(
             icon: Icons.place_outlined,
             label: l10n.communityFabArtDrop,
             onTap: () => _handleArtFabPressed(),
           ),
-          _ExpandableFabOption(
+          CommunityFabOption(
             icon: Icons.rate_review_outlined,
             label: l10n.communityFabPostReview,
-            onTap: () => _createNewPost(presetCategory: 'review', artContext: true),
+            onTap: () =>
+                _createNewPost(presetCategory: 'review', artContext: true),
           ),
         ],
       );
@@ -3118,112 +2334,24 @@ class _CommunityScreenState extends State<CommunityScreen>
     required AppAnimationTheme animationTheme,
     required IconData mainIcon,
     required String mainLabel,
-    required List<_ExpandableFabOption> options,
+    required List<CommunityFabOption> options,
   }) {
     final l10n = AppLocalizations.of(context)!;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        AnimatedSize(
-          duration: animationTheme.medium,
-          curve: animationTheme.emphasisCurve,
-          child: _isFabExpanded
-              ? Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    ...options.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final option = entry.value;
-                      return TweenAnimationBuilder<double>(
-                        tween: Tween(begin: 0.0, end: 1.0),
-                        duration: Duration(
-                          milliseconds: animationTheme.medium.inMilliseconds + (index * 50),
-                        ),
-                        curve: animationTheme.emphasisCurve,
-                        builder: (context, value, child) {
-                          return Transform.translate(
-                            offset: Offset(0, 20 * (1 - value)),
-                            child: Opacity(
-                              opacity: value,
-                              child: child,
-                            ),
-                          );
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: scheme.surface,
-                                  borderRadius: KubusRadius.circular(KubusRadius.sm),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.1),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: Text(
-                                  option.label,
-                                  style: KubusTypography.textTheme.labelMedium?.copyWith(
-                                    fontWeight: FontWeight.w500,
-                                    color: scheme.onSurface,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              FloatingActionButton.small(
-                                heroTag: 'fab_option_${option.label}',
-                                onPressed: () {
-                                  setState(() => _isFabExpanded = false);
-                                  option.onTap();
-                                },
-                                backgroundColor: scheme.primaryContainer,
-                                foregroundColor: scheme.onSurface,
-                                child: Icon(option.icon, size: 20),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }),
-                    const SizedBox(height: 4),
-                  ],
-                )
-              : const SizedBox.shrink(),
-        ),
-        // Main FAB
-        FloatingActionButton.extended(
-          heroTag: 'community_fab_expandable',
-          onPressed: () {
-            setState(() => _isFabExpanded = !_isFabExpanded);
-          },
-          backgroundColor: _isFabExpanded
-              ? scheme.surfaceContainerHighest
-              : themeProvider.accentColor,
-          foregroundColor: _isFabExpanded
-              ? scheme.onSurface
-              : scheme.onPrimary,
-          icon: AnimatedRotation(
-            turns: _isFabExpanded ? 0.125 : 0,
-            duration: animationTheme.short,
-            child: Icon(_isFabExpanded ? Icons.close : mainIcon),
-          ),
-          label: AnimatedSwitcher(
-            duration: animationTheme.short,
-            child: Text(
-              _isFabExpanded ? l10n.commonClose : mainLabel,
-              key: ValueKey(_isFabExpanded),
-              style: KubusTypography.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
-            ),
-          ),
-        ),
-      ],
+    return CommunityExpandableFab(
+      isExpanded: _isFabExpanded,
+      accentColor: themeProvider.accentColor,
+      scheme: scheme,
+      animationTheme: animationTheme,
+      mainIcon: mainIcon,
+      mainLabel: mainLabel,
+      closeLabel: l10n.commonClose,
+      mainHeroTag: 'community_fab_expandable',
+      optionHeroTagPrefix: 'fab_option_',
+      options: options,
+      variant: CommunityExpandableFabVariant.mobile,
+      onExpandedChanged: (expanded) {
+        setState(() => _isFabExpanded = expanded);
+      },
     );
   }
 
@@ -3241,16 +2369,19 @@ class _CommunityScreenState extends State<CommunityScreen>
       builder: (sheetContext) => StatefulBuilder(
         builder: (context, setModalState) {
           final scheme = Theme.of(context).colorScheme;
-          final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+          final themeProvider =
+              Provider.of<ThemeProvider>(context, listen: false);
           final l10n = AppLocalizations.of(context)!;
 
           return Padding(
-            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+            padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom),
             child: Container(
               height: MediaQuery.of(context).size.height * 0.65,
               decoration: BoxDecoration(
                 color: scheme.surface,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(KubusRadius.xl)),
+                borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(KubusRadius.xl)),
               ),
               child: Column(
                 children: [
@@ -3269,7 +2400,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                       children: [
                         Text(
                           l10n.communityCreateGroupTitle,
-                          style: KubusTypography.textTheme.titleMedium?.copyWith(
+                          style:
+                              KubusTypography.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
                             color: scheme.onSurface,
                           ),
@@ -3294,10 +2426,12 @@ class _CommunityScreenState extends State<CommunityScreen>
                               labelText: l10n.communityCreateGroupNameLabel,
                               hintText: l10n.communityCreateGroupNameHint,
                               border: OutlineInputBorder(
-                                borderRadius: KubusRadius.circular(KubusRadius.md),
+                                borderRadius:
+                                    KubusRadius.circular(KubusRadius.md),
                               ),
                               filled: true,
-                              fillColor: scheme.primaryContainer.withValues(alpha: 0.4),
+                              fillColor: scheme.primaryContainer
+                                  .withValues(alpha: 0.4),
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -3305,13 +2439,16 @@ class _CommunityScreenState extends State<CommunityScreen>
                             controller: descriptionController,
                             maxLines: 3,
                             decoration: InputDecoration(
-                              labelText: l10n.communityCreateGroupDescriptionLabel,
-                              hintText: l10n.communityCreateGroupDescriptionHint,
+                              labelText:
+                                  l10n.communityCreateGroupDescriptionLabel,
+                              hintText:
+                                  l10n.communityCreateGroupDescriptionHint,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               filled: true,
-                              fillColor: scheme.primaryContainer.withValues(alpha: 0.4),
+                              fillColor: scheme.primaryContainer
+                                  .withValues(alpha: 0.4),
                             ),
                           ),
                           const SizedBox(height: 20),
@@ -3319,7 +2456,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                             contentPadding: EdgeInsets.zero,
                             title: Text(
                               l10n.communityCreateGroupPublicLabel,
-                              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                              style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.w600),
                             ),
                             subtitle: Text(
                               isPublic
@@ -3328,7 +2466,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                               style: GoogleFonts.inter(fontSize: 13),
                             ),
                             value: isPublic,
-                            onChanged: (val) => setModalState(() => isPublic = val),
+                            onChanged: (val) =>
+                                setModalState(() => isPublic = val),
                             activeThumbColor: themeProvider.accentColor,
                           ),
                           const SizedBox(height: 32),
@@ -3343,16 +2482,20 @@ class _CommunityScreenState extends State<CommunityScreen>
                       child: SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: isCreating || nameController.text.trim().isEmpty
+                          onPressed: isCreating ||
+                                  nameController.text.trim().isEmpty
                               ? null
                               : () async {
-                                  final sheetNavigator = Navigator.of(sheetContext);
-                                    final l10n = AppLocalizations.of(context)!;
+                                  final sheetNavigator =
+                                      Navigator.of(sheetContext);
+                                  final l10n = AppLocalizations.of(context)!;
                                   setModalState(() => isCreating = true);
                                   try {
                                     final created = await hub.createGroup(
                                       name: nameController.text.trim(),
-                                      description: descriptionController.text.trim().isEmpty
+                                      description: descriptionController.text
+                                              .trim()
+                                              .isEmpty
                                           ? null
                                           : descriptionController.text.trim(),
                                       isPublic: isPublic,
@@ -3360,15 +2503,19 @@ class _CommunityScreenState extends State<CommunityScreen>
                                     if (!mounted) return;
                                     sheetNavigator.pop();
                                     if (created != null) {
-                                      _showSnack(l10n.communityGroupCreatedToast(created.name));
+                                      _showSnack(
+                                          l10n.communityGroupCreatedToast(
+                                              created.name));
                                       _openGroupFeed(created);
                                     }
                                   } catch (e) {
                                     setModalState(() => isCreating = false);
                                     if (kDebugMode) {
-                                      debugPrint('CommunityScreen: failed to create group: $e');
+                                      debugPrint(
+                                          'CommunityScreen: failed to create group: $e');
                                     }
-                                    _showSnack(l10n.communityCreateGroupFailedToast);
+                                    _showSnack(
+                                        l10n.communityCreateGroupFailedToast);
                                   }
                                 },
                           child: isCreating
@@ -3381,7 +2528,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                     tileSize: 3.5,
                                   ),
                                 )
-                                : Text(l10n.communityCreateGroupButton),
+                              : Text(l10n.communityCreateGroupButton),
                         ),
                       ),
                     ),
@@ -3409,11 +2556,13 @@ class _CommunityScreenState extends State<CommunityScreen>
   }
 
   // Navigation and interaction methods
-  void _showSearchBottomSheet({String initialType = 'profiles', String? initialQuery}) {
+  void _showSearchBottomSheet(
+      {String initialType = 'profiles', String? initialQuery}) {
     if (!mounted) return;
     final sheetContext = context;
     final backend = BackendApiService();
-    final sheetSearchController = TextEditingController(text: initialQuery ?? '');
+    final sheetSearchController =
+        TextEditingController(text: initialQuery ?? '');
 
     String searchType = initialType;
     List<Map<String, dynamic>> results = [];
@@ -3421,7 +2570,8 @@ class _CommunityScreenState extends State<CommunityScreen>
     Timer? debounce;
     int requestId = 0;
 
-    Future<void> runSearch(StateSetter setModalState, {String? overrideQuery}) async {
+    Future<void> runSearch(StateSetter setModalState,
+        {String? overrideQuery}) async {
       final query = (overrideQuery ?? sheetSearchController.text).trim();
       final currentType = searchType;
 
@@ -3439,17 +2589,21 @@ class _CommunityScreenState extends State<CommunityScreen>
       try {
         List<Map<String, dynamic>> list = [];
         if (currentType == 'profiles') {
-          final resp = await backend.search(query: query, type: 'profiles', limit: 20);
+          final resp =
+              await backend.search(query: query, type: 'profiles', limit: 20);
           list = _extractSearchResults(resp, 'profiles');
         } else if (currentType == 'posts') {
-          final resp = await backend.search(query: query, type: 'posts', limit: 20);
+          final resp =
+              await backend.search(query: query, type: 'posts', limit: 20);
           list = _extractSearchResults(resp, 'posts');
         } else if (currentType == 'artworks') {
-          final artworkProvider = Provider.of<ArtworkProvider>(sheetContext, listen: false);
+          final artworkProvider =
+              Provider.of<ArtworkProvider>(sheetContext, listen: false);
           list = artworkProvider.artworks
               .where((a) {
                 final q = query.toLowerCase();
-                return a.title.toLowerCase().contains(q) || a.artist.toLowerCase().contains(q);
+                return a.title.toLowerCase().contains(q) ||
+                    a.artist.toLowerCase().contains(q);
               })
               .take(30)
               .map((a) => {
@@ -3460,7 +2614,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                   })
               .toList();
         } else if (currentType == 'institutions') {
-          final institutionProvider = Provider.of<InstitutionProvider>(sheetContext, listen: false);
+          final institutionProvider =
+              Provider.of<InstitutionProvider>(sheetContext, listen: false);
           final q = query.toLowerCase();
           list = institutionProvider.institutions
               .where((i) =>
@@ -3517,10 +2672,13 @@ class _CommunityScreenState extends State<CommunityScreen>
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) {
           final scheme = Theme.of(context).colorScheme;
-          final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+          final themeProvider =
+              Provider.of<ThemeProvider>(context, listen: false);
           final l10n = AppLocalizations.of(context)!;
 
-          if (sheetSearchController.text.trim().isNotEmpty && results.isEmpty && !isLoading) {
+          if (sheetSearchController.text.trim().isNotEmpty &&
+              results.isEmpty &&
+              !isLoading) {
             Future.microtask(() => runSearch(setModalState));
           }
 
@@ -3528,7 +2686,8 @@ class _CommunityScreenState extends State<CommunityScreen>
             height: MediaQuery.of(context).size.height * 0.75,
             decoration: BoxDecoration(
               color: scheme.surface,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(20)),
             ),
             child: Column(
               children: [
@@ -3622,19 +2781,21 @@ class _CommunityScreenState extends State<CommunityScreen>
                     controller: sheetSearchController,
                     decoration: InputDecoration(
                       hintText: searchType == 'profiles'
-                        ? l10n.communitySearchHintProfiles
+                          ? l10n.communitySearchHintProfiles
                           : searchType == 'artworks'
-                          ? l10n.communitySearchHintArtworks
+                              ? l10n.communitySearchHintArtworks
                               : searchType == 'institutions'
-                            ? l10n.communitySearchHintInstitutions
+                                  ? l10n.communitySearchHintInstitutions
                                   : searchType == 'screens'
-                              ? l10n.communitySearchHintScreens
-                              : l10n.communitySearchHintPosts,
+                                      ? l10n.communitySearchHintScreens
+                                      : l10n.communitySearchHintPosts,
                       prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
                       filled: true,
                       fillColor: scheme.surfaceContainerHighest,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                      contentPadding: const EdgeInsets.symmetric(
+                          vertical: 14, horizontal: 16),
                     ),
                     onChanged: (_) {
                       debounce?.cancel();
@@ -3658,14 +2819,16 @@ class _CommunityScreenState extends State<CommunityScreen>
                                       : l10n.communitySearchEmptyNoResults,
                                   style: GoogleFonts.inter(
                                     fontSize: 14,
-                                    color: scheme.onSurface.withValues(alpha: 0.45),
+                                    color: scheme.onSurface
+                                        .withValues(alpha: 0.45),
                                   ),
                                   textAlign: TextAlign.center,
                                 ),
                               ),
                             )
                           : ListView.builder(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 16),
                               itemCount: results.length,
                               itemBuilder: (ctx, idx) {
                                 final result = results[idx];
@@ -3710,7 +2873,9 @@ class _CommunityScreenState extends State<CommunityScreen>
         labelStyle: GoogleFonts.inter(
           fontSize: 12,
           fontWeight: FontWeight.w600,
-          color: selected ? scheme.onSurface : scheme.onSurface.withValues(alpha: 0.7),
+          color: selected
+              ? scheme.onSurface
+              : scheme.onSurface.withValues(alpha: 0.7),
         ),
       ),
     );
@@ -3718,15 +2883,25 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   void _handleSearchSelection(String type, Map<String, dynamic> result) {
     if (type == 'profiles') {
-      final walletAddr = (result['wallet_address'] ?? result['wallet'] ?? result['walletAddress'] ?? result['id'])?.toString() ?? '';
+      final walletAddr = (result['wallet_address'] ??
+                  result['wallet'] ??
+                  result['walletAddress'] ??
+                  result['id'])
+              ?.toString() ??
+          '';
       if (walletAddr.isNotEmpty) {
-        Navigator.push(context, MaterialPageRoute(builder: (_) => UserProfileScreen(userId: walletAddr)));
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) => UserProfileScreen(userId: walletAddr)));
       }
       return;
     }
 
     if (type == 'artworks') {
-      final id = (result['id'] ?? result['artworkId'] ?? result['artwork_id'])?.toString() ?? '';
+      final id = (result['id'] ?? result['artworkId'] ?? result['artwork_id'])
+              ?.toString() ??
+          '';
       if (id.isNotEmpty) {
         openArtwork(context, id, source: 'community_search');
       }
@@ -3734,8 +2909,10 @@ class _CommunityScreenState extends State<CommunityScreen>
     }
 
     if (type == 'institutions') {
-      final lat = (result['latitude'] as num?)?.toDouble() ?? (result['lat'] as num?)?.toDouble();
-      final lng = (result['longitude'] as num?)?.toDouble() ?? (result['lng'] as num?)?.toDouble();
+      final lat = (result['latitude'] as num?)?.toDouble() ??
+          (result['lat'] as num?)?.toDouble();
+      final lng = (result['longitude'] as num?)?.toDouble() ??
+          (result['lng'] as num?)?.toDouble();
       if (lat != null && lng != null) {
         Navigator.push(
           context,
@@ -3752,15 +2929,19 @@ class _CommunityScreenState extends State<CommunityScreen>
     }
 
     if (type == 'screens') {
-      final screenKey = (result['screenKey'] ?? result['key'])?.toString() ?? '';
+      final screenKey =
+          (result['screenKey'] ?? result['key'])?.toString() ?? '';
       if (screenKey.isNotEmpty) {
-        Provider.of<NavigationProvider>(context, listen: false).navigateToScreen(context, screenKey);
+        Provider.of<NavigationProvider>(context, listen: false)
+            .navigateToScreen(context, screenKey);
       }
       return;
     }
 
     if (type == 'posts') {
-      final postId = (result['id'] ?? result['postId'] ?? result['post_id'])?.toString() ?? '';
+      final postId =
+          (result['id'] ?? result['postId'] ?? result['post_id'])?.toString() ??
+              '';
       if (postId.isNotEmpty) {
         PostDetailScreen.openById(context, postId);
       }
@@ -3780,17 +2961,17 @@ class _CommunityScreenState extends State<CommunityScreen>
           await backend.loadAuthToken();
           final token = backend.getAuthToken();
           debugPrint(
-              'ðŸ” Auth token loaded for notifications: ${token != null ? (token.length > 16 ? '${token.substring(0, 8)}...' : token) : "<none>"}');
+              '🔐 Auth token loaded for notifications: ${token != null ? (token.length > 16 ? '${token.substring(0, 8)}...' : token) : "<none>"}');
           // Optionally fetch which wallet this token maps to
           try {
             final me = await backend.getMyProfile();
             debugPrint(
-                'ðŸ” Token maps to wallet: ${me['wallet'] ?? me['wallet_address']}');
+                '🔍 Token maps to wallet: ${me['wallet'] ?? me['wallet_address']}');
           } catch (e) {
-            debugPrint('âš ï¸ Unable to map token to profile: $e');
+            debugPrint('⚠️ Unable to map token to profile: $e');
           }
         } catch (e) {
-          debugPrint('âš ï¸ No auth token available: $e');
+          debugPrint('⚠️ No auth token available: $e');
         }
 
         // Load local in-app notifications
@@ -3798,7 +2979,7 @@ class _CommunityScreenState extends State<CommunityScreen>
         // Load server notifications (if authenticated)
         final remote = await backend.getNotifications(limit: 50);
         debugPrint(
-            'ðŸ“¥ Loaded ${local.length} local + ${remote.length} remote notifications');
+            '📥 Loaded ${local.length} local + ${remote.length} remote notifications');
         // Normalize remote (ensure Map<String,dynamic>)
         final remapped =
             remote.map((e) => Map<String, dynamic>.from(e)).toList();
@@ -4083,8 +3264,7 @@ class _CommunityScreenState extends State<CommunityScreen>
     final hub = Provider.of<CommunityHubProvider>(context, listen: false);
     if (resetDraft) hub.resetDraft();
 
-    final seedCategory =
-        presetCategory ?? (artContext ? 'art_drop' : null);
+    final seedCategory = presetCategory ?? (artContext ? 'art_drop' : null);
     if (seedCategory != null && seedCategory.trim().isNotEmpty) {
       hub.setDraftCategory(seedCategory);
     }
@@ -4166,8 +3346,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                 controller: tagController,
                                 prefix: '#',
                                 onAdd: (value) {
-                                  final sanitized =
-                                      value.replaceFirst('#', '');
+                                  final sanitized = value.replaceFirst('#', '');
                                   provider.addTag(sanitized);
                                 },
                                 onRemove: provider.removeTag,
@@ -4195,8 +3374,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                       SafeArea(
                         top: false,
                         child: Padding(
-                          padding:
-                              const EdgeInsets.fromLTRB(24, 12, 24, 24),
+                          padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
                           child: SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
@@ -4207,30 +3385,29 @@ class _CommunityScreenState extends State<CommunityScreen>
                                         setModalState: setModalState,
                                         hub: provider,
                                       ),
-                                child: AnimatedSwitcher(
-                              duration: context.animationTheme.short,
-                              switchInCurve:
-                                context.animationTheme.defaultCurve,
-                              switchOutCurve:
-                                context.animationTheme.fadeCurve,
-                                  child: _isPostingNew
-                                      ? SizedBox(
-                                          key: const ValueKey(
-                                              'composer_posting_spinner'),
-                                          width: 20,
-                                          height: 20,
-                                          child: InlineLoading(
-                                            expand: true,
-                                            shape: BoxShape.circle,
-                                            tileSize: 3.5,
-                                          ),
-                                        )
-                                      : const Text(
-                                          'Post',
-                                          key: ValueKey(
-                                              'composer_post_label'),
+                              child: AnimatedSwitcher(
+                                duration: context.animationTheme.short,
+                                switchInCurve:
+                                    context.animationTheme.defaultCurve,
+                                switchOutCurve:
+                                    context.animationTheme.fadeCurve,
+                                child: _isPostingNew
+                                    ? SizedBox(
+                                        key: const ValueKey(
+                                            'composer_posting_spinner'),
+                                        width: 20,
+                                        height: 20,
+                                        child: InlineLoading(
+                                          expand: true,
+                                          shape: BoxShape.circle,
+                                          tileSize: 3.5,
                                         ),
-                                ),
+                                      )
+                                    : const Text(
+                                        'Post',
+                                        key: ValueKey('composer_post_label'),
+                                      ),
+                              ),
                             ),
                           ),
                         ),
@@ -4297,10 +3474,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       height: 5,
       margin: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
-        color: Theme.of(context)
-            .colorScheme
-            .outline
-            .withValues(alpha: 0.4),
+        color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.4),
         borderRadius: BorderRadius.circular(3),
       ),
     );
@@ -4453,9 +3627,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                 children: [
                   Icon(Icons.videocam_outlined,
                       size: 42,
-                      color:
-                          Provider.of<ThemeProvider>(context, listen: false)
-                              .accentColor),
+                      color: Provider.of<ThemeProvider>(context, listen: false)
+                          .accentColor),
                   const SizedBox(height: 8),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -4567,51 +3740,16 @@ class _CommunityScreenState extends State<CommunityScreen>
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final animationTheme = context.animationTheme;
     final l10n = AppLocalizations.of(context)!;
-    final categories = _composerCategories(l10n);
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: categories.map((option) {
-          final selected = draft.category == option.value;
-          return Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: AnimatedScale(
-              duration: animationTheme.short,
-              curve: animationTheme.emphasisCurve,
-              scale: selected ? 1.0 : 0.95,
-              child: AnimatedOpacity(
-                duration: animationTheme.short,
-                opacity: selected ? 1.0 : 0.85,
-                child: ChoiceChip(
-                  label: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(option.icon,
-                          size: 16,
-                          color: selected
-                              ? themeProvider.accentColor
-                              : Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.7)),
-                      const SizedBox(width: 6),
-                      Text(option.label),
-                    ],
-                  ),
-                  selected: selected,
-                  showCheckmark: false,
-                  backgroundColor:
-                      Theme.of(context).colorScheme.surfaceContainerHighest,
-                  selectedColor:
-                      themeProvider.accentColor.withValues(alpha: 0.15),
-                  onSelected: (_) => hub.setDraftCategory(option.value),
-                ),
-              ),
-            ),
-          );
-        }).toList(),
+    return CommunityComposerCategorySelector(
+      options: buildCommunityComposerCategoryOptions(
+        l10n: l10n,
+        variant: CommunityComposerCategoryLabelVariant.mobile,
       ),
+      selectedValue: draft.category,
+      accentColor: themeProvider.accentColor,
+      animationTheme: animationTheme,
+      variant: CommunityComposerCategorySelectorVariant.mobile,
+      onSelected: hub.setDraftCategory,
     );
   }
 
@@ -4624,68 +3762,34 @@ class _CommunityScreenState extends State<CommunityScreen>
     final group = draft.targetGroup;
     final hasGroup = group != null;
     final animationTheme = context.animationTheme;
-    return InkWell(
-      borderRadius: BorderRadius.circular(18),
+    return CommunityComposerAttachmentCard(
       onTap: () async {
         final selection = await _showGroupPicker();
         if (selection != null) {
           hub.setDraftGroup(selection);
         }
       },
-      child: AnimatedContainer(
-        duration: animationTheme.short,
-        curve: animationTheme.defaultCurve,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: hasGroup
-              ? scheme.primaryContainer.withValues(alpha: 0.25)
-              : scheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: hasGroup
-                ? scheme.primary.withValues(alpha: 0.4)
-                : scheme.outline.withValues(alpha: 0.3),
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.groups_2_outlined, color: scheme.onSurface),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    group?.name ?? l10n.communityComposerTargetGroupLabel,
-                    style: GoogleFonts.inter(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    group == null
-                        ? l10n.communityComposerGroupOptionalHelper
-                        : l10n.communityComposerPostingInGroupHelper(group.name),
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: scheme.onSurface.withValues(alpha: 0.6),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (group != null)
-              IconButton(
-                tooltip: l10n.communityComposerRemoveGroupTooltip,
-                onPressed: () => hub.setDraftGroup(null),
-                icon: const Icon(Icons.close),
-              )
-            else
-              const Icon(Icons.chevron_right),
-          ],
-        ),
-      ),
+      leading: Icon(Icons.groups_2_outlined, color: scheme.onSurface),
+      title: group?.name ?? l10n.communityComposerTargetGroupLabel,
+      subtitle: group == null
+          ? l10n.communityComposerGroupOptionalHelper
+          : l10n.communityComposerPostingInGroupHelper(group.name),
+      trailing: group != null
+          ? IconButton(
+              tooltip: l10n.communityComposerRemoveGroupTooltip,
+              onPressed: () => hub.setDraftGroup(null),
+              icon: const Icon(Icons.close),
+            )
+          : const Icon(Icons.chevron_right),
+      backgroundColor: hasGroup
+          ? scheme.primaryContainer.withValues(alpha: 0.25)
+          : scheme.surfaceContainerHighest,
+      borderColor: hasGroup
+          ? scheme.primary.withValues(alpha: 0.4)
+          : scheme.outline.withValues(alpha: 0.3),
+      duration: animationTheme.short,
+      curve: animationTheme.defaultCurve,
+      borderRadius: 18,
     );
   }
 
@@ -4696,49 +3800,27 @@ class _CommunityScreenState extends State<CommunityScreen>
     final subjectProvider =
         Provider.of<CommunitySubjectProvider>(context, listen: false);
     final animationTheme = context.animationTheme;
-
-    CommunitySubjectPreview? preview;
-    final type = (draft.subjectType ?? '').trim();
-    final id = (draft.subjectId ?? '').trim();
-    if (type.isNotEmpty && id.isNotEmpty) {
-      preview = subjectProvider.previewFor(
-        CommunitySubjectRef(type: type, id: id),
-      );
-    }
-      if (preview == null && draft.artwork != null) {
-        preview = CommunitySubjectPreview(
-          ref: CommunitySubjectRef(type: 'artwork', id: draft.artwork!.id),
-          title: draft.artwork!.title,
-          imageUrl: MediaUrlResolver.resolve(draft.artwork!.imageUrl) ??
-              draft.artwork!.imageUrl,
-        );
-      }
-
-      final previewValue = preview;
-      final bool hasSubject = previewValue != null;
-      final String label;
-      final String title;
-      final IconData subjectIcon;
-      final String? imageUrl;
-      if (previewValue == null) {
-        label = l10n.communitySubjectSelectPrompt;
-        title = l10n.communitySubjectSelectTitle;
-        subjectIcon = Icons.link;
-        imageUrl = null;
-      } else {
-        label = l10n.communitySubjectLinkedLabel(
-          _subjectTypeLabel(l10n, previewValue.ref.normalizedType),
-        );
-        title = previewValue.title;
-        subjectIcon = _subjectTypeIcon(previewValue.ref.normalizedType);
-        imageUrl = previewValue.imageUrl;
-      }
-
-    return InkWell(
-      borderRadius: BorderRadius.circular(18),
+    final subjectRef = communityDraftSubjectRef(draft);
+    final previewValue = resolveCommunityDraftSubjectPreview(
+      draft: draft,
+      providerPreview:
+          subjectRef == null ? null : subjectProvider.previewFor(subjectRef),
+    );
+    final hasSubject = previewValue != null;
+    final label = previewValue == null
+        ? l10n.communitySubjectSelectPrompt
+        : l10n.communitySubjectLinkedLabel(
+            communitySubjectTypeLabel(l10n, previewValue.ref.normalizedType),
+          );
+    final title = previewValue?.title ?? l10n.communitySubjectSelectTitle;
+    final subjectIcon = previewValue == null
+        ? Icons.link
+        : communitySubjectTypeIcon(previewValue.ref.normalizedType);
+    final imageUrl = previewValue?.imageUrl;
+    return CommunityComposerAttachmentCard(
       onTap: () async {
-        final selection =
-            await CommunitySubjectPicker.pick(context, initialType: draft.subjectType);
+        final selection = await CommunitySubjectPicker.pick(context,
+            initialType: draft.subjectType);
         if (selection == null) return;
         if (selection.cleared) {
           hub.setDraftSubject();
@@ -4748,7 +3830,8 @@ class _CommunityScreenState extends State<CommunityScreen>
         final selected = selection.preview;
         if (selected == null) return;
         subjectProvider.upsertPreview(selected);
-        hub.setDraftSubject(type: selected.ref.normalizedType, id: selected.ref.id);
+        hub.setDraftSubject(
+            type: selected.ref.normalizedType, id: selected.ref.id);
         if (selected.ref.normalizedType == 'artwork') {
           hub.setDraftArtwork(
             CommunityArtworkReference(
@@ -4761,112 +3844,45 @@ class _CommunityScreenState extends State<CommunityScreen>
           hub.setDraftArtwork(null);
         }
       },
-      child: AnimatedContainer(
-        duration: animationTheme.short,
-        curve: animationTheme.defaultCurve,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: hasSubject
-              ? scheme.primaryContainer.withValues(alpha: 0.25)
-              : scheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: hasSubject
-                ? scheme.primary.withValues(alpha: 0.35)
-                : scheme.outline.withValues(alpha: 0.3),
-          ),
-        ),
-          child: Row(
-            children: [
-              if (previewValue != null &&
-                  imageUrl != null &&
-                  imageUrl.isNotEmpty)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.network(
-                    MediaUrlResolver.resolveDisplayUrl(imageUrl) ?? imageUrl,
-                    width: 44,
-                    height: 44,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Icon(
-                      subjectIcon,
-                      color: scheme.onSurface,
-                    ),
-                  ),
-                )
-              else
-                Icon(
+      leading: previewValue != null && imageUrl != null && imageUrl.isNotEmpty
+          ? ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                MediaUrlResolver.resolveDisplayUrl(imageUrl) ?? imageUrl,
+                width: 44,
+                height: 44,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Icon(
                   subjectIcon,
                   color: scheme.onSurface,
                 ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: GoogleFonts.inter(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    label,
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: scheme.onSurface.withValues(alpha: 0.6),
-                    ),
-                  ),
-                ],
               ),
-            ),
-            if (hasSubject)
-              IconButton(
-                tooltip: l10n.communitySubjectRemoveTooltip,
-                onPressed: () {
-                  hub.setDraftSubject();
-                  hub.setDraftArtwork(null);
-                },
-                icon: const Icon(Icons.close),
-              )
-            else
-              const Icon(Icons.chevron_right),
-          ],
-        ),
-      ),
+            )
+          : Icon(subjectIcon, color: scheme.onSurface),
+      title: title,
+      subtitle: label,
+      trailing: hasSubject
+          ? IconButton(
+              tooltip: l10n.communitySubjectRemoveTooltip,
+              onPressed: () {
+                hub.setDraftSubject();
+                hub.setDraftArtwork(null);
+              },
+              icon: const Icon(Icons.close),
+            )
+          : const Icon(Icons.chevron_right),
+      backgroundColor: hasSubject
+          ? scheme.primaryContainer.withValues(alpha: 0.25)
+          : scheme.surfaceContainerHighest,
+      borderColor: hasSubject
+          ? scheme.primary.withValues(alpha: 0.35)
+          : scheme.outline.withValues(alpha: 0.3),
+      duration: animationTheme.short,
+      curve: animationTheme.defaultCurve,
+      borderRadius: 18,
+      titleMaxLines: 2,
+      subtitleMaxLines: 2,
     );
-  }
-
-  String _subjectTypeLabel(AppLocalizations l10n, String type) {
-    switch (type.toLowerCase()) {
-      case 'artwork':
-        return l10n.commonArtwork;
-      case 'exhibition':
-        return l10n.commonExhibition;
-      case 'collection':
-        return l10n.commonCollection;
-      case 'institution':
-        return l10n.commonInstitution;
-      default:
-        return l10n.commonDetails;
-    }
-  }
-
-  IconData _subjectTypeIcon(String type) {
-    switch (type.toLowerCase()) {
-      case 'artwork':
-        return Icons.view_in_ar;
-      case 'exhibition':
-        return Icons.event_outlined;
-      case 'collection':
-        return Icons.collections_bookmark_outlined;
-      case 'institution':
-        return Icons.apartment_outlined;
-      default:
-        return Icons.info_outline;
-    }
   }
 
   Widget _buildComposerLocationSection(
@@ -4918,9 +3934,9 @@ class _CommunityScreenState extends State<CommunityScreen>
                 ),
                 IconButton(
                   tooltip: l10n.communityComposerRemoveLocationTooltip,
-                  onPressed: () => Provider.of<CommunityHubProvider>(context,
-                          listen: false)
-                      .setDraftLocation(null),
+                  onPressed: () =>
+                      Provider.of<CommunityHubProvider>(context, listen: false)
+                          .setDraftLocation(null),
                   icon: const Icon(Icons.close),
                 ),
               ],
@@ -4939,8 +3955,8 @@ class _CommunityScreenState extends State<CommunityScreen>
             Row(
               children: [
                 TextButton.icon(
-                  onPressed: () => _promptLocationLabelEdit(location,
-                      initialLabel: label),
+                  onPressed: () =>
+                      _promptLocationLabelEdit(location, initialLabel: label),
                   icon: const Icon(Icons.edit_location_alt_outlined, size: 18),
                   label: Text(l10n.commonRename),
                 ),
@@ -5004,7 +4020,7 @@ class _CommunityScreenState extends State<CommunityScreen>
     final animationTheme = context.animationTheme;
     final isMentions = label.toLowerCase() == 'mentions';
     final isTags = label.toLowerCase() == 'tags';
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -5020,23 +4036,38 @@ class _CommunityScreenState extends State<CommunityScreen>
             const Spacer(),
             TextButton.icon(
               onPressed: () => _showSearchPicker(
-                title: isMentions ? 'Search Users' : isTags ? 'Popular Tags' : 'Search',
-                searchType: isMentions ? 'profiles' : isTags ? 'tags' : 'all',
+                title: isMentions
+                    ? 'Search Users'
+                    : isTags
+                        ? 'Popular Tags'
+                        : 'Search',
+                searchType: isMentions
+                    ? 'profiles'
+                    : isTags
+                        ? 'tags'
+                        : 'all',
                 onSelect: (result) {
                   if (isMentions) {
-                    final handle = result['username'] ?? result['wallet_address'] ?? result['id'] ?? '';
+                    final handle = result['username'] ??
+                        result['wallet_address'] ??
+                        result['id'] ??
+                        '';
                     if (handle.toString().isNotEmpty) {
                       onAdd(handle.toString());
                     }
                   } else if (isTags) {
-                    final tag = result['tag'] ?? result['name'] ?? result['value'] ?? '';
+                    final tag = result['tag'] ??
+                        result['name'] ??
+                        result['value'] ??
+                        '';
                     if (tag.toString().isNotEmpty) {
                       onAdd(tag.toString());
                     }
                   }
                 },
               ),
-              icon: Icon(Icons.search, size: 18, color: themeProvider.accentColor),
+              icon: Icon(Icons.search,
+                  size: 18, color: themeProvider.accentColor),
               label: Text(
                 'Search',
                 style: GoogleFonts.inter(
@@ -5122,7 +4153,8 @@ class _CommunityScreenState extends State<CommunityScreen>
       builder: (sheetContext) => StatefulBuilder(
         builder: (context, setModalState) {
           final scheme = Theme.of(context).colorScheme;
-          final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+          final themeProvider =
+              Provider.of<ThemeProvider>(context, listen: false);
           final l10n = AppLocalizations.of(context)!;
 
           // Load suggestions on first build
@@ -5135,13 +4167,20 @@ class _CommunityScreenState extends State<CommunityScreen>
                   final trending = await backend.getTrendingSearches(limit: 15);
                   if (mounted) {
                     setModalState(() {
-                      suggestions = trending.map((t) {
-                        final count = t['count'] ?? t['search_count'] ?? t['post_count'] ?? t['frequency'] ?? 0;
-                        return {
-                          'tag': t['term'] ?? t['tag'] ?? t['query'] ?? '',
-                          'count': count,
-                        };
-                      }).where((t) => t['tag'].toString().isNotEmpty).toList();
+                      suggestions = trending
+                          .map((t) {
+                            final count = t['count'] ??
+                                t['search_count'] ??
+                                t['post_count'] ??
+                                t['frequency'] ??
+                                0;
+                            return {
+                              'tag': t['term'] ?? t['tag'] ?? t['query'] ?? '',
+                              'count': count,
+                            };
+                          })
+                          .where((t) => t['tag'].toString().isNotEmpty)
+                          .toList();
                       isLoading = false;
                     });
                   }
@@ -5162,12 +4201,14 @@ class _CommunityScreenState extends State<CommunityScreen>
           }
 
           return Padding(
-            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+            padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom),
             child: Container(
               height: MediaQuery.of(context).size.height * 0.7,
               decoration: BoxDecoration(
                 color: scheme.surface,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(24)),
               ),
               child: Column(
                 children: [
@@ -5207,12 +4248,12 @@ class _CommunityScreenState extends State<CommunityScreen>
                       autofocus: true,
                       decoration: InputDecoration(
                         hintText: searchType == 'tags'
-                          ? l10n.communitySearchSheetHintTags
-                          : searchType == 'profiles'
-                            ? l10n.communitySearchSheetHintProfiles
-                            : searchType == 'artworks'
-                              ? l10n.communitySearchSheetHintArtworks
-                              : l10n.communitySearchSheetHintDefault,
+                            ? l10n.communitySearchSheetHintTags
+                            : searchType == 'profiles'
+                                ? l10n.communitySearchSheetHintProfiles
+                                : searchType == 'artworks'
+                                    ? l10n.communitySearchSheetHintArtworks
+                                    : l10n.communitySearchSheetHintDefault,
                         prefixIcon: const Icon(Icons.search),
                         suffixIcon: searchController.text.isNotEmpty
                             ? IconButton(
@@ -5231,7 +4272,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                           borderSide: BorderSide.none,
                         ),
                         filled: true,
-                        fillColor: scheme.primaryContainer.withValues(alpha: 0.4),
+                        fillColor:
+                            scheme.primaryContainer.withValues(alpha: 0.4),
                       ),
                       onChanged: (query) async {
                         final q = query.trim();
@@ -5255,19 +4297,24 @@ class _CommunityScreenState extends State<CommunityScreen>
                           final list = <Map<String, dynamic>>[];
                           if (response['success'] == true) {
                             if (searchType == 'profiles') {
-                              final profiles = _extractSearchResults(response, 'profiles');
+                              final profiles =
+                                  _extractSearchResults(response, 'profiles');
                               list.addAll(profiles);
                             } else if (searchType == 'artworks') {
-                              final artworks = _extractSearchResults(response, 'artworks');
+                              final artworks =
+                                  _extractSearchResults(response, 'artworks');
                               list.addAll(artworks);
                             } else if (searchType == 'tags') {
                               // For tags, generate suggestions from query
-                              list.add({'tag': q, 'count': 0, 'isCustom': true});
+                              list.add(
+                                  {'tag': q, 'count': 0, 'isCustom': true});
                               // Also check for tag matches in results
-                              final tags = _extractSearchResults(response, 'tags');
+                              final tags =
+                                  _extractSearchResults(response, 'tags');
                               list.addAll(tags);
                             } else {
-                              final all = _extractSearchResults(response, 'all');
+                              final all =
+                                  _extractSearchResults(response, 'all');
                               list.addAll(all);
                             }
                           }
@@ -5310,7 +4357,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                             : results.isEmpty
                                 ? Center(
                                     child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
                                         Icon(
                                           searchType == 'tags'
@@ -5319,15 +4367,19 @@ class _CommunityScreenState extends State<CommunityScreen>
                                                   ? Icons.person_search
                                                   : Icons.search,
                                           size: 48,
-                                          color: scheme.onSurface.withValues(alpha: 0.3),
+                                          color: scheme.onSurface
+                                              .withValues(alpha: 0.3),
                                         ),
                                         const SizedBox(height: 16),
                                         Text(
                                           searchController.text.isEmpty
-                                              ? l10n.communitySearchEmptyStartTyping
-                                              : l10n.communitySearchEmptyNoResults,
+                                              ? l10n
+                                                  .communitySearchEmptyStartTyping
+                                              : l10n
+                                                  .communitySearchEmptyNoResults,
                                           style: GoogleFonts.inter(
-                                            color: scheme.onSurface.withValues(alpha: 0.5),
+                                            color: scheme.onSurface
+                                                .withValues(alpha: 0.5),
                                           ),
                                         ),
                                       ],
@@ -5353,7 +4405,8 @@ class _CommunityScreenState extends State<CommunityScreen>
     );
   }
 
-  List<Map<String, dynamic>> _extractSearchResults(Map<String, dynamic> response, String type) {
+  List<Map<String, dynamic>> _extractSearchResults(
+      Map<String, dynamic> response, String type) {
     final list = <Map<String, dynamic>>[];
     try {
       if (response['results'] is Map<String, dynamic>) {
@@ -5459,7 +4512,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       final tag = result['tag'] ?? result['name'] ?? '';
       final count = result['count'] ?? result['search_count'] ?? 0;
       final isCustom = result['isCustom'] == true;
-      
+
       return ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
         leading: Container(
@@ -5532,7 +4585,8 @@ class _CommunityScreenState extends State<CommunityScreen>
     } else if (searchType == 'artworks') {
       final title = result['title'] ?? 'Untitled';
       final artist = result['artist_name'] ?? result['artistName'] ?? 'Unknown';
-      final image = result['image_url'] ?? result['imageUrl'] ?? result['thumbnailUrl'];
+      final image =
+          result['image_url'] ?? result['imageUrl'] ?? result['thumbnailUrl'];
 
       return ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
@@ -5603,7 +4657,9 @@ class _CommunityScreenState extends State<CommunityScreen>
           overflow: TextOverflow.ellipsis,
         ),
         subtitle: Text(
-          [type, address].where((e) => e.toString().trim().isNotEmpty).join(' • '),
+          [type, address]
+              .where((e) => e.toString().trim().isNotEmpty)
+              .join(' � '),
           style: GoogleFonts.inter(
             fontSize: 12,
             color: scheme.onSurface.withValues(alpha: 0.6),
@@ -5645,8 +4701,14 @@ class _CommunityScreenState extends State<CommunityScreen>
         onTap: onTap,
       );
     } else if (searchType == 'posts') {
-      final content = (result['content'] ?? result['text'] ?? result['message'] ?? '').toString();
-      final author = (result['authorName'] ?? result['author_name'] ?? result['author'] ?? 'Post').toString();
+      final content =
+          (result['content'] ?? result['text'] ?? result['message'] ?? '')
+              .toString();
+      final author = (result['authorName'] ??
+              result['author_name'] ??
+              result['author'] ??
+              'Post')
+          .toString();
       final snippet = content.trim().isNotEmpty ? content.trim() : 'Open post';
 
       return ListTile(
@@ -5658,7 +4720,8 @@ class _CommunityScreenState extends State<CommunityScreen>
             color: themeProvider.accentColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(Icons.article_outlined, color: themeProvider.accentColor, size: 20),
+          child: Icon(Icons.article_outlined,
+              color: themeProvider.accentColor, size: 20),
         ),
         title: Text(
           snippet,
@@ -5706,48 +4769,17 @@ class _CommunityScreenState extends State<CommunityScreen>
           color: Theme.of(context).colorScheme.surface,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        child: Column(
-          children: [
-            _buildComposerHandle(),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                children: [
-                  Text(
-                    'Select group',
-                    style: GoogleFonts.inter(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const Spacer(),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: joined.length,
-                separatorBuilder: (_, __) => const Divider(height: 1),
-                itemBuilder: (ctx, index) {
-                  final group = joined[index];
-                  return ListTile(
-                    title: Text(group.name),
-                    subtitle: Text(
-                      group.description?.isNotEmpty == true
-                          ? group.description!
-                          : 'No description yet',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    onTap: () => Navigator.of(ctx).pop(group),
-                    trailing: const Icon(Icons.chevron_right),
-                  );
-                },
-              ),
-            ),
-          ],
+        child: CommunityGroupPickerContent(
+          title: 'Select group',
+          groups: joined,
+          showHandle: true,
+          headerPadding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
+          listPadding: const EdgeInsets.symmetric(horizontal: 16),
+          subtitleBuilder: (group) => group.description?.isNotEmpty == true
+              ? group.description!
+              : 'No description yet',
+          onSelect: (group) => Navigator.of(ctx).pop(group),
+          headerTrailing: const SizedBox.shrink(),
         ),
       ),
     );
@@ -5870,9 +4902,10 @@ class _CommunityScreenState extends State<CommunityScreen>
   }
 
   String _resolveComposerPostType() {
-    if (_selectedPostVideo != null) return 'video';
-    if (_selectedPostImage != null) return 'image';
-    return 'text';
+    return communityComposerPostType(
+      hasImage: _selectedPostImage != null,
+      hasVideo: _selectedPostVideo != null,
+    );
   }
 
   Future<CommunityPost> _submitCommunityPost({
@@ -5954,8 +4987,8 @@ class _CommunityScreenState extends State<CommunityScreen>
       final mediaUrls = await _uploadComposerMedia();
       if (content.isEmpty) {
         content = _selectedPostVideo != null
-            ? 'ðŸŽ¥'
-            : (_selectedPostImage != null ? 'ðŸ“·' : 'Shared via art.kubus');
+            ? '🎥'
+            : (_selectedPostImage != null ? '📷' : 'Shared via art.kubus');
       }
 
       final groupName = hub.draft.targetGroup?.name;
@@ -5976,7 +5009,8 @@ class _CommunityScreenState extends State<CommunityScreen>
         SnackBar(
           content: Text(
             isGroupPost
-                ? l10n.communityComposerSharedInGroupToast(groupName ?? l10n.communityGroupFallbackName)
+                ? l10n.communityComposerSharedInGroupToast(
+                    groupName ?? l10n.communityGroupFallbackName)
                 : l10n.communityComposerPostCreatedToast,
           ),
         ),
@@ -6079,7 +5113,9 @@ class _CommunityScreenState extends State<CommunityScreen>
       // Show feedback message
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
-          content: Text(!wasLiked ? l10n.postDetailPostLikedToast : l10n.postDetailLikeRemovedToast),
+          content: Text(!wasLiked
+              ? l10n.postDetailPostLikedToast
+              : l10n.postDetailLikeRemovedToast),
           duration: const Duration(seconds: 1),
         ),
       );
@@ -6119,172 +5155,15 @@ class _CommunityScreenState extends State<CommunityScreen>
   void _showLikesDialog(
       {required String title,
       required Future<List<CommunityLikeUser>> Function() loader}) {
-    if (!mounted) return;
-
-    final theme = Theme.of(context);
-    final future = loader();
-
-    showModalBottomSheet(
+    showCommunityLikesSheet(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) {
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.6,
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.outline,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      title,
-                      style: GoogleFonts.inter(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.onSurface,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      color: theme.colorScheme.onSurface,
-                      onPressed: () => Navigator.of(sheetContext).pop(),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: FutureBuilder<List<CommunityLikeUser>>(
-                  future: future,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState != ConnectionState.done) {
-                      return Center(
-                        child: SizedBox(
-                          width: 32,
-                          height: 32,
-                          child: InlineLoading(
-                              expand: true,
-                              shape: BoxShape.circle,
-                              tileSize: 4.0),
-                        ),
-                      );
-                    }
-
-                    if (snapshot.hasError) {
-                      return Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.error_outline,
-                                  color: theme.colorScheme.error, size: 36),
-                              const SizedBox(height: 12),
-                              Text(
-                                'Failed to load likes',
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  color: theme.colorScheme.onSurface,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '${snapshot.error}',
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.inter(
-                                  fontSize: 13,
-                                  color: theme.colorScheme.onSurface
-                                      .withValues(alpha: 0.7),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }
-
-                    final likes = snapshot.data ?? <CommunityLikeUser>[];
-                    if (likes.isEmpty) {
-                      final l10n = AppLocalizations.of(context)!;
-                      return Center(
-                        child: EmptyStateCard(
-                          icon: Icons.favorite_border,
-                          title: l10n.postDetailNoLikesTitle,
-                          description: l10n.postDetailNoLikesDescription,
-                        ),
-                      );
-                    }
-
-                    return ListView.separated(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
-                      itemCount: likes.length,
-                      separatorBuilder: (_, __) => Divider(
-                          color:
-                              theme.colorScheme.outline.withValues(alpha: 0.3)),
-                      itemBuilder: (context, index) {
-                        final user = likes[index];
-                        final subtitleParts = <String>[];
-                        if (user.username != null &&
-                            user.username!.isNotEmpty) {
-                          subtitleParts.add('@${user.username}');
-                        }
-                        if (user.likedAt != null) {
-                          subtitleParts.add(_getTimeAgo(user.likedAt!));
-                        }
-
-                        return ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: AvatarWidget(
-                            wallet: user.walletAddress ?? user.userId,
-                            avatarUrl: user.avatarUrl,
-                            radius: 20,
-                            allowFabricatedFallback: true,
-                          ),
-                          title: Text(
-                            user.displayName.isNotEmpty
-                                ? user.displayName
-                                : 'Unnamed User',
-                            style: GoogleFonts.inter(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: theme.colorScheme.onSurface,
-                            ),
-                          ),
-                          subtitle: subtitleParts.isNotEmpty
-                              ? Text(
-                                  subtitleParts.join(' • '),
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    color: theme.colorScheme.onSurface
-                                        .withValues(alpha: 0.6),
-                                  ),
-                                )
-                              : null,
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+      title: title,
+      loader: loader,
+      formatTimeAgo: _getTimeAgo,
+      errorMessage: 'Failed to load likes',
+      unnamedUserLabel: 'Unnamed User',
+      showDetailedError: true,
+      allowFabricatedFallback: true,
     );
   }
 
@@ -6383,7 +5262,9 @@ class _CommunityScreenState extends State<CommunityScreen>
 
     final post = _communityPosts[index];
     // Load comments via provider so edited/original fields and mutations stay consistent.
-    unawaited(context.read<CommunityCommentsProvider>().loadComments(post.id, force: true));
+    unawaited(context
+        .read<CommunityCommentsProvider>()
+        .loadComments(post.id, force: true));
 
     final TextEditingController commentController = TextEditingController();
     String? replyToCommentId; // Track which comment is being replied to
@@ -6426,7 +5307,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                     const Spacer(),
                     Consumer<CommunityCommentsProvider>(
                       builder: (context, commentsProvider, _) {
-                        final count = commentsProvider.totalCountForPost(post.id);
+                        final count =
+                            commentsProvider.totalCountForPost(post.id);
                         return Text(
                           l10n.commonCommentsCount(count),
                           style: GoogleFonts.inter(
@@ -6450,12 +5332,15 @@ class _CommunityScreenState extends State<CommunityScreen>
                     final loading = commentsProvider.isLoading(post.id);
                     final error = commentsProvider.errorForPost(post.id);
                     final currentWallet = WalletUtils.canonical(
-                      Provider.of<WalletProvider>(context, listen: false).currentWalletAddress ?? '',
+                      Provider.of<WalletProvider>(context, listen: false)
+                              .currentWalletAddress ??
+                          '',
                     );
 
                     bool canModify(Comment c) {
                       if (currentWallet.isEmpty) return false;
-                      final authorKey = WalletUtils.canonical((c.authorWallet ?? c.authorId).toString());
+                      final authorKey = WalletUtils.canonical(
+                          (c.authorWallet ?? c.authorId).toString());
                       return authorKey.isNotEmpty && authorKey == currentWallet;
                     }
 
@@ -6470,19 +5355,26 @@ class _CommunityScreenState extends State<CommunityScreen>
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(l10n.commentHistoryCurrentLabel, style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                                  Text(l10n.commentHistoryCurrentLabel,
+                                      style: GoogleFonts.inter(
+                                          fontWeight: FontWeight.w700)),
                                   const SizedBox(height: 8),
-                                  SelectableText(c.content, style: GoogleFonts.inter()),
+                                  SelectableText(c.content,
+                                      style: GoogleFonts.inter()),
                                   const SizedBox(height: 16),
-                                  Text(l10n.commentHistoryOriginalLabel, style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                                  Text(l10n.commentHistoryOriginalLabel,
+                                      style: GoogleFonts.inter(
+                                          fontWeight: FontWeight.w700)),
                                   const SizedBox(height: 8),
-                                  SelectableText(c.originalContent ?? '', style: GoogleFonts.inter()),
+                                  SelectableText(c.originalContent ?? '',
+                                      style: GoogleFonts.inter()),
                                 ],
                               ),
                             ),
                             actions: [
                               TextButton(
-                                onPressed: () => Navigator.of(dialogContext).pop(),
+                                onPressed: () =>
+                                    Navigator.of(dialogContext).pop(),
                                 child: Text(l10n.commonClose),
                               ),
                             ],
@@ -6507,11 +5399,16 @@ class _CommunityScreenState extends State<CommunityScreen>
                                   controller: controller,
                                   maxLines: null,
                                   autofocus: true,
-                                  decoration: InputDecoration(hintText: l10n.postDetailWriteCommentHint),
+                                  decoration: InputDecoration(
+                                      hintText:
+                                          l10n.postDetailWriteCommentHint),
                                 ),
                                 actions: [
                                   TextButton(
-                                    onPressed: saving ? null : () => Navigator.of(dialogContext).pop(),
+                                    onPressed: saving
+                                        ? null
+                                        : () =>
+                                            Navigator.of(dialogContext).pop(),
                                     child: Text(l10n.commonCancel),
                                   ),
                                   FilledButton(
@@ -6522,26 +5419,38 @@ class _CommunityScreenState extends State<CommunityScreen>
                                             if (next.isEmpty) return;
                                             setDialogState(() => saving = true);
                                             try {
-                                              await commentsProvider.editComment(
+                                              await commentsProvider
+                                                  .editComment(
                                                 postId: post.id,
                                                 commentId: c.id,
                                                 content: next,
                                               );
-                                              post.commentCount = commentsProvider.totalCountForPost(post.id);
+                                              post.commentCount =
+                                                  commentsProvider
+                                                      .totalCountForPost(
+                                                          post.id);
                                               if (mounted) setState(() {});
-                                              if (!dialogContext.mounted) return;
+                                              if (!dialogContext.mounted) {
+                                                return;
+                                              }
                                               Navigator.of(dialogContext).pop();
-                                              messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commentUpdatedToast)));
+                                              messenger.showKubusSnackBar(
+                                                  SnackBar(
+                                                      content: Text(l10n
+                                                          .commentUpdatedToast)));
                                             } catch (_) {
                                               messenger.showKubusSnackBar(
                                                 SnackBar(
-                                                  content: Text(l10n.commentEditFailedToast),
-                                                  backgroundColor: scheme.errorContainer,
+                                                  content: Text(l10n
+                                                      .commentEditFailedToast),
+                                                  backgroundColor:
+                                                      scheme.errorContainer,
                                                 ),
                                               );
                                             } finally {
                                               if (dialogContext.mounted) {
-                                                setDialogState(() => saving = false);
+                                                setDialogState(
+                                                    () => saving = false);
                                               }
                                             }
                                           },
@@ -6566,11 +5475,13 @@ class _CommunityScreenState extends State<CommunityScreen>
                             content: Text(l10n.commentDeleteConfirmMessage),
                             actions: [
                               TextButton(
-                                onPressed: () => Navigator.of(dialogContext).pop(false),
+                                onPressed: () =>
+                                    Navigator.of(dialogContext).pop(false),
                                 child: Text(l10n.commonCancel),
                               ),
                               FilledButton(
-                                onPressed: () => Navigator.of(dialogContext).pop(true),
+                                onPressed: () =>
+                                    Navigator.of(dialogContext).pop(true),
                                 style: FilledButton.styleFrom(
                                   backgroundColor: scheme.error,
                                   foregroundColor: scheme.onError,
@@ -6583,10 +5494,13 @@ class _CommunityScreenState extends State<CommunityScreen>
                       );
                       if (confirmed != true) return;
                       try {
-                        await commentsProvider.deleteComment(postId: post.id, commentId: c.id);
-                        post.commentCount = commentsProvider.totalCountForPost(post.id);
+                        await commentsProvider.deleteComment(
+                            postId: post.id, commentId: c.id);
+                        post.commentCount =
+                            commentsProvider.totalCountForPost(post.id);
                         if (mounted) setState(() {});
-                        messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commentDeletedToast)));
+                        messenger.showKubusSnackBar(
+                            SnackBar(content: Text(l10n.commentDeletedToast)));
                       } catch (_) {
                         messenger.showKubusSnackBar(
                           SnackBar(
@@ -6599,7 +5513,8 @@ class _CommunityScreenState extends State<CommunityScreen>
 
                     Widget buildComment(Comment c, {required int depth}) {
                       final isReply = depth > 0;
-                      final bubbleColor = isReply ? scheme.surface : scheme.primaryContainer;
+                      final bubbleColor =
+                          isReply ? scheme.surface : scheme.primaryContainer;
                       final bubbleTextColor = scheme.onSurface;
 
                       return Container(
@@ -6646,8 +5561,12 @@ class _CommunityScreenState extends State<CommunityScreen>
                                             }
                                           },
                                           itemBuilder: (context) => [
-                                            PopupMenuItem(value: 'edit', child: Text(l10n.commonEdit)),
-                                            PopupMenuItem(value: 'delete', child: Text(l10n.commonDelete)),
+                                            PopupMenuItem(
+                                                value: 'edit',
+                                                child: Text(l10n.commonEdit)),
+                                            PopupMenuItem(
+                                                value: 'delete',
+                                                child: Text(l10n.commonDelete)),
                                           ],
                                         ),
                                     ],
@@ -6659,7 +5578,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                                         _getTimeAgo(c.timestamp),
                                         style: GoogleFonts.inter(
                                           fontSize: 12,
-                                          color: bubbleTextColor.withValues(alpha: 0.55),
+                                          color: bubbleTextColor.withValues(
+                                              alpha: 0.55),
                                         ),
                                       ),
                                       if (c.isEdited) ...[
@@ -6668,7 +5588,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                                           l10n.commonEditedTag,
                                           style: GoogleFonts.inter(
                                             fontSize: 12,
-                                            color: bubbleTextColor.withValues(alpha: 0.55),
+                                            color: bubbleTextColor.withValues(
+                                                alpha: 0.55),
                                           ),
                                         ),
                                       ],
@@ -6677,12 +5598,16 @@ class _CommunityScreenState extends State<CommunityScreen>
                                   const SizedBox(height: 6),
                                   GestureDetector(
                                     behavior: HitTestBehavior.opaque,
-                                    onTap: (c.isEdited && c.originalContent != null) ? () => showHistory(c) : null,
+                                    onTap: (c.isEdited &&
+                                            c.originalContent != null)
+                                        ? () => showHistory(c)
+                                        : null,
                                     child: Text(
                                       c.content,
                                       style: GoogleFonts.inter(
                                         fontSize: 13,
-                                        color: bubbleTextColor.withValues(alpha: 0.85),
+                                        color: bubbleTextColor.withValues(
+                                            alpha: 0.85),
                                       ),
                                     ),
                                   ),
@@ -6693,11 +5618,15 @@ class _CommunityScreenState extends State<CommunityScreen>
                                         padding: EdgeInsets.zero,
                                         constraints: const BoxConstraints(),
                                         icon: Icon(
-                                          c.isLiked ? Icons.favorite : Icons.favorite_border,
+                                          c.isLiked
+                                              ? Icons.favorite
+                                              : Icons.favorite_border,
                                           size: isReply ? 14 : 18,
                                           color: c.isLiked
-                                              ? KubusColorRoles.of(context).likeAction
-                                              : bubbleTextColor.withValues(alpha: 0.6),
+                                              ? KubusColorRoles.of(context)
+                                                  .likeAction
+                                              : bubbleTextColor.withValues(
+                                                  alpha: 0.6),
                                         ),
                                         onPressed: () async {
                                           // Optimistic toggle
@@ -6706,7 +5635,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                                             c.likeCount += c.isLiked ? 1 : -1;
                                           });
                                           try {
-                                            await CommunityService.toggleCommentLike(c, post.id);
+                                            await CommunityService
+                                                .toggleCommentLike(c, post.id);
                                           } catch (_) {
                                             // rollback on error
                                             setModalState(() {
@@ -6714,11 +5644,15 @@ class _CommunityScreenState extends State<CommunityScreen>
                                               c.likeCount += c.isLiked ? 1 : -1;
                                             });
                                             if (context.mounted) {
-                                              ScaffoldMessenger.of(context).showKubusSnackBar(
+                                              ScaffoldMessenger.of(context)
+                                                  .showKubusSnackBar(
                                                 SnackBar(
-                                                  content: Text(l10n.postDetailUpdateCommentLikeFailedToast),
-                                                  backgroundColor: scheme.errorContainer,
-                                                  duration: const Duration(seconds: 2),
+                                                  content: Text(l10n
+                                                      .postDetailUpdateCommentLikeFailedToast),
+                                                  backgroundColor:
+                                                      scheme.errorContainer,
+                                                  duration: const Duration(
+                                                      seconds: 2),
                                                 ),
                                               );
                                             }
@@ -6733,7 +5667,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                                           '${c.likeCount}',
                                           style: GoogleFonts.inter(
                                             fontSize: 12,
-                                            color: bubbleTextColor.withValues(alpha: 0.6),
+                                            color: bubbleTextColor.withValues(
+                                                alpha: 0.6),
                                           ),
                                         ),
                                       ),
@@ -6744,28 +5679,40 @@ class _CommunityScreenState extends State<CommunityScreen>
                                           final fallbackId = c.authorId;
                                           String mention;
                                           if (authorName.isNotEmpty) {
-                                            final sanitized = authorName.replaceAll(' ', '');
-                                            mention = '@${sanitized.length > 20 ? sanitized.substring(0, 20) : sanitized} ';
+                                            final sanitized =
+                                                authorName.replaceAll(' ', '');
+                                            mention =
+                                                '@${sanitized.length > 20 ? sanitized.substring(0, 20) : sanitized} ';
                                           } else if (fallbackId.isNotEmpty) {
-                                            mention = '@${fallbackId.substring(0, 8)} ';
+                                            mention =
+                                                '@${fallbackId.substring(0, 8)} ';
                                           } else {
                                             mention = '';
                                           }
                                           setModalState(() {
                                             replyToCommentId = c.id;
                                             commentController.text = mention;
-                                            commentController.selection = TextSelection.fromPosition(
-                                              TextPosition(offset: commentController.text.length),
+                                            commentController.selection =
+                                                TextSelection.fromPosition(
+                                              TextPosition(
+                                                  offset: commentController
+                                                      .text.length),
                                             );
                                           });
                                         },
                                         child: Row(
                                           children: [
-                                            Icon(Icons.reply_outlined, size: 18, color: bubbleTextColor.withValues(alpha: 0.6)),
+                                            Icon(Icons.reply_outlined,
+                                                size: 18,
+                                                color: bubbleTextColor
+                                                    .withValues(alpha: 0.6)),
                                             const SizedBox(width: 6),
                                             Text(
                                               l10n.commonReply,
-                                              style: GoogleFonts.inter(fontSize: 12, color: bubbleTextColor.withValues(alpha: 0.6)),
+                                              style: GoogleFonts.inter(
+                                                  fontSize: 12,
+                                                  color: bubbleTextColor
+                                                      .withValues(alpha: 0.6)),
                                             ),
                                           ],
                                         ),
@@ -6815,7 +5762,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                     }
 
                     // Keep the post card count roughly in sync when this sheet is open.
-                    post.commentCount = commentsProvider.totalCountForPost(post.id);
+                    post.commentCount =
+                        commentsProvider.totalCountForPost(post.id);
 
                     return ListView(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -6868,7 +5816,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                AppLocalizations.of(context)!.communityReplyingToCommentLabel,
+                                AppLocalizations.of(context)!
+                                    .communityReplyingToCommentLabel,
                                 style: GoogleFonts.inter(
                                   fontSize: 13,
                                   color: Provider.of<ThemeProvider>(context)
@@ -6975,7 +5924,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                             onSubmitted: (value) async {
                               if (value.trim().isNotEmpty) {
                                 final messenger = ScaffoldMessenger.of(context);
-                                final commentsProvider = context.read<CommunityCommentsProvider>();
+                                final commentsProvider =
+                                    context.read<CommunityCommentsProvider>();
                                 try {
                                   final authorContext =
                                       await _resolveCommentAuthorContext();
@@ -6983,18 +5933,20 @@ class _CommunityScreenState extends State<CommunityScreen>
                                     if (!mounted) return;
                                     messenger.showKubusSnackBar(
                                       SnackBar(
-                                        content: Text(l10n.communityCommentAuthRequiredToast),
+                                        content: Text(l10n
+                                            .communityCommentAuthRequiredToast),
                                         duration: const Duration(seconds: 2),
                                       ),
                                     );
                                     return;
                                   }
                                   await commentsProvider.addComment(
-                                        postId: post.id,
-                                        content: value.trim(),
-                                        parentCommentId: replyToCommentId,
-                                      );
-                                  post.commentCount = commentsProvider.totalCountForPost(post.id);
+                                    postId: post.id,
+                                    content: value.trim(),
+                                    parentCommentId: replyToCommentId,
+                                  );
+                                  post.commentCount = commentsProvider
+                                      .totalCountForPost(post.id);
                                   if (!mounted) return;
                                   // Reset reply state
                                   replyToCommentId = null;
@@ -7004,18 +5956,21 @@ class _CommunityScreenState extends State<CommunityScreen>
 
                                   messenger.showKubusSnackBar(
                                     SnackBar(
-                                      content: Text(l10n.postDetailCommentAddedToast),
+                                      content: Text(
+                                          l10n.postDetailCommentAddedToast),
                                       duration: const Duration(seconds: 2),
                                     ),
                                   );
                                 } catch (e) {
                                   if (kDebugMode) {
-                                    debugPrint('CommunityScreen: add comment (submit) failed: $e');
+                                    debugPrint(
+                                        'CommunityScreen: add comment (submit) failed: $e');
                                   }
                                   if (!mounted) return;
                                   messenger.showKubusSnackBar(
                                     SnackBar(
-                                      content: Text(l10n.postDetailAddCommentFailedToast),
+                                      content: Text(
+                                          l10n.postDetailAddCommentFailedToast),
                                       duration: const Duration(seconds: 2),
                                     ),
                                   );
@@ -7041,7 +5996,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                             onPressed: () async {
                               if (commentController.text.trim().isNotEmpty) {
                                 final messenger = ScaffoldMessenger.of(context);
-                                final commentsProvider = context.read<CommunityCommentsProvider>();
+                                final commentsProvider =
+                                    context.read<CommunityCommentsProvider>();
                                 try {
                                   final commentText =
                                       commentController.text.trim();
@@ -7051,18 +6007,20 @@ class _CommunityScreenState extends State<CommunityScreen>
                                     if (!mounted) return;
                                     messenger.showKubusSnackBar(
                                       SnackBar(
-                                        content: Text(l10n.communityCommentAuthRequiredToast),
+                                        content: Text(l10n
+                                            .communityCommentAuthRequiredToast),
                                         duration: const Duration(seconds: 2),
                                       ),
                                     );
                                     return;
                                   }
                                   await commentsProvider.addComment(
-                                        postId: post.id,
-                                        content: commentText,
-                                        parentCommentId: replyToCommentId,
-                                      );
-                                  post.commentCount = commentsProvider.totalCountForPost(post.id);
+                                    postId: post.id,
+                                    content: commentText,
+                                    parentCommentId: replyToCommentId,
+                                  );
+                                  post.commentCount = commentsProvider
+                                      .totalCountForPost(post.id);
                                   if (!mounted) return;
 
                                   // Reset reply state
@@ -7073,18 +6031,21 @@ class _CommunityScreenState extends State<CommunityScreen>
 
                                   messenger.showKubusSnackBar(
                                     SnackBar(
-                                      content: Text(l10n.postDetailCommentAddedToast),
+                                      content: Text(
+                                          l10n.postDetailCommentAddedToast),
                                       duration: const Duration(seconds: 2),
                                     ),
                                   );
                                 } catch (e) {
                                   if (kDebugMode) {
-                                    debugPrint('CommunityScreen: add comment (button) failed: $e');
+                                    debugPrint(
+                                        'CommunityScreen: add comment (button) failed: $e');
                                   }
                                   if (!mounted) return;
                                   messenger.showKubusSnackBar(
                                     SnackBar(
-                                      content: Text(l10n.postDetailAddCommentFailedToast),
+                                      content: Text(
+                                          l10n.postDetailAddCommentFailedToast),
                                       duration: const Duration(seconds: 2),
                                     ),
                                   );
@@ -7189,14 +6150,14 @@ class _CommunityScreenState extends State<CommunityScreen>
                       children: [
                         TextButton(
                             onPressed: () => Navigator.pop(sheetContext),
-                          child: Text(l10n.commonCancel, style: GoogleFonts.inter())),
+                            child: Text(l10n.commonCancel,
+                                style: GoogleFonts.inter())),
                         const SizedBox(width: 8),
                         ElevatedButton(
                           onPressed: () async {
                             final content = repostContentController.text.trim();
                             Navigator.pop(sheetContext);
-                            final messenger =
-                                ScaffoldMessenger.of(context);
+                            final messenger = ScaffoldMessenger.of(context);
 
                             try {
                               // Create repost via backend
@@ -7220,22 +6181,26 @@ class _CommunityScreenState extends State<CommunityScreen>
                                 SnackBar(
                                   content: Text(content.isEmpty
                                       ? l10n.postDetailRepostSuccessToast
-                                      : l10n.postDetailRepostWithCommentSuccessToast),
+                                      : l10n
+                                          .postDetailRepostWithCommentSuccessToast),
                                 ),
                               );
                             } catch (e) {
                               if (kDebugMode) {
-                                debugPrint('CommunityScreen: repost failed: $e');
+                                debugPrint(
+                                    'CommunityScreen: repost failed: $e');
                               }
                               if (!mounted) return;
                               messenger.showKubusSnackBar(
                                 SnackBar(
-                                  content: Text(l10n.postDetailRepostFailedToast),
+                                  content:
+                                      Text(l10n.postDetailRepostFailedToast),
                                 ),
                               );
                             }
                           },
-                          child: Text(l10n.postDetailRepostButton, style: GoogleFonts.inter()),
+                          child: Text(l10n.postDetailRepostButton,
+                              style: GoogleFonts.inter()),
                         ),
                       ],
                     ),
@@ -7318,13 +6283,15 @@ class _CommunityScreenState extends State<CommunityScreen>
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(8),
                                 child: Image.network(
-                                  MediaUrlResolver.resolveDisplayUrl(post.imageUrl) ??
+                                  MediaUrlResolver.resolveDisplayUrl(
+                                          post.imageUrl) ??
                                       post.imageUrl!,
                                   fit: BoxFit.cover,
                                   height: 120,
                                   width: double.infinity,
                                   errorBuilder: (context, error, stackTrace) {
-                                    final scheme = Theme.of(context).colorScheme;
+                                    final scheme =
+                                        Theme.of(context).colorScheme;
                                     return Container(
                                       height: 120,
                                       width: double.infinity,
@@ -7433,18 +6400,22 @@ class _CommunityScreenState extends State<CommunityScreen>
                     itemBuilder: (ctx, idx) {
                       final repost = reposts[idx];
                       final user = repost['user'] as Map<String, dynamic>?;
-                      final rawUsername = (user?['username'] ?? '').toString().trim();
+                      final rawUsername =
+                          (user?['username'] ?? '').toString().trim();
                       final username = rawUsername.startsWith('@')
                           ? rawUsername.substring(1).trim()
                           : rawUsername;
                       final wallet = WalletUtils.coalesce(
                         walletAddress: user?['walletAddress']?.toString(),
-                        wallet: user?['wallet_address']?.toString() ?? user?['wallet']?.toString(),
+                        wallet: user?['wallet_address']?.toString() ??
+                            user?['wallet']?.toString(),
                         userId: user?['id']?.toString(),
                         fallback: '',
                       );
                       final displayName =
-                          (user?['displayName'] ?? user?['display_name'])?.toString().trim();
+                          (user?['displayName'] ?? user?['display_name'])
+                              ?.toString()
+                              .trim();
                       final avatar = user?['avatar'];
                       final comment = repost['repostComment'] as String?;
                       final createdAt =
@@ -7461,7 +6432,9 @@ class _CommunityScreenState extends State<CommunityScreen>
                         leading: AvatarWidget(
                             wallet: wallet.isNotEmpty
                                 ? wallet
-                                : (username.isNotEmpty ? username : l10n.commonUnknown),
+                                : (username.isNotEmpty
+                                    ? username
+                                    : l10n.commonUnknown),
                             avatarUrl: avatar,
                             radius: 20,
                             allowFabricatedFallback: false),
@@ -7529,9 +6502,10 @@ class _CommunityScreenState extends State<CommunityScreen>
                     color: theme.colorScheme.outline,
                     borderRadius: BorderRadius.circular(2))),
             ListTile(
-              leading: Icon(Icons.delete_outline, color: theme.colorScheme.error),
-              title:
-                  Text(l10n.communityUnrepostAction, style: GoogleFonts.inter(color: theme.colorScheme.error)),
+              leading:
+                  Icon(Icons.delete_outline, color: theme.colorScheme.error),
+              title: Text(l10n.communityUnrepostAction,
+                  style: GoogleFonts.inter(color: theme.colorScheme.error)),
               onTap: () {
                 Navigator.pop(sheetContext);
                 _unrepostPost(post);
@@ -7560,8 +6534,8 @@ class _CommunityScreenState extends State<CommunityScreen>
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
         title: Text(l10n.communityUnrepostTitle, style: GoogleFonts.inter()),
-        content: Text(l10n.communityUnrepostConfirmBody,
-            style: GoogleFonts.inter()),
+        content:
+            Text(l10n.communityUnrepostConfirmBody, style: GoogleFonts.inter()),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
@@ -7569,8 +6543,10 @@ class _CommunityScreenState extends State<CommunityScreen>
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            style: TextButton.styleFrom(foregroundColor: Theme.of(dialogContext).colorScheme.error),
-            child: Text(l10n.communityUnrepostAction, style: GoogleFonts.inter()),
+            style: TextButton.styleFrom(
+                foregroundColor: Theme.of(dialogContext).colorScheme.error),
+            child:
+                Text(l10n.communityUnrepostAction, style: GoogleFonts.inter()),
           ),
         ],
       ),
@@ -7602,24 +6578,12 @@ class _CommunityScreenState extends State<CommunityScreen>
     }
   }
 
-  void _viewPostDetail(int index) {
-    if (index >= _communityPosts.length) return;
-
-    final post = _communityPosts[index];
-
-    // Open full post detail screen instead of dialog
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => PostDetailScreen(post: post)),
-    );
-  }
-
   void _showPostOptionsForPost(CommunityPost post) {
     if (!mounted) return;
     final currentWallet = _currentWalletAddress();
     final authorWallet = post.authorWallet ?? post.authorId;
-    final isOwner =
-        currentWallet != null && WalletUtils.equals(authorWallet, currentWallet);
+    final isOwner = currentWallet != null &&
+        WalletUtils.equals(authorWallet, currentWallet);
 
     unawaited(
       showCommunityPostOptionsSheet(
@@ -7663,53 +6627,6 @@ class _CommunityScreenState extends State<CommunityScreen>
     );
   }
 
-  // ==================== Post metadata helpers ====================
-
-  IconData _getCategoryIcon(String category) {
-    switch (category.toLowerCase()) {
-      case 'ar_drop':
-      case 'art_drop':
-        return Icons.place_outlined;
-      case 'art_review':
-        return Icons.rate_review_outlined;
-      case 'event':
-        return Icons.event_outlined;
-      case 'poll':
-        return Icons.poll_outlined;
-      case 'question':
-        return Icons.help_outline;
-      case 'announcement':
-        return Icons.campaign_outlined;
-      case 'review':
-        return Icons.rate_review_outlined;
-      default:
-        return Icons.article_outlined;
-    }
-  }
-
-  String _formatCategoryLabel(String category) {
-    switch (category.toLowerCase()) {
-      case 'ar_drop':
-      case 'art_drop':
-        return 'AR Drop';
-      case 'art_review':
-        return 'Art Review';
-      case 'event':
-        return 'Event';
-      case 'poll':
-        return 'Poll';
-      case 'question':
-        return 'Question';
-      case 'announcement':
-        return 'Announcement';
-      case 'review':
-        return 'Review';
-      default:
-        return category.replaceAll('_', ' ').split(' ').map((w) =>
-            w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : w).join(' ');
-    }
-  }
-
   void _filterByTag(String tag) {
     final cleaned = tag.replaceAll('#', '').trim();
     if (cleaned.isEmpty) return;
@@ -7722,14 +6639,13 @@ class _CommunityScreenState extends State<CommunityScreen>
   }
 
   void _openLocationOnMap(CommunityLocation location) {
-    final lat = location.lat;
-    final lng = location.lng;
-    if (lat == null || lng == null) return;
+    final target = communityLocationToLatLng(location);
+    if (target == null) return;
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => MapScreen(
-          initialCenter: LatLng(lat, lng),
+          initialCenter: target,
           initialZoom: 15,
           autoFollow: false,
         ),
@@ -7737,28 +6653,8 @@ class _CommunityScreenState extends State<CommunityScreen>
     );
   }
 
-  void _openArtworkDetail(CommunityArtworkReference artwork) {
-    CommunitySubjectNavigation.open(
-      context,
-      subject: CommunitySubjectRef(type: 'artwork', id: artwork.id),
-      titleOverride: artwork.title,
-    );
-  }
-
   void _openGroupFromPost(CommunityGroupReference group) {
-    // Navigate to group feed
-    _openGroupFeed(CommunityGroupSummary(
-      id: group.id,
-      name: group.name,
-      slug: group.slug,
-      coverImage: group.coverImage,
-      description: group.description,
-      isPublic: true,
-      ownerWallet: '',
-      memberCount: 0,
-      isMember: false,
-      isOwner: false,
-    ));
+    _openGroupFeed(communityGroupSummaryFromReference(group));
   }
 
   String _getTimeAgo(DateTime timestamp) {
@@ -7777,18 +6673,6 @@ class _CommunityScreenState extends State<CommunityScreen>
       return 'Just now';
     }
   }
-}
-
-class _ExpandableFabOption {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  const _ExpandableFabOption({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
 }
 
 class _CommentAuthorContext {
