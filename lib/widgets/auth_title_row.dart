@@ -49,8 +49,6 @@ class AuthTitleRow extends StatelessWidget {
               Expanded(
                 child: Text(
                   title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                         fontSize: compact ? 16 : 18,

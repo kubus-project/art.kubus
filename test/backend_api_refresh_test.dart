@@ -12,7 +12,8 @@ String _encodeSegment(Map<String, dynamic> payload) {
 }
 
 String _buildJwt({required int expSeconds}) {
-  final header = _encodeSegment(<String, dynamic>{'alg': 'HS256', 'typ': 'JWT'});
+  final header =
+      _encodeSegment(<String, dynamic>{'alg': 'HS256', 'typ': 'JWT'});
   final body = _encodeSegment(<String, dynamic>{'exp': expSeconds});
   return '$header.$body.signature';
 }
@@ -25,8 +26,12 @@ void main() {
     BackendApiService().setAuthTokenForTesting(null);
   });
 
-  test('refreshAuthTokenFromStorage refreshes access token with stored refresh token', () async {
-    final exp = DateTime.now().add(const Duration(hours: 1)).millisecondsSinceEpoch ~/ 1000;
+  test(
+      'refreshAuthTokenFromStorage refreshes access token with stored refresh token',
+      () async {
+    final exp =
+        DateTime.now().add(const Duration(hours: 1)).millisecondsSinceEpoch ~/
+            1000;
     final refreshedToken = _buildJwt(expSeconds: exp);
 
     SharedPreferences.setMockInitialValues(<String, Object>{
@@ -50,7 +55,8 @@ void main() {
     expect((BackendApiService().getAuthToken() ?? '').isNotEmpty, isTrue);
   });
 
-  test('refreshAuthTokenFromStorage returns false for invalid refresh token', () async {
+  test('refreshAuthTokenFromStorage returns false for invalid refresh token',
+      () async {
     SharedPreferences.setMockInitialValues(<String, Object>{
       'refresh_token': 'refresh-123',
     });
@@ -67,5 +73,49 @@ void main() {
     final ok = await BackendApiService().refreshAuthTokenFromStorage();
 
     expect(ok, isFalse);
+  });
+
+  test(
+      'authenticated GET restores stored session before hitting protected endpoint',
+      () async {
+    final nowSeconds = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final expiredToken = _buildJwt(expSeconds: nowSeconds - 3600);
+    final refreshedToken = _buildJwt(expSeconds: nowSeconds + 3600);
+    final requestPaths = <String>[];
+
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'jwt_token': expiredToken,
+      'refresh_token': 'refresh-abc',
+    });
+
+    BackendApiService().setHttpClient(
+      MockClient((request) async {
+        requestPaths.add(request.url.path);
+        if (request.url.path.endsWith('/api/auth/refresh')) {
+          return http.Response(jsonEncode({'token': refreshedToken}), 200);
+        }
+        if (request.url.path.endsWith('/api/profiles/me')) {
+          expect(
+            request.headers['Authorization'],
+            'Bearer $refreshedToken',
+          );
+          return http.Response(
+            jsonEncode({
+              'data': {'wallet_address': 'wallet_me'},
+            }),
+            200,
+          );
+        }
+        return http.Response('Not Found', 404);
+      }),
+    );
+
+    final result = await BackendApiService().getMyProfile();
+
+    expect(result['success'], isTrue);
+    expect(
+      requestPaths,
+      equals(<String>['/api/auth/refresh', '/api/profiles/me']),
+    );
   });
 }

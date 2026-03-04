@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' as foundation;
 
 import '../config/config.dart';
 import '../services/storage_config.dart';
+import '../services/telemetry/telemetry_service.dart';
 
 /// Shared media URL resolver for images, models, and other assets.
 ///
@@ -84,9 +85,10 @@ class MediaUrlResolver {
 
   static Uri _canonicalizeIndirectImageUrl(Uri uri) {
     final isDirectImagePath = _pathLooksLikeImageAsset(uri.path);
+    final isKnownRedirector = _isKnownCorsHostileRedirector(uri.toString());
     final params = Map<String, String>.from(uri.queryParameters);
 
-    if (!isDirectImagePath) {
+    if (!isDirectImagePath || isKnownRedirector) {
       // Keep indirect resolver URLs cache-stable across small client-side
       // variants (e.g. `width`, `v`, `cb`) that usually don't alter the final
       // origin file selected by upstream redirectors.
@@ -172,8 +174,17 @@ class MediaUrlResolver {
   }
 
   static String _proxyImageUrl(String absoluteUrl) {
-    final encoded = Uri.encodeQueryComponent(absoluteUrl);
-    final proxyPath = '/api/media/proxy?url=$encoded';
+    final queryParams = <String, String>{
+      'url': absoluteUrl,
+    };
+    final sessionId = TelemetryService().currentSessionId;
+    if (sessionId != null && sessionId.isNotEmpty) {
+      queryParams['sid'] = sessionId;
+    }
+    final proxyPath = Uri(
+      path: '/api/media/proxy',
+      queryParameters: queryParams,
+    ).toString();
     return StorageConfig.resolveUrl(proxyPath) ?? proxyPath;
   }
 

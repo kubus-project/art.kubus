@@ -16,7 +16,8 @@ class RecentActivityProvider extends ChangeNotifier {
     PushNotificationService? pushNotificationService,
     UserActionService? userActionService,
   })  : _backend = backendApiService ?? BackendApiService(),
-        _pushNotifications = pushNotificationService ?? PushNotificationService(),
+        _pushNotifications =
+            pushNotificationService ?? PushNotificationService(),
         _actions = userActionService ?? UserActionService();
 
   final BackendApiService _backend;
@@ -89,7 +90,10 @@ class RecentActivityProvider extends ChangeNotifier {
 
     try {
       await _backend.loadAuthToken();
-      final remote = await _backend.getNotifications(limit: 100);
+      final hasSession = await _backend.restoreExistingSession();
+      final remote = hasSession
+          ? await _backend.getNotifications(limit: 100)
+          : const <Map<String, dynamic>>[];
       final local = await _pushNotifications.getInAppNotifications();
       final actions = await _actions.getRecentActions(limit: 30);
       final mapped = _mapActivities([...remote, ...local, ...actions]);
@@ -112,9 +116,8 @@ class RecentActivityProvider extends ChangeNotifier {
   void markAllReadLocally() {
     if (!hasUnread) return;
     _activities = _activities
-        .map((activity) => activity.isRead
-            ? activity
-            : activity.copyWith(isRead: true))
+        .map((activity) =>
+            activity.isRead ? activity : activity.copyWith(isRead: true))
         .toList(growable: false);
     notifyListeners();
   }
@@ -162,20 +165,21 @@ class RecentActivityProvider extends ChangeNotifier {
       for (final activity in _activities) activity.id: activity,
     };
 
-    return next
-        .map((activity) {
-          final previous = existingById[activity.id];
-          if (previous == null) return activity;
-          if (previous.isRead && !activity.isRead) {
-            return activity.copyWith(isRead: true);
-          }
-          return activity;
-        })
-        .toList();
+    return next.map((activity) {
+      final previous = existingById[activity.id];
+      if (previous == null) return activity;
+      if (previous.isRead && !activity.isRead) {
+        return activity.copyWith(isRead: true);
+      }
+      return activity;
+    }).toList();
   }
 
   RecentActivity? _mapSingle(Map<String, dynamic> raw) {
-    final type = _string(raw['type']) ?? _string(raw['interactionType']) ?? _string(raw['eventType']) ?? 'system';
+    final type = _string(raw['type']) ??
+        _string(raw['interactionType']) ??
+        _string(raw['eventType']) ??
+        'system';
     final data = _extractData(raw['data']);
     final customMetadata = _extractData(raw['metadata']);
     final sender = _extractData(raw['sender']);
@@ -198,19 +202,34 @@ class RecentActivityProvider extends ChangeNotifier {
       wallet: actorWallet,
     );
     final actorName = actorFormatted.primary;
-    final actorAvatar = _string(sender['avatar']) ?? _string(sender['avatarUrl']) ?? _string(raw['actorAvatar']);
-    final timestamp = _parseTimestamp(raw['timestamp'] ?? raw['createdAt'] ?? raw['time'] ?? data['timestamp']);
-    final id = _string(raw['id']) ?? _string(raw['notificationId']) ?? _buildSyntheticId(type, timestamp, actorName, data);
+    final actorAvatar = _string(sender['avatar']) ??
+        _string(sender['avatarUrl']) ??
+        _string(raw['actorAvatar']);
+    final timestamp = _parseTimestamp(raw['timestamp'] ??
+        raw['createdAt'] ??
+        raw['time'] ??
+        data['timestamp']);
+    final id = _string(raw['id']) ??
+        _string(raw['notificationId']) ??
+        _buildSyntheticId(type, timestamp, actorName, data);
     var category = activityCategoryFromString(type);
     if (category == ActivityCategory.system) {
-      final fallbackType = _string(data['interactionType']) ?? _string(data['eventType']) ?? _string(data['category']);
+      final fallbackType = _string(data['interactionType']) ??
+          _string(data['eventType']) ??
+          _string(data['category']);
       if (fallbackType != null) {
         category = activityCategoryFromString(fallbackType);
       }
     }
-    final resolvedTitle = _string(raw['title']) ?? _defaultTitle(category, actorName, data);
-    final resolvedDescription = _string(raw['message']) ?? _string(raw['description']) ?? _defaultDescription(category, actorName, data);
-    final actionUrl = _string(raw['actionUrl']) ?? _string(raw['action_url']) ?? _string(data['actionUrl']) ?? _string(data['action_url']);
+    final resolvedTitle =
+        _string(raw['title']) ?? _defaultTitle(category, actorName, data);
+    final resolvedDescription = _string(raw['message']) ??
+        _string(raw['description']) ??
+        _defaultDescription(category, actorName, data);
+    final actionUrl = _string(raw['actionUrl']) ??
+        _string(raw['action_url']) ??
+        _string(data['actionUrl']) ??
+        _string(data['action_url']);
     final isRead = _bool(raw['isRead']) ?? _bool(raw['is_read']) ?? true;
 
     final metadata = <String, dynamic>{
@@ -277,12 +296,14 @@ class RecentActivityProvider extends ChangeNotifier {
     if (value is DateTime) return value;
     if (value is int) {
       final isSeconds = value < 10000000000;
-      return DateTime.fromMillisecondsSinceEpoch(isSeconds ? value * 1000 : value);
+      return DateTime.fromMillisecondsSinceEpoch(
+          isSeconds ? value * 1000 : value);
     }
     if (value is num) {
       final millis = value.toInt();
       final isSeconds = millis < 10000000000;
-      return DateTime.fromMillisecondsSinceEpoch(isSeconds ? millis * 1000 : millis);
+      return DateTime.fromMillisecondsSinceEpoch(
+          isSeconds ? millis * 1000 : millis);
     }
     if (value is String && value.isNotEmpty) {
       return DateTime.tryParse(value) ?? DateTime.now();
@@ -290,7 +311,8 @@ class RecentActivityProvider extends ChangeNotifier {
     return DateTime.now();
   }
 
-  String _buildSyntheticId(String? type, DateTime timestamp, String? actor, Map<String, dynamic> data) {
+  String _buildSyntheticId(String? type, DateTime timestamp, String? actor,
+      Map<String, dynamic> data) {
     final parts = [
       type ?? 'system',
       timestamp.toIso8601String(),
@@ -300,7 +322,8 @@ class RecentActivityProvider extends ChangeNotifier {
     return parts.where((element) => element.isNotEmpty).join('-');
   }
 
-  String _defaultTitle(ActivityCategory category, String? actor, Map<String, dynamic> data) {
+  String _defaultTitle(
+      ActivityCategory category, String? actor, Map<String, dynamic> data) {
     switch (category) {
       case ActivityCategory.like:
         return 'New Like';
@@ -321,7 +344,11 @@ class RecentActivityProvider extends ChangeNotifier {
       case ActivityCategory.ar:
         return 'AR Event';
       case ActivityCategory.save:
-        final targetTitle = data['targetTitle'] ?? data['title'] ?? data['artworkTitle'] ?? data['targetType'] ?? 'item';
+        final targetTitle = data['targetTitle'] ??
+            data['title'] ??
+            data['artworkTitle'] ??
+            data['targetType'] ??
+            'item';
         return 'Saved ${targetTitle.toString()}';
       case ActivityCategory.achievement:
         return 'Achievement Unlocked';
@@ -330,7 +357,8 @@ class RecentActivityProvider extends ChangeNotifier {
     }
   }
 
-  String _defaultDescription(ActivityCategory category, String? actor, Map<String, dynamic> data) {
+  String _defaultDescription(
+      ActivityCategory category, String? actor, Map<String, dynamic> data) {
     final actorName = actor ?? 'Someone';
     switch (category) {
       case ActivityCategory.like:
@@ -344,8 +372,11 @@ class RecentActivityProvider extends ChangeNotifier {
             ? 'Discovered ${data['artworkTitle']}'
             : 'A new artwork was discovered';
       case ActivityCategory.reward:
-        final amount = data['amount'] ?? data['rewards'] ?? data['rewardTokens'];
-        return amount != null ? '+$amount KUB8 awarded' : 'You earned new rewards';
+        final amount =
+            data['amount'] ?? data['rewards'] ?? data['rewardTokens'];
+        return amount != null
+            ? '+$amount KUB8 awarded'
+            : 'You earned new rewards';
       case ActivityCategory.follow:
         return '$actorName started following you';
       case ActivityCategory.share:
@@ -358,7 +389,11 @@ class RecentActivityProvider extends ChangeNotifier {
       case ActivityCategory.ar:
         return data['eventTitle']?.toString() ?? 'New AR activity nearby';
       case ActivityCategory.save:
-        final targetTitle = data['targetTitle'] ?? data['title'] ?? data['artworkTitle'] ?? data['targetType'] ?? 'item';
+        final targetTitle = data['targetTitle'] ??
+            data['title'] ??
+            data['artworkTitle'] ??
+            data['targetType'] ??
+            'item';
         return '$actorName saved ${targetTitle.toString()}';
       case ActivityCategory.achievement:
         return data['title'] != null

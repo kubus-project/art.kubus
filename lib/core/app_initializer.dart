@@ -1,4 +1,4 @@
-﻿// NOTE: use_build_context_synchronously lint handled per-instance; avoid file-level ignore
+// NOTE: use_build_context_synchronously lint handled per-instance; avoid file-level ignore
 
 import 'package:art_kubus/services/share/share_types.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
@@ -311,6 +311,12 @@ class _AppInitializerState extends State<AppInitializer> {
             context: context,
             walletAddress: walletAddress,
           );
+      Future<void> maybeStartWarmUp() {
+        if (shouldShowSignIn) {
+          return Future<void>.value();
+        }
+        return startWarmUp();
+      }
 
       final pendingAuthLink = (() {
         try {
@@ -367,11 +373,6 @@ class _AppInitializerState extends State<AppInitializer> {
           }
         } catch (_) {}
 
-        try {
-          await startWarmUp().timeout(const Duration(seconds: 15));
-        } catch (_) {}
-        if (!mounted) return;
-        _didNavigate = true;
         final decision = const DeepLinkStartupRouting().decide(
           pending: pendingDeepLink,
           shouldShowSignIn: shouldShowSignIn,
@@ -379,12 +380,20 @@ class _AppInitializerState extends State<AppInitializer> {
         if (decision == null) return;
 
         if (decision.route == '/sign-in') {
+          if (!mounted) return;
+          _didNavigate = true;
           navigator.pushReplacementNamed(
             decision.route,
             arguments: decision.arguments,
           );
           return;
         }
+
+        try {
+          await maybeStartWarmUp().timeout(const Duration(seconds: 15));
+        } catch (_) {}
+        if (!mounted) return;
+        _didNavigate = true;
 
         final canonicalPath =
             _deepLinkCodec.canonicalPathForTarget(pendingDeepLink);
@@ -408,7 +417,7 @@ class _AppInitializerState extends State<AppInitializer> {
         // Ensure welcome/first-launch flags are consistent for returning users.
         await OnboardingStateService.markWelcomeSeen(prefs: prefs);
 
-        unawaited(startWarmUp());
+        unawaited(maybeStartWarmUp());
         if (!mounted) return;
         if (shouldShowSignIn) {
           _didNavigate = true;
@@ -435,7 +444,7 @@ class _AppInitializerState extends State<AppInitializer> {
         if (kDebugMode) {
           debugPrint('AppInitializer: route -> MainApp');
         }
-        unawaited(startWarmUp());
+        unawaited(maybeStartWarmUp());
         if (!mounted) return;
         _didNavigate = true;
         navigator.pushReplacementNamed(shouldShowSignIn ? '/sign-in' : '/main');
@@ -679,7 +688,8 @@ class WalletPromptScreen extends StatelessWidget {
             }
             Navigator.of(context).pop();
             Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (context) => const OnboardingFlowScreen()),
+              MaterialPageRoute(
+                  builder: (context) => const OnboardingFlowScreen()),
             );
           },
           icon: const Icon(Icons.arrow_forward),
