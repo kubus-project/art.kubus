@@ -88,12 +88,14 @@ class MediaUrlResolver {
     final isKnownRedirector = _isKnownCorsHostileRedirector(uri.toString());
     final params = Map<String, String>.from(uri.queryParameters);
 
-    if (!isDirectImagePath || isKnownRedirector) {
+    if (!isDirectImagePath) {
       // Keep indirect resolver URLs cache-stable across small client-side
       // variants (e.g. `width`, `v`, `cb`) that usually don't alter the final
       // origin file selected by upstream redirectors.
-      params.remove('width');
-      params.remove('w');
+      if (!isKnownRedirector) {
+        params.remove('width');
+        params.remove('w');
+      }
       for (final key in _indirectImageNoiseParams) {
         params.remove(key);
       }
