@@ -118,7 +118,8 @@ void main() {
       expect(resolved!, contains('width=1600'));
     });
 
-    test('resolveDisplayUrl strips noisy width query for hostile redirectors',
+    test(
+        'resolveDisplayUrl preserves bounded width query for hostile redirectors',
         () {
       const raw =
           'https://commons.wikimedia.org/wiki/Special:FilePath/Ljubljana%20087.JPG?width=4000';
@@ -127,8 +128,9 @@ void main() {
       expect(resolved!, isNot(contains('width=4000')));
       if (kIsWeb) {
         expect(resolved, contains('/api/media/proxy?'));
+        expect(resolved, contains('width%3D1600'));
       } else {
-        expect(resolved, contains('Special:FilePath'));
+        expect(resolved, contains('width=1600'));
       }
     });
 
