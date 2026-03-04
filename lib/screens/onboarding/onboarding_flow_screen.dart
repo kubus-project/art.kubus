@@ -1961,22 +1961,47 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         );
     }
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 260),
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(KubusRadius.xl),
-        color: scheme.surface.withValues(alpha: 0.16),
-        border: Border.all(
-          color: palette.accent.withValues(alpha: 0.35),
-          width: 1,
+    if (_isDesktop) {
+      // Desktop: keep the card container with subtle glass look
+      return AnimatedContainer(
+        duration: const Duration(milliseconds: 260),
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(KubusRadius.xl),
+          color: scheme.surface.withValues(alpha: 0.16),
+          border: Border.all(
+            color: palette.accent.withValues(alpha: 0.35),
+            width: 1,
+          ),
         ),
-      ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              height: 4,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(999),
+                gradient: LinearGradient(
+                  colors: [palette.start, palette.accent, palette.end],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Expanded(child: content),
+          ],
+        ),
+      );
+    }
+
+    // Mobile: clean layout without card container, content directly on gradient
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            height: 4,
+            height: 3,
+            margin: const EdgeInsets.symmetric(horizontal: 8),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(999),
               gradient: LinearGradient(
@@ -1984,8 +2009,13 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
               ),
             ),
           ),
-          const SizedBox(height: 12),
-          Expanded(child: content),
+          const SizedBox(height: 14),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: content,
+            ),
+          ),
         ],
       ),
     );
@@ -2017,12 +2047,16 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   }
 
   Widget _buildBottomActions(AppLocalizations l10n, {required bool compact}) {
-    final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Use high-contrast colors: white button in dark mode, dark button in light
     final ctaBackground = isDark
-        ? scheme.primary.withValues(alpha: 0.96)
-        : scheme.primary.withValues(alpha: 0.98);
-    final ctaForeground = scheme.onPrimary;
+        ? Colors.white.withValues(alpha: 0.95)
+        : const Color(0xFF1A1A1A);
+    final ctaForeground = isDark ? const Color(0xFF1A1A1A) : Colors.white;
+    // Back button text: readable against gradient background
+    final backForeground = isDark
+        ? Colors.white.withValues(alpha: 0.85)
+        : Colors.white.withValues(alpha: 0.95);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -2039,7 +2073,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
             child: TextButton(
               onPressed: _goBackStep,
               style: TextButton.styleFrom(
-                foregroundColor: scheme.onSurface.withValues(alpha: 0.7),
+                foregroundColor: backForeground,
                 padding: const EdgeInsets.symmetric(
                   horizontal: KubusSpacing.lg,
                   vertical: KubusSpacing.sm,
@@ -2449,7 +2483,6 @@ class _AccountStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxHeight < 520;
@@ -2461,18 +2494,21 @@ class _AccountStep extends StatelessWidget {
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                     fontSize: compact ? 22 : null,
+                    color: Colors.white,
                   ),
               maxLines: 3,
               overflow: TextOverflow.visible,
             ),
             SizedBox(height: compact ? KubusSpacing.xs : KubusSpacing.sm),
-            Text(body, style: Theme.of(context).textTheme.bodyLarge),
+            Text(body,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.85))),
             if (!compact) ...[
               const SizedBox(height: KubusSpacing.xs),
               Text(
                 verifyHint,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurface.withValues(alpha: 0.75),
+                      color: Colors.white.withValues(alpha: 0.65),
                     ),
               ),
             ],
@@ -2642,16 +2678,21 @@ class _VerifyEmailStep extends StatelessWidget {
                 style: Theme.of(context)
                     .textTheme
                     .headlineSmall
-                    ?.copyWith(fontWeight: FontWeight.w700),
+                    ?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white),
                 maxLines: 3,
                 overflow: TextOverflow.visible,
               ),
               const SizedBox(height: KubusSpacing.sm),
-              Text(body, style: Theme.of(context).textTheme.bodyLarge),
+              Text(body,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: Colors.white.withValues(alpha: 0.85))),
               const SizedBox(height: KubusSpacing.sm),
               Text(
                 AppLocalizations.of(context)!.commonSignIn,
-                style: Theme.of(context).textTheme.bodyMedium,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.7)),
               ),
               const Spacer(),
             ],
@@ -2750,17 +2791,21 @@ class _InlineVerificationPanelState extends State<_InlineVerificationPanel> {
             style: Theme.of(context)
                 .textTheme
                 .headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w700),
+                ?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white),
             maxLines: 3,
             overflow: TextOverflow.visible),
         const SizedBox(height: KubusSpacing.sm),
-        Text(widget.body, style: Theme.of(context).textTheme.bodyLarge),
+        Text(widget.body,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: Colors.white.withValues(alpha: 0.85))),
         const SizedBox(height: 12),
         if (widget.email.isNotEmpty)
           Text(
             '${AppLocalizations.of(context)!.commonEmail}: ${widget.email}',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: scheme.onSurface.withValues(alpha: 0.85),
+                  color: Colors.white.withValues(alpha: 0.8),
                 ),
           ),
         const SizedBox(height: 12),
@@ -2769,13 +2814,13 @@ class _InlineVerificationPanelState extends State<_InlineVerificationPanel> {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
             color: widget.isVerified
-                ? Colors.green.withValues(alpha: 0.16)
-                : scheme.surface.withValues(alpha: 0.55),
+                ? Colors.green.withValues(alpha: 0.2)
+                : Colors.white.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: widget.isVerified
                   ? Colors.green.withValues(alpha: 0.5)
-                  : scheme.outline.withValues(alpha: 0.24),
+                  : Colors.white.withValues(alpha: 0.2),
             ),
           ),
           child: Row(
@@ -2785,7 +2830,9 @@ class _InlineVerificationPanelState extends State<_InlineVerificationPanel> {
                     ? Icons.check_circle_outline
                     : Icons.mark_email_unread_outlined,
                 size: 18,
-                color: widget.isVerified ? Colors.green : scheme.onSurface,
+                color: widget.isVerified
+                    ? const Color(0xFF81C784)
+                    : Colors.white.withValues(alpha: 0.85),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -2798,8 +2845,8 @@ class _InlineVerificationPanelState extends State<_InlineVerificationPanel> {
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: widget.isVerified
-                            ? Colors.green
-                            : scheme.onSurface.withValues(alpha: 0.85),
+                            ? const Color(0xFF81C784)
+                            : Colors.white.withValues(alpha: 0.85),
                       ),
                 ),
               ),
@@ -3197,11 +3244,15 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
             style: Theme.of(context)
                 .textTheme
                 .headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w700),
+                ?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white),
             maxLines: 3,
             overflow: TextOverflow.visible),
         const SizedBox(height: KubusSpacing.sm),
-        Text(widget.body, style: Theme.of(context).textTheme.bodyLarge),
+        Text(widget.body,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: Colors.white.withValues(alpha: 0.85))),
         const SizedBox(height: 12),
         Expanded(
           child: SingleChildScrollView(
@@ -3364,13 +3415,16 @@ class _RoleStepState extends State<_RoleStep> {
                           style: Theme.of(context)
                               .textTheme
                               .headlineSmall
-                              ?.copyWith(fontWeight: FontWeight.w700),
+                              ?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white),
                           maxLines: 3,
                           overflow: TextOverflow.visible),
                       const SizedBox(height: KubusSpacing.sm),
                       Text(
                         widget.body,
-                        style: Theme.of(context).textTheme.bodyLarge,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: Colors.white.withValues(alpha: 0.85)),
                       ),
                       const SizedBox(height: 12),
                       UserPersonaPickerContent(
@@ -3428,11 +3482,17 @@ class _PermissionsStep extends StatelessWidget {
             style: Theme.of(context)
                 .textTheme
                 .headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w700),
+                ?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white),
             maxLines: 3,
             overflow: TextOverflow.visible),
         const SizedBox(height: KubusSpacing.sm),
-        Text(body, style: Theme.of(context).textTheme.bodyLarge),
+        Text(body,
+            style: Theme.of(context)
+                .textTheme
+                .bodyLarge
+                ?.copyWith(color: Colors.white.withValues(alpha: 0.85))),
         const SizedBox(height: 12),
         _PermissionTile(
           label: l10n.onboardingFlowPermissionLocation,
@@ -3455,7 +3515,8 @@ class _PermissionsStep extends StatelessWidget {
             padding: const EdgeInsets.only(top: 6),
             child: Text(
               hint!,
-              style: Theme.of(context).textTheme.bodySmall,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.white.withValues(alpha: 0.6)),
             ),
           ),
         const Spacer(),
@@ -3477,21 +3538,25 @@ class _PermissionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      title: Text(label),
+      title: Text(label,
+          style: Theme.of(context)
+              .textTheme
+              .bodyLarge
+              ?.copyWith(color: Colors.white)),
       trailing: enabled
           ? Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.check_circle, color: scheme.primary),
+                const Icon(Icons.check_circle,
+                    color: Color(0xFF81C784)),
                 const SizedBox(width: KubusSpacing.xs),
                 Text(
                   l10n.permissionsGrantedLabel,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: scheme.primary,
+                        color: const Color(0xFF81C784),
                         fontWeight: FontWeight.w700,
                       ),
                 ),
@@ -3500,9 +3565,9 @@ class _PermissionTile extends StatelessWidget {
           : OutlinedButton(
               onPressed: onTap,
               style: OutlinedButton.styleFrom(
-                foregroundColor: scheme.onSurface,
+                foregroundColor: Colors.white,
                 side: BorderSide(
-                  color: scheme.onSurface.withValues(alpha: 0.4),
+                  color: Colors.white.withValues(alpha: 0.5),
                 ),
                 padding: const EdgeInsets.symmetric(
                   horizontal: KubusSpacing.md,
@@ -3554,11 +3619,14 @@ class _DoneStep extends StatelessWidget {
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                       fontSize: isWide ? 28 : null,
+                      color: Colors.white,
                     ),
                 maxLines: 3,
                 overflow: TextOverflow.visible),
             const SizedBox(height: KubusSpacing.sm),
-            Text(body, style: Theme.of(context).textTheme.bodyLarge),
+            Text(body,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.85))),
             const Spacer(),
           ],
         );
