@@ -54,6 +54,13 @@ class TelemetryService {
     caseSensitive: false,
   );
 
+  String? get currentSessionId {
+    if (!_initialized || !_enabled) return null;
+    final value = _sessionId.trim();
+    if (!_uuidRegex.hasMatch(value)) return null;
+    return value;
+  }
+
   @visibleForTesting
   static TelemetryService createForTest({
     required TelemetryEventQueue queue,
@@ -69,7 +76,8 @@ class TelemetryService {
     return svc;
   }
 
-  TelemetryService._test({required TelemetryEventQueue queue, required TelemetrySender sender})
+  TelemetryService._test(
+      {required TelemetryEventQueue queue, required TelemetrySender sender})
       : _queue = queue,
         _sender = sender;
 
@@ -89,7 +97,9 @@ class TelemetryService {
       _actorUserId = null;
     }
 
-    _enabled = (_enabledByBuildFlagOverride ?? AppTelemetryConfig.enabledByBuildFlag) && _analyticsPreferenceEnabled;
+    _enabled = (_enabledByBuildFlagOverride ??
+            AppTelemetryConfig.enabledByBuildFlag) &&
+        _analyticsPreferenceEnabled;
     KubusClientContext.instance.setEnabled(_enabled);
 
     await _queue.init();
@@ -102,7 +112,9 @@ class TelemetryService {
 
   void setAnalyticsPreferenceEnabled(bool enabled) {
     _analyticsPreferenceEnabled = enabled;
-    _enabled = (_enabledByBuildFlagOverride ?? AppTelemetryConfig.enabledByBuildFlag) && _analyticsPreferenceEnabled;
+    _enabled = (_enabledByBuildFlagOverride ??
+            AppTelemetryConfig.enabledByBuildFlag) &&
+        _analyticsPreferenceEnabled;
     KubusClientContext.instance.setEnabled(_enabled);
     if (!_initialized) return;
     if (_enabled) {
@@ -129,8 +141,9 @@ class TelemetryService {
     final routeName = (route.settings.name ?? '').trim();
     final screenRoute = routeName.isNotEmpty ? routeName : null;
 
-    final screenName =
-        _screenNameForRouteName(routeName) ?? screenRoute ?? route.runtimeType.toString();
+    final screenName = _screenNameForRouteName(routeName) ??
+        screenRoute ??
+        route.runtimeType.toString();
 
     setActiveScreen(screenName: screenName, screenRoute: screenRoute);
   }
@@ -139,20 +152,24 @@ class TelemetryService {
     required String screenName,
     String? screenRoute,
   }) {
-    unawaited(_setActiveScreenAsync(screenName: screenName, screenRoute: screenRoute));
+    unawaited(_setActiveScreenAsync(
+        screenName: screenName, screenRoute: screenRoute));
   }
 
-  Future<void> _setActiveScreenAsync({required String screenName, String? screenRoute}) async {
+  Future<void> _setActiveScreenAsync(
+      {required String screenName, String? screenRoute}) async {
     await ensureInitialized();
     if (!_enabled) return;
 
     _rotateSessionIfNeeded();
 
-    final normalizedName = screenName.trim().isEmpty ? 'unknown' : screenName.trim();
+    final normalizedName =
+        screenName.trim().isEmpty ? 'unknown' : screenName.trim();
     final normalizedRoute = (screenRoute ?? '').trim();
     final routeOrNull = normalizedRoute.isEmpty ? null : normalizedRoute;
 
-    if (_screenName == normalizedName && (_screenRoute ?? '') == (routeOrNull ?? '')) {
+    if (_screenName == normalizedName &&
+        (_screenRoute ?? '') == (routeOrNull ?? '')) {
       return;
     }
 
@@ -212,7 +229,8 @@ class TelemetryService {
     );
   }
 
-  Future<void> trackSignInFailure({required String method, required String errorClass}) async {
+  Future<void> trackSignInFailure(
+      {required String method, required String errorClass}) async {
     await trackEvent(
       AppTelemetryEventTypes.signInFailure,
       extra: {
@@ -243,7 +261,8 @@ class TelemetryService {
     );
   }
 
-  Future<void> trackSignUpFailure({required String method, required String errorClass}) async {
+  Future<void> trackSignUpFailure(
+      {required String method, required String errorClass}) async {
     await trackEvent(
       AppTelemetryEventTypes.signUpFailure,
       extra: {
@@ -254,7 +273,8 @@ class TelemetryService {
     );
   }
 
-  Future<void> trackEvent(String eventType, {Map<String, Object?> extra = const {}}) async {
+  Future<void> trackEvent(String eventType,
+      {Map<String, Object?> extra = const {}}) async {
     await ensureInitialized();
     if (!_enabled) return;
     final normalizedEventType = eventType.trim();
@@ -311,7 +331,8 @@ class TelemetryService {
     await ensureInitialized();
     if (!_enabled) return;
 
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
       await _emitScreenDurationIfNeeded();
       _screenEnteredAtUtc = null;
       _scheduleFlush(const Duration(milliseconds: 250));
@@ -357,7 +378,8 @@ class TelemetryService {
     await _queue.enqueue(event);
   }
 
-  Future<void> _trackOncePerSession(String eventType, {Map<String, Object?> extra = const {}}) async {
+  Future<void> _trackOncePerSession(String eventType,
+      {Map<String, Object?> extra = const {}}) async {
     final key = '$_sessionId::$eventType';
     if (_onceKeys.contains(key)) return;
     _onceKeys.add(key);
@@ -383,7 +405,9 @@ class TelemetryService {
     for (final entry in extra.entries) {
       final key = entry.key.toString();
       if (key.isEmpty) continue;
-      if (key == 'email' || key == 'wallet' || key.contains('mnemonic')) continue;
+      if (key == 'email' || key == 'wallet' || key.contains('mnemonic')) {
+        continue;
+      }
       base[key] = entry.value;
     }
 
@@ -416,7 +440,9 @@ class TelemetryService {
 
   void _rotateSessionIfNeeded() {
     final now = DateTime.now().toUtc();
-    if (now.difference(_sessionStartUtc) < AppTelemetryConfig.sessionRotation) return;
+    if (now.difference(_sessionStartUtc) < AppTelemetryConfig.sessionRotation) {
+      return;
+    }
     _sessionId = TelemetryUuid.v4();
     _sessionStartUtc = now;
     _onceKeys.clear();
@@ -450,7 +476,9 @@ class TelemetryService {
     if (name == '/sign-in') return 'SignIn';
     if (name == '/register') return 'Register';
     if (name == '/ar') return 'AR';
-    if (name.startsWith('/wallet_connect') || name.startsWith('/connect_wallet') || name.startsWith('/connect-wallet')) {
+    if (name.startsWith('/wallet_connect') ||
+        name.startsWith('/connect_wallet') ||
+        name.startsWith('/connect-wallet')) {
       return 'ConnectWallet';
     }
     if (name.startsWith('/artwork')) return 'ArtworkDetail';
@@ -461,7 +489,8 @@ class TelemetryService {
   bool _isOnboardingScreen(String screenName, String? screenRoute) {
     final lowerName = screenName.toLowerCase();
     final lowerRoute = (screenRoute ?? '').toLowerCase();
-    return lowerName.contains('onboarding') || lowerRoute.startsWith('/onboarding');
+    return lowerName.contains('onboarding') ||
+        lowerRoute.startsWith('/onboarding');
   }
 
   bool _isAuthFlowScreen(String screenName, String? screenRoute) {

@@ -4,6 +4,8 @@ import 'package:art_kubus/utils/media_url_resolver.dart';
 import 'package:art_kubus/services/storage_config.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('MediaUrlResolver proxy decisions + rate limiting', () {
     final originalCustom = StorageConfig.customHttpBackend;
 
@@ -20,14 +22,16 @@ void main() {
 
     test('shouldProxyDisplayUrl proxies non-allowlisted external hosts', () {
       expect(
-        MediaUrlResolver.shouldProxyDisplayUrl('https://www.hikuk.com/media/example.jpg'),
+        MediaUrlResolver.shouldProxyDisplayUrl(
+            'https://www.hikuk.com/media/example.jpg'),
         isTrue,
       );
     });
 
     test('shouldProxyDisplayUrl does not proxy backend host', () {
       expect(
-        MediaUrlResolver.shouldProxyDisplayUrl('https://api.example.test/uploads/example.jpg'),
+        MediaUrlResolver.shouldProxyDisplayUrl(
+            'https://api.example.test/uploads/example.jpg'),
         isFalse,
       );
     });
@@ -41,7 +45,9 @@ void main() {
       );
     });
 
-    test('shouldProxyDisplayUrl forces proxy for Wikimedia Special:FilePath redirects', () {
+    test(
+        'shouldProxyDisplayUrl forces proxy for Wikimedia Special:FilePath redirects',
+        () {
       expect(
         MediaUrlResolver.shouldProxyDisplayUrl(
           'https://commons.wikimedia.org/wiki/Special:FilePath/Ljubljana%20087.JPG?width=1600',
@@ -88,7 +94,8 @@ void main() {
 
     test('normalizes protocol-relative URLs to https', () {
       const raw = '//example.com/img.png';
-      expect(MediaUrlResolver.resolve(raw), equals('https://example.com/img.png'));
+      expect(
+          MediaUrlResolver.resolve(raw), equals('https://example.com/img.png'));
     });
 
     test('resolveDisplayUrl percent-encodes unsafe URL characters', () {
@@ -103,15 +110,25 @@ void main() {
       }
     });
 
-    test('resolveDisplayUrl clamps oversized width query for display use', () {
+    test('resolveDisplayUrl clamps oversized width query for direct image URLs',
+        () {
+      const raw = 'https://images.example.com/path/photo.jpg?width=4000';
+      final resolved = MediaUrlResolver.resolveDisplayUrl(raw);
+      expect(resolved, isNotNull);
+      expect(resolved!, contains('width=1600'));
+    });
+
+    test('resolveDisplayUrl strips noisy width query for hostile redirectors',
+        () {
       const raw =
           'https://commons.wikimedia.org/wiki/Special:FilePath/Ljubljana%20087.JPG?width=4000';
       final resolved = MediaUrlResolver.resolveDisplayUrl(raw);
       expect(resolved, isNotNull);
+      expect(resolved!, isNot(contains('width=4000')));
       if (kIsWeb) {
-        expect(resolved!, contains('width%3D1600'));
+        expect(resolved, contains('/api/media/proxy?'));
       } else {
-        expect(resolved!, contains('width=1600'));
+        expect(resolved, contains('Special:FilePath'));
       }
     });
 

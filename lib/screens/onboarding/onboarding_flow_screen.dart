@@ -1716,106 +1716,104 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     final stepNumber = _currentIndex + 1;
     final viewportSize = MediaQuery.sizeOf(context);
     final headerCompact = compact && viewportSize.height < 680;
-    final headerNarrow = viewportSize.width < 380;
-    final horizontalPadding = _isDesktop
-        ? (KubusSpacing.xxl + KubusSpacing.sm)
-        : (headerCompact
-            ? KubusSpacing.lg
-            : (KubusSpacing.lg + KubusSpacing.xs));
-    final safeHorizontalPadding =
-        headerNarrow ? KubusSpacing.md : horizontalPadding;
-    final actionSpacing = headerNarrow ? KubusSpacing.xs : KubusSpacing.sm;
-    final actionTapTarget = headerNarrow ? 44.0 : (headerCompact ? 46.0 : 48.0);
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        safeHorizontalPadding,
-        headerCompact ? KubusSpacing.sm : KubusSpacing.lg,
-        safeHorizontalPadding,
-        headerCompact ? KubusSpacing.sm : KubusSpacing.md,
-      ),
-      child: AuthTitleRow(
-        title: l10n.onboardingFlowTitle,
-        icon: _stepIcon(_currentStep),
-        compact: headerCompact,
-        trailing: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (_isDesktop)
-                Text(
-                  l10n.commonStepOfTotal(stepNumber, _steps.length),
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: scheme.onSurface.withValues(alpha: 0.72),
+    final actionTapTarget = headerCompact ? 44.0 : 48.0;
+
+    return FractionallySizedBox(
+      widthFactor: _isDesktop ? 1.0 : 0.9,
+      child: Padding(
+        padding: EdgeInsets.only(
+          top: headerCompact ? KubusSpacing.sm : KubusSpacing.md,
+          bottom: headerCompact ? KubusSpacing.xs : KubusSpacing.sm,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Top-right: Skip button
+            TextButton(
+              onPressed: _isSkippingFlow ? null : _skipForNow,
+              style: TextButton.styleFrom(
+                foregroundColor: scheme.onSurface.withValues(alpha: 0.8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: KubusSpacing.sm,
+                  vertical: KubusSpacing.xs,
+                ),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: Text(_headerSkipLabel(l10n)),
+            ),
+            const SizedBox(height: KubusSpacing.xs),
+            // Main row: icon + title + lang/theme buttons
+            AuthTitleRow(
+              title: l10n.onboardingFlowTitle,
+              icon: _stepIcon(_currentStep),
+              compact: headerCompact,
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_isDesktop) ...[
+                    Text(
+                      l10n.commonStepOfTotal(stepNumber, _steps.length),
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: scheme.onSurface.withValues(alpha: 0.72),
+                          ),
+                    ),
+                    const SizedBox(width: KubusSpacing.xs),
+                  ],
+                  PopupMenuButton<String>(
+                    borderRadius: BorderRadius.circular(999),
+                    padding: EdgeInsets.zero,
+                    splashRadius: actionTapTarget / 2,
+                    onSelected: (value) {
+                      unawaited(localeProvider.setLanguageCode(value));
+                    },
+                    itemBuilder: (context) => [
+                      PopupMenuItem<String>(
+                        value: 'sl',
+                        child: Text(l10n.languageSlovenian),
                       ),
-                ),
-              if (_isDesktop) const SizedBox(width: KubusSpacing.xs),
-              PopupMenuButton<String>(
-                borderRadius: BorderRadius.circular(999),
-                padding: EdgeInsets.zero,
-                splashRadius: actionTapTarget / 2,
-                onSelected: (value) {
-                  unawaited(localeProvider.setLanguageCode(value));
-                },
-                itemBuilder: (context) => [
-                  PopupMenuItem<String>(
-                    value: 'sl',
-                    child: Text(l10n.languageSlovenian),
+                      PopupMenuItem<String>(
+                        value: 'en',
+                        child: Text(l10n.languageEnglish),
+                      ),
+                    ],
+                    child: OnboardingTopbarIcon(
+                      icon: Icons.language,
+                      tapTargetSize: actionTapTarget,
+                    ),
                   ),
-                  PopupMenuItem<String>(
-                    value: 'en',
-                    child: Text(l10n.languageEnglish),
-                  ),
-                ],
-                child: OnboardingTopbarIcon(
-                  icon: Icons.language,
-                  tapTargetSize: actionTapTarget,
-                ),
-              ),
-              SizedBox(width: actionSpacing),
-              PopupMenuButton<ThemeMode>(
-                borderRadius: BorderRadius.circular(999),
-                padding: EdgeInsets.zero,
-                splashRadius: actionTapTarget / 2,
-                onSelected: (mode) {
-                  unawaited(themeProvider.setThemeMode(mode));
-                },
-                itemBuilder: (context) => [
-                  PopupMenuItem<ThemeMode>(
-                    value: ThemeMode.light,
-                    child: Text(_themeModeLabel(l10n, ThemeMode.light)),
-                  ),
-                  PopupMenuItem<ThemeMode>(
-                    value: ThemeMode.dark,
-                    child: Text(_themeModeLabel(l10n, ThemeMode.dark)),
-                  ),
-                  PopupMenuItem<ThemeMode>(
-                    value: ThemeMode.system,
-                    child: Text(_themeModeLabel(l10n, ThemeMode.system)),
+                  const SizedBox(width: KubusSpacing.xs),
+                  PopupMenuButton<ThemeMode>(
+                    borderRadius: BorderRadius.circular(999),
+                    padding: EdgeInsets.zero,
+                    splashRadius: actionTapTarget / 2,
+                    onSelected: (mode) {
+                      unawaited(themeProvider.setThemeMode(mode));
+                    },
+                    itemBuilder: (context) => [
+                      PopupMenuItem<ThemeMode>(
+                        value: ThemeMode.light,
+                        child: Text(_themeModeLabel(l10n, ThemeMode.light)),
+                      ),
+                      PopupMenuItem<ThemeMode>(
+                        value: ThemeMode.dark,
+                        child: Text(_themeModeLabel(l10n, ThemeMode.dark)),
+                      ),
+                      PopupMenuItem<ThemeMode>(
+                        value: ThemeMode.system,
+                        child: Text(_themeModeLabel(l10n, ThemeMode.system)),
+                      ),
+                    ],
+                    child: OnboardingTopbarIcon(
+                      icon: Icons.brightness_6_outlined,
+                      tapTargetSize: actionTapTarget,
+                    ),
                   ),
                 ],
-                child: OnboardingTopbarIcon(
-                  icon: Icons.brightness_6_outlined,
-                  tapTargetSize: actionTapTarget,
-                ),
               ),
-              SizedBox(width: actionSpacing),
-              TextButton(
-                onPressed: _isSkippingFlow ? null : _skipForNow,
-                style: TextButton.styleFrom(
-                  foregroundColor: scheme.onSurface.withValues(alpha: 0.84),
-                  padding: EdgeInsets.symmetric(
-                    horizontal:
-                        headerCompact ? KubusSpacing.sm : KubusSpacing.md,
-                    vertical: headerCompact ? KubusSpacing.xs : KubusSpacing.sm,
-                  ),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: Text(_headerSkipLabel(l10n)),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

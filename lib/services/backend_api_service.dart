@@ -731,6 +731,36 @@ class BackendApiService
     }
   }
 
+  /// Restores an existing authenticated session without issuing a new account
+  /// token for an arbitrary wallet. This is safe to use for warm-up and
+  /// provider bootstrap paths that should only run for already-signed-in users.
+  Future<bool> restoreExistingSession({bool allowRefresh = true}) async {
+    try {
+      await loadAuthToken();
+      final token = (_authToken ?? '').trim();
+      if (token.isNotEmpty && AuthGatingService.isAccessTokenValid(token)) {
+        return true;
+      }
+
+      if (!allowRefresh) return false;
+
+      final prefs = await SharedPreferences.getInstance();
+      final sessionStatus = AuthGatingService.evaluateStoredSession(
+        prefs: prefs,
+      );
+      if (sessionStatus != StoredSessionStatus.refreshRequired) {
+        return false;
+      }
+
+      return await refreshAuthTokenFromStorage();
+    } catch (e) {
+      AppConfig.debugPrint(
+        'BackendApiService.restoreExistingSession failed: $e',
+      );
+      return false;
+    }
+  }
+
   /// Get common headers for API requests
   Map<String, String> _getHeaders({bool includeAuth = true}) {
     final headers = <String, String>{
@@ -836,6 +866,19 @@ class BackendApiService
           path: uri.path,
           body: settled.message,
         );
+      }
+    }
+
+    if (includeAuth) {
+      final token = (_authToken ?? '').trim();
+      final needsSessionRestore =
+          token.isEmpty || !AuthGatingService.isAccessTokenValid(token);
+      if (needsSessionRestore) {
+        try {
+          await restoreExistingSession();
+        } catch (_) {
+          // Fall through and let the request/auth-coordinator path decide.
+        }
       }
     }
 
@@ -1360,9 +1403,8 @@ class BackendApiService
       final includeAuth =
           walletAddress != null && walletAddress.trim().isNotEmpty;
       const profileDisplayNameMaxLength = 100;
-      final normalizedDisplayName = displayName
-          ?.replaceAll(RegExp(r'\s+'), ' ')
-          .trim();
+      final normalizedDisplayName =
+          displayName?.replaceAll(RegExp(r'\s+'), ' ').trim();
       final sanitizedDisplayName = (normalizedDisplayName == null ||
               normalizedDisplayName.isEmpty)
           ? null
@@ -6098,8 +6140,7 @@ class BackendApiService
   String _normalizeDaoPortfolioUrl(String rawValue) {
     final trimmed = rawValue.trim();
     if (trimmed.isEmpty) return '';
-    final hasScheme =
-        RegExp(r'^[a-zA-Z][a-zA-Z0-9+.-]*:').hasMatch(trimmed);
+    final hasScheme = RegExp(r'^[a-zA-Z][a-zA-Z0-9+.-]*:').hasMatch(trimmed);
     final withScheme = hasScheme
         ? trimmed
         : (trimmed.startsWith('//') ? 'https:$trimmed' : 'https://$trimmed');

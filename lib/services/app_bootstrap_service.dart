@@ -69,7 +69,10 @@ class AppBootstrapService {
         ? walletAddress!.trim()
         : walletProvider.currentWalletAddress;
 
-    await _runTask('auth_token', () => backend.ensureAuthLoaded(walletAddress: resolvedWallet));
+    var hasAuth = false;
+    await _runTask('auth_token', () async {
+      hasAuth = await backend.restoreExistingSession();
+    });
 
     final shouldLoadWeb3 = AppConfig.enableWeb3;
     final shouldLoadCommunity = AppConfig.enableUserProfiles;
@@ -80,16 +83,22 @@ class AppBootstrapService {
       _runTask('navigation', navigationProvider.initialize),
       _runTask('stats', statsProvider.initialize),
       _runTask('presence', presenceProvider.initialize),
-      _runTask('tasks', () => Future<void>.sync(taskProvider.initializeProgress)),
+      _runTask(
+          'tasks', () => Future<void>.sync(taskProvider.initializeProgress)),
     ];
 
     final p1 = <Future<void>>[
       _runTask('artworks', () => artworkProvider.loadArtworks(refresh: true)),
-      _runTask('collectibles', () => collectiblesProvider.initialize(loadMockIfEmpty: AppConfig.isDevelopment)),
-      _runTask('institutions', () => institutionProvider.initialize(seedMockIfEmpty: AppConfig.isDevelopment)),
+      _runTask(
+          'collectibles',
+          () => collectiblesProvider.initialize(
+              loadMockIfEmpty: AppConfig.isDevelopment)),
+      _runTask(
+          'institutions',
+          () => institutionProvider.initialize(
+              seedMockIfEmpty: AppConfig.isDevelopment)),
     ];
 
-    final hasAuth = (backend.getAuthToken() ?? '').trim().isNotEmpty;
     if (AppConfig.isFeatureEnabled('collabInvites') && hasAuth) {
       p1.add(_runTask('collab_invites', () async {
         await collabProvider.initialize(refresh: true);
@@ -98,34 +107,60 @@ class AppBootstrapService {
     }
 
     if (shouldLoadCommunity) {
-      p1.add(_runTask('recent_activity', () => recentActivityProvider.initialize(force: true)));
-      p1.add(_runTask(
-        'notifications',
-        () => notificationProvider.initialize(walletOverride: resolvedWallet, force: true),
-      ));
-      p1.add(_runTask('community_groups', () => communityHubProvider.loadGroups(refresh: true)));
-      p1.add(_runTask('chat', () => chatProvider.initialize(initialWallet: resolvedWallet)));
+      if (hasAuth) {
+        p1.add(
+          _runTask(
+            'recent_activity',
+            () => recentActivityProvider.initialize(force: true),
+          ),
+        );
+        p1.add(
+          _runTask(
+            'notifications',
+            () => notificationProvider.initialize(
+              walletOverride: resolvedWallet,
+              force: true,
+            ),
+          ),
+        );
+        p1.add(
+          _runTask('chat',
+              () => chatProvider.initialize(initialWallet: resolvedWallet)),
+        );
+      }
+      p1.add(_runTask('community_groups',
+          () => communityHubProvider.loadGroups(refresh: true)));
     }
 
     if (shouldLoadWeb3) {
-      p1.add(_runTask('web3_provider', () => web3Provider.initialize(attemptRestore: true)));
+      p1.add(_runTask('web3_provider',
+          () => web3Provider.initialize(attemptRestore: true)));
       if (resolvedWallet != null && resolvedWallet.isNotEmpty) {
         p1.add(_runTask('wallet_refresh', () => walletProvider.refreshData()));
         p1.add(_runTask('profile_refresh', () async {
           await profileProvider.loadProfile(resolvedWallet);
           await profileProvider.refreshStats();
         }));
-        p1.add(_runTask('stats_snapshot', () => statsProvider.ensureSnapshot(
-              entityType: 'user',
-              entityId: resolvedWallet,
-              metrics: const ['followers', 'following', 'posts', 'artworks', 'viewsReceived'],
-              scope: 'public',
-            )));
+        p1.add(_runTask(
+            'stats_snapshot',
+            () => statsProvider.ensureSnapshot(
+                  entityType: 'user',
+                  entityId: resolvedWallet,
+                  metrics: const [
+                    'followers',
+                    'following',
+                    'posts',
+                    'artworks',
+                    'viewsReceived'
+                  ],
+                  scope: 'public',
+                )));
       }
     }
 
     if (hasAuth) {
-      p1.add(_runTask('marker_management', () => markerManagementProvider.initialize(force: true)));
+      p1.add(_runTask('marker_management',
+          () => markerManagementProvider.initialize(force: true)));
     }
 
     await Future.wait(p0, eagerError: false);
@@ -136,7 +171,8 @@ class AppBootstrapService {
     }
 
     if (kDebugMode) {
-      debugPrint('AppBootstrapService: warm-up tiers complete (p0=${p0.length}, p1=${p1.length})');
+      debugPrint(
+          'AppBootstrapService: warm-up tiers complete (p0=${p0.length}, p1=${p1.length})');
     }
 
     // Signal listeners with view-aware targeted refreshes (avoid global fan-out).
