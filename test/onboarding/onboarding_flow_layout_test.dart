@@ -380,7 +380,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final titleSize = tester.getSize(find.byType(AuthTitleRow).first);
-    expect(titleSize.height, greaterThanOrEqualTo(68));
+    expect(titleSize.height, greaterThanOrEqualTo(48));
     expect(titleSize.width, greaterThan(280));
   });
 

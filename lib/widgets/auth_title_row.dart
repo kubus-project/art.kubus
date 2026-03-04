@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'glass_components.dart';
-
 class AuthTitleRow extends StatelessWidget {
   const AuthTitleRow({
     super.key,
@@ -21,20 +19,18 @@ class AuthTitleRow extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return SizedBox(
       width: double.infinity,
-      child: LiquidGlassPanel(
-        margin: EdgeInsets.zero,
+      child: Padding(
         padding: EdgeInsets.symmetric(
-          horizontal: compact ? 14 : 24,
-          vertical: compact ? 10 : 14,
+          horizontal: compact ? 4 : 8,
+          vertical: compact ? 6 : 8,
         ),
-        borderRadius: BorderRadius.circular(20),
         child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: compact ? 52 : 68),
+          constraints: BoxConstraints(minHeight: compact ? 40 : 48),
           child: Row(
             children: [
               Container(
-                width: compact ? 34 : 42,
-                height: compact ? 34 : 42,
+                width: compact ? 30 : 36,
+                height: compact ? 30 : 36,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
@@ -44,19 +40,21 @@ class AuthTitleRow extends StatelessWidget {
                       scheme.primary.withValues(alpha: 0.7),
                     ],
                   ),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, size: compact ? 18 : 22, color: Colors.white),
+                child:
+                    Icon(icon, size: compact ? 16 : 18, color: Colors.white),
               ),
-              SizedBox(width: compact ? 12 : 14),
+              SizedBox(width: compact ? 10 : 12),
               Expanded(
                 child: Text(
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        fontSize: compact ? 20 : 24,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        fontSize: compact ? 16 : 18,
+                        color: Colors.white,
                       ),
                 ),
               ),
