@@ -2046,12 +2046,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
   Widget _buildBottomActions(AppLocalizations l10n, {required bool compact}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    // Use high-contrast colors: white button in dark mode, dark button in light
-    final ctaBackground = isDark
-        ? Colors.white.withValues(alpha: 0.95)
-        : const Color(0xFF1A1A1A);
-    final ctaForeground = isDark ? const Color(0xFF1A1A1A) : Colors.white;
-    // Back button text: readable against gradient background
+    // Back button text: white to be readable against gradient background
     final backForeground = isDark
         ? Colors.white.withValues(alpha: 0.85)
         : Colors.white.withValues(alpha: 0.95);
@@ -2062,8 +2057,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           onPressed: _onPrimaryAction,
           label: _primaryLabelForStep(l10n),
           isFullWidth: true,
-          backgroundColor: ctaBackground,
-          foregroundColor: ctaForeground,
         ),
         if (_currentIndex > 0)
           Padding(
@@ -2858,8 +2851,6 @@ class _InlineVerificationPanelState extends State<_InlineVerificationPanel> {
             isLoading: _sending,
             label: AppLocalizations.of(context)!.authVerifyEmailResendButton,
             isFullWidth: true,
-            backgroundColor: scheme.primary,
-            foregroundColor: scheme.onPrimary,
           ),
           const SizedBox(height: KubusSpacing.sm),
           KubusButton(
@@ -2869,8 +2860,6 @@ class _InlineVerificationPanelState extends State<_InlineVerificationPanel> {
             isLoading: widget.isRefreshingVerification,
             label: AppLocalizations.of(context)!.onboardingFlowVerifyContinue,
             isFullWidth: true,
-            backgroundColor: scheme.secondary,
-            foregroundColor: scheme.onSecondary,
           ),
         ] else ...[
           const SizedBox(height: KubusSpacing.sm),
@@ -3060,8 +3049,6 @@ class _FinishVerificationSignInPanelState
             isLoading: _submitting,
             label: l10n.commonSignIn,
             isFullWidth: true,
-            backgroundColor: scheme.primary,
-            foregroundColor: scheme.onPrimary,
           ),
         ],
       ),

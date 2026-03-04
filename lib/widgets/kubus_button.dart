@@ -25,13 +25,16 @@ class KubusButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
     final isEnabled = !isLoading && onPressed != null;
 
-    final effectiveBackground = backgroundColor ?? colorScheme.primary;
-    final effectiveForeground = foregroundColor ?? colorScheme.onPrimary;
-    // Primary/colored buttons should look mostly opaque in their color, but still sit on glass.
+    // Default: white button in dark mode, dark button in light mode
+    final effectiveBackground = backgroundColor ??
+        (isDark
+            ? Colors.white.withValues(alpha: 0.95)
+            : const Color(0xFF1A1A1A));
+    final effectiveForeground = foregroundColor ??
+        (isDark ? const Color(0xFF1A1A1A) : Colors.white);
     final glassTint = effectiveBackground.withValues(
       alpha: isEnabled ? (isDark ? 0.82 : 0.88) : (isDark ? 0.62 : 0.70),
     );
@@ -133,6 +136,14 @@ class KubusOutlineButton extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
     final isEnabled = !isLoading && onPressed != null;
 
+    // Outline button: white text/border in dark mode, dark in light mode
+    final contentColor = isDark
+        ? Colors.white.withValues(alpha: 0.9)
+        : const Color(0xFF1A1A1A).withValues(alpha: 0.9);
+    final borderColor = isDark
+        ? Colors.white.withValues(alpha: isEnabled ? 0.3 : 0.16)
+        : const Color(0xFF1A1A1A).withValues(alpha: isEnabled ? 0.3 : 0.16);
+
     final radius = KubusRadius.circular(KubusRadius.sm);
     final glassTint = colorScheme.surface.withValues(
       alpha: isEnabled ? (isDark ? 0.16 : 0.10) : (isDark ? 0.10 : 0.06),
@@ -144,7 +155,7 @@ class KubusOutlineButton extends StatelessWidget {
             width: 20,
             child: CircularProgressIndicator(
               strokeWidth: 2.5,
-              valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+              valueColor: AlwaysStoppedAnimation<Color>(contentColor),
             ),
           )
         : FittedBox(
@@ -160,7 +171,7 @@ class KubusOutlineButton extends StatelessWidget {
                 Text(
                   label,
                   style: KubusTypography.textTheme.labelLarge?.copyWith(
-                    color: colorScheme.primary,
+                    color: contentColor,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -171,9 +182,7 @@ class KubusOutlineButton extends StatelessWidget {
     final button = Container(
       decoration: BoxDecoration(
         borderRadius: radius,
-        border: Border.all(
-          color: colorScheme.outline.withValues(alpha: isEnabled ? 0.28 : 0.16),
-        ),
+        border: Border.all(color: borderColor),
       ),
       child: LiquidGlassPanel(
         padding: EdgeInsets.zero,
@@ -184,7 +193,7 @@ class KubusOutlineButton extends StatelessWidget {
         child: OutlinedButton(
           onPressed: isLoading ? null : onPressed,
           style: OutlinedButton.styleFrom(
-            foregroundColor: colorScheme.primary,
+            foregroundColor: contentColor,
             backgroundColor: Colors.transparent,
             shadowColor: Colors.transparent,
             side: BorderSide.none,
