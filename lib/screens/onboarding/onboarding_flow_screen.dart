@@ -3,11 +3,11 @@ import 'dart:convert';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/user_persona.dart';
-import 'package:art_kubus/providers/locale_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/providers/web3provider.dart';
+import 'package:art_kubus/screens/auth/sign_in_screen.dart';
 import 'package:art_kubus/screens/desktop/desktop_shell.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/notification_helper.dart';
@@ -17,13 +17,14 @@ import 'package:art_kubus/services/telemetry/telemetry_service.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/keyboard_inset_resolver.dart';
 import 'package:art_kubus/utils/media_url_resolver.dart';
+import 'package:art_kubus/widgets/app_logo.dart';
+import 'package:art_kubus/widgets/auth_entry_controls.dart';
 import 'package:art_kubus/widgets/auth_methods_panel.dart';
 import 'package:art_kubus/widgets/auth_title_row.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/gradient_icon_card.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
-import 'package:art_kubus/widgets/onboarding_topbar_icon.dart';
 import 'package:art_kubus/widgets/user_persona_picker_content.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -34,10 +35,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 enum _OnboardingStep {
-  // Phase 1: Welcome wizard (swipeable, dot indicators, no progress bar)
-  welcomeDiscover,
-  welcomeCreate,
-  welcomeJoin,
+  welcome,
 
   // Phase 2a: Guest branch
   guestPermissions,
@@ -148,8 +146,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   final Set<_OnboardingStep> _deferred = <_OnboardingStep>{};
 
   _OnboardingBranch _branch = _OnboardingBranch.none;
-  late final PageController _welcomePageController;
-  int _welcomePageIndex = 0;
   bool _isFinishingOnboarding = false;
 
   int _currentIndex = 0;
@@ -183,23 +179,11 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
   _StepPalette _paletteForStep(_OnboardingStep step) {
     switch (step) {
-      case _OnboardingStep.welcomeDiscover:
+      case _OnboardingStep.welcome:
         return const _StepPalette(
           start: Color(0xFF006064),
           end: KubusColors.accentTealLight,
           accent: Color(0xFF26A69A),
-        );
-      case _OnboardingStep.welcomeCreate:
-        return const _StepPalette(
-          start: Color(0xFFE65100),
-          end: KubusColors.accentOrangeDark,
-          accent: Color(0xFFFFB74D),
-        );
-      case _OnboardingStep.welcomeJoin:
-        return const _StepPalette(
-          start: Color(0xFF2E7D32),
-          end: Color(0xFF43A047),
-          accent: Color(0xFFA5D6A7),
         );
       case _OnboardingStep.guestPermissions:
         return const _StepPalette(
@@ -250,7 +234,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       widget.forceDesktop || DesktopBreakpoints.isDesktop(context);
 
   _OnboardingStep get _currentStep {
-    if (_steps.isEmpty) return _OnboardingStep.welcomeDiscover;
+    if (_steps.isEmpty) return _OnboardingStep.welcome;
     final safeIndex = _currentIndex.clamp(0, _steps.length - 1);
     return _steps[safeIndex];
   }
@@ -261,7 +245,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _welcomePageController = PageController();
     unawaited(_bootstrap());
   }
 
@@ -269,7 +252,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _verificationPollTimer?.cancel();
-    _welcomePageController.dispose();
     super.dispose();
   }
 
@@ -385,7 +367,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       final fallbackSteps = _buildSteps();
       setState(() {
         _steps = fallbackSteps.isEmpty
-            ? const <_OnboardingStep>[_OnboardingStep.welcomeDiscover]
+            ? const <_OnboardingStep>[_OnboardingStep.welcome]
             : fallbackSteps;
         _isInitializing = false;
         _currentIndex = _nextIncompleteIndex();
@@ -617,11 +599,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   List<_OnboardingStep> _buildSteps() {
     switch (_branch) {
       case _OnboardingBranch.none:
-        // Welcome wizard phase - not shown in step list
         return const <_OnboardingStep>[
-          _OnboardingStep.welcomeDiscover,
-          _OnboardingStep.welcomeCreate,
-          _OnboardingStep.welcomeJoin,
+          _OnboardingStep.welcome,
         ];
       case _OnboardingBranch.guest:
         return const <_OnboardingStep>[
@@ -1650,10 +1629,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
   Future<void> _onPrimaryAction() async {
     switch (_currentStep) {
-      case _OnboardingStep.welcomeDiscover:
-      case _OnboardingStep.welcomeCreate:
-      case _OnboardingStep.welcomeJoin:
-        // Welcome phase is handled by welcome wizard buttons
+      case _OnboardingStep.welcome:
         return;
       case _OnboardingStep.guestPermissions:
         await _markCompleted(_OnboardingStep.guestPermissions);
@@ -1691,130 +1667,83 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     }
   }
 
-  String _themeModeLabel(AppLocalizations l10n, ThemeMode mode) {
-    switch (mode) {
-      case ThemeMode.light:
-        return l10n.settingsThemeModeLight;
-      case ThemeMode.dark:
-        return l10n.settingsThemeModeDark;
-      case ThemeMode.system:
-        return l10n.settingsThemeModeSystem;
-    }
-  }
-
-  String _headerSkipLabel(AppLocalizations l10n) {
-    return l10n.commonSkipForNow;
-  }
-
   Widget _buildHeader(
     AppLocalizations l10n,
     ColorScheme scheme, {
-    required LocaleProvider localeProvider,
-    required ThemeProvider themeProvider,
     bool compact = false,
   }) {
     final stepNumber = _currentIndex + 1;
     final viewportSize = MediaQuery.sizeOf(context);
     final headerCompact = compact && viewportSize.height < 680;
-    final actionTapTarget = headerCompact ? 44.0 : 48.0;
-
-    return FractionallySizedBox(
-      widthFactor: _isDesktop ? 1.0 : 0.9,
-      child: Padding(
-        padding: EdgeInsets.only(
-          top: headerCompact ? KubusSpacing.sm : KubusSpacing.md,
-          bottom: headerCompact ? KubusSpacing.xs : KubusSpacing.sm,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Top-right: Skip button
-            TextButton(
-              onPressed: _isSkippingFlow ? null : _skipForNow,
-              style: TextButton.styleFrom(
-                foregroundColor: scheme.onSurface.withValues(alpha: 0.8),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: KubusSpacing.sm,
-                  vertical: KubusSpacing.xs,
+    return Padding(
+      padding: EdgeInsets.only(
+        top: headerCompact ? KubusSpacing.xs : KubusSpacing.sm,
+        bottom: headerCompact ? KubusSpacing.xs : KubusSpacing.sm,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Row(
+              children: [
+                Container(
+                  width: headerCompact ? 42 : 48,
+                  height: headerCompact ? 42 : 48,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        _paletteForStep(_currentStep).start,
+                        _paletteForStep(_currentStep).end,
+                      ],
+                    ),
+                  ),
+                  child: Icon(
+                    _stepIcon(_currentStep),
+                    color: Colors.white,
+                    size: headerCompact ? 20 : 24,
+                  ),
                 ),
-                minimumSize: Size.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              child: Text(_headerSkipLabel(l10n)),
-            ),
-            const SizedBox(height: KubusSpacing.xs),
-            // Main row: icon + title + lang/theme buttons
-            AuthTitleRow(
-              title: l10n.onboardingFlowTitle,
-              icon: _stepIcon(_currentStep),
-              compact: headerCompact,
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (_isDesktop) ...[
-                    Text(
-                      l10n.commonStepOfTotal(stepNumber, _steps.length),
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: scheme.onSurface.withValues(alpha: 0.72),
-                          ),
-                    ),
-                    const SizedBox(width: KubusSpacing.xs),
-                  ],
-                  PopupMenuButton<String>(
-                    borderRadius: BorderRadius.circular(999),
-                    padding: EdgeInsets.zero,
-                    splashRadius: actionTapTarget / 2,
-                    onSelected: (value) {
-                      unawaited(localeProvider.setLanguageCode(value));
-                    },
-                    itemBuilder: (context) => [
-                      PopupMenuItem<String>(
-                        value: 'sl',
-                        child: Text(l10n.languageSlovenian),
+                const SizedBox(width: KubusSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.onboardingFlowTitle,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              color: scheme.onSurface,
+                              fontWeight: FontWeight.w800,
+                            ),
                       ),
-                      PopupMenuItem<String>(
-                        value: 'en',
-                        child: Text(l10n.languageEnglish),
+                      const SizedBox(height: KubusSpacing.xs),
+                      Text(
+                        l10n.commonStepOfTotal(stepNumber, _steps.length),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: scheme.onSurface.withValues(alpha: 0.66),
+                            ),
                       ),
                     ],
-                    child: OnboardingTopbarIcon(
-                      icon: Icons.language,
-                      tapTargetSize: actionTapTarget,
-                    ),
                   ),
-                  const SizedBox(width: KubusSpacing.xs),
-                  PopupMenuButton<ThemeMode>(
-                    borderRadius: BorderRadius.circular(999),
-                    padding: EdgeInsets.zero,
-                    splashRadius: actionTapTarget / 2,
-                    onSelected: (mode) {
-                      unawaited(themeProvider.setThemeMode(mode));
-                    },
-                    itemBuilder: (context) => [
-                      PopupMenuItem<ThemeMode>(
-                        value: ThemeMode.light,
-                        child: Text(_themeModeLabel(l10n, ThemeMode.light)),
-                      ),
-                      PopupMenuItem<ThemeMode>(
-                        value: ThemeMode.dark,
-                        child: Text(_themeModeLabel(l10n, ThemeMode.dark)),
-                      ),
-                      PopupMenuItem<ThemeMode>(
-                        value: ThemeMode.system,
-                        child: Text(_themeModeLabel(l10n, ThemeMode.system)),
-                      ),
-                    ],
-                    child: OnboardingTopbarIcon(
-                      icon: Icons.brightness_6_outlined,
-                      tapTargetSize: actionTapTarget,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+          const SizedBox(width: KubusSpacing.md),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              AuthEntryControls(compact: headerCompact),
+              const SizedBox(height: KubusSpacing.xs),
+              TextButton(
+                onPressed: _isSkippingFlow ? null : _skipForNow,
+                child: Text(l10n.commonSkipForNow),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -1833,20 +1762,14 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
               duration: const Duration(milliseconds: 200),
               margin: EdgeInsets.only(
                   right: index == _steps.length - 1 ? 0 : KubusSpacing.xs),
-              height: 8,
+              height: 6,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(999),
                 color: done
                     ? stepPalette.accent
                     : active
                         ? stepPalette.accent
-                        : scheme.outline.withValues(alpha: 0.18),
-                border: (active || done)
-                    ? Border.all(
-                        color: Colors.white.withValues(alpha: 0.25),
-                        width: 0.5,
-                      )
-                    : null,
+                        : scheme.outline.withValues(alpha: 0.14),
               ),
             ),
           );
@@ -1861,10 +1784,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
     Widget content;
     switch (step) {
-      case _OnboardingStep.welcomeDiscover:
-      case _OnboardingStep.welcomeCreate:
-      case _OnboardingStep.welcomeJoin:
-        // Welcome phase uses the wizard, not the step card
+      case _OnboardingStep.welcome:
         content = const SizedBox.shrink();
       case _OnboardingStep.guestPermissions:
         content = _PermissionsStep(
@@ -1889,11 +1809,12 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           profileDisplayName:
               (_localProfileDraft['displayName'] ?? currentProfile?.displayName ?? '')
                   .trim(),
-          onVerifyEmail: _jumpToVerifyStep,
           onAuthCompleted: _handleEmbeddedRegistrationSuccess,
           onEmailRegistrationAttempted:
               _handleEmbeddedEmailRegistrationAttempted,
           onVerificationRequired: _handleEmbeddedVerificationRequired,
+          onSignInSuccess: _handleEmbeddedSignInSuccess,
+          onSignInNeedsVerification: _handleEmbeddedSignInNeedsVerification,
         );
       case _OnboardingStep.verifyEmail:
         content = _VerifyEmailStep(
@@ -1960,23 +1881,21 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     }
 
     if (_isDesktop) {
-      // Desktop: keep the card container with subtle glass look
       return AnimatedContainer(
         duration: const Duration(milliseconds: 260),
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+        padding: const EdgeInsets.fromLTRB(28, 24, 28, 24),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(KubusRadius.xl),
-          color: scheme.surface.withValues(alpha: 0.16),
+          color: scheme.surface.withValues(alpha: 0.12),
           border: Border.all(
-            color: palette.accent.withValues(alpha: 0.35),
-            width: 1,
+            color: scheme.outlineVariant.withValues(alpha: 0.14),
           ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
-              height: 4,
+              height: 3,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(999),
                 gradient: LinearGradient(
@@ -1991,14 +1910,13 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       );
     }
 
-    // Mobile: clean layout without card container, content directly on gradient
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            height: 3,
+            height: 2,
             margin: const EdgeInsets.symmetric(horizontal: 8),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(999),
@@ -2021,12 +1939,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
   IconData _stepIcon(_OnboardingStep step) {
     switch (step) {
-      case _OnboardingStep.welcomeDiscover:
+      case _OnboardingStep.welcome:
         return Icons.explore_outlined;
-      case _OnboardingStep.welcomeCreate:
-        return Icons.palette_outlined;
-      case _OnboardingStep.welcomeJoin:
-        return Icons.groups_outlined;
       case _OnboardingStep.guestPermissions:
         return Icons.shield_outlined;
       case _OnboardingStep.account:
@@ -2082,12 +1996,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   Widget _buildDesktopStepRail(AppLocalizations l10n, ColorScheme scheme) {
     final labels = _steps.map((step) {
       switch (step) {
-        case _OnboardingStep.welcomeDiscover:
+        case _OnboardingStep.welcome:
           return l10n.onboardingExploreTitle;
-        case _OnboardingStep.welcomeCreate:
-          return l10n.onboardingFlowRoleTitle;
-        case _OnboardingStep.welcomeJoin:
-          return l10n.onboardingCommunityTitle;
         case _OnboardingStep.guestPermissions:
           return l10n.onboardingFlowPermissionsTitle;
         case _OnboardingStep.account:
@@ -2110,9 +2020,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       width: 260,
       padding: const EdgeInsets.all(KubusSpacing.sm),
       decoration: BoxDecoration(
-        color: scheme.surface.withValues(alpha: 0.14),
+        color: scheme.surface.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(KubusRadius.lg),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.08),
@@ -2159,13 +2068,13 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
                   ),
                   decoration: BoxDecoration(
                     color: isActive
-                        ? palette.accent.withValues(alpha: 0.26)
-                        : Colors.white.withValues(alpha: 0.08),
+                        ? palette.accent.withValues(alpha: 0.18)
+                        : Colors.white.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(KubusRadius.md),
                     border: Border.all(
                       color: isActive
-                          ? palette.accent.withValues(alpha: 0.78)
-                          : Colors.white.withValues(alpha: 0.14),
+                          ? palette.accent.withValues(alpha: 0.32)
+                          : Colors.transparent,
                     ),
                   ),
                   child: Row(
@@ -2215,73 +2124,102 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     );
   }
 
-  Widget _buildWelcomeWizard(AppLocalizations l10n, ColorScheme scheme) {
-    final pages = <_WelcomeWizardPage>[
-      _WelcomeWizardPage(
-        icon: Icons.explore_outlined,
-        title: l10n.onboardingWelcomeDiscoverTitle,
-        body: l10n.onboardingWelcomeDiscoverBody,
-        gradient: const [Color(0xFF006064), Color(0xFF26A69A)],
-      ),
-      _WelcomeWizardPage(
-        icon: Icons.palette_outlined,
-        title: l10n.onboardingWelcomeCreateTitle,
-        body: l10n.onboardingWelcomeCreateBody,
-        gradient: const [Color(0xFFE65100), Color(0xFFFFB74D)],
-      ),
-      _WelcomeWizardPage(
-        icon: Icons.groups_outlined,
-        title: l10n.onboardingWelcomeJoinTitle,
-        body: l10n.onboardingWelcomeJoinBody,
-        gradient: const [Color(0xFF2E7D32), Color(0xFFA5D6A7)],
-      ),
-    ];
+  Widget _buildWelcomeScreen(AppLocalizations l10n, ColorScheme scheme) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final spotlight = _paletteForStep(_OnboardingStep.welcome);
 
-    return Column(
-      children: [
-        Expanded(
-          child: PageView.builder(
-            controller: _welcomePageController,
-            itemCount: pages.length,
-            onPageChanged: (index) {
-              setState(() => _welcomePageIndex = index);
-            },
-            itemBuilder: (context, index) {
-              final page = pages[index];
-              return _WelcomePageView(
-                icon: page.icon,
-                title: page.title,
-                body: page.body,
-                gradient: page.gradient,
-              );
-            },
-          ),
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1180),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const AppLogo(width: 46, height: 46),
+                const Spacer(),
+                AuthEntryControls(compact: !_isDesktop),
+              ],
+            ),
+            const SizedBox(height: KubusSpacing.xl),
+            Expanded(
+              child: _isDesktop
+                  ? Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: _WelcomeHeroColumn(
+                            title: l10n.onboardingWelcomeTitle,
+                            subtitle: l10n.onboardingWelcomeDescription,
+                            details: [
+                              l10n.onboardingFlowWelcomeInfoAccount,
+                              l10n.onboardingFlowWelcomeInfoCreate,
+                              l10n.onboardingFlowWelcomeInfoFollow,
+                              l10n.onboardingFlowWelcomeInfoTime,
+                            ],
+                            start: spotlight.start,
+                            end: spotlight.end,
+                          ),
+                        ),
+                        const SizedBox(width: KubusSpacing.xl),
+                        SizedBox(
+                          width: 430,
+                          child: _WelcomeDecisionPanel(
+                            isDark: isDark,
+                            scheme: scheme,
+                            discoverTitle: l10n.commonDiscoverArt,
+                            discoverBody: l10n.onboardingWelcomeDiscoverBody,
+                            createTitle: l10n.commonCreateAccount,
+                            createBody: l10n.onboardingFlowAccountBody,
+                            onSelectGuest: _selectGuestBranch,
+                            onSelectAccount: _selectAccountBranch,
+                            onSignIn: () {
+                              Navigator.of(context)
+                                  .pushReplacementNamed('/sign-in');
+                            },
+                          ),
+                        ),
+                      ],
+                    )
+                  : SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _WelcomeHeroColumn(
+                            title: l10n.onboardingWelcomeTitle,
+                            subtitle: l10n.onboardingWelcomeDescription,
+                            details: [
+                              l10n.onboardingFlowWelcomeInfoAccount,
+                              l10n.onboardingFlowWelcomeInfoCreate,
+                              l10n.onboardingFlowWelcomeInfoFollow,
+                            ],
+                            start: spotlight.start,
+                            end: spotlight.end,
+                            compact: true,
+                          ),
+                          const SizedBox(height: KubusSpacing.lg),
+                          _WelcomeDecisionPanel(
+                            isDark: isDark,
+                            scheme: scheme,
+                            discoverTitle: l10n.commonDiscoverArt,
+                            discoverBody: l10n.onboardingWelcomeDiscoverBody,
+                            createTitle: l10n.commonCreateAccount,
+                            createBody: l10n.onboardingFlowAccountBody,
+                            onSelectGuest: _selectGuestBranch,
+                            onSelectAccount: _selectAccountBranch,
+                            onSignIn: () {
+                              Navigator.of(context)
+                                  .pushReplacementNamed('/sign-in');
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+            ),
+          ],
         ),
-        const SizedBox(height: KubusSpacing.md),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(pages.length, (index) {
-            final isActive = index == _welcomePageIndex;
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              width: isActive ? 12 : 8,
-              height: 8,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(4),
-                color: isActive
-                    ? scheme.primary
-                    : scheme.onSurface.withValues(alpha: 0.3),
-              ),
-            );
-          }),
-        ),
-        const SizedBox(height: KubusSpacing.lg),
-        _WelcomeBranchPage(
-          onSelectGuest: _selectGuestBranch,
-          onSelectAccount: _selectAccountBranch,
-        ),
-      ],
+      ),
     );
   }
 
@@ -2301,16 +2239,15 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final themeProvider = Provider.of<ThemeProvider>(context);
-    final localeProvider = Provider.of<LocaleProvider>(context);
     final accent = themeProvider.accentColor;
     final stepPalette = _paletteForStep(_currentStep);
 
-    final bgStart = stepPalette.start.withValues(alpha: 0.92);
-    final bgEnd = stepPalette.end.withValues(alpha: 0.85);
+    final bgStart = stepPalette.start.withValues(alpha: 0.76);
+    final bgEnd = stepPalette.end.withValues(alpha: 0.68);
     final bgMid = Color.lerp(bgStart, bgEnd, 0.45) ?? bgEnd;
     final bgAccent =
-        Color.lerp(stepPalette.accent, accent, 0.3)?.withValues(alpha: 0.78) ??
-            accent.withValues(alpha: 0.78);
+        Color.lerp(stepPalette.accent, accent, 0.3)?.withValues(alpha: 0.58) ??
+            accent.withValues(alpha: 0.58);
     final isWidgetTestBinding = WidgetsBinding.instance.runtimeType
         .toString()
         .contains('TestWidgetsFlutterBinding');
@@ -2319,7 +2256,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       return AnimatedGradientBackground(
         animate: !isWidgetTestBinding,
         colors: [bgStart, bgMid, bgEnd, bgStart],
-        intensity: 0.48,
+        intensity: 0.3,
         child: Scaffold(
           backgroundColor: Colors.transparent,
           body: const Center(child: CircularProgressIndicator()),
@@ -2328,9 +2265,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     }
 
     return AnimatedGradientBackground(
-      animate: !isWidgetTestBinding,
-      colors: [bgStart, bgMid, bgAccent, bgEnd, bgStart],
-      intensity: 0.48,
+        animate: !isWidgetTestBinding,
+        colors: [bgStart, bgMid, bgAccent, bgEnd, bgStart],
+        intensity: 0.3,
       child: Scaffold(
         backgroundColor: Colors.transparent,
         resizeToAvoidBottomInset: false,
@@ -2345,7 +2282,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
               final compactLayout = compactHeight;
               final hideProgress = !_isDesktop && constraints.maxHeight < 700;
 
-              // Show welcome wizard during welcome phase
               if (_isWelcomePhase) {
                 return AnimatedPadding(
                   duration: const Duration(milliseconds: 180),
@@ -2358,7 +2294,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
                           : (compactLayout ? KubusSpacing.sm : KubusSpacing.md),
                       vertical: compactLayout ? 8 : 10,
                     ),
-                    child: _buildWelcomeWizard(l10n, scheme),
+                    child: _buildWelcomeScreen(l10n, scheme),
                   ),
                 );
               }
@@ -2384,8 +2320,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
                           _buildHeader(
                             l10n,
                             scheme,
-                            localeProvider: localeProvider,
-                            themeProvider: themeProvider,
                             compact: compactLayout,
                           ),
                           SizedBox(
@@ -2434,9 +2368,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
   String _primaryLabelForStep(AppLocalizations l10n) {
     switch (_currentStep) {
-      case _OnboardingStep.welcomeDiscover:
-      case _OnboardingStep.welcomeCreate:
-      case _OnboardingStep.welcomeJoin:
+      case _OnboardingStep.welcome:
       case _OnboardingStep.guestPermissions:
       case _OnboardingStep.account:
       case _OnboardingStep.role:
@@ -2451,26 +2383,35 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   }
 }
 
-class _AccountStep extends StatelessWidget {
+class _AccountStep extends StatefulWidget {
   const _AccountStep({
     required this.title,
     required this.body,
     required this.verifyHint,
     required this.profileDisplayName,
-    required this.onVerifyEmail,
     required this.onAuthCompleted,
     required this.onEmailRegistrationAttempted,
     required this.onVerificationRequired,
+    required this.onSignInSuccess,
+    required this.onSignInNeedsVerification,
   });
 
   final String title;
   final String body;
   final String verifyHint;
   final String profileDisplayName;
-  final Future<void> Function() onVerifyEmail;
   final Future<void> Function() onAuthCompleted;
   final Future<void> Function(String email) onEmailRegistrationAttempted;
   final Future<void> Function(String email) onVerificationRequired;
+  final Future<void> Function(Map<String, dynamic>) onSignInSuccess;
+  final Future<void> Function(String email) onSignInNeedsVerification;
+
+  @override
+  State<_AccountStep> createState() => _AccountStepState();
+}
+
+class _AccountStepState extends State<_AccountStep> {
+  bool _showSignIn = false;
 
   @override
   Widget build(BuildContext context) {
@@ -2480,42 +2421,71 @@ class _AccountStep extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    fontSize: compact ? 22 : null,
-                    color: Colors.white,
-                  ),
-              maxLines: 3,
-              overflow: TextOverflow.visible,
+            AuthTitleRow(
+              title: widget.title,
+              subtitle: widget.body,
+              compact: compact,
+              foregroundColor: Colors.white,
+              subtitleColor: Colors.white.withValues(alpha: 0.85),
             ),
-            SizedBox(height: compact ? KubusSpacing.xs : KubusSpacing.sm),
-            Text(body,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.85))),
             if (!compact) ...[
               const SizedBox(height: KubusSpacing.xs),
               Text(
-                verifyHint,
+                widget.verifyHint,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Colors.white.withValues(alpha: 0.65),
                     ),
               ),
             ],
+            const SizedBox(height: KubusSpacing.sm),
+            Wrap(
+              spacing: KubusSpacing.sm,
+              runSpacing: KubusSpacing.sm,
+              children: [
+                ChoiceChip(
+                  label: Text(AppLocalizations.of(context)!.commonCreateAccount),
+                  selected: !_showSignIn,
+                  onSelected: (_) {
+                    setState(() => _showSignIn = false);
+                  },
+                ),
+                ChoiceChip(
+                  label: Text(AppLocalizations.of(context)!.commonSignIn),
+                  selected: _showSignIn,
+                  onSelected: (_) {
+                    setState(() => _showSignIn = true);
+                  },
+                ),
+              ],
+            ),
             SizedBox(height: compact ? KubusSpacing.xs : 10),
             Expanded(
-              child: AuthMethodsPanel(
-                embedded: true,
-                onAuthSuccess: onAuthCompleted,
-                preferredEmailGreetingName:
-                    profileDisplayName.trim().isEmpty ? null : profileDisplayName.trim(),
-                prepareProvisionalProfileBeforeRegister: false,
-                onEmailRegistrationAttempted: (email) =>
-                    unawaited(onEmailRegistrationAttempted(email)),
-                onVerificationRequired: onVerificationRequired,
-                onSwitchToSignIn: onVerifyEmail,
-              ),
+              child: _showSignIn
+                  ? SignInScreen(
+                      embedded: true,
+                      onAuthSuccess: widget.onSignInSuccess,
+                      onVerificationRequired: (email) => unawaited(
+                        widget.onSignInNeedsVerification(email),
+                      ),
+                      onSwitchToRegister: () {
+                        setState(() => _showSignIn = false);
+                      },
+                    )
+                  : AuthMethodsPanel(
+                      embedded: true,
+                      onAuthSuccess: widget.onAuthCompleted,
+                      preferredEmailGreetingName: widget
+                              .profileDisplayName.trim().isEmpty
+                          ? null
+                          : widget.profileDisplayName.trim(),
+                      prepareProvisionalProfileBeforeRegister: false,
+                      onEmailRegistrationAttempted: (email) =>
+                          unawaited(widget.onEmailRegistrationAttempted(email)),
+                      onVerificationRequired: widget.onVerificationRequired,
+                      onSwitchToSignIn: () {
+                        setState(() => _showSignIn = true);
+                      },
+                    ),
             ),
           ],
         );
@@ -2524,105 +2494,214 @@ class _AccountStep extends StatelessWidget {
   }
 }
 
-class _WelcomeWizardPage {
-  const _WelcomeWizardPage({
-    required this.icon,
+class _WelcomeHeroColumn extends StatelessWidget {
+  const _WelcomeHeroColumn({
     required this.title,
-    required this.body,
-    required this.gradient,
+    required this.subtitle,
+    required this.details,
+    required this.start,
+    required this.end,
+    this.compact = false,
   });
 
-  final IconData icon;
   final String title;
-  final String body;
-  final List<Color> gradient;
-}
-
-class _WelcomePageView extends StatelessWidget {
-  const _WelcomePageView({
-    required this.icon,
-    required this.title,
-    required this.body,
-    required this.gradient,
-  });
-
-  final IconData icon;
-  final String title;
-  final String body;
-  final List<Color> gradient;
+  final String subtitle;
+  final List<String> details;
+  final Color start;
+  final Color end;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.all(KubusSpacing.md),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          GradientIconCard(
-            start: gradient.first,
-            end: gradient.last,
-            icon: icon,
-            iconSize: 48,
-            width: 96,
-            height: 96,
-            radius: KubusRadius.xl,
-          ),
-          const SizedBox(height: KubusSpacing.lg),
-          Text(
-            title,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GradientIconCard(
+          start: start,
+          end: end,
+          icon: Icons.explore_outlined,
+          iconSize: compact ? 34 : 42,
+          width: compact ? 76 : 88,
+          height: compact ? 76 : 88,
+          radius: 24,
+        ),
+        SizedBox(height: compact ? KubusSpacing.lg : KubusSpacing.xl),
+        Text(
+          title,
+          style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                color: scheme.onSurface,
+                fontWeight: FontWeight.w800,
+                height: 1.02,
+              ),
+        ),
+        const SizedBox(height: KubusSpacing.md),
+        Text(
+          subtitle,
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.76),
+                height: 1.55,
+              ),
+        ),
+        SizedBox(height: compact ? KubusSpacing.lg : KubusSpacing.xl),
+        Wrap(
+          spacing: KubusSpacing.sm,
+          runSpacing: KubusSpacing.sm,
+          children: details
+              .map(
+                (detail) => DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: scheme.surface.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    child: Text(
+                      detail,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            color: scheme.onSurface.withValues(alpha: 0.84),
+                          ),
+                    ),
+                  ),
                 ),
-            textAlign: TextAlign.center,
-            maxLines: 3,
-            overflow: TextOverflow.visible,
-          ),
-          const SizedBox(height: KubusSpacing.sm),
-          Text(
-            body,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: scheme.onSurface.withValues(alpha: 0.8),
-                ),
-            textAlign: TextAlign.center,
-            maxLines: 4,
-            overflow: TextOverflow.visible,
+              )
+              .toList(growable: false),
+        ),
+      ],
+    );
+  }
+}
+
+class _WelcomeDecisionPanel extends StatelessWidget {
+  const _WelcomeDecisionPanel({
+    required this.isDark,
+    required this.scheme,
+    required this.discoverTitle,
+    required this.discoverBody,
+    required this.createTitle,
+    required this.createBody,
+    required this.onSelectGuest,
+    required this.onSelectAccount,
+    required this.onSignIn,
+  });
+
+  final bool isDark;
+  final ColorScheme scheme;
+  final String discoverTitle;
+  final String discoverBody;
+  final String createTitle;
+  final String createBody;
+  final Future<void> Function() onSelectGuest;
+  final Future<void> Function() onSelectAccount;
+  final VoidCallback onSignIn;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: scheme.surface.withValues(alpha: isDark ? 0.18 : 0.84),
+        borderRadius: BorderRadius.circular(32),
+        border: Border.all(
+          color: scheme.outlineVariant.withValues(alpha: isDark ? 0.18 : 0.12),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.18 : 0.08),
+            blurRadius: 28,
+            offset: const Offset(0, 18),
           ),
         ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(KubusSpacing.xl),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _WelcomeChoiceCard(
+              icon: Icons.travel_explore_rounded,
+              title: discoverTitle,
+              body: discoverBody,
+              action: KubusButton(
+                onPressed: () => unawaited(onSelectGuest()),
+                label: discoverTitle,
+                isFullWidth: true,
+              ),
+            ),
+            const SizedBox(height: KubusSpacing.md),
+            _WelcomeChoiceCard(
+              icon: Icons.person_add_alt_1_rounded,
+              title: createTitle,
+              body: createBody,
+              action: KubusOutlineButton(
+                onPressed: () => unawaited(onSelectAccount()),
+                label: createTitle,
+                isFullWidth: true,
+              ),
+            ),
+            const SizedBox(height: KubusSpacing.lg),
+            Center(
+              child: TextButton(
+                onPressed: onSignIn,
+                child: Text(AppLocalizations.of(context)!.commonSignIn),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _WelcomeBranchPage extends StatelessWidget {
-  const _WelcomeBranchPage({
-    required this.onSelectGuest,
-    required this.onSelectAccount,
+class _WelcomeChoiceCard extends StatelessWidget {
+  const _WelcomeChoiceCard({
+    required this.icon,
+    required this.title,
+    required this.body,
+    required this.action,
   });
 
-  final Future<void> Function() onSelectGuest;
-  final Future<void> Function() onSelectAccount;
+  final IconData icon;
+  final String title;
+  final String body;
+  final Widget action;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          KubusButton(
-            onPressed: onSelectAccount,
-            label: l10n.commonCreateAccount,
-            isFullWidth: true,
-          ),
-          const SizedBox(height: KubusSpacing.sm),
-          KubusOutlineButton(
-            onPressed: () => unawaited(onSelectGuest()),
-            label: l10n.commonDiscoverArt,
-            isFullWidth: true,
-          ),
-        ],
+    final scheme = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: scheme.surface.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(KubusSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: scheme.primary, size: 26),
+            const SizedBox(height: KubusSpacing.sm),
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: scheme.onSurface,
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
+            const SizedBox(height: KubusSpacing.xs),
+            Text(
+              body,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.72),
+                    height: 1.45,
+                  ),
+            ),
+            const SizedBox(height: KubusSpacing.md),
+            action,
+          ],
+        ),
       ),
     );
   }

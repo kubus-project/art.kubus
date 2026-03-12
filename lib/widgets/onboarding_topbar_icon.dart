@@ -4,92 +4,71 @@ class OnboardingTopbarIcon extends StatefulWidget {
   const OnboardingTopbarIcon({
     super.key,
     required this.icon,
-    this.iconSize = 20,
-    this.tapTargetSize = 48,
+    this.onPressed,
+    this.tooltip,
+    this.size = 22,
   });
 
   final IconData icon;
-  final double iconSize;
-  final double tapTargetSize;
+  final VoidCallback? onPressed;
+  final String? tooltip;
+  final double size;
 
   @override
   State<OnboardingTopbarIcon> createState() => _OnboardingTopbarIconState();
 }
 
 class _OnboardingTopbarIconState extends State<OnboardingTopbarIcon> {
-  bool _isHovered = false;
-  bool _isFocused = false;
-  bool _isPressed = false;
-
-  void _setHovered(bool value) {
-    if (_isHovered == value) return;
-    setState(() => _isHovered = value);
-  }
-
-  void _setFocused(bool value) {
-    if (_isFocused == value) return;
-    setState(() => _isFocused = value);
-  }
+  bool _pressed = false;
 
   void _setPressed(bool value) {
-    if (_isPressed == value) return;
-    setState(() => _isPressed = value);
+    if (_pressed == value) return;
+    setState(() => _pressed = value);
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final brightness = Theme.of(context).brightness;
     final iconColor =
-        theme.brightness == Brightness.dark ? Colors.white : Colors.black;
-    final focusRingColor = iconColor.withValues(
-      alpha: theme.brightness == Brightness.dark ? 0.38 : 0.24,
-    );
-    final scale = _isPressed
-        ? 0.88
-        : (_isHovered ? 1.05 : (_isFocused ? 1.02 : 1.0));
-    final opacity = _isPressed
-        ? 0.74
-        : ((_isHovered || _isFocused) ? 0.92 : 1.0);
+        brightness == Brightness.dark ? Colors.white : Colors.black;
 
-    return Listener(
-      onPointerDown: (_) => _setPressed(true),
-      onPointerUp: (_) => _setPressed(false),
-      onPointerCancel: (_) => _setPressed(false),
-      child: FocusableActionDetector(
-        onShowHoverHighlight: _setHovered,
-        onShowFocusHighlight: _setFocused,
-        child: AnimatedContainer(
+    final iconButton = GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => _setPressed(true),
+      onTapUp: (_) => _setPressed(false),
+      onTapCancel: () => _setPressed(false),
+      onTap: widget.onPressed,
+      child: AnimatedScale(
+        duration: const Duration(milliseconds: 140),
+        scale: _pressed ? 0.94 : 1,
+        child: AnimatedOpacity(
           duration: const Duration(milliseconds: 140),
-          curve: Curves.easeOutCubic,
-          width: widget.tapTargetSize,
-          height: widget.tapTargetSize,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: _isFocused
-                ? Border.all(
-                    color: focusRingColor,
-                    width: 1.2,
-                  )
-                : null,
-          ),
-          child: AnimatedScale(
-            duration: const Duration(milliseconds: 120),
-            curve: Curves.easeOutCubic,
-            scale: scale,
-            child: AnimatedOpacity(
-              duration: const Duration(milliseconds: 120),
-              curve: Curves.easeOut,
-              opacity: opacity,
-              child: Icon(
-                widget.icon,
-                size: widget.iconSize,
-                color: iconColor,
-              ),
+          opacity: _pressed ? 0.78 : 1,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 140),
+            curve: Curves.easeOut,
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: null,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Icon(
+              widget.icon,
+              color: iconColor,
+              size: widget.size,
             ),
           ),
         ),
       ),
+    );
+
+    if (widget.tooltip == null || widget.tooltip!.trim().isEmpty) {
+      return iconButton;
+    }
+
+    return Tooltip(
+      message: widget.tooltip!,
+      child: iconButton,
     );
   }
 }

@@ -6,7 +6,6 @@ import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/security_gate_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/providers/web3provider.dart';
-import 'package:art_kubus/screens/desktop/auth/desktop_auth_shell.dart';
 import 'package:art_kubus/screens/desktop/desktop_shell.dart';
 import 'package:art_kubus/screens/web3/wallet/connectwallet_screen.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
@@ -16,14 +15,12 @@ import 'package:art_kubus/services/security/post_auth_security_setup_service.dar
 import 'package:art_kubus/services/telemetry/telemetry_service.dart';
 import 'package:art_kubus/utils/auth_password_policy.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
-import 'package:art_kubus/utils/keyboard_inset_resolver.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
-import 'package:art_kubus/widgets/app_logo.dart';
+import 'package:art_kubus/widgets/auth_entry_shell.dart';
 import 'package:art_kubus/widgets/email_registration_form.dart';
-import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/google_sign_in_button.dart';
 import 'package:art_kubus/widgets/google_sign_in_web_button.dart';
-import 'package:art_kubus/widgets/gradient_icon_card.dart';
+import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -643,140 +640,34 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     final enableWallet = AppConfig.enableWeb3 && AppConfig.enableWalletConnect;
     final enableEmail = AppConfig.enableEmailAuth;
     final enableGoogle = AppConfig.enableGoogleAuth;
-    final isDesktop =
-        MediaQuery.of(context).size.width >= DesktopBreakpoints.medium;
-
-    final bgStart = accentStart.withValues(alpha: 0.55);
-    final bgEnd = accentEnd.withValues(alpha: 0.50);
-    final bgMid =
-        (Color.lerp(bgStart, bgEnd, 0.55) ?? bgEnd).withValues(alpha: 0.52);
-    final bgColors = <Color>[bgStart, bgMid, bgEnd, bgStart];
 
     final form = _buildRegisterForm(
       colorScheme: colorScheme,
       enableWallet: enableWallet,
       enableEmail: enableEmail,
       enableGoogle: enableGoogle,
-      isDesktop: isDesktop,
-      compact: widget.embedded,
     );
 
     if (widget.embedded) {
       return form;
     }
 
-    if (isDesktop) {
-      return DesktopAuthShell(
-        title: l10n.authRegisterTitle,
-        subtitle: l10n.authRegisterSubtitle,
-        highlights: [
-          l10n.authHighlightOnboardingOptions,
-          l10n.authHighlightKeysLocal,
-          l10n.authHighlightOptionalWeb3,
-        ],
-        icon: GradientIconCard(
-          start: accentStart,
-          end: accentEnd,
-          icon: Icons.person_add_alt_rounded,
-          iconSize: 48,
-          width: 96,
-          height: 96,
-          radius: 18,
-        ),
-        gradientStart: accentStart,
-        gradientEnd: accentEnd,
-        form: form,
-        footer: Align(
-          alignment: Alignment.centerLeft,
-          child: TextButton(
-            onPressed: _navigateToSignIn,
-            child: Text(
-              l10n.authHaveAccountSignIn,
-              style: GoogleFonts.inter(
-                color: colorScheme.onSurface.withValues(alpha: 0.7),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      extendBodyBehindAppBar: true,
-      resizeToAvoidBottomInset: false,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        titleSpacing: 16,
-        title: const AppLogo(width: 36, height: 36),
-        actions: [
-          TextButton(
-            onPressed: _navigateToSignIn,
-            child: Text(
-              l10n.authHaveAccountSignIn,
-              style: GoogleFonts.inter(
-                color: colorScheme.onSurface.withValues(alpha: 0.7),
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-        ],
+    return AuthEntryShell(
+      title: l10n.authRegisterTitle,
+      subtitle: l10n.authRegisterSubtitle,
+      heroIcon: Icons.person_add_alt_rounded,
+      gradientStart: accentStart,
+      gradientEnd: accentEnd,
+      highlights: [
+        l10n.authHighlightOnboardingOptions,
+        l10n.authHighlightKeysLocal,
+        l10n.authHighlightOptionalWeb3,
+      ],
+      topAction: TextButton(
+        onPressed: _navigateToSignIn,
+        child: Text(l10n.authHaveAccountSignIn),
       ),
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          AnimatedGradientBackground(
-            duration: const Duration(seconds: 10),
-            intensity: 0.2,
-            colors: bgColors,
-            child: const SizedBox.expand(),
-          ),
-          SafeArea(
-            top: false,
-            child: LayoutBuilder(
-              builder: (BuildContext context, BoxConstraints constraints) {
-                final keyboardLift = KeyboardInsetResolver.effectiveBottomInset(
-                  context,
-                  maxInset: 140,
-                );
-                return Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  child: Column(
-                    children: [
-                      const SizedBox(height: kToolbarHeight + 12),
-                      Expanded(
-                        child: Center(
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 180),
-                            curve: Curves.easeOut,
-                            transform: Matrix4.translationValues(
-                              0,
-                              -keyboardLift,
-                              0,
-                            ),
-                            child: ConstrainedBox(
-                              constraints: BoxConstraints(
-                                maxWidth: 520,
-                                maxHeight: constraints.maxHeight - kToolbarHeight,
-                              ),
-                              child: form,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
+      form: form,
     );
   }
 
@@ -785,164 +676,127 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     required bool enableWallet,
     required bool enableEmail,
     required bool enableGoogle,
-    required bool isDesktop,
-    bool compact = false,
   }) {
     final l10n = AppLocalizations.of(context)!;
-    final roles = KubusColorRoles.of(context);
-    final compactEmailOpen = compact && _showCompactEmailForm;
-    final panelTint = colorScheme.surface.withValues(
-      alpha: Theme.of(context).brightness == Brightness.dark ? 0.20 : 0.24,
-    );
-    return LiquidGlassPanel(
-      borderRadius: BorderRadius.circular(22),
-      padding: EdgeInsets.all(compact ? KubusSpacing.md : KubusSpacing.lg),
-      backgroundColor: panelTint,
-      fallbackMinOpacity: 0.28,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          if (!isDesktop && !compact) ...[
-            GradientIconCard(
-              start: roles.lockedFeature,
-              end: roles.likeAction,
-              icon: Icons.person_add_alt_rounded,
-              iconSize: 40,
-              width: 76,
-              height: 76,
-              radius: 18,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              l10n.authRegisterTitle,
-              textAlign: TextAlign.center,
-              style: KubusTypography.textTheme.headlineSmall?.copyWith(
+    final showEmailForm = _showCompactEmailForm;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          showEmailForm ? l10n.authOrUseEmail : l10n.authRegisterSubtitle,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 color: colorScheme.onSurface,
                 fontWeight: FontWeight.w800,
               ),
-            ),
-            const SizedBox(height: 16),
-          ],
-          if (enableWallet && !compactEmailOpen)
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: colorScheme.primary,
-                foregroundColor: colorScheme.onPrimary,
-                minimumSize: Size.fromHeight(compact ? 44 : 56),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16)),
-                elevation: 2,
+        ),
+        const SizedBox(height: KubusSpacing.xs),
+        Text(
+          showEmailForm
+              ? l10n.authRegisterSubtitle
+              : l10n.authHighlightOptionalWeb3,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurface.withValues(alpha: 0.66),
+                height: 1.45,
               ),
-              onPressed: _showConnectWalletModal,
-              icon: Icon(Icons.account_balance_wallet_outlined,
-                  size: 24, color: colorScheme.onPrimary),
-              label: Text(l10n.authConnectWalletButton,
-                  style: GoogleFonts.inter(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                      color: colorScheme.onPrimary)),
-            ),
-          if (enableWallet && !compactEmailOpen)
-            SizedBox(height: compact ? 8 : 16),
-          LiquidGlassPanel(
-            borderRadius: BorderRadius.circular(18),
-            padding: EdgeInsets.all(compact ? 12 : 16),
-            backgroundColor: colorScheme.surface.withValues(alpha: 0.22),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text(l10n.authOrUseEmail,
-                    style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: colorScheme.onSurface),
-                    textAlign: TextAlign.center),
-                SizedBox(height: compact ? 8 : 12),
-                if (enableEmail)
-                  if (compact && !_showCompactEmailForm)
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          setState(() => _showCompactEmailForm = true);
-                        },
-                        icon: const Icon(Icons.email_outlined),
-                        label: Text(l10n.authContinueWithEmail),
-                      ),
-                    )
-                  else
-                    _buildEmailForm(compact: compact),
-                if (enableGoogle && !compactEmailOpen) ...[
-                  SizedBox(height: compact ? 8 : 12),
-                  if (kIsWeb)
-                    GoogleSignInWebButton(
-                      colorScheme: colorScheme,
-                      isLoading: _isGoogleSubmitting,
-                      onAuthResult: (GoogleAuthResult googleResult) async {
-                        unawaited(
-                          TelemetryService().trackSignUpAttempt(method: 'google'),
-                        );
-                        if (!_isGoogleSubmitting && mounted) {
-                          setState(() => _isGoogleSubmitting = true);
-                        }
-                        try {
-                          final api = BackendApiService();
-                          final result = await api.loginWithGoogle(
-                            idToken: googleResult.idToken,
-                            code: googleResult.serverAuthCode,
-                            email: googleResult.email,
-                            username: null,
-                          );
-                          if (!mounted) return;
-                          await _handleAuthSuccess(result);
-                          unawaited(
-                            TelemetryService()
-                                .trackSignUpSuccess(method: 'google'),
-                          );
-                        } finally {
-                          if (mounted) {
-                            setState(() => _isGoogleSubmitting = false);
-                          }
-                        }
-                      },
-                      onAuthError: (Object error) {
-                        widget.onError?.call(error);
-                        unawaited(
-                          TelemetryService().trackSignUpFailure(
-                            method: 'google',
-                            errorClass: error.runtimeType.toString(),
-                          ),
-                        );
-                        if (!mounted) return;
-                        ScaffoldMessenger.of(context).showKubusSnackBar(
-                          SnackBar(content: Text(l10n.authGoogleSignInFailed)),
-                        );
-                      },
-                    )
-                  else
-                    GoogleSignInButton(
-                      onPressed: _registerWithGoogle,
-                      isLoading: _isGoogleSubmitting,
-                      colorScheme: colorScheme,
-                    ),
-                ],
-                if (compact && _showCompactEmailForm) ...[
-                  const SizedBox(height: 6),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () {
-                        setState(() => _showCompactEmailForm = false);
-                      },
-                      child: Text(l10n.commonBack),
-                    ),
+        ),
+        const SizedBox(height: KubusSpacing.lg),
+        if (!showEmailForm && enableGoogle) ...[
+          if (kIsWeb)
+            GoogleSignInWebButton(
+              colorScheme: colorScheme,
+              isLoading: _isGoogleSubmitting,
+              onAuthResult: (GoogleAuthResult googleResult) async {
+                unawaited(
+                  TelemetryService().trackSignUpAttempt(method: 'google'),
+                );
+                if (!_isGoogleSubmitting && mounted) {
+                  setState(() => _isGoogleSubmitting = true);
+                }
+                try {
+                  final api = BackendApiService();
+                  final result = await api.loginWithGoogle(
+                    idToken: googleResult.idToken,
+                    code: googleResult.serverAuthCode,
+                    email: googleResult.email,
+                    username: null,
+                  );
+                  if (!mounted) return;
+                  await _handleAuthSuccess(result);
+                  unawaited(
+                    TelemetryService().trackSignUpSuccess(method: 'google'),
+                  );
+                } finally {
+                  if (mounted) {
+                    setState(() => _isGoogleSubmitting = false);
+                  }
+                }
+              },
+              onAuthError: (Object error) {
+                widget.onError?.call(error);
+                unawaited(
+                  TelemetryService().trackSignUpFailure(
+                    method: 'google',
+                    errorClass: error.runtimeType.toString(),
                   ),
-                ],
-              ],
+                );
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showKubusSnackBar(
+                  SnackBar(content: Text(l10n.authGoogleSignInFailed)),
+                );
+              },
+            )
+          else
+            GoogleSignInButton(
+              onPressed: _registerWithGoogle,
+              isLoading: _isGoogleSubmitting,
+              colorScheme: colorScheme,
+            ),
+          const SizedBox(height: KubusSpacing.sm),
+        ],
+        if (!showEmailForm && enableEmail) ...[
+          OutlinedButton.icon(
+            onPressed: () {
+              setState(() => _showCompactEmailForm = true);
+            },
+            icon: const Icon(Icons.email_outlined),
+            label: Text(l10n.authContinueWithEmail),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(54),
+              side: BorderSide(
+                color: colorScheme.outlineVariant.withValues(alpha: 0.34),
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+            ),
+          ),
+          const SizedBox(height: KubusSpacing.sm),
+        ],
+        if (!showEmailForm && enableWallet) ...[
+          _buildMethodDivider(l10n.authHighlightOptionalWeb3),
+          const SizedBox(height: KubusSpacing.sm),
+          KubusButton(
+            onPressed: _showConnectWalletModal,
+            icon: Icons.account_balance_wallet_outlined,
+            label: l10n.authConnectWalletButton,
+            isFullWidth: true,
+          ),
+        ],
+        if (showEmailForm) ...[
+          _buildEmailForm(compact: widget.embedded),
+          const SizedBox(height: KubusSpacing.sm),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () {
+                setState(() => _showCompactEmailForm = false);
+              },
+              child: Text(l10n.commonBack),
             ),
           ),
         ],
-      ),
+      ],
     );
   }
 
@@ -961,6 +815,36 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       compact: compact,
       submitLabel: l10n.authContinueWithEmail,
       submittingLabel: l10n.commonWorking,
+    );
+  }
+
+  Widget _buildMethodDivider(String label) {
+    final scheme = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        Expanded(
+          child: Divider(
+            color: scheme.outlineVariant.withValues(alpha: 0.4),
+            height: 1,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.sm),
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.56),
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ),
+        Expanded(
+          child: Divider(
+            color: scheme.outlineVariant.withValues(alpha: 0.4),
+            height: 1,
+          ),
+        ),
+      ],
     );
   }
 }
