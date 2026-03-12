@@ -45,18 +45,25 @@ class EmailRegistrationForm extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
+    final border = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(18),
+      borderSide: BorderSide(
+        color: colorScheme.outlineVariant.withValues(alpha: 0.14),
+      ),
+    );
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         TextField(
           controller: emailController,
           keyboardType: TextInputType.emailAddress,
           onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
-          decoration: InputDecoration(
+          decoration: _decoration(
             labelText: l10n.commonEmail,
-            border: const OutlineInputBorder(),
             errorText: emailError,
+            border: border,
+            colorScheme: colorScheme,
           ),
         ),
         SizedBox(height: compact ? 8 : 10),
@@ -64,10 +71,11 @@ class EmailRegistrationForm extends StatelessWidget {
           controller: passwordController,
           obscureText: true,
           onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
-          decoration: InputDecoration(
+          decoration: _decoration(
             labelText: l10n.commonPassword,
-            border: const OutlineInputBorder(),
             errorText: passwordError,
+            border: border,
+            colorScheme: colorScheme,
           ),
         ),
         SizedBox(height: compact ? 8 : 10),
@@ -75,10 +83,11 @@ class EmailRegistrationForm extends StatelessWidget {
           controller: confirmPasswordController,
           obscureText: true,
           onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
-          decoration: InputDecoration(
+          decoration: _decoration(
             labelText: l10n.commonConfirmPassword,
-            border: const OutlineInputBorder(),
             errorText: confirmPasswordError,
+            border: border,
+            colorScheme: colorScheme,
           ),
         ),
         if (!compact && showUsername && usernameController != null) ...[
@@ -86,9 +95,10 @@ class EmailRegistrationForm extends StatelessWidget {
           TextField(
             controller: usernameController,
             onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
-            decoration: InputDecoration(
+            decoration: _decoration(
               labelText: l10n.commonUsernameOptional,
-              border: const OutlineInputBorder(),
+              border: border,
+              colorScheme: colorScheme,
             ),
           ),
         ],
@@ -125,6 +135,31 @@ class EmailRegistrationForm extends StatelessWidget {
         ),
         if (compact) const SizedBox(height: KubusSpacing.xs),
       ],
+    );
+  }
+
+  InputDecoration _decoration({
+    required String labelText,
+    required OutlineInputBorder border,
+    required ColorScheme colorScheme,
+    String? errorText,
+  }) {
+    return InputDecoration(
+      labelText: labelText,
+      errorText: errorText,
+      filled: true,
+      fillColor: Colors.white.withValues(alpha: 0.06),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: KubusSpacing.md,
+        vertical: 18,
+      ),
+      enabledBorder: border,
+      border: border,
+      focusedBorder: border.copyWith(
+        borderSide: BorderSide(
+          color: colorScheme.primary.withValues(alpha: 0.52),
+        ),
+      ),
     );
   }
 }

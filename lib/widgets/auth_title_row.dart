@@ -4,70 +4,60 @@ class AuthTitleRow extends StatelessWidget {
   const AuthTitleRow({
     super.key,
     required this.title,
-    required this.icon,
-    this.trailing,
+    this.subtitle,
     this.compact = false,
+    this.foregroundColor,
+    this.subtitleColor,
   });
 
   final String title;
-  final IconData icon;
-  final Widget? trailing;
+  final String? subtitle;
   final bool compact;
+  final Color? foregroundColor;
+  final Color? subtitleColor;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return SizedBox(
-      width: double.infinity,
-      child: Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: compact ? 4 : 8,
-          vertical: compact ? 6 : 8,
-        ),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: compact ? 40 : 48),
-          child: Row(
-            children: [
-              Container(
-                width: compact ? 30 : 36,
-                height: compact ? 30 : 36,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      scheme.primary,
-                      scheme.primary.withValues(alpha: 0.7),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child:
-                    Icon(icon, size: compact ? 16 : 18, color: Colors.white),
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+    final scheme = theme.colorScheme;
+    final resolvedSubtitle = subtitle?.trim();
+    final resolvedForeground = foregroundColor ?? scheme.onSurface;
+    final resolvedSubtitleColor =
+        subtitleColor ?? resolvedForeground.withValues(alpha: 0.78);
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        minHeight: compact ? 48 : 56,
+      ),
+      child: SizedBox(
+        width: double.infinity,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              title,
+              style: textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+                fontSize: compact ? 22 : 28,
+                color: resolvedForeground,
+                height: 1.02,
               ),
-              SizedBox(width: compact ? 10 : 12),
-              Expanded(
-                child: Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        fontSize: compact ? 16 : 18,
-                        color: Colors.white,
-                      ),
+              maxLines: compact ? 3 : 2,
+              overflow: TextOverflow.visible,
+            ),
+            if (resolvedSubtitle != null && resolvedSubtitle.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                resolvedSubtitle,
+                style: textTheme.bodyLarge?.copyWith(
+                  color: resolvedSubtitleColor,
+                  height: 1.45,
                 ),
               ),
-              if (trailing != null) ...[
-                const SizedBox(width: 12),
-                Flexible(
-                  fit: FlexFit.loose,
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: trailing!,
-                  ),
-                ),
-              ],
             ],
-          ),
+          ],
         ),
       ),
     );

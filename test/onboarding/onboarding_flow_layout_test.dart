@@ -109,7 +109,7 @@ void main() {
     api.setHttpClient(createPlatformHttpClient());
   });
 
-  testWidgets('onboarding starts at welcome wizard phase', (tester) async {
+  testWidgets('onboarding starts at unified welcome phase', (tester) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() async => tester.binding.setSurfaceSize(null));
 
@@ -121,16 +121,14 @@ void main() {
     );
     await _pumpOnboardingReady(tester);
 
-    // Welcome wizard should show page view with dot indicators
-    expect(find.byType(PageView), findsOneWidget);
-    // Should show discover title from welcome pages
-    expect(find.text('Discover art around you'), findsOneWidget);
-    // Branch buttons should be visible
+    expect(find.byType(PageView), findsNothing);
+    expect(find.text('Welcome to art.kubus'), findsOneWidget);
     expect(find.text('Create an account'), findsOneWidget);
     expect(find.text('Discover art'), findsOneWidget);
+    expect(find.text('Sign in'), findsOneWidget);
   });
 
-  testWidgets('welcome wizard shows both branch buttons on page',
+  testWidgets('welcome screen shows both branch buttons on page',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() async => tester.binding.setSurfaceSize(null));
@@ -143,11 +141,11 @@ void main() {
     );
     await _pumpOnboardingReady(tester);
 
-    // Both branch buttons should be visible and tappable
     final createAccountButton = find.text('Create an account');
     final discoverArtButton = find.text('Discover art');
     expect(createAccountButton, findsOneWidget);
     expect(discoverArtButton, findsOneWidget);
+    expect(find.text('Welcome to art.kubus'), findsOneWidget);
   });
 
   testWidgets('guest branch: discover art → permissions → done',
@@ -399,7 +397,7 @@ void main() {
     await _pumpOnboardingReady(tester);
     expect(tester.takeException(), isNull);
 
-    // Welcome wizard should render without overflow on small heights
+    // Unified welcome screen should render without overflow on small heights
     expect(find.text('Create an account'), findsOneWidget);
     expect(find.text('Discover art'), findsOneWidget);
   });
