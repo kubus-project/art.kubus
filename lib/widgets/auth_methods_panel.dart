@@ -785,11 +785,10 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         if (!showEmailForm && enableWallet) ...[
           _buildMethodDivider(l10n.authHighlightOptionalWeb3),
           SizedBox(height: compactLayout ? KubusSpacing.xs : KubusSpacing.sm),
-          KubusButton(
+          AuthSecondaryActionButton(
             onPressed: _showConnectWalletModal,
             icon: Icons.account_balance_wallet_outlined,
             label: l10n.authConnectWalletButton,
-            isFullWidth: true,
           ),
         ],
         if (showEmailForm) ...[

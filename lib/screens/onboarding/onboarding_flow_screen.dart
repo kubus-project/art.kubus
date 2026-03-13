@@ -1675,6 +1675,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     final stepNumber = _currentIndex + 1;
     final viewportSize = MediaQuery.sizeOf(context);
     final headerCompact = compact && viewportSize.height < 680;
+    final skipLabel = headerCompact ? l10n.commonSkip : l10n.commonSkipForNow;
     return Padding(
       padding: EdgeInsets.only(
         top: headerCompact ? KubusSpacing.xs : KubusSpacing.sm,
@@ -1713,7 +1714,12 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
                     children: [
                       Text(
                         l10n.onboardingFlowTitle,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: (headerCompact
+                                ? Theme.of(context).textTheme.titleMedium
+                                : Theme.of(context).textTheme.titleLarge)
+                            ?.copyWith(
                               color: scheme.onSurface,
                               fontWeight: FontWeight.w800,
                             ),
@@ -1732,15 +1738,28 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
             ),
           ),
           const SizedBox(width: KubusSpacing.md),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              AuthEntryControls(compact: headerCompact),
-              const SizedBox(height: KubusSpacing.xs),
               TextButton(
                 onPressed: _isSkippingFlow ? null : _skipForNow,
-                child: Text(l10n.commonSkipForNow),
+                style: TextButton.styleFrom(
+                  foregroundColor: scheme.onSurface,
+                  backgroundColor:
+                      scheme.surface.withValues(alpha: headerCompact ? 0.78 : 0.7),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: headerCompact ? KubusSpacing.sm : KubusSpacing.md,
+                    vertical: headerCompact ? 8 : 10,
+                  ),
+                  minimumSize: Size(headerCompact ? 56 : 72, 40),
+                ),
+                child: Text(skipLabel),
               ),
+              const SizedBox(width: KubusSpacing.xs),
+              AuthEntryControls(compact: headerCompact),
             ],
           ),
         ],
@@ -2469,43 +2488,15 @@ class _AccountStepState extends State<_AccountStep> {
               ),
             ],
             const SizedBox(height: KubusSpacing.sm),
-            Wrap(
-              spacing: KubusSpacing.sm,
-              runSpacing: KubusSpacing.sm,
-              children: [
-                ChoiceChip(
-                  label: Text(AppLocalizations.of(context)!.commonCreateAccount),
-                  selected: !_showSignIn,
-                  backgroundColor: Colors.white.withValues(alpha: 0.08),
-                  selectedColor: Colors.white.withValues(alpha: 0.18),
-                  side: BorderSide(
-                    color: Colors.white.withValues(alpha: 0.14),
-                  ),
-                  labelStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.92),
-                        fontWeight: FontWeight.w700,
-                      ),
-                  onSelected: (_) {
-                    setState(() => _showSignIn = false);
-                  },
-                ),
-                ChoiceChip(
-                  label: Text(AppLocalizations.of(context)!.commonSignIn),
-                  selected: _showSignIn,
-                  backgroundColor: Colors.white.withValues(alpha: 0.08),
-                  selectedColor: Colors.white.withValues(alpha: 0.18),
-                  side: BorderSide(
-                    color: Colors.white.withValues(alpha: 0.14),
-                  ),
-                  labelStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.92),
-                        fontWeight: FontWeight.w700,
-                      ),
-                  onSelected: (_) {
-                    setState(() => _showSignIn = true);
-                  },
-                ),
-              ],
+            _OnboardingAuthModeSwitch(
+              showSignIn: _showSignIn,
+              compact: compact,
+              onShowCreateAccount: () {
+                setState(() => _showSignIn = false);
+              },
+              onShowSignIn: () {
+                setState(() => _showSignIn = true);
+              },
             ),
             SizedBox(height: compact ? KubusSpacing.xs : 10),
             Expanded(
@@ -2539,6 +2530,102 @@ class _AccountStepState extends State<_AccountStep> {
           ],
         );
       },
+    );
+  }
+}
+
+class _OnboardingAuthModeSwitch extends StatelessWidget {
+  const _OnboardingAuthModeSwitch({
+    required this.showSignIn,
+    required this.compact,
+    required this.onShowCreateAccount,
+    required this.onShowSignIn,
+  });
+
+  final bool showSignIn;
+  final bool compact;
+  final VoidCallback onShowCreateAccount;
+  final VoidCallback onShowSignIn;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.12),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(4),
+        child: Row(
+          children: [
+            Expanded(
+              child: _OnboardingAuthModeButton(
+                label: l10n.commonCreateAccount,
+                selected: !showSignIn,
+                compact: compact,
+                onTap: onShowCreateAccount,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: _OnboardingAuthModeButton(
+                label: l10n.commonSignIn,
+                selected: showSignIn,
+                compact: compact,
+                onTap: onShowSignIn,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OnboardingAuthModeButton extends StatelessWidget {
+  const _OnboardingAuthModeButton({
+    required this.label,
+    required this.selected,
+    required this.compact,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final bool compact;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected
+          ? Colors.white.withValues(alpha: 0.16)
+          : Colors.transparent,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: KubusSpacing.sm,
+            vertical: compact ? 10 : 12,
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: Colors.white.withValues(alpha: selected ? 0.96 : 0.78),
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+        ),
+      ),
     );
   }
 }

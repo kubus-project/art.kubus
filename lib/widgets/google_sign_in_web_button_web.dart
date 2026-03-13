@@ -7,6 +7,7 @@ import 'package:google_sign_in_web/google_sign_in_web.dart' as gweb;
 
 import '../config/config.dart';
 import '../services/google_auth_service.dart';
+import 'google_sign_in_button.dart';
 
 class GoogleSignInWebButton extends StatefulWidget {
   const GoogleSignInWebButton({
@@ -136,66 +137,7 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    final Widget child;
-    if (!_ready) {
-      child = const SizedBox(
-        width: 20,
-        height: 20,
-        child: CircularProgressIndicator(strokeWidth: 2),
-      );
-    } else {
-      final platform = GoogleSignInPlatform.instance;
-      child = LayoutBuilder(
-        builder: (BuildContext context, BoxConstraints constraints) {
-          final double maxWidth =
-              constraints.maxWidth.isFinite ? constraints.maxWidth : 400;
-          // Match the surrounding auth buttons: take the full available width.
-          // Keep GIS unscaled so logo/text match Google's sizing.
-          final double buttonWidth = maxWidth;
-
-          final config = gweb.GSIButtonConfiguration(
-            type: gweb.GSIButtonType.standard,
-            theme: isDark
-                ? gweb.GSIButtonTheme.filledBlack
-                : gweb.GSIButtonTheme.outline,
-            size: gweb.GSIButtonSize.large,
-            text: gweb.GSIButtonText.continueWith,
-            shape: gweb.GSIButtonShape.rectangular,
-            logoAlignment: gweb.GSIButtonLogoAlignment.left,
-            minimumWidth: buttonWidth,
-          );
-
-          Widget? gisButton;
-          try {
-            if (platform is gweb.GoogleSignInPlugin) {
-              gisButton = platform.renderButton(configuration: config);
-            } else {
-              // Capability-based fallback: some runtimes may not expose the web
-              // plugin type directly even though `renderButton` is available.
-              final dynamic dyn = platform;
-              final dynamic rendered = dyn.renderButton(configuration: config);
-              if (rendered is Widget) gisButton = rendered;
-            }
-          } catch (e) {
-            // Never crash the auth screen due to a GIS rendering failure.
-          }
-
-          if (gisButton == null) {
-            return SizedBox(width: buttonWidth);
-          }
-
-          // Use only the GIS button (no custom visible wrappers).
-          // Keep the GIS button unscaled so its typography matches Google specs.
-          // We still match the surrounding layout by centering it inside the
-          // 56px auth row height.
-          return SizedBox(
-            width: buttonWidth,
-            child: gisButton,
-          );
-        },
-      );
-    }
+    final platform = GoogleSignInPlatform.instance;
 
     // Same size as other auth buttons.
     const double reservedHeight = 56;
@@ -206,11 +148,73 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
         alignment: Alignment.center,
         children: <Widget>[
           Positioned.fill(
-            child: AbsorbPointer(
-              absorbing: widget.isLoading,
-              child: child,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 160),
+              opacity: _ready ? 0 : 1,
+              child: IgnorePointer(
+                ignoring: true,
+                child: GoogleSignInButton(
+                  onPressed: () async {},
+                  isLoading: false,
+                  colorScheme: widget.colorScheme,
+                ),
+              ),
             ),
           ),
+          if (_ready)
+            Positioned.fill(
+              child: LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints constraints) {
+                  final double maxWidth =
+                      constraints.maxWidth.isFinite ? constraints.maxWidth : 400;
+                  final double buttonWidth = maxWidth;
+
+                  final config = gweb.GSIButtonConfiguration(
+                    type: gweb.GSIButtonType.standard,
+                    theme: isDark
+                        ? gweb.GSIButtonTheme.filledBlack
+                        : gweb.GSIButtonTheme.outline,
+                    size: gweb.GSIButtonSize.large,
+                    text: gweb.GSIButtonText.continueWith,
+                    shape: gweb.GSIButtonShape.rectangular,
+                    logoAlignment: gweb.GSIButtonLogoAlignment.left,
+                    minimumWidth: buttonWidth,
+                  );
+
+                  Widget? gisButton;
+                  try {
+                    if (platform is gweb.GoogleSignInPlugin) {
+                      gisButton = platform.renderButton(configuration: config);
+                    } else {
+                      final dynamic dyn = platform;
+                      final dynamic rendered =
+                          dyn.renderButton(configuration: config);
+                      if (rendered is Widget) gisButton = rendered;
+                    }
+                  } catch (_) {}
+
+                  if (gisButton == null) {
+                    return GoogleSignInButton(
+                      onPressed: () async {},
+                      isLoading: widget.isLoading,
+                      colorScheme: widget.colorScheme,
+                    );
+                  }
+
+                  return AbsorbPointer(
+                    absorbing: widget.isLoading,
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 160),
+                      opacity: _ready ? 1 : 0,
+                      child: SizedBox(
+                        width: buttonWidth,
+                        child: gisButton,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
           if (widget.isLoading)
             Positioned.fill(
               child: ColoredBox(
