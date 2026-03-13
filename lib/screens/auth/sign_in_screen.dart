@@ -742,11 +742,10 @@ class _SignInScreenState extends State<SignInScreen> {
         ),
         SizedBox(height: compactLayout ? KubusSpacing.md : KubusSpacing.lg),
         if (!showEmailForm && enableWallet) ...[
-          KubusButton(
+          AuthSecondaryActionButton(
             onPressed: _showConnectWalletModal,
             icon: Icons.account_balance_wallet_outlined,
             label: l10n.authConnectWalletButton,
-            isFullWidth: true,
           ),
           SizedBox(height: compactLayout ? KubusSpacing.xs : KubusSpacing.sm),
         ],
