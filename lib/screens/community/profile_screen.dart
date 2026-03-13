@@ -47,8 +47,7 @@ import '../../widgets/email_verification_status_badge.dart';
 import '../../widgets/secure_account_banner_card.dart';
 import '../../models/dao.dart';
 import '../../config/config.dart';
-import 'community_analytics_screen.dart';
-import 'profile_analytics_screen.dart';
+import '../activity/advanced_analytics_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 
@@ -441,68 +440,19 @@ class _ProfileScreenState extends State<ProfileScreen>
                                         onPressed: () {
                                           final wallet = profileProvider.currentUser?.walletAddress ?? '';
                                           if (wallet.trim().isEmpty) return;
-                                          showModalBottomSheet<void>(
-                                            context: context,
-                                            backgroundColor: Theme.of(context).colorScheme.surface,
-                                            shape: const RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => AdvancedAnalyticsScreen(
+                                                statType: '',
+                                                walletAddress: wallet,
+                                                initialContext: AnalyticsExperienceContext.profile,
+                                                contexts: const <AnalyticsExperienceContext>[
+                                                  AnalyticsExperienceContext.profile,
+                                                  AnalyticsExperienceContext.community,
+                                                ],
+                                              ),
                                             ),
-                                            builder: (sheetContext) {
-                                              final l10n = AppLocalizations.of(sheetContext)!;
-                                              final scheme = Theme.of(sheetContext).colorScheme;
-                                              return SafeArea(
-                                                child: Padding(
-                                                  padding: const EdgeInsets.all(16),
-                                                  child: Column(
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                    children: [
-                                                      Text(
-                                                        l10n.navigationScreenAnalytics,
-                                                        style: GoogleFonts.inter(
-                                                          fontSize: 16,
-                                                          fontWeight: FontWeight.w700,
-                                                          color: scheme.onSurface,
-                                                        ),
-                                                      ),
-                                                      const SizedBox(height: 12),
-                                                      ListTile(
-                                                        leading: Icon(Icons.person_outline, color: scheme.primary),
-                                                        title: Text(l10n.profileAnalyticsProfileTitle, style: GoogleFonts.inter()),
-                                                        onTap: () {
-                                                          Navigator.pop(sheetContext);
-                                                          Navigator.push(
-                                                            context,
-                                                            MaterialPageRoute(
-                                                              builder: (_) => ProfileAnalyticsScreen(
-                                                                walletAddress: wallet,
-                                                                title: l10n.profileAnalyticsProfileTitle,
-                                                              ),
-                                                            ),
-                                                          );
-                                                        },
-                                                      ),
-                                                      ListTile(
-                                                        leading: Icon(Icons.forum_outlined, color: scheme.secondary),
-                                                        title: Text(l10n.profileAnalyticsCommunityTitle, style: GoogleFonts.inter()),
-                                                        onTap: () {
-                                                          Navigator.pop(sheetContext);
-                                                          Navigator.push(
-                                                            context,
-                                                            MaterialPageRoute(
-                                                              builder: (_) => CommunityAnalyticsScreen(
-                                                                walletAddress: wallet,
-                                                                title: l10n.profileAnalyticsCommunityTitle,
-                                                              ),
-                                                            ),
-                                                          );
-                                                        },
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              );
-                                            },
                                           );
                                         },
                                         tooltip: AppLocalizations.of(context)!.navigationScreenAnalytics,

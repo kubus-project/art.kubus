@@ -1,29 +1,46 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:art_kubus/config/config.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/topbar_icon.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../utils/app_animations.dart';
-import '../../utils/app_color_utils.dart';
+import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../models/stats/stats_models.dart';
 import '../../services/stats_api_service.dart';
 import '../../widgets/charts/stats_interactive_line_chart.dart';
 import '../../widgets/charts/stats_interactive_bar_chart.dart';
+import '../../providers/analytics_filters_provider.dart';
+import '../../providers/config_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/stats_provider.dart';
 import '../../providers/web3provider.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
+enum AnalyticsExperienceContext { home, profile, community }
+
 class AdvancedAnalyticsScreen extends StatefulWidget {
   final String statType;
-  
-  const AdvancedAnalyticsScreen({super.key, required this.statType});
+  final String? walletAddress;
+  final AnalyticsExperienceContext initialContext;
+  final List<AnalyticsExperienceContext> contexts;
+
+  const AdvancedAnalyticsScreen({
+    super.key,
+    required this.statType,
+    this.walletAddress,
+    this.initialContext = AnalyticsExperienceContext.home,
+    this.contexts = const <AnalyticsExperienceContext>[
+      AnalyticsExperienceContext.home,
+    ],
+  });
 
   @override
   State<AdvancedAnalyticsScreen> createState() => _AdvancedAnalyticsScreenState();
@@ -35,13 +52,12 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
   late Animation<double> _fadeAnimation;
   late TabController _tabController;
   bool _didPlayEntrance = false;
-  
-  String _selectedPeriod = '7D';
-  final List<String> _periods = ['1D', '7D', '30D', '90D', '1Y'];
+  late AnalyticsExperienceContext _activeContext;
 
   @override
   void initState() {
     super.initState();
+    _activeContext = widget.initialContext;
     _animationController = AnimationController(
       duration: AppAnimationTheme.defaults.long,
       vsync: this,
@@ -85,16 +101,52 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
     final profileProvider = context.watch<ProfileProvider>();
     final web3Provider = context.watch<Web3Provider>();
     final statsProvider = context.watch<StatsProvider>();
-    final wallet = (profileProvider.currentUser?.walletAddress ??
+    final filtersProvider = context.watch<AnalyticsFiltersProvider>();
+    final configProvider = context.watch<ConfigProvider>();
+    final viewerWallet = (profileProvider.currentUser?.walletAddress ??
             web3Provider.walletAddress)
         .trim();
+    final targetWallet = (widget.walletAddress?.trim().isNotEmpty ?? false)
+        ? widget.walletAddress!.trim()
+        : viewerWallet;
+    final isOwner = viewerWallet.isNotEmpty &&
+        targetWallet.isNotEmpty &&
+        viewerWallet.toLowerCase() == targetWallet.toLowerCase();
+    final definition = _buildDefinition(
+      l10n: l10n,
+      scheme: scheme,
+      roles: roles,
+      contextType: _activeContext,
+      isOwner: isOwner,
+    );
+    final timeframe = filtersProvider.timeframeFor(definition.storageKey);
+    final selectedMetricId = _resolveSelectedMetricId(
+      definition: definition,
+      storedMetricId: filtersProvider.metricFor(
+        definition.storageKey,
+        fallback: _defaultMetricForDefinition(definition),
+      ),
+      hasExplicitMetricSelection: filtersProvider.hasExplicitMetricFor(
+        definition.storageKey,
+      ),
+      statType: widget.statType,
+    );
     final analytics = _buildAnalyticsContext(
       statsProvider: statsProvider,
-      walletAddress: wallet,
+      walletAddress: targetWallet,
+      definition: definition,
+      timeframe: timeframe,
+      selectedMetricId: selectedMetricId,
+      canFetch: StatsApiService.shouldFetchAnalytics(
+        analyticsFeatureEnabled: AppConfig.isFeatureEnabled('analytics'),
+        analyticsPreferenceEnabled: configProvider.enableAnalytics,
+      ),
     );
 
     return FadeTransition(
@@ -111,7 +163,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
             onPressed: () => Navigator.pop(context),
           ),
           title: Text(
-            '${widget.statType} Analytics',
+            definition.title,
             style: GoogleFonts.inter(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -128,7 +180,11 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
         ),
         body: Column(
           children: [
-            _buildPeriodSelector(),
+            _buildHeaderControls(
+              definition: definition,
+              selectedMetricId: selectedMetricId,
+              timeframe: timeframe,
+            ),
             const SizedBox(height: 16),
             _buildTabBar(),
             Expanded(
@@ -148,51 +204,300 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
     );
   }
 
-  Widget _buildPeriodSelector() {
+  Widget _buildHeaderControls({
+    required _AnalyticsDefinition definition,
+    required String selectedMetricId,
+    required String timeframe,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24),
-      padding: const EdgeInsets.all(4),
+      margin: const EdgeInsets.symmetric(horizontal: KubusSpacing.lg),
+      padding: const EdgeInsets.all(KubusSpacing.md),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
+        color: scheme.surface.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
+        border: Border.all(color: scheme.outline.withValues(alpha: 0.12)),
       ),
-      child: Row(
-        children: _periods.map((period) {
-          final isSelected = _selectedPeriod == period;
-          return Expanded(
-            child: GestureDetector(
-              onTap: () => setState(() => _selectedPeriod = period),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                  color: isSelected 
-                      ? AppColorUtils.amberAccent
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  period,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            definition.scopeLabel,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: scheme.primary,
+            ),
+          ),
+          const SizedBox(height: KubusSpacing.xs),
+          Text(
+            definition.subtitle,
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              height: 1.35,
+              color: scheme.onSurface.withValues(alpha: 0.72),
+            ),
+          ),
+          const SizedBox(height: KubusSpacing.md),
+          if (widget.contexts.length > 1) ...[
+            Wrap(
+              spacing: KubusSpacing.sm,
+              runSpacing: KubusSpacing.sm,
+              children: widget.contexts.map((contextType) {
+                final selected = contextType == _activeContext;
+                return ChoiceChip(
+                  selected: selected,
+                  label: Text(_contextLabel(l10n, contextType)),
+                  avatar: Icon(_contextIcon(contextType), size: 16),
+                  onSelected: (_) {
+                    if (selected) return;
+                    setState(() => _activeContext = contextType);
+                  },
+                );
+              }).toList(growable: false),
+            ),
+            const SizedBox(height: KubusSpacing.md),
+          ],
+          Wrap(
+            spacing: KubusSpacing.md,
+            runSpacing: KubusSpacing.md,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Wrap(
+                spacing: KubusSpacing.sm,
+                runSpacing: KubusSpacing.sm,
+                children: AnalyticsFiltersProvider.allowedTimeframes.map((value) {
+                  return ChoiceChip(
+                    selected: timeframe == value,
+                    label: Text(value.toUpperCase()),
+                    onSelected: (_) {
+                      context
+                          .read<AnalyticsFiltersProvider>()
+                          .setTimeframeFor(definition.storageKey, value);
+                    },
+                  );
+                }).toList(growable: false),
+              ),
+              SizedBox(
+                width: 260,
+                child: DropdownButtonFormField<String>(
+                  initialValue: selectedMetricId,
+                  items: definition.metrics
+                      .map(
+                        (metric) => DropdownMenuItem<String>(
+                          value: metric.id,
+                          child: Text(metric.label),
+                        ),
+                      )
+                      .toList(growable: false),
+                  onChanged: (value) {
+                    if (value == null || value.trim().isEmpty) return;
+                    context.read<AnalyticsFiltersProvider>().setMetricFor(
+                          definition.storageKey,
+                          value.trim(),
+                          allowedMetrics: definition.metrics.map((metric) => metric.id),
+                        );
+                  },
+                  decoration: InputDecoration(
+                    labelText: l10n.analyticsMetricLabel,
+                    filled: true,
+                    fillColor: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(KubusRadius.md),
+                    ),
                   ),
                 ),
               ),
-            ),
-          );
-        }).toList(),
+            ],
+          ),
+        ],
       ),
     );
   }
 
+  _AnalyticsDefinition _buildDefinition({
+    required AppLocalizations l10n,
+    required ColorScheme scheme,
+    required KubusColorRoles roles,
+    required AnalyticsExperienceContext contextType,
+    required bool isOwner,
+  }) {
+    final metrics = <String, _AnalyticsMetricDefinition>{
+      'followers': _AnalyticsMetricDefinition(
+        id: 'followers',
+        label: l10n.userProfileFollowersStatLabel,
+        icon: Icons.people_outline,
+        color: scheme.primary,
+      ),
+      'posts': _AnalyticsMetricDefinition(
+        id: 'posts',
+        label: l10n.userProfilePostsStatLabel,
+        icon: Icons.forum_outlined,
+        color: scheme.secondary,
+      ),
+      'artworks': _AnalyticsMetricDefinition(
+        id: 'artworks',
+        label: l10n.userProfileArtworksTitle,
+        icon: Icons.palette_outlined,
+        color: roles.positiveAction,
+      ),
+      'viewsReceived': _AnalyticsMetricDefinition(
+        id: 'viewsReceived',
+        label: l10n.analyticsMetricViewsReceivedLabel,
+        icon: Icons.visibility_outlined,
+        color: scheme.tertiary,
+      ),
+      'likesReceived': _AnalyticsMetricDefinition(
+        id: 'likesReceived',
+        label: l10n.analyticsMetricLikesReceivedLabel,
+        icon: Icons.favorite_border,
+        color: roles.negativeAction,
+      ),
+      'engagement': _AnalyticsMetricDefinition(
+        id: 'engagement',
+        label: l10n.analyticsMetricEngagementLabel,
+        icon: Icons.insights_outlined,
+        color: scheme.primary,
+        privateOnly: true,
+      ),
+      'viewsGiven': _AnalyticsMetricDefinition(
+        id: 'viewsGiven',
+        label: l10n.analyticsMetricViewsGivenLabel,
+        icon: Icons.travel_explore_outlined,
+        color: scheme.secondary,
+        privateOnly: true,
+      ),
+    };
+
+    switch (contextType) {
+      case AnalyticsExperienceContext.home:
+        return _AnalyticsDefinition(
+          contextType: contextType,
+          storageKey: AnalyticsFiltersProvider.homeContextKey,
+          title: 'Analytics',
+          subtitle:
+              'Unified personal analytics for reach, activity, and momentum across the app.',
+          scopeLabel: l10n.analyticsYourAnalyticsTitle,
+          icon: Icons.analytics_outlined,
+          accentColor: scheme.primary,
+          metrics: <_AnalyticsMetricDefinition>[
+            metrics['engagement']!,
+            metrics['viewsReceived']!,
+            metrics['followers']!,
+            metrics['artworks']!,
+          ],
+        );
+      case AnalyticsExperienceContext.profile:
+        return _AnalyticsDefinition(
+          contextType: contextType,
+          storageKey: AnalyticsFiltersProvider.profileContextKey,
+          title: l10n.profileAnalyticsProfileTitle,
+          subtitle:
+              'A single profile-focused analytics surface with public and owner-aware metrics.',
+          scopeLabel:
+              isOwner ? l10n.analyticsYourAnalyticsTitle : l10n.analyticsPublicAnalyticsTitle,
+          icon: Icons.person_outline,
+          accentColor: scheme.primary,
+          metrics: <_AnalyticsMetricDefinition>[
+            metrics['viewsReceived']!,
+            metrics['followers']!,
+            metrics['posts']!,
+            metrics['artworks']!,
+            metrics['likesReceived']!,
+            if (isOwner) metrics['engagement']!,
+            if (isOwner) metrics['viewsGiven']!,
+          ],
+        );
+      case AnalyticsExperienceContext.community:
+        return _AnalyticsDefinition(
+          contextType: contextType,
+          storageKey: AnalyticsFiltersProvider.communityContextKey,
+          title: l10n.profileAnalyticsCommunityTitle,
+          subtitle:
+              'The same analytics system, configured around community posting and response signals.',
+          scopeLabel:
+              isOwner ? l10n.analyticsYourAnalyticsTitle : l10n.analyticsPublicAnalyticsTitle,
+          icon: Icons.forum_outlined,
+          accentColor: scheme.secondary,
+          metrics: <_AnalyticsMetricDefinition>[
+            metrics['posts']!,
+            metrics['likesReceived']!,
+            if (isOwner) metrics['engagement']!,
+          ],
+        );
+    }
+  }
+
+  String _defaultMetricForDefinition(_AnalyticsDefinition definition) {
+    switch (definition.contextType) {
+      case AnalyticsExperienceContext.home:
+        return 'engagement';
+      case AnalyticsExperienceContext.profile:
+        return 'viewsReceived';
+      case AnalyticsExperienceContext.community:
+        return 'posts';
+    }
+  }
+
+  String _resolveSelectedMetricId({
+    required _AnalyticsDefinition definition,
+    required String storedMetricId,
+    required bool hasExplicitMetricSelection,
+    required String statType,
+  }) {
+    final statMetric = StatsApiService.metricFromUiStatType(statType).trim();
+    final candidates = definition.contextType == AnalyticsExperienceContext.home &&
+            statMetric.isNotEmpty &&
+            !hasExplicitMetricSelection
+        ? <String>[
+            statMetric,
+            storedMetricId.trim(),
+            _defaultMetricForDefinition(definition),
+          ]
+        : <String>[
+            storedMetricId.trim(),
+            statMetric,
+            _defaultMetricForDefinition(definition),
+          ];
+
+    for (final candidate in candidates) {
+      if (candidate.isEmpty) continue;
+      if (definition.metricById(candidate) != null) return candidate;
+    }
+    return definition.metrics.first.id;
+  }
+
+  String _contextLabel(AppLocalizations l10n, AnalyticsExperienceContext contextType) {
+    switch (contextType) {
+      case AnalyticsExperienceContext.home:
+        return 'Home';
+      case AnalyticsExperienceContext.profile:
+        return l10n.profileAnalyticsProfileTitle;
+      case AnalyticsExperienceContext.community:
+        return l10n.profileAnalyticsCommunityTitle;
+    }
+  }
+
+  IconData _contextIcon(AnalyticsExperienceContext contextType) {
+    switch (contextType) {
+      case AnalyticsExperienceContext.home:
+        return Icons.home_outlined;
+      case AnalyticsExperienceContext.profile:
+        return Icons.person_outline;
+      case AnalyticsExperienceContext.community:
+        return Icons.forum_outlined;
+    }
+  }
+
   Widget _buildTabBar() {
+    final scheme = Theme.of(context).colorScheme;
     return TabBar(
       controller: _tabController,
-      labelColor: AppColorUtils.amberAccent,
-      unselectedLabelColor: Colors.white.withValues(alpha: 0.6),
-      indicatorColor: AppColorUtils.amberAccent,
+      labelColor: scheme.primary,
+      unselectedLabelColor: scheme.onSurface.withValues(alpha: 0.6),
+      indicatorColor: scheme.primary,
       labelStyle: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
       tabs: const [
         Tab(text: 'Overview'),
@@ -373,7 +678,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
           ),
           const SizedBox(height: 8),
           Text(
-            'vs previous $_selectedPeriod',
+            'vs previous ${analytics.periodLabel}',
             style: GoogleFonts.inter(
               fontSize: 14,
               color: Colors.white.withValues(alpha: 0.6),
@@ -444,7 +749,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '${widget.statType} Over Time',
+            '${analytics.metricLabel} Over Time',
             style: GoogleFonts.inter(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -474,7 +779,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
                     : StatsInteractiveLineChart(
                         series: [
                           StatsLineSeries(
-                            label: widget.statType,
+                            label: analytics.metricLabel,
                             values: analytics.chartData,
                             color: scheme.tertiary,
                             showArea: true,
@@ -561,6 +866,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
   Widget _buildGoalProgress(_AnalyticsContext analytics) {
     final progress = analytics.goalProgress;
     final animationTheme = context.animationTheme;
+    final scheme = Theme.of(context).colorScheme;
     
     return Container(
       padding: const EdgeInsets.all(20),
@@ -588,7 +894,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
               child: InlineLoading(
                 progress: progress,
                 tileSize: 8.0,
-                color: AppColorUtils.greenAccent,
+                color: scheme.primary,
                 duration: animationTheme.medium,
               ),
             ),
@@ -1220,15 +1526,18 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
   _AnalyticsContext _buildAnalyticsContext({
     required StatsProvider statsProvider,
     required String walletAddress,
+    required _AnalyticsDefinition definition,
+    required String timeframe,
+    required String selectedMetricId,
+    required bool canFetch,
   }) {
     final hasWallet = walletAddress.trim().isNotEmpty;
-    final analyticsEnabled = statsProvider.analyticsEnabled;
-
-    final resolvedMetricRaw = StatsApiService.metricFromUiStatType(widget.statType);
-    final metric = resolvedMetricRaw.trim().isNotEmpty ? resolvedMetricRaw.trim() : 'engagement';
-
-    final timeframe = StatsApiService.timeframeFromLabel(_selectedPeriod);
+    final analyticsEnabled = canFetch;
+    final metricDefinition = definition.metricById(selectedMetricId) ??
+        definition.metricById(_defaultMetricForDefinition(definition))!;
+    final metric = metricDefinition.id;
     final bucket = timeframe == '24h' ? 'hour' : 'day';
+    final scope = definition.scopeFor(metricDefinition);
 
     final now = DateTime.now().toUtc();
     final duration = _durationForTimeframe(timeframe);
@@ -1254,7 +1563,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
         timeframe: timeframe,
         from: currentFrom.toIso8601String(),
         to: currentTo.toIso8601String(),
-        scope: 'private',
+        scope: scope,
       ));
       unawaited(statsProvider.ensureSeries(
         entityType: 'user',
@@ -1264,7 +1573,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
         timeframe: timeframe,
         from: prevFrom.toIso8601String(),
         to: prevTo.toIso8601String(),
-        scope: 'private',
+        scope: scope,
       ));
     }
 
@@ -1276,7 +1585,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       timeframe: timeframe,
       from: currentFrom.toIso8601String(),
       to: currentTo.toIso8601String(),
-      scope: 'private',
+      scope: scope,
     );
     final previousSeries = statsProvider.getSeries(
       entityType: 'user',
@@ -1286,7 +1595,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       timeframe: timeframe,
       from: prevFrom.toIso8601String(),
       to: prevTo.toIso8601String(),
-      scope: 'private',
+      scope: scope,
     );
 
     final isLoading = statsProvider.isSeriesLoading(
@@ -1297,7 +1606,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       timeframe: timeframe,
       from: currentFrom.toIso8601String(),
       to: currentTo.toIso8601String(),
-      scope: 'private',
+      scope: scope,
     );
     final error = statsProvider.seriesError(
       entityType: 'user',
@@ -1307,7 +1616,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       timeframe: timeframe,
       from: currentFrom.toIso8601String(),
       to: currentTo.toIso8601String(),
-      scope: 'private',
+      scope: scope,
     );
 
     final prevLoading = statsProvider.isSeriesLoading(
@@ -1318,7 +1627,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       timeframe: timeframe,
       from: prevFrom.toIso8601String(),
       to: prevTo.toIso8601String(),
-      scope: 'private',
+      scope: scope,
     );
     final prevError = statsProvider.seriesError(
       entityType: 'user',
@@ -1328,7 +1637,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       timeframe: timeframe,
       from: prevFrom.toIso8601String(),
       to: prevTo.toIso8601String(),
-      scope: 'private',
+      scope: scope,
     );
 
     List<double> toValues(StatsSeries? s) {
@@ -1517,7 +1826,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
     final insights = <_AnalyticsInsight>[];
     if (chartData.isNotEmpty) {
       insights.add(_AnalyticsInsight('Peak bucket: ${peak.toInt()}', Icons.trending_up, Colors.green));
-      insights.add(_AnalyticsInsight('Average per ${bucket == 'hour' ? 'hour' : 'day'}: ${_formatValue(avg)}', Icons.timeline, scheme.secondary));
+      insights.add(_AnalyticsInsight('Average ${metricDefinition.label.toLowerCase()} per ${bucket == 'hour' ? 'hour' : 'day'}: ${_formatValue(avg)}', Icons.timeline, scheme.secondary));
       insights.add(_AnalyticsInsight('Consistency: ${(consistency * 100).toStringAsFixed(0)}%', Icons.check_circle, scheme.primary));
     }
 
@@ -1584,6 +1893,10 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
     }
 
     return _AnalyticsContext(
+      title: definition.title,
+      subtitle: definition.subtitle,
+      metricLabel: metricDefinition.label,
+      periodLabel: timeframe.toUpperCase(),
       walletAddress: walletAddress,
       metric: metric,
       timeframe: timeframe,
@@ -1646,12 +1959,12 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
     final messenger = ScaffoldMessenger.of(context);
     final scheme = Theme.of(context).colorScheme;
 
-    final title = widget.statType.trim().isEmpty ? 'Analytics' : '${widget.statType} Analytics';
-    final periodLabel = _selectedPeriod;
+    final title = analytics.title;
+    final periodLabel = analytics.periodLabel;
     final summary = StringBuffer()
       ..writeln(title)
       ..writeln('Period: $periodLabel')
-      ..writeln('Total: ${_formatValue(analytics.currentTotal)}')
+      ..writeln('${analytics.metricLabel}: ${_formatValue(analytics.currentTotal)}')
       ..writeln('Change: ${analytics.changePctLabel}')
       ..writeln('Trend: ${analytics.trendLabel}');
 
@@ -1674,6 +1987,10 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
 }
 
 class _AnalyticsContext {
+  final String title;
+  final String subtitle;
+  final String metricLabel;
+  final String periodLabel;
   final String walletAddress;
   final String metric;
   final String timeframe;
@@ -1708,6 +2025,10 @@ class _AnalyticsContext {
   final List<_AnalyticsComparison> comparisons;
 
   const _AnalyticsContext({
+    required this.title,
+    required this.subtitle,
+    required this.metricLabel,
+    required this.periodLabel,
     required this.walletAddress,
     required this.metric,
     required this.timeframe,
@@ -1737,6 +2058,57 @@ class _AnalyticsContext {
     required this.recommendations,
     required this.comparisons,
   });
+}
+
+class _AnalyticsDefinition {
+  const _AnalyticsDefinition({
+    required this.contextType,
+    required this.storageKey,
+    required this.title,
+    required this.subtitle,
+    required this.scopeLabel,
+    required this.icon,
+    required this.accentColor,
+    required this.metrics,
+  });
+
+  final AnalyticsExperienceContext contextType;
+  final String storageKey;
+  final String title;
+  final String subtitle;
+  final String scopeLabel;
+  final IconData icon;
+  final Color accentColor;
+  final List<_AnalyticsMetricDefinition> metrics;
+
+  _AnalyticsMetricDefinition? metricById(String metricId) {
+    for (final metric in metrics) {
+      if (metric.id == metricId) return metric;
+    }
+    return null;
+  }
+
+  String scopeFor(_AnalyticsMetricDefinition metricDefinition) {
+    if (contextType == AnalyticsExperienceContext.home) return 'private';
+    if (metricDefinition.privateOnly) return 'private';
+    return 'public';
+  }
+}
+
+class _AnalyticsMetricDefinition {
+  const _AnalyticsMetricDefinition({
+    required this.id,
+    required this.label,
+    required this.icon,
+    required this.color,
+    this.privateOnly = false,
+  });
+
+  final String id;
+  final String label;
+  final IconData icon;
+  final Color color;
+  final bool privateOnly;
 }
 
 class _AnalyticsProjection {
@@ -1781,123 +2153,3 @@ class _AnalyticsComparison {
   const _AnalyticsComparison(this.metric, this.currentValue, this.previousValue, this.isGood);
 }
 
-// Custom chart painter for advanced analytics
-class AdvancedChartPainter extends CustomPainter {
-  final List<double> data;
-  final Color accentColor;
-
-  AdvancedChartPainter({required this.data, required this.accentColor});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = accentColor
-      ..strokeWidth = 3
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    final fillPaint = Paint()
-      ..color = accentColor.withValues(alpha: 0.1)
-      ..style = PaintingStyle.fill;
-
-    final gridPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.1)
-      ..strokeWidth = 1;
-
-    // Draw grid lines
-    for (int i = 0; i <= 5; i++) {
-      final y = size.height * i / 5;
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
-    }
-
-    for (int i = 0; i <= 6; i++) {
-      final x = size.width * i / 6;
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
-    }
-
-    if (data.isEmpty) return;
-
-    final maxValue = data.reduce((a, b) => a > b ? a : b);
-    final minValue = data.reduce((a, b) => a < b ? a : b);
-    final range = maxValue - minValue;
-
-    if (range == 0) return;
-
-    final path = Path();
-    final fillPath = Path();
-    
-    for (int i = 0; i < data.length; i++) {
-      final x = size.width * i / (data.length - 1);
-      final normalizedValue = (data[i] - minValue) / range;
-      final y = size.height * (1 - normalizedValue);
-
-      if (i == 0) {
-        path.moveTo(x, y);
-        fillPath.moveTo(x, size.height);
-        fillPath.lineTo(x, y);
-      } else {
-        path.lineTo(x, y);
-        fillPath.lineTo(x, y);
-      }
-    }
-
-    // Complete fill path
-    fillPath.lineTo(size.width, size.height);
-    fillPath.close();
-
-    // Draw fill and line
-    canvas.drawPath(fillPath, fillPaint);
-    canvas.drawPath(path, paint);
-
-    // Draw data points
-    final pointPaint = Paint()
-      ..color = accentColor
-      ..style = PaintingStyle.fill;
-
-    for (int i = 0; i < data.length; i++) {
-      final x = size.width * i / (data.length - 1);
-      final normalizedValue = (data[i] - minValue) / range;
-      final y = size.height * (1 - normalizedValue);
-      
-      canvas.drawCircle(Offset(x, y), 4, pointPaint);
-      canvas.drawCircle(Offset(x, y), 2, Paint()..color = Colors.white);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
-}
-
-// Seasonality chart painter
-class SeasonalityChartPainter extends CustomPainter {
-  final Color accentColor;
-  final List<double> data;
-
-  SeasonalityChartPainter({required this.accentColor, required this.data});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (data.isEmpty) return;
-    final barWidth = size.width / data.length * 0.8;
-    final spacing = size.width / data.length * 0.2;
-
-    for (int i = 0; i < data.length; i++) {
-      final x = i * (barWidth + spacing) + spacing / 2;
-      final value = data[i].clamp(0.0, 1.0);
-      final height = size.height * value;
-      final y = size.height - height;
-
-      final paint = Paint()
-        ..color = accentColor.withValues(alpha: 0.6 + 0.4 * value)
-        ..style = PaintingStyle.fill;
-
-      canvas.drawRRect(
-        RRect.fromLTRBR(x, y, x + barWidth, size.height, const Radius.circular(4)),
-        paint,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
-}

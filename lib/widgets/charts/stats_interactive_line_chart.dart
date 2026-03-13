@@ -32,7 +32,7 @@ class StatsInteractiveLineChart extends StatelessWidget {
     required this.xLabels,
     this.height = 200,
     required this.gridColor,
-    this.padding = const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+    this.padding = const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
   });
 
   @override
@@ -58,7 +58,7 @@ class StatsInteractiveLineChart extends StatelessWidget {
     final yMax = _computeMaxY(normalizedSeries);
     final yTop = yMax <= 0 ? 1.0 : (yMax * 1.15);
 
-    final chartWidth = math.max(0, pointCount - 1) * 28.0 + 56;
+    final chartWidth = math.max(0, pointCount - 1) * 34.0 + 84;
 
     return SizedBox(
       height: height,
@@ -102,7 +102,7 @@ class StatsInteractiveLineChart extends StatelessWidget {
                         sideTitles: SideTitles(
                           showTitles: true,
                           interval: _niceInterval(yTop),
-                          reservedSize: 44,
+                          reservedSize: 52,
                           getTitlesWidget: (value, meta) {
                             if (value < 0) return const SizedBox.shrink();
                             return Padding(
@@ -110,7 +110,7 @@ class StatsInteractiveLineChart extends StatelessWidget {
                               child: Text(
                                 value.round().toString(),
                                 style: GoogleFonts.inter(
-                                  fontSize: 10,
+                                  fontSize: 11,
                                   color: scheme.onSurface.withValues(alpha: 0.65),
                                 ),
                               ),
@@ -121,7 +121,7 @@ class StatsInteractiveLineChart extends StatelessWidget {
                       bottomTitles: AxisTitles(
                         sideTitles: SideTitles(
                           showTitles: true,
-                          reservedSize: 26,
+                          reservedSize: 34,
                           interval: _bottomInterval(pointCount),
                           getTitlesWidget: (value, meta) {
                             final idx = value.round();
@@ -133,7 +133,7 @@ class StatsInteractiveLineChart extends StatelessWidget {
                               child: Text(
                                 xLabels[idx],
                                 style: GoogleFonts.inter(
-                                  fontSize: 9,
+                                  fontSize: 10,
                                   color: scheme.onSurface.withValues(alpha: 0.55),
                                 ),
                                 textAlign: TextAlign.center,
@@ -196,10 +196,10 @@ class StatsInteractiveLineChart extends StatelessWidget {
                       return LineChartBarData(
                         spots: spots,
                         isCurved: true,
-                        curveSmoothness: 0.25,
+                        curveSmoothness: 0.22,
                         preventCurveOverShooting: true,
                         color: s.color,
-                        barWidth: 2.5,
+                        barWidth: 2.8,
                         isStrokeCapRound: true,
                         dotData: const FlDotData(show: false),
                         belowBarData: BarAreaData(
