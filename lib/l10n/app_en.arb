@@ -3645,6 +3645,139 @@
   "analyticsMetricViewsReceivedLabel": "Views received",
   "analyticsMetricEngagementLabel": "Engagement",
   "analyticsMetricViewsGivenLabel": "Views given",
+  "analyticsTabOverview": "Overview",
+  "analyticsTabTrends": "Trends",
+  "analyticsTabInsights": "Insights",
+  "analyticsTabCompare": "Compare",
+  "analyticsHomeContextLabel": "Home",
+  "analyticsHomeSubtitle": "Unified personal analytics for reach, activity, and momentum across the app.",
+  "analyticsProfileSubtitle": "A single profile-focused analytics surface with public and owner-aware metrics.",
+  "analyticsCommunitySubtitle": "The same analytics system, configured around community posting and response signals.",
+  "analyticsShowFiltersAction": "Show filters",
+  "analyticsHideFiltersAction": "Hide filters",
+  "analyticsThisPeriodLabel": "This period",
+  "analyticsVsPreviousPeriod": "vs previous {period}",
+  "@analyticsVsPreviousPeriod": {
+    "placeholders": {
+      "period": {}
+    }
+  },
+  "analyticsChartOverTimeTitle": "{metric} over time",
+  "@analyticsChartOverTimeTitle": {
+    "placeholders": {
+      "metric": {}
+    }
+  },
+  "analyticsSectionKeyMetrics": "Key metrics",
+  "analyticsSectionGoalProgress": "Goal progress",
+  "analyticsPercentComplete": "{percent} complete",
+  "@analyticsPercentComplete": {
+    "placeholders": {
+      "percent": {}
+    }
+  },
+  "analyticsTargetValue": "Target: {value}",
+  "@analyticsTargetValue": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "analyticsSectionTrendAnalysis": "Trend analysis",
+  "analyticsTrendOverall": "Overall trend",
+  "analyticsTrendGrowthRate": "Growth rate",
+  "analyticsTrendVolatility": "Volatility",
+  "analyticsTrendMomentum": "Momentum",
+  "analyticsSectionSeasonalityPattern": "Seasonality pattern",
+  "analyticsNotEnoughDataTitle": "Not enough data",
+  "analyticsSeasonalityEmptyDescription": "Seasonality becomes available after more activity is recorded.",
+  "analyticsSectionGrowthProjections": "Growth projections",
+  "analyticsGrowthProjectionEmptyDescription": "Projections require enough historical data in the selected range.",
+  "analyticsSectionInsights": "Insights",
+  "analyticsInsightsEmptyTitle": "No insights yet",
+  "analyticsInsightsEmptyDescription": "Interact with the platform to start generating analytics.",
+  "analyticsSectionPerformanceBreakdown": "Performance breakdown",
+  "analyticsSectionRecommendations": "Recommendations",
+  "analyticsRecommendationsEmptyDescription": "Recommendations appear once enough analytics data is available.",
+  "analyticsSectionPeriodComparison": "Period comparison",
+  "analyticsComparisonsEmptyDescription": "Comparisons require enough analytics data.",
+  "analyticsSectionPeerAnalysis": "Peer analysis",
+  "analyticsPeerAnalysisEmptyDescription": "Peer benchmarking requires aggregate platform data.",
+  "analyticsSectionMarketPosition": "Market position",
+  "analyticsMarketPositionEmptyDescription": "Market position insights require aggregate platform data.",
+  "analyticsTrendStable": "Stable",
+  "analyticsTrendUpward": "Upward",
+  "analyticsTrendDownward": "Downward",
+  "analyticsVolatilityLow": "Low",
+  "analyticsVolatilityMedium": "Medium",
+  "analyticsVolatilityHigh": "High",
+  "analyticsMomentumStrong": "Strong",
+  "analyticsMomentumWeak": "Weak",
+  "analyticsKeyMetricHourlyAverage": "Hourly avg",
+  "analyticsKeyMetricDailyAverage": "Daily avg",
+  "analyticsKeyMetricPeakHour": "Peak hour",
+  "analyticsKeyMetricPeak": "Peak",
+  "analyticsKeyMetricConsistency": "Consistency",
+  "analyticsProjectionNext7Days": "Next 7 days",
+  "analyticsProjectionNext30Days": "Next 30 days",
+  "analyticsPeakBucket": "Peak bucket: {value}",
+  "@analyticsPeakBucket": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "analyticsAveragePerBucket": "Average {metric} per {bucket}: {value}",
+  "@analyticsAveragePerBucket": {
+    "placeholders": {
+      "metric": {},
+      "bucket": {},
+      "value": {}
+    }
+  },
+  "analyticsConsistencyValue": "Consistency: {value}",
+  "@analyticsConsistencyValue": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "analyticsPerformanceStability": "Stability",
+  "analyticsPerformanceGrowth": "Growth",
+  "analyticsPerformanceActivity": "Activity",
+  "analyticsRecommendationImproveConsistency": "Improve consistency",
+  "analyticsRecommendationConsistencyDescription": "Activity was recorded on {activeBuckets} of {totalBuckets} buckets.",
+  "@analyticsRecommendationConsistencyDescription": {
+    "placeholders": {
+      "activeBuckets": {},
+      "totalBuckets": {}
+    }
+  },
+  "analyticsRecommendationReverseDecline": "Reverse the decline",
+  "analyticsRecommendationReverseDeclineDescription": "This period is down vs the previous period.",
+  "analyticsRecommendationMaintainMomentum": "Maintain momentum",
+  "analyticsRecommendationMaintainMomentumDescription": "This period is up vs the previous period.",
+  "analyticsComparisonTotal": "Total",
+  "analyticsComparisonAveragePerHour": "Avg / hour",
+  "analyticsComparisonAveragePerDay": "Avg / day",
+  "analyticsSharePeriodValue": "Period: {period}",
+  "@analyticsSharePeriodValue": {
+    "placeholders": {
+      "period": {}
+    }
+  },
+  "analyticsShareChangeValue": "Change: {change}",
+  "@analyticsShareChangeValue": {
+    "placeholders": {
+      "change": {}
+    }
+  },
+  "analyticsShareTrendValue": "Trend: {trend}",
+  "@analyticsShareTrendValue": {
+    "placeholders": {
+      "trend": {}
+    }
+  },
+  "analyticsShareUnavailable": "Unable to share analytics on this device.",
+  "analyticsBucketHour": "hour",
+  "analyticsBucketDay": "day",
 
   "userProfileCollectionsDesktopSubtitle": "Curated sets of work",
   "userProfileNoCollectionsTitle": "No collections yet",

@@ -15443,6 +15443,459 @@ abstract class AppLocalizations {
   /// **'Views given'**
   String get analyticsMetricViewsGivenLabel;
 
+  /// No description provided for @analyticsTabOverview.
+  ///
+  /// In en, this message translates to:
+  /// **'Overview'**
+  String get analyticsTabOverview;
+
+  /// No description provided for @analyticsTabTrends.
+  ///
+  /// In en, this message translates to:
+  /// **'Trends'**
+  String get analyticsTabTrends;
+
+  /// No description provided for @analyticsTabInsights.
+  ///
+  /// In en, this message translates to:
+  /// **'Insights'**
+  String get analyticsTabInsights;
+
+  /// No description provided for @analyticsTabCompare.
+  ///
+  /// In en, this message translates to:
+  /// **'Compare'**
+  String get analyticsTabCompare;
+
+  /// No description provided for @analyticsHomeContextLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get analyticsHomeContextLabel;
+
+  /// No description provided for @analyticsHomeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unified personal analytics for reach, activity, and momentum across the app.'**
+  String get analyticsHomeSubtitle;
+
+  /// No description provided for @analyticsProfileSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A single profile-focused analytics surface with public and owner-aware metrics.'**
+  String get analyticsProfileSubtitle;
+
+  /// No description provided for @analyticsCommunitySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The same analytics system, configured around community posting and response signals.'**
+  String get analyticsCommunitySubtitle;
+
+  /// No description provided for @analyticsShowFiltersAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Show filters'**
+  String get analyticsShowFiltersAction;
+
+  /// No description provided for @analyticsHideFiltersAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide filters'**
+  String get analyticsHideFiltersAction;
+
+  /// No description provided for @analyticsThisPeriodLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'This period'**
+  String get analyticsThisPeriodLabel;
+
+  /// No description provided for @analyticsVsPreviousPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'vs previous {period}'**
+  String analyticsVsPreviousPeriod(Object period);
+
+  /// No description provided for @analyticsChartOverTimeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{metric} over time'**
+  String analyticsChartOverTimeTitle(Object metric);
+
+  /// No description provided for @analyticsSectionKeyMetrics.
+  ///
+  /// In en, this message translates to:
+  /// **'Key metrics'**
+  String get analyticsSectionKeyMetrics;
+
+  /// No description provided for @analyticsSectionGoalProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal progress'**
+  String get analyticsSectionGoalProgress;
+
+  /// No description provided for @analyticsPercentComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent} complete'**
+  String analyticsPercentComplete(Object percent);
+
+  /// No description provided for @analyticsTargetValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Target: {value}'**
+  String analyticsTargetValue(Object value);
+
+  /// No description provided for @analyticsSectionTrendAnalysis.
+  ///
+  /// In en, this message translates to:
+  /// **'Trend analysis'**
+  String get analyticsSectionTrendAnalysis;
+
+  /// No description provided for @analyticsTrendOverall.
+  ///
+  /// In en, this message translates to:
+  /// **'Overall trend'**
+  String get analyticsTrendOverall;
+
+  /// No description provided for @analyticsTrendGrowthRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Growth rate'**
+  String get analyticsTrendGrowthRate;
+
+  /// No description provided for @analyticsTrendVolatility.
+  ///
+  /// In en, this message translates to:
+  /// **'Volatility'**
+  String get analyticsTrendVolatility;
+
+  /// No description provided for @analyticsTrendMomentum.
+  ///
+  /// In en, this message translates to:
+  /// **'Momentum'**
+  String get analyticsTrendMomentum;
+
+  /// No description provided for @analyticsSectionSeasonalityPattern.
+  ///
+  /// In en, this message translates to:
+  /// **'Seasonality pattern'**
+  String get analyticsSectionSeasonalityPattern;
+
+  /// No description provided for @analyticsNotEnoughDataTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Not enough data'**
+  String get analyticsNotEnoughDataTitle;
+
+  /// No description provided for @analyticsSeasonalityEmptyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Seasonality becomes available after more activity is recorded.'**
+  String get analyticsSeasonalityEmptyDescription;
+
+  /// No description provided for @analyticsSectionGrowthProjections.
+  ///
+  /// In en, this message translates to:
+  /// **'Growth projections'**
+  String get analyticsSectionGrowthProjections;
+
+  /// No description provided for @analyticsGrowthProjectionEmptyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Projections require enough historical data in the selected range.'**
+  String get analyticsGrowthProjectionEmptyDescription;
+
+  /// No description provided for @analyticsSectionInsights.
+  ///
+  /// In en, this message translates to:
+  /// **'Insights'**
+  String get analyticsSectionInsights;
+
+  /// No description provided for @analyticsInsightsEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No insights yet'**
+  String get analyticsInsightsEmptyTitle;
+
+  /// No description provided for @analyticsInsightsEmptyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Interact with the platform to start generating analytics.'**
+  String get analyticsInsightsEmptyDescription;
+
+  /// No description provided for @analyticsSectionPerformanceBreakdown.
+  ///
+  /// In en, this message translates to:
+  /// **'Performance breakdown'**
+  String get analyticsSectionPerformanceBreakdown;
+
+  /// No description provided for @analyticsSectionRecommendations.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommendations'**
+  String get analyticsSectionRecommendations;
+
+  /// No description provided for @analyticsRecommendationsEmptyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommendations appear once enough analytics data is available.'**
+  String get analyticsRecommendationsEmptyDescription;
+
+  /// No description provided for @analyticsSectionPeriodComparison.
+  ///
+  /// In en, this message translates to:
+  /// **'Period comparison'**
+  String get analyticsSectionPeriodComparison;
+
+  /// No description provided for @analyticsComparisonsEmptyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Comparisons require enough analytics data.'**
+  String get analyticsComparisonsEmptyDescription;
+
+  /// No description provided for @analyticsSectionPeerAnalysis.
+  ///
+  /// In en, this message translates to:
+  /// **'Peer analysis'**
+  String get analyticsSectionPeerAnalysis;
+
+  /// No description provided for @analyticsPeerAnalysisEmptyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Peer benchmarking requires aggregate platform data.'**
+  String get analyticsPeerAnalysisEmptyDescription;
+
+  /// No description provided for @analyticsSectionMarketPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'Market position'**
+  String get analyticsSectionMarketPosition;
+
+  /// No description provided for @analyticsMarketPositionEmptyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Market position insights require aggregate platform data.'**
+  String get analyticsMarketPositionEmptyDescription;
+
+  /// No description provided for @analyticsTrendStable.
+  ///
+  /// In en, this message translates to:
+  /// **'Stable'**
+  String get analyticsTrendStable;
+
+  /// No description provided for @analyticsTrendUpward.
+  ///
+  /// In en, this message translates to:
+  /// **'Upward'**
+  String get analyticsTrendUpward;
+
+  /// No description provided for @analyticsTrendDownward.
+  ///
+  /// In en, this message translates to:
+  /// **'Downward'**
+  String get analyticsTrendDownward;
+
+  /// No description provided for @analyticsVolatilityLow.
+  ///
+  /// In en, this message translates to:
+  /// **'Low'**
+  String get analyticsVolatilityLow;
+
+  /// No description provided for @analyticsVolatilityMedium.
+  ///
+  /// In en, this message translates to:
+  /// **'Medium'**
+  String get analyticsVolatilityMedium;
+
+  /// No description provided for @analyticsVolatilityHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'High'**
+  String get analyticsVolatilityHigh;
+
+  /// No description provided for @analyticsMomentumStrong.
+  ///
+  /// In en, this message translates to:
+  /// **'Strong'**
+  String get analyticsMomentumStrong;
+
+  /// No description provided for @analyticsMomentumWeak.
+  ///
+  /// In en, this message translates to:
+  /// **'Weak'**
+  String get analyticsMomentumWeak;
+
+  /// No description provided for @analyticsKeyMetricHourlyAverage.
+  ///
+  /// In en, this message translates to:
+  /// **'Hourly avg'**
+  String get analyticsKeyMetricHourlyAverage;
+
+  /// No description provided for @analyticsKeyMetricDailyAverage.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily avg'**
+  String get analyticsKeyMetricDailyAverage;
+
+  /// No description provided for @analyticsKeyMetricPeakHour.
+  ///
+  /// In en, this message translates to:
+  /// **'Peak hour'**
+  String get analyticsKeyMetricPeakHour;
+
+  /// No description provided for @analyticsKeyMetricPeak.
+  ///
+  /// In en, this message translates to:
+  /// **'Peak'**
+  String get analyticsKeyMetricPeak;
+
+  /// No description provided for @analyticsKeyMetricConsistency.
+  ///
+  /// In en, this message translates to:
+  /// **'Consistency'**
+  String get analyticsKeyMetricConsistency;
+
+  /// No description provided for @analyticsProjectionNext7Days.
+  ///
+  /// In en, this message translates to:
+  /// **'Next 7 days'**
+  String get analyticsProjectionNext7Days;
+
+  /// No description provided for @analyticsProjectionNext30Days.
+  ///
+  /// In en, this message translates to:
+  /// **'Next 30 days'**
+  String get analyticsProjectionNext30Days;
+
+  /// No description provided for @analyticsPeakBucket.
+  ///
+  /// In en, this message translates to:
+  /// **'Peak bucket: {value}'**
+  String analyticsPeakBucket(Object value);
+
+  /// No description provided for @analyticsAveragePerBucket.
+  ///
+  /// In en, this message translates to:
+  /// **'Average {metric} per {bucket}: {value}'**
+  String analyticsAveragePerBucket(Object metric, Object bucket, Object value);
+
+  /// No description provided for @analyticsConsistencyValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Consistency: {value}'**
+  String analyticsConsistencyValue(Object value);
+
+  /// No description provided for @analyticsPerformanceStability.
+  ///
+  /// In en, this message translates to:
+  /// **'Stability'**
+  String get analyticsPerformanceStability;
+
+  /// No description provided for @analyticsPerformanceGrowth.
+  ///
+  /// In en, this message translates to:
+  /// **'Growth'**
+  String get analyticsPerformanceGrowth;
+
+  /// No description provided for @analyticsPerformanceActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity'**
+  String get analyticsPerformanceActivity;
+
+  /// No description provided for @analyticsRecommendationImproveConsistency.
+  ///
+  /// In en, this message translates to:
+  /// **'Improve consistency'**
+  String get analyticsRecommendationImproveConsistency;
+
+  /// No description provided for @analyticsRecommendationConsistencyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity was recorded on {activeBuckets} of {totalBuckets} buckets.'**
+  String analyticsRecommendationConsistencyDescription(
+    Object activeBuckets,
+    Object totalBuckets,
+  );
+
+  /// No description provided for @analyticsRecommendationReverseDecline.
+  ///
+  /// In en, this message translates to:
+  /// **'Reverse the decline'**
+  String get analyticsRecommendationReverseDecline;
+
+  /// No description provided for @analyticsRecommendationReverseDeclineDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'This period is down vs the previous period.'**
+  String get analyticsRecommendationReverseDeclineDescription;
+
+  /// No description provided for @analyticsRecommendationMaintainMomentum.
+  ///
+  /// In en, this message translates to:
+  /// **'Maintain momentum'**
+  String get analyticsRecommendationMaintainMomentum;
+
+  /// No description provided for @analyticsRecommendationMaintainMomentumDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'This period is up vs the previous period.'**
+  String get analyticsRecommendationMaintainMomentumDescription;
+
+  /// No description provided for @analyticsComparisonTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get analyticsComparisonTotal;
+
+  /// No description provided for @analyticsComparisonAveragePerHour.
+  ///
+  /// In en, this message translates to:
+  /// **'Avg / hour'**
+  String get analyticsComparisonAveragePerHour;
+
+  /// No description provided for @analyticsComparisonAveragePerDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Avg / day'**
+  String get analyticsComparisonAveragePerDay;
+
+  /// No description provided for @analyticsSharePeriodValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Period: {period}'**
+  String analyticsSharePeriodValue(Object period);
+
+  /// No description provided for @analyticsShareChangeValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Change: {change}'**
+  String analyticsShareChangeValue(Object change);
+
+  /// No description provided for @analyticsShareTrendValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Trend: {trend}'**
+  String analyticsShareTrendValue(Object trend);
+
+  /// No description provided for @analyticsShareUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to share analytics on this device.'**
+  String get analyticsShareUnavailable;
+
+  /// No description provided for @analyticsBucketHour.
+  ///
+  /// In en, this message translates to:
+  /// **'hour'**
+  String get analyticsBucketHour;
+
+  /// No description provided for @analyticsBucketDay.
+  ///
+  /// In en, this message translates to:
+  /// **'day'**
+  String get analyticsBucketDay;
+
   /// No description provided for @userProfileCollectionsDesktopSubtitle.
   ///
   /// In en, this message translates to:

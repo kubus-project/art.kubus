@@ -3482,6 +3482,139 @@
   "analyticsMetricViewsReceivedLabel": "Prejeti ogledi",
   "analyticsMetricEngagementLabel": "Vključenost",
   "analyticsMetricViewsGivenLabel": "Oddani ogledi",
+  "analyticsTabOverview": "Pregled",
+  "analyticsTabTrends": "Trendi",
+  "analyticsTabInsights": "Vpogledi",
+  "analyticsTabCompare": "Primerjava",
+  "analyticsHomeContextLabel": "Domov",
+  "analyticsHomeSubtitle": "Poenotena osebna analitika dosega, aktivnosti in zagona v celotni aplikaciji.",
+  "analyticsProfileSubtitle": "Enotna analitika profila z javnimi meritvami in meritvami za lastnika.",
+  "analyticsCommunitySubtitle": "Isti analitični sistem, prilagojen objavam skupnosti in odzivnim signalom.",
+  "analyticsShowFiltersAction": "Prikaži filtre",
+  "analyticsHideFiltersAction": "Skrij filtre",
+  "analyticsThisPeriodLabel": "To obdobje",
+  "analyticsVsPreviousPeriod": "v primerjavi s prejšnjim obdobjem {period}",
+  "@analyticsVsPreviousPeriod": {
+    "placeholders": {
+      "period": {}
+    }
+  },
+  "analyticsChartOverTimeTitle": "{metric} skozi čas",
+  "@analyticsChartOverTimeTitle": {
+    "placeholders": {
+      "metric": {}
+    }
+  },
+  "analyticsSectionKeyMetrics": "Ključne meritve",
+  "analyticsSectionGoalProgress": "Napredek do cilja",
+  "analyticsPercentComplete": "{percent} dokončano",
+  "@analyticsPercentComplete": {
+    "placeholders": {
+      "percent": {}
+    }
+  },
+  "analyticsTargetValue": "Cilj: {value}",
+  "@analyticsTargetValue": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "analyticsSectionTrendAnalysis": "Analiza trenda",
+  "analyticsTrendOverall": "Splošni trend",
+  "analyticsTrendGrowthRate": "Stopnja rasti",
+  "analyticsTrendVolatility": "Volatilnost",
+  "analyticsTrendMomentum": "Zagon",
+  "analyticsSectionSeasonalityPattern": "Sezonski vzorec",
+  "analyticsNotEnoughDataTitle": "Ni dovolj podatkov",
+  "analyticsSeasonalityEmptyDescription": "Sezonski vzorec bo na voljo, ko bo zabeležene več aktivnosti.",
+  "analyticsSectionGrowthProjections": "Projekcije rasti",
+  "analyticsGrowthProjectionEmptyDescription": "Projekcije zahtevajo dovolj zgodovinskih podatkov v izbranem obdobju.",
+  "analyticsSectionInsights": "Vpogledi",
+  "analyticsInsightsEmptyTitle": "Vpogledov še ni",
+  "analyticsInsightsEmptyDescription": "Začni uporabljati platformo, da se začnejo ustvarjati analitični vpogledi.",
+  "analyticsSectionPerformanceBreakdown": "Razčlenitev uspešnosti",
+  "analyticsSectionRecommendations": "Priporočila",
+  "analyticsRecommendationsEmptyDescription": "Priporočila se prikažejo, ko je na voljo dovolj analitičnih podatkov.",
+  "analyticsSectionPeriodComparison": "Primerjava obdobij",
+  "analyticsComparisonsEmptyDescription": "Primerjave zahtevajo dovolj analitičnih podatkov.",
+  "analyticsSectionPeerAnalysis": "Primerjava z drugimi",
+  "analyticsPeerAnalysisEmptyDescription": "Primerjava z drugimi zahteva agregirane podatke platforme.",
+  "analyticsSectionMarketPosition": "Tržni položaj",
+  "analyticsMarketPositionEmptyDescription": "Vpogledi v tržni položaj zahtevajo agregirane podatke platforme.",
+  "analyticsTrendStable": "Stabilno",
+  "analyticsTrendUpward": "Narašča",
+  "analyticsTrendDownward": "Pada",
+  "analyticsVolatilityLow": "Nizka",
+  "analyticsVolatilityMedium": "Srednja",
+  "analyticsVolatilityHigh": "Visoka",
+  "analyticsMomentumStrong": "Močan",
+  "analyticsMomentumWeak": "Šibek",
+  "analyticsKeyMetricHourlyAverage": "Povp. na uro",
+  "analyticsKeyMetricDailyAverage": "Povp. na dan",
+  "analyticsKeyMetricPeakHour": "Vrh ure",
+  "analyticsKeyMetricPeak": "Vrh",
+  "analyticsKeyMetricConsistency": "Doslednost",
+  "analyticsProjectionNext7Days": "Naslednjih 7 dni",
+  "analyticsProjectionNext30Days": "Naslednjih 30 dni",
+  "analyticsPeakBucket": "Najmočnejši interval: {value}",
+  "@analyticsPeakBucket": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "analyticsAveragePerBucket": "Povprečno {metric} na {bucket}: {value}",
+  "@analyticsAveragePerBucket": {
+    "placeholders": {
+      "metric": {},
+      "bucket": {},
+      "value": {}
+    }
+  },
+  "analyticsConsistencyValue": "Doslednost: {value}",
+  "@analyticsConsistencyValue": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "analyticsPerformanceStability": "Stabilnost",
+  "analyticsPerformanceGrowth": "Rast",
+  "analyticsPerformanceActivity": "Aktivnost",
+  "analyticsRecommendationImproveConsistency": "Izboljšaj doslednost",
+  "analyticsRecommendationConsistencyDescription": "Aktivnost je bila zabeležena v {activeBuckets} od {totalBuckets} intervalov.",
+  "@analyticsRecommendationConsistencyDescription": {
+    "placeholders": {
+      "activeBuckets": {},
+      "totalBuckets": {}
+    }
+  },
+  "analyticsRecommendationReverseDecline": "Obrni padec",
+  "analyticsRecommendationReverseDeclineDescription": "To obdobje zaostaja za prejšnjim obdobjem.",
+  "analyticsRecommendationMaintainMomentum": "Ohrani zagon",
+  "analyticsRecommendationMaintainMomentumDescription": "To obdobje presega prejšnje obdobje.",
+  "analyticsComparisonTotal": "Skupaj",
+  "analyticsComparisonAveragePerHour": "Povp. / ura",
+  "analyticsComparisonAveragePerDay": "Povp. / dan",
+  "analyticsSharePeriodValue": "Obdobje: {period}",
+  "@analyticsSharePeriodValue": {
+    "placeholders": {
+      "period": {}
+    }
+  },
+  "analyticsShareChangeValue": "Sprememba: {change}",
+  "@analyticsShareChangeValue": {
+    "placeholders": {
+      "change": {}
+    }
+  },
+  "analyticsShareTrendValue": "Trend: {trend}",
+  "@analyticsShareTrendValue": {
+    "placeholders": {
+      "trend": {}
+    }
+  },
+  "analyticsShareUnavailable": "Analitike v tej napravi ni mogoče deliti.",
+  "analyticsBucketHour": "uro",
+  "analyticsBucketDay": "dan",
 
   "userProfileCollectionsDesktopSubtitle": "Kurirani izbori del",
   "userProfileNoCollectionsTitle": "Še ni zbirk",
