@@ -742,10 +742,13 @@ class _SignInScreenState extends State<SignInScreen> {
         ),
         SizedBox(height: compactLayout ? KubusSpacing.md : KubusSpacing.lg),
         if (!showEmailForm && enableWallet) ...[
-          AuthSecondaryActionButton(
+          KubusButton(
             onPressed: _showConnectWalletModal,
             icon: Icons.account_balance_wallet_outlined,
             label: l10n.authConnectWalletButton,
+            variant: KubusButtonVariant.secondary,
+            foregroundColor: colorScheme.onSurface,
+            isFullWidth: true,
           ),
           SizedBox(height: compactLayout ? KubusSpacing.xs : KubusSpacing.sm),
         ],
@@ -819,12 +822,15 @@ class _SignInScreenState extends State<SignInScreen> {
         if (!showEmailForm && enableEmail) ...[
           _buildMethodDivider(l10n.authOrLogInWithEmailOrUsername),
           SizedBox(height: compactLayout ? KubusSpacing.xs : KubusSpacing.sm),
-          AuthSecondaryActionButton(
+          KubusButton(
             onPressed: () {
               setState(() => _showCompactEmailForm = true);
             },
             icon: Icons.email_outlined,
             label: l10n.authSignInWithEmail,
+            variant: KubusButtonVariant.secondary,
+            foregroundColor: colorScheme.onSurface,
+            isFullWidth: true,
           ),
         ],
         if (showEmailForm) ...[

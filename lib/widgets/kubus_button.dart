@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import '../utils/design_tokens.dart';
 import 'glass_components.dart';
 
+enum KubusButtonVariant {
+  primary,
+  secondary,
+}
+
 class KubusButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final String label;
@@ -10,6 +15,7 @@ class KubusButton extends StatelessWidget {
   final bool isFullWidth;
   final Color? backgroundColor;
   final Color? foregroundColor;
+  final KubusButtonVariant variant;
 
   const KubusButton({
     super.key,
@@ -20,25 +26,48 @@ class KubusButton extends StatelessWidget {
     this.isFullWidth = false,
     this.backgroundColor,
     this.foregroundColor,
+    this.variant = KubusButtonVariant.primary,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
     final isEnabled = !isLoading && onPressed != null;
 
-    // Default: white button in dark mode, dark button in light mode
-    final effectiveBackground = backgroundColor ??
-        (isDark
-            ? Colors.white.withValues(alpha: 0.95)
-            : const Color(0xFF1A1A1A));
-    final effectiveForeground = foregroundColor ??
-        (isDark ? const Color(0xFF1A1A1A) : Colors.white);
-    final glassTint = effectiveBackground.withValues(
-      alpha: isEnabled ? (isDark ? 0.82 : 0.88) : (isDark ? 0.62 : 0.70),
-    );
+    final defaultBackground = switch (variant) {
+      KubusButtonVariant.primary => isDark
+          ? Colors.white.withValues(alpha: 0.95)
+          : const Color(0xFF1A1A1A),
+      KubusButtonVariant.secondary =>
+        scheme.surface.withValues(alpha: isDark ? 0.9 : 0.96),
+    };
+    final defaultForeground = switch (variant) {
+      KubusButtonVariant.primary =>
+        isDark ? const Color(0xFF1A1A1A) : Colors.white,
+      KubusButtonVariant.secondary => scheme.onSurface,
+    };
+    final effectiveBackground = backgroundColor ?? defaultBackground;
+    final effectiveForeground = foregroundColor ?? defaultForeground;
+    final glassTint = switch (variant) {
+      KubusButtonVariant.primary => effectiveBackground.withValues(
+          alpha: isEnabled ? (isDark ? 0.82 : 0.88) : (isDark ? 0.62 : 0.70),
+        ),
+      KubusButtonVariant.secondary => effectiveBackground.withValues(
+          alpha: isEnabled ? (isDark ? 0.92 : 0.98) : (isDark ? 0.74 : 0.82),
+        ),
+    };
     final radius = KubusRadius.circular(KubusRadius.sm);
+    final borderColor = switch (variant) {
+      KubusButtonVariant.primary =>
+        effectiveBackground.withValues(alpha: isEnabled ? 0.30 : 0.18),
+      KubusButtonVariant.secondary => scheme.outlineVariant.withValues(
+          alpha: isDark
+              ? (isEnabled ? 0.24 : 0.14)
+              : (isEnabled ? 0.16 : 0.10),
+        ),
+    };
 
     Widget content = isLoading
         ? SizedBox(
@@ -73,9 +102,7 @@ class KubusButton extends StatelessWidget {
     final button = Container(
       decoration: BoxDecoration(
         borderRadius: radius,
-        border: Border.all(
-          color: effectiveBackground.withValues(alpha: isEnabled ? 0.30 : 0.18),
-        ),
+        border: Border.all(color: borderColor),
       ),
       child: LiquidGlassPanel(
         padding: EdgeInsets.zero,

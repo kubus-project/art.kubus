@@ -773,22 +773,28 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
           SizedBox(height: compactLayout ? KubusSpacing.xs : KubusSpacing.sm),
         ],
         if (!showEmailForm && enableEmail) ...[
-          AuthSecondaryActionButton(
+          KubusButton(
             onPressed: () {
               setState(() => _showCompactEmailForm = true);
             },
             icon: Icons.email_outlined,
             label: l10n.authContinueWithEmail,
+            variant: KubusButtonVariant.secondary,
+            foregroundColor: colorScheme.onSurface,
+            isFullWidth: true,
           ),
           SizedBox(height: compactLayout ? KubusSpacing.xs : KubusSpacing.sm),
         ],
         if (!showEmailForm && enableWallet) ...[
           _buildMethodDivider(l10n.authHighlightOptionalWeb3),
           SizedBox(height: compactLayout ? KubusSpacing.xs : KubusSpacing.sm),
-          AuthSecondaryActionButton(
+          KubusButton(
             onPressed: _showConnectWalletModal,
             icon: Icons.account_balance_wallet_outlined,
             label: l10n.authConnectWalletButton,
+            variant: KubusButtonVariant.secondary,
+            foregroundColor: colorScheme.onSurface,
+            isFullWidth: true,
           ),
         ],
         if (showEmailForm) ...[
