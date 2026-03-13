@@ -2550,7 +2550,6 @@ class _WelcomeHeroColumn extends StatelessWidget {
     required this.details,
     required this.start,
     required this.end,
-    this.compact = false,
   });
 
   final String title;
@@ -2558,7 +2557,6 @@ class _WelcomeHeroColumn extends StatelessWidget {
   final List<String> details;
   final Color start;
   final Color end;
-  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -2570,12 +2568,12 @@ class _WelcomeHeroColumn extends StatelessWidget {
           start: start,
           end: end,
           icon: Icons.explore_outlined,
-          iconSize: compact ? 34 : 42,
-          width: compact ? 76 : 88,
-          height: compact ? 76 : 88,
+          iconSize: 42,
+          width: 88,
+          height: 88,
           radius: 24,
         ),
-        SizedBox(height: compact ? KubusSpacing.lg : KubusSpacing.xl),
+        const SizedBox(height: KubusSpacing.xl),
         Text(
           title,
           style: Theme.of(context).textTheme.displaySmall?.copyWith(
@@ -2592,7 +2590,7 @@ class _WelcomeHeroColumn extends StatelessWidget {
                 height: 1.55,
               ),
         ),
-        SizedBox(height: compact ? KubusSpacing.lg : KubusSpacing.xl),
+        const SizedBox(height: KubusSpacing.xl),
         Wrap(
           spacing: KubusSpacing.sm,
           runSpacing: KubusSpacing.sm,
