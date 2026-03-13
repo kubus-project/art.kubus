@@ -20,74 +20,86 @@ class AuthEntryControls extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final themeProvider = context.watch<ThemeProvider>();
     final localeProvider = context.watch<LocaleProvider>();
+    final controls = <Widget>[
+      PopupMenuButton<String>(
+        tooltip: l10n.settingsLanguageTitle,
+        onSelected: (value) {
+          unawaited(localeProvider.setLanguageCode(value));
+        },
+        itemBuilder: (context) => [
+          PopupMenuItem<String>(
+            value: 'sl',
+            child: _PopupMenuRow(
+              label: l10n.languageSlovenian,
+              selected: localeProvider.languageCode == 'sl',
+            ),
+          ),
+          PopupMenuItem<String>(
+            value: 'en',
+            child: _PopupMenuRow(
+              label: l10n.languageEnglish,
+              selected: localeProvider.languageCode == 'en',
+            ),
+          ),
+        ],
+        child: _AuthEntryControlChip(
+          icon: Icons.language,
+          label: localeProvider.languageCode.toUpperCase(),
+          compact: compact,
+        ),
+      ),
+      PopupMenuButton<ThemeMode>(
+        tooltip: l10n.settingsThemeModeTitle,
+        onSelected: (mode) {
+          unawaited(themeProvider.setThemeMode(mode));
+        },
+        itemBuilder: (context) => [
+          PopupMenuItem<ThemeMode>(
+            value: ThemeMode.system,
+            child: _PopupMenuRow(
+              label: l10n.settingsThemeModeSystem,
+              selected: themeProvider.themeMode == ThemeMode.system,
+            ),
+          ),
+          PopupMenuItem<ThemeMode>(
+            value: ThemeMode.light,
+            child: _PopupMenuRow(
+              label: l10n.settingsThemeModeLight,
+              selected: themeProvider.themeMode == ThemeMode.light,
+            ),
+          ),
+          PopupMenuItem<ThemeMode>(
+            value: ThemeMode.dark,
+            child: _PopupMenuRow(
+              label: l10n.settingsThemeModeDark,
+              selected: themeProvider.themeMode == ThemeMode.dark,
+            ),
+          ),
+        ],
+        child: _AuthEntryControlChip(
+          icon: _themeIcon(),
+          label: _themeLabel(l10n, themeProvider.themeMode),
+          compact: compact,
+        ),
+      ),
+    ];
+
+    if (compact) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          controls[0],
+          const SizedBox(width: KubusSpacing.xs),
+          controls[1],
+        ],
+      );
+    }
 
     return Wrap(
-      spacing: compact ? KubusSpacing.xs : KubusSpacing.sm,
-      runSpacing: compact ? KubusSpacing.xs : KubusSpacing.sm,
+      spacing: KubusSpacing.sm,
+      runSpacing: KubusSpacing.sm,
       alignment: WrapAlignment.end,
-      children: [
-        PopupMenuButton<String>(
-          tooltip: l10n.settingsLanguageTitle,
-          onSelected: (value) {
-            unawaited(localeProvider.setLanguageCode(value));
-          },
-          itemBuilder: (context) => [
-            PopupMenuItem<String>(
-              value: 'sl',
-              child: _PopupMenuRow(
-                label: l10n.languageSlovenian,
-                selected: localeProvider.languageCode == 'sl',
-              ),
-            ),
-            PopupMenuItem<String>(
-              value: 'en',
-              child: _PopupMenuRow(
-                label: l10n.languageEnglish,
-                selected: localeProvider.languageCode == 'en',
-              ),
-            ),
-          ],
-          child: _AuthEntryControlChip(
-            icon: Icons.language,
-            label: localeProvider.languageCode.toUpperCase(),
-            compact: compact,
-          ),
-        ),
-        PopupMenuButton<ThemeMode>(
-          tooltip: l10n.settingsThemeModeTitle,
-          onSelected: (mode) {
-            unawaited(themeProvider.setThemeMode(mode));
-          },
-          itemBuilder: (context) => [
-            PopupMenuItem<ThemeMode>(
-              value: ThemeMode.system,
-              child: _PopupMenuRow(
-                label: l10n.settingsThemeModeSystem,
-                selected: themeProvider.themeMode == ThemeMode.system,
-              ),
-            ),
-            PopupMenuItem<ThemeMode>(
-              value: ThemeMode.light,
-              child: _PopupMenuRow(
-                label: l10n.settingsThemeModeLight,
-                selected: themeProvider.themeMode == ThemeMode.light,
-              ),
-            ),
-            PopupMenuItem<ThemeMode>(
-              value: ThemeMode.dark,
-              child: _PopupMenuRow(
-                label: l10n.settingsThemeModeDark,
-                selected: themeProvider.themeMode == ThemeMode.dark,
-              ),
-            ),
-          ],
-          child: _AuthEntryControlChip(
-            icon: _themeIcon(),
-            label: _themeLabel(l10n, themeProvider.themeMode),
-            compact: compact,
-          ),
-        ),
-      ],
+      children: controls,
     );
   }
 
@@ -142,33 +154,39 @@ class _AuthEntryControlChip extends StatelessWidget {
       ),
       child: Padding(
         padding: EdgeInsets.symmetric(
-          horizontal: compact ? 10 : 14,
+          horizontal: compact ? 8 : 14,
           vertical: compact ? 8 : 10,
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: compact ? 16 : 18,
-              color: iconColor,
-            ),
-            SizedBox(width: compact ? 6 : 8),
-            Text(
-              label,
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.88),
-                    fontWeight: FontWeight.w700,
+        child: compact
+            ? Icon(
+                icon,
+                size: 18,
+                color: iconColor,
+              )
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    icon,
+                    size: 18,
+                    color: iconColor,
                   ),
-            ),
-            SizedBox(width: compact ? 2 : 4),
-            Icon(
-              Icons.expand_more_rounded,
-              size: compact ? 16 : 18,
-              color: scheme.onSurface.withValues(alpha: 0.58),
-            ),
-          ],
-        ),
+                  const SizedBox(width: 8),
+                  Text(
+                    label,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: scheme.onSurface.withValues(alpha: 0.88),
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.expand_more_rounded,
+                    size: 18,
+                    color: scheme.onSurface.withValues(alpha: 0.58),
+                  ),
+                ],
+              ),
       ),
     );
   }

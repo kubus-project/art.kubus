@@ -624,7 +624,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         elevation: 0,
       ),
       onPressed: onTap,
-      icon: Icon(icon, color: colorScheme.primary, size: 22),
+      icon: Icon(icon, color: colorScheme.onSurface, size: 22),
       label: Text(label,
           style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16)),
     );
@@ -679,7 +679,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
             vertical: 10,
           ),
         ),
-        child: Text(l10n.authHaveAccountSignIn),
+        child: Text(l10n.commonSignIn),
       ),
       form: form,
     );
@@ -693,6 +693,8 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
   }) {
     final l10n = AppLocalizations.of(context)!;
     final showEmailForm = _showCompactEmailForm;
+    final compactLayout =
+        widget.embedded || MediaQuery.sizeOf(context).height < 820;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -703,6 +705,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
                 color: colorScheme.onSurface,
                 fontWeight: FontWeight.w800,
               ),
+          maxLines: compactLayout ? 2 : null,
         ),
         const SizedBox(height: KubusSpacing.xs),
         Text(
@@ -713,8 +716,9 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
                 color: colorScheme.onSurface.withValues(alpha: 0.66),
                 height: 1.45,
               ),
+          maxLines: compactLayout ? 2 : null,
         ),
-        const SizedBox(height: KubusSpacing.lg),
+        SizedBox(height: compactLayout ? KubusSpacing.md : KubusSpacing.lg),
         if (!showEmailForm && enableGoogle) ...[
           if (kIsWeb)
             GoogleSignInWebButton(
@@ -766,7 +770,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
               isLoading: _isGoogleSubmitting,
               colorScheme: colorScheme,
             ),
-          const SizedBox(height: KubusSpacing.sm),
+          SizedBox(height: compactLayout ? KubusSpacing.xs : KubusSpacing.sm),
         ],
         if (!showEmailForm && enableEmail) ...[
           AuthSecondaryActionButton(
@@ -776,11 +780,11 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
             icon: Icons.email_outlined,
             label: l10n.authContinueWithEmail,
           ),
-          const SizedBox(height: KubusSpacing.sm),
+          SizedBox(height: compactLayout ? KubusSpacing.xs : KubusSpacing.sm),
         ],
         if (!showEmailForm && enableWallet) ...[
           _buildMethodDivider(l10n.authHighlightOptionalWeb3),
-          const SizedBox(height: KubusSpacing.sm),
+          SizedBox(height: compactLayout ? KubusSpacing.xs : KubusSpacing.sm),
           KubusButton(
             onPressed: _showConnectWalletModal,
             icon: Icons.account_balance_wallet_outlined,
@@ -797,6 +801,12 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
               onPressed: () {
                 setState(() => _showCompactEmailForm = false);
               },
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.82),
+              ),
               child: Text(l10n.commonBack),
             ),
           ),
