@@ -8142,6 +8142,269 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analyticsMetricViewsGivenLabel => 'Views given';
 
   @override
+  String get analyticsTabOverview => 'Overview';
+
+  @override
+  String get analyticsTabTrends => 'Trends';
+
+  @override
+  String get analyticsTabInsights => 'Insights';
+
+  @override
+  String get analyticsTabCompare => 'Compare';
+
+  @override
+  String get analyticsHomeContextLabel => 'Home';
+
+  @override
+  String get analyticsHomeSubtitle =>
+      'Unified personal analytics for reach, activity, and momentum across the app.';
+
+  @override
+  String get analyticsProfileSubtitle =>
+      'A single profile-focused analytics surface with public and owner-aware metrics.';
+
+  @override
+  String get analyticsCommunitySubtitle =>
+      'The same analytics system, configured around community posting and response signals.';
+
+  @override
+  String get analyticsShowFiltersAction => 'Show filters';
+
+  @override
+  String get analyticsHideFiltersAction => 'Hide filters';
+
+  @override
+  String get analyticsThisPeriodLabel => 'This period';
+
+  @override
+  String analyticsVsPreviousPeriod(Object period) {
+    return 'vs previous $period';
+  }
+
+  @override
+  String analyticsChartOverTimeTitle(Object metric) {
+    return '$metric over time';
+  }
+
+  @override
+  String get analyticsSectionKeyMetrics => 'Key metrics';
+
+  @override
+  String get analyticsSectionGoalProgress => 'Goal progress';
+
+  @override
+  String analyticsPercentComplete(Object percent) {
+    return '$percent complete';
+  }
+
+  @override
+  String analyticsTargetValue(Object value) {
+    return 'Target: $value';
+  }
+
+  @override
+  String get analyticsSectionTrendAnalysis => 'Trend analysis';
+
+  @override
+  String get analyticsTrendOverall => 'Overall trend';
+
+  @override
+  String get analyticsTrendGrowthRate => 'Growth rate';
+
+  @override
+  String get analyticsTrendVolatility => 'Volatility';
+
+  @override
+  String get analyticsTrendMomentum => 'Momentum';
+
+  @override
+  String get analyticsSectionSeasonalityPattern => 'Seasonality pattern';
+
+  @override
+  String get analyticsNotEnoughDataTitle => 'Not enough data';
+
+  @override
+  String get analyticsSeasonalityEmptyDescription =>
+      'Seasonality becomes available after more activity is recorded.';
+
+  @override
+  String get analyticsSectionGrowthProjections => 'Growth projections';
+
+  @override
+  String get analyticsGrowthProjectionEmptyDescription =>
+      'Projections require enough historical data in the selected range.';
+
+  @override
+  String get analyticsSectionInsights => 'Insights';
+
+  @override
+  String get analyticsInsightsEmptyTitle => 'No insights yet';
+
+  @override
+  String get analyticsInsightsEmptyDescription =>
+      'Interact with the platform to start generating analytics.';
+
+  @override
+  String get analyticsSectionPerformanceBreakdown => 'Performance breakdown';
+
+  @override
+  String get analyticsSectionRecommendations => 'Recommendations';
+
+  @override
+  String get analyticsRecommendationsEmptyDescription =>
+      'Recommendations appear once enough analytics data is available.';
+
+  @override
+  String get analyticsSectionPeriodComparison => 'Period comparison';
+
+  @override
+  String get analyticsComparisonsEmptyDescription =>
+      'Comparisons require enough analytics data.';
+
+  @override
+  String get analyticsSectionPeerAnalysis => 'Peer analysis';
+
+  @override
+  String get analyticsPeerAnalysisEmptyDescription =>
+      'Peer benchmarking requires aggregate platform data.';
+
+  @override
+  String get analyticsSectionMarketPosition => 'Market position';
+
+  @override
+  String get analyticsMarketPositionEmptyDescription =>
+      'Market position insights require aggregate platform data.';
+
+  @override
+  String get analyticsTrendStable => 'Stable';
+
+  @override
+  String get analyticsTrendUpward => 'Upward';
+
+  @override
+  String get analyticsTrendDownward => 'Downward';
+
+  @override
+  String get analyticsVolatilityLow => 'Low';
+
+  @override
+  String get analyticsVolatilityMedium => 'Medium';
+
+  @override
+  String get analyticsVolatilityHigh => 'High';
+
+  @override
+  String get analyticsMomentumStrong => 'Strong';
+
+  @override
+  String get analyticsMomentumWeak => 'Weak';
+
+  @override
+  String get analyticsKeyMetricHourlyAverage => 'Hourly avg';
+
+  @override
+  String get analyticsKeyMetricDailyAverage => 'Daily avg';
+
+  @override
+  String get analyticsKeyMetricPeakHour => 'Peak hour';
+
+  @override
+  String get analyticsKeyMetricPeak => 'Peak';
+
+  @override
+  String get analyticsKeyMetricConsistency => 'Consistency';
+
+  @override
+  String get analyticsProjectionNext7Days => 'Next 7 days';
+
+  @override
+  String get analyticsProjectionNext30Days => 'Next 30 days';
+
+  @override
+  String analyticsPeakBucket(Object value) {
+    return 'Peak bucket: $value';
+  }
+
+  @override
+  String analyticsAveragePerBucket(Object metric, Object bucket, Object value) {
+    return 'Average $metric per $bucket: $value';
+  }
+
+  @override
+  String analyticsConsistencyValue(Object value) {
+    return 'Consistency: $value';
+  }
+
+  @override
+  String get analyticsPerformanceStability => 'Stability';
+
+  @override
+  String get analyticsPerformanceGrowth => 'Growth';
+
+  @override
+  String get analyticsPerformanceActivity => 'Activity';
+
+  @override
+  String get analyticsRecommendationImproveConsistency => 'Improve consistency';
+
+  @override
+  String analyticsRecommendationConsistencyDescription(
+    Object activeBuckets,
+    Object totalBuckets,
+  ) {
+    return 'Activity was recorded on $activeBuckets of $totalBuckets buckets.';
+  }
+
+  @override
+  String get analyticsRecommendationReverseDecline => 'Reverse the decline';
+
+  @override
+  String get analyticsRecommendationReverseDeclineDescription =>
+      'This period is down vs the previous period.';
+
+  @override
+  String get analyticsRecommendationMaintainMomentum => 'Maintain momentum';
+
+  @override
+  String get analyticsRecommendationMaintainMomentumDescription =>
+      'This period is up vs the previous period.';
+
+  @override
+  String get analyticsComparisonTotal => 'Total';
+
+  @override
+  String get analyticsComparisonAveragePerHour => 'Avg / hour';
+
+  @override
+  String get analyticsComparisonAveragePerDay => 'Avg / day';
+
+  @override
+  String analyticsSharePeriodValue(Object period) {
+    return 'Period: $period';
+  }
+
+  @override
+  String analyticsShareChangeValue(Object change) {
+    return 'Change: $change';
+  }
+
+  @override
+  String analyticsShareTrendValue(Object trend) {
+    return 'Trend: $trend';
+  }
+
+  @override
+  String get analyticsShareUnavailable =>
+      'Unable to share analytics on this device.';
+
+  @override
+  String get analyticsBucketHour => 'hour';
+
+  @override
+  String get analyticsBucketDay => 'day';
+
+  @override
   String get userProfileCollectionsDesktopSubtitle => 'Curated sets of work';
 
   @override

@@ -8170,6 +8170,269 @@ class AppLocalizationsSl extends AppLocalizations {
   String get analyticsMetricViewsGivenLabel => 'Oddani ogledi';
 
   @override
+  String get analyticsTabOverview => 'Pregled';
+
+  @override
+  String get analyticsTabTrends => 'Trendi';
+
+  @override
+  String get analyticsTabInsights => 'Vpogledi';
+
+  @override
+  String get analyticsTabCompare => 'Primerjava';
+
+  @override
+  String get analyticsHomeContextLabel => 'Domov';
+
+  @override
+  String get analyticsHomeSubtitle =>
+      'Poenotena osebna analitika dosega, aktivnosti in zagona v celotni aplikaciji.';
+
+  @override
+  String get analyticsProfileSubtitle =>
+      'Enotna analitika profila z javnimi meritvami in meritvami za lastnika.';
+
+  @override
+  String get analyticsCommunitySubtitle =>
+      'Isti analitični sistem, prilagojen objavam skupnosti in odzivnim signalom.';
+
+  @override
+  String get analyticsShowFiltersAction => 'Prikaži filtre';
+
+  @override
+  String get analyticsHideFiltersAction => 'Skrij filtre';
+
+  @override
+  String get analyticsThisPeriodLabel => 'To obdobje';
+
+  @override
+  String analyticsVsPreviousPeriod(Object period) {
+    return 'v primerjavi s prejšnjim obdobjem $period';
+  }
+
+  @override
+  String analyticsChartOverTimeTitle(Object metric) {
+    return '$metric skozi čas';
+  }
+
+  @override
+  String get analyticsSectionKeyMetrics => 'Ključne meritve';
+
+  @override
+  String get analyticsSectionGoalProgress => 'Napredek do cilja';
+
+  @override
+  String analyticsPercentComplete(Object percent) {
+    return '$percent dokončano';
+  }
+
+  @override
+  String analyticsTargetValue(Object value) {
+    return 'Cilj: $value';
+  }
+
+  @override
+  String get analyticsSectionTrendAnalysis => 'Analiza trenda';
+
+  @override
+  String get analyticsTrendOverall => 'Splošni trend';
+
+  @override
+  String get analyticsTrendGrowthRate => 'Stopnja rasti';
+
+  @override
+  String get analyticsTrendVolatility => 'Volatilnost';
+
+  @override
+  String get analyticsTrendMomentum => 'Zagon';
+
+  @override
+  String get analyticsSectionSeasonalityPattern => 'Sezonski vzorec';
+
+  @override
+  String get analyticsNotEnoughDataTitle => 'Ni dovolj podatkov';
+
+  @override
+  String get analyticsSeasonalityEmptyDescription =>
+      'Sezonski vzorec bo na voljo, ko bo zabeležene več aktivnosti.';
+
+  @override
+  String get analyticsSectionGrowthProjections => 'Projekcije rasti';
+
+  @override
+  String get analyticsGrowthProjectionEmptyDescription =>
+      'Projekcije zahtevajo dovolj zgodovinskih podatkov v izbranem obdobju.';
+
+  @override
+  String get analyticsSectionInsights => 'Vpogledi';
+
+  @override
+  String get analyticsInsightsEmptyTitle => 'Vpogledov še ni';
+
+  @override
+  String get analyticsInsightsEmptyDescription =>
+      'Začni uporabljati platformo, da se začnejo ustvarjati analitični vpogledi.';
+
+  @override
+  String get analyticsSectionPerformanceBreakdown => 'Razčlenitev uspešnosti';
+
+  @override
+  String get analyticsSectionRecommendations => 'Priporočila';
+
+  @override
+  String get analyticsRecommendationsEmptyDescription =>
+      'Priporočila se prikažejo, ko je na voljo dovolj analitičnih podatkov.';
+
+  @override
+  String get analyticsSectionPeriodComparison => 'Primerjava obdobij';
+
+  @override
+  String get analyticsComparisonsEmptyDescription =>
+      'Primerjave zahtevajo dovolj analitičnih podatkov.';
+
+  @override
+  String get analyticsSectionPeerAnalysis => 'Primerjava z drugimi';
+
+  @override
+  String get analyticsPeerAnalysisEmptyDescription =>
+      'Primerjava z drugimi zahteva agregirane podatke platforme.';
+
+  @override
+  String get analyticsSectionMarketPosition => 'Tržni položaj';
+
+  @override
+  String get analyticsMarketPositionEmptyDescription =>
+      'Vpogledi v tržni položaj zahtevajo agregirane podatke platforme.';
+
+  @override
+  String get analyticsTrendStable => 'Stabilno';
+
+  @override
+  String get analyticsTrendUpward => 'Narašča';
+
+  @override
+  String get analyticsTrendDownward => 'Pada';
+
+  @override
+  String get analyticsVolatilityLow => 'Nizka';
+
+  @override
+  String get analyticsVolatilityMedium => 'Srednja';
+
+  @override
+  String get analyticsVolatilityHigh => 'Visoka';
+
+  @override
+  String get analyticsMomentumStrong => 'Močan';
+
+  @override
+  String get analyticsMomentumWeak => 'Šibek';
+
+  @override
+  String get analyticsKeyMetricHourlyAverage => 'Povp. na uro';
+
+  @override
+  String get analyticsKeyMetricDailyAverage => 'Povp. na dan';
+
+  @override
+  String get analyticsKeyMetricPeakHour => 'Vrh ure';
+
+  @override
+  String get analyticsKeyMetricPeak => 'Vrh';
+
+  @override
+  String get analyticsKeyMetricConsistency => 'Doslednost';
+
+  @override
+  String get analyticsProjectionNext7Days => 'Naslednjih 7 dni';
+
+  @override
+  String get analyticsProjectionNext30Days => 'Naslednjih 30 dni';
+
+  @override
+  String analyticsPeakBucket(Object value) {
+    return 'Najmočnejši interval: $value';
+  }
+
+  @override
+  String analyticsAveragePerBucket(Object metric, Object bucket, Object value) {
+    return 'Povprečno $metric na $bucket: $value';
+  }
+
+  @override
+  String analyticsConsistencyValue(Object value) {
+    return 'Doslednost: $value';
+  }
+
+  @override
+  String get analyticsPerformanceStability => 'Stabilnost';
+
+  @override
+  String get analyticsPerformanceGrowth => 'Rast';
+
+  @override
+  String get analyticsPerformanceActivity => 'Aktivnost';
+
+  @override
+  String get analyticsRecommendationImproveConsistency => 'Izboljšaj doslednost';
+
+  @override
+  String analyticsRecommendationConsistencyDescription(
+    Object activeBuckets,
+    Object totalBuckets,
+  ) {
+    return 'Aktivnost je bila zabeležena v $activeBuckets od $totalBuckets intervalov.';
+  }
+
+  @override
+  String get analyticsRecommendationReverseDecline => 'Obrni padec';
+
+  @override
+  String get analyticsRecommendationReverseDeclineDescription =>
+      'To obdobje zaostaja za prejšnjim obdobjem.';
+
+  @override
+  String get analyticsRecommendationMaintainMomentum => 'Ohrani zagon';
+
+  @override
+  String get analyticsRecommendationMaintainMomentumDescription =>
+      'To obdobje presega prejšnje obdobje.';
+
+  @override
+  String get analyticsComparisonTotal => 'Skupaj';
+
+  @override
+  String get analyticsComparisonAveragePerHour => 'Povp. / ura';
+
+  @override
+  String get analyticsComparisonAveragePerDay => 'Povp. / dan';
+
+  @override
+  String analyticsSharePeriodValue(Object period) {
+    return 'Obdobje: $period';
+  }
+
+  @override
+  String analyticsShareChangeValue(Object change) {
+    return 'Sprememba: $change';
+  }
+
+  @override
+  String analyticsShareTrendValue(Object trend) {
+    return 'Trend: $trend';
+  }
+
+  @override
+  String get analyticsShareUnavailable =>
+      'Analitike v tej napravi ni mogoče deliti.';
+
+  @override
+  String get analyticsBucketHour => 'uro';
+
+  @override
+  String get analyticsBucketDay => 'dan';
+
+  @override
   String get userProfileCollectionsDesktopSubtitle => 'Kurirani izbori del';
 
   @override
