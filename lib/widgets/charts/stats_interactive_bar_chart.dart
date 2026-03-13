@@ -40,7 +40,7 @@ class StatsInteractiveBarChart extends StatelessWidget {
     final yTop = maxY <= 0 ? 1.0 : maxY.toDouble() * 1.2;
 
     final pointCount = entries.length;
-    final chartWidth = math.max(0, pointCount - 1) * 28.0 + 56;
+    final chartWidth = math.max(0, pointCount - 1) * 34.0 + 84;
 
     return SizedBox(
       height: height,
@@ -53,7 +53,7 @@ class StatsInteractiveBarChart extends StatelessWidget {
             child: SizedBox(
               width: width,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                 child: BarChart(
                   BarChartData(
                     minY: 0,
@@ -83,7 +83,7 @@ class StatsInteractiveBarChart extends StatelessWidget {
                         sideTitles: SideTitles(
                           showTitles: true,
                           interval: _niceInterval(yTop),
-                          reservedSize: 44,
+                          reservedSize: 52,
                           getTitlesWidget: (value, meta) {
                             if (value < 0) return const SizedBox.shrink();
                             return Padding(
@@ -91,7 +91,7 @@ class StatsInteractiveBarChart extends StatelessWidget {
                               child: Text(
                                 value.round().toString(),
                                 style: GoogleFonts.inter(
-                                  fontSize: 10,
+                                  fontSize: 11,
                                   color: scheme.onSurface.withValues(alpha: 0.65),
                                 ),
                               ),
@@ -102,7 +102,7 @@ class StatsInteractiveBarChart extends StatelessWidget {
                       bottomTitles: AxisTitles(
                         sideTitles: SideTitles(
                           showTitles: true,
-                          reservedSize: 26,
+                          reservedSize: 34,
                           interval: _bottomInterval(pointCount),
                           getTitlesWidget: (value, meta) {
                             final idx = value.round();
@@ -114,7 +114,7 @@ class StatsInteractiveBarChart extends StatelessWidget {
                               child: Text(
                                 xLabels[idx],
                                 style: GoogleFonts.inter(
-                                  fontSize: 9,
+                                  fontSize: 10,
                                   color: scheme.onSurface.withValues(alpha: 0.55),
                                 ),
                                 textAlign: TextAlign.center,
@@ -154,7 +154,7 @@ class StatsInteractiveBarChart extends StatelessWidget {
                             BarChartRodData(
                               toY: entries[i].value.toDouble(),
                               color: barColor,
-                              width: 14,
+                              width: 16,
                               borderRadius: const BorderRadius.only(
                                 topLeft: Radius.circular(4),
                                 topRight: Radius.circular(4),

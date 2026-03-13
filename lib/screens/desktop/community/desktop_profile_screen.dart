@@ -42,8 +42,7 @@ import '../../collab/invites_inbox_screen.dart';
 import '../../activity/view_history_screen.dart';
 import '../../events/event_detail_screen.dart';
 import '../../../config/config.dart';
-import '../../community/community_analytics_screen.dart';
-import '../../community/profile_analytics_screen.dart';
+import '../../activity/advanced_analytics_screen.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 
 /// Desktop profile screen with clean card-based layout
@@ -354,59 +353,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 onPressed: () {
                   final wallet = context.read<ProfileProvider>().currentUser?.walletAddress ?? '';
                   if (wallet.trim().isEmpty) return;
-                  showKubusDialog<void>(
-                    context: context,
-                    builder: (dialogContext) {
-                      final scheme = Theme.of(dialogContext).colorScheme;
-                      return KubusAlertDialog(
-                        backgroundColor: scheme.surface,
-                        title: Text(l10n.navigationScreenAnalytics, style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
-                        content: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            ListTile(
-                              leading: Icon(Icons.person_outline, color: scheme.primary),
-                              title: Text(l10n.profileAnalyticsProfileTitle, style: GoogleFonts.inter()),
-                              onTap: () {
-                                Navigator.pop(dialogContext);
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => ProfileAnalyticsScreen(
-                                      walletAddress: wallet,
-                                      title: l10n.profileAnalyticsProfileTitle,
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                            ListTile(
-                              leading: Icon(Icons.forum_outlined, color: scheme.secondary),
-                              title: Text(l10n.profileAnalyticsCommunityTitle, style: GoogleFonts.inter()),
-                              onTap: () {
-                                Navigator.pop(dialogContext);
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => CommunityAnalyticsScreen(
-                                      walletAddress: wallet,
-                                      title: l10n.profileAnalyticsCommunityTitle,
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(dialogContext),
-                            child: Text(l10n.commonClose, style: GoogleFonts.inter(color: scheme.primary)),
-                          ),
-                        ],
-                      );
-                    },
-                  );
+                  _openAnalyticsDialog(wallet);
                 },
                 isPrimary: false,
               ),
@@ -426,6 +373,105 @@ class _ProfileScreenState extends State<ProfileScreen>
           ],
         ),
       ],
+    );
+  }
+
+  void _openAnalyticsDialog(String wallet) {
+    final l10n = AppLocalizations.of(context)!;
+    showKubusDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        final scheme = Theme.of(dialogContext).colorScheme;
+        return KubusAlertDialog(
+          backgroundColor: scheme.surface,
+          title: Text(
+            l10n.navigationScreenAnalytics,
+            style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Open the unified analytics experience and start in the context you want to review.',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: scheme.onSurface.withValues(alpha: 0.75),
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: DetailSpacing.md),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(Icons.person_outline, color: scheme.primary),
+                title: Text(
+                  l10n.profileAnalyticsProfileTitle,
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text(
+                  'Profile reach, follower growth, views, and owned signals.',
+                  style: GoogleFonts.inter(fontSize: 12),
+                ),
+                onTap: () {
+                  Navigator.pop(dialogContext);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AdvancedAnalyticsScreen(
+                        statType: '',
+                        walletAddress: wallet,
+                        initialContext: AnalyticsExperienceContext.profile,
+                        contexts: const <AnalyticsExperienceContext>[
+                          AnalyticsExperienceContext.profile,
+                          AnalyticsExperienceContext.community,
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(Icons.forum_outlined, color: scheme.secondary),
+                title: Text(
+                  l10n.profileAnalyticsCommunityTitle,
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text(
+                  'Community posting, likes, and engagement in the same analytics UI.',
+                  style: GoogleFonts.inter(fontSize: 12),
+                ),
+                onTap: () {
+                  Navigator.pop(dialogContext);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AdvancedAnalyticsScreen(
+                        statType: '',
+                        walletAddress: wallet,
+                        initialContext: AnalyticsExperienceContext.community,
+                        contexts: const <AnalyticsExperienceContext>[
+                          AnalyticsExperienceContext.profile,
+                          AnalyticsExperienceContext.community,
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(
+                l10n.commonClose,
+                style: GoogleFonts.inter(color: scheme.primary),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 

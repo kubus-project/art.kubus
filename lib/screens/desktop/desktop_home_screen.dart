@@ -1273,7 +1273,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         _pushScreen(const DesktopSettingsScreen(), screenKey);
         return;
       case 'analytics':
-        _pushScreen(const AdvancedAnalyticsScreen(statType: ''), screenKey);
+        _pushScreen(const AdvancedAnalyticsScreen(statType: 'Engagement'), screenKey);
         return;
       case 'achievements':
         // Reuse onboarding to surface achievements context
