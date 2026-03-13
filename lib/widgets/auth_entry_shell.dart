@@ -37,6 +37,16 @@ class AuthEntryShell extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final isDesktop = DesktopBreakpoints.isDesktop(context);
+    final shellTheme = theme.copyWith(
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: theme.colorScheme.onSurface,
+          textStyle: theme.textTheme.labelLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
 
     final bgStart = gradientStart.withValues(alpha: isDark ? 0.46 : 0.62);
     final bgEnd = gradientEnd.withValues(alpha: isDark ? 0.42 : 0.56);
@@ -47,100 +57,110 @@ class AuthEntryShell extends StatelessWidget {
       duration: const Duration(seconds: 12),
       intensity: 0.24,
       colors: [bgStart, bgMid, bgEnd, bgStart],
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        resizeToAvoidBottomInset: false,
-        body: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final keyboardLift = KeyboardInsetResolver.effectiveBottomInset(
-                context,
-                maxInset: isDesktop ? 0 : 160,
-              );
-              final compactSurface = !isDesktop && constraints.maxWidth < 430;
+      child: Theme(
+        data: shellTheme,
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          resizeToAvoidBottomInset: false,
+          body: SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final keyboardLift = KeyboardInsetResolver.effectiveBottomInset(
+                  context,
+                  maxInset: isDesktop ? 0 : 160,
+                );
+                final compactSurface = !isDesktop && constraints.maxWidth < 430;
 
-              return AnimatedPadding(
-                duration: const Duration(milliseconds: 180),
-                curve: Curves.easeOut,
-                padding: EdgeInsets.only(bottom: keyboardLift),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: isDesktop ? KubusSpacing.xl : KubusSpacing.md,
-                    vertical: isDesktop ? KubusSpacing.lg : KubusSpacing.md,
-                  ),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 1180),
-                      child: Column(
-                        children: [
-                          _ShellTopBar(
-                            compact: compactSurface,
-                            action: topAction,
-                          ),
-                          SizedBox(height: isDesktop ? KubusSpacing.xl : KubusSpacing.lg),
-                          Expanded(
-                            child: isDesktop
-                                ? Row(
-                                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                                    children: [
-                                      Expanded(
-                                        child: _HeroColumn(
-                                          title: title,
-                                          subtitle: subtitle,
-                                          eyebrow: eyebrow,
-                                          highlights: highlights,
-                                          heroIcon: heroIcon,
-                                          gradientStart: gradientStart,
-                                          gradientEnd: gradientEnd,
-                                          compact: compactSurface,
-                                        ),
-                                      ),
-                                      const SizedBox(width: KubusSpacing.xl),
-                                      Flexible(
-                                        child: ConstrainedBox(
-                                          constraints: const BoxConstraints(
-                                            maxWidth: 470,
+                return AnimatedPadding(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOut,
+                  padding: EdgeInsets.only(bottom: keyboardLift),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isDesktop ? KubusSpacing.xl : KubusSpacing.md,
+                      vertical: isDesktop ? KubusSpacing.lg : KubusSpacing.md,
+                    ),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 1180),
+                        child: Column(
+                          children: [
+                            _ShellTopBar(
+                              compact: compactSurface,
+                              title: title,
+                              action: topAction,
+                            ),
+                            SizedBox(
+                              height: isDesktop
+                                  ? KubusSpacing.xl
+                                  : KubusSpacing.md,
+                            ),
+                            Expanded(
+                              child: isDesktop
+                                  ? Row(
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                                      children: [
+                                        Expanded(
+                                          child: _HeroColumn(
+                                            title: title,
+                                            subtitle: subtitle,
+                                            eyebrow: eyebrow,
+                                            highlights: highlights,
+                                            heroIcon: heroIcon,
+                                            gradientStart: gradientStart,
+                                            gradientEnd: gradientEnd,
+                                            compact: compactSurface,
                                           ),
+                                        ),
+                                        const SizedBox(width: KubusSpacing.xl),
+                                        Flexible(
+                                          child: ConstrainedBox(
+                                            constraints: const BoxConstraints(
+                                              maxWidth: 470,
+                                            ),
+                                            child: _FormSurface(
+                                              footer: footer,
+                                              compact: compactSurface,
+                                              child: form,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  : Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        Text(
+                                          subtitle,
+                                          style: theme.textTheme.bodyMedium
+                                              ?.copyWith(
+                                            color: theme.colorScheme.onSurface
+                                                .withValues(alpha: 0.72),
+                                            height: 1.45,
+                                          ),
+                                        ),
+                                        const SizedBox(
+                                          height: KubusSpacing.md,
+                                        ),
+                                        Expanded(
                                           child: _FormSurface(
                                             footer: footer,
                                             compact: compactSurface,
                                             child: form,
                                           ),
                                         ),
-                                      ),
-                                    ],
-                                  )
-                                : SingleChildScrollView(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                                      children: [
-                                        _HeroColumn(
-                                          title: title,
-                                          subtitle: subtitle,
-                                          eyebrow: eyebrow,
-                                          highlights: highlights,
-                                          heroIcon: heroIcon,
-                                          gradientStart: gradientStart,
-                                          gradientEnd: gradientEnd,
-                                          compact: compactSurface,
-                                        ),
-                                        const SizedBox(height: KubusSpacing.lg),
-                                        _FormSurface(
-                                          footer: footer,
-                                          compact: compactSurface,
-                                          child: form,
-                                        ),
                                       ],
                                     ),
-                                  ),
-                          ),
-                        ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -151,10 +171,12 @@ class AuthEntryShell extends StatelessWidget {
 class _ShellTopBar extends StatelessWidget {
   const _ShellTopBar({
     required this.compact,
+    required this.title,
     this.action,
   });
 
   final bool compact;
+  final String title;
   final Widget? action;
 
   @override
@@ -162,20 +184,25 @@ class _ShellTopBar extends StatelessWidget {
     final controls = AuthEntryControls(compact: compact);
 
     if (compact) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const AppLogo(width: 42, height: 42),
-              if (action != null) ...[
-                const Spacer(),
-                Flexible(child: action!),
-              ],
-            ],
+          Expanded(
+            child: Text(
+              title,
+              maxLines: 2,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontWeight: FontWeight.w800,
+                    height: 1.05,
+                  ),
+            ),
           ),
-          const SizedBox(height: KubusSpacing.md),
+          const SizedBox(width: KubusSpacing.sm),
+          if (action != null) ...[
+            Flexible(child: action!),
+            const SizedBox(width: KubusSpacing.xs),
+          ],
           controls,
         ],
       );
@@ -391,14 +418,14 @@ class _FormSurface extends StatelessWidget {
         ],
       ),
       child: Padding(
-        padding: EdgeInsets.all(compact ? KubusSpacing.lg : KubusSpacing.xl),
+        padding: EdgeInsets.all(compact ? KubusSpacing.md : KubusSpacing.xl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             child,
             if (footer != null) ...[
-              const SizedBox(height: KubusSpacing.lg),
+              SizedBox(height: compact ? KubusSpacing.sm : KubusSpacing.lg),
               footer!,
             ],
           ],
@@ -425,10 +452,7 @@ class AuthSecondaryActionButton extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final background = Color.alphaBlend(
-      scheme.primary.withValues(alpha: isDark ? 0.14 : 0.06),
-      scheme.surface.withValues(alpha: isDark ? 0.9 : 0.98),
-    );
+    final background = scheme.surface.withValues(alpha: isDark ? 0.9 : 0.96);
 
     return OutlinedButton.icon(
       onPressed: onPressed,

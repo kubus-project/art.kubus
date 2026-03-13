@@ -2142,15 +2142,25 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
                       const AuthEntryControls(compact: false),
                     ],
                   )
-                : const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                : Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      AppLogo(width: 46, height: 46),
-                      SizedBox(height: KubusSpacing.md),
-                      AuthEntryControls(compact: true),
+                      Expanded(
+                        child: Text(
+                          l10n.onboardingWelcomeTitle,
+                          style:
+                              Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    color: scheme.onSurface,
+                                    fontWeight: FontWeight.w800,
+                                    height: 1.05,
+                                  ),
+                        ),
+                      ),
+                      const SizedBox(width: KubusSpacing.sm),
+                      const AuthEntryControls(compact: true),
                     ],
                   ),
-            const SizedBox(height: KubusSpacing.xl),
+            SizedBox(height: _isDesktop ? KubusSpacing.xl : KubusSpacing.md),
             Expanded(
               child: _isDesktop
                   ? Row(
@@ -2190,26 +2200,22 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
                         ),
                       ],
                     )
-                  : SingleChildScrollView(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _WelcomeHeroColumn(
-                            title: l10n.onboardingWelcomeTitle,
-                            subtitle: l10n.onboardingWelcomeDescription,
-                            details: [
-                              l10n.onboardingFlowWelcomeInfoAccount,
-                              l10n.onboardingFlowWelcomeInfoCreate,
-                              l10n.onboardingFlowWelcomeInfoFollow,
-                            ],
-                            start: spotlight.start,
-                            end: spotlight.end,
-                            compact: true,
-                          ),
-                          const SizedBox(height: KubusSpacing.lg),
-                          _WelcomeDecisionPanel(
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          l10n.onboardingWelcomeDescription,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: scheme.onSurface.withValues(alpha: 0.74),
+                                height: 1.45,
+                              ),
+                        ),
+                        const SizedBox(height: KubusSpacing.md),
+                        Expanded(
+                          child: _WelcomeDecisionPanel(
                             isDark: isDark,
                             scheme: scheme,
+                            compact: true,
                             discoverTitle: l10n.commonDiscoverArt,
                             discoverBody: l10n.onboardingWelcomeDiscoverBody,
                             createTitle: l10n.commonCreateAccount,
@@ -2221,8 +2227,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
                                   .pushReplacementNamed('/sign-in');
                             },
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
             ),
           ],
@@ -2244,11 +2250,22 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
+    final scheme = theme.colorScheme;
     final themeProvider = Provider.of<ThemeProvider>(context);
     final accent = themeProvider.accentColor;
     final stepPalette = _paletteForStep(_currentStep);
+    final onboardingTheme = theme.copyWith(
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: scheme.onSurface,
+          textStyle: theme.textTheme.labelLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
 
     final bgStart = stepPalette.start.withValues(alpha: 0.76);
     final bgEnd = stepPalette.end.withValues(alpha: 0.68);
@@ -2265,9 +2282,12 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         animate: !isWidgetTestBinding,
         colors: [bgStart, bgMid, bgEnd, bgStart],
         intensity: 0.3,
-        child: Scaffold(
-          backgroundColor: Colors.transparent,
-          body: const Center(child: CircularProgressIndicator()),
+        child: Theme(
+          data: onboardingTheme,
+          child: const Scaffold(
+            backgroundColor: Colors.transparent,
+            body: Center(child: CircularProgressIndicator()),
+          ),
         ),
       );
     }
@@ -2276,12 +2296,14 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         animate: !isWidgetTestBinding,
         colors: [bgStart, bgMid, bgAccent, bgEnd, bgStart],
         intensity: 0.3,
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        resizeToAvoidBottomInset: false,
-        body: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
+      child: Theme(
+        data: onboardingTheme,
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          resizeToAvoidBottomInset: false,
+          body: SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
               final keyboardLift = KeyboardInsetResolver.effectiveBottomInset(
                 context,
                 maxInset: _isDesktop ? 0 : double.infinity,
@@ -2367,7 +2389,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
                   ),
                 ),
               );
-            },
+              },
+            ),
           ),
         ),
       ),
@@ -2453,6 +2476,15 @@ class _AccountStepState extends State<_AccountStep> {
                 ChoiceChip(
                   label: Text(AppLocalizations.of(context)!.commonCreateAccount),
                   selected: !_showSignIn,
+                  backgroundColor: Colors.white.withValues(alpha: 0.08),
+                  selectedColor: Colors.white.withValues(alpha: 0.18),
+                  side: BorderSide(
+                    color: Colors.white.withValues(alpha: 0.14),
+                  ),
+                  labelStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.92),
+                        fontWeight: FontWeight.w700,
+                      ),
                   onSelected: (_) {
                     setState(() => _showSignIn = false);
                   },
@@ -2460,6 +2492,15 @@ class _AccountStepState extends State<_AccountStep> {
                 ChoiceChip(
                   label: Text(AppLocalizations.of(context)!.commonSignIn),
                   selected: _showSignIn,
+                  backgroundColor: Colors.white.withValues(alpha: 0.08),
+                  selectedColor: Colors.white.withValues(alpha: 0.18),
+                  side: BorderSide(
+                    color: Colors.white.withValues(alpha: 0.14),
+                  ),
+                  labelStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.92),
+                        fontWeight: FontWeight.w700,
+                      ),
                   onSelected: (_) {
                     setState(() => _showSignIn = true);
                   },
@@ -2587,6 +2628,7 @@ class _WelcomeDecisionPanel extends StatelessWidget {
   const _WelcomeDecisionPanel({
     required this.isDark,
     required this.scheme,
+    this.compact = false,
     required this.discoverTitle,
     required this.discoverBody,
     required this.createTitle,
@@ -2598,6 +2640,7 @@ class _WelcomeDecisionPanel extends StatelessWidget {
 
   final bool isDark;
   final ColorScheme scheme;
+  final bool compact;
   final String discoverTitle;
   final String discoverBody;
   final String createTitle;
@@ -2624,11 +2667,12 @@ class _WelcomeDecisionPanel extends StatelessWidget {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(KubusSpacing.xl),
+        padding: EdgeInsets.all(compact ? KubusSpacing.lg : KubusSpacing.xl),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _WelcomeChoiceCard(
+              compact: compact,
               icon: Icons.travel_explore_rounded,
               title: discoverTitle,
               body: discoverBody,
@@ -2640,6 +2684,7 @@ class _WelcomeDecisionPanel extends StatelessWidget {
             ),
             const SizedBox(height: KubusSpacing.md),
             _WelcomeChoiceCard(
+              compact: compact,
               icon: Icons.person_add_alt_1_rounded,
               title: createTitle,
               body: createBody,
@@ -2653,6 +2698,9 @@ class _WelcomeDecisionPanel extends StatelessWidget {
             Center(
               child: TextButton(
                 onPressed: onSignIn,
+                style: TextButton.styleFrom(
+                  foregroundColor: scheme.onSurface,
+                ),
                 child: Text(AppLocalizations.of(context)!.commonSignIn),
               ),
             ),
@@ -2665,12 +2713,14 @@ class _WelcomeDecisionPanel extends StatelessWidget {
 
 class _WelcomeChoiceCard extends StatelessWidget {
   const _WelcomeChoiceCard({
+    required this.compact,
     required this.icon,
     required this.title,
     required this.body,
     required this.action,
   });
 
+  final bool compact;
   final IconData icon;
   final String title;
   final String body;
@@ -2685,22 +2735,26 @@ class _WelcomeChoiceCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(KubusSpacing.lg),
+        padding: EdgeInsets.all(compact ? KubusSpacing.md : KubusSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: scheme.primary, size: 26),
+            Icon(icon, color: scheme.onSurface, size: compact ? 22 : 26),
             const SizedBox(height: KubusSpacing.sm),
             Text(
               title,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: scheme.onSurface,
-                    fontWeight: FontWeight.w800,
-                  ),
+              style: (compact
+                      ? Theme.of(context).textTheme.titleMedium
+                      : Theme.of(context).textTheme.titleLarge)
+                  ?.copyWith(
+                color: scheme.onSurface,
+                fontWeight: FontWeight.w800,
+              ),
             ),
             const SizedBox(height: KubusSpacing.xs),
             Text(
               body,
+              maxLines: compact ? 2 : null,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: scheme.onSurface.withValues(alpha: 0.72),
                     height: 1.45,

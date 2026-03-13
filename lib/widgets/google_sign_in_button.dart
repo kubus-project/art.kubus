@@ -19,10 +19,11 @@ class GoogleSignInButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final background =
+        colorScheme.surface.withValues(alpha: isDark ? 0.9 : 0.96);
     // Match KubusButton geometry (more square than the previous pill-ish look).
     final radius = BorderRadius.circular(8);
 
-    // Transparent background (requested) with neutral black/white content.
     final baseForeground = isDark ? Colors.white : const Color(0xFF1F1F1F);
     final borderColor = isDark
         ? Colors.white.withValues(alpha: 0.22)
@@ -46,7 +47,7 @@ class GoogleSignInButton extends StatelessWidget {
       width: double.infinity,
       child: OutlinedButton.icon(
         style: OutlinedButton.styleFrom(
-          backgroundColor: Colors.transparent,
+          backgroundColor: background,
           foregroundColor: baseForeground,
           shadowColor: Colors.transparent,
           disabledForegroundColor: baseForeground.withValues(alpha: 0.55),
@@ -98,4 +99,3 @@ class _GoogleGlyph extends StatelessWidget {
     );
   }
 }
-

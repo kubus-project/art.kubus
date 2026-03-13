@@ -629,7 +629,7 @@ class _SignInScreenState extends State<SignInScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: colorScheme.primary, size: 22),
+          Icon(icon, color: colorScheme.onSurface, size: 22),
           const SizedBox(width: KubusSpacing.sm),
           Text(label,
               style: KubusTypography.textTheme.titleMedium
@@ -688,7 +688,7 @@ class _SignInScreenState extends State<SignInScreen> {
             vertical: 10,
           ),
         ),
-        child: Text(l10n.commonSkipForNow),
+        child: Text(l10n.commonSkip),
       ),
       footer: Center(
         child: TextButton(
@@ -715,6 +715,8 @@ class _SignInScreenState extends State<SignInScreen> {
   }) {
     final l10n = AppLocalizations.of(context)!;
     final showEmailForm = _showCompactEmailForm;
+    final compactLayout =
+        widget.embedded || MediaQuery.sizeOf(context).height < 820;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -727,6 +729,7 @@ class _SignInScreenState extends State<SignInScreen> {
                 color: colorScheme.onSurface,
                 fontWeight: FontWeight.w800,
               ),
+          maxLines: compactLayout ? 2 : null,
         ),
         const SizedBox(height: KubusSpacing.xs),
         Text(
@@ -735,8 +738,9 @@ class _SignInScreenState extends State<SignInScreen> {
                 color: colorScheme.onSurface.withValues(alpha: 0.66),
                 height: 1.45,
               ),
+          maxLines: compactLayout ? 2 : null,
         ),
-        const SizedBox(height: KubusSpacing.lg),
+        SizedBox(height: compactLayout ? KubusSpacing.md : KubusSpacing.lg),
         if (!showEmailForm && enableWallet) ...[
           KubusButton(
             onPressed: _showConnectWalletModal,
@@ -744,7 +748,7 @@ class _SignInScreenState extends State<SignInScreen> {
             label: l10n.authConnectWalletButton,
             isFullWidth: true,
           ),
-          const SizedBox(height: KubusSpacing.sm),
+          SizedBox(height: compactLayout ? KubusSpacing.xs : KubusSpacing.sm),
         ],
         if (!showEmailForm && enableGoogle) ...[
           if (kIsWeb)
@@ -811,11 +815,11 @@ class _SignInScreenState extends State<SignInScreen> {
               isLoading: _isGoogleSubmitting,
               colorScheme: colorScheme,
             ),
-          const SizedBox(height: KubusSpacing.sm),
+          SizedBox(height: compactLayout ? KubusSpacing.xs : KubusSpacing.sm),
         ],
         if (!showEmailForm && enableEmail) ...[
           _buildMethodDivider(l10n.authOrLogInWithEmailOrUsername),
-          const SizedBox(height: KubusSpacing.sm),
+          SizedBox(height: compactLayout ? KubusSpacing.xs : KubusSpacing.sm),
           AuthSecondaryActionButton(
             onPressed: () {
               setState(() => _showCompactEmailForm = true);
@@ -833,6 +837,12 @@ class _SignInScreenState extends State<SignInScreen> {
               onPressed: () {
                 setState(() => _showCompactEmailForm = false);
               },
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.82),
+              ),
               child: Text(l10n.commonBack),
             ),
           ),
@@ -874,6 +884,10 @@ class _SignInScreenState extends State<SignInScreen> {
                 arguments: {'email': email},
               );
             },
+            style: TextButton.styleFrom(
+              foregroundColor:
+                  Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.82),
+            ),
             child: Text(AppLocalizations.of(context)!.authForgotPasswordLink),
           ),
         ),

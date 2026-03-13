@@ -44,7 +44,13 @@ class EmailRegistrationForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final submitBackground =
+        isDark ? Colors.white.withValues(alpha: 0.96) : const Color(0xFF1A1A1A);
+    final submitForeground =
+        isDark ? const Color(0xFF1A1A1A) : Colors.white;
     final border = OutlineInputBorder(
       borderRadius: BorderRadius.circular(18),
       borderSide: BorderSide(
@@ -105,8 +111,8 @@ class EmailRegistrationForm extends StatelessWidget {
         SizedBox(height: compact ? 8 : 10),
         ElevatedButton.icon(
           style: ElevatedButton.styleFrom(
-            backgroundColor: colorScheme.primary,
-            foregroundColor: colorScheme.onPrimary,
+            backgroundColor: submitBackground,
+            foregroundColor: submitForeground,
             padding: EdgeInsets.symmetric(
               vertical: compact ? 12 : 16,
               horizontal: compact ? 10 : 12,
@@ -123,13 +129,13 @@ class EmailRegistrationForm extends StatelessWidget {
                   height: 20,
                   child: InlineLoading(width: 20, height: 20, tileSize: 5),
                 )
-              : Icon(icon, color: colorScheme.onPrimary, size: 22),
+              : Icon(icon, color: submitForeground, size: 22),
           label: Text(
             isSubmitting ? submittingLabel : submitLabel,
             style: GoogleFonts.inter(
               fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: colorScheme.onPrimary,
+              color: submitForeground,
             ),
           ),
         ),
