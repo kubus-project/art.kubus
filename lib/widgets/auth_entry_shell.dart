@@ -57,6 +57,7 @@ class AuthEntryShell extends StatelessWidget {
                 context,
                 maxInset: isDesktop ? 0 : 160,
               );
+              final compactSurface = !isDesktop && constraints.maxWidth < 430;
 
               return AnimatedPadding(
                 duration: const Duration(milliseconds: 180),
@@ -73,7 +74,7 @@ class AuthEntryShell extends StatelessWidget {
                       child: Column(
                         children: [
                           _ShellTopBar(
-                            compact: !isDesktop,
+                            compact: compactSurface,
                             action: topAction,
                           ),
                           SizedBox(height: isDesktop ? KubusSpacing.xl : KubusSpacing.lg),
@@ -91,6 +92,7 @@ class AuthEntryShell extends StatelessWidget {
                                           heroIcon: heroIcon,
                                           gradientStart: gradientStart,
                                           gradientEnd: gradientEnd,
+                                          compact: compactSurface,
                                         ),
                                       ),
                                       const SizedBox(width: KubusSpacing.xl),
@@ -101,6 +103,7 @@ class AuthEntryShell extends StatelessWidget {
                                           ),
                                           child: _FormSurface(
                                             footer: footer,
+                                            compact: compactSurface,
                                             child: form,
                                           ),
                                         ),
@@ -119,11 +122,12 @@ class AuthEntryShell extends StatelessWidget {
                                           heroIcon: heroIcon,
                                           gradientStart: gradientStart,
                                           gradientEnd: gradientEnd,
-                                          compact: true,
+                                          compact: compactSurface,
                                         ),
                                         const SizedBox(height: KubusSpacing.lg),
                                         _FormSurface(
                                           footer: footer,
+                                          compact: compactSurface,
                                           child: form,
                                         ),
                                       ],
@@ -155,6 +159,28 @@ class _ShellTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final controls = AuthEntryControls(compact: compact);
+
+    if (compact) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const AppLogo(width: 42, height: 42),
+              if (action != null) ...[
+                const Spacer(),
+                Flexible(child: action!),
+              ],
+            ],
+          ),
+          const SizedBox(height: KubusSpacing.md),
+          controls,
+        ],
+      );
+    }
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -168,7 +194,7 @@ class _ShellTopBar extends StatelessWidget {
             runSpacing: KubusSpacing.sm,
             children: [
               if (action != null) action!,
-              AuthEntryControls(compact: compact),
+              controls,
             ],
           ),
         ),
@@ -249,7 +275,11 @@ class _HeroColumn extends StatelessWidget {
           SizedBox(height: compact ? KubusSpacing.md : KubusSpacing.xl),
           Text(
             title,
-            style: theme.textTheme.displaySmall?.copyWith(
+            softWrap: true,
+            style: (compact
+                    ? theme.textTheme.headlineMedium
+                    : theme.textTheme.displaySmall)
+                ?.copyWith(
               color: scheme.onSurface,
               fontWeight: FontWeight.w800,
               height: 1.05,
@@ -332,10 +362,12 @@ class _FormSurface extends StatelessWidget {
   const _FormSurface({
     required this.child,
     this.footer,
+    this.compact = false,
   });
 
   final Widget child;
   final Widget? footer;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -348,7 +380,7 @@ class _FormSurface extends StatelessWidget {
         color: scheme.surface.withValues(alpha: isDark ? 0.2 : 0.86),
         borderRadius: BorderRadius.circular(32),
         border: Border.all(
-          color: scheme.outlineVariant.withValues(alpha: isDark ? 0.18 : 0.14),
+          color: scheme.outlineVariant.withValues(alpha: isDark ? 0.12 : 0.08),
         ),
         boxShadow: [
           BoxShadow(
@@ -359,7 +391,7 @@ class _FormSurface extends StatelessWidget {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(KubusSpacing.xl),
+        padding: EdgeInsets.all(compact ? KubusSpacing.lg : KubusSpacing.xl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -370,6 +402,54 @@ class _FormSurface extends StatelessWidget {
               footer!,
             ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class AuthSecondaryActionButton extends StatelessWidget {
+  const AuthSecondaryActionButton({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final background = Color.alphaBlend(
+      scheme.primary.withValues(alpha: isDark ? 0.14 : 0.06),
+      scheme.surface.withValues(alpha: isDark ? 0.9 : 0.98),
+    );
+
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon),
+      label: Text(label),
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size.fromHeight(56),
+        backgroundColor: background,
+        foregroundColor: scheme.onSurface,
+        side: BorderSide(
+          color: scheme.outlineVariant.withValues(alpha: isDark ? 0.24 : 0.16),
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+        ),
+        padding: const EdgeInsets.symmetric(
+          horizontal: KubusSpacing.md,
+          vertical: KubusSpacing.sm,
+        ),
+        textStyle: theme.textTheme.titleSmall?.copyWith(
+          fontWeight: FontWeight.w700,
         ),
       ),
     );

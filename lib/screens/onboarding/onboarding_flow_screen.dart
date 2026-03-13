@@ -2102,8 +2102,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
                       Expanded(
                         child: Text(
                           labels[index],
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                          maxLines: 3,
                           style:
                               Theme.of(context).textTheme.labelLarge?.copyWith(
                                     color: Colors.white.withValues(alpha: 0.95),
@@ -2134,14 +2133,23 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const AppLogo(width: 46, height: 46),
-                const Spacer(),
-                AuthEntryControls(compact: !_isDesktop),
-              ],
-            ),
+            _isDesktop
+                ? Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const AppLogo(width: 46, height: 46),
+                      const Spacer(),
+                      const AuthEntryControls(compact: false),
+                    ],
+                  )
+                : const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AppLogo(width: 46, height: 46),
+                      SizedBox(height: KubusSpacing.md),
+                      AuthEntryControls(compact: true),
+                    ],
+                  ),
             const SizedBox(height: KubusSpacing.xl),
             Expanded(
               child: _isDesktop

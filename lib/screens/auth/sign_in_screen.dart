@@ -641,11 +641,13 @@ class _SignInScreenState extends State<SignInScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final roles = KubusColorRoles.of(context);
     final accentStart = colorScheme.primary;
     final accentEnd = roles.positiveAction;
+    final isDark = theme.brightness == Brightness.dark;
     final enableWallet = AppConfig.enableWeb3 && AppConfig.enableWalletConnect;
     final enableEmail = AppConfig.enableEmailAuth;
     final enableGoogle = AppConfig.enableGoogleAuth;
@@ -674,11 +676,30 @@ class _SignInScreenState extends State<SignInScreen> {
       ],
       topAction: TextButton(
         onPressed: _continueAsGuest,
+        style: TextButton.styleFrom(
+          foregroundColor: colorScheme.onSurface,
+          backgroundColor:
+              colorScheme.surface.withValues(alpha: isDark ? 0.16 : 0.78),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(999),
+          ),
+          padding: const EdgeInsets.symmetric(
+            horizontal: KubusSpacing.md,
+            vertical: 10,
+          ),
+        ),
         child: Text(l10n.commonSkipForNow),
       ),
       footer: Center(
         child: TextButton(
           onPressed: _navigateToRegister,
+          style: TextButton.styleFrom(
+            foregroundColor: colorScheme.onSurface,
+            padding: const EdgeInsets.symmetric(
+              horizontal: KubusSpacing.md,
+              vertical: KubusSpacing.xs,
+            ),
+          ),
           child: Text(l10n.authNeedAccountRegister),
         ),
       ),
@@ -795,21 +816,12 @@ class _SignInScreenState extends State<SignInScreen> {
         if (!showEmailForm && enableEmail) ...[
           _buildMethodDivider(l10n.authOrLogInWithEmailOrUsername),
           const SizedBox(height: KubusSpacing.sm),
-          OutlinedButton.icon(
+          AuthSecondaryActionButton(
             onPressed: () {
               setState(() => _showCompactEmailForm = true);
             },
-            icon: const Icon(Icons.email_outlined),
-            label: Text(l10n.authSignInWithEmail),
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size.fromHeight(54),
-              side: BorderSide(
-                color: colorScheme.outlineVariant.withValues(alpha: 0.34),
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
-              ),
-            ),
+            icon: Icons.email_outlined,
+            label: l10n.authSignInWithEmail,
           ),
         ],
         if (showEmailForm) ...[
