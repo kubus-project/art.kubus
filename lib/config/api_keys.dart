@@ -110,6 +110,6 @@ class ApiKeys {
   );
   static const String googleIosClientId = String.fromEnvironment(
     'KUBUS_GOOGLE_IOS_CLIENT_ID',
-    defaultValue: '',
+    defaultValue: '623807687386-h0cbiqegcaint6s7gf4av9fvcvs1jmor.apps.googleusercontent.com',
   );
 }

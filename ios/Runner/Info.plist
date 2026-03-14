@@ -22,6 +22,21 @@
 		<string>????</string>
 		<key>CFBundleVersion</key>
 		<string>$(FLUTTER_BUILD_NUMBER)</string>
+		<key>CFBundleURLTypes</key>
+		<array>
+			<dict>
+				<key>CFBundleTypeRole</key>
+				<string>Editor</string>
+				<key>CFBundleURLSchemes</key>
+				<array>
+					<string>$(KUBUS_GOOGLE_REVERSED_IOS_CLIENT_ID)</string>
+				</array>
+			</dict>
+		</array>
+		<key>GIDClientID</key>
+		<string>$(KUBUS_GOOGLE_IOS_CLIENT_ID)</string>
+		<key>GIDServerClientID</key>
+		<string>$(KUBUS_GOOGLE_SERVER_CLIENT_ID)</string>
 		<key>LSRequiresIPhoneOS</key>
 		<true/>
 		<key>UILaunchStoryboardName</key>

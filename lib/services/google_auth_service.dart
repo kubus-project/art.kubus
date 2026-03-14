@@ -29,19 +29,62 @@ class GoogleAuthService {
 
   bool _initialized = false;
 
+  bool get _isApplePlatform =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.iOS ||
+          defaultTargetPlatform == TargetPlatform.macOS);
+
+  bool get _isAndroidPlatform =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+  String? _trimmedOrNull(String value) {
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
+  String? _selectedClientId() {
+    if (kIsWeb) {
+      return _trimmedOrNull(ApiKeys.googleWebClientId);
+    }
+    if (_isApplePlatform) {
+      return _trimmedOrNull(ApiKeys.googleIosClientId) ??
+          _trimmedOrNull(ApiKeys.googleClientId);
+    }
+    if (_isAndroidPlatform) {
+      return null;
+    }
+    return _trimmedOrNull(ApiKeys.googleClientId);
+  }
+
+  String? _selectedServerClientId() {
+    if (kIsWeb) {
+      return null;
+    }
+    return _trimmedOrNull(ApiKeys.googleWebClientId);
+  }
+
+  String? configurationIssue() {
+    if (kIsWeb) {
+      return _selectedClientId() == null
+          ? 'Missing Google web client ID.'
+          : null;
+    }
+
+    if (_selectedServerClientId() == null) {
+      return 'Missing Google web/server client ID.';
+    }
+
+    if (_isApplePlatform && _selectedClientId() == null) {
+      return 'Missing Google iOS client ID.';
+    }
+
+    return null;
+  }
+
   Future<void> ensureInitialized() async {
     if (_initialized) return;
-    final webId = ApiKeys.googleWebClientId.trim();
-    final androidId = ApiKeys.googleClientId.trim();
-    final String? selectedClientId =
-        kIsWeb
-            ? (webId.isNotEmpty ? webId : null)
-            : (androidId.isNotEmpty ? androidId : null);
-
-    // Web does not support serverClientId in google_sign_in_web.
-    // On mobile, if server auth code is ever required, serverClientId should
-    // be the Web OAuth client id.
-    final String? serverClientId = (!kIsWeb && webId.isNotEmpty) ? webId : null;
+    final selectedClientId = _selectedClientId();
+    final serverClientId = _selectedServerClientId();
 
     // GoogleSignIn 7.x: Initialize with clientId and serverClientId
     // Note: GoogleSignIn.instance is a singleton, configure before use
@@ -84,6 +127,11 @@ class GoogleAuthService {
   Future<GoogleAuthResult?> signIn() async {
     if (!AppConfig.enableGoogleAuth) {
       throw Exception('Google sign-in is disabled by feature flag.');
+    }
+
+    final configurationError = configurationIssue();
+    if (configurationError != null) {
+      throw Exception(configurationError);
     }
 
     await ensureInitialized();
