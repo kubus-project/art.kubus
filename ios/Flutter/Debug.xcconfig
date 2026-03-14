@@ -1,1 +1,4 @@
 #include "Generated.xcconfig"
+KUBUS_GOOGLE_IOS_CLIENT_ID=623807687386-h0cbiqegcaint6s7gf4av9fvcvs1jmor.apps.googleusercontent.com
+KUBUS_GOOGLE_SERVER_CLIENT_ID=623807687386-b08lhv474n1li9kkaasq46sag1s8gjcp.apps.googleusercontent.com
+KUBUS_GOOGLE_REVERSED_IOS_CLIENT_ID=com.googleusercontent.apps.623807687386-h0cbiqegcaint6s7gf4av9fvcvs1jmor

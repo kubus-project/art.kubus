@@ -130,7 +130,7 @@ class _GeneralBackgroundState extends State<GeneralBackground>
           intensity: widget.intensity,
         );
         final gradientAlpha =
-            widget.showMapLayer ? (isDark ? 0.88 : 0.90) : 1.0;
+            widget.showMapLayer ? (isDark ? 0.85 : 0.88) : 1.0;
         final gradientPalette = effectivePalette
             .map((color) => color.withValues(alpha: gradientAlpha))
             .toList(growable: false);
@@ -162,8 +162,8 @@ class _GeneralBackgroundState extends State<GeneralBackground>
     final isDark = theme.brightness == Brightness.dark;
     final media = MediaQuery.of(context);
     final shortestSide = media.size.shortestSide;
-    final opacity = isDark ? 0.22 : 0.30;
-    final blurSigma = isDark ? 0.8 : 1.1;
+    final opacity = isDark ? 0.30 : 0.38;
+    final blurSigma = isDark ? 0.6 : 0.9;
     final scale = shortestSide >= 1100
         ? 1.10
         : shortestSide >= 700
