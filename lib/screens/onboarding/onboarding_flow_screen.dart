@@ -2213,52 +2213,64 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
             SizedBox(height: _isDesktop ? KubusSpacing.xl : KubusSpacing.md),
             Expanded(
               child: _isDesktop
-                  ? Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(
-                          child: _WelcomeHeroColumn(
-                            title: l10n.onboardingWelcomeTitle,
-                            subtitle: l10n.onboardingWelcomeDescription,
-                            details: [
-                              l10n.onboardingFlowWelcomeInfoAccount,
-                              l10n.onboardingFlowWelcomeInfoCreate,
-                              l10n.onboardingFlowWelcomeInfoFollow,
-                              l10n.onboardingFlowWelcomeInfoTime,
-                            ],
-                            start: spotlight.start,
-                            end: spotlight.end,
-                          ),
+                  ? Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          maxWidth: 1120,
+                          maxHeight: 640,
                         ),
-                        const SizedBox(width: KubusSpacing.xl),
-                        SizedBox(
-                          width: 430,
-                          child: _WelcomeDecisionPanel(
-                            isDark: isDark,
-                            scheme: scheme,
-                            discoverTitle: l10n.commonDiscoverArt,
-                            discoverBody: l10n.onboardingWelcomeDiscoverBody,
-                            createTitle: l10n.commonCreateAccount,
-                            createBody: l10n.onboardingFlowAccountBody,
-                            onSelectGuest: _selectGuestBranch,
-                            onSelectAccount: _selectAccountBranch,
-                            onSignIn: () {
-                              Navigator.of(context)
-                                  .pushReplacementNamed('/sign-in');
-                            },
-                          ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              child: _WelcomeHeroColumn(
+                                title: l10n.onboardingWelcomeTitle,
+                                subtitle: l10n.onboardingWelcomeDescription,
+                                details: [
+                                  l10n.onboardingFlowWelcomeInfoAccount,
+                                  l10n.onboardingFlowWelcomeInfoCreate,
+                                  l10n.onboardingFlowWelcomeInfoFollow,
+                                  l10n.onboardingFlowWelcomeInfoTime,
+                                ],
+                                start: spotlight.start,
+                                end: spotlight.end,
+                                centered: true,
+                              ),
+                            ),
+                            const SizedBox(width: KubusSpacing.xl),
+                            SizedBox(
+                              width: 440,
+                              child: _WelcomeDecisionPanel(
+                                isDark: isDark,
+                                scheme: scheme,
+                                discoverTitle: l10n.commonDiscoverArt,
+                                discoverBody: l10n.onboardingWelcomeDiscoverBody,
+                                createTitle: l10n.commonCreateAccount,
+                                createBody: l10n.onboardingFlowAccountBody,
+                                onSelectGuest: _selectGuestBranch,
+                                onSelectAccount: _selectAccountBranch,
+                                onSignIn: () {
+                                  Navigator.of(context)
+                                      .pushReplacementNamed('/sign-in');
+                                },
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     )
                   : Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
                           l10n.onboardingWelcomeDescription,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: scheme.onSurface.withValues(alpha: 0.74),
-                                height: 1.45,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: scheme.onSurface.withValues(
+                                      alpha: 0.74,
+                                    ),
+                                    height: 1.45,
+                                  ),
                         ),
                         const SizedBox(height: KubusSpacing.md),
                         Expanded(
@@ -2659,6 +2671,7 @@ class _WelcomeHeroColumn extends StatelessWidget {
     required this.details,
     required this.start,
     required this.end,
+    this.centered = false,
   });
 
   final String title;
@@ -2666,11 +2679,14 @@ class _WelcomeHeroColumn extends StatelessWidget {
   final List<String> details;
   final Color start;
   final Color end;
+  final bool centered;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Column(
+      mainAxisAlignment:
+          centered ? MainAxisAlignment.center : MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         GradientIconCard(
@@ -2778,29 +2794,61 @@ class _WelcomeDecisionPanel extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _WelcomeChoiceCard(
-              compact: compact,
-              icon: Icons.travel_explore_rounded,
-              title: discoverTitle,
-              body: discoverBody,
-              action: KubusButton(
-                onPressed: () => unawaited(onSelectGuest()),
-                label: discoverTitle,
-                isFullWidth: true,
+            if (compact)
+              _WelcomeChoiceCard(
+                compact: compact,
+                icon: Icons.travel_explore_rounded,
+                title: discoverTitle,
+                body: discoverBody,
+                action: KubusButton(
+                  onPressed: () => unawaited(onSelectGuest()),
+                  label: discoverTitle,
+                  isFullWidth: true,
+                ),
+              )
+            else
+              Expanded(
+                child: _WelcomeChoiceCard(
+                  compact: compact,
+                  fillHeight: true,
+                  icon: Icons.travel_explore_rounded,
+                  title: discoverTitle,
+                  body: discoverBody,
+                  action: KubusButton(
+                    onPressed: () => unawaited(onSelectGuest()),
+                    label: discoverTitle,
+                    isFullWidth: true,
+                  ),
+                ),
               ),
-            ),
             const SizedBox(height: KubusSpacing.md),
-            _WelcomeChoiceCard(
-              compact: compact,
-              icon: Icons.person_add_alt_1_rounded,
-              title: createTitle,
-              body: createBody,
-              action: KubusOutlineButton(
-                onPressed: () => unawaited(onSelectAccount()),
-                label: createTitle,
-                isFullWidth: true,
+            if (compact)
+              _WelcomeChoiceCard(
+                compact: compact,
+                icon: Icons.person_add_alt_1_rounded,
+                title: createTitle,
+                body: createBody,
+                action: KubusOutlineButton(
+                  onPressed: () => unawaited(onSelectAccount()),
+                  label: createTitle,
+                  isFullWidth: true,
+                ),
+              )
+            else
+              Expanded(
+                child: _WelcomeChoiceCard(
+                  compact: compact,
+                  fillHeight: true,
+                  icon: Icons.person_add_alt_1_rounded,
+                  title: createTitle,
+                  body: createBody,
+                  action: KubusOutlineButton(
+                    onPressed: () => unawaited(onSelectAccount()),
+                    label: createTitle,
+                    isFullWidth: true,
+                  ),
+                ),
               ),
-            ),
             const SizedBox(height: KubusSpacing.lg),
             Center(
               child: TextButton(
@@ -2825,6 +2873,7 @@ class _WelcomeChoiceCard extends StatelessWidget {
     required this.title,
     required this.body,
     required this.action,
+    this.fillHeight = false,
   });
 
   final bool compact;
@@ -2832,6 +2881,7 @@ class _WelcomeChoiceCard extends StatelessWidget {
   final String title;
   final String body;
   final Widget action;
+  final bool fillHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -2844,6 +2894,7 @@ class _WelcomeChoiceCard extends StatelessWidget {
       child: Padding(
         padding: EdgeInsets.all(compact ? KubusSpacing.md : KubusSpacing.lg),
         child: Column(
+          mainAxisSize: fillHeight ? MainAxisSize.max : MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(icon, color: scheme.onSurface, size: compact ? 22 : 26),
@@ -2867,6 +2918,7 @@ class _WelcomeChoiceCard extends StatelessWidget {
                     height: 1.45,
                   ),
             ),
+            if (fillHeight) const Spacer(),
             const SizedBox(height: KubusSpacing.md),
             action,
           ],
