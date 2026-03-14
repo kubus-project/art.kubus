@@ -254,11 +254,9 @@ class _HeroColumn extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
-    return Padding(
-      padding: EdgeInsets.only(top: compact ? KubusSpacing.sm : KubusSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
           Container(
             width: compact ? 72 : 88,
             height: compact ? 72 : 88,
@@ -333,8 +331,7 @@ class _HeroColumn extends StatelessWidget {
                   .toList(growable: false),
             ),
           ],
-        ],
-      ),
+      ],
     );
   }
 }

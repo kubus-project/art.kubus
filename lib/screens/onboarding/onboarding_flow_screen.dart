@@ -2234,7 +2234,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
                                 ],
                                 start: spotlight.start,
                                 end: spotlight.end,
-                                centered: true,
                               ),
                             ),
                             const SizedBox(width: KubusSpacing.xl),
@@ -2671,7 +2670,6 @@ class _WelcomeHeroColumn extends StatelessWidget {
     required this.details,
     required this.start,
     required this.end,
-    this.centered = false,
   });
 
   final String title;
@@ -2679,14 +2677,12 @@ class _WelcomeHeroColumn extends StatelessWidget {
   final List<String> details;
   final Color start;
   final Color end;
-  final bool centered;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Column(
-      mainAxisAlignment:
-          centered ? MainAxisAlignment.center : MainAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         GradientIconCard(

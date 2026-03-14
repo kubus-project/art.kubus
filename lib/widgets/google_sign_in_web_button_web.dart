@@ -7,6 +7,7 @@ import 'package:google_sign_in_web/google_sign_in_web.dart' as gweb;
 
 import '../config/config.dart';
 import '../services/google_auth_service.dart';
+import 'google_sign_in_button.dart';
 
 class GoogleSignInWebButton extends StatefulWidget {
   const GoogleSignInWebButton({
@@ -138,80 +139,98 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
     final platform = GoogleSignInPlatform.instance;
 
     const reservedHeight = 56.0;
-    if (!_ready || widget.isLoading) {
-      return SizedBox(
-        height: reservedHeight,
-        width: double.infinity,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: widget.colorScheme.surface.withValues(
-              alpha: isDark ? 0.9 : 0.96,
-            ),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.22)
-                  : Colors.black.withValues(alpha: 0.12),
-            ),
-          ),
-          child: Center(
-            child: SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  widget.colorScheme.onSurface,
+    return SizedBox(
+      height: reservedHeight,
+      width: double.infinity,
+      child: Stack(
+        alignment: Alignment.center,
+        children: <Widget>[
+          Positioned.fill(
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 160),
+              opacity: _ready ? 0 : 1,
+              child: IgnorePointer(
+                ignoring: true,
+                child: GoogleSignInButton(
+                  onPressed: () async {},
+                  isLoading: false,
+                  colorScheme: widget.colorScheme,
                 ),
               ),
             ),
           ),
-        ),
-      );
-    }
+          if (_ready)
+            Positioned.fill(
+              child: LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints constraints) {
+                  final double maxWidth =
+                      constraints.maxWidth.isFinite ? constraints.maxWidth : 400.0;
 
-    return SizedBox(
-      height: reservedHeight,
-      width: double.infinity,
-      child: LayoutBuilder(
-        builder: (BuildContext context, BoxConstraints constraints) {
-          final double maxWidth =
-              constraints.maxWidth.isFinite ? constraints.maxWidth : 400.0;
-          final config = gweb.GSIButtonConfiguration(
-            type: gweb.GSIButtonType.standard,
-            theme: isDark
-                ? gweb.GSIButtonTheme.filledBlack
-                : gweb.GSIButtonTheme.outline,
-            size: gweb.GSIButtonSize.large,
-            text: gweb.GSIButtonText.continueWith,
-            shape: gweb.GSIButtonShape.rectangular,
-            logoAlignment: gweb.GSIButtonLogoAlignment.left,
-            minimumWidth: maxWidth,
-          );
+                  final config = gweb.GSIButtonConfiguration(
+                    type: gweb.GSIButtonType.standard,
+                    theme: isDark
+                        ? gweb.GSIButtonTheme.filledBlack
+                        : gweb.GSIButtonTheme.outline,
+                    size: gweb.GSIButtonSize.large,
+                    text: gweb.GSIButtonText.continueWith,
+                    shape: gweb.GSIButtonShape.rectangular,
+                    logoAlignment: gweb.GSIButtonLogoAlignment.left,
+                    minimumWidth: maxWidth,
+                  );
 
-          Widget? gisButton;
-          try {
-            if (platform is gweb.GoogleSignInPlugin) {
-              gisButton = platform.renderButton(configuration: config);
-            } else {
-              final dynamic dyn = platform;
-              final dynamic rendered =
-                  dyn.renderButton(configuration: config);
-              if (rendered is Widget) {
-                gisButton = rendered;
-              }
-            }
-          } catch (_) {}
+                  Widget? gisButton;
+                  try {
+                    if (platform is gweb.GoogleSignInPlugin) {
+                      gisButton = platform.renderButton(configuration: config);
+                    } else {
+                      final dynamic dyn = platform;
+                      final dynamic rendered =
+                          dyn.renderButton(configuration: config);
+                      if (rendered is Widget) gisButton = rendered;
+                    }
+                  } catch (_) {}
 
-          if (gisButton == null) {
-            return const SizedBox.shrink();
-          }
+                  if (gisButton == null) {
+                    return GoogleSignInButton(
+                      onPressed: () async {},
+                      isLoading: widget.isLoading,
+                      colorScheme: widget.colorScheme,
+                    );
+                  }
 
-          return SizedBox(
-            width: maxWidth,
-            child: gisButton,
-          );
-        },
+                  return AbsorbPointer(
+                    absorbing: widget.isLoading,
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 160),
+                      opacity: _ready ? 1 : 0,
+                      child: SizedBox(
+                        width: maxWidth,
+                        child: gisButton,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          if (widget.isLoading)
+            Positioned.fill(
+              child: ColoredBox(
+                color: Colors.transparent,
+                child: Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        widget.colorScheme.onSurface,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
