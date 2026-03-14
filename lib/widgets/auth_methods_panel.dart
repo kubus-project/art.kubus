@@ -638,10 +638,19 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     required bool enableGoogle,
   }) {
     final l10n = AppLocalizations.of(context)!;
+    final roles = KubusColorRoles.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final showEmailForm = _showCompactEmailForm;
     final compactLayout =
         widget.embedded || MediaQuery.sizeOf(context).height < 820;
     final showSectionCopy = !widget.embedded && !compactLayout;
+    final emailSurface =
+        Color.lerp(colorScheme.surface, colorScheme.primary, isDark ? 0.18 : 0.10)!;
+    final walletSurface = Color.lerp(
+      colorScheme.surface,
+      roles.web3MarketplaceAccent,
+      isDark ? 0.24 : 0.14,
+    )!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -727,6 +736,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
             icon: Icons.email_outlined,
             label: l10n.authContinueWithEmail,
             variant: KubusButtonVariant.secondary,
+            backgroundColor: emailSurface,
             foregroundColor: colorScheme.onSurface,
             isFullWidth: true,
           ),
@@ -741,6 +751,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
             icon: Icons.account_balance_wallet_outlined,
             label: l10n.authConnectWalletButton,
             variant: KubusButtonVariant.secondary,
+            backgroundColor: walletSurface,
             foregroundColor: colorScheme.onSurface,
             isFullWidth: true,
           ),
