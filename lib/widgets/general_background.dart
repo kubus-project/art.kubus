@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -6,6 +5,11 @@ import 'package:flutter/material.dart';
 import '../utils/design_tokens.dart';
 
 class GeneralBackground extends StatefulWidget {
+  static const String lightMapAsset =
+      'assets/images/backgrounds/background_map_light.png';
+  static const String darkMapAsset =
+      'assets/images/backgrounds/background_map_dark.png';
+
   final Widget child;
   final Duration duration;
   final bool animate;
@@ -104,9 +108,9 @@ class _GeneralBackgroundState extends State<GeneralBackground>
       animation: Listenable.merge(<Listenable>[_motion, _paletteController]),
       builder: (context, child) {
         final theme = Theme.of(context);
-        final scheme = theme.colorScheme;
         final motionT = _motion.value;
         final progress = motionT * widget.intensity;
+        final isDark = theme.brightness == Brightness.dark;
 
         final beginOffset = Alignment(
           -1.0 + (progress * 0.5),
@@ -125,51 +129,23 @@ class _GeneralBackgroundState extends State<GeneralBackground>
           t: motionT,
           intensity: widget.intensity,
         );
-
-        final isDark = theme.brightness == Brightness.dark;
-        final mapAccent = Color.lerp(scheme.primary, scheme.secondary, 0.35) ??
-            scheme.primary;
-        final arterialColor = Color.lerp(scheme.onSurface, mapAccent, 0.72)!
-            .withValues(alpha: isDark ? 0.17 : 0.095);
-        final collectorColor = Color.lerp(
-          scheme.outlineVariant,
-          mapAccent,
-          0.38,
-        )!
-            .withValues(alpha: isDark ? 0.10 : 0.055);
-        final gridColor = scheme.onSurface.withValues(
-          alpha: isDark ? 0.042 : 0.024,
-        );
-        final glowColor = mapAccent.withValues(alpha: isDark ? 0.14 : 0.075);
-        final hubStrokeColor = Color.lerp(scheme.onSurface, mapAccent, 0.56)!
-            .withValues(alpha: isDark ? 0.18 : 0.10);
+        final gradientAlpha =
+            widget.showMapLayer ? (isDark ? 0.88 : 0.90) : 1.0;
+        final gradientPalette = effectivePalette
+            .map((color) => color.withValues(alpha: gradientAlpha))
+            .toList(growable: false);
 
         return Stack(
           fit: StackFit.expand,
           children: [
-            if (widget.showMapLayer)
-              IgnorePointer(
-                child: RepaintBoundary(
-                  child: CustomPaint(
-                    painter: _GeneralBackgroundMapPainter(
-                      motionT: motionT,
-                      intensity: widget.intensity,
-                      gridColor: gridColor,
-                      arterialColor: arterialColor,
-                      collectorColor: collectorColor,
-                      glowColor: glowColor,
-                      hubStrokeColor: hubStrokeColor,
-                    ),
-                  ),
-                ),
-              ),
+            if (widget.showMapLayer) _buildStaticMapLayer(context),
             DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: effectivePalette,
+                  colors: gradientPalette,
                   begin: beginOffset,
                   end: endOffset,
-                  stops: _calculateStops(effectivePalette.length, progress),
+                  stops: _calculateStops(gradientPalette.length, progress),
                 ),
               ),
             ),
@@ -178,6 +154,43 @@ class _GeneralBackgroundState extends State<GeneralBackground>
         );
       },
       child: widget.child,
+    );
+  }
+
+  Widget _buildStaticMapLayer(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final media = MediaQuery.of(context);
+    final shortestSide = media.size.shortestSide;
+    final opacity = isDark ? 0.22 : 0.30;
+    final blurSigma = isDark ? 0.8 : 1.1;
+    final scale = shortestSide >= 1100
+        ? 1.10
+        : shortestSide >= 700
+            ? 1.14
+            : 1.22;
+
+    return IgnorePointer(
+      child: Opacity(
+        opacity: opacity,
+        child: ImageFiltered(
+          imageFilter: ui.ImageFilter.blur(
+            sigmaX: blurSigma,
+            sigmaY: blurSigma,
+          ),
+          child: Transform.scale(
+            scale: scale,
+            child: Image.asset(
+              isDark
+                  ? GeneralBackground.darkMapAsset
+                  : GeneralBackground.lightMapAsset,
+              fit: BoxFit.cover,
+              alignment: Alignment.center,
+              filterQuality: FilterQuality.medium,
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -239,7 +252,7 @@ class _GeneralBackgroundState extends State<GeneralBackground>
     if (a.isEmpty) return b;
     if (b.isEmpty) return a;
 
-    final length = math.max(a.length, b.length);
+    final length = a.length > b.length ? a.length : b.length;
     final aPad = _padToLength(a, length);
     final bPad = _padToLength(b, length);
     return List<Color>.generate(length, (index) {
@@ -279,308 +292,5 @@ class _GeneralBackgroundState extends State<GeneralBackground>
     final hsl = HSLColor.fromColor(color);
     final newHue = (hsl.hue + degrees) % 360.0;
     return hsl.withHue(newHue < 0 ? newHue + 360.0 : newHue).toColor();
-  }
-}
-
-class _GeneralBackgroundMapPainter extends CustomPainter {
-  final double motionT;
-  final double intensity;
-  final Color gridColor;
-  final Color arterialColor;
-  final Color collectorColor;
-  final Color glowColor;
-  final Color hubStrokeColor;
-
-  const _GeneralBackgroundMapPainter({
-    required this.motionT,
-    required this.intensity,
-    required this.gridColor,
-    required this.arterialColor,
-    required this.collectorColor,
-    required this.glowColor,
-    required this.hubStrokeColor,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (size.isEmpty) return;
-
-    final drift = Offset(
-      (motionT - 0.5) * size.width * 0.035 * intensity.clamp(0.2, 1.0),
-      (0.5 - motionT) * size.height * 0.028 * intensity.clamp(0.2, 1.0),
-    );
-    final shortestSide = math.min(size.width, size.height);
-    final density = size.width >= 1400
-        ? 1.18
-        : size.width >= 900
-            ? 1.0
-            : 0.84;
-
-    canvas.save();
-    canvas.clipRect(Offset.zero & size);
-    canvas.translate(drift.dx, drift.dy);
-
-    _paintMinorGrid(canvas, size, density);
-    _paintRoads(canvas, size, shortestSide, density);
-    _paintBlocks(canvas, size, density);
-
-    canvas.restore();
-
-    _paintHubs(canvas, size, shortestSide, drift, density);
-  }
-
-  void _paintMinorGrid(Canvas canvas, Size size, double density) {
-    final verticalCount = size.width >= 1200
-        ? 9
-        : size.width >= 700
-            ? 7
-            : 5;
-    final horizontalCount = size.height >= 900
-        ? 9
-        : size.height >= 700
-            ? 7
-            : 5;
-    final paint = Paint()
-      ..color = gridColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0 * density;
-
-    for (int i = 0; i < verticalCount; i++) {
-      final x = size.width * ((i + 0.5) / verticalCount);
-      final path = Path()
-        ..moveTo(x, -size.height * 0.05)
-        ..cubicTo(
-          x - (12 * density),
-          size.height * 0.24,
-          x + (10 * density),
-          size.height * 0.66,
-          x - (8 * density),
-          size.height * 1.05,
-        );
-      canvas.drawPath(path, paint);
-    }
-
-    for (int i = 0; i < horizontalCount; i++) {
-      final y = size.height * ((i + 0.5) / horizontalCount);
-      final path = Path()
-        ..moveTo(-size.width * 0.05, y)
-        ..cubicTo(
-          size.width * 0.26,
-          y - (10 * density),
-          size.width * 0.72,
-          y + (12 * density),
-          size.width * 1.05,
-          y - (8 * density),
-        );
-      canvas.drawPath(path, paint);
-    }
-  }
-
-  void _paintRoads(
-    Canvas canvas,
-    Size size,
-    double shortestSide,
-    double density,
-  ) {
-    final arterialPaint = Paint()
-      ..color = arterialColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = math.max(1.5, shortestSide * 0.0038) * density
-      ..strokeCap = StrokeCap.round;
-    final collectorPaint = Paint()
-      ..color = collectorColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = math.max(1.1, shortestSide * 0.0026) * density
-      ..strokeCap = StrokeCap.round;
-
-    final ring = Rect.fromCenter(
-      center: Offset(size.width * 0.58, size.height * 0.52),
-      width: size.width * 0.34,
-      height: size.height * 0.25,
-    );
-    canvas.drawOval(ring, collectorPaint);
-
-    canvas.drawPath(_northArc(size), arterialPaint);
-    canvas.drawPath(_southArc(size), arterialPaint);
-    canvas.drawPath(_verticalSpine(size), arterialPaint);
-    canvas.drawPath(_eastDiagonal(size), collectorPaint);
-    canvas.drawPath(_westDiagonal(size), collectorPaint);
-    canvas.drawPath(_innerConnector(size), collectorPaint);
-  }
-
-  void _paintBlocks(Canvas canvas, Size size, double density) {
-    final blockPaint = Paint()
-      ..color = collectorColor.withValues(alpha: collectorColor.a * 0.72)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = math.max(0.8, density);
-
-    final blocks = <Rect>[
-      Rect.fromLTWH(size.width * 0.16, size.height * 0.18, size.width * 0.10,
-          size.height * 0.08),
-      Rect.fromLTWH(size.width * 0.72, size.height * 0.18, size.width * 0.11,
-          size.height * 0.09),
-      Rect.fromLTWH(size.width * 0.26, size.height * 0.62, size.width * 0.12,
-          size.height * 0.10),
-      Rect.fromLTWH(size.width * 0.64, size.height * 0.66, size.width * 0.10,
-          size.height * 0.08),
-    ];
-
-    for (final block in blocks) {
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(block, Radius.circular(14 * density)),
-        blockPaint,
-      );
-    }
-  }
-
-  void _paintHubs(
-    Canvas canvas,
-    Size size,
-    double shortestSide,
-    Offset drift,
-    double density,
-  ) {
-    final glowRadius = math.max(22.0, shortestSide * 0.034) * density;
-    final glowPaint = Paint()
-      ..color = glowColor
-      ..style = PaintingStyle.fill
-      ..maskFilter = ui.MaskFilter.blur(
-        ui.BlurStyle.normal,
-        math.max(12.0, shortestSide * 0.015),
-      );
-    final hubPaint = Paint()
-      ..color = hubStrokeColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = math.max(1.2, shortestSide * 0.0024) * density;
-
-    final hubs = <Offset>[
-      Offset(size.width * 0.24, size.height * 0.26),
-      Offset(size.width * 0.58, size.height * 0.51),
-      Offset(size.width * 0.79, size.height * 0.34),
-      Offset(size.width * 0.34, size.height * 0.72),
-    ];
-
-    final parallax = Offset(-drift.dx * 0.4, -drift.dy * 0.4);
-    for (final hub in hubs) {
-      final center = hub + parallax;
-      canvas.drawCircle(center, glowRadius, glowPaint);
-      canvas.drawCircle(center, glowRadius * 0.56, hubPaint);
-      canvas.drawCircle(
-          center, glowRadius * 0.16, hubPaint..style = PaintingStyle.fill);
-      hubPaint.style = PaintingStyle.stroke;
-    }
-  }
-
-  Path _northArc(Size size) {
-    return Path()
-      ..moveTo(size.width * 0.02, size.height * 0.18)
-      ..cubicTo(
-        size.width * 0.18,
-        size.height * 0.07,
-        size.width * 0.34,
-        size.height * 0.10,
-        size.width * 0.47,
-        size.height * 0.18,
-      )
-      ..cubicTo(
-        size.width * 0.66,
-        size.height * 0.30,
-        size.width * 0.83,
-        size.height * 0.18,
-        size.width * 1.02,
-        size.height * 0.08,
-      );
-  }
-
-  Path _southArc(Size size) {
-    return Path()
-      ..moveTo(size.width * -0.02, size.height * 0.78)
-      ..cubicTo(
-        size.width * 0.16,
-        size.height * 0.64,
-        size.width * 0.34,
-        size.height * 0.60,
-        size.width * 0.52,
-        size.height * 0.70,
-      )
-      ..cubicTo(
-        size.width * 0.72,
-        size.height * 0.82,
-        size.width * 0.88,
-        size.height * 0.78,
-        size.width * 1.04,
-        size.height * 0.92,
-      );
-  }
-
-  Path _verticalSpine(Size size) {
-    return Path()
-      ..moveTo(size.width * 0.46, size.height * -0.04)
-      ..cubicTo(
-        size.width * 0.42,
-        size.height * 0.18,
-        size.width * 0.54,
-        size.height * 0.34,
-        size.width * 0.50,
-        size.height * 0.52,
-      )
-      ..cubicTo(
-        size.width * 0.46,
-        size.height * 0.72,
-        size.width * 0.54,
-        size.height * 0.86,
-        size.width * 0.48,
-        size.height * 1.04,
-      );
-  }
-
-  Path _eastDiagonal(Size size) {
-    return Path()
-      ..moveTo(size.width * 0.58, size.height * 0.14)
-      ..cubicTo(
-        size.width * 0.68,
-        size.height * 0.24,
-        size.width * 0.76,
-        size.height * 0.40,
-        size.width * 0.92,
-        size.height * 0.52,
-      );
-  }
-
-  Path _westDiagonal(Size size) {
-    return Path()
-      ..moveTo(size.width * 0.14, size.height * 0.56)
-      ..cubicTo(
-        size.width * 0.24,
-        size.height * 0.46,
-        size.width * 0.34,
-        size.height * 0.38,
-        size.width * 0.48,
-        size.height * 0.34,
-      );
-  }
-
-  Path _innerConnector(Size size) {
-    return Path()
-      ..moveTo(size.width * 0.28, size.height * 0.78)
-      ..cubicTo(
-        size.width * 0.42,
-        size.height * 0.60,
-        size.width * 0.62,
-        size.height * 0.56,
-        size.width * 0.78,
-        size.height * 0.36,
-      );
-  }
-
-  @override
-  bool shouldRepaint(_GeneralBackgroundMapPainter oldDelegate) {
-    return motionT != oldDelegate.motionT ||
-        intensity != oldDelegate.intensity ||
-        gridColor.toARGB32() != oldDelegate.gridColor.toARGB32() ||
-        arterialColor.toARGB32() != oldDelegate.arterialColor.toARGB32() ||
-        collectorColor.toARGB32() != oldDelegate.collectorColor.toARGB32() ||
-        glowColor.toARGB32() != oldDelegate.glowColor.toARGB32() ||
-        hubStrokeColor.toARGB32() != oldDelegate.hubStrokeColor.toARGB32();
   }
 }

@@ -156,6 +156,8 @@ flutter:
   assets:
     - assets/images/logo.png
     - assets/images/logo_black.png
+    - assets/images/backgrounds/background_map_light.png
+    - assets/images/backgrounds/background_map_dark.png
     - assets/map_styles/kubus_light.json
     - assets/map_styles/kubus_dark.json
 
