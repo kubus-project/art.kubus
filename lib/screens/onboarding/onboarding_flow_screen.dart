@@ -15,7 +15,6 @@ import 'package:art_kubus/services/onboarding_state_service.dart';
 import 'package:art_kubus/services/push_notification_service.dart';
 import 'package:art_kubus/services/telemetry/telemetry_service.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
-import 'package:art_kubus/utils/keyboard_inset_resolver.dart';
 import 'package:art_kubus/utils/media_url_resolver.dart';
 import 'package:art_kubus/widgets/app_logo.dart';
 import 'package:art_kubus/widgets/auth_entry_controls.dart';
@@ -1712,17 +1711,24 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        l10n.onboardingFlowTitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: (headerCompact
-                                ? Theme.of(context).textTheme.titleMedium
-                                : Theme.of(context).textTheme.titleLarge)
-                            ?.copyWith(
-                              color: scheme.onSurface,
-                              fontWeight: FontWeight.w800,
-                            ),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            l10n.onboardingFlowTitle,
+                            maxLines: 1,
+                            softWrap: false,
+                            style: (headerCompact
+                                    ? Theme.of(context).textTheme.titleMedium
+                                    : Theme.of(context).textTheme.titleLarge)
+                                ?.copyWith(
+                                  color: scheme.onSurface,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                          ),
+                        ),
                       ),
                       const SizedBox(height: KubusSpacing.xs),
                       Text(
@@ -1978,6 +1984,31 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   }
 
   Widget _buildBottomActions(AppLocalizations l10n, {required bool compact}) {
+    if (_currentStep == _OnboardingStep.account) {
+      if (_currentIndex == 0) {
+        return const SizedBox.shrink();
+      }
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      final backForeground = isDark
+          ? Colors.white.withValues(alpha: 0.85)
+          : Colors.white.withValues(alpha: 0.95);
+      return Align(
+        alignment: Alignment.center,
+        child: TextButton(
+          onPressed: _goBackStep,
+          style: TextButton.styleFrom(
+            foregroundColor: backForeground,
+            padding: const EdgeInsets.symmetric(
+              horizontal: KubusSpacing.lg,
+              vertical: KubusSpacing.sm,
+            ),
+            minimumSize: const Size(48, 44),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          child: Text(l10n.commonBack),
+        ),
+      );
+    }
     final isDark = Theme.of(context).brightness == Brightness.dark;
     // Back button text: white to be readable against gradient background
     final backForeground = isDark
@@ -2323,20 +2354,13 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           body: SafeArea(
             child: LayoutBuilder(
               builder: (context, constraints) {
-              final keyboardLift = KeyboardInsetResolver.effectiveBottomInset(
-                context,
-                maxInset: _isDesktop ? 0 : double.infinity,
-              );
-              final compactHeight = !_isDesktop && constraints.maxHeight < 760;
-              final compactLayout = compactHeight;
-              final hideProgress = !_isDesktop && constraints.maxHeight < 700;
+                final compactHeight =
+                    !_isDesktop && constraints.maxHeight < 760;
+                final compactLayout = compactHeight;
+                final hideProgress = !_isDesktop && constraints.maxHeight < 700;
 
-              if (_isWelcomePhase) {
-                return AnimatedPadding(
-                  duration: const Duration(milliseconds: 180),
-                  curve: Curves.easeOut,
-                  padding: EdgeInsets.only(bottom: keyboardLift),
-                  child: Padding(
+                if (_isWelcomePhase) {
+                  return Padding(
                     padding: EdgeInsets.symmetric(
                       horizontal: _isDesktop
                           ? KubusSpacing.lg
@@ -2344,15 +2368,10 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
                       vertical: compactLayout ? 8 : 10,
                     ),
                     child: _buildWelcomeScreen(l10n, scheme),
-                  ),
-                );
-              }
+                  );
+                }
 
-              return AnimatedPadding(
-                duration: const Duration(milliseconds: 180),
-                curve: Curves.easeOut,
-                padding: EdgeInsets.only(bottom: keyboardLift),
-                child: Padding(
+                return Padding(
                   padding: EdgeInsets.symmetric(
                     horizontal: _isDesktop
                         ? KubusSpacing.lg
@@ -2406,8 +2425,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
                       ),
                     ),
                   ),
-                ),
-              );
+                );
               },
             ),
           ),
@@ -2467,7 +2485,7 @@ class _AccountStepState extends State<_AccountStep> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final compact = constraints.maxHeight < 520;
+        final compact = constraints.maxHeight < 620;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -2614,15 +2632,19 @@ class _OnboardingAuthModeButton extends StatelessWidget {
             horizontal: KubusSpacing.sm,
             vertical: compact ? 10 : 12,
           ),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: Colors.white.withValues(alpha: selected ? 0.96 : 0.78),
-                  fontWeight: FontWeight.w800,
-                ),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              softWrap: false,
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color:
+                        Colors.white.withValues(alpha: selected ? 0.96 : 0.78),
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
           ),
         ),
       ),
@@ -3322,6 +3344,9 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
   late final TextEditingController _displayName;
   late final TextEditingController _username;
   late final TextEditingController _bio;
+  final _displayNameFocusNode = FocusNode();
+  final _usernameFocusNode = FocusNode();
+  final _bioFocusNode = FocusNode();
   final ImagePicker _picker = ImagePicker();
   String? _avatarUrl;
   Uint8List? _localAvatarBytes;
@@ -3342,6 +3367,9 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
     _displayName.dispose();
     _username.dispose();
     _bio.dispose();
+    _displayNameFocusNode.dispose();
+    _usernameFocusNode.dispose();
+    _bioFocusNode.dispose();
     super.dispose();
   }
 
@@ -3508,6 +3536,9 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
                 const SizedBox(height: KubusSpacing.sm),
                 TextField(
                   controller: _displayName,
+                  focusNode: _displayNameFocusNode,
+                  textInputAction: TextInputAction.next,
+                  onSubmitted: (_) => _usernameFocusNode.requestFocus(),
                   onTapOutside: (_) =>
                       FocusManager.instance.primaryFocus?.unfocus(),
                   decoration: InputDecoration(
@@ -3517,6 +3548,9 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
                 const SizedBox(height: 10),
                 TextField(
                   controller: _username,
+                  focusNode: _usernameFocusNode,
+                  textInputAction: TextInputAction.next,
+                  onSubmitted: (_) => _bioFocusNode.requestFocus(),
                   onTapOutside: (_) =>
                       FocusManager.instance.primaryFocus?.unfocus(),
                   decoration: InputDecoration(
@@ -3526,8 +3560,11 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
                 const SizedBox(height: 10),
                 TextField(
                   controller: _bio,
+                  focusNode: _bioFocusNode,
                   minLines: 2,
                   maxLines: 4,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _save(),
                   onTapOutside: (_) =>
                       FocusManager.instance.primaryFocus?.unfocus(),
                   decoration: InputDecoration(

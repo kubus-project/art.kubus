@@ -76,11 +76,11 @@ class GoogleAuthService {
     );
   }
 
-  /// Sign in with Google. Supports both mobile and web.
-  /// - Mobile (iOS/Android): Uses authenticate() / attemptLightweightAuthentication().
-  /// - Web: Interactive authentication is not supported via this API.
-  ///   On web, use a GIS-rendered button and listen to
-  ///   [GoogleSignIn.instance.authenticationEvents].
+  /// Starts a single interactive Google sign-in flow and returns the result.
+  ///
+  /// This intentionally avoids silent/lightweight auth attempts here because
+  /// those flows are easy to duplicate from multiple entry surfaces and can
+  /// lead to unstable UX on mobile.
   Future<GoogleAuthResult?> signIn() async {
     if (!AppConfig.enableGoogleAuth) {
       throw Exception('Google sign-in is disabled by feature flag.');
@@ -88,49 +88,16 @@ class GoogleAuthService {
 
     await ensureInitialized();
 
-    if (kIsWeb) {
+    try {
       try {
         final account = await GoogleSignIn.instance.authenticate();
         return resultFromAccount(account);
       } catch (e) {
         if (kDebugMode) {
-          debugPrint('GoogleAuthService: web authenticate failed: $e');
+          debugPrint('GoogleAuthService: authenticate failed: $e');
         }
         return null;
       }
-    }
-
-    try {
-      GoogleSignInAccount? account;
-
-      // Mobile flow: Try lightweight auth first (may return null or throw).
-      try {
-        final Future<GoogleSignInAccount?>? attempt =
-            GoogleSignIn.instance.attemptLightweightAuthentication();
-        if (attempt != null) {
-          account = await attempt;
-        }
-      } catch (e) {
-        if (kDebugMode) {
-          debugPrint(
-            'GoogleAuthService: attemptLightweightAuthentication failed: $e',
-          );
-        }
-      }
-
-      // If no user, trigger interactive authentication.
-      if (account == null) {
-        try {
-          account = await GoogleSignIn.instance.authenticate();
-        } catch (e) {
-          if (kDebugMode) {
-            debugPrint('GoogleAuthService: authenticate failed: $e');
-          }
-          return null;
-        }
-      }
-
-      return resultFromAccount(account);
     } on Exception {
       rethrow;
     } catch (e) {
