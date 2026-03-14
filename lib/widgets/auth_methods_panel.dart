@@ -25,7 +25,6 @@ import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -65,56 +64,10 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
   final _usernameController = TextEditingController();
   bool _isSubmitting = false;
   bool _isGoogleSubmitting = false;
-  bool _didAttemptGoogleAutoSignIn = false;
   String? _emailError;
   String? _passwordError;
   String? _confirmPasswordError;
   bool _showCompactEmailForm = false;
-
-  @override
-  void initState() {
-    super.initState();
-    // Best-effort "automatic" sign-in on mobile (silent re-auth for returning users).
-    // Note: One Tap is web-only (GIS iframe) and cannot be replicated on native.
-    if (!widget.embedded && !kIsWeb && AppConfig.enableGoogleAuth) {
-      unawaited(_attemptGoogleAutoSignIn());
-    }
-  }
-
-  Future<void> _attemptGoogleAutoSignIn() async {
-    if (_didAttemptGoogleAutoSignIn) return;
-    _didAttemptGoogleAutoSignIn = true;
-    if (_isGoogleSubmitting) return;
-
-    try {
-      await GoogleAuthService().ensureInitialized();
-      final account =
-          await GoogleSignIn.instance.attemptLightweightAuthentication();
-      if (!mounted) return;
-      if (account == null) return;
-
-      if (mounted) {
-        setState(() => _isGoogleSubmitting = true);
-      }
-
-      final googleResult = GoogleAuthService().resultFromAccount(account);
-      final api = BackendApiService();
-      final result = await api.loginWithGoogle(
-        idToken: googleResult.idToken,
-        code: googleResult.serverAuthCode,
-        email: googleResult.email,
-        username: null,
-      );
-      if (!mounted) return;
-      await _handleAuthSuccess(result);
-    } catch (_) {
-      // Best-effort only.
-    } finally {
-      if (mounted) {
-        setState(() => _isGoogleSubmitting = false);
-      }
-    }
-  }
 
   @override
   void dispose() {
@@ -464,8 +417,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       return;
     }
 
-    // Web uses a GIS-rendered button which triggers auth events instead of an
-    // imperative signIn call.
+    // Web sign-in is handled by the dedicated web button widget.
     if (kIsWeb) {
       return;
     }
@@ -614,19 +566,13 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
   Widget _walletOptionButton(
       BuildContext context, String label, IconData icon, VoidCallback onTap) {
     final colorScheme = Theme.of(context).colorScheme;
-    return ElevatedButton.icon(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: colorScheme.surface,
-        foregroundColor: colorScheme.onSurface,
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        side: BorderSide(color: colorScheme.outline.withValues(alpha: 0.4)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        elevation: 0,
-      ),
+    return KubusButton(
       onPressed: onTap,
-      icon: Icon(icon, color: colorScheme.onSurface, size: 22),
-      label: Text(label,
-          style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16)),
+      icon: icon,
+      label: label,
+      variant: KubusButtonVariant.secondary,
+      foregroundColor: colorScheme.onSurface,
+      isFullWidth: true,
     );
   }
 
@@ -695,30 +641,31 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     final showEmailForm = _showCompactEmailForm;
     final compactLayout =
         widget.embedded || MediaQuery.sizeOf(context).height < 820;
+    final showSectionCopy = !widget.embedded && !compactLayout;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          showEmailForm ? l10n.authOrUseEmail : l10n.authRegisterSubtitle,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: colorScheme.onSurface,
-                fontWeight: FontWeight.w800,
-              ),
-          maxLines: compactLayout ? 2 : null,
-        ),
-        const SizedBox(height: KubusSpacing.xs),
-        Text(
-          showEmailForm
-              ? l10n.authRegisterSubtitle
-              : l10n.authHighlightOptionalWeb3,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurface.withValues(alpha: 0.66),
-                height: 1.45,
-              ),
-          maxLines: compactLayout ? 2 : null,
-        ),
-        SizedBox(height: compactLayout ? KubusSpacing.md : KubusSpacing.lg),
+        if (showSectionCopy) ...[
+          Text(
+            showEmailForm ? l10n.authOrUseEmail : l10n.authRegisterSubtitle,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: colorScheme.onSurface,
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: KubusSpacing.xs),
+          Text(
+            showEmailForm
+                ? l10n.authRegisterSubtitle
+                : l10n.authHighlightOptionalWeb3,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurface.withValues(alpha: 0.66),
+                  height: 1.45,
+                ),
+          ),
+          SizedBox(height: compactLayout ? KubusSpacing.md : KubusSpacing.lg),
+        ],
         if (!showEmailForm && enableGoogle) ...[
           if (kIsWeb)
             GoogleSignInWebButton(
@@ -786,7 +733,8 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
           SizedBox(height: compactLayout ? KubusSpacing.xs : KubusSpacing.sm),
         ],
         if (!showEmailForm && enableWallet) ...[
-          _buildMethodDivider(l10n.authHighlightOptionalWeb3),
+          if (showSectionCopy)
+            _buildMethodDivider(l10n.authHighlightOptionalWeb3),
           SizedBox(height: compactLayout ? KubusSpacing.xs : KubusSpacing.sm),
           KubusButton(
             onPressed: _showConnectWalletModal,
@@ -798,7 +746,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
           ),
         ],
         if (showEmailForm) ...[
-          _buildEmailForm(compact: widget.embedded),
+          _buildEmailForm(compact: compactLayout),
           const SizedBox(height: KubusSpacing.sm),
           Align(
             alignment: Alignment.centerRight,
@@ -833,6 +781,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       onSubmit: _registerWithEmail,
       isSubmitting: _isSubmitting,
       compact: compact,
+      autofocusEmail: true,
       submitLabel: l10n.authContinueWithEmail,
       submittingLabel: l10n.commonWorking,
     );

@@ -1,15 +1,9 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:google_sign_in_platform_interface/google_sign_in_platform_interface.dart';
-import 'package:google_sign_in_web/google_sign_in_web.dart' as gweb;
 
-import '../config/config.dart';
 import '../services/google_auth_service.dart';
 import 'google_sign_in_button.dart';
 
-class GoogleSignInWebButton extends StatefulWidget {
+class GoogleSignInWebButton extends StatelessWidget {
   const GoogleSignInWebButton({
     super.key,
     required this.onAuthResult,
@@ -24,217 +18,21 @@ class GoogleSignInWebButton extends StatefulWidget {
   final ColorScheme colorScheme;
 
   @override
-  State<GoogleSignInWebButton> createState() => _GoogleSignInWebButtonState();
-}
-
-class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
-  StreamSubscription<GoogleSignInAuthenticationEvent>? _sub;
-  bool _ready = false;
-  bool _processingAuth = false;
-  String? _lastProcessedUid;
-
-  @override
-  void initState() {
-    super.initState();
-    unawaited(_init());
-  }
-
-  Future<void> _init() async {
-    try {
-      await GoogleAuthService().ensureInitialized();
-    } catch (e) {
-      widget.onAuthError?.call(e);
-    }
-
-    if (!mounted) return;
-    setState(() {
-      _ready = true;
-    });
-
-    _sub ??= GoogleSignIn.instance.authenticationEvents.listen(
-      (GoogleSignInAuthenticationEvent event) async {
-        if (event is GoogleSignInAuthenticationEventSignIn) {
-          if (!mounted) return;
-          if (widget.isLoading || _processingAuth) return;
-
-          // Prevent reprocessing the same authentication event
-          final uid = event.user.id;
-          if (_lastProcessedUid == uid) return;
-
-          try {
-            _processingAuth = true;
-            final result = GoogleAuthService().resultFromAccount(event.user);
-            await widget.onAuthResult(result);
-            _lastProcessedUid = uid;
-          } catch (e) {
-            _lastProcessedUid = null;
-            widget.onAuthError?.call(e);
-          } finally {
-            if (mounted) {
-              _processingAuth = false;
-            }
-          }
-        }
-      },
-      onError: (Object error) {
-        widget.onAuthError?.call(error);
-      },
-    );
-
-    if (AppConfig.isFeatureEnabled('googleOneTapWeb')) {
-      // Bring back "automatic" / low-friction sign-in on web:
-      // - attemptLightweightAuthentication() enables silent re-auth when possible
-      //   (returning users, existing session, etc.).
-      // - best-effort One Tap prompt when supported by the underlying web plugin.
-      try {
-        final account =
-            await GoogleSignIn.instance.attemptLightweightAuthentication();
-        if (!mounted) return;
-        if (account != null && !widget.isLoading && !_processingAuth) {
-          final uid = account.id;
-          if (_lastProcessedUid != uid) {
-            _processingAuth = true;
-            try {
-              final result = GoogleAuthService().resultFromAccount(account);
-              await widget.onAuthResult(result);
-              _lastProcessedUid = uid;
-            } catch (e) {
-              _lastProcessedUid = null;
-              widget.onAuthError?.call(e);
-            } finally {
-              if (mounted) {
-                _processingAuth = false;
-              }
-            }
-          }
-        }
-      } catch (_) {
-        // Best-effort only; One Tap / silent auth may be blocked by browser policies.
-      }
-
-      // Avoid GIS One Tap prompt on web until FedCM configuration is wired.
-      // This prevents deprecation warnings about prompt UI status methods.
-    }
-  }
-
-  @override
-  void didUpdateWidget(GoogleSignInWebButton oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // Reset the processing flag if isLoading changed back to false
-    if (oldWidget.isLoading && !widget.isLoading) {
-      _processingAuth = false;
-    }
-  }
-
-  @override
-  void dispose() {
-    _processingAuth = false;
-    _lastProcessedUid = null;
-    unawaited(_sub?.cancel());
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final platform = GoogleSignInPlatform.instance;
-
-    // Same size as other auth buttons.
-    const double reservedHeight = 56;
-    return SizedBox(
-      height: reservedHeight,
-      width: double.infinity,
-      child: Stack(
-        alignment: Alignment.center,
-        children: <Widget>[
-          Positioned.fill(
-            child: AnimatedOpacity(
-              duration: const Duration(milliseconds: 160),
-              opacity: _ready ? 0 : 1,
-              child: IgnorePointer(
-                ignoring: true,
-                child: GoogleSignInButton(
-                  onPressed: () async {},
-                  isLoading: false,
-                  colorScheme: widget.colorScheme,
-                ),
-              ),
-            ),
-          ),
-          if (_ready)
-            Positioned.fill(
-              child: LayoutBuilder(
-                builder: (BuildContext context, BoxConstraints constraints) {
-                  final double maxWidth =
-                      constraints.maxWidth.isFinite ? constraints.maxWidth : 400;
-                  final double buttonWidth = maxWidth;
-
-                  final config = gweb.GSIButtonConfiguration(
-                    type: gweb.GSIButtonType.standard,
-                    theme: isDark
-                        ? gweb.GSIButtonTheme.filledBlack
-                        : gweb.GSIButtonTheme.outline,
-                    size: gweb.GSIButtonSize.large,
-                    text: gweb.GSIButtonText.continueWith,
-                    shape: gweb.GSIButtonShape.rectangular,
-                    logoAlignment: gweb.GSIButtonLogoAlignment.left,
-                    minimumWidth: buttonWidth,
-                  );
-
-                  Widget? gisButton;
-                  try {
-                    if (platform is gweb.GoogleSignInPlugin) {
-                      gisButton = platform.renderButton(configuration: config);
-                    } else {
-                      final dynamic dyn = platform;
-                      final dynamic rendered =
-                          dyn.renderButton(configuration: config);
-                      if (rendered is Widget) gisButton = rendered;
-                    }
-                  } catch (_) {}
-
-                  if (gisButton == null) {
-                    return GoogleSignInButton(
-                      onPressed: () async {},
-                      isLoading: widget.isLoading,
-                      colorScheme: widget.colorScheme,
-                    );
-                  }
-
-                  return AbsorbPointer(
-                    absorbing: widget.isLoading,
-                    child: AnimatedOpacity(
-                      duration: const Duration(milliseconds: 160),
-                      opacity: _ready ? 1 : 0,
-                      child: SizedBox(
-                        width: buttonWidth,
-                        child: gisButton,
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          if (widget.isLoading)
-            Positioned.fill(
-              child: ColoredBox(
-                color: Colors.transparent,
-                child: Center(
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        widget.colorScheme.onSurface,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
+    return GoogleSignInButton(
+      isLoading: isLoading,
+      colorScheme: colorScheme,
+      onPressed: () async {
+        try {
+          final result = await GoogleAuthService().signIn();
+          if (result == null) {
+            throw StateError('Google sign-in cancelled or unavailable.');
+          }
+          await onAuthResult(result);
+        } catch (error) {
+          onAuthError?.call(error);
+        }
+      },
     );
   }
 }

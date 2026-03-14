@@ -1,10 +1,9 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
-import 'package:art_kubus/widgets/inline_loading.dart';
+import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
-class EmailRegistrationForm extends StatelessWidget {
+class EmailRegistrationForm extends StatefulWidget {
   const EmailRegistrationForm({
     super.key,
     required this.emailController,
@@ -20,6 +19,7 @@ class EmailRegistrationForm extends StatelessWidget {
     this.isSubmitting = false,
     this.compact = false,
     this.showUsername = true,
+    this.autofocusEmail = false,
     this.icon = Icons.person_add_alt,
   });
 
@@ -40,6 +40,26 @@ class EmailRegistrationForm extends StatelessWidget {
   final bool isSubmitting;
   final bool compact;
   final bool showUsername;
+  final bool autofocusEmail;
+
+  @override
+  State<EmailRegistrationForm> createState() => _EmailRegistrationFormState();
+}
+
+class _EmailRegistrationFormState extends State<EmailRegistrationForm> {
+  final _emailFocusNode = FocusNode();
+  final _passwordFocusNode = FocusNode();
+  final _confirmPasswordFocusNode = FocusNode();
+  final _usernameFocusNode = FocusNode();
+
+  @override
+  void dispose() {
+    _emailFocusNode.dispose();
+    _passwordFocusNode.dispose();
+    _confirmPasswordFocusNode.dispose();
+    _usernameFocusNode.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,90 +77,105 @@ class EmailRegistrationForm extends StatelessWidget {
         color: colorScheme.outlineVariant.withValues(alpha: 0.14),
       ),
     );
+    final fieldSpacing = widget.compact ? 8.0 : 10.0;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        TextField(
-          controller: emailController,
-          keyboardType: TextInputType.emailAddress,
-          onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
-          decoration: _decoration(
-            labelText: l10n.commonEmail,
-            errorText: emailError,
-            border: border,
-            colorScheme: colorScheme,
-          ),
-        ),
-        SizedBox(height: compact ? 8 : 10),
-        TextField(
-          controller: passwordController,
-          obscureText: true,
-          onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
-          decoration: _decoration(
-            labelText: l10n.commonPassword,
-            errorText: passwordError,
-            border: border,
-            colorScheme: colorScheme,
-          ),
-        ),
-        SizedBox(height: compact ? 8 : 10),
-        TextField(
-          controller: confirmPasswordController,
-          obscureText: true,
-          onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
-          decoration: _decoration(
-            labelText: l10n.commonConfirmPassword,
-            errorText: confirmPasswordError,
-            border: border,
-            colorScheme: colorScheme,
-          ),
-        ),
-        if (!compact && showUsername && usernameController != null) ...[
-          const SizedBox(height: 10),
+    return AutofillGroup(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
           TextField(
-            controller: usernameController,
+            controller: widget.emailController,
+            focusNode: _emailFocusNode,
+            autofocus: widget.autofocusEmail,
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next,
+            autofillHints: const [AutofillHints.email],
+            onSubmitted: (_) => _passwordFocusNode.requestFocus(),
             onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
             decoration: _decoration(
-              labelText: l10n.commonUsernameOptional,
+              labelText: l10n.commonEmail,
+              errorText: widget.emailError,
               border: border,
               colorScheme: colorScheme,
+              compact: widget.compact,
             ),
           ),
-        ],
-        SizedBox(height: compact ? 8 : 10),
-        ElevatedButton.icon(
-          style: ElevatedButton.styleFrom(
+          SizedBox(height: fieldSpacing),
+          TextField(
+            controller: widget.passwordController,
+            focusNode: _passwordFocusNode,
+            obscureText: true,
+            textInputAction: TextInputAction.next,
+            autofillHints: const [AutofillHints.newPassword],
+            onSubmitted: (_) => _confirmPasswordFocusNode.requestFocus(),
+            onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
+            decoration: _decoration(
+              labelText: l10n.commonPassword,
+              errorText: widget.passwordError,
+              border: border,
+              colorScheme: colorScheme,
+              compact: widget.compact,
+            ),
+          ),
+          SizedBox(height: fieldSpacing),
+          TextField(
+            controller: widget.confirmPasswordController,
+            focusNode: _confirmPasswordFocusNode,
+            obscureText: true,
+            textInputAction:
+                widget.showUsername && widget.usernameController != null
+                    ? TextInputAction.next
+                    : TextInputAction.done,
+            autofillHints: const [AutofillHints.newPassword],
+            onSubmitted: (_) {
+              if (widget.showUsername && widget.usernameController != null) {
+                _usernameFocusNode.requestFocus();
+                return;
+              }
+              widget.onSubmit?.call();
+            },
+            onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
+            decoration: _decoration(
+              labelText: l10n.commonConfirmPassword,
+              errorText: widget.confirmPasswordError,
+              border: border,
+              colorScheme: colorScheme,
+              compact: widget.compact,
+            ),
+          ),
+          if (!widget.compact &&
+              widget.showUsername &&
+              widget.usernameController != null) ...[
+            SizedBox(height: fieldSpacing),
+            TextField(
+              controller: widget.usernameController,
+              focusNode: _usernameFocusNode,
+              textInputAction: TextInputAction.done,
+              autofillHints: const [AutofillHints.username],
+              onSubmitted: (_) => widget.onSubmit?.call(),
+              onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
+              decoration: _decoration(
+                labelText: l10n.commonUsernameOptional,
+                border: border,
+                colorScheme: colorScheme,
+                compact: widget.compact,
+              ),
+            ),
+          ],
+          SizedBox(height: fieldSpacing),
+          KubusButton(
+            onPressed: widget.isSubmitting ? null : widget.onSubmit,
+            isLoading: widget.isSubmitting,
+            icon: widget.isSubmitting ? null : widget.icon,
+            label:
+                widget.isSubmitting ? widget.submittingLabel : widget.submitLabel,
             backgroundColor: submitBackground,
             foregroundColor: submitForeground,
-            padding: EdgeInsets.symmetric(
-              vertical: compact ? 12 : 16,
-              horizontal: compact ? 10 : 12,
-            ),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            elevation: 1,
-            minimumSize: Size.fromHeight(compact ? 46 : 54),
+            isFullWidth: true,
           ),
-          onPressed: isSubmitting ? null : onSubmit,
-          icon: isSubmitting
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: InlineLoading(width: 20, height: 20, tileSize: 5),
-                )
-              : Icon(icon, color: submitForeground, size: 22),
-          label: Text(
-            isSubmitting ? submittingLabel : submitLabel,
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: submitForeground,
-            ),
-          ),
-        ),
-        if (compact) const SizedBox(height: KubusSpacing.xs),
-      ],
+          if (widget.compact) const SizedBox(height: KubusSpacing.xs),
+        ],
+      ),
     );
   }
 
@@ -148,6 +183,7 @@ class EmailRegistrationForm extends StatelessWidget {
     required String labelText,
     required OutlineInputBorder border,
     required ColorScheme colorScheme,
+    bool compact = false,
     String? errorText,
   }) {
     return InputDecoration(
@@ -155,9 +191,9 @@ class EmailRegistrationForm extends StatelessWidget {
       errorText: errorText,
       filled: true,
       fillColor: Colors.white.withValues(alpha: 0.06),
-      contentPadding: const EdgeInsets.symmetric(
+      contentPadding: EdgeInsets.symmetric(
         horizontal: KubusSpacing.md,
-        vertical: 18,
+        vertical: compact ? 14 : 18,
       ),
       enabledBorder: border,
       border: border,

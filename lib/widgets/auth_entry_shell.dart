@@ -1,6 +1,5 @@
 import 'package:art_kubus/screens/desktop/desktop_shell.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
-import 'package:art_kubus/utils/keyboard_inset_resolver.dart';
 import 'package:art_kubus/widgets/app_logo.dart';
 import 'package:art_kubus/widgets/auth_entry_controls.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
@@ -65,96 +64,87 @@ class AuthEntryShell extends StatelessWidget {
           body: SafeArea(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final keyboardLift = KeyboardInsetResolver.effectiveBottomInset(
-                  context,
-                  maxInset: isDesktop ? 0 : 160,
-                );
                 final compactSurface = !isDesktop && constraints.maxWidth < 430;
 
-                return AnimatedPadding(
-                  duration: const Duration(milliseconds: 180),
-                  curve: Curves.easeOut,
-                  padding: EdgeInsets.only(bottom: keyboardLift),
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isDesktop ? KubusSpacing.xl : KubusSpacing.md,
-                      vertical: isDesktop ? KubusSpacing.lg : KubusSpacing.md,
-                    ),
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 1180),
-                        child: Column(
-                          children: [
-                            _ShellTopBar(
-                              compact: compactSurface,
-                              title: title,
-                              action: topAction,
-                            ),
-                            SizedBox(
-                              height: isDesktop
-                                  ? KubusSpacing.xl
-                                  : KubusSpacing.md,
-                            ),
-                            Expanded(
-                              child: isDesktop
-                                  ? Row(
-                                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                                      children: [
-                                        Expanded(
-                                          child: _HeroColumn(
-                                            title: title,
-                                            subtitle: subtitle,
-                                            eyebrow: eyebrow,
-                                            highlights: highlights,
-                                            heroIcon: heroIcon,
-                                            gradientStart: gradientStart,
-                                            gradientEnd: gradientEnd,
-                                            compact: compactSurface,
+                return Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isDesktop ? KubusSpacing.xl : KubusSpacing.md,
+                    vertical: isDesktop ? KubusSpacing.lg : KubusSpacing.md,
+                  ),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 1180),
+                      child: Column(
+                        children: [
+                          _ShellTopBar(
+                            compact: compactSurface,
+                            title: title,
+                            action: topAction,
+                          ),
+                          SizedBox(
+                            height:
+                                isDesktop ? KubusSpacing.xl : KubusSpacing.md,
+                          ),
+                          Expanded(
+                            child: isDesktop
+                                ? Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      Expanded(
+                                        child: _HeroColumn(
+                                          title: title,
+                                          subtitle: subtitle,
+                                          eyebrow: eyebrow,
+                                          highlights: highlights,
+                                          heroIcon: heroIcon,
+                                          gradientStart: gradientStart,
+                                          gradientEnd: gradientEnd,
+                                          compact: compactSurface,
+                                        ),
+                                      ),
+                                      const SizedBox(width: KubusSpacing.xl),
+                                      Flexible(
+                                        child: ConstrainedBox(
+                                          constraints: const BoxConstraints(
+                                            maxWidth: 470,
                                           ),
-                                        ),
-                                        const SizedBox(width: KubusSpacing.xl),
-                                        Flexible(
-                                          child: ConstrainedBox(
-                                            constraints: const BoxConstraints(
-                                              maxWidth: 470,
-                                            ),
-                                            child: _FormSurface(
-                                              footer: footer,
-                                              compact: compactSurface,
-                                              child: form,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    )
-                                  : Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.stretch,
-                                      children: [
-                                        Text(
-                                          subtitle,
-                                          style: theme.textTheme.bodyMedium
-                                              ?.copyWith(
-                                            color: theme.colorScheme.onSurface
-                                                .withValues(alpha: 0.72),
-                                            height: 1.45,
-                                          ),
-                                        ),
-                                        const SizedBox(
-                                          height: KubusSpacing.md,
-                                        ),
-                                        Expanded(
                                           child: _FormSurface(
                                             footer: footer,
                                             compact: compactSurface,
                                             child: form,
                                           ),
                                         ),
-                                      ],
-                                    ),
-                            ),
-                          ],
-                        ),
+                                      ),
+                                    ],
+                                  )
+                                : Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      Text(
+                                        subtitle,
+                                        style:
+                                            theme.textTheme.bodyMedium?.copyWith(
+                                          color: theme.colorScheme.onSurface
+                                              .withValues(alpha: 0.72),
+                                          height: 1.45,
+                                        ),
+                                      ),
+                                      const SizedBox(
+                                        height: KubusSpacing.md,
+                                      ),
+                                      Expanded(
+                                        child: _FormSurface(
+                                          footer: footer,
+                                          compact: compactSurface,
+                                          child: form,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -188,14 +178,22 @@ class _ShellTopBar extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
-            child: Text(
-              title,
-              maxLines: 2,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface,
-                    fontWeight: FontWeight.w800,
-                    height: 1.05,
-                  ),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  softWrap: false,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontWeight: FontWeight.w800,
+                        height: 1.05,
+                      ),
+                ),
+              ),
             ),
           ),
           const SizedBox(width: KubusSpacing.sm),

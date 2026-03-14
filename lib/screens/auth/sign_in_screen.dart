@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/config.dart';
@@ -21,7 +20,6 @@ import '../../services/telemetry/telemetry_service.dart';
 import '../../widgets/google_sign_in_button.dart';
 import '../../widgets/google_sign_in_web_button.dart';
 import '../../widgets/kubus_button.dart';
-import '../../widgets/kubus_card.dart';
 import '../../widgets/auth_entry_shell.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
@@ -57,10 +55,11 @@ class SignInScreen extends StatefulWidget {
 class _SignInScreenState extends State<SignInScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _emailFocusNode = FocusNode();
+  final _passwordFocusNode = FocusNode();
   bool _isEmailSubmitting = false;
   bool _isGoogleSubmitting = false;
   int? _googleRateLimitUntilMs;
-  bool _didAttemptGoogleAutoSignIn = false;
   String _googleAuthDiagStage = 'idle';
   String? _googleAuthDiagCode;
   bool _showCompactEmailForm = false;
@@ -75,38 +74,6 @@ class _SignInScreenState extends State<SignInScreen> {
     // Preload rate-limit cooldown so the Google sign-in click handler can
     // start the popup flow without awaiting (browser user-activation rules).
     unawaited(_loadGoogleAuthCooldown());
-
-    // Best-effort "automatic" sign-in on mobile (silent re-auth for returning users).
-    // Note: One Tap is web-only (GIS iframe) and cannot be replicated on native.
-    if (!widget.embedded && !kIsWeb && AppConfig.enableGoogleAuth) {
-      unawaited(_attemptGoogleAutoSignIn());
-    }
-  }
-
-  Future<void> _attemptGoogleAutoSignIn() async {
-    if (_didAttemptGoogleAutoSignIn) return;
-    _didAttemptGoogleAutoSignIn = true;
-    if (_isGoogleSubmitting) return;
-
-    try {
-      await GoogleAuthService().ensureInitialized();
-      final account =
-          await GoogleSignIn.instance.attemptLightweightAuthentication();
-      if (!mounted) return;
-      if (account == null) return;
-
-      if (mounted) {
-        setState(() => _isGoogleSubmitting = true);
-      }
-      final result = GoogleAuthService().resultFromAccount(account);
-      await _completeGoogleSignIn(result);
-    } catch (_) {
-      // Best-effort only.
-    } finally {
-      if (mounted) {
-        setState(() => _isGoogleSubmitting = false);
-      }
-    }
   }
 
   Future<void> _loadGoogleAuthCooldown() async {
@@ -124,6 +91,8 @@ class _SignInScreenState extends State<SignInScreen> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _emailFocusNode.dispose();
+    _passwordFocusNode.dispose();
     super.dispose();
   }
 
@@ -425,8 +394,7 @@ class _SignInScreenState extends State<SignInScreen> {
       return;
     }
 
-    // Web uses a GIS-rendered button which triggers auth events instead of an
-    // imperative signIn call.
+    // Web sign-in is handled by the dedicated web button widget.
     if (kIsWeb) {
       return;
     }
@@ -621,21 +589,13 @@ class _SignInScreenState extends State<SignInScreen> {
   Widget _walletOptionButton(
       BuildContext context, String label, IconData icon, VoidCallback onTap) {
     final colorScheme = Theme.of(context).colorScheme;
-    return KubusCard(
-      onTap: onTap,
-      padding: const EdgeInsets.symmetric(
-          vertical: KubusSpacing.md, horizontal: KubusSpacing.md),
-      color: colorScheme.surface,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: colorScheme.onSurface, size: 22),
-          const SizedBox(width: KubusSpacing.sm),
-          Text(label,
-              style: KubusTypography.textTheme.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w600)),
-        ],
-      ),
+    return KubusButton(
+      onPressed: onTap,
+      icon: icon,
+      label: label,
+      variant: KubusButtonVariant.secondary,
+      foregroundColor: colorScheme.onSurface,
+      isFullWidth: true,
     );
   }
 
@@ -717,30 +677,31 @@ class _SignInScreenState extends State<SignInScreen> {
     final showEmailForm = _showCompactEmailForm;
     final compactLayout =
         widget.embedded || MediaQuery.sizeOf(context).height < 820;
+    final showSectionCopy = !widget.embedded && !compactLayout;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          showEmailForm
-              ? l10n.authOrLogInWithEmailOrUsername
-              : l10n.authHighlightSignInMethods,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: colorScheme.onSurface,
-                fontWeight: FontWeight.w800,
-              ),
-          maxLines: compactLayout ? 2 : null,
-        ),
-        const SizedBox(height: KubusSpacing.xs),
-        Text(
-          l10n.authSignInSubtitle,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurface.withValues(alpha: 0.66),
-                height: 1.45,
-              ),
-          maxLines: compactLayout ? 2 : null,
-        ),
-        SizedBox(height: compactLayout ? KubusSpacing.md : KubusSpacing.lg),
+        if (showSectionCopy) ...[
+          Text(
+            showEmailForm
+                ? l10n.authOrLogInWithEmailOrUsername
+                : l10n.authHighlightSignInMethods,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: colorScheme.onSurface,
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: KubusSpacing.xs),
+          Text(
+            l10n.authSignInSubtitle,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurface.withValues(alpha: 0.66),
+                  height: 1.45,
+                ),
+          ),
+          SizedBox(height: compactLayout ? KubusSpacing.md : KubusSpacing.lg),
+        ],
         if (!showEmailForm && enableWallet) ...[
           KubusButton(
             onPressed: _showConnectWalletModal,
@@ -820,11 +781,17 @@ class _SignInScreenState extends State<SignInScreen> {
           SizedBox(height: compactLayout ? KubusSpacing.xs : KubusSpacing.sm),
         ],
         if (!showEmailForm && enableEmail) ...[
-          _buildMethodDivider(l10n.authOrLogInWithEmailOrUsername),
+          if (showSectionCopy)
+            _buildMethodDivider(l10n.authOrLogInWithEmailOrUsername),
           SizedBox(height: compactLayout ? KubusSpacing.xs : KubusSpacing.sm),
           KubusButton(
             onPressed: () {
               setState(() => _showCompactEmailForm = true);
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  _emailFocusNode.requestFocus();
+                }
+              });
             },
             icon: Icons.email_outlined,
             label: l10n.authSignInWithEmail,
@@ -857,26 +824,39 @@ class _SignInScreenState extends State<SignInScreen> {
   }
 
   Widget _buildEmailForm() {
+    final compact =
+        widget.embedded || MediaQuery.sizeOf(context).height < 820;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         TextField(
           controller: _emailController,
+          focusNode: _emailFocusNode,
+          autofocus: _showCompactEmailForm,
           keyboardType: TextInputType.emailAddress,
+          textInputAction: TextInputAction.next,
+          autofillHints: const [AutofillHints.email],
+          onSubmitted: (_) => _passwordFocusNode.requestFocus(),
           onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
           decoration: _authInputDecoration(
             context,
             label: AppLocalizations.of(context)!.commonEmail,
+            compact: compact,
           ),
         ),
-        const SizedBox(height: KubusSpacing.sm),
+        SizedBox(height: compact ? KubusSpacing.xs : KubusSpacing.sm),
         TextField(
           controller: _passwordController,
+          focusNode: _passwordFocusNode,
           obscureText: true,
+          textInputAction: TextInputAction.done,
+          autofillHints: const [AutofillHints.password],
+          onSubmitted: (_) => _submitEmail(),
           onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
           decoration: _authInputDecoration(
             context,
             label: AppLocalizations.of(context)!.commonPassword,
+            compact: compact,
           ),
         ),
         Align(
@@ -943,6 +923,7 @@ class _SignInScreenState extends State<SignInScreen> {
   InputDecoration _authInputDecoration(
     BuildContext context, {
     required String label,
+    bool compact = false,
   }) {
     final scheme = Theme.of(context).colorScheme;
     final border = OutlineInputBorder(
@@ -955,9 +936,9 @@ class _SignInScreenState extends State<SignInScreen> {
       labelText: label,
       filled: true,
       fillColor: scheme.surface.withValues(alpha: 0.54),
-      contentPadding: const EdgeInsets.symmetric(
+      contentPadding: EdgeInsets.symmetric(
         horizontal: KubusSpacing.md,
-        vertical: 18,
+        vertical: compact ? 14 : 18,
       ),
       enabledBorder: border,
       border: border,
