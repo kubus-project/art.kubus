@@ -3,7 +3,6 @@ import 'dart:math' as math;
 
 import 'package:art_kubus/config/config.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -53,6 +52,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
   late Animation<double> _fadeAnimation;
   late TabController _tabController;
   bool _didPlayEntrance = false;
+  bool _didConfigureInitialFilterState = false;
   bool _filtersExpanded = true;
   late AnalyticsExperienceContext _activeContext;
 
@@ -84,6 +84,10 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
   void didChangeDependencies() {
     super.didChangeDependencies();
     final animationTheme = context.animationTheme;
+    if (!_didConfigureInitialFilterState) {
+      _didConfigureInitialFilterState = true;
+      _filtersExpanded = !_isCompactLayout(context);
+    }
     if (_animationController.duration != animationTheme.long) {
       _animationController.duration = animationTheme.long;
     }
@@ -188,7 +192,11 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
               selectedMetricId: selectedMetricId,
               timeframe: timeframe,
             ),
-            SizedBox(height: compact ? KubusSpacing.sm : KubusSpacing.md),
+            SizedBox(
+              height: compact
+                  ? (_filtersExpanded ? KubusSpacing.xs : 2)
+                  : KubusSpacing.md,
+            ),
             _buildTabBar(),
             Expanded(
               child: TabBarView(
@@ -211,22 +219,25 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
     return MediaQuery.sizeOf(context).width < 720;
   }
 
-  bool _handleScrollNotification(UserScrollNotification notification) {
+  bool _handleScrollNotification(ScrollNotification notification) {
     if (!_isCompactLayout(context)) return false;
+    if (notification.metrics.axis != Axis.vertical) return false;
 
-    switch (notification.direction) {
-      case ScrollDirection.reverse:
-        if (_filtersExpanded) {
-          setState(() => _filtersExpanded = false);
-        }
-        break;
-      case ScrollDirection.forward:
-        if (!_filtersExpanded) {
-          setState(() => _filtersExpanded = true);
-        }
-        break;
-      case ScrollDirection.idle:
-        break;
+    final pixels = notification.metrics.pixels;
+    final isAtTop = pixels <= 8;
+
+    if (isAtTop) {
+      if (!_filtersExpanded) {
+        setState(() => _filtersExpanded = true);
+      }
+      return false;
+    }
+
+    if (notification is ScrollUpdateNotification) {
+      final delta = notification.scrollDelta ?? 0;
+      if (delta > 2 && pixels > 24 && _filtersExpanded) {
+        setState(() => _filtersExpanded = false);
+      }
     }
 
     return false;
@@ -246,12 +257,12 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
 
   Widget _buildScrollableTab(List<Widget> children) {
     final compact = _isCompactLayout(context);
-    return NotificationListener<UserScrollNotification>(
+    return NotificationListener<ScrollNotification>(
       onNotification: _handleScrollNotification,
       child: SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(
           compact ? KubusSpacing.md : 24,
-          compact ? KubusSpacing.md : 24,
+          compact ? KubusSpacing.sm : 24,
           compact ? KubusSpacing.md : 24,
           compact ? KubusSpacing.xl : 32,
         ),
@@ -298,6 +309,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
     Widget buildMetricSelector() {
       return DropdownButtonFormField<String>(
         initialValue: selectedMetricId,
+        isDense: compact,
         items: definition.metrics
             .map(
               (metric) => DropdownMenuItem<String>(
@@ -318,6 +330,12 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
           labelText: l10n.analyticsMetricLabel,
           filled: true,
           fillColor: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
+          contentPadding: compact
+              ? const EdgeInsets.symmetric(
+                  horizontal: KubusSpacing.sm,
+                  vertical: KubusSpacing.sm,
+                )
+              : null,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(KubusRadius.md),
           ),
@@ -325,21 +343,38 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       );
     }
 
+    final timeframeChips = AnalyticsFiltersProvider.allowedTimeframes.map((value) {
+      return ChoiceChip(
+        selected: timeframe == value,
+        label: Text(value.toUpperCase()),
+        visualDensity: compact ? VisualDensity.compact : null,
+        onSelected: (_) {
+          context
+              .read<AnalyticsFiltersProvider>()
+              .setTimeframeFor(definition.storageKey, value);
+        },
+      );
+    }).toList(growable: false);
+
     Widget buildTimeframeChips() {
+      if (compact) {
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (var index = 0; index < timeframeChips.length; index++) ...[
+                if (index > 0) const SizedBox(width: KubusSpacing.sm),
+                timeframeChips[index],
+              ],
+            ],
+          ),
+        );
+      }
+
       return Wrap(
         spacing: KubusSpacing.sm,
         runSpacing: KubusSpacing.sm,
-        children: AnalyticsFiltersProvider.allowedTimeframes.map((value) {
-          return ChoiceChip(
-            selected: timeframe == value,
-            label: Text(value.toUpperCase()),
-            onSelected: (_) {
-              context
-                  .read<AnalyticsFiltersProvider>()
-                  .setTimeframeFor(definition.storageKey, value);
-            },
-          );
-        }).toList(growable: false),
+        children: timeframeChips,
       );
     }
 
@@ -357,32 +392,23 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
               ),
             ),
             const SizedBox(height: KubusSpacing.xs),
-          ],
-          Text(
-            definition.subtitle,
-            style: GoogleFonts.inter(
-              fontSize: compact ? 12 : 13,
-              height: 1.35,
-              color: scheme.onSurface.withValues(alpha: 0.72),
-            ),
-          ),
-          const SizedBox(height: KubusSpacing.md),
-          if (widget.contexts.length > 1) ...[
-            buildContextSwitches(),
-            const SizedBox(height: KubusSpacing.md),
-          ],
-          if (compact) ...[
             Text(
-              l10n.analyticsTimeframeLabel,
+              definition.subtitle,
               style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
+                fontSize: 13,
+                height: 1.35,
                 color: scheme.onSurface.withValues(alpha: 0.72),
               ),
             ),
-            const SizedBox(height: KubusSpacing.xs),
-            buildTimeframeChips(),
             const SizedBox(height: KubusSpacing.md),
+          ],
+          if (widget.contexts.length > 1) ...[
+            buildContextSwitches(),
+            SizedBox(height: compact ? KubusSpacing.sm : KubusSpacing.md),
+          ],
+          if (compact) ...[
+            buildTimeframeChips(),
+            const SizedBox(height: KubusSpacing.sm),
             buildMetricSelector(),
           ] else
             Wrap(
@@ -401,78 +427,104 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       );
     }
 
-    return AnimatedSize(
-      duration: animationTheme.medium,
-      curve: animationTheme.emphasisCurve,
-      child: Container(
-        margin: EdgeInsets.symmetric(
-          horizontal: compact ? KubusSpacing.md : KubusSpacing.lg,
-        ),
-        padding: EdgeInsets.all(compact ? KubusSpacing.sm : KubusSpacing.md),
-        decoration: BoxDecoration(
-          color: scheme.surface.withValues(alpha: 0.18),
-          borderRadius: BorderRadius.circular(KubusRadius.lg),
-          border: Border.all(color: scheme.outline.withValues(alpha: 0.12)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (compact)
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          definition.scopeLabel,
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: scheme.primary,
-                          ),
+    return Container(
+      margin: EdgeInsets.symmetric(
+        horizontal: compact ? KubusSpacing.md : KubusSpacing.lg,
+      ),
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? KubusSpacing.sm : KubusSpacing.md,
+        vertical: compact ? KubusSpacing.xs : KubusSpacing.md,
+      ),
+      decoration: BoxDecoration(
+        color: scheme.surface.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
+        border: Border.all(color: scheme.outline.withValues(alpha: 0.12)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (compact)
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        definition.scopeLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: scheme.primary,
                         ),
-                        const SizedBox(height: KubusSpacing.xs),
-                        Wrap(
-                          spacing: KubusSpacing.xs,
-                          runSpacing: KubusSpacing.xs,
-                          children: [
-                            _AnalyticsHeaderPill(label: timeframe.toUpperCase()),
-                            _AnalyticsHeaderPill(
-                              label: selectedMetric?.label ?? selectedMetricId,
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  TextButton.icon(
-                    onPressed: () {
-                      setState(() => _filtersExpanded = !_filtersExpanded);
-                    },
-                    icon: AnimatedRotation(
-                      turns: _filtersExpanded ? 0.5 : 0,
-                      duration: animationTheme.medium,
-                      child: Icon(
-                        Icons.keyboard_arrow_down,
-                        color: scheme.primary,
                       ),
-                    ),
-                    label: Text(
-                      _filtersExpanded
-                          ? l10n.analyticsHideFiltersAction
-                          : l10n.analyticsShowFiltersAction,
+                      const SizedBox(height: 2),
+                      Text(
+                        '${timeframe.toUpperCase()} / ${selectedMetric?.label ?? selectedMetricId}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: scheme.onSurface.withValues(alpha: 0.82),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  tooltip: _filtersExpanded
+                      ? l10n.analyticsHideFiltersAction
+                      : l10n.analyticsShowFiltersAction,
+                  visualDensity: VisualDensity.compact,
+                  constraints: const BoxConstraints.tightFor(
+                    width: 36,
+                    height: 36,
+                  ),
+                  onPressed: () {
+                    setState(() => _filtersExpanded = !_filtersExpanded);
+                  },
+                  icon: AnimatedRotation(
+                    turns: _filtersExpanded ? 0.5 : 0,
+                    duration: animationTheme.medium,
+                    curve: animationTheme.emphasisCurve,
+                    child: Icon(
+                      Icons.keyboard_arrow_down,
+                      color: scheme.primary,
                     ),
                   ),
-                ],
-              ),
-            if (!compact || _filtersExpanded) ...[
-              if (compact) const SizedBox(height: KubusSpacing.sm),
-              buildExpandedControls(),
-            ],
-          ],
-        ),
+                ),
+              ],
+            ),
+          AnimatedSwitcher(
+            duration: animationTheme.medium,
+            switchInCurve: animationTheme.emphasisCurve,
+            switchOutCurve: Curves.easeOutCubic,
+            transitionBuilder: (child, animation) {
+              return FadeTransition(
+                opacity: animation,
+                child: SizeTransition(
+                  sizeFactor: animation,
+                  axisAlignment: -1,
+                  child: child,
+                ),
+              );
+            },
+            child: !compact || _filtersExpanded
+                ? Padding(
+                    key: const ValueKey<String>('analytics-filters-expanded'),
+                    padding: EdgeInsets.only(
+                      top: compact ? KubusSpacing.xs : 0,
+                    ),
+                    child: buildExpandedControls(),
+                  )
+                : const SizedBox(
+                    key: ValueKey<String>('analytics-filters-collapsed'),
+                  ),
+          ),
+        ],
       ),
     );
   }
@@ -2178,39 +2230,6 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
         ),
       );
     }
-  }
-}
-
-class _AnalyticsHeaderPill extends StatelessWidget {
-  const _AnalyticsHeaderPill({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: KubusSpacing.sm,
-        vertical: KubusSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(KubusRadius.xl),
-        border: Border.all(color: scheme.outline.withValues(alpha: 0.12)),
-      ),
-      child: Text(
-        label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: GoogleFonts.inter(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: scheme.onSurface,
-        ),
-      ),
-    );
   }
 }
 
