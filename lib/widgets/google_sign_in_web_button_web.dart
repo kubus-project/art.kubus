@@ -5,7 +5,6 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:google_sign_in_platform_interface/google_sign_in_platform_interface.dart';
 import 'package:google_sign_in_web/google_sign_in_web.dart' as gweb;
 
-import '../config/config.dart';
 import '../services/google_auth_service.dart';
 import 'google_sign_in_button.dart';
 
@@ -71,45 +70,13 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
           _lastProcessedUid = null;
           widget.onAuthError?.call(error);
         } finally {
-          if (mounted) {
-            _processingAuth = false;
-          }
+          _processingAuth = false;
         }
       },
       onError: (Object error) {
         widget.onAuthError?.call(error);
       },
     );
-
-    if (AppConfig.isFeatureEnabled('googleOneTapWeb')) {
-      try {
-        final account =
-            await GoogleSignIn.instance.attemptLightweightAuthentication();
-        if (mounted &&
-            account != null &&
-            !widget.isLoading &&
-            !_processingAuth) {
-          final uid = account.id;
-          if (_lastProcessedUid != uid) {
-            _processingAuth = true;
-            try {
-              final result = GoogleAuthService().resultFromAccount(account);
-              await widget.onAuthResult(result);
-              _lastProcessedUid = uid;
-            } catch (error) {
-              _lastProcessedUid = null;
-              widget.onAuthError?.call(error);
-            } finally {
-              if (mounted) {
-                _processingAuth = false;
-              }
-            }
-          }
-        }
-      } catch (_) {
-        // Silent auth on web is best-effort only.
-      }
-    }
 
     if (!mounted) return;
     setState(() {
@@ -133,104 +100,82 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
     super.dispose();
   }
 
+  Future<void> _handleFallbackPress() async {
+    if (widget.isLoading || _processingAuth) return;
+    try {
+      _processingAuth = true;
+      final result = await GoogleAuthService().signIn();
+      if (result == null) {
+        throw StateError('Google sign-in cancelled or unavailable.');
+      }
+      await widget.onAuthResult(result);
+      final email = result.email.trim().toLowerCase();
+      _lastProcessedUid = email.isNotEmpty ? email : null;
+    } catch (error) {
+      _lastProcessedUid = null;
+      widget.onAuthError?.call(error);
+    } finally {
+      _processingAuth = false;
+    }
+  }
+
+  Widget _buildRenderedButton(BoxConstraints constraints) {
+    final platform = GoogleSignInPlatform.instance;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final maxWidth =
+        constraints.maxWidth.isFinite ? constraints.maxWidth : 400.0;
+
+    final config = gweb.GSIButtonConfiguration(
+      type: gweb.GSIButtonType.standard,
+      theme: isDark
+          ? gweb.GSIButtonTheme.filledBlack
+          : gweb.GSIButtonTheme.outline,
+      size: gweb.GSIButtonSize.large,
+      text: gweb.GSIButtonText.continueWith,
+      shape: gweb.GSIButtonShape.rectangular,
+      logoAlignment: gweb.GSIButtonLogoAlignment.left,
+      minimumWidth: maxWidth,
+    );
+
+    try {
+      final rendered = platform is gweb.GoogleSignInPlugin
+          ? platform.renderButton(configuration: config)
+          : (platform as dynamic).renderButton(configuration: config);
+      if (rendered is Widget) {
+        return SizedBox(
+          width: maxWidth,
+          height: 56,
+          child: rendered,
+        );
+      }
+    } catch (_) {
+      // Fall back to the interactive Flutter button below.
+    }
+
+    return GoogleSignInButton(
+      onPressed: _handleFallbackPress,
+      isLoading: widget.isLoading || _processingAuth,
+      colorScheme: widget.colorScheme,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final platform = GoogleSignInPlatform.instance;
+    if (!_ready || widget.isLoading) {
+      return GoogleSignInButton(
+        onPressed: _handleFallbackPress,
+        isLoading: widget.isLoading || (!_ready && _processingAuth),
+        colorScheme: widget.colorScheme,
+      );
+    }
 
-    const reservedHeight = 56.0;
     return SizedBox(
-      height: reservedHeight,
+      height: 56,
       width: double.infinity,
-      child: Stack(
-        alignment: Alignment.center,
-        children: <Widget>[
-          Positioned.fill(
-            child: AnimatedOpacity(
-              duration: const Duration(milliseconds: 160),
-              opacity: _ready ? 0 : 1,
-              child: IgnorePointer(
-                ignoring: true,
-                child: GoogleSignInButton(
-                  onPressed: () async {},
-                  isLoading: false,
-                  colorScheme: widget.colorScheme,
-                ),
-              ),
-            ),
-          ),
-          if (_ready)
-            Positioned.fill(
-              child: LayoutBuilder(
-                builder: (BuildContext context, BoxConstraints constraints) {
-                  final double maxWidth =
-                      constraints.maxWidth.isFinite ? constraints.maxWidth : 400.0;
-
-                  final config = gweb.GSIButtonConfiguration(
-                    type: gweb.GSIButtonType.standard,
-                    theme: isDark
-                        ? gweb.GSIButtonTheme.filledBlack
-                        : gweb.GSIButtonTheme.outline,
-                    size: gweb.GSIButtonSize.large,
-                    text: gweb.GSIButtonText.continueWith,
-                    shape: gweb.GSIButtonShape.rectangular,
-                    logoAlignment: gweb.GSIButtonLogoAlignment.left,
-                    minimumWidth: maxWidth,
-                  );
-
-                  Widget? gisButton;
-                  try {
-                    if (platform is gweb.GoogleSignInPlugin) {
-                      gisButton = platform.renderButton(configuration: config);
-                    } else {
-                      final dynamic dyn = platform;
-                      final dynamic rendered =
-                          dyn.renderButton(configuration: config);
-                      if (rendered is Widget) gisButton = rendered;
-                    }
-                  } catch (_) {}
-
-                  if (gisButton == null) {
-                    return GoogleSignInButton(
-                      onPressed: () async {},
-                      isLoading: widget.isLoading,
-                      colorScheme: widget.colorScheme,
-                    );
-                  }
-
-                  return AbsorbPointer(
-                    absorbing: widget.isLoading,
-                    child: AnimatedOpacity(
-                      duration: const Duration(milliseconds: 160),
-                      opacity: _ready ? 1 : 0,
-                      child: SizedBox(
-                        width: maxWidth,
-                        child: gisButton,
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          if (widget.isLoading)
-            Positioned.fill(
-              child: ColoredBox(
-                color: Colors.transparent,
-                child: Center(
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        widget.colorScheme.onSurface,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
+      child: LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          return _buildRenderedButton(constraints);
+        },
       ),
     );
   }

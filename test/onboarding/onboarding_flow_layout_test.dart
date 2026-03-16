@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/models/user_profile.dart';
 import 'package:art_kubus/providers/locale_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
@@ -319,6 +320,39 @@ void main() {
     expect(find.text('Apply for DAO review'), findsNothing);
     // No text fields for portfolio URL, medium, statement
     expect(find.byType(TextField), findsNothing);
+  });
+
+  testWidgets('dao review step opens inside account onboarding branch',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 1700));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+
+    final profileProvider = ProfileProvider()
+      ..setCurrentUser(UserProfile(
+        id: 'profile_creator',
+        walletAddress: '0xcreator',
+        username: 'creator_user',
+        displayName: 'Creator User',
+        bio: 'Artist bio',
+        avatar: '',
+        preferences: ProfilePreferences(persona: 'creator'),
+        createdAt: DateTime(2026, 3, 16),
+        updatedAt: DateTime(2026, 3, 16),
+      ));
+
+    await tester.pumpWidget(
+      _buildTestApp(
+        child: const OnboardingFlowScreen(initialStepId: 'daoReview'),
+        locale: const Locale('en'),
+        size: const Size(390, 1700),
+        profileProvider: profileProvider,
+      ),
+    );
+    await _pumpOnboardingReady(tester);
+
+    expect(find.text('DAO review'), findsOneWidget);
+    expect(find.text('Submit your practice for DAO review before the account setup is completed.'),
+        findsOneWidget);
   });
 
   testWidgets('onboarding header action icons follow theme contrast rules',

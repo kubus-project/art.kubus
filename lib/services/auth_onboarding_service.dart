@@ -1,0 +1,166 @@
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'onboarding_state_service.dart';
+
+class StructuredOnboardingResumeState {
+  const StructuredOnboardingResumeState({
+    required this.requiresStructuredOnboarding,
+    this.nextStepId,
+  });
+
+  final bool requiresStructuredOnboarding;
+  final String? nextStepId;
+}
+
+class AuthOnboardingService {
+  static const int onboardingFlowVersion = 4;
+
+  static const List<String> accountStepIds = <String>[
+    'account',
+    'verifyEmail',
+    'role',
+    'profile',
+    'daoReview',
+    'accountPermissions',
+    'done',
+  ];
+
+  static const Set<String> _accountStepIdSet = <String>{
+    'account',
+    'verifyEmail',
+    'role',
+    'profile',
+    'daoReview',
+    'accountPermissions',
+    'done',
+  };
+
+  static bool payloadIndicatesNewAccount(Map<String, dynamic> payload) {
+    final data = payload['data'];
+    final envelope = data is Map<String, dynamic> ? data : payload;
+
+    return _readBool(payload, 'isNewUser') ||
+        _readBool(payload, 'needsOnboarding') ||
+        _readBool(envelope, 'isNewUser') ||
+        _readBool(envelope, 'needsOnboarding');
+  }
+
+  static bool isAccountStepId(String? value) {
+    final normalized = (value ?? '').trim();
+    return normalized.isNotEmpty && _accountStepIdSet.contains(normalized);
+  }
+
+  static Future<StructuredOnboardingResumeState>
+      resolveStructuredOnboardingResume({
+    required SharedPreferences prefs,
+    required bool hasPendingAuthOnboarding,
+    required bool hasAuthenticatedSession,
+    required bool hasHydratedProfile,
+    required String? heuristicNextStepId,
+    required String? persona,
+    Map<String, dynamic>? payload,
+  }) async {
+    final payloadIsNewAccount =
+        payload != null && payloadIndicatesNewAccount(payload);
+    final shouldResume = hasPendingAuthOnboarding || payloadIsNewAccount;
+    if (!shouldResume) {
+      return const StructuredOnboardingResumeState(
+        requiresStructuredOnboarding: false,
+      );
+    }
+
+    final progress = await OnboardingStateService.loadFlowProgress(
+      prefs: prefs,
+      onboardingVersion: onboardingFlowVersion,
+    );
+    final completedSteps = progress.completedSteps
+        .where(isAccountStepId)
+        .map((step) => step.trim())
+        .toSet();
+    final deferredSteps = progress.deferredSteps
+        .where(isAccountStepId)
+        .map((step) => step.trim())
+        .toSet();
+    final hasSavedProgress =
+        completedSteps.isNotEmpty || deferredSteps.isNotEmpty;
+
+    final normalizedHeuristic = isAccountStepId(heuristicNextStepId)
+        ? heuristicNextStepId!.trim()
+        : null;
+    final normalizedPersona = (persona ?? '').trim().toLowerCase();
+    final requiresDaoReview = completedSteps.contains('daoReview') ||
+        deferredSteps.contains('daoReview') ||
+        normalizedPersona == 'creator' ||
+        normalizedPersona == 'institution';
+    final requiresVerifyEmail = completedSteps.contains('verifyEmail') ||
+        deferredSteps.contains('verifyEmail');
+
+    if (hasSavedProgress) {
+      final nextStepId = _nextIncompleteStepId(
+        hasAuthenticatedSession: hasAuthenticatedSession,
+        requiresVerifyEmail: requiresVerifyEmail,
+        requiresDaoReview: requiresDaoReview,
+        completedSteps: completedSteps,
+      );
+      return StructuredOnboardingResumeState(
+        requiresStructuredOnboarding: nextStepId != null,
+        nextStepId: nextStepId,
+      );
+    }
+
+    if (normalizedHeuristic != null) {
+      return StructuredOnboardingResumeState(
+        requiresStructuredOnboarding: true,
+        nextStepId: normalizedHeuristic,
+      );
+    }
+
+    if (hasAuthenticatedSession && hasHydratedProfile) {
+      final nextStepId = requiresDaoReview ? 'daoReview' : 'accountPermissions';
+      return StructuredOnboardingResumeState(
+        requiresStructuredOnboarding: true,
+        nextStepId: nextStepId,
+      );
+    }
+
+    return StructuredOnboardingResumeState(
+      requiresStructuredOnboarding: true,
+      nextStepId: hasAuthenticatedSession ? 'role' : 'account',
+    );
+  }
+
+  static bool _readBool(Map<String, dynamic> source, String key) {
+    final value = source[key];
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    if (value is String) {
+      final normalized = value.trim().toLowerCase();
+      return normalized == 'true' || normalized == '1' || normalized == 'yes';
+    }
+    return false;
+  }
+
+  static String? _nextIncompleteStepId({
+    required bool hasAuthenticatedSession,
+    required bool requiresVerifyEmail,
+    required bool requiresDaoReview,
+    required Set<String> completedSteps,
+  }) {
+    final orderedSteps = <String>[
+      if (!hasAuthenticatedSession) 'account',
+      if (requiresVerifyEmail) 'verifyEmail',
+      'role',
+      'profile',
+      if (requiresDaoReview) 'daoReview',
+      'accountPermissions',
+      'done',
+    ];
+
+    for (final step in orderedSteps) {
+      if (!completedSteps.contains(step)) {
+        return step;
+      }
+    }
+    return null;
+  }
+}

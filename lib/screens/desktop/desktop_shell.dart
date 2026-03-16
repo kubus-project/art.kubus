@@ -563,42 +563,42 @@ class _DesktopShellState extends State<DesktopShell>
 
     return UserPersonaOnboardingGate(
       child: DesktopShellScope(
-        pushScreen: _pushScreenToStack,
-        popScreen: _popScreenFromStack,
-        navigateToRoute: _navigateToRoute,
-        openNotifications: () => unawaited(_toggleNotificationsPanel()),
-        openFunctionsPanel: _openFunctionsPanel,
-        setFunctionsPanelContent: _setFunctionsPanelContent,
-        closeFunctionsPanel: _closeFunctionsPanel,
-        canPop: _screenStack.isNotEmpty,
-        child: Builder(
-          builder: (shellContext) {
-            _shellScopeContext = shellContext;
-            DesktopShellRegistry.instance.register(shellContext);
-            _maybeConsumePendingDeepLink(shellContext);
+          pushScreen: _pushScreenToStack,
+          popScreen: _popScreenFromStack,
+          navigateToRoute: _navigateToRoute,
+          openNotifications: () => unawaited(_toggleNotificationsPanel()),
+          openFunctionsPanel: _openFunctionsPanel,
+          setFunctionsPanelContent: _setFunctionsPanelContent,
+          closeFunctionsPanel: _closeFunctionsPanel,
+          canPop: _screenStack.isNotEmpty,
+          child: Builder(
+            builder: (shellContext) {
+              _shellScopeContext = shellContext;
+              DesktopShellRegistry.instance.register(shellContext);
+              _maybeConsumePendingDeepLink(shellContext);
 
-            return Stack(
-              children: [
-                if (!(kIsWeb && effectiveRoute == '/explore'))
-                  Positioned.fill(
-                    child: AnimatedGradientBackground(
-                      duration: const Duration(seconds: 12),
-                      intensity: 0.25,
-                      colors:
-                          _backgroundColorsForRoute(context, effectiveRoute),
-                      child: const SizedBox.expand(),
-                    ),
-                  ),
-                Scaffold(
-                  backgroundColor: Colors.transparent,
-                  body: Row(
-                    children: [
-                      // Main content area (takes most space)
-                      Expanded(
-                        child: _screenStack.isNotEmpty
-                            ? _screenStack.last
-                            : _buildCurrentScreen(effectiveRoute),
+              return Stack(
+                children: [
+                  if (!(kIsWeb && effectiveRoute == '/explore'))
+                    Positioned.fill(
+                      child: AnimatedGradientBackground(
+                        duration: const Duration(seconds: 12),
+                        intensity: 0.25,
+                        colors:
+                            _backgroundColorsForRoute(context, effectiveRoute),
+                        child: const SizedBox.expand(),
                       ),
+                    ),
+                  Scaffold(
+                    backgroundColor: Colors.transparent,
+                    body: Row(
+                      children: [
+                        // Main content area (takes most space)
+                        Expanded(
+                          child: _screenStack.isNotEmpty
+                              ? _screenStack.last
+                              : _buildCurrentScreen(effectiveRoute),
+                        ),
 
                       // Functions sidebar (contextual panels like Notifications)
                       if (isExpanded || isLarge)
@@ -765,14 +765,13 @@ class _DesktopShellState extends State<DesktopShell>
                           );
                         },
                       ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            );
-          },
-        ),
-      ),
+                ],
+              );
+            },
+          )),
     );
   }
 

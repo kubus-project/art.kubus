@@ -17,6 +17,8 @@ import '../providers/profile_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/security_gate_provider.dart';
 import '../providers/email_preferences_provider.dart';
+import '../models/email_preferences.dart';
+import '../models/user_profile.dart';
 import '../models/wallet.dart';
 import '../services/backend_api_service.dart';
 import '../services/push_notification_service.dart';
@@ -1037,10 +1039,18 @@ class _SettingsScreenState extends State<SettingsScreen>
       institutionRole ? l10n.commonOn : l10n.commonOff,
     );
 
+    final managedEmailEnabled = emailPreferencesProvider.preferences
+            .productUpdates ||
+        emailPreferencesProvider.preferences.newsletter ||
+        emailPreferencesProvider.preferences.communityDigest ||
+        emailPreferencesProvider.preferences.securityAlerts ||
+        emailPreferencesProvider.preferences.artNotifications ||
+        emailPreferencesProvider.preferences.communityNotifications ||
+        emailPreferencesProvider.preferences.daoNotifications ||
+        emailPreferencesProvider.preferences.artistHubNotifications ||
+        emailPreferencesProvider.preferences.institutionHubNotifications;
     final emailNotificationsState = emailPreferencesProvider.canManage
-        ? (emailPreferencesProvider.preferences.productUpdates
-            ? l10n.commonOn
-            : l10n.commonOff)
+        ? (managedEmailEnabled ? l10n.commonOn : l10n.commonOff)
         : (_emailNotifications ? l10n.commonOn : l10n.commonOff);
     return _buildSection(
       l10n.settingsProfileSectionTitle,
@@ -4101,253 +4111,377 @@ class _SettingsScreenState extends State<SettingsScreen>
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) =>
-            Consumer<EmailPreferencesProvider>(
-          builder: (context, emailPreferences, _) => KubusAlertDialog(
-            backgroundColor: Theme.of(context).colorScheme.surface,
-            title: Text(
-              l10n.settingsAccountManagementDialogTitle,
-              style: GoogleFonts.inter(
-                color: Theme.of(context).colorScheme.onSurface,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.settingsEmailPreferencesSectionTitle,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      l10n.settingsEmailPreferencesTransactionalNote,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.7),
-                      ),
-                    ),
-                    if (emailPreferences.isLoading) ...[
-                      const SizedBox(height: 12),
-                      LinearProgressIndicator(
-                        minHeight: 2,
-                        backgroundColor: Theme.of(context)
-                            .colorScheme
-                            .surfaceContainerHighest
-                            .withValues(alpha: 0.5),
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Provider.of<ThemeProvider>(context, listen: false)
-                              .accentColor,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 12),
-                    _buildSwitchTile(
-                      l10n.settingsEmailPreferencesProductUpdatesTitle,
-                      l10n.settingsEmailPreferencesProductUpdatesSubtitle,
-                      emailPreferences.preferences.productUpdates,
-                      (value) {
-                        final next = emailPreferences.preferences
-                            .copyWith(productUpdates: value);
-                        final messenger = ScaffoldMessenger.of(this.context);
-                        unawaited(() async {
-                          final ok =
-                              await emailPreferences.updatePreferences(next);
-                          if (!ok && mounted) {
-                            messenger.showKubusSnackBar(
-                              SnackBar(
-                                  content: Text(l10n
-                                      .settingsEmailPreferencesUpdateFailedToast)),
-                            );
-                          }
-                        }());
-                      },
-                      enabled: emailPreferences.canManage &&
-                          !emailPreferences.isUpdating,
-                    ),
-                    _buildSwitchTile(
-                      l10n.settingsEmailPreferencesNewsletterTitle,
-                      l10n.settingsEmailPreferencesNewsletterSubtitle,
-                      emailPreferences.preferences.newsletter,
-                      (value) {
-                        final next = emailPreferences.preferences
-                            .copyWith(newsletter: value);
-                        final messenger = ScaffoldMessenger.of(this.context);
-                        unawaited(() async {
-                          final ok =
-                              await emailPreferences.updatePreferences(next);
-                          if (!ok && mounted) {
-                            messenger.showKubusSnackBar(
-                              SnackBar(
-                                  content: Text(l10n
-                                      .settingsEmailPreferencesUpdateFailedToast)),
-                            );
-                          }
-                        }());
-                      },
-                      enabled: emailPreferences.canManage &&
-                          !emailPreferences.isUpdating,
-                    ),
-                    _buildSwitchTile(
-                      l10n.settingsEmailPreferencesCommunityDigestTitle,
-                      l10n.settingsEmailPreferencesCommunityDigestSubtitle,
-                      emailPreferences.preferences.communityDigest,
-                      (value) {
-                        final next = emailPreferences.preferences
-                            .copyWith(communityDigest: value);
-                        final messenger = ScaffoldMessenger.of(this.context);
-                        unawaited(() async {
-                          final ok =
-                              await emailPreferences.updatePreferences(next);
-                          if (!ok && mounted) {
-                            messenger.showKubusSnackBar(
-                              SnackBar(
-                                  content: Text(l10n
-                                      .settingsEmailPreferencesUpdateFailedToast)),
-                            );
-                          }
-                        }());
-                      },
-                      enabled: emailPreferences.canManage &&
-                          !emailPreferences.isUpdating,
-                    ),
-                    _buildSwitchTile(
-                      l10n.settingsEmailPreferencesSecurityAlertsTitle,
-                      l10n.settingsEmailPreferencesSecurityAlertsSubtitle,
-                      emailPreferences.preferences.securityAlerts,
-                      (value) {
-                        final next = emailPreferences.preferences
-                            .copyWith(securityAlerts: value);
-                        final messenger = ScaffoldMessenger.of(this.context);
-                        unawaited(() async {
-                          final ok =
-                              await emailPreferences.updatePreferences(next);
-                          if (!ok && mounted) {
-                            messenger.showKubusSnackBar(
-                              SnackBar(
-                                  content: Text(l10n
-                                      .settingsEmailPreferencesUpdateFailedToast)),
-                            );
-                          }
-                        }());
-                      },
-                      enabled: emailPreferences.canManage &&
-                          !emailPreferences.isUpdating,
-                    ),
-                    _buildSwitchTile(
-                      l10n.settingsEmailPreferencesTransactionalTitle,
-                      l10n.settingsEmailPreferencesTransactionalSubtitle,
-                      true,
-                      (_) {},
-                      enabled: false,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      l10n.permissionsNotificationsTitle,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    _buildSwitchTile(
-                      l10n.settingsPushNotificationsTitle,
-                      l10n.settingsPushNotificationsSubtitle,
-                      _pushNotifications,
-                      (value) async {
-                        setDialogState(() => _pushNotifications = value);
-                        await _togglePushNotifications(value);
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    _buildDropdownTile(
-                      l10n.settingsAccountTypeTitle,
-                      l10n.settingsAccountTypeSubtitle,
-                      _accountType,
-                      ['Standard', 'Premium', 'Enterprise'],
-                      (value) => setDialogState(() => _accountType = value!),
-                      optionLabelBuilder: (option) {
-                        switch (option) {
-                          case 'Standard':
-                            return l10n.settingsAccountTypeStandard;
-                          case 'Premium':
-                            return l10n.settingsAccountTypePremium;
-                          case 'Enterprise':
-                            return l10n.settingsAccountTypeEnterprise;
-                          default:
-                            return option;
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    _buildActionTile(
-                      l10n.settingsDeactivateAccountTileTitle,
-                      l10n.settingsDeactivateAccountTileSubtitle,
-                      Icons.pause_circle_outline,
-                      () {
-                        Navigator.pop(context);
-                        _showAccountDeactivationDialog();
-                      },
-                    ),
-                    _buildActionTile(
-                      l10n.settingsDeleteAccountTileTitle,
-                      l10n.settingsDeleteAccountTileSubtitle,
-                      Icons.delete_forever,
-                      () {
-                        Navigator.pop(context);
-                        _showDeleteAccountDialog();
-                      },
-                    ),
-                  ],
+            Consumer2<EmailPreferencesProvider, ProfileProvider>(
+          builder: (context, emailPreferences, profileProvider, _) {
+            final messenger = ScaffoldMessenger.of(this.context);
+            final notificationPreferences =
+                profileProvider.preferences.notificationPreferences;
+
+            Future<void> persistEmailPreferences(EmailPreferences next) async {
+              final ok = await emailPreferences.updatePreferences(next);
+              if (!ok && mounted) {
+                messenger.showKubusSnackBar(
+                  SnackBar(
+                    content:
+                        Text(l10n.settingsEmailPreferencesUpdateFailedToast),
+                  ),
+                );
+              }
+            }
+
+            Future<void> persistNotificationPreferences(
+              NotificationPreferenceSettings next,
+            ) async {
+              await profileProvider.updateNotificationPreferences(next);
+            }
+
+            return KubusAlertDialog(
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              title: Text(
+                l10n.settingsAccountManagementDialogTitle,
+                style: GoogleFonts.inter(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(
-                  l10n.commonCancel,
-                  style: GoogleFonts.inter(
-                    color: Theme.of(context).colorScheme.outline,
+              content: SizedBox(
+                width: double.maxFinite,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.settingsEmailPreferencesSectionTitle,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        l10n.settingsEmailPreferencesTransactionalNote,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.7),
+                        ),
+                      ),
+                      if (emailPreferences.isLoading) ...[
+                        const SizedBox(height: 12),
+                        LinearProgressIndicator(
+                          minHeight: 2,
+                          backgroundColor: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest
+                              .withValues(alpha: 0.5),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Provider.of<ThemeProvider>(context, listen: false)
+                                .accentColor,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                      _buildSwitchTile(
+                        l10n.settingsEmailPreferencesProductUpdatesTitle,
+                        l10n.settingsEmailPreferencesProductUpdatesSubtitle,
+                        emailPreferences.preferences.productUpdates,
+                        (value) {
+                          final next = emailPreferences.preferences
+                              .copyWith(productUpdates: value);
+                          unawaited(persistEmailPreferences(next));
+                        },
+                        enabled: emailPreferences.canManage &&
+                            !emailPreferences.isUpdating,
+                      ),
+                      _buildSwitchTile(
+                        l10n.settingsEmailPreferencesNewsletterTitle,
+                        l10n.settingsEmailPreferencesNewsletterSubtitle,
+                        emailPreferences.preferences.newsletter,
+                        (value) {
+                          final next = emailPreferences.preferences
+                              .copyWith(newsletter: value);
+                          unawaited(persistEmailPreferences(next));
+                        },
+                        enabled: emailPreferences.canManage &&
+                            !emailPreferences.isUpdating,
+                      ),
+                      _buildSwitchTile(
+                        l10n.settingsEmailPreferencesCommunityDigestTitle,
+                        l10n.settingsEmailPreferencesCommunityDigestSubtitle,
+                        emailPreferences.preferences.communityDigest,
+                        (value) {
+                          final next = emailPreferences.preferences
+                              .copyWith(communityDigest: value);
+                          unawaited(persistEmailPreferences(next));
+                        },
+                        enabled: emailPreferences.canManage &&
+                            !emailPreferences.isUpdating,
+                      ),
+                      _buildSwitchTile(
+                        l10n.settingsEmailPreferencesSecurityAlertsTitle,
+                        l10n.settingsEmailPreferencesSecurityAlertsSubtitle,
+                        emailPreferences.preferences.securityAlerts,
+                        (value) {
+                          final next = emailPreferences.preferences
+                              .copyWith(securityAlerts: value);
+                          unawaited(persistEmailPreferences(next));
+                        },
+                        enabled: emailPreferences.canManage &&
+                            !emailPreferences.isUpdating,
+                      ),
+                      _buildSwitchTile(
+                        'Art notifications',
+                        'Emails for artwork activity, achievements, and discovery updates.',
+                        emailPreferences.preferences.artNotifications,
+                        (value) {
+                          final next = emailPreferences.preferences
+                              .copyWith(artNotifications: value);
+                          unawaited(persistEmailPreferences(next));
+                        },
+                        enabled: emailPreferences.canManage &&
+                            !emailPreferences.isUpdating,
+                      ),
+                      _buildSwitchTile(
+                        'Community notifications',
+                        'Emails for likes, comments, follows, shares, and direct community activity.',
+                        emailPreferences.preferences.communityNotifications,
+                        (value) {
+                          final next = emailPreferences.preferences
+                              .copyWith(communityNotifications: value);
+                          unawaited(persistEmailPreferences(next));
+                        },
+                        enabled: emailPreferences.canManage &&
+                            !emailPreferences.isUpdating,
+                      ),
+                      _buildSwitchTile(
+                        'DAO notifications',
+                        'Emails for DAO application decisions and governance review updates.',
+                        emailPreferences.preferences.daoNotifications,
+                        (value) {
+                          final next = emailPreferences.preferences
+                              .copyWith(daoNotifications: value);
+                          unawaited(persistEmailPreferences(next));
+                        },
+                        enabled: emailPreferences.canManage &&
+                            !emailPreferences.isUpdating,
+                      ),
+                      _buildSwitchTile(
+                        'Artist hub emails',
+                        'Emails for artist profile, studio, and artist hub actions.',
+                        emailPreferences.preferences.artistHubNotifications,
+                        (value) {
+                          final next = emailPreferences.preferences
+                              .copyWith(artistHubNotifications: value);
+                          unawaited(persistEmailPreferences(next));
+                        },
+                        enabled: emailPreferences.canManage &&
+                            !emailPreferences.isUpdating,
+                      ),
+                      _buildSwitchTile(
+                        'Institution hub emails',
+                        'Emails for institution profile, approvals, and institution hub actions.',
+                        emailPreferences
+                            .preferences.institutionHubNotifications,
+                        (value) {
+                          final next = emailPreferences.preferences.copyWith(
+                            institutionHubNotifications: value,
+                          );
+                          unawaited(persistEmailPreferences(next));
+                        },
+                        enabled: emailPreferences.canManage &&
+                            !emailPreferences.isUpdating,
+                      ),
+                      _buildSwitchTile(
+                        l10n.settingsEmailPreferencesTransactionalTitle,
+                        l10n.settingsEmailPreferencesTransactionalSubtitle,
+                        true,
+                        (_) {},
+                        enabled: false,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        l10n.permissionsNotificationsTitle,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _buildSwitchTile(
+                        l10n.settingsPushNotificationsTitle,
+                        l10n.settingsPushNotificationsSubtitle,
+                        _pushNotifications,
+                        (value) async {
+                          setDialogState(() => _pushNotifications = value);
+                          await _togglePushNotifications(value);
+                        },
+                      ),
+                      _buildSwitchTile(
+                        'All app notifications',
+                        'Master switch for in-app and push notification categories.',
+                        notificationPreferences.enabled,
+                        (value) {
+                          final next =
+                              notificationPreferences.copyWith(enabled: value);
+                          unawaited(persistNotificationPreferences(next));
+                        },
+                      ),
+                      _buildSwitchTile(
+                        'Art notifications',
+                        'In-app notifications for artwork activity and achievements.',
+                        notificationPreferences.art,
+                        (value) {
+                          final next =
+                              notificationPreferences.copyWith(art: value);
+                          unawaited(persistNotificationPreferences(next));
+                        },
+                        enabled: notificationPreferences.enabled,
+                      ),
+                      _buildSwitchTile(
+                        'Community notifications',
+                        'In-app notifications for comments, likes, follows, and shares.',
+                        notificationPreferences.community,
+                        (value) {
+                          final next = notificationPreferences.copyWith(
+                            community: value,
+                          );
+                          unawaited(persistNotificationPreferences(next));
+                        },
+                        enabled: notificationPreferences.enabled,
+                      ),
+                      _buildSwitchTile(
+                        'DAO notifications',
+                        'In-app notifications for DAO form reviews and governance decisions.',
+                        notificationPreferences.dao,
+                        (value) {
+                          final next =
+                              notificationPreferences.copyWith(dao: value);
+                          unawaited(persistNotificationPreferences(next));
+                        },
+                        enabled: notificationPreferences.enabled,
+                      ),
+                      _buildSwitchTile(
+                        'Artist hub notifications',
+                        'In-app notifications for artist workflow and studio updates.',
+                        notificationPreferences.artistHub,
+                        (value) {
+                          final next = notificationPreferences.copyWith(
+                            artistHub: value,
+                          );
+                          unawaited(persistNotificationPreferences(next));
+                        },
+                        enabled: notificationPreferences.enabled,
+                      ),
+                      _buildSwitchTile(
+                        'Institution hub notifications',
+                        'In-app notifications for institution workflow and review updates.',
+                        notificationPreferences.institutionHub,
+                        (value) {
+                          final next = notificationPreferences.copyWith(
+                            institutionHub: value,
+                          );
+                          unawaited(persistNotificationPreferences(next));
+                        },
+                        enabled: notificationPreferences.enabled,
+                      ),
+                      _buildSwitchTile(
+                        'Account notifications',
+                        'In-app notifications for security, access, and account updates.',
+                        notificationPreferences.account,
+                        (value) {
+                          final next = notificationPreferences.copyWith(
+                            account: value,
+                          );
+                          unawaited(persistNotificationPreferences(next));
+                        },
+                        enabled: notificationPreferences.enabled,
+                      ),
+                      const SizedBox(height: 8),
+                      _buildDropdownTile(
+                        l10n.settingsAccountTypeTitle,
+                        l10n.settingsAccountTypeSubtitle,
+                        _accountType,
+                        ['Standard', 'Premium', 'Enterprise'],
+                        (value) => setDialogState(() => _accountType = value!),
+                        optionLabelBuilder: (option) {
+                          switch (option) {
+                            case 'Standard':
+                              return l10n.settingsAccountTypeStandard;
+                            case 'Premium':
+                              return l10n.settingsAccountTypePremium;
+                            case 'Enterprise':
+                              return l10n.settingsAccountTypeEnterprise;
+                            default:
+                              return option;
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      _buildActionTile(
+                        l10n.settingsDeactivateAccountTileTitle,
+                        l10n.settingsDeactivateAccountTileSubtitle,
+                        Icons.pause_circle_outline,
+                        () {
+                          Navigator.pop(context);
+                          _showAccountDeactivationDialog();
+                        },
+                      ),
+                      _buildActionTile(
+                        l10n.settingsDeleteAccountTileTitle,
+                        l10n.settingsDeleteAccountTileSubtitle,
+                        Icons.delete_forever,
+                        () {
+                          Navigator.pop(context);
+                          _showDeleteAccountDialog();
+                        },
+                      ),
+                    ],
                   ),
                 ),
               ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      Provider.of<ThemeProvider>(context, listen: false)
-                          .accentColor,
-                  foregroundColor: Colors.white,
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(
+                    l10n.commonCancel,
+                    style: GoogleFonts.inter(
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
+                  ),
                 ),
-                onPressed: () async {
-                  final dialogContext = context;
-                  final navigator = Navigator.of(dialogContext);
-                  final messenger = ScaffoldMessenger.of(dialogContext);
-                  setState(() {}); // Update main state
-                  await _saveAllSettings();
-                  if (!mounted) return;
-                  navigator.pop();
-                  messenger.showKubusSnackBar(
-                    SnackBar(
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        Provider.of<ThemeProvider>(context, listen: false)
+                            .accentColor,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () async {
+                    final dialogContext = context;
+                    final navigator = Navigator.of(dialogContext);
+                    final snackbarMessenger =
+                        ScaffoldMessenger.of(dialogContext);
+                    setState(() {});
+                    await _saveAllSettings();
+                    if (!mounted) return;
+                    navigator.pop();
+                    snackbarMessenger.showKubusSnackBar(
+                      SnackBar(
                         content:
-                            Text(l10n.settingsAccountSettingsUpdatedToast)),
-                  );
-                },
-                child: Text(l10n.commonSave),
-              ),
-            ],
-          ),
+                            Text(l10n.settingsAccountSettingsUpdatedToast),
+                      ),
+                    );
+                  },
+                  child: Text(l10n.commonSave),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );

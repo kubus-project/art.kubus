@@ -188,6 +188,7 @@ class ArtistInfo {
 class ProfilePreferences {
   final String privacy;
   final bool notifications;
+  final NotificationPreferenceSettings notificationPreferences;
   final String theme;
   final bool showActivityStatus;
   final bool shareLastVisitedLocation;
@@ -201,6 +202,7 @@ class ProfilePreferences {
   ProfilePreferences({
     this.privacy = 'public',
     this.notifications = true,
+    this.notificationPreferences = const NotificationPreferenceSettings(),
     this.theme = 'auto',
     this.showActivityStatus = true,
     this.shareLastVisitedLocation = false,
@@ -212,6 +214,7 @@ class ProfilePreferences {
   ProfilePreferences copyWith({
     String? privacy,
     bool? notifications,
+    NotificationPreferenceSettings? notificationPreferences,
     String? theme,
     bool? showActivityStatus,
     bool? shareLastVisitedLocation,
@@ -222,6 +225,8 @@ class ProfilePreferences {
     return ProfilePreferences(
       privacy: privacy ?? this.privacy,
       notifications: notifications ?? this.notifications,
+      notificationPreferences:
+          notificationPreferences ?? this.notificationPreferences,
       theme: theme ?? this.theme,
       showActivityStatus: showActivityStatus ?? this.showActivityStatus,
       shareLastVisitedLocation: shareLastVisitedLocation ?? this.shareLastVisitedLocation,
@@ -232,9 +237,16 @@ class ProfilePreferences {
   }
 
   factory ProfilePreferences.fromJson(Map<String, dynamic> json) {
+    final notifications = json['notifications'] ?? true;
     return ProfilePreferences(
       privacy: json['privacy'] ?? 'public',
-      notifications: json['notifications'] ?? true,
+      notifications: notifications,
+      notificationPreferences: NotificationPreferenceSettings.fromJson(
+        json['notificationPreferences'] ??
+            json['notification_preferences'] ??
+            const <String, dynamic>{},
+        fallbackEnabled: notifications is bool ? notifications : true,
+      ),
       theme: json['theme'] ?? 'auto',
       showActivityStatus: json['showActivityStatus'] ?? json['show_activity_status'] ?? true,
       shareLastVisitedLocation: json['shareLastVisitedLocation'] ?? json['share_last_visited_location'] ?? false,
@@ -248,12 +260,110 @@ class ProfilePreferences {
     return {
       'privacy': privacy,
       'notifications': notifications,
+      'notificationPreferences': notificationPreferences.toJson(),
       'theme': theme,
       'showActivityStatus': showActivityStatus,
       'shareLastVisitedLocation': shareLastVisitedLocation,
       'showCollection': showCollection,
       'allowMessages': allowMessages,
       if (persona != null) 'persona': persona,
+    };
+  }
+}
+
+class NotificationPreferenceSettings {
+  final bool enabled;
+  final bool art;
+  final bool community;
+  final bool dao;
+  final bool artistHub;
+  final bool institutionHub;
+  final bool account;
+
+  const NotificationPreferenceSettings({
+    this.enabled = true,
+    this.art = true,
+    this.community = true,
+    this.dao = true,
+    this.artistHub = true,
+    this.institutionHub = true,
+    this.account = true,
+  });
+
+  NotificationPreferenceSettings copyWith({
+    bool? enabled,
+    bool? art,
+    bool? community,
+    bool? dao,
+    bool? artistHub,
+    bool? institutionHub,
+    bool? account,
+  }) {
+    return NotificationPreferenceSettings(
+      enabled: enabled ?? this.enabled,
+      art: art ?? this.art,
+      community: community ?? this.community,
+      dao: dao ?? this.dao,
+      artistHub: artistHub ?? this.artistHub,
+      institutionHub: institutionHub ?? this.institutionHub,
+      account: account ?? this.account,
+    );
+  }
+
+  factory NotificationPreferenceSettings.fromJson(
+    Map<String, dynamic>? json, {
+    bool fallbackEnabled = true,
+  }) {
+    if (json == null) {
+      return NotificationPreferenceSettings(enabled: fallbackEnabled);
+    }
+
+    bool readBool(String key, bool fallback, [List<String> aliases = const []]) {
+      final dynamic direct = json[key];
+      if (direct is bool) return direct;
+      for (final alias in aliases) {
+        final dynamic value = json[alias];
+        if (value is bool) return value;
+      }
+      return fallback;
+    }
+
+    return NotificationPreferenceSettings(
+      enabled: readBool('enabled', fallbackEnabled),
+      art: readBool('art', true, ['artNotifications', 'art_notifications']),
+      community: readBool(
+        'community',
+        true,
+        ['communityNotifications', 'community_notifications'],
+      ),
+      dao: readBool('dao', true, ['daoNotifications', 'dao_notifications']),
+      artistHub: readBool(
+        'artistHub',
+        true,
+        ['artistHubNotifications', 'artist_hub'],
+      ),
+      institutionHub: readBool(
+        'institutionHub',
+        true,
+        ['institutionHubNotifications', 'institution_hub'],
+      ),
+      account: readBool(
+        'account',
+        true,
+        ['accountNotifications', 'account_notifications'],
+      ),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'enabled': enabled,
+      'art': art,
+      'community': community,
+      'dao': dao,
+      'artistHub': artistHub,
+      'institutionHub': institutionHub,
+      'account': account,
     };
   }
 }

@@ -8,10 +8,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/config.dart';
+import '../../models/user_persona.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/security_gate_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../providers/web3provider.dart';
+import '../../screens/onboarding/onboarding_flow_screen.dart';
+import '../../services/auth_onboarding_service.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/google_auth_service.dart';
 import '../../services/onboarding_state_service.dart';
@@ -121,6 +124,49 @@ class _SignInScreenState extends State<SignInScreen> {
     return error.runtimeType.toString();
   }
 
+  Future<bool> _maybeRouteToStructuredOnboarding({
+    required SharedPreferences prefs,
+    required ProfileProvider profileProvider,
+    required Map<String, dynamic> payload,
+  }) async {
+    if (widget.embedded || widget.onAuthSuccess != null) return false;
+
+    final resumeState =
+        await AuthOnboardingService.resolveStructuredOnboardingResume(
+      prefs: prefs,
+      hasPendingAuthOnboarding:
+          OnboardingStateService.hasPendingAuthOnboardingSync(prefs),
+      hasAuthenticatedSession: true,
+      hasHydratedProfile: profileProvider.hasHydratedProfile,
+      heuristicNextStepId: profileProvider.nextStructuredOnboardingStepId,
+      persona: profileProvider.userPersona?.storageValue,
+      payload: payload,
+    );
+    final nextStepId = resumeState.nextStepId;
+
+    if (!resumeState.requiresStructuredOnboarding ||
+        nextStepId == null ||
+        nextStepId.isEmpty) {
+      await OnboardingStateService.clearPendingAuthOnboarding(prefs: prefs);
+      return false;
+    }
+
+    await OnboardingStateService.markAuthOnboardingPending(prefs: prefs);
+    if (!mounted) return true;
+
+    final isDesktop = DesktopBreakpoints.isDesktop(context);
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => OnboardingFlowScreen(
+          forceDesktop: isDesktop,
+          initialStepId: nextStepId,
+        ),
+        settings: const RouteSettings(name: '/onboarding'),
+      ),
+    );
+    return true;
+  }
+
   Future<void> _handleAuthSuccess(Map<String, dynamic> payload) async {
     final l10n = AppLocalizations.of(context)!;
     final redirectRoute = widget.redirectRoute?.trim();
@@ -141,9 +187,6 @@ class _SignInScreenState extends State<SignInScreen> {
       AppConfig.debugPrint('SignInScreen: wallet provisioning failed: $e');
     }
     final prefs = await SharedPreferences.getInstance();
-    if (!widget.embedded) {
-      await OnboardingStateService.markCompleted(prefs: prefs);
-    }
     if (walletAddress != null && walletAddress.toString().isNotEmpty) {
       await prefs.setString('wallet_address', walletAddress.toString());
       await prefs.setString('wallet', walletAddress.toString());
@@ -201,17 +244,24 @@ class _SignInScreenState extends State<SignInScreen> {
       return;
     }
 
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
+    if (await _maybeRouteToStructuredOnboarding(
+      prefs: prefs,
+      profileProvider: profileProvider,
+      payload: payload,
+    )) {
+      return;
+    }
+
     if (redirectRoute != null && redirectRoute.isNotEmpty) {
-      Navigator.of(context).pushReplacementNamed(
+      navigator.pushReplacementNamed(
         redirectRoute,
         arguments: widget.redirectArguments,
       );
       return;
     }
 
-    // Check if user needs profile onboarding (new users from email registration)
-    final profileProvider =
-        Provider.of<ProfileProvider>(context, listen: false);
     final profile = profileProvider.currentUser;
     final needsProfileSetup = profile != null &&
         (profile.displayName.isEmpty ||
@@ -219,7 +269,7 @@ class _SignInScreenState extends State<SignInScreen> {
         (profile.bio).isEmpty;
 
     if (needsProfileSetup) {
-      Navigator.of(context).pushReplacement(
+      navigator.pushReplacement(
         MaterialPageRoute(
           builder: (context) => const ProfileEditScreen(isOnboarding: true),
         ),
@@ -227,7 +277,7 @@ class _SignInScreenState extends State<SignInScreen> {
       return;
     }
 
-    Navigator.of(context).pushReplacementNamed('/main');
+    navigator.pushReplacementNamed('/main');
   }
 
   Future<String?> _ensureWalletProvisioned(String? existingWallet,

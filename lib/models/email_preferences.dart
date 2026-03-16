@@ -3,6 +3,11 @@ class EmailPreferences {
   final bool newsletter;
   final bool communityDigest;
   final bool securityAlerts;
+  final bool artNotifications;
+  final bool communityNotifications;
+  final bool daoNotifications;
+  final bool artistHubNotifications;
+  final bool institutionHubNotifications;
   final bool transactional;
 
   const EmailPreferences({
@@ -10,6 +15,11 @@ class EmailPreferences {
     required this.newsletter,
     required this.communityDigest,
     required this.securityAlerts,
+    required this.artNotifications,
+    required this.communityNotifications,
+    required this.daoNotifications,
+    required this.artistHubNotifications,
+    required this.institutionHubNotifications,
     required this.transactional,
   });
 
@@ -19,6 +29,11 @@ class EmailPreferences {
       newsletter: false,
       communityDigest: false,
       securityAlerts: true,
+      artNotifications: true,
+      communityNotifications: true,
+      daoNotifications: true,
+      artistHubNotifications: true,
+      institutionHubNotifications: true,
       transactional: true,
     );
   }
@@ -28,6 +43,11 @@ class EmailPreferences {
     bool? newsletter,
     bool? communityDigest,
     bool? securityAlerts,
+    bool? artNotifications,
+    bool? communityNotifications,
+    bool? daoNotifications,
+    bool? artistHubNotifications,
+    bool? institutionHubNotifications,
     bool? transactional,
   }) {
     return EmailPreferences(
@@ -35,6 +55,14 @@ class EmailPreferences {
       newsletter: newsletter ?? this.newsletter,
       communityDigest: communityDigest ?? this.communityDigest,
       securityAlerts: securityAlerts ?? this.securityAlerts,
+      artNotifications: artNotifications ?? this.artNotifications,
+      communityNotifications:
+          communityNotifications ?? this.communityNotifications,
+      daoNotifications: daoNotifications ?? this.daoNotifications,
+      artistHubNotifications:
+          artistHubNotifications ?? this.artistHubNotifications,
+      institutionHubNotifications:
+          institutionHubNotifications ?? this.institutionHubNotifications,
       transactional: transactional ?? this.transactional,
     );
   }
@@ -53,6 +81,12 @@ class EmailPreferences {
       newsletter: readBool('newsletter', false),
       communityDigest: readBool('communityDigest', false),
       securityAlerts: readBool('securityAlerts', true),
+      artNotifications: readBool('artNotifications', true),
+      communityNotifications: readBool('communityNotifications', true),
+      daoNotifications: readBool('daoNotifications', true),
+      artistHubNotifications: readBool('artistHubNotifications', true),
+      institutionHubNotifications:
+          readBool('institutionHubNotifications', true),
       transactional: true,
     );
   }
@@ -63,8 +97,12 @@ class EmailPreferences {
       'newsletter': newsletter,
       'communityDigest': communityDigest,
       'securityAlerts': securityAlerts,
+      'artNotifications': artNotifications,
+      'communityNotifications': communityNotifications,
+      'daoNotifications': daoNotifications,
+      'artistHubNotifications': artistHubNotifications,
+      'institutionHubNotifications': institutionHubNotifications,
       'transactional': true,
     };
   }
 }
-

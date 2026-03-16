@@ -14,6 +14,8 @@ import '../../providers/wallet_provider.dart';
 import '../../providers/platform_provider.dart';
 import '../../providers/security_gate_provider.dart';
 import '../../providers/email_preferences_provider.dart';
+import '../../models/email_preferences.dart';
+import '../../models/user_profile.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/push_notification_service.dart';
 import '../../services/settings_service.dart';
@@ -2314,10 +2316,29 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
   Widget _buildNotificationSettings(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
     final emailPreferencesProvider = context.watch<EmailPreferencesProvider>();
+    final profileProvider = context.watch<ProfileProvider>();
+    final notificationPreferences =
+        profileProvider.preferences.notificationPreferences;
     if (emailPreferencesProvider.canManage &&
         !emailPreferencesProvider.initialized &&
         !emailPreferencesProvider.isLoading) {
       unawaited(emailPreferencesProvider.initialize());
+    }
+    Future<void> persistEmailPreferences(EmailPreferences next) async {
+      final ok = await emailPreferencesProvider.updatePreferences(next);
+      if (!ok && mounted) {
+        ScaffoldMessenger.of(context).showKubusSnackBar(
+          SnackBar(
+            content: Text(l10n.settingsEmailPreferencesUpdateFailedToast),
+          ),
+        );
+      }
+    }
+
+    Future<void> persistNotificationPreferences(
+      NotificationPreferenceSettings next,
+    ) async {
+      await profileProvider.updateNotificationPreferences(next);
     }
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -2397,18 +2418,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   onChanged: (value) {
                     final next = emailPreferencesProvider.preferences
                         .copyWith(productUpdates: value);
-                    final messenger = ScaffoldMessenger.of(context);
-                    unawaited(() async {
-                      final ok = await emailPreferencesProvider
-                          .updatePreferences(next);
-                      if (!ok && mounted) {
-                        messenger.showKubusSnackBar(
-                          SnackBar(
-                              content: Text(l10n
-                                  .settingsEmailPreferencesUpdateFailedToast)),
-                        );
-                      }
-                    }());
+                    unawaited(persistEmailPreferences(next));
                   },
                 ),
                 const Divider(height: 32),
@@ -2422,18 +2432,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   onChanged: (value) {
                     final next = emailPreferencesProvider.preferences
                         .copyWith(newsletter: value);
-                    final messenger = ScaffoldMessenger.of(context);
-                    unawaited(() async {
-                      final ok = await emailPreferencesProvider
-                          .updatePreferences(next);
-                      if (!ok && mounted) {
-                        messenger.showKubusSnackBar(
-                          SnackBar(
-                              content: Text(l10n
-                                  .settingsEmailPreferencesUpdateFailedToast)),
-                        );
-                      }
-                    }());
+                    unawaited(persistEmailPreferences(next));
                   },
                 ),
                 const Divider(height: 32),
@@ -2447,18 +2446,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   onChanged: (value) {
                     final next = emailPreferencesProvider.preferences
                         .copyWith(communityDigest: value);
-                    final messenger = ScaffoldMessenger.of(context);
-                    unawaited(() async {
-                      final ok = await emailPreferencesProvider
-                          .updatePreferences(next);
-                      if (!ok && mounted) {
-                        messenger.showKubusSnackBar(
-                          SnackBar(
-                              content: Text(l10n
-                                  .settingsEmailPreferencesUpdateFailedToast)),
-                        );
-                      }
-                    }());
+                    unawaited(persistEmailPreferences(next));
                   },
                 ),
                 const Divider(height: 32),
@@ -2472,18 +2460,79 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   onChanged: (value) {
                     final next = emailPreferencesProvider.preferences
                         .copyWith(securityAlerts: value);
-                    final messenger = ScaffoldMessenger.of(context);
-                    unawaited(() async {
-                      final ok = await emailPreferencesProvider
-                          .updatePreferences(next);
-                      if (!ok && mounted) {
-                        messenger.showKubusSnackBar(
-                          SnackBar(
-                              content: Text(l10n
-                                  .settingsEmailPreferencesUpdateFailedToast)),
-                        );
-                      }
-                    }());
+                    unawaited(persistEmailPreferences(next));
+                  },
+                ),
+                const Divider(height: 32),
+                _buildToggleSetting(
+                  'Art notifications',
+                  'Emails for artwork activity, achievements, and discovery updates.',
+                  emailPreferencesProvider.preferences.artNotifications,
+                  saveAfterToggle: false,
+                  enabled: emailPreferencesProvider.canManage &&
+                      !emailPreferencesProvider.isUpdating,
+                  onChanged: (value) {
+                    final next = emailPreferencesProvider.preferences
+                        .copyWith(artNotifications: value);
+                    unawaited(persistEmailPreferences(next));
+                  },
+                ),
+                const Divider(height: 32),
+                _buildToggleSetting(
+                  'Community notifications',
+                  'Emails for likes, comments, follows, shares, and direct community activity.',
+                  emailPreferencesProvider.preferences.communityNotifications,
+                  saveAfterToggle: false,
+                  enabled: emailPreferencesProvider.canManage &&
+                      !emailPreferencesProvider.isUpdating,
+                  onChanged: (value) {
+                    final next = emailPreferencesProvider.preferences
+                        .copyWith(communityNotifications: value);
+                    unawaited(persistEmailPreferences(next));
+                  },
+                ),
+                const Divider(height: 32),
+                _buildToggleSetting(
+                  'DAO notifications',
+                  'Emails for DAO application decisions and governance review updates.',
+                  emailPreferencesProvider.preferences.daoNotifications,
+                  saveAfterToggle: false,
+                  enabled: emailPreferencesProvider.canManage &&
+                      !emailPreferencesProvider.isUpdating,
+                  onChanged: (value) {
+                    final next = emailPreferencesProvider.preferences
+                        .copyWith(daoNotifications: value);
+                    unawaited(persistEmailPreferences(next));
+                  },
+                ),
+                const Divider(height: 32),
+                _buildToggleSetting(
+                  'Artist hub emails',
+                  'Emails for artist profile, studio, and artist hub actions.',
+                  emailPreferencesProvider.preferences.artistHubNotifications,
+                  saveAfterToggle: false,
+                  enabled: emailPreferencesProvider.canManage &&
+                      !emailPreferencesProvider.isUpdating,
+                  onChanged: (value) {
+                    final next = emailPreferencesProvider.preferences
+                        .copyWith(artistHubNotifications: value);
+                    unawaited(persistEmailPreferences(next));
+                  },
+                ),
+                const Divider(height: 32),
+                _buildToggleSetting(
+                  'Institution hub emails',
+                  'Emails for institution profile, approvals, and institution hub actions.',
+                  emailPreferencesProvider
+                      .preferences.institutionHubNotifications,
+                  saveAfterToggle: false,
+                  enabled: emailPreferencesProvider.canManage &&
+                      !emailPreferencesProvider.isUpdating,
+                  onChanged: (value) {
+                    final next = emailPreferencesProvider.preferences.copyWith(
+                      institutionHubNotifications: value,
+                    );
+                    unawaited(persistEmailPreferences(next));
                   },
                 ),
                 const Divider(height: 32),
@@ -2538,6 +2587,97 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   _loginNotifications,
                   onChanged: (value) =>
                       setState(() => _loginNotifications = value),
+                ),
+                const Divider(height: 32),
+                _buildToggleSetting(
+                  'All app notifications',
+                  'Master switch for in-app and push notification categories.',
+                  notificationPreferences.enabled,
+                  saveAfterToggle: false,
+                  onChanged: (value) {
+                    final next =
+                        notificationPreferences.copyWith(enabled: value);
+                    unawaited(persistNotificationPreferences(next));
+                  },
+                ),
+                const Divider(height: 32),
+                _buildToggleSetting(
+                  'Art notifications',
+                  'In-app notifications for artwork activity and achievements.',
+                  notificationPreferences.art,
+                  saveAfterToggle: false,
+                  enabled: notificationPreferences.enabled,
+                  onChanged: (value) {
+                    final next =
+                        notificationPreferences.copyWith(art: value);
+                    unawaited(persistNotificationPreferences(next));
+                  },
+                ),
+                const Divider(height: 32),
+                _buildToggleSetting(
+                  'Community notifications',
+                  'In-app notifications for comments, likes, follows, and shares.',
+                  notificationPreferences.community,
+                  saveAfterToggle: false,
+                  enabled: notificationPreferences.enabled,
+                  onChanged: (value) {
+                    final next =
+                        notificationPreferences.copyWith(community: value);
+                    unawaited(persistNotificationPreferences(next));
+                  },
+                ),
+                const Divider(height: 32),
+                _buildToggleSetting(
+                  'DAO notifications',
+                  'In-app notifications for DAO form reviews and governance decisions.',
+                  notificationPreferences.dao,
+                  saveAfterToggle: false,
+                  enabled: notificationPreferences.enabled,
+                  onChanged: (value) {
+                    final next =
+                        notificationPreferences.copyWith(dao: value);
+                    unawaited(persistNotificationPreferences(next));
+                  },
+                ),
+                const Divider(height: 32),
+                _buildToggleSetting(
+                  'Artist hub notifications',
+                  'In-app notifications for artist workflow and studio updates.',
+                  notificationPreferences.artistHub,
+                  saveAfterToggle: false,
+                  enabled: notificationPreferences.enabled,
+                  onChanged: (value) {
+                    final next =
+                        notificationPreferences.copyWith(artistHub: value);
+                    unawaited(persistNotificationPreferences(next));
+                  },
+                ),
+                const Divider(height: 32),
+                _buildToggleSetting(
+                  'Institution hub notifications',
+                  'In-app notifications for institution workflow and review updates.',
+                  notificationPreferences.institutionHub,
+                  saveAfterToggle: false,
+                  enabled: notificationPreferences.enabled,
+                  onChanged: (value) {
+                    final next = notificationPreferences.copyWith(
+                      institutionHub: value,
+                    );
+                    unawaited(persistNotificationPreferences(next));
+                  },
+                ),
+                const Divider(height: 32),
+                _buildToggleSetting(
+                  'Account notifications',
+                  'In-app notifications for security, access, and account updates.',
+                  notificationPreferences.account,
+                  saveAfterToggle: false,
+                  enabled: notificationPreferences.enabled,
+                  onChanged: (value) {
+                    final next =
+                        notificationPreferences.copyWith(account: value);
+                    unawaited(persistNotificationPreferences(next));
+                  },
                 ),
               ],
             ),

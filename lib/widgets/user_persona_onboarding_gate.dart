@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../providers/profile_provider.dart';
+import '../services/onboarding_state_service.dart';
 import 'user_persona_onboarding_sheet.dart';
 
 /// Presents the persona onboarding sheet once per wallet when needed.
@@ -20,54 +22,65 @@ class UserPersonaOnboardingGate extends StatefulWidget {
 
 class _UserPersonaOnboardingGateState extends State<UserPersonaOnboardingGate> {
   bool _isShowing = false;
+  bool _isChecking = false;
   String? _lastWallet;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _maybeShow();
+    unawaited(_maybeShow());
   }
 
   @override
   void didUpdateWidget(covariant UserPersonaOnboardingGate oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _maybeShow();
+    unawaited(_maybeShow());
   }
 
-  void _maybeShow() {
-    if (_isShowing) return;
+  Future<void> _maybeShow() async {
+    if (_isShowing || _isChecking) return;
+    _isChecking = true;
 
-    final profile = context.read<ProfileProvider>();
-    final wallet = profile.currentUser?.walletAddress;
-    if (wallet == null || wallet.isEmpty) return;
+    try {
+      final profile = context.read<ProfileProvider>();
+      final wallet = profile.currentUser?.walletAddress;
+      if (wallet == null || wallet.isEmpty) return;
 
-    if (_lastWallet != wallet) {
-      _lastWallet = wallet;
-    }
-
-    if (!profile.needsPersonaOnboarding) return;
-
-    _isShowing = true;
-    // Persist that we already surfaced this onboarding prompt so it doesn't
-    // repeatedly re-open if the user dismisses it.
-    unawaited(profile.markPersonaOnboardingSeen(walletAddress: wallet));
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted) return;
-      try {
-        await showModalBottomSheet<void>(
-          context: context,
-          isScrollControlled: true,
-          backgroundColor: Colors.transparent,
-          builder: (_) => const UserPersonaOnboardingSheet(),
-        );
-      } finally {
-        if (mounted) {
-          setState(() => _isShowing = false);
-        } else {
-          _isShowing = false;
-        }
+      if (_lastWallet != wallet) {
+        _lastWallet = wallet;
       }
-    });
+
+      if (!profile.needsPersonaOnboarding) return;
+
+      final prefs = await SharedPreferences.getInstance();
+      if (OnboardingStateService.hasPendingAuthOnboardingSync(prefs)) {
+        return;
+      }
+
+      _isShowing = true;
+      // Persist that we already surfaced this onboarding prompt so it doesn't
+      // repeatedly re-open if the user dismisses it.
+      unawaited(profile.markPersonaOnboardingSeen(walletAddress: wallet));
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        try {
+          await showModalBottomSheet<void>(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (_) => const UserPersonaOnboardingSheet(),
+          );
+        } finally {
+          if (mounted) {
+            setState(() => _isShowing = false);
+          } else {
+            _isShowing = false;
+          }
+        }
+      });
+    } finally {
+      _isChecking = false;
+    }
   }
 
   @override

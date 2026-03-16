@@ -1564,6 +1564,8 @@ class BackendApiService
         return {
           'hasEmail': data['hasEmail'] == true,
           'hasPassword': data['hasPassword'] == true,
+          'email': (data['email'] ?? '').toString().trim(),
+          'emailVerified': data['emailVerified'] == true,
           'emailAuthEnabled': data['emailAuthEnabled'] != false,
         };
       }
@@ -1576,6 +1578,36 @@ class BackendApiService
       AppConfig.debugPrint(
           'BackendApiService.getAccountSecurityStatus failed: $e');
       rethrow;
+    }
+  }
+
+  Future<void> syncSecureAccountStatusToPrefs() async {
+    try {
+      if (!AppConfig.isFeatureEnabled('emailAuth')) return;
+      final status = await getAccountSecurityStatus();
+      final prefs = await SharedPreferences.getInstance();
+      final email = (status['email'] ?? '').toString().trim();
+      final emailVerified = status['emailVerified'] == true;
+      final hasEmail = status['hasEmail'] == true && email.isNotEmpty;
+
+      if (!hasEmail) {
+        await prefs.remove(PreferenceKeys.secureAccountEmail);
+        await prefs.setBool(
+          PreferenceKeys.secureAccountEmailVerifiedV1,
+          false,
+        );
+        return;
+      }
+
+      await prefs.setString(PreferenceKeys.secureAccountEmail, email);
+      await prefs.setBool(
+        PreferenceKeys.secureAccountEmailVerifiedV1,
+        emailVerified,
+      );
+    } catch (e) {
+      AppConfig.debugPrint(
+        'BackendApiService.syncSecureAccountStatusToPrefs failed: $e',
+      );
     }
   }
 

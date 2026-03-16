@@ -380,6 +380,7 @@ class PreferenceKeys {
   static const String hasSeenWelcome = 'has_seen_welcome';
   static const String hasCompletedOnboarding = 'has_completed_onboarding';
   static const String hasCompletedAuthOnboarding = 'auth_onboarding_completed';
+  static const String pendingAuthOnboarding = 'pending_auth_onboarding_v1';
   static const String secureAccountEmail = 'secure_account_email';
   static const String secureAccountEmailVerifiedV1 =
       'secure_account_email_verified_v1';

@@ -2,11 +2,14 @@
 
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/models/user_persona.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/security_gate_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/providers/web3provider.dart';
 import 'package:art_kubus/screens/desktop/desktop_shell.dart';
+import 'package:art_kubus/screens/onboarding/onboarding_flow_screen.dart';
+import 'package:art_kubus/services/auth_onboarding_service.dart';
 import 'package:art_kubus/screens/web3/wallet/connectwallet_screen.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/google_auth_service.dart';
@@ -78,6 +81,49 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     super.dispose();
   }
 
+  Future<bool> _maybeRouteToStructuredOnboarding({
+    required SharedPreferences prefs,
+    required ProfileProvider profileProvider,
+    required Map<String, dynamic> payload,
+  }) async {
+    if (widget.embedded || widget.onAuthSuccess != null) return false;
+
+    final resumeState =
+        await AuthOnboardingService.resolveStructuredOnboardingResume(
+      prefs: prefs,
+      hasPendingAuthOnboarding:
+          OnboardingStateService.hasPendingAuthOnboardingSync(prefs),
+      hasAuthenticatedSession: true,
+      hasHydratedProfile: profileProvider.hasHydratedProfile,
+      heuristicNextStepId: profileProvider.nextStructuredOnboardingStepId,
+      persona: profileProvider.userPersona?.storageValue,
+      payload: payload,
+    );
+    final nextStepId = resumeState.nextStepId;
+
+    if (!resumeState.requiresStructuredOnboarding ||
+        nextStepId == null ||
+        nextStepId.isEmpty) {
+      await OnboardingStateService.clearPendingAuthOnboarding(prefs: prefs);
+      return false;
+    }
+
+    await OnboardingStateService.markAuthOnboardingPending(prefs: prefs);
+    if (!mounted) return true;
+
+    final isDesktop = DesktopBreakpoints.isDesktop(context);
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => OnboardingFlowScreen(
+          forceDesktop: isDesktop,
+          initialStepId: nextStepId,
+        ),
+        settings: const RouteSettings(name: '/onboarding'),
+      ),
+    );
+    return true;
+  }
+
   Future<void> _handleAuthSuccess(Map<String, dynamic> payload) async {
     final l10n = AppLocalizations.of(context)!;
     final navigator = Navigator.of(context);
@@ -97,9 +143,6 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       AppConfig.debugPrint('AuthMethodsPanel: wallet provisioning failed: $e');
     }
     final prefs = await SharedPreferences.getInstance();
-    if (!widget.embedded) {
-      await OnboardingStateService.markCompleted(prefs: prefs);
-    }
     if (walletAddress != null && walletAddress.toString().isNotEmpty) {
       await prefs.setString('wallet_address', walletAddress.toString());
       await prefs.setString('wallet', walletAddress.toString());
@@ -136,6 +179,14 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       }
     }
     if (!mounted) return;
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    if (await _maybeRouteToStructuredOnboarding(
+      prefs: prefs,
+      profileProvider: profileProvider,
+      payload: payload,
+    )) {
+      return;
+    }
     if (widget.embedded) {
       AppConfig.debugPrint('AuthMethodsPanel._handleAuthSuccess: embedded flow auth success callback');
       if (widget.onAuthSuccess != null) {
@@ -144,7 +195,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       return;
     }
     AppConfig.debugPrint('AuthMethodsPanel._handleAuthSuccess: navigating to /main');
-    Navigator.of(context).pushReplacementNamed('/main');
+    navigator.pushReplacementNamed('/main');
   }
 
   Future<void> _registerWithEmail() async {
@@ -210,6 +261,8 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       if (widget.onEmailCredentialsCaptured != null) {
         await widget.onEmailCredentialsCaptured!(email, password);
       }
+      final prefs = await SharedPreferences.getInstance();
+      await OnboardingStateService.markAuthOnboardingPending(prefs: prefs);
       if (!mounted) return;
       if (widget.embedded) {
         // Embedded onboarding is verification-first: avoid immediate login

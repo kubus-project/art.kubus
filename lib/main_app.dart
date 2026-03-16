@@ -145,13 +145,13 @@ class _MainAppState extends State<MainApp> {
       bottomNavigationBar: _buildBottomNavigationBar(),
     );
 
+    // On web, MapLibre is rendered via a platform view (MapLibre GL JS).
+    // When using the CanvasKit renderer, any full-screen Flutter-painted
+    // background can end up covering the DOM-based map surface.
+    //
+    // Keep the Kubus gradient everywhere else, but let the map tab "punch
+    // through" so the web map remains visible.
     return UserPersonaOnboardingGate(
-      // On web, MapLibre is rendered via a platform view (MapLibre GL JS).
-      // When using the CanvasKit renderer, any full-screen Flutter-painted
-      // background can end up covering the DOM-based map surface.
-      //
-      // Keep the Kubus gradient everywhere else, but let the map tab "punch
-      // through" so the web map remains visible.
       child: mapNeedsPlatformViewBackgroundPassthrough
           ? scaffold
           : AnimatedGradientBackground(

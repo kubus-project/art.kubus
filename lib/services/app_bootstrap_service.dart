@@ -108,6 +108,10 @@ class AppBootstrapService {
 
     if (shouldLoadCommunity) {
       if (hasAuth) {
+        p1.add(_runTask(
+          'secure_account_status',
+          backend.syncSecureAccountStatusToPrefs,
+        ));
         p1.add(
           _runTask(
             'recent_activity',

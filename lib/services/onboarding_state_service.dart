@@ -68,6 +68,7 @@ class OnboardingStateService {
     await p.setBool(PreferenceKeys.hasCompletedOnboarding, true);
     await p.setBool(PreferenceKeys.hasSeenWelcome, true);
     await p.setBool(PreferenceKeys.isFirstLaunch, false);
+    await p.remove(PreferenceKeys.pendingAuthOnboarding);
 
     // Legacy keys (compat)
     await p.setBool(_legacyCompletedOnboarding, true);
@@ -95,6 +96,7 @@ class OnboardingStateService {
     await p.setBool(PreferenceKeys.hasCompletedOnboarding, false);
     await p.setBool(PreferenceKeys.hasSeenWelcome, false);
     await p.setBool(PreferenceKeys.isFirstLaunch, true);
+    await p.remove(PreferenceKeys.pendingAuthOnboarding);
 
     // Legacy
     await p.setBool(_legacyFirstTime, true);
@@ -196,5 +198,32 @@ class OnboardingStateService {
       _onboardingDeferredStepsKey,
       deferredSteps.where((value) => value.trim().isNotEmpty).toList(growable: false),
     );
+  }
+
+  static bool hasPendingAuthOnboardingSync(SharedPreferences prefs) {
+    return prefs.getBool(PreferenceKeys.pendingAuthOnboarding) ?? false;
+  }
+
+  static Future<bool> hasPendingAuthOnboarding({
+    SharedPreferences? prefs,
+  }) async {
+    final p = prefs ?? await SharedPreferences.getInstance();
+    return hasPendingAuthOnboardingSync(p);
+  }
+
+  static Future<void> markAuthOnboardingPending({
+    SharedPreferences? prefs,
+  }) async {
+    final p = prefs ?? await SharedPreferences.getInstance();
+    await p.setBool(PreferenceKeys.pendingAuthOnboarding, true);
+    await p.setBool(PreferenceKeys.hasSeenWelcome, true);
+    await p.setBool(PreferenceKeys.isFirstLaunch, false);
+  }
+
+  static Future<void> clearPendingAuthOnboarding({
+    SharedPreferences? prefs,
+  }) async {
+    final p = prefs ?? await SharedPreferences.getInstance();
+    await p.remove(PreferenceKeys.pendingAuthOnboarding);
   }
 }

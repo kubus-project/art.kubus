@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/user_persona.dart';
 import '../config/config.dart';
 import '../providers/config_provider.dart';
 import '../providers/profile_provider.dart';
@@ -23,6 +24,7 @@ import '../providers/auth_deep_link_provider.dart';
 import '../providers/deferred_onboarding_provider.dart';
 import '../services/backend_api_service.dart';
 import '../services/app_bootstrap_service.dart';
+import '../services/auth_onboarding_service.dart';
 import '../services/onboarding_state_service.dart';
 import '../services/auth_gating_service.dart';
 import '../services/auth/auth_deep_link_parser.dart';
@@ -267,6 +269,22 @@ class _AppInitializerState extends State<AppInitializer> {
           (AppConfig.enableEmailAuth ||
               AppConfig.enableGoogleAuth ||
               AppConfig.enableWalletConnect);
+      final hasPendingAuthOnboarding =
+          OnboardingStateService.hasPendingAuthOnboardingSync(prefs);
+      final pendingAuthOnboardingResume = hasValidSession
+          ? await AuthOnboardingService.resolveStructuredOnboardingResume(
+              prefs: prefs,
+              hasPendingAuthOnboarding: hasPendingAuthOnboarding,
+              hasAuthenticatedSession: hasValidSession,
+              hasHydratedProfile: profileProvider.hasHydratedProfile,
+              heuristicNextStepId: profileProvider.nextStructuredOnboardingStepId,
+              persona: profileProvider.userPersona?.storageValue,
+            )
+          : const StructuredOnboardingResumeState(
+              requiresStructuredOnboarding: false,
+            );
+      final pendingAuthOnboardingStepId =
+          pendingAuthOnboardingResume.nextStepId;
 
       if (kDebugMode) {
         debugPrint('AppInitializer: flags');
@@ -277,6 +295,9 @@ class _AppInitializerState extends State<AppInitializer> {
         debugPrint('  hasCompletedOnboarding: $hasCompletedOnboarding');
         debugPrint('  hasLocalAccount: $hasLocalAccount');
         debugPrint('  sessionStatus: $sessionStatus');
+        debugPrint('  hasPendingAuthOnboarding: $hasPendingAuthOnboarding');
+        debugPrint(
+            '  pendingAuthOnboardingStepId: ${pendingAuthOnboardingStepId ?? 'none'}');
         debugPrint(
             '  shouldShowFirstRunOnboarding: $shouldShowFirstRunOnboarding');
         debugPrint('  showWelcomeScreen: ${AppConfig.showWelcomeScreen}');
@@ -407,6 +428,32 @@ class _AppInitializerState extends State<AppInitializer> {
           ),
         );
         return;
+      }
+
+      if (hasPendingAuthOnboarding) {
+        if (!hasValidSession) {
+          // Keep the pending flag until the user completes auth again.
+        } else if (!pendingAuthOnboardingResume.requiresStructuredOnboarding ||
+            pendingAuthOnboardingStepId == null ||
+            pendingAuthOnboardingStepId.isEmpty) {
+          await OnboardingStateService.clearPendingAuthOnboarding(prefs: prefs);
+        } else {
+          if (kDebugMode) {
+            debugPrint(
+                'AppInitializer: route -> OnboardingFlowScreen (pending auth onboarding)');
+          }
+          _didNavigate = true;
+          navigator.pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => OnboardingFlowScreen(
+                forceDesktop: isDesktop,
+                initialStepId: pendingAuthOnboardingStepId,
+              ),
+              settings: const RouteSettings(name: '/onboarding'),
+            ),
+          );
+          return;
+        }
       }
 
       if (shouldSkipOnboarding) {

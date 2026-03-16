@@ -31,6 +31,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
   final ProfileBackendApi _apiService;
   Map<String, dynamic>? _lastUploadDebug;
   ProfilePreferences? _cachedPreferences;
+  bool _hasHydratedProfile = false;
 
   ProfileProvider({ProfileBackendApi? apiService})
       : _apiService = apiService ?? BackendApiService();
@@ -274,6 +275,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
   List<UserProfile> get followers => _followers;
   bool get isSignedIn => _isSignedIn;
   bool get isLoading => _isLoading;
+  bool get hasHydratedProfile => _hasHydratedProfile;
   String? get error => _error;
   bool get hasProfile => _currentUser != null;
   ProfilePreferences get preferences =>
@@ -296,6 +298,11 @@ class ProfileProvider extends foundation.ChangeNotifier {
       '${PreferenceKeys.userPersona}_$walletAddress';
   String _personaOnboardedKeyForWallet(String walletAddress) =>
       '${PreferenceKeys.userPersonaOnboardedV1}_$walletAddress';
+  String _notificationPreferenceKeyForWallet(
+    String walletAddress,
+    String key,
+  ) =>
+      'notification_preference_${key}_$walletAddress';
 
   UserPersona? get userPersona {
     final raw = preferences.persona;
@@ -330,6 +337,41 @@ class ProfileProvider extends foundation.ChangeNotifier {
     return userPersona == null;
   }
 
+  bool get hasSelectedStructuredRole => userPersona != null;
+
+  bool get needsStructuredRoleSelection {
+    if (!_isSignedIn || !_hasHydratedProfile) return false;
+    final wallet = (_currentUser?.walletAddress ?? '').trim();
+    if (wallet.isEmpty) return false;
+    return !hasSelectedStructuredRole;
+  }
+
+  bool get needsStructuredProfileCompletion {
+    if (!_isSignedIn || !_hasHydratedProfile) return false;
+    final user = _currentUser;
+    if (user == null) return false;
+
+    final normalizedUsername =
+        user.username.replaceFirst(RegExp(r'^@+'), '').trim();
+    final displayName = user.displayName.trim();
+    final bio = user.bio.trim();
+    final looksLikeWalletFallback =
+        displayName == _shortWallet(user.walletAddress);
+    final looksLikeGeneratedUsername =
+        normalizedUsername.isNotEmpty && displayName == normalizedUsername;
+
+    return displayName.isEmpty ||
+        bio.isEmpty ||
+        looksLikeWalletFallback ||
+        looksLikeGeneratedUsername;
+  }
+
+  String? get nextStructuredOnboardingStepId {
+    if (needsStructuredRoleSelection) return 'role';
+    if (needsStructuredProfileCompletion) return 'profile';
+    return null;
+  }
+
   Future<void> markPersonaOnboardingSeen({String? walletAddress}) async {
     final resolved = (walletAddress ?? _currentWalletAddress ?? '').trim();
     if (resolved.isEmpty) return;
@@ -359,6 +401,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
   void setCurrentUser(UserProfile user) {
     _currentUser = user;
     _isSignedIn = true;
+    _hasHydratedProfile = true;
     notifyListeners();
     try {
       EventBus().emitProfileUpdated(_currentUser);
@@ -492,6 +535,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
   Future<void> loadProfile(String walletAddress) async {
     _isLoading = true;
     _error = null;
+    _hasHydratedProfile = false;
     // Immediately set a provisional profile so UI can show a stable identicon
     // and a shortened wallet display name without waiting for the backend.
     try {
@@ -587,6 +631,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
               _currentUser?.copyWith(avatar: _convertSvgToRaster(resolved));
         } catch (_) {}
         _isSignedIn = true;
+        _hasHydratedProfile = true;
         // Merge backend preferences with locally cached toggles for offline continuity
         final mergedPrefs = _mergePreferencesWithLocalPersona(walletAddress);
         _currentUser = _currentUser?.copyWith(preferences: mergedPrefs);
@@ -671,6 +716,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
                 _currentUser?.copyWith(avatar: _convertSvgToRaster(resolved));
           } catch (_) {}
           _isSignedIn = true;
+          _hasHydratedProfile = true;
           final mergedPrefs = _mergePreferencesWithLocalPersona(walletAddress);
           _currentUser = _currentUser?.copyWith(preferences: mergedPrefs);
           await _persistPreferences(mergedPrefs);
@@ -680,6 +726,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
           // If registration also fails, create local default
           _currentUser = _createDefaultProfile(walletAddress);
           _isSignedIn = true;
+          _hasHydratedProfile = true;
           final mergedPrefs = _mergePreferencesWithLocalPersona(walletAddress);
           _currentUser = _currentUser?.copyWith(preferences: mergedPrefs);
           await _persistPreferences(mergedPrefs);
@@ -692,10 +739,12 @@ class ProfileProvider extends foundation.ChangeNotifier {
       debugPrint('ProfileProvider: Wallet address saved and profile loaded');
 
       _isLoading = false;
+      _hasHydratedProfile = true;
       notifyListeners();
     } catch (e) {
       _error = 'Failed to load profile: $e';
       _isLoading = false;
+      _hasHydratedProfile = true;
       debugPrint('Error loading profile: $e');
       notifyListeners();
     }
@@ -756,8 +805,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
         if (effectiveIsArtist != null) 'isArtist': effectiveIsArtist,
         if (effectiveIsInstitution != null)
           'isInstitution': effectiveIsInstitution,
-        if ((effectiveIsArtist == true || effectiveIsInstitution == true) &&
-            (effectiveFieldOfWork != null || effectiveYearsActive != null))
+        if (effectiveFieldOfWork != null || effectiveYearsActive != null)
           'artistInfo': {
             if (effectiveFieldOfWork != null) 'specialty': effectiveFieldOfWork,
             if (effectiveYearsActive != null)
@@ -1138,9 +1186,47 @@ class ProfileProvider extends foundation.ChangeNotifier {
       final String? persona = wallet.isNotEmpty
           ? prefs.getString(_personaKeyForWallet(wallet))
           : null;
+      final notificationPreferences = NotificationPreferenceSettings(
+        enabled: wallet.isNotEmpty
+            ? (prefs.getBool(_notificationPreferenceKeyForWallet(
+                    wallet, 'enabled')) ??
+                true)
+            : true,
+        art: wallet.isNotEmpty
+            ? (prefs.getBool(
+                    _notificationPreferenceKeyForWallet(wallet, 'art')) ??
+                true)
+            : true,
+        community: wallet.isNotEmpty
+            ? (prefs.getBool(_notificationPreferenceKeyForWallet(
+                    wallet, 'community')) ??
+                true)
+            : true,
+        dao: wallet.isNotEmpty
+            ? (prefs.getBool(
+                    _notificationPreferenceKeyForWallet(wallet, 'dao')) ??
+                true)
+            : true,
+        artistHub: wallet.isNotEmpty
+            ? (prefs.getBool(_notificationPreferenceKeyForWallet(
+                    wallet, 'artistHub')) ??
+                true)
+            : true,
+        institutionHub: wallet.isNotEmpty
+            ? (prefs.getBool(_notificationPreferenceKeyForWallet(
+                    wallet, 'institutionHub')) ??
+                true)
+            : true,
+        account: wallet.isNotEmpty
+            ? (prefs.getBool(_notificationPreferenceKeyForWallet(
+                    wallet, 'account')) ??
+                true)
+            : true,
+      );
       return ProfilePreferences(
         privacy: isPrivate ? 'private' : 'public',
-        notifications: true,
+        notifications: notificationPreferences.enabled,
+        notificationPreferences: notificationPreferences,
         theme: 'auto',
         showActivityStatus: showActivityStatus,
         shareLastVisitedLocation: shareLastVisitedLocation,
@@ -1187,24 +1273,37 @@ class ProfileProvider extends foundation.ChangeNotifier {
           await _apiService.getDAOReview(idOrWallet: walletAddress);
       if (reviewPayload == null) return;
       final daoReview = DAOReview.fromJson(reviewPayload);
-      if (!daoReview.isApproved) return;
-
-      final isArtistReview = daoReview.isArtistApplication;
-      final isInstitutionReview = daoReview.isInstitutionApplication;
-
-      final nextArtist = (_currentUser?.isArtist ?? false) || isArtistReview;
-      final nextInstitution =
-          (_currentUser?.isInstitution ?? false) || isInstitutionReview;
-
       final previousArtist = _currentUser?.isArtist ?? false;
       final previousInstitution = _currentUser?.isInstitution ?? false;
+      final existingPreferences =
+          _currentUser?.preferences ?? _cachedPreferencesFromPrefs();
+      var nextPreferences = existingPreferences;
+      var nextArtist = previousArtist;
+      var nextInstitution = previousInstitution;
+
+      if (daoReview.isApproved) {
+        nextArtist = daoReview.isArtistApplication;
+        nextInstitution = daoReview.isInstitutionApplication;
+        nextPreferences = existingPreferences.copyWith(
+          persona: daoReview.isInstitutionApplication ? 'institution' : 'creator',
+        );
+      } else if (daoReview.isRejected) {
+        nextArtist = false;
+        nextInstitution = false;
+        nextPreferences = existingPreferences.copyWith(persona: 'lover');
+      } else {
+        return;
+      }
 
       if (nextArtist != previousArtist ||
-          nextInstitution != previousInstitution) {
+          nextInstitution != previousInstitution ||
+          nextPreferences.persona != existingPreferences.persona) {
         _currentUser = _currentUser?.copyWith(
           isArtist: nextArtist,
           isInstitution: nextInstitution,
+          preferences: nextPreferences,
         );
+        await _persistPreferences(nextPreferences);
         notifyListeners();
         try {
           EventBus().emitProfileUpdated(_currentUser);
@@ -1228,9 +1327,39 @@ class ProfileProvider extends foundation.ChangeNotifier {
       await prefs.setBool('allow_messages', preferences.allowMessages);
       final wallet = _currentWalletAddress;
       final persona = (preferences.persona ?? '').trim();
-      if (wallet != null && wallet.isNotEmpty && persona.isNotEmpty) {
-        await prefs.setString(_personaKeyForWallet(wallet), persona);
-        await prefs.setBool(_personaOnboardedKeyForWallet(wallet), true);
+      if (wallet != null && wallet.isNotEmpty) {
+        if (persona.isNotEmpty) {
+          await prefs.setString(_personaKeyForWallet(wallet), persona);
+          await prefs.setBool(_personaOnboardedKeyForWallet(wallet), true);
+        }
+        await prefs.setBool(
+          _notificationPreferenceKeyForWallet(wallet, 'enabled'),
+          preferences.notificationPreferences.enabled,
+        );
+        await prefs.setBool(
+          _notificationPreferenceKeyForWallet(wallet, 'art'),
+          preferences.notificationPreferences.art,
+        );
+        await prefs.setBool(
+          _notificationPreferenceKeyForWallet(wallet, 'community'),
+          preferences.notificationPreferences.community,
+        );
+        await prefs.setBool(
+          _notificationPreferenceKeyForWallet(wallet, 'dao'),
+          preferences.notificationPreferences.dao,
+        );
+        await prefs.setBool(
+          _notificationPreferenceKeyForWallet(wallet, 'artistHub'),
+          preferences.notificationPreferences.artistHub,
+        );
+        await prefs.setBool(
+          _notificationPreferenceKeyForWallet(wallet, 'institutionHub'),
+          preferences.notificationPreferences.institutionHub,
+        );
+        await prefs.setBool(
+          _notificationPreferenceKeyForWallet(wallet, 'account'),
+          preferences.notificationPreferences.account,
+        );
       }
       _cachedPreferences = preferences;
     } catch (_) {}
@@ -1247,6 +1376,8 @@ class ProfileProvider extends foundation.ChangeNotifier {
   /// Update privacy/display preferences locally and attempt to persist to backend.
   Future<void> updatePreferences({
     bool? privateProfile,
+    bool? notificationsEnabled,
+    NotificationPreferenceSettings? notificationPreferences,
     bool? showActivityStatus,
     bool? shareLastVisitedLocation,
     bool? showCollection,
@@ -1260,6 +1391,14 @@ class ProfileProvider extends foundation.ChangeNotifier {
             (privateProfile ?? (existing.privacy.toLowerCase() == 'private'))
                 ? 'private'
                 : 'public',
+        notifications: notificationsEnabled ?? existing.notifications,
+        notificationPreferences: (notificationPreferences ??
+                existing.notificationPreferences)
+            .copyWith(
+          enabled: notificationsEnabled ??
+              notificationPreferences?.enabled ??
+              existing.notificationPreferences.enabled,
+        ),
         showActivityStatus: showActivityStatus ?? existing.showActivityStatus,
         shareLastVisitedLocation:
             shareLastVisitedLocation ?? existing.shareLastVisitedLocation,
@@ -1289,6 +1428,15 @@ class ProfileProvider extends foundation.ChangeNotifier {
     } catch (e) {
       debugPrint('ProfileProvider.updatePreferences failed: $e');
     }
+  }
+
+  Future<void> updateNotificationPreferences(
+    NotificationPreferenceSettings notificationPreferences,
+  ) {
+    return updatePreferences(
+      notificationsEnabled: notificationPreferences.enabled,
+      notificationPreferences: notificationPreferences,
+    );
   }
 
   // Helper method to format large numbers
