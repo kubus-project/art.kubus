@@ -12,7 +12,6 @@ import '../../models/user_persona.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/security_gate_provider.dart';
 import '../../providers/wallet_provider.dart';
-import '../../providers/web3provider.dart';
 import '../../screens/onboarding/onboarding_flow_screen.dart';
 import '../../services/auth_onboarding_service.dart';
 import '../../services/backend_api_service.dart';
@@ -20,6 +19,7 @@ import '../../services/google_auth_service.dart';
 import '../../services/onboarding_state_service.dart';
 import '../../services/security/post_auth_security_setup_service.dart';
 import '../../services/telemetry/telemetry_service.dart';
+import '../../services/wallet_session_sync_service.dart';
 import '../../widgets/google_sign_in_button.dart';
 import '../../widgets/google_sign_in_web_button.dart';
 import '../../widgets/kubus_button.dart';
@@ -187,17 +187,22 @@ class _SignInScreenState extends State<SignInScreen> {
       AppConfig.debugPrint('SignInScreen: wallet provisioning failed: $e');
     }
     final prefs = await SharedPreferences.getInstance();
-    if (walletAddress != null && walletAddress.toString().isNotEmpty) {
-      await prefs.setString('wallet_address', walletAddress.toString());
-      await prefs.setString('wallet', walletAddress.toString());
-      await prefs.setString('walletAddress', walletAddress.toString());
-      await prefs.setBool('has_wallet', true);
-    }
     if (userId != null && userId.toString().isNotEmpty) {
       await prefs.setString('user_id', userId.toString());
       TelemetryService().setActorUserId(userId.toString());
     }
     if (!mounted) return;
+
+    if (walletAddress != null && walletAddress.toString().isNotEmpty) {
+      await const WalletSessionSyncService().bindAuthenticatedWallet(
+        context: context,
+        walletAddress: walletAddress.toString(),
+        userId: userId,
+        warmUp: !isModalReauth,
+        loadProfile: !isModalReauth,
+      );
+      if (!mounted) return;
+    }
 
     if (!isModalReauth) {
       final ok = await const PostAuthSecuritySetupService()
@@ -215,9 +220,11 @@ class _SignInScreenState extends State<SignInScreen> {
     // The app refreshes profile/session via SecurityGateProvider after re-auth.
     if (!isModalReauth) {
       try {
-        if (walletAddress != null && walletAddress.toString().isNotEmpty) {
+        if ((walletAddress == null || walletAddress.toString().isEmpty) &&
+            walletProvider.currentWalletAddress != null &&
+            walletProvider.currentWalletAddress!.isNotEmpty) {
           await Provider.of<ProfileProvider>(context, listen: false)
-              .loadProfile(walletAddress.toString())
+              .loadProfile(walletProvider.currentWalletAddress!)
               .timeout(const Duration(seconds: 5));
         }
       } catch (e) {
@@ -283,7 +290,6 @@ class _SignInScreenState extends State<SignInScreen> {
   Future<String?> _ensureWalletProvisioned(String? existingWallet,
       {String? desiredUsername}) async {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final web3Provider = Provider.of<Web3Provider>(context, listen: false);
     final sanitizedExisting = existingWallet?.trim();
     String? address = sanitizedExisting;
     address ??= walletProvider.currentWalletAddress;
@@ -293,7 +299,6 @@ class _SignInScreenState extends State<SignInScreen> {
     // Wallet + Web3 initialization is best-effort and must never block the UI
     // indefinitely (e.g. on slow RPC / captive portals / flaky mobile data).
     const walletConnectTimeout = Duration(seconds: 6);
-    const web3ConnectTimeout = Duration(seconds: 10);
 
     if (address != null && address.isNotEmpty) {
       final currentWallet = (walletProvider.currentWalletAddress ?? '').trim();
@@ -307,38 +312,13 @@ class _SignInScreenState extends State<SignInScreen> {
               'SignInScreen: connectWalletWithAddress failed: $e');
         }
       }
-      try {
-        if (!web3Provider.isConnected ||
-            web3Provider.walletAddress != address) {
-          // Do not block sign-in on Web3 initialization; it can be retried later.
-          unawaited(() async {
-            try {
-              await web3Provider
-                  .connectExistingWallet(address!)
-                  .timeout(web3ConnectTimeout);
-            } catch (e) {
-              AppConfig.debugPrint(
-                  'SignInScreen: connectExistingWallet skipped/failed: $e');
-            }
-          }());
-        }
-      } catch (e) {
-        AppConfig.debugPrint('SignInScreen: connectExistingWallet failed: $e');
-      }
       return address;
     }
 
     try {
       final result = await walletProvider.createWallet();
-      final mnemonic = result['mnemonic']!;
       address = result['address']!;
       createdFreshWallet = true;
-      try {
-        // Importing may trigger RPC/network sync; keep it bounded.
-        await web3Provider.importWallet(mnemonic).timeout(web3ConnectTimeout);
-      } catch (e) {
-        AppConfig.debugPrint('SignInScreen: web3 import failed: $e');
-      }
       try {
         if (AppConfig.enableDebugIssueToken) {
           await BackendApiService().issueTokenForWallet(address);

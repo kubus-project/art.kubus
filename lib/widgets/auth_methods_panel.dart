@@ -6,7 +6,6 @@ import 'package:art_kubus/models/user_persona.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/security_gate_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
-import 'package:art_kubus/providers/web3provider.dart';
 import 'package:art_kubus/screens/desktop/desktop_shell.dart';
 import 'package:art_kubus/screens/onboarding/onboarding_flow_screen.dart';
 import 'package:art_kubus/services/auth_onboarding_service.dart';
@@ -16,6 +15,7 @@ import 'package:art_kubus/services/google_auth_service.dart';
 import 'package:art_kubus/services/onboarding_state_service.dart';
 import 'package:art_kubus/services/security/post_auth_security_setup_service.dart';
 import 'package:art_kubus/services/telemetry/telemetry_service.dart';
+import 'package:art_kubus/services/wallet_session_sync_service.dart';
 import 'package:art_kubus/utils/auth_password_policy.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
@@ -143,17 +143,20 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       AppConfig.debugPrint('AuthMethodsPanel: wallet provisioning failed: $e');
     }
     final prefs = await SharedPreferences.getInstance();
-    if (walletAddress != null && walletAddress.toString().isNotEmpty) {
-      await prefs.setString('wallet_address', walletAddress.toString());
-      await prefs.setString('wallet', walletAddress.toString());
-      await prefs.setString('walletAddress', walletAddress.toString());
-      await prefs.setBool('has_wallet', true);
-    }
     if (userId != null && userId.toString().isNotEmpty) {
       await prefs.setString('user_id', userId.toString());
       TelemetryService().setActorUserId(userId.toString());
     }
     if (!mounted) return;
+
+    if (walletAddress != null && walletAddress.toString().isNotEmpty) {
+      await const WalletSessionSyncService().bindAuthenticatedWallet(
+        context: context,
+        walletAddress: walletAddress.toString(),
+        userId: userId,
+      );
+      if (!mounted) return;
+    }
 
     final ok =
         await const PostAuthSecuritySetupService().ensurePostAuthSecuritySetup(
@@ -165,9 +168,11 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     if (!ok) return;
 
     try {
-      if (walletAddress != null && walletAddress.toString().isNotEmpty) {
+      if ((walletAddress == null || walletAddress.toString().isEmpty) &&
+          walletProvider.currentWalletAddress != null &&
+          walletProvider.currentWalletAddress!.isNotEmpty) {
         await Provider.of<ProfileProvider>(context, listen: false)
-            .loadProfile(walletAddress.toString())
+            .loadProfile(walletProvider.currentWalletAddress!)
             .timeout(const Duration(seconds: 5));
       }
     } catch (e) {
@@ -313,7 +318,6 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
   Future<String?> _ensureWalletProvisioned(String? existingWallet,
       {String? desiredUsername}) async {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final web3Provider = Provider.of<Web3Provider>(context, listen: false);
     final sanitizedExisting = existingWallet?.trim();
     String? address = sanitizedExisting;
     address ??= walletProvider.currentWalletAddress;
@@ -322,7 +326,6 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     // Keep registration completion offline-friendly.
     // Web3 sync can be slow on mobile networks; never block UI indefinitely.
     const walletConnectTimeout = Duration(seconds: 6);
-    const web3ConnectTimeout = Duration(seconds: 10);
 
     if (address != null && address.isNotEmpty) {
       final currentWallet = (walletProvider.currentWalletAddress ?? '').trim();
@@ -335,23 +338,6 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
           AppConfig.debugPrint('AuthMethodsPanel: connectWalletWithAddress failed: $e');
         }
       }
-      try {
-        if (!web3Provider.isConnected ||
-            web3Provider.walletAddress != address) {
-          unawaited(() async {
-            try {
-              await web3Provider
-                  .connectExistingWallet(address!)
-                  .timeout(web3ConnectTimeout);
-            } catch (e) {
-              AppConfig.debugPrint(
-                  'AuthMethodsPanel: connectExistingWallet skipped/failed: $e');
-            }
-          }());
-        }
-      } catch (e) {
-        AppConfig.debugPrint('AuthMethodsPanel: connectExistingWallet failed: $e');
-      }
       return address;
     }
 
@@ -359,14 +345,8 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       final result = await walletProvider
           .createWallet()
           .timeout(const Duration(seconds: 12));
-      final mnemonic = result['mnemonic']!;
       address = result['address']!;
       createdFreshWallet = true;
-      try {
-        await web3Provider.importWallet(mnemonic).timeout(web3ConnectTimeout);
-      } catch (e) {
-        AppConfig.debugPrint('AuthMethodsPanel: web3 import failed: $e');
-      }
       try {
         if (AppConfig.enableDebugIssueToken) {
           await BackendApiService().issueTokenForWallet(address);

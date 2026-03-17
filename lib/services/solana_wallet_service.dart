@@ -43,13 +43,15 @@ class SolanaWalletService {
     'epjfwdd5aufqssqem2qn1xzybapc8g4weggkzwytdt1v': {
       'symbol': 'USDC',
       'name': 'USD Coin',
-      'logoUrl': 'https://assets.coingecko.com/coins/images/6319/standard/USD_Coin_icon.png',
+      'logoUrl':
+          'https://assets.coingecko.com/coins/images/6319/standard/USD_Coin_icon.png',
       'decimals': 6,
     },
     'so11111111111111111111111111111111111111112': {
       'symbol': 'SOL',
       'name': 'Solana',
-      'logoUrl': 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png',
+      'logoUrl':
+          'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png',
       'decimals': 9,
     },
     WalletUtils.canonical(ApiKeys.kub8MintAddress): {
@@ -62,7 +64,7 @@ class SolanaWalletService {
   };
   static const Duration _tokenMetadataCacheTtl = Duration(minutes: 30);
   final Map<String, _TokenMetadataCacheEntry> _tokenMetadataCache = {};
-  
+
   late String _currentRpcUrl;
   late RpcClient _rpcClient;
   String _network = ApiKeys.defaultSolanaNetwork; // Use default from API keys
@@ -114,7 +116,8 @@ class SolanaWalletService {
     return results;
   }
 
-  Future<Map<String, double>> _fetchLamportBalances(List<String> addresses) async {
+  Future<Map<String, double>> _fetchLamportBalances(
+      List<String> addresses) async {
     if (addresses.isEmpty) return const {};
 
     final seen = <String>{};
@@ -128,7 +131,8 @@ class SolanaWalletService {
     final balances = <String, double>{};
 
     for (var i = 0; i < ordered.length; i += _maxAccountsPerBatch) {
-      final batch = ordered.sublist(i, min(i + _maxAccountsPerBatch, ordered.length));
+      final batch =
+          ordered.sublist(i, min(i + _maxAccountsPerBatch, ordered.length));
       try {
         final response = await _makeRpcCall('getMultipleAccounts', [
           batch,
@@ -145,7 +149,8 @@ class SolanaWalletService {
           balances[address] = lamports / _lamportsPerSol;
         }
       } catch (e) {
-        debugPrint('SolanaWalletService: batched balance lookup failed for ${batch.length} accounts -> $e');
+        debugPrint(
+            'SolanaWalletService: batched balance lookup failed for ${batch.length} accounts -> $e');
       }
     }
 
@@ -227,7 +232,7 @@ class SolanaWalletService {
         _currentRpcUrl = _devnetUrl;
         _network = 'devnet';
     }
-    
+
     // Initialize RPC client with the selected network
     _rpcClient = RpcClient(_currentRpcUrl);
   }
@@ -263,11 +268,11 @@ class SolanaWalletService {
         changeIndex: changeIndex,
         pathType: pathType,
       );
-      
+
       // Extract the key data
       final keyData = await hdKeyPair.extract();
       final publicKey = await hdKeyPair.extractPublicKey();
-      
+
       return SolanaKeyPair(
         publicKey: publicKey.toBase58(),
         privateKey: '', // We'll extract this when needed for security
@@ -301,7 +306,8 @@ class SolanaWalletService {
       throw ArgumentError('Account and change candidate lists cannot be empty');
     }
 
-    final cacheKey = '${_cacheKeyForMnemonic(trimmedMnemonic)}::${accountCandidates.join('-')}|${changeCandidates.join('-')}|$includeLegacy';
+    final cacheKey =
+        '${_cacheKeyForMnemonic(trimmedMnemonic)}::${accountCandidates.join('-')}|${changeCandidates.join('-')}|$includeLegacy';
     final cached = _mnemonicCache[cacheKey];
     if (cached != null) {
       return cached;
@@ -383,12 +389,66 @@ class SolanaWalletService {
     _activeKeyPair = keyPair;
   }
 
+  void clearActiveKeyPair() {
+    _activeKeyPair = null;
+  }
+
   bool get hasActiveKeyPair => _activeKeyPair != null;
 
   String? get activePublicKey => _activeKeyPair?.address;
 
   Future<String?> getActivePublicKey() async {
     return activePublicKey;
+  }
+
+  Future<String> signMessageBase64(String messageBase64) async {
+    if (!hasActiveKeyPair) {
+      throw Exception('No active keypair set for message signing');
+    }
+
+    final messageBytes = base64Decode(messageBase64);
+    final signature = await _activeKeyPair!.sign(messageBytes);
+    return base64Encode(signature.bytes);
+  }
+
+  Future<String> signTransactionBase64(String transactionBase64) async {
+    if (!hasActiveKeyPair) {
+      throw Exception('No active keypair set for transaction signing');
+    }
+
+    final unsigned = SignedTx.decode(transactionBase64);
+    final requiredSignatures = unsigned.compiledMessage.requiredSignatureCount;
+    if (requiredSignatures < 1) {
+      throw Exception('Transaction does not require signatures');
+    }
+
+    final signatures = List<Signature>.from(unsigned.signatures);
+    if (signatures.length != requiredSignatures) {
+      throw Exception(
+        'Transaction expects $requiredSignatures signatures but received ${signatures.length}.',
+      );
+    }
+
+    signatures[0] = await _activeKeyPair!.sign(
+      unsigned.compiledMessage.toByteArray(),
+    );
+
+    final signedTx = unsigned.copyWith(signatures: signatures);
+    return signedTx.encode();
+  }
+
+  Future<String> signAndSendTransactionBase64(String transactionBase64) async {
+    if (!hasActiveKeyPair) {
+      throw Exception('No active keypair set for transaction signing');
+    }
+
+    final signedTransactionBase64 =
+        await signTransactionBase64(transactionBase64);
+    return _rpcClient.sendTransaction(
+      signedTransactionBase64,
+      skipPreflight: false,
+      preflightCommitment: Commitment.confirmed,
+    );
   }
 
   // Get balance for a public key
@@ -406,17 +466,18 @@ class SolanaWalletService {
   }
 
   // Request airdrop on devnet/testnet
-  Future<String> requestDevnetAirdrop(String publicKey, {double amount = 1.0}) async {
+  Future<String> requestDevnetAirdrop(String publicKey,
+      {double amount = 1.0}) async {
     try {
       final pubKey = Ed25519HDPublicKey.fromBase58(publicKey);
       final lamports = (amount * 1000000000).toInt(); // Convert SOL to lamports
-      
+
       // Request airdrop from Solana devnet
       final signature = await _rpcClient.requestAirdrop(
         pubKey.toBase58(),
         lamports,
       );
-      
+
       return signature;
     } catch (e) {
       if (kDebugMode) {
@@ -471,8 +532,10 @@ class SolanaWalletService {
         final tokenAmount = parsedInfo['tokenAmount'];
         final mint = parsedInfo['mint'];
         final decimals = (tokenAmount['decimals'] as num?)?.toInt() ?? 0;
-        final amountRaw = double.tryParse(tokenAmount['amount']?.toString() ?? '0') ?? 0.0;
-        final balance = decimals > 0 ? amountRaw / pow(10, decimals) : amountRaw;
+        final amountRaw =
+            double.tryParse(tokenAmount['amount']?.toString() ?? '0') ?? 0.0;
+        final balance =
+            decimals > 0 ? amountRaw / pow(10, decimals) : amountRaw;
         final uiAmount = tokenAmount['uiAmount'];
 
         final tokenInfo = await _getTokenInfo(mint, decimalsHint: decimals);
@@ -487,7 +550,8 @@ class SolanaWalletService {
           logoUrl: tokenInfo['logoUrl'] as String?,
           metadataUri: tokenInfo['uri'] as String?,
           description: tokenInfo['description'] as String?,
-          rawMetadata: tokenInfo['rawOffChainMetadata'] as Map<String, dynamic>?,
+          rawMetadata:
+              tokenInfo['rawOffChainMetadata'] as Map<String, dynamic>?,
         ));
       }
 
@@ -517,8 +581,10 @@ class SolanaWalletService {
       for (final account in accounts) {
         final parsedInfo = account['account']['data']['parsed']['info'];
         final tokenAmount = parsedInfo['tokenAmount'];
-        final decimals = tokenAmount['decimals'] as int? ?? expectedDecimals ?? 0;
-        final amountRaw = double.tryParse(tokenAmount['amount']?.toString() ?? '0') ?? 0.0;
+        final decimals =
+            tokenAmount['decimals'] as int? ?? expectedDecimals ?? 0;
+        final amountRaw =
+            double.tryParse(tokenAmount['amount']?.toString() ?? '0') ?? 0.0;
         total += amountRaw / pow(10, decimals);
       }
 
@@ -536,7 +602,8 @@ class SolanaWalletService {
 
     try {
       final lamports = (amount * 1000000000).toInt(); // Convert SOL to lamports
-      final response = await _makeRpcCall('requestAirdrop', [publicKey, lamports]);
+      final response =
+          await _makeRpcCall('requestAirdrop', [publicKey, lamports]);
       return response['result'] as String;
     } catch (e) {
       debugPrint('Error requesting airdrop: $e');
@@ -544,7 +611,8 @@ class SolanaWalletService {
     }
   }
 
-  Future<List<TransactionInfo>> getTransactionHistory(String publicKey, {int limit = 10}) async {
+  Future<List<TransactionInfo>> getTransactionHistory(String publicKey,
+      {int limit = 10}) async {
     try {
       final response = await _makeRpcCall('getSignaturesForAddress', [
         publicKey,
@@ -565,7 +633,8 @@ class SolanaWalletService {
           final tx = txResponse['result'];
           transactions.add(TransactionInfo(
             signature: signature,
-            blockTime: DateTime.fromMillisecondsSinceEpoch((tx['blockTime'] ?? 0) * 1000),
+            blockTime: DateTime.fromMillisecondsSinceEpoch(
+                (tx['blockTime'] ?? 0) * 1000),
             fee: (tx['meta']['fee'] ?? 0) / 1000000000.0,
             status: tx['meta']['err'] == null ? 'success' : 'failed',
             slot: tx['slot'] ?? 0,
@@ -581,7 +650,8 @@ class SolanaWalletService {
   }
 
   // Transfer native SOL between accounts
-  Future<String> transferSol({required String toAddress, required double amount}) async {
+  Future<String> transferSol(
+      {required String toAddress, required double amount}) async {
     if (!hasActiveKeyPair) {
       throw Exception('No active keypair set for signing');
     }
@@ -614,7 +684,8 @@ class SolanaWalletService {
     final mintPub = Ed25519HDPublicKey.fromBase58(mint);
     final toPub = Ed25519HDPublicKey.fromBase58(toAddress);
 
-    final fromAta = await findAssociatedTokenAddress(owner: fromPub, mint: mintPub);
+    final fromAta =
+        await findAssociatedTokenAddress(owner: fromPub, mint: mintPub);
     final toAta = await findAssociatedTokenAddress(owner: toPub, mint: mintPub);
 
     final instructions = <Instruction>[];
@@ -648,7 +719,10 @@ class SolanaWalletService {
   }
 
   // Swap SOL -> SPL token (e.g., SOL -> KUB8) via DEX aggregator (Jupiter/Raydium)
-  Future<String> swapSolToSpl({required String mint, required double solAmount, double slippage = 0.5}) async {
+  Future<String> swapSolToSpl(
+      {required String mint,
+      required double solAmount,
+      double slippage = 0.5}) async {
     return _executeJupiterSwap(
       inputMint: ApiKeys.wrappedSolMintAddress,
       outputMint: mint,
@@ -665,7 +739,8 @@ class SolanaWalletService {
     required double amount,
     double slippage = 0.01,
   }) async {
-    final decimals = ApiKeys.kub8Decimals; // assume SPL has decimals set; adjust if needed
+    final decimals =
+        ApiKeys.kub8Decimals; // assume SPL has decimals set; adjust if needed
     return _executeJupiterSwap(
       inputMint: fromMint,
       outputMint: toMint,
@@ -704,7 +779,8 @@ class SolanaWalletService {
       throw Exception('No swap routes available for the selected pair.');
     }
 
-    final route = Map<String, dynamic>.from(routes.first as Map<String, dynamic>);
+    final route =
+        Map<String, dynamic>.from(routes.first as Map<String, dynamic>);
     return SwapQuote.fromRoute(
       route: route,
       inputMint: inputMint,
@@ -870,9 +946,8 @@ class SolanaWalletService {
 
   MetadataCollection? _parseMetadataCollection(Map<String, dynamic> metadata) {
     final raw = metadata['collection'] ?? metadata['collectionMint'];
-    final collectionAddress = raw is Map
-        ? raw['address']?.toString()
-        : (raw?.toString());
+    final collectionAddress =
+        raw is Map ? raw['address']?.toString() : (raw?.toString());
     if (collectionAddress == null || collectionAddress.isEmpty) {
       return null;
     }
@@ -902,7 +977,8 @@ class SolanaWalletService {
     return value.substring(0, maxLength);
   }
 
-  Future<String> _sendInstructions(List<Instruction> instructions, {List<Ed25519HDKeyPair> extraSigners = const []}) async {
+  Future<String> _sendInstructions(List<Instruction> instructions,
+      {List<Ed25519HDKeyPair> extraSigners = const []}) async {
     final signers = [_activeKeyPair!, ...extraSigners];
     final latest = await _rpcClient.getLatestBlockhash();
     final message = Message(instructions: instructions);
@@ -929,7 +1005,8 @@ class SolanaWalletService {
       throw Exception('No active keypair set for swap');
     }
 
-    final quoteUri = Uri.parse('${ApiKeys.jupiterBaseUrl}/quote').replace(queryParameters: {
+    final quoteUri =
+        Uri.parse('${ApiKeys.jupiterBaseUrl}/quote').replace(queryParameters: {
       'inputMint': inputMint,
       'outputMint': outputMint,
       'amount': '$inputAmountRaw',
@@ -938,10 +1015,13 @@ class SolanaWalletService {
 
     final quoteResp = await http.get(quoteUri);
     if (quoteResp.statusCode != 200) {
-      throw Exception('Jupiter quote failed: ${quoteResp.statusCode} ${quoteResp.body}');
+      throw Exception(
+          'Jupiter quote failed: ${quoteResp.statusCode} ${quoteResp.body}');
     }
     final quoteJson = jsonDecode(quoteResp.body) as Map<String, dynamic>;
-    final route = (quoteJson['data'] as List).isNotEmpty ? quoteJson['data'][0] as Map<String, dynamic> : null;
+    final route = (quoteJson['data'] as List).isNotEmpty
+        ? quoteJson['data'][0] as Map<String, dynamic>
+        : null;
     if (route == null) {
       throw Exception('No Jupiter route available');
     }
@@ -957,7 +1037,8 @@ class SolanaWalletService {
     );
 
     if (swapResp.statusCode != 200) {
-      throw Exception('Jupiter swap build failed: ${swapResp.statusCode} ${swapResp.body}');
+      throw Exception(
+          'Jupiter swap build failed: ${swapResp.statusCode} ${swapResp.body}');
     }
 
     final swapJson = jsonDecode(swapResp.body) as Map<String, dynamic>;
@@ -993,7 +1074,8 @@ class SolanaWalletService {
   }
 
   // Private helper methods
-  Future<Map<String, dynamic>> _makeRpcCall(String method, List<dynamic> params) async {
+  Future<Map<String, dynamic>> _makeRpcCall(
+      String method, List<dynamic> params) async {
     final response = await http.post(
       Uri.parse(_currentRpcUrl),
       headers: {'Content-Type': 'application/json'},
@@ -1026,7 +1108,8 @@ class SolanaWalletService {
 
   String _fallbackName(String mint) {
     final normalized = WalletUtils.canonical(mint);
-    final short = normalized.length >= 6 ? normalized.substring(0, 6) : normalized;
+    final short =
+        normalized.length >= 6 ? normalized.substring(0, 6) : normalized;
     return 'Token ${short.toUpperCase()}';
   }
 
@@ -1072,7 +1155,8 @@ class SolanaWalletService {
     return normalized;
   }
 
-  Future<Map<String, dynamic>> _getTokenInfo(String mint, {int? decimalsHint}) async {
+  Future<Map<String, dynamic>> _getTokenInfo(String mint,
+      {int? decimalsHint}) async {
     final normalizedMint = WalletUtils.canonical(mint);
     final cached = _tokenMetadataCache[normalizedMint];
     if (cached != null && !cached.isExpired(_tokenMetadataCacheTtl)) {
@@ -1101,26 +1185,28 @@ class SolanaWalletService {
         if (metadataUri.isNotEmpty) base['uri'] = metadataUri;
 
         try {
-            final offChain =
-                await metadata.getExternalJson().timeout(const Duration(seconds: 6));
-            if (offChain != null) {
-              base['description'] = offChain.description;
-              final offChainName = offChain.name.trim();
-              if (offChainName.isNotEmpty) {
-                base['name'] = offChainName;
-              }
-              final offChainSymbol = offChain.symbol.trim();
-              if (offChainSymbol.isNotEmpty) {
-                base['symbol'] = offChainSymbol;
-              }
-              final resolvedImage = _resolveTokenImage(offChain.image);
-              if (resolvedImage != null) {
-                base['logoUrl'] = resolvedImage;
-              }
-              base['rawOffChainMetadata'] = offChain.toJson();
+          final offChain = await metadata
+              .getExternalJson()
+              .timeout(const Duration(seconds: 6));
+          if (offChain != null) {
+            base['description'] = offChain.description;
+            final offChainName = offChain.name.trim();
+            if (offChainName.isNotEmpty) {
+              base['name'] = offChainName;
             }
+            final offChainSymbol = offChain.symbol.trim();
+            if (offChainSymbol.isNotEmpty) {
+              base['symbol'] = offChainSymbol;
+            }
+            final resolvedImage = _resolveTokenImage(offChain.image);
+            if (resolvedImage != null) {
+              base['logoUrl'] = resolvedImage;
+            }
+            base['rawOffChainMetadata'] = offChain.toJson();
+          }
         } catch (e) {
-          debugPrint('SolanaWalletService: Failed to fetch off-chain metadata for $mint -> $e');
+          debugPrint(
+              'SolanaWalletService: Failed to fetch off-chain metadata for $mint -> $e');
         }
       }
     } catch (e) {
@@ -1130,7 +1216,8 @@ class SolanaWalletService {
     base['logoUrl'] ??= _knownTokens[normalizedMint]?['logoUrl'];
     base['decimals'] ??= decimalsHint ?? ApiKeys.kub8Decimals;
 
-    final sanitized = Map<String, dynamic>.from(base)..removeWhere((key, value) => value == null);
+    final sanitized = Map<String, dynamic>.from(base)
+      ..removeWhere((key, value) => value == null);
     _tokenMetadataCache[normalizedMint] = _TokenMetadataCacheEntry(
       data: sanitized,
       timestamp: DateTime.now(),

@@ -7,8 +7,6 @@ import 'package:art_kubus/models/user_persona.dart';
 import 'package:art_kubus/providers/dao_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
-import 'package:art_kubus/providers/wallet_provider.dart';
-import 'package:art_kubus/providers/web3provider.dart';
 import 'package:art_kubus/screens/auth/sign_in_screen.dart';
 import 'package:art_kubus/screens/desktop/desktop_shell.dart';
 import 'package:art_kubus/services/auth_onboarding_service.dart';
@@ -17,6 +15,7 @@ import 'package:art_kubus/services/notification_helper.dart';
 import 'package:art_kubus/services/onboarding_state_service.dart';
 import 'package:art_kubus/services/push_notification_service.dart';
 import 'package:art_kubus/services/telemetry/telemetry_service.dart';
+import 'package:art_kubus/services/wallet_session_sync_service.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/dao_role_verification.dart';
 import 'package:art_kubus/utils/media_url_resolver.dart';
@@ -278,7 +277,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   bool get _isWelcomePhase => _branch == _OnboardingBranch.none;
 
   UserPersona? get _effectivePersona {
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
     return _selectedPersona ?? profileProvider.userPersona;
   }
 
@@ -348,8 +348,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       // wizard.
       final initialStepId = widget.initialStepId?.trim();
       if (initialStepId != null && initialStepId.isNotEmpty) {
-        final accountStepIds =
-            AuthOnboardingService.accountStepIds.toSet();
+        final accountStepIds = AuthOnboardingService.accountStepIds.toSet();
         const guestStepIds = {'guestPermissions'};
         if (accountStepIds.contains(initialStepId)) {
           _branch = _OnboardingBranch.account;
@@ -518,7 +517,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     _daoDraft = _normalizeDaoDraftForPersona(_selectedPersona);
   }
 
-  _DaoApplicationDraftRecord? _normalizeDaoDraftForPersona(UserPersona? persona) {
+  _DaoApplicationDraftRecord? _normalizeDaoDraftForPersona(
+      UserPersona? persona) {
     if (persona == null || persona == UserPersona.lover) {
       return null;
     }
@@ -533,7 +533,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       isInstitution: isInstitution,
       title: isInstitution ? (existing?.title ?? profileName) : '',
       contact: isInstitution ? (existing?.contact ?? profileWebsite) : '',
-      portfolioUrl: isInstitution ? '' : (existing?.portfolioUrl ?? profileWebsite),
+      portfolioUrl:
+          isInstitution ? '' : (existing?.portfolioUrl ?? profileWebsite),
       medium: existing?.medium ?? '',
       statement: existing?.statement ?? '',
     );
@@ -613,50 +614,13 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         : _currentSessionWalletAddress();
     if (sessionWallet.isEmpty) return;
 
-    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final web3Provider = Provider.of<Web3Provider>(context, listen: false);
-    final api = BackendApiService();
-    api.setPreferredWalletAddress(sessionWallet);
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('wallet_address', sessionWallet);
-      await prefs.setString('walletAddress', sessionWallet);
-      await prefs.setString('wallet', sessionWallet);
-      await prefs.setBool('has_wallet', true);
-      final normalizedUserId = (userId ?? '').toString().trim();
-      if (normalizedUserId.isNotEmpty) {
-        await prefs.setString('user_id', normalizedUserId);
-      }
-    } catch (_) {
-      // Keep onboarding completion resilient when local persistence fails.
-    }
-
-    final currentWallet = (walletProvider.currentWalletAddress ?? '').trim();
-    if (currentWallet != sessionWallet) {
-      try {
-        await walletProvider
-            .connectWalletWithAddress(sessionWallet)
-            .timeout(const Duration(seconds: 8));
-      } catch (_) {
-        // The wallet address is already persisted; provider can recover on next app start.
-      }
-    }
-
-    try {
-      if (!web3Provider.isConnected ||
-          web3Provider.walletAddress != sessionWallet) {
-        unawaited(() async {
-          try {
-            await web3Provider
-                .connectExistingWallet(sessionWallet)
-                .timeout(const Duration(seconds: 8));
-          } catch (_) {}
-        }());
-      }
-    } catch (_) {
-      // Best-effort only.
-    }
+    await const WalletSessionSyncService().bindAuthenticatedWallet(
+      context: context,
+      walletAddress: sessionWallet,
+      userId: userId,
+      warmUp: false,
+      loadProfile: true,
+    );
   }
 
   void _showVerificationSnack(
@@ -740,8 +704,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
             permission == LocationPermission.always;
         if (granted) _webLocationGrantedOverride = true;
         if (granted) return true;
-      } catch (_) {
-      }
+      } catch (_) {}
 
       // Fallback: keep UI accurate if Geolocator.checkPermission() is stale on
       // some browsers by consulting permission_handler as a secondary signal.
@@ -1507,7 +1470,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     final user = (data['user'] as Map<String, dynamic>?) ?? data;
     final signedInEmail = (user['email'] ?? '').toString().trim().toLowerCase();
     final signedInWallet =
-        (user['walletAddress'] ?? user['wallet_address'] ?? '').toString().trim();
+        (user['walletAddress'] ?? user['wallet_address'] ?? '')
+            .toString()
+            .trim();
     final pendingEmail = (_pendingVerificationEmail ?? '').trim().toLowerCase();
     var shouldPersistDrafts = false;
     if (pendingEmail.isNotEmpty && signedInEmail == pendingEmail) {
@@ -1528,8 +1493,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     }
 
     await _syncWalletSessionIntoProviders(
-      preferredWalletAddress:
-          signedInWallet.isEmpty ? null : signedInWallet,
+      preferredWalletAddress: signedInWallet.isEmpty ? null : signedInWallet,
       userId: user['id'],
     );
     _refreshAuthDerivedSteps();
@@ -1925,9 +1889,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
                                     ? Theme.of(context).textTheme.titleMedium
                                     : Theme.of(context).textTheme.titleLarge)
                                 ?.copyWith(
-                                  color: scheme.onSurface,
-                                  fontWeight: FontWeight.w800,
-                                ),
+                              color: scheme.onSurface,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                         ),
                       ),
@@ -1952,13 +1916,14 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
                 onPressed: _isSkippingFlow ? null : _skipForNow,
                 style: TextButton.styleFrom(
                   foregroundColor: scheme.onSurface,
-                  backgroundColor:
-                      scheme.surface.withValues(alpha: headerCompact ? 0.78 : 0.7),
+                  backgroundColor: scheme.surface
+                      .withValues(alpha: headerCompact ? 0.78 : 0.7),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(999),
                   ),
                   padding: EdgeInsets.symmetric(
-                    horizontal: headerCompact ? KubusSpacing.sm : KubusSpacing.md,
+                    horizontal:
+                        headerCompact ? KubusSpacing.sm : KubusSpacing.md,
                     vertical: headerCompact ? 8 : 10,
                   ),
                   minimumSize: Size(headerCompact ? 56 : 72, 40),
@@ -2034,9 +1999,10 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           title: l10n.onboardingFlowAccountTitle,
           body: l10n.onboardingFlowAccountBody,
           verifyHint: l10n.onboardingFlowAccountVerifyHint,
-          profileDisplayName:
-              (_localProfileDraft['displayName'] ?? currentProfile?.displayName ?? '')
-                  .trim(),
+          profileDisplayName: (_localProfileDraft['displayName'] ??
+                  currentProfile?.displayName ??
+                  '')
+              .trim(),
           onAuthCompleted: _handleEmbeddedRegistrationSuccess,
           onEmailRegistrationAttempted:
               _handleEmbeddedEmailRegistrationAttempted,
@@ -2065,7 +2031,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       case _OnboardingStep.role:
         final profileProvider =
             Provider.of<ProfileProvider>(context, listen: false);
-        final personaSelection = _selectedPersona ?? profileProvider.userPersona;
+        final personaSelection =
+            _selectedPersona ?? profileProvider.userPersona;
         content = _RoleStep(
           title: l10n.onboardingFlowRoleTitle,
           body: l10n.onboardingFlowRoleBody,
@@ -2507,7 +2474,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
                                 isDark: isDark,
                                 scheme: scheme,
                                 discoverTitle: l10n.commonDiscoverArt,
-                                discoverBody: l10n.onboardingWelcomeDiscoverBody,
+                                discoverBody:
+                                    l10n.onboardingWelcomeDiscoverBody,
                                 createTitle: l10n.commonCreateAccount,
                                 createBody: l10n.onboardingFlowAccountBody,
                                 onSelectGuest: _selectGuestBranch,
@@ -2618,9 +2586,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     }
 
     return AnimatedGradientBackground(
-        animate: !isWidgetTestBinding,
-        colors: [bgStart, bgMid, bgAccent, bgEnd, bgStart],
-        intensity: 0.3,
+      animate: !isWidgetTestBinding,
+      colors: [bgStart, bgMid, bgAccent, bgEnd, bgStart],
+      intensity: 0.3,
       child: Theme(
         data: onboardingTheme,
         child: Scaffold(
@@ -2808,10 +2776,10 @@ class _AccountStepState extends State<_AccountStep> {
                   : AuthMethodsPanel(
                       embedded: true,
                       onAuthSuccess: widget.onAuthCompleted,
-                      preferredEmailGreetingName: widget
-                              .profileDisplayName.trim().isEmpty
-                          ? null
-                          : widget.profileDisplayName.trim(),
+                      preferredEmailGreetingName:
+                          widget.profileDisplayName.trim().isEmpty
+                              ? null
+                              : widget.profileDisplayName.trim(),
                       prepareProvisionalProfileBeforeRegister: false,
                       onEmailRegistrationAttempted: (email) =>
                           unawaited(widget.onEmailRegistrationAttempted(email)),
@@ -2896,9 +2864,8 @@ class _OnboardingAuthModeButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected
-          ? Colors.white.withValues(alpha: 0.16)
-          : Colors.transparent,
+      color:
+          selected ? Colors.white.withValues(alpha: 0.16) : Colors.transparent,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -3227,24 +3194,24 @@ class _VerifyEmailStep extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: Theme.of(context)
-                    .textTheme
-                    .headlineSmall
-                    ?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white),
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w700, color: Colors.white),
                 maxLines: 3,
                 overflow: TextOverflow.visible,
               ),
               const SizedBox(height: KubusSpacing.sm),
               Text(body,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.85))),
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyLarge
+                      ?.copyWith(color: Colors.white.withValues(alpha: 0.85))),
               const SizedBox(height: KubusSpacing.sm),
               Text(
                 AppLocalizations.of(context)!.commonSignIn,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.7)),
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyMedium
+                    ?.copyWith(color: Colors.white.withValues(alpha: 0.7)),
               ),
               const Spacer(),
             ],
@@ -3343,15 +3310,15 @@ class _InlineVerificationPanelState extends State<_InlineVerificationPanel> {
             style: Theme.of(context)
                 .textTheme
                 .headlineSmall
-                ?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white),
+                ?.copyWith(fontWeight: FontWeight.w700, color: Colors.white),
             maxLines: 3,
             overflow: TextOverflow.visible),
         const SizedBox(height: KubusSpacing.sm),
         Text(widget.body,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Colors.white.withValues(alpha: 0.85))),
+            style: Theme.of(context)
+                .textTheme
+                .bodyLarge
+                ?.copyWith(color: Colors.white.withValues(alpha: 0.85))),
         const SizedBox(height: 12),
         if (widget.email.isNotEmpty)
           Text(
@@ -3816,8 +3783,9 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
         : isCreator
             ? 'Set up your public creator profile now so your review submission has the right context.'
             : widget.body;
-    final displayNameLabel =
-        isInstitution ? 'Organization name' : l10n.desktopSettingsDisplayNameLabel;
+    final displayNameLabel = isInstitution
+        ? 'Organization name'
+        : l10n.desktopSettingsDisplayNameLabel;
     final bioLabel =
         isInstitution ? 'About your institution' : l10n.desktopSettingsBioLabel;
 
@@ -3828,15 +3796,15 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
             style: Theme.of(context)
                 .textTheme
                 .headlineSmall
-                ?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white),
+                ?.copyWith(fontWeight: FontWeight.w700, color: Colors.white),
             maxLines: 3,
             overflow: TextOverflow.visible),
         const SizedBox(height: KubusSpacing.sm),
         Text(introBody,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Colors.white.withValues(alpha: 0.85))),
+            style: Theme.of(context)
+                .textTheme
+                .bodyLarge
+                ?.copyWith(color: Colors.white.withValues(alpha: 0.85))),
         const SizedBox(height: 12),
         Expanded(
           child: SingleChildScrollView(
@@ -4052,8 +4020,8 @@ class _DaoReviewStepState extends State<_DaoReviewStep> {
       walletAddress: '',
       review: widget.review,
     );
-    final isSatisfied = verification.isApprovedFor(role) ||
-        verification.isPendingFor(role);
+    final isSatisfied =
+        verification.isApprovedFor(role) || verification.isPendingFor(role);
     final status = widget.review?.status.toLowerCase() ?? '';
     final statusLabel = status.isEmpty ? null : 'Current status: $status';
 
@@ -4134,7 +4102,8 @@ class _DaoReviewStepState extends State<_DaoReviewStep> {
                 TextField(
                   controller: _medium,
                   decoration: InputDecoration(
-                    labelText: isInstitution ? 'Institution focus' : 'Primary medium',
+                    labelText:
+                        isInstitution ? 'Institution focus' : 'Primary medium',
                   ),
                   onChanged: (_) => unawaited(_saveDraft()),
                 ),
@@ -4295,9 +4264,7 @@ class _PermissionsStep extends StatelessWidget {
             style: Theme.of(context)
                 .textTheme
                 .headlineSmall
-                ?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white),
+                ?.copyWith(fontWeight: FontWeight.w700, color: Colors.white),
             maxLines: 3,
             overflow: TextOverflow.visible),
         const SizedBox(height: KubusSpacing.sm),
@@ -4328,8 +4295,10 @@ class _PermissionsStep extends StatelessWidget {
             padding: const EdgeInsets.only(top: 6),
             child: Text(
               hint!,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.6)),
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: Colors.white.withValues(alpha: 0.6)),
             ),
           ),
         const Spacer(),
@@ -4363,8 +4332,7 @@ class _PermissionTile extends StatelessWidget {
           ? Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.check_circle,
-                    color: Color(0xFF81C784)),
+                const Icon(Icons.check_circle, color: Color(0xFF81C784)),
                 const SizedBox(width: KubusSpacing.xs),
                 Text(
                   l10n.permissionsGrantedLabel,
@@ -4438,8 +4406,10 @@ class _DoneStep extends StatelessWidget {
                 overflow: TextOverflow.visible),
             const SizedBox(height: KubusSpacing.sm),
             Text(body,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.85))),
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyLarge
+                    ?.copyWith(color: Colors.white.withValues(alpha: 0.85))),
             const Spacer(),
           ],
         );

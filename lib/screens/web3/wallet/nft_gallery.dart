@@ -8,7 +8,7 @@ import '../../../config/config.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../models/collectible.dart';
 import '../../../providers/collectibles_provider.dart';
-import '../../../providers/web3provider.dart';
+import '../../../providers/wallet_provider.dart';
 import '../../../utils/app_color_utils.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../utils/rarity_ui.dart';
@@ -32,7 +32,9 @@ class _NFTGalleryState extends State<NFTGallery> {
     _requestedInit = true;
 
     final provider = Provider.of<CollectiblesProvider>(context, listen: false);
-    if (!provider.isLoading && provider.allSeries.isEmpty && provider.allCollectibles.isEmpty) {
+    if (!provider.isLoading &&
+        provider.allSeries.isEmpty &&
+        provider.allCollectibles.isEmpty) {
       unawaited(provider.initialize(loadMockIfEmpty: AppConfig.isDevelopment));
     }
   }
@@ -65,27 +67,32 @@ class _NFTGalleryState extends State<NFTGallery> {
           IconButton(
             icon: Icon(Icons.refresh, color: scheme.onSurface),
             onPressed: () {
-              final provider = Provider.of<CollectiblesProvider>(context, listen: false);
-              unawaited(provider.initialize(loadMockIfEmpty: AppConfig.isDevelopment));
+              final provider =
+                  Provider.of<CollectiblesProvider>(context, listen: false);
+              unawaited(provider.initialize(
+                  loadMockIfEmpty: AppConfig.isDevelopment));
             },
             tooltip: l10n.commonRefresh,
           ),
         ],
       ),
-      body: Consumer2<Web3Provider, CollectiblesProvider>(
-        builder: (context, web3Provider, collectiblesProvider, _) {
-          final walletAddress = web3Provider.walletAddress.trim();
+      body: Consumer2<WalletProvider, CollectiblesProvider>(
+        builder: (context, walletProvider, collectiblesProvider, _) {
+          final walletAddress =
+              (walletProvider.currentWalletAddress ?? '').trim();
           if (walletAddress.isEmpty) {
             return Center(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0, vertical: 24.0),
                 child: EmptyStateCard(
                   icon: Icons.account_balance_wallet,
                   title: 'Connect your wallet',
                   description: 'Connect a wallet to view your collectibles.',
                   showAction: true,
                   actionLabel: 'Connect Wallet',
-                  onAction: () => Navigator.of(context).pushNamed('/connect-wallet'),
+                  onAction: () =>
+                      Navigator.of(context).pushNamed('/connect-wallet'),
                 ),
               ),
             );
@@ -97,11 +104,13 @@ class _NFTGalleryState extends State<NFTGallery> {
             return const AppLoading();
           }
 
-          final owned = collectiblesProvider.getCollectiblesByOwner(walletAddress);
+          final owned =
+              collectiblesProvider.getCollectiblesByOwner(walletAddress);
           if (owned.isEmpty) {
             return Center(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0, vertical: 24.0),
                 child: EmptyStateCard(
                   icon: Icons.diamond_outlined,
                   title: 'No collectibles yet',
@@ -113,7 +122,8 @@ class _NFTGalleryState extends State<NFTGallery> {
           }
 
           final seriesById = <String, CollectibleSeries>{
-            for (final series in collectiblesProvider.allSeries) series.id: series,
+            for (final series in collectiblesProvider.allSeries)
+              series.id: series,
           };
 
           return LayoutBuilder(
@@ -139,7 +149,8 @@ class _NFTGalleryState extends State<NFTGallery> {
                 itemBuilder: (context, index) {
                   final collectible = owned[index];
                   final series = seriesById[collectible.seriesId];
-                  return _buildCollectibleCard(context, collectible, series, isSmallScreen);
+                  return _buildCollectibleCard(
+                      context, collectible, series, isSmallScreen);
                 },
               );
             },
@@ -158,7 +169,9 @@ class _NFTGalleryState extends State<NFTGallery> {
     final scheme = Theme.of(context).colorScheme;
     final title = series?.name ?? 'Collectible';
     final rawImage = series?.imageUrl ?? series?.animationUrl;
-    final resolvedImage = rawImage == null ? null : (MediaUrlResolver.resolve(rawImage) ?? rawImage);
+    final resolvedImage = rawImage == null
+        ? null
+        : (MediaUrlResolver.resolve(rawImage) ?? rawImage);
     final rarityColor = series != null
         ? RarityUi.collectibleColor(context, series.rarity)
         : AppColorUtils.tealAccent;
@@ -175,7 +188,8 @@ class _NFTGalleryState extends State<NFTGallery> {
           Expanded(
             flex: 3,
             child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(16)),
               child: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -183,7 +197,8 @@ class _NFTGalleryState extends State<NFTGallery> {
                     Image.network(
                       resolvedImage,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _imageFallback(rarityColor, scheme),
+                      errorBuilder: (_, __, ___) =>
+                          _imageFallback(rarityColor, scheme),
                     )
                   else
                     _imageFallback(rarityColor, scheme),
@@ -191,11 +206,13 @@ class _NFTGalleryState extends State<NFTGallery> {
                     top: 12,
                     right: 12,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: scheme.surface.withValues(alpha: 0.85),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: scheme.outline.withValues(alpha: 0.2)),
+                        border: Border.all(
+                            color: scheme.outline.withValues(alpha: 0.2)),
                       ),
                       child: Text(
                         collectible.status.name.toUpperCase(),

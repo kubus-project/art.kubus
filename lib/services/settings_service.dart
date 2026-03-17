@@ -123,7 +123,7 @@ class SettingsService {
       await PushNotificationService().cancelAllNotifications();
     } catch (_) {}
 
-    walletProvider.disconnectWallet();
+    await walletProvider.disconnectWallet(preserveAuthenticatedWallet: false);
 
     final prefs = await SharedPreferences.getInstance();
     const removeKeys = {

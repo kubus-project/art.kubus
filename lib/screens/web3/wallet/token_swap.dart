@@ -63,6 +63,9 @@ class _TokenSwapState extends State<TokenSwap> {
     final theme = Theme.of(context);
     const swapColor = AppColorUtils.greenAccent;
     final walletProvider = context.watch<WalletProvider>();
+    if (walletProvider.hasWalletIdentity && !walletProvider.canTransact) {
+      return _buildReadOnlyState(theme, swapColor);
+    }
     final tokens = _availableTokens(walletProvider);
     final hasTokens = tokens.isNotEmpty;
     final canFlip = tokens.length > 1;
@@ -135,6 +138,70 @@ class _TokenSwapState extends State<TokenSwap> {
                 },
               )
             : _buildEmptyState(theme, swapColor),
+      ),
+    );
+  }
+
+  Widget _buildReadOnlyState(ThemeData theme, Color swapColor) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: Text(
+          'Token Swap',
+          style: GoogleFonts.inter(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: theme.colorScheme.onSurface,
+          ),
+        ),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: theme.colorScheme.onSurface),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.lock_clock, size: 64, color: swapColor),
+                const SizedBox(height: 20),
+                Text(
+                  'Read-only wallet session',
+                  style: GoogleFonts.inter(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Reconnect to enable signing and transfers.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () =>
+                      Navigator.of(context).pushNamed('/connect-wallet'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: swapColor,
+                    foregroundColor: theme.colorScheme.onPrimary,
+                  ),
+                  child: const Text('Reconnect'),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

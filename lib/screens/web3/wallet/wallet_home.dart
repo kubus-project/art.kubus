@@ -7,7 +7,6 @@ import '../../../providers/wallet_provider.dart';
 import '../../../providers/navigation_provider.dart';
 import '../../../widgets/app_loading.dart';
 import 'mnemonic_reveal_screen.dart';
-import '../../../providers/web3provider.dart';
 import '../../../models/wallet.dart';
 import 'nft_gallery.dart';
 import 'token_swap.dart';
@@ -22,7 +21,7 @@ class WalletHome extends StatefulWidget {
   const WalletHome({super.key});
 
   @override
- State<WalletHome> createState() => _WalletHomeState();
+  State<WalletHome> createState() => _WalletHomeState();
 }
 
 class _WalletHomeState extends State<WalletHome> {
@@ -31,7 +30,8 @@ class _WalletHomeState extends State<WalletHome> {
     super.initState();
     // Track this screen visit for quick actions
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<NavigationProvider>(context, listen: false).trackScreenVisit('wallet');
+      Provider.of<NavigationProvider>(context, listen: false)
+          .trackScreenVisit('wallet');
     });
   }
 
@@ -44,7 +44,9 @@ class _WalletHomeState extends State<WalletHome> {
         final walletAddress = walletProvider.currentWalletAddress;
         final tokens = walletProvider.tokens;
         final isLoading = walletProvider.isLoading;
-        
+        final isReadOnlySession = walletProvider.isReadOnlySession;
+        final canTransact = walletProvider.canTransact;
+
         // Show loading indicator while wallet is loading
         if (isLoading) {
           return Scaffold(
@@ -72,7 +74,10 @@ class _WalletHomeState extends State<WalletHome> {
                   Text(
                     l10n.walletHomeLoadingLabel,
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.7),
                       fontSize: 16,
                     ),
                   ),
@@ -81,7 +86,7 @@ class _WalletHomeState extends State<WalletHome> {
             ),
           );
         }
-        
+
         // Show empty state if no wallet data AND no address
         if (wallet == null && walletAddress == null) {
           return Scaffold(
@@ -101,14 +106,16 @@ class _WalletHomeState extends State<WalletHome> {
               ),
               actions: [
                 IconButton(
-                  icon: Icon(Icons.settings, color: Theme.of(context).colorScheme.onSurface),
+                  icon: Icon(Icons.settings,
+                      color: Theme.of(context).colorScheme.onSurface),
                   onPressed: _showWalletSettings,
                 ),
               ],
             ),
             body: Center(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0, vertical: 24.0),
                 child: EmptyStateCard(
                   icon: Icons.account_balance_wallet_outlined,
                   title: l10n.settingsNoWalletConnected,
@@ -116,12 +123,16 @@ class _WalletHomeState extends State<WalletHome> {
                   showAction: true,
                   actionLabel: l10n.authConnectWalletButton,
                   onAction: () {
-                    final web3Provider = Provider.of<Web3Provider>(context, listen: false);
-                    if (!web3Provider.isConnected) {
-                      Navigator.pushReplacementNamed(context, '/connect_wallet');
+                    final walletProvider =
+                        Provider.of<WalletProvider>(context, listen: false);
+                    if (!walletProvider.hasWalletIdentity) {
+                      Navigator.pushReplacementNamed(
+                          context, '/connect-wallet');
                     } else {
                       ScaffoldMessenger.of(context).showKubusSnackBar(
-                        SnackBar(content: Text(l10n.walletHomeAlreadyConnectedToast)),
+                        SnackBar(
+                            content:
+                                Text(l10n.walletHomeAlreadyConnectedToast)),
                       );
                     }
                   },
@@ -130,11 +141,11 @@ class _WalletHomeState extends State<WalletHome> {
             ),
           );
         }
-        
+
         return LayoutBuilder(
           builder: (context, constraints) {
             bool isSmallScreen = constraints.maxWidth < 600;
-            
+
             return Scaffold(
               backgroundColor: Colors.transparent,
               appBar: AppBar(
@@ -152,16 +163,19 @@ class _WalletHomeState extends State<WalletHome> {
                 ),
                 actions: [
                   IconButton(
-                    icon: Icon(Icons.vpn_key, color: Theme.of(context).colorScheme.onSurface),
+                    icon: Icon(Icons.vpn_key,
+                        color: Theme.of(context).colorScheme.onSurface),
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const MnemonicRevealScreen()),
+                        MaterialPageRoute(
+                            builder: (context) => const MnemonicRevealScreen()),
                       );
                     },
                   ),
                   IconButton(
-                    icon: Icon(Icons.settings, color: Theme.of(context).colorScheme.onSurface),
+                    icon: Icon(Icons.settings,
+                        color: Theme.of(context).colorScheme.onSurface),
                     onPressed: _showWalletSettings,
                   ),
                 ],
@@ -187,7 +201,8 @@ class _WalletHomeState extends State<WalletHome> {
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColorUtils.amberAccent.withValues(alpha: 0.3),
+                            color: AppColorUtils.amberAccent
+                                .withValues(alpha: 0.3),
                             blurRadius: 20,
                             offset: const Offset(0, 10),
                           ),
@@ -203,25 +218,35 @@ class _WalletHomeState extends State<WalletHome> {
                                 l10n.walletHomeTotalBalanceLabel,
                                 style: GoogleFonts.inter(
                                   fontSize: isSmallScreen ? 14 : 16,
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.8),
                                 ),
                               ),
                               GestureDetector(
                                 onTap: () {
                                   // Show full address and copy to clipboard
-                                  final address = wallet?.address ?? walletAddress ?? '';
-                                  ScaffoldMessenger.of(context).showKubusSnackBar(
+                                  final address =
+                                      wallet?.address ?? walletAddress ?? '';
+                                  ScaffoldMessenger.of(context)
+                                      .showKubusSnackBar(
                                     SnackBar(
-                                      content: Text(l10n.walletHomeAddressLabel(address)),
+                                      content: Text(
+                                          l10n.walletHomeAddressLabel(address)),
                                       action: SnackBarAction(
                                         label: l10n.commonCopy,
                                         onPressed: () async {
-                                          await Clipboard.setData(ClipboardData(text: address));
+                                          await Clipboard.setData(
+                                              ClipboardData(text: address));
                                           if (context.mounted) {
-                                            ScaffoldMessenger.of(context).showKubusSnackBar(
+                                            ScaffoldMessenger.of(context)
+                                                .showKubusSnackBar(
                                               SnackBar(
-                                                content: Text(l10n.walletHomeAddressCopiedToast),
-                                                duration: const Duration(seconds: 2),
+                                                content: Text(l10n
+                                                    .walletHomeAddressCopiedToast),
+                                                duration:
+                                                    const Duration(seconds: 2),
                                               ),
                                             );
                                           }
@@ -231,16 +256,23 @@ class _WalletHomeState extends State<WalletHome> {
                                   );
                                 },
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 6),
                                   decoration: BoxDecoration(
-                                    color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2),
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onPrimary
+                                        .withValues(alpha: 0.2),
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Text(
-                                    wallet?.shortAddress ?? _shortenAddress(walletAddress ?? ''),
+                                    wallet?.shortAddress ??
+                                        _shortenAddress(walletAddress ?? ''),
                                     style: GoogleFonts.inter(
                                       fontSize: isSmallScreen ? 12 : 14,
-                                      color: Theme.of(context).colorScheme.onSurface,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
@@ -259,7 +291,8 @@ class _WalletHomeState extends State<WalletHome> {
                                 style: GoogleFonts.inter(
                                   fontSize: isSmallScreen ? 36 : 48,
                                   fontWeight: FontWeight.bold,
-                                  color: Theme.of(context).colorScheme.onSurface,
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
                               const SizedBox(width: 8),
@@ -268,7 +301,10 @@ class _WalletHomeState extends State<WalletHome> {
                                 style: GoogleFonts.inter(
                                   fontSize: isSmallScreen ? 16 : 20,
                                   fontWeight: FontWeight.w600,
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.9),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.9),
                                 ),
                               ),
                             ],
@@ -282,7 +318,10 @@ class _WalletHomeState extends State<WalletHome> {
                                 style: GoogleFonts.inter(
                                   fontSize: isSmallScreen ? 14 : 16,
                                   fontWeight: FontWeight.w500,
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.7),
                                 ),
                               ),
                               const SizedBox(width: 16),
@@ -291,24 +330,45 @@ class _WalletHomeState extends State<WalletHome> {
                                 style: GoogleFonts.inter(
                                   fontSize: isSmallScreen ? 14 : 16,
                                   fontWeight: FontWeight.w500,
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.7),
                                 ),
                               ),
                             ],
                           ),
+                          if (isReadOnlySession) ...[
+                            SizedBox(height: isSmallScreen ? 12 : 16),
+                            Text(
+                              'Reconnect to enable signing and transfers.',
+                              style: GoogleFonts.inter(
+                                fontSize: isSmallScreen ? 13 : 14,
+                                fontWeight: FontWeight.w500,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.85),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
-                    
+
                     SizedBox(height: isSmallScreen ? 16 : 20),
-                    
+
                     // Action Buttons (Separated from balance card)
                     Container(
                       padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
                       decoration: BoxDecoration(
                         color: Theme.of(context).colorScheme.surface,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3)),
+                        border: Border.all(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .outline
+                                .withValues(alpha: 0.3)),
                       ),
                       child: Row(
                         children: [
@@ -317,11 +377,22 @@ class _WalletHomeState extends State<WalletHome> {
                               l10n.walletHomeActionSend,
                               Icons.arrow_upward,
                               AppColorUtils.coralAccent, // Send
-                              () => Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => const SendTokenScreen()),
-                              ),
+                              () {
+                                if (!canTransact) {
+                                  Navigator.of(context)
+                                      .pushNamed('/connect-wallet');
+                                  return;
+                                }
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) =>
+                                          const SendTokenScreen()),
+                                );
+                              },
                               isSmallScreen,
+                              buttonKey: const Key('wallet_home_action_send'),
+                              enabled: canTransact,
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -332,9 +403,13 @@ class _WalletHomeState extends State<WalletHome> {
                               AppColorUtils.indigoAccent, // Receive
                               () => Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (context) => const ReceiveTokenScreen()),
+                                MaterialPageRoute(
+                                    builder: (context) =>
+                                        const ReceiveTokenScreen()),
                               ),
                               isSmallScreen,
+                              buttonKey:
+                                  const Key('wallet_home_action_receive'),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -343,11 +418,22 @@ class _WalletHomeState extends State<WalletHome> {
                               l10n.walletHomeActionSwap,
                               Icons.swap_horiz,
                               AppColorUtils.greenAccent, // Swap
-                              () => Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => const TokenSwap()),
-                              ),
+                              () {
+                                if (!canTransact) {
+                                  Navigator.of(context)
+                                      .pushNamed('/connect-wallet');
+                                  return;
+                                }
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) =>
+                                          const TokenSwap()),
+                                );
+                              },
                               isSmallScreen,
+                              buttonKey: const Key('wallet_home_action_swap'),
+                              enabled: canTransact,
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -358,17 +444,19 @@ class _WalletHomeState extends State<WalletHome> {
                               AppColorUtils.tealAccent, // NFTs
                               () => Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (context) => const NFTGallery()),
+                                MaterialPageRoute(
+                                    builder: (context) => const NFTGallery()),
                               ),
                               isSmallScreen,
+                              buttonKey: const Key('wallet_home_action_nfts'),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    
+
                     SizedBox(height: isSmallScreen ? 24 : 32),
-                    
+
                     // Tokens Section
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -383,72 +471,92 @@ class _WalletHomeState extends State<WalletHome> {
                         ),
                       ],
                     ),
-                    
+
                     SizedBox(height: isSmallScreen ? 12 : 16),
-                    
+
                     // Token List
                     Column(
-                      children: tokens.map((token) => Container(
-                        margin: EdgeInsets.only(bottom: isSmallScreen ? 8 : 12),
-                        padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surface,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3)),
-                        ),
-                        child: Row(
-                          children: [
-                            _buildTokenAvatar(token),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    token.name,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: Theme.of(context).colorScheme.onSurface,
-                                    ),
-                                  ),
-                                  Text(
-                                    token.symbol,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 14,
-                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  token.balance.toStringAsFixed(4),
-                                  style: GoogleFonts.inter(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: Theme.of(context).colorScheme.onSurface,
-                                  ),
+                      children: tokens
+                          .map((token) => Container(
+                                margin: EdgeInsets.only(
+                                    bottom: isSmallScreen ? 8 : 12),
+                                padding:
+                                    EdgeInsets.all(isSmallScreen ? 12 : 16),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.surface,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .outline
+                                          .withValues(alpha: 0.3)),
                                 ),
-                                Text(
-                                  '\$${token.value.toStringAsFixed(2)}',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14,
-                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                                  ),
+                                child: Row(
+                                  children: [
+                                    _buildTokenAvatar(token),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            token.name,
+                                            style: GoogleFonts.inter(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurface,
+                                            ),
+                                          ),
+                                          Text(
+                                            token.symbol,
+                                            style: GoogleFonts.inter(
+                                              fontSize: 14,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurface
+                                                  .withValues(alpha: 0.7),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
+                                      children: [
+                                        Text(
+                                          token.balance.toStringAsFixed(4),
+                                          style: GoogleFonts.inter(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface,
+                                          ),
+                                        ),
+                                        Text(
+                                          '\$${token.value.toStringAsFixed(2)}',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 14,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface
+                                                .withValues(alpha: 0.7),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      )).toList(),
+                              ))
+                          .toList(),
                     ),
-                    
+
                     SizedBox(height: isSmallScreen ? 24 : 32),
-                    
+
                     // Recent Transactions
                     _buildRecentTransactions(isSmallScreen: isSmallScreen),
                   ],
@@ -475,7 +583,8 @@ class _WalletHomeState extends State<WalletHome> {
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.2)),
+        border:
+            Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.2)),
         color: theme.colorScheme.surfaceContainerHighest,
       ),
       child: Image.network(
@@ -546,12 +655,23 @@ class _WalletHomeState extends State<WalletHome> {
     return uri.hasScheme && (uri.scheme == 'https' || uri.scheme == 'http');
   }
 
-  Widget _buildActionButton(String title, IconData icon, Color color, VoidCallback onPressed, bool isSmallScreen) {
+  Widget _buildActionButton(
+    String title,
+    IconData icon,
+    Color color,
+    VoidCallback onPressed,
+    bool isSmallScreen, {
+    Key? buttonKey,
+    bool enabled = true,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    final effectiveColor = enabled ? color : color.withValues(alpha: 0.45);
     return Container(
+      key: buttonKey,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.5),
+        color: scheme.surface.withValues(alpha: enabled ? 0.5 : 0.35),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color, width: 1.5),
+        border: Border.all(color: effectiveColor, width: 1.5),
       ),
       child: Material(
         color: Colors.transparent,
@@ -567,7 +687,7 @@ class _WalletHomeState extends State<WalletHome> {
               children: [
                 Icon(
                   icon,
-                  color: color,
+                  color: effectiveColor,
                   size: isSmallScreen ? 20 : 24,
                 ),
                 SizedBox(height: isSmallScreen ? 4 : 8),
@@ -576,7 +696,9 @@ class _WalletHomeState extends State<WalletHome> {
                   style: GoogleFonts.inter(
                     fontSize: isSmallScreen ? 10 : 12,
                     fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
+                    color: enabled
+                        ? scheme.onSurface
+                        : scheme.onSurface.withValues(alpha: 0.65),
                   ),
                   textAlign: TextAlign.center,
                   maxLines: 1,
@@ -593,13 +715,15 @@ class _WalletHomeState extends State<WalletHome> {
   // Helper methods to get specific token balances
   double _getKub8Balance() {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final kub8Tokens = walletProvider.tokens.where((token) => token.symbol.toUpperCase() == 'KUB8');
+    final kub8Tokens = walletProvider.tokens
+        .where((token) => token.symbol.toUpperCase() == 'KUB8');
     return kub8Tokens.isNotEmpty ? kub8Tokens.first.balance : 0.0;
   }
 
   double _getSolBalance() {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final solTokens = walletProvider.tokens.where((token) => token.symbol.toUpperCase() == 'SOL');
+    final solTokens = walletProvider.tokens
+        .where((token) => token.symbol.toUpperCase() == 'SOL');
     return solTokens.isNotEmpty ? solTokens.first.balance : 0.0;
   }
 
@@ -677,74 +801,85 @@ class _WalletHomeState extends State<WalletHome> {
           )
         else
           ...recentTransactions.map((transaction) => Container(
-            margin: EdgeInsets.only(bottom: isSmallScreen ? 8 : 12),
-            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3)),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: _getTransactionColor(transaction.type).withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Icon(
-                    _getTransactionIcon(transaction.type),
-                    color: _getTransactionColor(transaction.type),
-                    size: 20,
-                  ),
+                margin: EdgeInsets.only(bottom: isSmallScreen ? 8 : 12),
+                padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .outline
+                          .withValues(alpha: 0.3)),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _transactionTypeLabel(transaction.type, l10n),
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                      Text(
-                        '${transaction.txHash.substring(0, 10)}...',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                child: Row(
                   children: [
-                    Text(
-                      '${transaction.amount.toStringAsFixed(4)} ${transaction.token}',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: _getTransactionColor(transaction.type)
+                            .withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Icon(
+                        _getTransactionIcon(transaction.type),
                         color: _getTransactionColor(transaction.type),
+                        size: 20,
                       ),
                     ),
-                    Text(
-                      _formatTime(transaction.timestamp),
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _transactionTypeLabel(transaction.type, l10n),
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                          Text(
+                            '${transaction.txHash.substring(0, 10)}...',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ],
                       ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          '${transaction.amount.toStringAsFixed(4)} ${transaction.token}',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: _getTransactionColor(transaction.type),
+                          ),
+                        ),
+                        Text(
+                          _formatTime(transaction.timestamp),
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
-          )),
+              )),
       ],
     );
   }
@@ -860,7 +995,8 @@ class _WalletHomeState extends State<WalletHome> {
                       ),
                       IconButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        icon: Icon(Icons.close, color: Theme.of(context).colorScheme.onSurface),
+                        icon: Icon(Icons.close,
+                            color: Theme.of(context).colorScheme.onSurface),
                         tooltip: l10n.commonClose,
                       ),
                     ],
@@ -886,10 +1022,15 @@ class _WalletHomeState extends State<WalletHome> {
                             margin: const EdgeInsets.only(bottom: 12),
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .outline
+                                    .withValues(alpha: 0.2),
                               ),
                             ),
                             child: Row(
@@ -898,7 +1039,8 @@ class _WalletHomeState extends State<WalletHome> {
                                   width: 40,
                                   height: 40,
                                   decoration: BoxDecoration(
-                                    color: _getTransactionColor(tx.type).withValues(alpha: 0.2),
+                                    color: _getTransactionColor(tx.type)
+                                        .withValues(alpha: 0.2),
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Icon(
@@ -910,14 +1052,17 @@ class _WalletHomeState extends State<WalletHome> {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         _transactionTypeLabel(tx.type, l10n),
                                         style: GoogleFonts.inter(
                                           fontSize: 14,
                                           fontWeight: FontWeight.w600,
-                                          color: Theme.of(context).colorScheme.onSurface,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface,
                                         ),
                                       ),
                                       const SizedBox(height: 2),

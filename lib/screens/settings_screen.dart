@@ -254,6 +254,7 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   Widget _buildUserSection(AppLocalizations l10n) {
     final web3Provider = Provider.of<Web3Provider>(context);
+    final walletProvider = Provider.of<WalletProvider>(context);
     final profileProvider = Provider.of<ProfileProvider>(context);
     final scheme = Theme.of(context).colorScheme;
     final headerColor = scheme.secondary;
@@ -311,14 +312,24 @@ class _SettingsScreenState extends State<SettingsScreen>
                         color: Theme.of(context).colorScheme.onPrimary,
                       ),
                     ),
-                    if (web3Provider.isConnected) ...[
+                    if (walletProvider.hasWalletIdentity) ...[
                       Text(
-                        web3Provider.formatAddress(web3Provider.walletAddress),
+                        web3Provider.formatAddress(
+                          walletProvider.currentWalletAddress ?? '',
+                        ),
                         style: GoogleFonts.robotoMono(
                           fontSize: 14,
                           color: Colors.white.withValues(alpha: 0.8),
                         ),
                       ),
+                      if (walletProvider.isReadOnlySession)
+                        Text(
+                          'Read-only wallet session',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: Colors.white.withValues(alpha: 0.75),
+                          ),
+                        ),
                     ] else ...[
                       Text(
                         l10n.settingsNoWalletConnected,
@@ -345,7 +356,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
             ],
           ),
-          if (web3Provider.isConnected) ...[
+          if (walletProvider.hasWalletIdentity) ...[
             const SizedBox(height: 20),
             Consumer<WalletProvider>(
               builder: (context, walletProvider, child) {
@@ -1039,16 +1050,16 @@ class _SettingsScreenState extends State<SettingsScreen>
       institutionRole ? l10n.commonOn : l10n.commonOff,
     );
 
-    final managedEmailEnabled = emailPreferencesProvider.preferences
-            .productUpdates ||
-        emailPreferencesProvider.preferences.newsletter ||
-        emailPreferencesProvider.preferences.communityDigest ||
-        emailPreferencesProvider.preferences.securityAlerts ||
-        emailPreferencesProvider.preferences.artNotifications ||
-        emailPreferencesProvider.preferences.communityNotifications ||
-        emailPreferencesProvider.preferences.daoNotifications ||
-        emailPreferencesProvider.preferences.artistHubNotifications ||
-        emailPreferencesProvider.preferences.institutionHubNotifications;
+    final managedEmailEnabled =
+        emailPreferencesProvider.preferences.productUpdates ||
+            emailPreferencesProvider.preferences.newsletter ||
+            emailPreferencesProvider.preferences.communityDigest ||
+            emailPreferencesProvider.preferences.securityAlerts ||
+            emailPreferencesProvider.preferences.artNotifications ||
+            emailPreferencesProvider.preferences.communityNotifications ||
+            emailPreferencesProvider.preferences.daoNotifications ||
+            emailPreferencesProvider.preferences.artistHubNotifications ||
+            emailPreferencesProvider.preferences.institutionHubNotifications;
     final emailNotificationsState = emailPreferencesProvider.canManage
         ? (managedEmailEnabled ? l10n.commonOn : l10n.commonOff)
         : (_emailNotifications ? l10n.commonOn : l10n.commonOff);
@@ -1127,11 +1138,13 @@ class _SettingsScreenState extends State<SettingsScreen>
             if (result == true && mounted) {
               final profileProvider =
                   Provider.of<ProfileProvider>(context, listen: false);
-              final web3Provider =
-                  Provider.of<Web3Provider>(context, listen: false);
-              if (web3Provider.isConnected &&
-                  web3Provider.walletAddress.isNotEmpty) {
-                await profileProvider.loadProfile(web3Provider.walletAddress);
+              final walletProvider =
+                  Provider.of<WalletProvider>(context, listen: false);
+              final walletAddress =
+                  (walletProvider.currentWalletAddress ?? '').trim();
+              if (walletProvider.hasWalletIdentity &&
+                  walletAddress.isNotEmpty) {
+                await profileProvider.loadProfile(walletAddress);
               }
             }
           },
@@ -1268,28 +1281,36 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   Widget _buildWalletSection(AppLocalizations l10n) {
-    final web3Provider = Provider.of<Web3Provider>(context);
+    final walletProvider = Provider.of<WalletProvider>(context);
     final scheme = Theme.of(context).colorScheme;
+    final walletStatusLabel = walletProvider.isReadOnlySession
+        ? '${l10n.settingsWalletConnectionConnected} (read-only)'
+        : walletProvider.hasWalletIdentity
+            ? l10n.settingsWalletConnectionConnected
+            : l10n.settingsWalletConnectionNotConnected;
     return _buildSection(
       l10n.settingsWalletSectionTitle,
       Icons.account_balance_wallet,
       [
         _buildSettingsTile(
           l10n.settingsWalletConnectionTileTitle,
-          web3Provider.isConnected
-              ? l10n.settingsWalletConnectionConnected
-              : l10n.settingsWalletConnectionNotConnected,
+          walletStatusLabel,
           Icons.link,
+          tileKey: const Key('settings_tile_wallet_connection'),
           onTap: () {
-            if (web3Provider.isConnected) {
-              web3Provider.disconnectWallet();
+            if (walletProvider.hasWalletIdentity) {
+              unawaited(walletProvider.disconnectWallet());
             } else {
-              // Navigate to connect wallet screen instead
               Navigator.of(context).pushNamed('/connect-wallet');
             }
           },
-          trailing: web3Provider.isConnected
-              ? Icon(Icons.check_circle, color: AppColorUtils.amberAccent)
+          trailing: walletProvider.hasWalletIdentity
+              ? Icon(
+                  walletProvider.isReadOnlySession
+                      ? Icons.visibility
+                      : Icons.check_circle,
+                  color: AppColorUtils.amberAccent,
+                )
               : Icon(Icons.error_outline, color: scheme.error),
         ),
         _buildSettingsTile(
@@ -1657,9 +1678,8 @@ class _SettingsScreenState extends State<SettingsScreen>
   // Dialog methods
   void _showNetworkDialog() {
     final l10n = AppLocalizations.of(context)!;
-    final web3Provider = Provider.of<Web3Provider>(context, listen: false);
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final currentNetwork = web3Provider.currentNetwork.toLowerCase();
+    final currentNetwork = walletProvider.currentSolanaNetwork.toLowerCase();
 
     showKubusDialog(
       context: context,
@@ -1684,7 +1704,6 @@ class _SettingsScreenState extends State<SettingsScreen>
                 final navigator = Navigator.of(context);
                 final messenger = ScaffoldMessenger.of(context);
                 navigator.pop();
-                web3Provider.switchNetwork('Mainnet');
                 walletProvider.switchSolanaNetwork('Mainnet');
                 setState(() {
                   _networkSelection = 'Mainnet';
@@ -1707,7 +1726,6 @@ class _SettingsScreenState extends State<SettingsScreen>
                 final navigator = Navigator.of(context);
                 final messenger = ScaffoldMessenger.of(context);
                 navigator.pop();
-                web3Provider.switchNetwork('Devnet');
                 walletProvider.switchSolanaNetwork('Devnet');
                 setState(() {
                   _networkSelection = 'Devnet';
@@ -1730,7 +1748,6 @@ class _SettingsScreenState extends State<SettingsScreen>
                 final navigator = Navigator.of(context);
                 final messenger = ScaffoldMessenger.of(context);
                 navigator.pop();
-                web3Provider.switchNetwork('Testnet');
                 walletProvider.switchSolanaNetwork('Testnet');
                 setState(() {
                   _networkSelection = 'Testnet';
@@ -2974,11 +2991,10 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   // Load all settings
   Future<void> _loadAllSettings() async {
-    final web3Provider = Provider.of<Web3Provider>(context, listen: false);
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final settings = await SettingsService.loadSettings(
-      fallbackNetwork: web3Provider.currentNetwork.isNotEmpty
-          ? web3Provider.currentNetwork
+      fallbackNetwork: walletProvider.currentSolanaNetwork.isNotEmpty
+          ? walletProvider.currentSolanaNetwork
           : null,
     );
     final hasPin = await walletProvider.hasPin();
@@ -4472,8 +4488,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     navigator.pop();
                     snackbarMessenger.showKubusSnackBar(
                       SnackBar(
-                        content:
-                            Text(l10n.settingsAccountSettingsUpdatedToast),
+                        content: Text(l10n.settingsAccountSettingsUpdatedToast),
                       ),
                     );
                   },

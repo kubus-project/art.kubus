@@ -11,7 +11,6 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:logger/logger.dart';
 import 'config/config.dart';
-import 'providers/connection_provider.dart';
 import 'providers/chat_provider.dart';
 import 'providers/glass_capabilities_provider.dart';
 import 'providers/profile_provider.dart';
@@ -307,11 +306,13 @@ void main() {
                   final Object err = pair[0] is Object
                       ? pair[0] as Object
                       : Exception(pair[0].toString());
-                  final StackTrace st = StackTrace.fromString(pair[1].toString());
+                  final StackTrace st =
+                      StackTrace.fromString(pair[1].toString());
                   _UnhandledErrorDedupe.handle(err, st, source: 'Isolate');
                   return;
                 }
-                final Object err = pair is Object ? pair : Exception(pair.toString());
+                final Object err =
+                    pair is Object ? pair : Exception(pair.toString());
                 _UnhandledErrorDedupe.handle(err, StackTrace.current,
                     source: 'Isolate');
               } catch (_) {
@@ -456,7 +457,6 @@ class _AppLauncherState extends State<AppLauncher> {
                 },
               ),
               ChangeNotifierProvider(create: (context) => PlatformProvider()),
-              ChangeNotifierProvider(create: (context) => ConnectionProvider()),
               ChangeNotifierProvider(create: (context) => ProfileProvider()),
               ChangeNotifierProxyProvider2<AppRefreshProvider, ConfigProvider,
                   StatsProvider>(
@@ -506,11 +506,6 @@ class _AppLauncherState extends State<AppLauncher> {
                   }
                   return provider;
                 },
-              ),
-              ChangeNotifierProvider(
-                create: (context) => Web3Provider(
-                  solanaWalletService: context.read<SolanaWalletService>(),
-                ),
               ),
               ChangeNotifierProvider(
                   create: (context) => DesktopDashboardStateProvider()),
@@ -592,6 +587,20 @@ class _AppLauncherState extends State<AppLauncher> {
                 create: (context) => WalletProvider(
                   solanaWalletService: context.read<SolanaWalletService>(),
                 ),
+              ),
+              ChangeNotifierProxyProvider<WalletProvider, Web3Provider>(
+                create: (context) => Web3Provider(
+                  solanaWalletService: context.read<SolanaWalletService>(),
+                ),
+                update: (context, walletProvider, web3Provider) {
+                  final provider = web3Provider ??
+                      Web3Provider(
+                        solanaWalletService:
+                            context.read<SolanaWalletService>(),
+                      );
+                  provider.bindWalletProvider(walletProvider);
+                  return provider;
+                },
               ),
               ChangeNotifierProxyProvider2<ProfileProvider, WalletProvider,
                   AttendanceProvider>(
@@ -908,6 +917,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
                       attendanceMarkerId: attendanceMarkerId,
                     );
             },
+            '/connect-wallet': (context) => const ConnectWallet(),
             '/wallet_connect': (context) => const ConnectWallet(),
             '/connect_wallet': (context) => const ConnectWallet(),
             '/sign-in': (context) {

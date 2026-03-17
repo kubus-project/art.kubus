@@ -16,7 +16,6 @@ import '../providers/profile_provider.dart';
 import '../providers/artwork_provider.dart';
 import '../providers/saved_items_provider.dart';
 import '../providers/wallet_provider.dart';
-import '../providers/web3provider.dart';
 import '../providers/cache_provider.dart';
 import '../providers/locale_provider.dart';
 import '../providers/deep_link_provider.dart';
@@ -172,19 +171,6 @@ class _AppInitializerState extends State<AppInitializer> {
           : null;
       if (!mounted) return;
 
-      // Sync Web3Provider with WalletProvider if wallet was restored
-      if (walletAddress != null && walletAddress.isNotEmpty) {
-        final web3Provider = Provider.of<Web3Provider>(context, listen: false);
-        try {
-          await web3Provider
-              .connectExistingWallet(walletAddress)
-              .timeout(const Duration(seconds: 6));
-        } catch (e) {
-          AppConfig.debugPrint('AppInitializer: Web3Provider sync failed: $e');
-        }
-      }
-      if (!mounted) return;
-
       // Initialize ProfileProvider and load profile if wallet exists
       final profileProvider =
           Provider.of<ProfileProvider>(context, listen: false);
@@ -277,7 +263,8 @@ class _AppInitializerState extends State<AppInitializer> {
               hasPendingAuthOnboarding: hasPendingAuthOnboarding,
               hasAuthenticatedSession: hasValidSession,
               hasHydratedProfile: profileProvider.hasHydratedProfile,
-              heuristicNextStepId: profileProvider.nextStructuredOnboardingStepId,
+              heuristicNextStepId:
+                  profileProvider.nextStructuredOnboardingStepId,
               persona: profileProvider.userPersona?.storageValue,
             )
           : const StructuredOnboardingResumeState(

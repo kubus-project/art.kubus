@@ -14,6 +14,7 @@ import '../services/backend_api_service.dart';
 import '../services/stats_api_service.dart';
 import '../services/pin_hashing.dart';
 import '../services/security/pin_auth_service.dart';
+import '../services/solana_walletconnect_service.dart';
 import '../services/user_service.dart';
 import '../config/config.dart';
 import '../config/api_keys.dart';
@@ -26,6 +27,13 @@ enum BiometricAuthOutcome {
   notAvailable,
   lockedOut,
   permanentlyLockedOut,
+  error,
+}
+
+enum WalletSessionPhase {
+  idle,
+  restoring,
+  ready,
   error,
 }
 
@@ -54,6 +62,8 @@ class WalletProvider extends ChangeNotifier {
   bool _isLoading = false;
   bool _isBalanceVisible = true;
   String? _currentWalletAddress;
+  WalletSessionPhase _sessionPhase = WalletSessionPhase.idle;
+  String? _lastError;
   DerivedKeyPairResult? _cachedDerivedCandidate;
   Completer<void>? _initializeCompleter;
 
@@ -68,8 +78,11 @@ class WalletProvider extends ChangeNotifier {
   int get collectionsCount => _collectionsCount;
   int get achievementsUnlocked => _achievementsUnlocked;
   double get achievementTokenTotal => _achievementTokenTotal;
+  WalletSessionPhase get sessionPhase => _sessionPhase;
+  String? get lastError => _lastError;
 
-  WalletProvider({SolanaWalletService? solanaWalletService, bool deferInit = false})
+  WalletProvider(
+      {SolanaWalletService? solanaWalletService, bool deferInit = false})
       : _solanaWalletService = solanaWalletService ?? SolanaWalletService() {
     if (!deferInit) {
       unawaited(initialize());
@@ -103,16 +116,20 @@ class WalletProvider extends ChangeNotifier {
   void setCurrentWalletAddressForTesting(String? address) {
     final next = (address ?? '').trim();
     _currentWalletAddress = next.isEmpty ? null : next;
+    _sessionPhase = WalletSessionPhase.ready;
     notifyListeners();
   }
 
   Future<void> _init() async {
+    _sessionPhase = WalletSessionPhase.restoring;
+    _lastError = null;
     await _applySavedNetworkPreference();
     await _loadCachedWallet();
     // If a cached wallet was not loaded, proceed to load data normally
     if (_currentWalletAddress == null) {
       await _loadData();
     }
+    _sessionPhase = WalletSessionPhase.ready;
   }
 
   Future<void> _applySavedNetworkPreference() async {
@@ -155,7 +172,9 @@ class WalletProvider extends ChangeNotifier {
         biometricOnly: true,
         persistAcrossBackgrounding: true,
       );
-      return didAuthenticate ? BiometricAuthOutcome.success : BiometricAuthOutcome.failed;
+      return didAuthenticate
+          ? BiometricAuthOutcome.success
+          : BiometricAuthOutcome.failed;
     } on PlatformException catch (e) {
       final code = e.code.toLowerCase();
       if (code.contains('notavailable') || code.contains('not_available')) {
@@ -167,7 +186,8 @@ class WalletProvider extends ChangeNotifier {
       if (code.contains('lockedout') || code.contains('locked_out')) {
         return BiometricAuthOutcome.lockedOut;
       }
-      if (code.contains('permanentlylockedout') || code.contains('permanently_locked_out')) {
+      if (code.contains('permanentlylockedout') ||
+          code.contains('permanently_locked_out')) {
         return BiometricAuthOutcome.permanentlyLockedOut;
       }
       if (code.contains('usercanceled') ||
@@ -186,7 +206,8 @@ class WalletProvider extends ChangeNotifier {
   }
 
   Future<bool> authenticateWithBiometrics({String? localizedReason}) async {
-    final outcome = await authenticateWithBiometricsDetailed(localizedReason: localizedReason);
+    final outcome = await authenticateWithBiometricsDetailed(
+        localizedReason: localizedReason);
     return outcome == BiometricAuthOutcome.success;
   }
 
@@ -275,7 +296,8 @@ class WalletProvider extends ChangeNotifier {
     try {
       await _secureStorage.write(key: 'cached_mnemonic', value: mnemonic);
       await _secureStorage.write(
-          key: 'cached_mnemonic_ts', value: DateTime.now().millisecondsSinceEpoch.toString());
+          key: 'cached_mnemonic_ts',
+          value: DateTime.now().millisecondsSinceEpoch.toString());
     } catch (e) {
       _walletLog('failed to cache mnemonic: $e');
     }
@@ -300,10 +322,12 @@ class WalletProvider extends ChangeNotifier {
         if (tsStr != null) {
           final ts = int.tryParse(tsStr);
           if (ts != null) {
-            final age = DateTime.now().difference(DateTime.fromMillisecondsSinceEpoch(ts));
+            final age = DateTime.now()
+                .difference(DateTime.fromMillisecondsSinceEpoch(ts));
 
             if (age.inDays < 7) {
-              _walletLog('cached mnemonic within TTL; validating before import');
+              _walletLog(
+                  'cached mnemonic within TTL; validating before import');
               // Validate mnemonic format first. If invalid, clear it immediately.
               try {
                 final isValid = _solanaWalletService.validateMnemonic(mnemonic);
@@ -329,13 +353,16 @@ class WalletProvider extends ChangeNotifier {
                 try {
                   _solanaWalletService.setActiveKeyPair(derived.hdKeyPair);
                 } catch (e) {
-                  _walletLog('failed to set active keypair from cached mnemonic: $e');
+                  _walletLog(
+                      'failed to set active keypair from cached mnemonic: $e');
                 }
                 _currentWalletAddress = derived.address;
+                SolanaWalletConnectService.instance
+                    .updateActiveWalletAddress(_currentWalletAddress);
 
                 // Save to SharedPreferences for profile provider
-                final prefs = await SharedPreferences.getInstance();
-                await prefs.setString('wallet_address', _currentWalletAddress!);
+                await _persistWalletIdentity(_currentWalletAddress!);
+                _apiService.setPreferredWalletAddress(_currentWalletAddress);
 
                 notifyListeners();
                 // Attempt to load data in background (don't block startup)
@@ -347,7 +374,8 @@ class WalletProvider extends ChangeNotifier {
               }
 
               // Attempt import of full wallet state; if it fails, schedule retries.
-              final success = await _attemptImportFromCache(mnemonic, derived: derived);
+              final success =
+                  await _attemptImportFromCache(mnemonic, derived: derived);
               if (success) return;
               _scheduleImportRetry(mnemonic);
             } else {
@@ -357,7 +385,8 @@ class WalletProvider extends ChangeNotifier {
           }
         } else {
           // No timestamp present but mnemonic exists — try to import and set timestamp on success.
-          _walletLog('cached mnemonic present without timestamp; attempting import');
+          _walletLog(
+              'cached mnemonic present without timestamp; attempting import');
           try {
             final isValid = _solanaWalletService.validateMnemonic(mnemonic);
             if (!isValid) {
@@ -378,20 +407,29 @@ class WalletProvider extends ChangeNotifier {
             try {
               _solanaWalletService.setActiveKeyPair(derived.hdKeyPair);
             } catch (e) {
-              _walletLog('failed to set active keypair from cached mnemonic (no timestamp): $e');
+              _walletLog(
+                  'failed to set active keypair from cached mnemonic (no timestamp): $e');
             }
             _currentWalletAddress = derived.address;
+            SolanaWalletConnectService.instance
+                .updateActiveWalletAddress(_currentWalletAddress);
+            await _persistWalletIdentity(_currentWalletAddress!);
+            _apiService.setPreferredWalletAddress(_currentWalletAddress);
             notifyListeners();
             _loadData();
           } catch (e) {
-            _walletLog('failed to derive keypair from cached mnemonic (no timestamp): $e');
+            _walletLog(
+                'failed to derive keypair from cached mnemonic (no timestamp): $e');
           }
 
-          final success = await _attemptImportFromCache(mnemonic, derived: derived);
+          final success =
+              await _attemptImportFromCache(mnemonic, derived: derived);
           if (success) {
             // Set a fresh timestamp so subsequent runs treat it as recent
             try {
-              await _secureStorage.write(key: 'cached_mnemonic_ts', value: DateTime.now().millisecondsSinceEpoch.toString());
+              await _secureStorage.write(
+                  key: 'cached_mnemonic_ts',
+                  value: DateTime.now().millisecondsSinceEpoch.toString());
             } catch (e) {
               _walletLog('failed to write cached_mnemonic_ts after import: $e');
             }
@@ -417,6 +455,7 @@ class WalletProvider extends ChangeNotifier {
             ?.trim();
         if (storedAddress != null && storedAddress.isNotEmpty) {
           _currentWalletAddress = storedAddress;
+          _apiService.setPreferredWalletAddress(storedAddress);
           await _loadData();
         }
       } catch (e) {
@@ -426,7 +465,8 @@ class WalletProvider extends ChangeNotifier {
   }
 
   // Attempt import immediately (returns true on success)
-  Future<bool> _attemptImportFromCache(String mnemonic, {DerivedKeyPairResult? derived}) async {
+  Future<bool> _attemptImportFromCache(String mnemonic,
+      {DerivedKeyPairResult? derived}) async {
     try {
       final candidate = derived ?? _cachedDerivedCandidate;
       await importWalletFromMnemonic(mnemonic, preDerived: candidate);
@@ -452,13 +492,15 @@ class WalletProvider extends ChangeNotifier {
 
       _importRetryTimer?.cancel();
       final multiplier = _importRetryAttempts + 1;
-      final delay = Duration(seconds: _baseImportRetryDelay.inSeconds * multiplier);
+      final delay =
+          Duration(seconds: _baseImportRetryDelay.inSeconds * multiplier);
       _walletLog('scheduling mnemonic import retry in ${delay.inSeconds}s');
       _importRetryTimer = Timer(delay, () async {
         // Only retry if still have cached mnemonic and not imported yet
         final cached = await _secureStorage.read(key: 'cached_mnemonic');
         if (cached == null) return;
-        final ok = await _attemptImportFromCache(cached, derived: _cachedDerivedCandidate);
+        final ok = await _attemptImportFromCache(cached,
+            derived: _cachedDerivedCandidate);
         if (!ok) {
           // If still failing and attempts not exhausted, schedule another
           if (_importRetryAttempts < _maxImportRetryAttempts) {
@@ -481,12 +523,56 @@ class WalletProvider extends ChangeNotifier {
   bool get isBalanceVisible => _isBalanceVisible;
   double get totalBalance => _wallet?.totalValue ?? 0.0;
   String? get currentWalletAddress => _currentWalletAddress;
-  bool get isConnected => _currentWalletAddress != null && _currentWalletAddress!.isNotEmpty;
+  bool get hasWalletIdentity =>
+      _currentWalletAddress != null && _currentWalletAddress!.isNotEmpty;
+  bool get hasSigner => _solanaWalletService.hasActiveKeyPair;
+  bool get isReadOnlySession => hasWalletIdentity && !hasSigner;
+  bool get canTransact => hasWalletIdentity && hasSigner;
+  bool get isConnected => hasWalletIdentity;
   bool get hasActiveKeyPair => _solanaWalletService.hasActiveKeyPair;
   SolanaWalletService get solanaWalletService => _solanaWalletService;
 
+  void _setLastError(Object error) {
+    _lastError = error.toString();
+    _sessionPhase = WalletSessionPhase.error;
+  }
+
+  void _clearLastError() {
+    _lastError = null;
+    if (_sessionPhase != WalletSessionPhase.restoring) {
+      _sessionPhase = WalletSessionPhase.ready;
+    }
+  }
+
+  Future<void> _persistWalletIdentity(String address) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('wallet_address', address);
+    await prefs.setString('walletAddress', address);
+    await prefs.setString('wallet', address);
+    await prefs.setBool('has_wallet', true);
+  }
+
+  Future<void> _clearPersistedWalletIdentity() async {
+    final prefs = await SharedPreferences.getInstance();
+    for (final key in const <String>[
+      'wallet_address',
+      'walletAddress',
+      'wallet',
+      'has_wallet',
+    ]) {
+      await prefs.remove(key);
+    }
+  }
+
+  Future<String?> _resolveAuthenticatedWalletAddress() async {
+    final authenticatedWallet =
+        (_apiService.getCurrentAuthWalletAddress() ?? '').trim();
+    return authenticatedWallet.isEmpty ? null : authenticatedWallet;
+  }
+
   Future<void> _loadData() async {
     _isLoading = true;
+    _sessionPhase = WalletSessionPhase.restoring;
     notifyListeners();
 
     _walletLog('_loadData: starting');
@@ -494,10 +580,15 @@ class WalletProvider extends ChangeNotifier {
     try {
       _walletLog('_loadData: loading from blockchain');
       await _loadFromBlockchain();
+      _clearLastError();
     } catch (e) {
       _walletLog('error loading wallet data: $e');
+      _setLastError(e);
     } finally {
       _isLoading = false;
+      if (_sessionPhase == WalletSessionPhase.restoring) {
+        _sessionPhase = WalletSessionPhase.ready;
+      }
       notifyListeners();
     }
   }
@@ -521,14 +612,17 @@ class WalletProvider extends ChangeNotifier {
       _wallet = null;
       _tokens = [];
       _transactions = [];
+      _setLastError(e);
     }
   }
 
   Future<void> _loadSolanaWallet(String address) async {
     try {
       final solBalance = await _solanaWalletService.getBalance(address);
-      final tokenBalances = await _solanaWalletService.getTokenBalances(address);
-      final transactionHistory = await _solanaWalletService.getTransactionHistory(address);
+      final tokenBalances =
+          await _solanaWalletService.getTokenBalances(address);
+      final transactionHistory =
+          await _solanaWalletService.getTransactionHistory(address);
 
       // Native SOL token first
       _tokens = [
@@ -542,7 +636,8 @@ class WalletProvider extends ChangeNotifier {
           changePercentage: 0.0,
           contractAddress: 'native',
           decimals: 9,
-          logoUrl: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png',
+          logoUrl:
+              'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png',
           network: 'Solana',
         ),
       ];
@@ -567,25 +662,27 @@ class WalletProvider extends ChangeNotifier {
       }
 
       // Map transaction history (simplified)
-      _transactions = transactionHistory.map((tx) => WalletTransaction(
-        id: tx.signature,
-        type: TransactionType.receive, // Placeholder mapping
-        token: 'SOL',
-        amount: 0.0,
-        fromAddress: null,
-        toAddress: address,
-        timestamp: tx.blockTime,
-        status: tx.status.toLowerCase() == 'finalized'
-            ? TransactionStatus.confirmed
-            : TransactionStatus.pending,
-        txHash: tx.signature,
-        gasUsed: tx.fee.toDouble(),
-        gasFee: tx.fee / 1000000000.0,
-        metadata: {'slot': tx.slot.toString()},
-      )).toList();
+      _transactions = transactionHistory
+          .map((tx) => WalletTransaction(
+                id: tx.signature,
+                type: TransactionType.receive, // Placeholder mapping
+                token: 'SOL',
+                amount: 0.0,
+                fromAddress: null,
+                toAddress: address,
+                timestamp: tx.blockTime,
+                status: tx.status.toLowerCase() == 'finalized'
+                    ? TransactionStatus.confirmed
+                    : TransactionStatus.pending,
+                txHash: tx.signature,
+                gasUsed: tx.fee.toDouble(),
+                gasFee: tx.fee / 1000000000.0,
+                metadata: {'slot': tx.slot.toString()},
+              ))
+          .toList();
 
       _wallet = Wallet(
-        id: 'wallet_${address.substring(0,8)}',
+        id: 'wallet_${address.substring(0, 8)}',
         address: address,
         name: 'Solana Wallet',
         network: 'Solana',
@@ -596,8 +693,10 @@ class WalletProvider extends ChangeNotifier {
       );
 
       await _syncBackendData(address);
+      _clearLastError();
     } catch (e) {
       _walletLog('error loading Solana wallet: $e');
+      _setLastError(e);
       rethrow;
     }
   }
@@ -626,13 +725,15 @@ class WalletProvider extends ChangeNotifier {
               try {
                 final reg = await _apiService.registerWallet(
                   walletAddress: address,
-                  username: 'user_${address.substring(0,6)}',
+                  username: 'user_${address.substring(0, 6)}',
                 );
                 _walletLog('_syncBackendData: registerWallet response: $reg');
                 try {
-                  _backendProfile = await _apiService.getProfileByWallet(address);
+                  _backendProfile =
+                      await _apiService.getProfileByWallet(address);
                 } catch (_) {
-                  final user2 = await UserService.getUserById(address, forceRefresh: true);
+                  final user2 = await UserService.getUserById(address,
+                      forceRefresh: true);
                   if (user2 != null) {
                     _backendProfile = {
                       'walletAddress': user2.id,
@@ -662,12 +763,17 @@ class WalletProvider extends ChangeNotifier {
         final snapshot = await StatsApiService(api: _apiService).fetchSnapshot(
           entityType: 'user',
           entityId: address,
-          metrics: const ['collections', 'achievementsUnlocked', 'achievementTokensTotal'],
+          metrics: const [
+            'collections',
+            'achievementsUnlocked',
+            'achievementTokensTotal'
+          ],
           scope: 'public',
         );
         _collectionsCount = snapshot.counters['collections'] ?? 0;
         _achievementsUnlocked = snapshot.counters['achievementsUnlocked'] ?? 0;
-        _achievementTokenTotal = (snapshot.counters['achievementTokensTotal'] ?? 0).toDouble();
+        _achievementTokenTotal =
+            (snapshot.counters['achievementTokensTotal'] ?? 0).toDouble();
       } catch (e) {
         _walletLog('stats snapshot fetch failed: $e');
       }
@@ -690,6 +796,7 @@ class WalletProvider extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       _walletLog('backend sync error: $e');
+      _setLastError(e);
     }
   }
 
@@ -719,7 +826,8 @@ class WalletProvider extends ChangeNotifier {
       }
     }
 
-    if (normalized == 'native' || normalized == ApiKeys.wrappedSolMintAddress.toLowerCase()) {
+    if (normalized == 'native' ||
+        normalized == ApiKeys.wrappedSolMintAddress.toLowerCase()) {
       return getTokenBySymbol('SOL');
     }
     return null;
@@ -756,7 +864,9 @@ class WalletProvider extends ChangeNotifier {
     double? gasPrice,
     Map<String, dynamic>? metadata,
   }) async {
-    if (!isConnected || _currentWalletAddress == null || _currentWalletAddress!.isEmpty) {
+    if (!canTransact ||
+        _currentWalletAddress == null ||
+        _currentWalletAddress!.isEmpty) {
       throw Exception('Connect wallet before sending transactions');
     }
     if (toAddress.trim().isEmpty) {
@@ -772,7 +882,8 @@ class WalletProvider extends ChangeNotifier {
       final totalRequired = amount + feeTeam + feeTreasury;
       final balance = getTokenBalance(token);
       if (balance < totalRequired) {
-        throw Exception('Insufficient balance. Needed $totalRequired $token including fees.');
+        throw Exception(
+            'Insufficient balance. Needed $totalRequired $token including fees.');
       }
 
       String? signature;
@@ -851,7 +962,7 @@ class WalletProvider extends ChangeNotifier {
       );
       await _loadFromBlockchain();
       notifyListeners();
-        } catch (e, st) {
+    } catch (e, st) {
       _walletLog('sendTransaction failed: $e\n$st');
       rethrow;
     }
@@ -864,7 +975,9 @@ class WalletProvider extends ChangeNotifier {
     required double toAmount,
     double? slippage,
   }) async {
-    if (!isConnected || _currentWalletAddress == null || _currentWalletAddress!.isEmpty) {
+    if (!canTransact ||
+        _currentWalletAddress == null ||
+        _currentWalletAddress!.isEmpty) {
       throw Exception('Connect wallet before swapping');
     }
     if (fromAmount <= 0 || toAmount <= 0) {
@@ -933,7 +1046,7 @@ class WalletProvider extends ChangeNotifier {
       );
       await _loadFromBlockchain();
       notifyListeners();
-        } catch (e, st) {
+    } catch (e, st) {
       _walletLog('swapTokens failed: $e\n$st');
       rethrow;
     }
@@ -986,14 +1099,15 @@ class WalletProvider extends ChangeNotifier {
   Map<String, dynamic> getWalletAnalytics() {
     final totalTransactions = _transactions.length;
     final sentTransactions = getTransactionsByType(TransactionType.send).length;
-    final receivedTransactions = getTransactionsByType(TransactionType.receive).length;
+    final receivedTransactions =
+        getTransactionsByType(TransactionType.receive).length;
     final swapTransactions = getTransactionsByType(TransactionType.swap).length;
-    
+
     final totalSent = getTransactionsByType(TransactionType.send)
         .fold<double>(0, (sum, tx) => sum + tx.amount);
     final totalReceived = getTransactionsByType(TransactionType.receive)
         .fold<double>(0, (sum, tx) => sum + tx.amount);
-    
+
     return {
       'totalBalance': totalBalance,
       'totalTokens': _tokens.length,
@@ -1016,6 +1130,8 @@ class WalletProvider extends ChangeNotifier {
 
   // Wallet Management
   Future<Map<String, String>> createWallet() async {
+    _lastError = null;
+    _sessionPhase = WalletSessionPhase.restoring;
     final mnemonic = _solanaWalletService.generateMnemonic();
     final keyPair = await _solanaWalletService.generateKeyPairFromMnemonic(
       mnemonic,
@@ -1034,13 +1150,14 @@ class WalletProvider extends ChangeNotifier {
     } catch (e) {
       _walletLog('failed to set active keypair for new wallet: $e');
     }
-    
+
     _currentWalletAddress = keyPair.publicKey;
+    SolanaWalletConnectService.instance
+        .updateActiveWalletAddress(_currentWalletAddress);
     // Persist address for other providers/screens
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('wallet_address', _currentWalletAddress!);
-      await prefs.setBool('has_wallet', true);
+      await _persistWalletIdentity(_currentWalletAddress!);
+      _apiService.setPreferredWalletAddress(_currentWalletAddress);
     } catch (e) {
       _walletLog('failed to persist wallet address: $e');
     }
@@ -1061,7 +1178,8 @@ class WalletProvider extends ChangeNotifier {
     try {
       await _cacheMnemonic(mnemonic);
     } catch (_) {}
-    
+
+    _clearLastError();
     notifyListeners();
 
     return {
@@ -1070,16 +1188,20 @@ class WalletProvider extends ChangeNotifier {
     };
   }
 
-  Future<String> importWalletFromMnemonic(String mnemonic, {DerivedKeyPairResult? preDerived}) async {
+  Future<String> importWalletFromMnemonic(String mnemonic,
+      {DerivedKeyPairResult? preDerived}) async {
     _walletLog('importWalletFromMnemonic start');
-    
+    _lastError = null;
+    _sessionPhase = WalletSessionPhase.restoring;
+
     if (!_solanaWalletService.validateMnemonic(mnemonic)) {
       throw Exception('Invalid mnemonic phrase');
     }
-    
-    final derived = preDerived ?? await _solanaWalletService.derivePreferredKeyPair(
-      mnemonic,
-    );
+
+    final derived = preDerived ??
+        await _solanaWalletService.derivePreferredKeyPair(
+          mnemonic,
+        );
     try {
       _solanaWalletService.setActiveKeyPair(derived.hdKeyPair);
       _walletLog('active keypair set for imported wallet');
@@ -1087,21 +1209,22 @@ class WalletProvider extends ChangeNotifier {
       _walletLog('failed to set active keypair for imported wallet: $e');
     }
     _currentWalletAddress = derived.address;
+    SolanaWalletConnectService.instance
+        .updateActiveWalletAddress(_currentWalletAddress);
     // Wallet address set.
-    
+
     // Save to SharedPreferences for profile provider
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('wallet_address', _currentWalletAddress!);
-      await prefs.setBool('has_wallet', true);
+      await _persistWalletIdentity(_currentWalletAddress!);
+      _apiService.setPreferredWalletAddress(_currentWalletAddress);
       _walletLog('wallet address saved to SharedPreferences');
     } catch (e) {
       _walletLog('failed to save wallet address to SharedPreferences: $e');
     }
-    
+
     // Notify immediately that we have an address
     notifyListeners();
-    
+
     // Load the imported wallet from blockchain
     try {
       _walletLog('loading wallet data');
@@ -1111,7 +1234,7 @@ class WalletProvider extends ChangeNotifier {
       _walletLog('error loading wallet data: $e');
       // Even if loading fails, we have the address
     }
-    
+
     if (_currentWalletAddress != null) {
       try {
         await _syncBackendData(_currentWalletAddress!);
@@ -1128,11 +1251,12 @@ class WalletProvider extends ChangeNotifier {
     } catch (e) {
       _walletLog('error caching mnemonic: $e');
     }
-    
+
     // Final notification to update all listeners
     _walletLog('wallet import complete');
+    _clearLastError();
     notifyListeners();
-    
+
     return _currentWalletAddress!;
   }
 
@@ -1143,25 +1267,34 @@ class WalletProvider extends ChangeNotifier {
       return;
     }
 
+    _lastError = null;
+    _sessionPhase = WalletSessionPhase.restoring;
     _currentWalletAddress = sanitized;
+    SolanaWalletConnectService.instance.updateActiveWalletAddress(sanitized);
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('wallet_address', sanitized);
-      await prefs.setString('walletAddress', sanitized);
-      await prefs.setString('wallet', sanitized);
-      await prefs.setBool('has_wallet', true);
+      await _persistWalletIdentity(sanitized);
+      _apiService.setPreferredWalletAddress(sanitized);
     } catch (e) {
-      _walletLog('connectWalletWithAddress: failed to persist wallet address: $e');
+      _walletLog(
+          'connectWalletWithAddress: failed to persist wallet address: $e');
     }
-    
+
     // Load the connected wallet from blockchain
     await _loadData();
     await _syncBackendData(sanitized);
+    _clearLastError();
     notifyListeners();
   }
 
-  void disconnectWallet() {
+  Future<void> disconnectWallet(
+      {bool preserveAuthenticatedWallet = true}) async {
+    final fallbackWallet = preserveAuthenticatedWallet
+        ? await _resolveAuthenticatedWalletAddress()
+        : null;
+
+    _solanaWalletService.clearActiveKeyPair();
+    SolanaWalletConnectService.instance.updateActiveWalletAddress(null);
     _currentWalletAddress = null;
     _wallet = null;
     _tokens.clear();
@@ -1173,7 +1306,7 @@ class WalletProvider extends ChangeNotifier {
     _cachedDerivedCandidate = null;
     // Clear cached mnemonic on explicit disconnect for security
     try {
-      clearCachedMnemonic();
+      await clearCachedMnemonic();
     } catch (_) {}
     // Cancel any pending import retry timers
     try {
@@ -1181,6 +1314,35 @@ class WalletProvider extends ChangeNotifier {
       _importRetryTimer = null;
       _importRetryAttempts = 0;
     } catch (_) {}
+
+    try {
+      await _clearPersistedWalletIdentity();
+    } catch (e) {
+      _walletLog('disconnectWallet: failed to clear wallet identity: $e');
+    }
+    try {
+      await SolanaWalletConnectService.instance.disconnect();
+    } catch (e) {
+      _walletLog('disconnectWallet: walletconnect cleanup failed: $e');
+    }
+
+    final nextWallet = (fallbackWallet ?? '').trim();
+    if (nextWallet.isNotEmpty) {
+      _currentWalletAddress = nextWallet;
+      SolanaWalletConnectService.instance.updateActiveWalletAddress(nextWallet);
+      try {
+        await _persistWalletIdentity(nextWallet);
+      } catch (e) {
+        _walletLog('disconnectWallet: failed to persist read-only wallet: $e');
+      }
+      _apiService.setPreferredWalletAddress(nextWallet);
+      await _loadData();
+      _clearLastError();
+    } else {
+      _apiService.setPreferredWalletAddress(null);
+      _sessionPhase = WalletSessionPhase.ready;
+      _lastError = null;
+    }
     notifyListeners();
   }
 
@@ -1189,26 +1351,30 @@ class WalletProvider extends ChangeNotifier {
     if (_currentWalletAddress == null) {
       throw Exception('No wallet connected');
     }
-    
-    await _solanaWalletService.requestAirdrop(_currentWalletAddress!, amount: amount);
-    
+
+    await _solanaWalletService.requestAirdrop(_currentWalletAddress!,
+        amount: amount);
+
     // Refresh wallet data after airdrop
     await refreshData();
   }
 
   void switchSolanaNetwork(String network) {
     _solanaWalletService.switchNetwork(network);
-    
+
     // Refresh data with new network
     if (_currentWalletAddress != null) {
-      _loadData();
+      unawaited(_loadData());
     }
+    _clearLastError();
+    notifyListeners();
   }
 
   String get currentSolanaNetwork => _solanaWalletService.currentNetwork;
 
   String _resolveMintAddress(Token token) {
-    if (token.symbol.toUpperCase() == 'SOL' || token.contractAddress.toLowerCase() == 'native') {
+    if (token.symbol.toUpperCase() == 'SOL' ||
+        token.contractAddress.toLowerCase() == 'native') {
       return ApiKeys.wrappedSolMintAddress;
     }
     return token.contractAddress;

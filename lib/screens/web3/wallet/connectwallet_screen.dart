@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,9 +7,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import '../../../services/event_bus.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import '../../../providers/web3provider.dart';
 import '../../../providers/wallet_provider.dart';
-import '../../../providers/chat_provider.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/app_refresh_provider.dart';
@@ -22,6 +20,7 @@ import '../../../services/app_bootstrap_service.dart';
 import '../../../services/security/post_auth_security_setup_service.dart';
 import '../../../services/user_service.dart';
 import '../../../services/telemetry/telemetry_service.dart';
+import '../../../services/wallet_session_sync_service.dart';
 import '../../../models/user.dart';
 import '../../../widgets/gradient_icon_card.dart';
 import '../../../widgets/kubus_button.dart';
@@ -45,14 +44,16 @@ class ConnectWallet extends StatefulWidget {
   State<ConnectWallet> createState() => _ConnectWalletState();
 }
 
-class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateMixin {
+class _ConnectWalletState extends State<ConnectWallet>
+    with TickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
   late Animation<double> _fadeAnimation;
   final TextEditingController _mnemonicController = TextEditingController();
-  
+
   bool _isLoading = false;
-  late int _currentStep; // 0: Choose option, 1: Connect existing (mnemonic), 2: Create new (generate mnemonic), 3: WalletConnect
+  late int
+      _currentStep; // 0: Choose option, 1: Connect existing (mnemonic), 2: Create new (generate mnemonic), 3: WalletConnect
   final TextEditingController _wcUriController = TextEditingController();
 
   @override
@@ -142,12 +143,15 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
   void _trackWalletAuthFailure(String errorClass) {
     final flow = _normalizedAuthFlow();
     if (flow == null) return;
-    final normalized = (errorClass).trim().isEmpty ? 'unknown' : errorClass.trim();
+    final normalized =
+        (errorClass).trim().isEmpty ? 'unknown' : errorClass.trim();
     if (flow == 'signin') {
-      unawaited(TelemetryService().trackSignInFailure(method: 'wallet', errorClass: normalized));
+      unawaited(TelemetryService()
+          .trackSignInFailure(method: 'wallet', errorClass: normalized));
       return;
     }
-    unawaited(TelemetryService().trackSignUpFailure(method: 'wallet', errorClass: normalized));
+    unawaited(TelemetryService()
+        .trackSignUpFailure(method: 'wallet', errorClass: normalized));
   }
 
   Future<void> _runPostWalletConnectRefresh(String walletAddress) async {
@@ -159,13 +163,16 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
       NotificationProvider? notificationProvider;
       RecentActivityProvider? recentActivityProvider;
       try {
-        refreshProvider = Provider.of<AppRefreshProvider>(context, listen: false);
+        refreshProvider =
+            Provider.of<AppRefreshProvider>(context, listen: false);
       } catch (_) {}
       try {
-        notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
+        notificationProvider =
+            Provider.of<NotificationProvider>(context, listen: false);
       } catch (_) {}
       try {
-        recentActivityProvider = Provider.of<RecentActivityProvider>(context, listen: false);
+        recentActivityProvider =
+            Provider.of<RecentActivityProvider>(context, listen: false);
       } catch (_) {}
 
       // Immediately bump versions so listening widgets can re-render quickly.
@@ -191,8 +198,10 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
       // hold a BuildContext across async gaps.
       await Future.wait([
         if (notificationProvider != null)
-          notificationProvider.initialize(walletOverride: walletAddress, force: true),
-        if (recentActivityProvider != null) recentActivityProvider.initialize(force: true),
+          notificationProvider.initialize(
+              walletOverride: walletAddress, force: true),
+        if (recentActivityProvider != null)
+          recentActivityProvider.initialize(force: true),
       ]);
     } catch (_) {}
   }
@@ -208,15 +217,17 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: _currentStep > 0 
-          ? IconButton(
-              icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
-              onPressed: () => setState(() => _currentStep--),
-            )
-          : IconButton(
-              icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
+        leading: _currentStep > 0
+            ? IconButton(
+                icon: Icon(Icons.arrow_back,
+                    color: Theme.of(context).colorScheme.onSurface),
+                onPressed: () => setState(() => _currentStep--),
+              )
+            : IconButton(
+                icon: Icon(Icons.arrow_back,
+                    color: Theme.of(context).colorScheme.onSurface),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
         title: Text(
           _getStepTitle(l10n),
           style: GoogleFonts.inter(
@@ -231,12 +242,12 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
         intensity: 0.2,
         colors: _backgroundPaletteForStep(context),
         child: SizedBox.expand(
-          child: Consumer<Web3Provider>(
-            builder: (context, web3Provider, child) {
-              if (web3Provider.isConnected) {
-                return _buildConnectedView(web3Provider);
+          child: Consumer<WalletProvider>(
+            builder: (context, walletProvider, child) {
+              if (walletProvider.canTransact) {
+                return _buildConnectedView();
               } else {
-                return _buildStepContent(web3Provider);
+                return _buildStepContent();
               }
             },
           ),
@@ -260,18 +271,16 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     }
   }
 
-  
-
-  Widget _buildStepContent(Web3Provider web3Provider) {
+  Widget _buildStepContent() {
     switch (_currentStep) {
       case 0:
         return _buildChooseOptionView();
       case 1:
-        return _buildConnectWithMnemonicView(web3Provider);
+        return _buildConnectWithMnemonicView();
       case 2:
-        return _buildCreateNewWalletView(web3Provider);
+        return _buildCreateNewWalletView();
       case 3:
-        return _buildWalletConnectView(web3Provider);
+        return _buildWalletConnectView();
       default:
         return _buildChooseOptionView();
     }
@@ -283,8 +292,9 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenHeight < 700 || screenWidth < 360;
     final colorScheme = Theme.of(context).colorScheme;
-    final accent = Provider.of<ThemeProvider>(context, listen: false).accentColor;
-    
+    final accent =
+        Provider.of<ThemeProvider>(context, listen: false).accentColor;
+
     return FadeTransition(
       opacity: _fadeAnimation,
       child: ScaleTransition(
@@ -348,14 +358,16 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                   icon: Icons.login,
                   label: l10n.connectWalletOptionSignInTitle,
                   description: l10n.connectWalletOptionSignInDescription,
-                  onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SignInScreen())),
+                  onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const SignInScreen())),
                   isSmallScreen: isSmallScreen,
                 ),
                 _buildActionButton(
                   icon: Icons.person_add_alt,
                   label: l10n.connectWalletOptionRegisterTitle,
                   description: l10n.connectWalletOptionRegisterDescription,
-                  onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RegisterScreen())),
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => const RegisterScreen())),
                   isSmallScreen: isSmallScreen,
                 ),
                 SizedBox(height: isSmallScreen ? 16 : 24),
@@ -386,7 +398,8 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     required VoidCallback onTap,
     required bool isSmallScreen,
   }) {
-    final accent = Provider.of<ThemeProvider>(context, listen: false).accentColor;
+    final accent =
+        Provider.of<ThemeProvider>(context, listen: false).accentColor;
     final colorScheme = Theme.of(context).colorScheme;
     final iconColor = icon == Icons.qr_code_scanner
         ? colorScheme.secondary
@@ -430,12 +443,14 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
       startColor = const Color(0xFFF59E0B);
       endColor = const Color(0xFFEF4444);
     }
-    
+
     return Padding(
-      padding: EdgeInsets.only(bottom: isSmallScreen ? KubusSpacing.sm : KubusSpacing.md),
+      padding: EdgeInsets.only(
+          bottom: isSmallScreen ? KubusSpacing.sm : KubusSpacing.md),
       child: LiquidGlassPanel(
         onTap: onTap,
-        padding: EdgeInsets.all(isSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
+        padding:
+            EdgeInsets.all(isSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
         margin: EdgeInsets.zero,
         borderRadius: BorderRadius.circular(isSmallScreen ? 16 : 18),
         blurSigma: KubusGlassEffects.blurSigmaLight,
@@ -492,11 +507,11 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
   }
 
   // Connect wallet with mnemonic phrase view
-  Widget _buildConnectWithMnemonicView(Web3Provider web3Provider) {
+  Widget _buildConnectWithMnemonicView() {
     final l10n = AppLocalizations.of(context)!;
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 360;
-    
+
     return FadeTransition(
       opacity: _fadeAnimation,
       child: SafeArea(
@@ -538,61 +553,74 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                 l10n.connectWalletImportDescription,
                 style: GoogleFonts.inter(
                   fontSize: isSmallScreen ? 14 : 15,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
                   height: 1.5,
                 ),
               ),
               SizedBox(height: isSmallScreen ? 20 : 24),
-            
-                // Mnemonic Input Field
-                TextField(
-                  controller: _mnemonicController,
-                  maxLines: isSmallScreen ? 3 : 4,
-                  decoration: InputDecoration(
-                    hintText: l10n.connectWalletImportHint,
-                    hintStyle: KubusTypography.textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-                    ),
-                    filled: true,
-                    fillColor: Theme.of(context).colorScheme.surface,
-                    contentPadding: EdgeInsets.all(isSmallScreen ? 12 : 14),
-                    border: OutlineInputBorder(
-                      borderRadius: KubusRadius.circular(KubusRadius.md),
-                      borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: KubusRadius.circular(KubusRadius.md),
-                      borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: KubusRadius.circular(KubusRadius.md),
-                      borderSide: const BorderSide(color: Colors.blue, width: 2),
-                    ),
+
+              // Mnemonic Input Field
+              TextField(
+                controller: _mnemonicController,
+                maxLines: isSmallScreen ? 3 : 4,
+                decoration: InputDecoration(
+                  hintText: l10n.connectWalletImportHint,
+                  hintStyle: KubusTypography.textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.4),
                   ),
-                  style: KubusTypography.textTheme.bodyLarge?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface,
+                  filled: true,
+                  fillColor: Theme.of(context).colorScheme.surface,
+                  contentPadding: EdgeInsets.all(isSmallScreen ? 12 : 14),
+                  border: OutlineInputBorder(
+                    borderRadius: KubusRadius.circular(KubusRadius.md),
+                    borderSide: BorderSide(
+                        color: Theme.of(context).colorScheme.outline),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: KubusRadius.circular(KubusRadius.md),
+                    borderSide: BorderSide(
+                        color: Theme.of(context).colorScheme.outline),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: KubusRadius.circular(KubusRadius.md),
+                    borderSide: const BorderSide(color: Colors.blue, width: 2),
                   ),
                 ),
+                style: KubusTypography.textTheme.bodyLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
               SizedBox(height: isSmallScreen ? 12 : 14),
-            
+
               // Warning Box
               Container(
                 padding: EdgeInsets.all(isSmallScreen ? 12 : 14),
                 decoration: BoxDecoration(
                   color: Colors.orange.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                  border:
+                      Border.all(color: Colors.orange.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.warning_amber_rounded, color: Colors.orange, size: isSmallScreen ? 20 : 22),
+                    Icon(Icons.warning_amber_rounded,
+                        color: Colors.orange, size: isSmallScreen ? 20 : 22),
                     SizedBox(width: isSmallScreen ? 10 : 12),
                     Expanded(
                       child: Text(
                         l10n.connectWalletImportWarning,
                         style: GoogleFonts.inter(
                           fontSize: isSmallScreen ? 11 : 12,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.7),
                           height: 1.4,
                         ),
                       ),
@@ -601,17 +629,18 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                 ),
               ),
               SizedBox(height: isSmallScreen ? 20 : 24),
-              
+
               // Connect Button
               KubusButton(
-                onPressed: _isLoading ? null : () => _importWalletFromMnemonic(web3Provider),
+                onPressed: _isLoading ? null : _importWalletFromMnemonic,
                 isLoading: _isLoading,
                 label: l10n.connectWalletImportButton,
                 isFullWidth: true,
                 backgroundColor: const Color(0xFF0EA5E9),
                 foregroundColor: Colors.white,
               ),
-              SizedBox(height: isSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
+              SizedBox(
+                  height: isSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
             ],
           ),
         ),
@@ -619,11 +648,11 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     );
   }
 
-  Future<void> _importWalletFromMnemonic(Web3Provider web3Provider) async {
+  Future<void> _importWalletFromMnemonic() async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     final mnemonic = _mnemonicController.text.trim();
-    
+
     if (mnemonic.isEmpty) {
       messenger.showKubusSnackBar(
         SnackBar(
@@ -634,116 +663,122 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
       );
       return;
     }
-    
+
     // Validate mnemonic format (12 words)
     final words = mnemonic.split(' ').where((w) => w.isNotEmpty).toList();
     if (words.length != 12) {
       messenger.showKubusSnackBar(
         SnackBar(
-          content: Text(l10n.connectWalletImportInvalidMnemonicWordCountError(words.length)),
+          content: Text(l10n
+              .connectWalletImportInvalidMnemonicWordCountError(words.length)),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
         ),
       );
       return;
     }
-    
+
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
-      final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+      final walletProvider =
+          Provider.of<WalletProvider>(context, listen: false);
       final gate = Provider.of<SecurityGateProvider>(context, listen: false);
       final navigator = Navigator.of(context);
-      final chatProvider = Provider.of<ChatProvider>(context, listen: false);
-      final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+      final profileProvider =
+          Provider.of<ProfileProvider>(context, listen: false);
       final address = await walletProvider.importWalletFromMnemonic(mnemonic);
 
-      // Import the wallet in Web3Provider as well
-      await web3Provider.importWallet(mnemonic);
-      
-        // Load or create user profile linked to wallet
-          if (mounted) {
-          final backendApiService = BackendApiService();
+      // Load or create user profile linked to wallet
+      if (mounted) {
+        final backendApiService = BackendApiService();
 
-          // Prefer cache-first lookup via UserService to avoid unnecessary network calls
-          bool profileExistsOnBackend = false;
-          try {
-            // Force a fresh lookup during wallet import
-            final freshUser = await UserService.getUserById(address, forceRefresh: true);
-            if (freshUser != null) {
-              profileExistsOnBackend = true;
-              debugPrint('Profile found (fresh) for wallet: $address');
-            } else {
-              try {
-                await backendApiService.getProfileByWallet(address);
-                profileExistsOnBackend = true;
-                debugPrint('Profile exists on backend for wallet: $address');
-              } catch (e) {
-                debugPrint('Profile not found on backend, will create new: $e');
-              }
-            }
-          } catch (e) {
-            debugPrint('Profile lookup failed: $e');
-          }
-
-          // Load profile (will create default if doesn't exist)
-          await profileProvider.loadProfile(address);
-
-          // Only register on backend if profile doesn't exist there yet
-            if (!profileExistsOnBackend && profileProvider.currentUser != null) {
-            debugPrint('Registering wallet on backend for wallet: $address');
-            await UserService.initialize();
+        // Prefer cache-first lookup via UserService to avoid unnecessary network calls
+        bool profileExistsOnBackend = false;
+        try {
+          // Force a fresh lookup during wallet import
+          final freshUser =
+              await UserService.getUserById(address, forceRefresh: true);
+          if (freshUser != null) {
+            profileExistsOnBackend = true;
+            debugPrint('Profile found (fresh) for wallet: $address');
+          } else {
             try {
-              final reg = await BackendApiService().registerWallet(
-                walletAddress: address,
-                username: profileProvider.currentUser!.username.replaceFirst(RegExp(r'^@+'), ''),
-              );
-              debugPrint('registerWallet response: $reg');
-              // Reload profile after registration
-              await profileProvider.loadProfile(address);
+              await backendApiService.getProfileByWallet(address);
+              profileExistsOnBackend = true;
+              debugPrint('Profile exists on backend for wallet: $address');
             } catch (e) {
-              debugPrint('Backend registration failed: $e');
+              debugPrint('Profile not found on backend, will create new: $e');
             }
-              // Update ChatProvider cache so messages/conversations show correct avatar/name immediately
-              try {
-                final updated = profileProvider.currentUser;
-                if (updated != null) {
-                  final user = User(
-                    id: updated.walletAddress,
-                    name: updated.displayName,
-                    username: updated.username,
-                    bio: updated.bio,
-                    profileImageUrl: updated.avatar,
-                    followersCount: updated.stats?.followersCount ?? 0,
-                    followingCount: updated.stats?.followingCount ?? 0,
-                    postsCount: updated.stats?.artworksCreated ?? 0,
-                    isFollowing: false,
-                    isVerified: false,
-                    joinedDate: updated.createdAt.toIso8601String(),
-                    achievementProgress: [],
-                  );
-                  try { EventBus().emitProfileUpdated(user); } catch (_) {}
-                }
-              } catch (_) {}
           }
+        } catch (e) {
+          debugPrint('Profile lookup failed: $e');
+        }
 
-          // After profile is loaded/created, inform ChatProvider so chats and unread badges refresh
+        // Load profile (will create default if doesn't exist)
+        await profileProvider.loadProfile(address);
+
+        // Only register on backend if profile doesn't exist there yet
+        if (!profileExistsOnBackend && profileProvider.currentUser != null) {
+          debugPrint('Registering wallet on backend for wallet: $address');
+          await UserService.initialize();
           try {
-            await chatProvider.setCurrentWallet(address);
+            final reg = await BackendApiService().registerWallet(
+              walletAddress: address,
+              username: profileProvider.currentUser!.username
+                  .replaceFirst(RegExp(r'^@+'), ''),
+            );
+            debugPrint('registerWallet response: $reg');
+            // Reload profile after registration
+            await profileProvider.loadProfile(address);
           } catch (e) {
-            debugPrint('connectwallet: failed to set chat provider wallet after import: $e');
+            debugPrint('Backend registration failed: $e');
           }
+          // Update ChatProvider cache so messages/conversations show correct avatar/name immediately
           try {
-            await _runPostWalletConnectRefresh(address);
+            final updated = profileProvider.currentUser;
+            if (updated != null) {
+              final user = User(
+                id: updated.walletAddress,
+                name: updated.displayName,
+                username: updated.username,
+                bio: updated.bio,
+                profileImageUrl: updated.avatar,
+                followersCount: updated.stats?.followersCount ?? 0,
+                followingCount: updated.stats?.followingCount ?? 0,
+                postsCount: updated.stats?.artworksCreated ?? 0,
+                isFollowing: false,
+                isVerified: false,
+                joinedDate: updated.createdAt.toIso8601String(),
+                achievementProgress: [],
+              );
+              try {
+                EventBus().emitProfileUpdated(user);
+              } catch (_) {}
+            }
           } catch (_) {}
         }
-      
+
+        if (!mounted) return;
+        await const WalletSessionSyncService().bindAuthenticatedWallet(
+          context: context,
+          walletAddress: address,
+          warmUp: false,
+          loadProfile: false,
+        );
+        try {
+          await _runPostWalletConnectRefresh(address);
+        } catch (_) {}
+      }
+
       if (mounted) {
-        final hasAuth = (BackendApiService().getAuthToken() ?? '').trim().isNotEmpty;
+        final hasAuth =
+            (BackendApiService().getAuthToken() ?? '').trim().isNotEmpty;
         if (hasAuth) {
-          final ok = await const PostAuthSecuritySetupService().ensurePostAuthSecuritySetup(
+          final ok = await const PostAuthSecuritySetupService()
+              .ensurePostAuthSecuritySetup(
             navigator: navigator,
             walletProvider: walletProvider,
             securityGateProvider: gate,
@@ -753,7 +788,8 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
         }
         messenger.showKubusSnackBar(
           SnackBar(
-            content: Text(l10n.connectWalletImportSuccessToast(address.substring(0, 8))),
+            content: Text(
+                l10n.connectWalletImportSuccessToast(address.substring(0, 8))),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
           ),
@@ -779,14 +815,13 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     }
   }
 
-
   // Create new wallet view - generates mnemonic
-  Widget _buildCreateNewWalletView(Web3Provider web3Provider) {
+  Widget _buildCreateNewWalletView() {
     final l10n = AppLocalizations.of(context)!;
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final isSmallScreen = screenWidth < 360 || screenHeight < 700;
-    
+
     return FadeTransition(
       opacity: _fadeAnimation,
       child: SafeArea(
@@ -828,26 +863,31 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                 l10n.connectWalletCreateDescription,
                 style: GoogleFonts.inter(
                   fontSize: isSmallScreen ? 14 : 15,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
                   height: 1.5,
                 ),
               ),
               SizedBox(height: isSmallScreen ? 20 : 24),
-              
+
               // Info Box
               Container(
                 padding: EdgeInsets.all(isSmallScreen ? 12 : 14),
                 decoration: BoxDecoration(
                   color: Colors.green.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+                  border:
+                      Border.all(color: Colors.green.withValues(alpha: 0.3)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.info_outline, color: Colors.green, size: isSmallScreen ? 20 : 22),
+                        Icon(Icons.info_outline,
+                            color: Colors.green, size: isSmallScreen ? 20 : 22),
                         SizedBox(width: isSmallScreen ? 10 : 12),
                         Text(
                           l10n.connectWalletCreateInfoTitle,
@@ -864,7 +904,10 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                       l10n.connectWalletCreateInfoBody,
                       style: GoogleFonts.inter(
                         fontSize: isSmallScreen ? 12 : 13,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.7),
                         height: 1.5,
                       ),
                     ),
@@ -872,26 +915,31 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                 ),
               ),
               SizedBox(height: isSmallScreen ? 16 : 20),
-              
+
               // Warning Box
               Container(
                 padding: EdgeInsets.all(isSmallScreen ? 12 : 14),
                 decoration: BoxDecoration(
                   color: Colors.orange.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                  border:
+                      Border.all(color: Colors.orange.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.warning_amber_rounded, color: Colors.orange, size: isSmallScreen ? 20 : 22),
+                    Icon(Icons.warning_amber_rounded,
+                        color: Colors.orange, size: isSmallScreen ? 20 : 22),
                     SizedBox(width: isSmallScreen ? 10 : 12),
                     Expanded(
                       child: Text(
                         l10n.connectWalletCreateWarning,
                         style: GoogleFonts.inter(
                           fontSize: isSmallScreen ? 11 : 12,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.7),
                           height: 1.4,
                         ),
                       ),
@@ -900,17 +948,18 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                 ),
               ),
               SizedBox(height: isSmallScreen ? 20 : 24),
-              
+
               // Generate Button
               KubusButton(
-                onPressed: _isLoading ? null : () => _generateNewWallet(web3Provider),
+                onPressed: _isLoading ? null : _generateNewWallet,
                 isLoading: _isLoading,
                 label: l10n.connectWalletCreateGenerateButton,
                 isFullWidth: true,
                 backgroundColor: const Color(0xFF10B981),
                 foregroundColor: Colors.white,
               ),
-              SizedBox(height: isSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
+              SizedBox(
+                  height: isSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -918,7 +967,10 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                     child: Text(
                       l10n.connectWalletCreateAlreadyHaveWalletPrefix,
                       style: KubusTypography.textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6),
                       ),
                     ),
                   ),
@@ -935,7 +987,8 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                   ),
                 ],
               ),
-              SizedBox(height: isSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
+              SizedBox(
+                  height: isSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
             ],
           ),
         ),
@@ -944,12 +997,12 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
   }
 
   // WalletConnect view - scan QR or paste URI
-  Widget _buildWalletConnectView(Web3Provider web3Provider) {
+  Widget _buildWalletConnectView() {
     final l10n = AppLocalizations.of(context)!;
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final isSmallScreen = screenWidth < 360 || screenHeight < 700;
-    
+
     return FadeTransition(
       opacity: _fadeAnimation,
       child: SafeArea(
@@ -985,18 +1038,24 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                   ],
                 ),
               ),
-              SizedBox(height: isSmallScreen ? KubusSpacing.sm : KubusSpacing.md),
+              SizedBox(
+                  height: isSmallScreen ? KubusSpacing.sm : KubusSpacing.md),
               Text(
                 l10n.connectWalletWalletConnectDescription,
                 style: KubusTypography.textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
                 ),
               ),
-              SizedBox(height: isSmallScreen ? KubusSpacing.lg : KubusSpacing.xl),
-            
+              SizedBox(
+                  height: isSmallScreen ? KubusSpacing.lg : KubusSpacing.xl),
+
               // Supported Wallets
               Container(
-                padding: EdgeInsets.all(isSmallScreen ? KubusSpacing.sm : KubusSpacing.md),
+                padding: EdgeInsets.all(
+                    isSmallScreen ? KubusSpacing.sm : KubusSpacing.md),
                 decoration: BoxDecoration(
                   color: Colors.blue.withValues(alpha: 0.1),
                   borderRadius: KubusRadius.circular(KubusRadius.sm),
@@ -1007,8 +1066,12 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.check_circle, color: Colors.blue, size: isSmallScreen ? 20 : 22),
-                        SizedBox(width: isSmallScreen ? KubusSpacing.xs : KubusSpacing.sm),
+                        Icon(Icons.check_circle,
+                            color: Colors.blue, size: isSmallScreen ? 20 : 22),
+                        SizedBox(
+                            width: isSmallScreen
+                                ? KubusSpacing.xs
+                                : KubusSpacing.sm),
                         Text(
                           l10n.connectWalletWalletConnectSupportedTitle,
                           style: KubusTypography.textTheme.bodyMedium?.copyWith(
@@ -1018,18 +1081,24 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                         ),
                       ],
                     ),
-                    SizedBox(height: isSmallScreen ? KubusSpacing.xs : KubusSpacing.sm),
+                    SizedBox(
+                        height:
+                            isSmallScreen ? KubusSpacing.xs : KubusSpacing.sm),
                     Text(
                       l10n.connectWalletWalletConnectSupportedList,
                       style: KubusTypography.textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.7),
                       ),
                     ),
                   ],
                 ),
               ),
-              SizedBox(height: isSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
-            
+              SizedBox(
+                  height: isSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
+
               // Instructions
               Text(
                 l10n.connectWalletWalletConnectHowToTitle,
@@ -1043,10 +1112,9 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
               _buildInstructionStep('2', l10n.connectWalletWalletConnectStep2),
               _buildInstructionStep('3', l10n.connectWalletWalletConnectStep3),
               SizedBox(height: isSmallScreen ? 16 : 20),
-            
+
               // Quick connect without typing
 
-              
               // URI Input Field
               TextField(
                 controller: _wcUriController,
@@ -1054,18 +1122,23 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                 decoration: InputDecoration(
                   hintText: l10n.connectWalletWalletConnectUriHint,
                   hintStyle: KubusTypography.textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.4),
                   ),
                   filled: true,
                   fillColor: Theme.of(context).colorScheme.surface,
                   contentPadding: EdgeInsets.all(isSmallScreen ? 10 : 12),
                   border: OutlineInputBorder(
                     borderRadius: KubusRadius.circular(KubusRadius.md),
-                    borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+                    borderSide: BorderSide(
+                        color: Theme.of(context).colorScheme.outline),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: KubusRadius.circular(KubusRadius.md),
-                    borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+                    borderSide: BorderSide(
+                        color: Theme.of(context).colorScheme.outline),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: KubusRadius.circular(KubusRadius.md),
@@ -1074,7 +1147,8 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                   suffixIcon: IconButton(
                     icon: Icon(Icons.paste, size: isSmallScreen ? 18 : 20),
                     onPressed: () async {
-                      final clipboardData = await Clipboard.getData('text/plain');
+                      final clipboardData =
+                          await Clipboard.getData('text/plain');
                       if (clipboardData?.text != null) {
                         setState(() {
                           _wcUriController.text = clipboardData!.text!;
@@ -1088,25 +1162,30 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                 ),
               ),
               SizedBox(height: isSmallScreen ? 12 : 14),
-            
+
               // Info Box
               Container(
                 padding: EdgeInsets.all(isSmallScreen ? 12 : 14),
                 decoration: BoxDecoration(
                   color: Colors.orange.withValues(alpha: 0.1),
                   borderRadius: KubusRadius.circular(KubusRadius.sm),
-                  border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                  border:
+                      Border.all(color: Colors.orange.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.info_outline, color: Colors.orange, size: isSmallScreen ? 18 : 20),
+                    Icon(Icons.info_outline,
+                        color: Colors.orange, size: isSmallScreen ? 18 : 20),
                     SizedBox(width: isSmallScreen ? 10 : 12),
                     Expanded(
                       child: Text(
                         l10n.connectWalletWalletConnectSecurityNote,
                         style: KubusTypography.textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.7),
                         ),
                       ),
                     ),
@@ -1114,11 +1193,11 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                 ),
               ),
               SizedBox(height: isSmallScreen ? 20 : 24),
-              
+
               // Connect Buttons
               if (isSmallScreen) ...[
                 KubusButton(
-                  onPressed: _isLoading ? null : () => _quickWalletConnect(web3Provider),
+                  onPressed: _isLoading ? null : _quickWalletConnect,
                   isLoading: _isLoading,
                   icon: Icons.flash_on_rounded,
                   label: l10n.connectWalletWalletConnectQuickConnectLabel,
@@ -1128,7 +1207,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                 ),
                 const SizedBox(height: 12),
                 KubusButton(
-                  onPressed: _isLoading ? null : () => _connectWithWalletConnect(web3Provider),
+                  onPressed: _isLoading ? null : _connectWithWalletConnect,
                   isLoading: _isLoading,
                   label: l10n.connectWalletWalletConnectConnectButton,
                   isFullWidth: true,
@@ -1136,11 +1215,11 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                   foregroundColor: Colors.white,
                 ),
               ] else ...[
-                 Row(
+                Row(
                   children: [
                     Expanded(
                       child: KubusButton(
-                        onPressed: _isLoading ? null : () => _scanQRCode(web3Provider),
+                        onPressed: _isLoading ? null : _scanQRCode,
                         icon: Icons.qr_code_scanner,
                         label: l10n.connectWalletWalletConnectScanQrButton,
                         backgroundColor: const Color(0xFF3B82F6),
@@ -1150,7 +1229,8 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                     const SizedBox(width: 12),
                     Expanded(
                       child: KubusButton(
-                        onPressed: _isLoading ? null : () => _connectWithWalletConnect(web3Provider),
+                        onPressed:
+                            _isLoading ? null : _connectWithWalletConnect,
                         isLoading: _isLoading,
                         label: l10n.connectWalletWalletConnectConnectButton,
                         backgroundColor: const Color(0xFF3B82F6),
@@ -1160,7 +1240,6 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                   ],
                 ),
               ],
-
             ],
           ),
         ),
@@ -1171,7 +1250,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
   Widget _buildInstructionStep(String number, String text) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 360;
-    
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
@@ -1198,7 +1277,10 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
             child: Text(
               text,
               style: KubusTypography.textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.8),
               ),
             ),
           ),
@@ -1207,7 +1289,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     );
   }
 
-  Future<void> _scanQRCode(Web3Provider web3Provider) async {
+  Future<void> _scanQRCode() async {
     final l10n = AppLocalizations.of(context)!;
     final result = await Navigator.push<String>(
       context,
@@ -1226,7 +1308,8 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                 onDetect: (capture) {
                   final List<Barcode> barcodes = capture.barcodes;
                   for (final barcode in barcodes) {
-                    if (barcode.rawValue != null && barcode.rawValue!.startsWith('wc:')) {
+                    if (barcode.rawValue != null &&
+                        barcode.rawValue!.startsWith('wc:')) {
                       Navigator.pop(context, barcode.rawValue);
                       break;
                     }
@@ -1249,7 +1332,8 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                 right: 0,
                 child: Center(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
                     decoration: BoxDecoration(
                       color: Colors.black.withValues(alpha: 0.7),
                       borderRadius: BorderRadius.circular(24),
@@ -1269,16 +1353,16 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
         ),
       ),
     );
-    
+
     if (result != null && mounted) {
       setState(() {
         _wcUriController.text = result;
       });
-      await _connectWithWalletConnect(web3Provider);
+      await _connectWithWalletConnect();
     }
   }
 
-  Future<void> _quickWalletConnect(Web3Provider web3Provider) async {
+  Future<void> _quickWalletConnect() async {
     // Try clipboard first
     try {
       final clipboardData = await Clipboard.getData('text/plain');
@@ -1287,21 +1371,21 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
         setState(() {
           _wcUriController.text = text;
         });
-        await _connectWithWalletConnect(web3Provider);
+        await _connectWithWalletConnect();
         return;
       }
     } catch (_) {}
 
     // If no URI in clipboard, fall back to scanner (mobile) or prompt
     if (!mounted) return;
-    await _scanQRCode(web3Provider);
+    await _scanQRCode();
   }
 
-  Future<void> _connectWithWalletConnect(Web3Provider web3Provider) async {
+  Future<void> _connectWithWalletConnect() async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     final uri = _wcUriController.text.trim();
-    
+
     if (uri.isEmpty) {
       messenger.showKubusSnackBar(
         SnackBar(
@@ -1312,7 +1396,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
       );
       return;
     }
-    
+
     if (!uri.startsWith('wc:')) {
       messenger.showKubusSnackBar(
         SnackBar(
@@ -1323,15 +1407,18 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
       );
       return;
     }
-    
+
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
-      final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+      final walletProvider =
+          Provider.of<WalletProvider>(context, listen: false);
       final walletAddress = walletProvider.currentWalletAddress;
-      if (walletAddress == null || walletAddress.isEmpty) {
+      if (!walletProvider.canTransact ||
+          walletAddress == null ||
+          walletAddress.isEmpty) {
         setState(() {
           _isLoading = false;
         });
@@ -1344,15 +1431,15 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
         );
         return;
       }
-      
+
       final wcService = SolanaWalletConnectService.instance;
       wcService.updateActiveWalletAddress(walletAddress);
-      
+
       // Initialize if not already done
-      if (!wcService.isConnected) {
+      if (!wcService.isInitialized) {
         await wcService.initialize();
       }
-      
+
       // Do not capture BuildContext-dependent objects here â€” capture inside the callback after verifying mounted
 
       // Set up callbacks
@@ -1361,31 +1448,31 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
           final l10n = AppLocalizations.of(context)!;
           final messenger = ScaffoldMessenger.of(context);
           final navigator = Navigator.of(context);
-          final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-          final gate = Provider.of<SecurityGateProvider>(context, listen: false);
-          final chatProvider = Provider.of<ChatProvider>(context, listen: false);
-          final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+          final walletProvider =
+              Provider.of<WalletProvider>(context, listen: false);
+          final gate =
+              Provider.of<SecurityGateProvider>(context, listen: false);
+          final profileProvider =
+              Provider.of<ProfileProvider>(context, listen: false);
           messenger.showKubusSnackBar(
             SnackBar(
-              content: Text(l10n.connectWalletWalletConnectConnectedToast(address)),
+              content:
+                  Text(l10n.connectWalletWalletConnectConnectedToast(address)),
               backgroundColor: Colors.green,
               behavior: SnackBarBehavior.floating,
             ),
           );
 
-          // Update wallet provider and web3 provider
-          debugPrint('connectwallet: calling web3Provider.connectExistingWallet for $address');
-          await web3Provider.connectExistingWallet(address);
-          debugPrint('connectwallet: web3Provider.connectExistingWallet completed for $address');
-
           // Load or create profile for this wallet, similar to import flow
           try {
             // use captured profileProvider
-            debugPrint('connectwallet: calling profileProvider.loadProfile for $address');
+            debugPrint(
+                'connectwallet: calling profileProvider.loadProfile for $address');
             final backendApiService = BackendApiService();
             bool profileExistsOnBackend = false;
             try {
-              final freshUser = await UserService.getUserById(address, forceRefresh: true);
+              final freshUser =
+                  await UserService.getUserById(address, forceRefresh: true);
               if (freshUser != null) {
                 profileExistsOnBackend = true;
               } else {
@@ -1397,14 +1484,18 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
             } catch (_) {}
 
             await profileProvider.loadProfile(address);
-            debugPrint('connectwallet: profileProvider.loadProfile completed for $address');
-            if (!profileExistsOnBackend && profileProvider.currentUser != null) {
+            debugPrint(
+                'connectwallet: profileProvider.loadProfile completed for $address');
+            if (!profileExistsOnBackend &&
+                profileProvider.currentUser != null) {
               try {
                 final reg = await BackendApiService().registerWallet(
                   walletAddress: address,
-                  username: profileProvider.currentUser!.username.replaceFirst(RegExp(r'^@+'), ''),
+                  username: profileProvider.currentUser!.username
+                      .replaceFirst(RegExp(r'^@+'), ''),
                 );
-                debugPrint('connectwallet (onConnected): registerWallet response: $reg');
+                debugPrint(
+                    'connectwallet (onConnected): registerWallet response: $reg');
                 await profileProvider.loadProfile(address);
                 // Update ChatProvider cache to immediately reflect profile changes in messages UI
                 try {
@@ -1424,31 +1515,36 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                       joinedDate: u.createdAt.toIso8601String(),
                       achievementProgress: [],
                     );
-                    try { EventBus().emitProfileUpdated(user); } catch (_) {}
+                    try {
+                      EventBus().emitProfileUpdated(user);
+                    } catch (_) {}
                   }
                 } catch (_) {}
               } catch (e) {
-                debugPrint('connectwallet (onConnected): backend registration failed: $e');
+                debugPrint(
+                    'connectwallet (onConnected): backend registration failed: $e');
               }
             }
           } catch (e, st) {
-            debugPrint('connectwallet: profile load/create failed after walletconnect: $e\n$st');
+            debugPrint(
+                'connectwallet: profile load/create failed after walletconnect: $e\n$st');
           }
 
-          // Inform ChatProvider so it can subscribe and refresh conversations/unread
-          try {
-            debugPrint('connectwallet: calling ChatProvider.setCurrentWallet for $address');
-            await chatProvider.setCurrentWallet(address);
-            debugPrint('connectwallet: ChatProvider.setCurrentWallet completed for $address');
-          } catch (e, st) {
-            debugPrint('connectwallet: failed to set chat provider wallet after walletconnect: $e\n$st');
-          }
+          if (!mounted) return;
+          await const WalletSessionSyncService().bindAuthenticatedWallet(
+            context: context,
+            walletAddress: address,
+            warmUp: false,
+            loadProfile: false,
+          );
           try {
             await _runPostWalletConnectRefresh(address);
           } catch (_) {}
-          final hasAuth = (BackendApiService().getAuthToken() ?? '').trim().isNotEmpty;
+          final hasAuth =
+              (BackendApiService().getAuthToken() ?? '').trim().isNotEmpty;
           if (hasAuth) {
-            final ok = await const PostAuthSecuritySetupService().ensurePostAuthSecuritySetup(
+            final ok = await const PostAuthSecuritySetupService()
+                .ensurePostAuthSecuritySetup(
               navigator: navigator,
               walletProvider: walletProvider,
               securityGateProvider: gate,
@@ -1460,7 +1556,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
           navigator.pop();
         }
       };
-      
+
       wcService.onError = (error) {
         debugPrint('connectwallet: walletconnect error: $error');
         _trackWalletAuthFailure('walletconnect_error');
@@ -1471,17 +1567,18 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
           final l10n = AppLocalizations.of(context)!;
           messenger.showKubusSnackBar(
             SnackBar(
-              content: Text(l10n.connectWalletWalletConnectConnectionErrorToast),
+              content:
+                  Text(l10n.connectWalletWalletConnectConnectionErrorToast),
               backgroundColor: Colors.red,
               behavior: SnackBarBehavior.floating,
             ),
           );
         }
       };
-      
+
       // Pair with the URI
       await wcService.pair(uri);
-      
+
       if (mounted) {
         messenger.showKubusSnackBar(
           SnackBar(
@@ -1510,7 +1607,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     }
   }
 
-  Future<void> _generateNewWallet(Web3Provider web3Provider) async {
+  Future<void> _generateNewWallet() async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
@@ -1518,39 +1615,40 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
-      final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+      final walletProvider =
+          Provider.of<WalletProvider>(context, listen: false);
       // Capture providers and UI state before any awaits to avoid use_build_context_synchronously
-      final chatProvider = Provider.of<ChatProvider>(context, listen: false);
-      final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+      final profileProvider =
+          Provider.of<ProfileProvider>(context, listen: false);
 
       final result = await walletProvider.createWallet();
-      
+
       // Show the mnemonic to the user
       if (mounted) {
         await _showMnemonicDialog(result['mnemonic']!, result['address']!);
-        
-        // Import the wallet in Web3Provider using the generated mnemonic
-        await web3Provider.importWallet(result['mnemonic']!);
-        // Notify ChatProvider about the new wallet so conversations and sockets refresh
-        try {
-          await chatProvider.setCurrentWallet(result['address']!);
-        } catch (e) {
-          debugPrint('connectwallet: failed to set chat provider wallet after create: $e');
-        }
-        
+        if (!mounted) return;
+
+        await const WalletSessionSyncService().bindAuthenticatedWallet(
+          context: context,
+          walletAddress: result['address']!,
+          warmUp: false,
+          loadProfile: false,
+        );
+
         // Create user profile linked to wallet
         if (mounted) {
           // profileProvider captured earlier
           final backendApiService = BackendApiService();
           final address = result['address']!;
-          
+
           // Prefer cache-first lookup via UserService to avoid unnecessary network calls
           bool profileExistsOnBackend = false;
           try {
             // Force fresh lookup during wallet creation
-            final freshUser = await UserService.getUserById(address, forceRefresh: true);
+            final freshUser =
+                await UserService.getUserById(address, forceRefresh: true);
             if (freshUser != null) {
               profileExistsOnBackend = true;
               debugPrint('Profile found (fresh) for wallet: $address');
@@ -1566,7 +1664,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
           } catch (e) {
             debugPrint('Profile lookup failed: $e');
           }
-          
+
           // Only create profile if it doesn't exist on backend
           if (!profileExistsOnBackend) {
             debugPrint('Creating new profile for wallet: $address');
@@ -1583,7 +1681,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
             await profileProvider.loadProfile(address);
           }
         }
-        
+
         if (mounted) {
           try {
             await _runPostWalletConnectRefresh(result['address']!);
@@ -1621,8 +1719,9 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     final l10n = AppLocalizations.of(context)!;
     final TextEditingController confirmController = TextEditingController();
     bool confirmed = false;
-    final shortAddress = '${address.substring(0, 8)}...${address.substring(address.length - 6)}';
-    
+    final shortAddress =
+        '${address.substring(0, 8)}...${address.substring(address.length - 6)}';
+
     await showKubusDialog(
       context: context,
       barrierDismissible: false,
@@ -1642,11 +1741,13 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                   decoration: BoxDecoration(
                     color: Colors.orange.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                    border:
+                        Border.all(color: Colors.orange.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 20),
+                      const Icon(Icons.warning_amber_rounded,
+                          color: Colors.orange, size: 20),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -1667,7 +1768,8 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.surface,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Theme.of(context).colorScheme.outline),
+                    border: Border.all(
+                        color: Theme.of(context).colorScheme.outline),
                   ),
                   child: SelectableText(
                     mnemonic,
@@ -1707,7 +1809,10 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                   l10n.connectWalletMnemonicDialogAddressLabel(shortAddress),
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -1745,11 +1850,11 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     );
   }
 
-  Widget _buildConnectedView(Web3Provider web3Provider) {
+  Widget _buildConnectedView() {
     final l10n = AppLocalizations.of(context)!;
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 360;
-    
+
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.symmetric(
@@ -1785,7 +1890,10 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                 l10n.connectWalletConnectedDescription,
                 style: GoogleFonts.inter(
                   fontSize: isSmallScreen ? 14 : 15,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
                   height: 1.5,
                 ),
                 textAlign: TextAlign.center,
@@ -1798,7 +1906,8 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                 onPressed: () => Navigator.of(context).pop(),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Color(0xFF10B981),
-                  padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 16 : 18),
+                  padding:
+                      EdgeInsets.symmetric(vertical: isSmallScreen ? 16 : 18),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
@@ -1816,14 +1925,19 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
             SizedBox(height: isSmallScreen ? 12 : 14),
             TextButton(
               onPressed: () {
-                web3Provider.disconnectWallet();
-                Provider.of<WalletProvider>(context, listen: false).disconnectWallet();
+                unawaited(
+                  Provider.of<WalletProvider>(context, listen: false)
+                      .disconnectWallet(),
+                );
               },
               child: Text(
                 l10n.connectWalletConnectedDisconnectButton,
                 style: GoogleFonts.inter(
                   fontSize: isSmallScreen ? 14 : 15,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
                 ),
               ),
             ),
@@ -1832,13 +1946,6 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
       ),
     );
   }
-
-
-
-
-
-
-
 
   void _showWeb3Guide() {
     final l10n = AppLocalizations.of(context)!;
@@ -1861,13 +1968,29 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
             children: [
               Text(
                 l10n.connectWalletWeb3GuideDescription,
-                style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+                style: GoogleFonts.inter(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6)),
               ),
               const SizedBox(height: 16),
-              _buildFeaturePoint(Icons.lock, l10n.connectWalletWeb3GuideFeatureSecureTitle, l10n.connectWalletWeb3GuideFeatureSecureDescription),
-              _buildFeaturePoint(Icons.palette, l10n.connectWalletWeb3GuideFeatureNftsTitle, l10n.connectWalletWeb3GuideFeatureNftsDescription),
-              _buildFeaturePoint(Icons.how_to_vote, l10n.connectWalletWeb3GuideFeatureGovernanceTitle, l10n.connectWalletWeb3GuideFeatureGovernanceDescription),
-              _buildFeaturePoint(Icons.account_balance_wallet, l10n.connectWalletWeb3GuideFeatureDefiTitle, l10n.connectWalletWeb3GuideFeatureDefiDescription),
+              _buildFeaturePoint(
+                  Icons.lock,
+                  l10n.connectWalletWeb3GuideFeatureSecureTitle,
+                  l10n.connectWalletWeb3GuideFeatureSecureDescription),
+              _buildFeaturePoint(
+                  Icons.palette,
+                  l10n.connectWalletWeb3GuideFeatureNftsTitle,
+                  l10n.connectWalletWeb3GuideFeatureNftsDescription),
+              _buildFeaturePoint(
+                  Icons.how_to_vote,
+                  l10n.connectWalletWeb3GuideFeatureGovernanceTitle,
+                  l10n.connectWalletWeb3GuideFeatureGovernanceDescription),
+              _buildFeaturePoint(
+                  Icons.account_balance_wallet,
+                  l10n.connectWalletWeb3GuideFeatureDefiTitle,
+                  l10n.connectWalletWeb3GuideFeatureDefiDescription),
             ],
           ),
         ),
@@ -1879,7 +2002,8 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
             ),
             child: Text(
               l10n.connectWalletWeb3GuideGotItButton,
-              style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onPrimary),
+              style: GoogleFonts.inter(
+                  color: Theme.of(context).colorScheme.onPrimary),
             ),
           ),
         ],
@@ -1893,7 +2017,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
       child: Row(
         children: [
           Icon(
-            icon, 
+            icon,
             size: 24,
             color: Provider.of<ThemeProvider>(context).accentColor,
           ),
@@ -1914,7 +2038,10 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                   description,
                   style: GoogleFonts.inter(
                     fontSize: 14,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -1925,4 +2052,3 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     );
   }
 }
-

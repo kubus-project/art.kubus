@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -107,11 +107,10 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
   }
 
   Future<void> _loadSettings() async {
-    final web3Provider = Provider.of<Web3Provider>(context, listen: false);
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final settings = await SettingsService.loadSettings(
-      fallbackNetwork: web3Provider.currentNetwork.isNotEmpty
-          ? web3Provider.currentNetwork
+      fallbackNetwork: walletProvider.currentSolanaNetwork.isNotEmpty
+          ? walletProvider.currentSolanaNetwork
           : null,
     );
     final hasPin = await walletProvider.hasPin();
@@ -307,10 +306,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
           l10n.settingsAppearanceSectionTitle, Icons.palette_outlined, 1),
       _SettingsItem(
           l10n.permissionsNotificationsTitle, Icons.notifications_outlined, 2),
+      _SettingsItem(l10n.settingsSecuritySettingsTileTitle, Icons.security, 3),
       _SettingsItem(
-        l10n.settingsSecuritySettingsTileTitle, Icons.security, 3),
-      _SettingsItem(
-        l10n.settingsPrivacySettingsTileTitle, Icons.lock_outline, 4),
+          l10n.settingsPrivacySettingsTileTitle, Icons.lock_outline, 4),
       _SettingsItem(
           l10n.userProfileAchievementsTitle, Icons.emoji_events_outlined, 5),
       _SettingsItem(l10n.settingsPlatformFeaturesSectionTitle,
@@ -670,6 +668,19 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     final l10n = AppLocalizations.of(context)!;
     final web3Provider = Provider.of<Web3Provider>(context);
     final walletProvider = Provider.of<WalletProvider>(context);
+    final hasWalletIdentity = walletProvider.hasWalletIdentity;
+    final canTransact = walletProvider.canTransact;
+    final walletAddress = (walletProvider.currentWalletAddress ?? '').trim();
+    final walletStatusLabel = walletProvider.isReadOnlySession
+        ? '${l10n.settingsWalletConnectionConnected} (read-only)'
+        : hasWalletIdentity
+            ? l10n.settingsWalletConnectionConnected
+            : l10n.settingsWalletConnectionNotConnected;
+    final statusColor = canTransact
+        ? Theme.of(context).colorScheme.tertiary
+        : hasWalletIdentity
+            ? Theme.of(context).colorScheme.primary
+            : Theme.of(context).colorScheme.secondary;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -708,19 +719,16 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
-                          color: (web3Provider.isConnected
-                                  ? Theme.of(context).colorScheme.tertiary
-                                  : Theme.of(context).colorScheme.secondary)
-                              .withValues(alpha: 0.1),
+                          color: statusColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
-                          web3Provider.isConnected
+                          canTransact
                               ? Icons.check_circle
-                              : Icons.warning,
-                          color: web3Provider.isConnected
-                              ? Theme.of(context).colorScheme.tertiary
-                              : Theme.of(context).colorScheme.secondary,
+                              : hasWalletIdentity
+                                  ? Icons.visibility
+                                  : Icons.warning,
+                          color: statusColor,
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -729,21 +737,29 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              web3Provider.isConnected
-                                  ? l10n.settingsWalletConnectionConnected
-                                  : l10n.settingsWalletConnectionNotConnected,
+                              walletStatusLabel,
                               style: GoogleFonts.inter(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                                 color: Theme.of(context).colorScheme.onSurface,
                               ),
                             ),
-                            if (web3Provider.isConnected)
+                            if (hasWalletIdentity)
                               Text(
-                                web3Provider
-                                    .formatAddress(web3Provider.walletAddress),
+                                web3Provider.formatAddress(walletAddress),
                                 style: GoogleFonts.robotoMono(
                                   fontSize: 13,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.6),
+                                ),
+                              ),
+                            if (walletProvider.isReadOnlySession)
+                              Text(
+                                'Reconnect to enable signing and transfers.',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
                                   color: Theme.of(context)
                                       .colorScheme
                                       .onSurface
@@ -753,17 +769,43 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                           ],
                         ),
                       ),
-                      if (web3Provider.isConnected)
+                      if (hasWalletIdentity)
                         ElevatedButton.icon(
                           onPressed: () {
+                            if (walletProvider.isReadOnlySession) {
+                              Navigator.of(context)
+                                  .pushNamed('/connect-wallet');
+                              return;
+                            }
                             Navigator.push(
                               context,
                               MaterialPageRoute(
                                   builder: (_) => const WalletHome()),
                             );
                           },
-                          icon: const Icon(Icons.visibility, size: 18),
-                          label: Text(l10n.desktopSettingsViewWalletButton),
+                          icon: Icon(
+                            walletProvider.isReadOnlySession
+                                ? Icons.login
+                                : Icons.visibility,
+                            size: 18,
+                          ),
+                          label: Text(
+                            walletProvider.isReadOnlySession
+                                ? 'Reconnect'
+                                : l10n.desktopSettingsViewWalletButton,
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColorUtils.amberAccent,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      if (!hasWalletIdentity)
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.of(context).pushNamed('/connect-wallet');
+                          },
+                          icon: const Icon(Icons.login, size: 18),
+                          label: const Text('Connect wallet'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColorUtils.amberAccent,
                             foregroundColor: Colors.white,
@@ -796,15 +838,16 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                     runSpacing: 12,
                     children: ['Mainnet', 'Devnet', 'Testnet'].map((network) {
                       final isSelected =
-                          web3Provider.currentNetwork.toLowerCase() ==
+                          walletProvider.currentSolanaNetwork.toLowerCase() ==
                               network.toLowerCase();
                       return ChoiceChip(
                         label: Text(network),
                         selected: isSelected,
                         onSelected: (selected) {
                           if (selected) {
-                            web3Provider.switchNetwork(network);
                             walletProvider.switchSolanaNetwork(network);
+                            setState(() => _networkSelection = network);
+                            unawaited(_saveSettings());
                           }
                         },
                         selectedColor:
@@ -851,6 +894,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                       l10n.desktopSettingsDisconnectWalletTileSubtitle,
                       Icons.logout,
                       isDestructive: true,
+                      tileKey: const Key('desktop_settings_wallet_disconnect'),
                       onTap: () => _showDisconnectConfirmation(),
                     ),
                   ],
@@ -956,8 +1000,10 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              Provider.of<Web3Provider>(context, listen: false)
-                  .disconnectWallet();
+              unawaited(
+                Provider.of<WalletProvider>(context, listen: false)
+                    .disconnectWallet(),
+              );
               ScaffoldMessenger.of(context).showKubusSnackBar(
                 SnackBar(
                     content: Text(l10n.desktopSettingsWalletDisconnectedToast)),
@@ -2340,6 +2386,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     ) async {
       await profileProvider.updateNotificationPreferences(next);
     }
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Column(
@@ -2608,8 +2655,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   saveAfterToggle: false,
                   enabled: notificationPreferences.enabled,
                   onChanged: (value) {
-                    final next =
-                        notificationPreferences.copyWith(art: value);
+                    final next = notificationPreferences.copyWith(art: value);
                     unawaited(persistNotificationPreferences(next));
                   },
                 ),
@@ -2634,8 +2680,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   saveAfterToggle: false,
                   enabled: notificationPreferences.enabled,
                   onChanged: (value) {
-                    final next =
-                        notificationPreferences.copyWith(dao: value);
+                    final next = notificationPreferences.copyWith(dao: value);
                     unawaited(persistNotificationPreferences(next));
                   },
                 ),
@@ -3530,11 +3575,13 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     bool isDestructive = false,
     VoidCallback? onTap,
     Widget? trailing,
+    Key? tileKey,
   }) {
     final errorColor = Theme.of(context).colorScheme.error;
     return Material(
       color: Colors.transparent,
       child: InkWell(
+        key: tileKey,
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
         child: Padding(
