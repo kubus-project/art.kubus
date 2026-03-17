@@ -22,6 +22,7 @@ import '../../../services/user_service.dart';
 import '../../../services/telemetry/telemetry_service.dart';
 import '../../../services/wallet_session_sync_service.dart';
 import '../../../models/user.dart';
+import '../../desktop/desktop_shell.dart';
 import '../../../widgets/auth_wallet_entry_menu.dart';
 import '../../../widgets/gradient_icon_card.dart';
 import '../../../widgets/kubus_button.dart';
@@ -151,6 +152,111 @@ class _ConnectWalletState extends State<ConnectWallet>
     }
     unawaited(TelemetryService()
         .trackSignUpFailure(method: 'wallet', errorClass: normalized));
+  }
+
+  bool get _isAuthEntryFlow => _normalizedAuthFlow() != null;
+
+  String _fallbackWalletUsername(String address) {
+    final prefix = address.length >= 6 ? address.substring(0, 6) : address;
+    return 'user_$prefix';
+  }
+
+  String? _normalizedProfileUsername(ProfileProvider profileProvider) {
+    final raw = (profileProvider.currentUser?.username ?? '').trim();
+    if (raw.isEmpty) return null;
+    final normalized = raw.replaceFirst(RegExp(r'^@+'), '').trim();
+    return normalized.isEmpty ? null : normalized;
+  }
+
+  void _emitProfileUpdate(ProfileProvider profileProvider) {
+    final currentUser = profileProvider.currentUser;
+    if (currentUser == null) return;
+
+    final user = User(
+      id: currentUser.walletAddress,
+      name: currentUser.displayName,
+      username: currentUser.username,
+      bio: currentUser.bio,
+      profileImageUrl: currentUser.avatar,
+      followersCount: currentUser.stats?.followersCount ?? 0,
+      followingCount: currentUser.stats?.followingCount ?? 0,
+      postsCount: currentUser.stats?.artworksCreated ?? 0,
+      isFollowing: false,
+      isVerified: false,
+      joinedDate: currentUser.createdAt.toIso8601String(),
+      achievementProgress: const [],
+    );
+
+    try {
+      EventBus().emitProfileUpdated(user);
+    } catch (_) {}
+  }
+
+  Future<void> _ensureWalletAccountAndProfile({
+    required String address,
+    required ProfileProvider profileProvider,
+  }) async {
+    final backendApiService = BackendApiService();
+
+    try {
+      await UserService.initialize();
+    } catch (_) {}
+
+    bool profileExistsOnBackend = false;
+    try {
+      final freshUser =
+          await UserService.getUserById(address, forceRefresh: true);
+      if (freshUser != null) {
+        profileExistsOnBackend = true;
+      } else {
+        try {
+          await backendApiService.getProfileByWallet(address);
+          profileExistsOnBackend = true;
+        } catch (_) {}
+      }
+    } catch (_) {}
+
+    try {
+      await profileProvider.loadProfile(address);
+    } catch (e) {
+      debugPrint('connectwallet: profile load failed for $address: $e');
+    }
+
+    if (!profileExistsOnBackend && profileProvider.currentUser == null) {
+      try {
+        final created = await profileProvider.createProfileFromWallet(
+            walletAddress: address);
+        if (created) {
+          await profileProvider.loadProfile(address);
+        }
+      } catch (e) {
+        debugPrint('connectwallet: createProfileFromWallet failed: $e');
+      }
+    }
+
+    final currentAuthWallet =
+        (backendApiService.getCurrentAuthWalletAddress() ?? '')
+            .trim()
+            .toLowerCase();
+    final hasAuthToken =
+        (backendApiService.getAuthToken() ?? '').trim().isNotEmpty;
+    final needsWalletAuth =
+        !hasAuthToken || currentAuthWallet != address.trim().toLowerCase();
+
+    if (needsWalletAuth) {
+      final username = _normalizedProfileUsername(profileProvider) ??
+          _fallbackWalletUsername(address);
+      final reg = await backendApiService.registerWallet(
+        walletAddress: address,
+        username: username,
+      );
+      debugPrint('connectwallet: registerWallet response: $reg');
+    }
+
+    try {
+      await profileProvider.loadProfile(address);
+    } catch (_) {}
+    _emitProfileUpdate(profileProvider);
   }
 
   Future<void> _runPostWalletConnectRefresh(String walletAddress) async {
@@ -722,75 +828,11 @@ class _ConnectWalletState extends State<ConnectWallet>
           Provider.of<ProfileProvider>(context, listen: false);
       final address = await walletProvider.importWalletFromMnemonic(mnemonic);
 
-      // Load or create user profile linked to wallet
       if (mounted) {
-        final backendApiService = BackendApiService();
-
-        // Prefer cache-first lookup via UserService to avoid unnecessary network calls
-        bool profileExistsOnBackend = false;
-        try {
-          // Force a fresh lookup during wallet import
-          final freshUser =
-              await UserService.getUserById(address, forceRefresh: true);
-          if (freshUser != null) {
-            profileExistsOnBackend = true;
-            debugPrint('Profile found (fresh) for wallet: $address');
-          } else {
-            try {
-              await backendApiService.getProfileByWallet(address);
-              profileExistsOnBackend = true;
-              debugPrint('Profile exists on backend for wallet: $address');
-            } catch (e) {
-              debugPrint('Profile not found on backend, will create new: $e');
-            }
-          }
-        } catch (e) {
-          debugPrint('Profile lookup failed: $e');
-        }
-
-        // Load profile (will create default if doesn't exist)
-        await profileProvider.loadProfile(address);
-
-        // Only register on backend if profile doesn't exist there yet
-        if (!profileExistsOnBackend && profileProvider.currentUser != null) {
-          debugPrint('Registering wallet on backend for wallet: $address');
-          await UserService.initialize();
-          try {
-            final reg = await BackendApiService().registerWallet(
-              walletAddress: address,
-              username: profileProvider.currentUser!.username
-                  .replaceFirst(RegExp(r'^@+'), ''),
-            );
-            debugPrint('registerWallet response: $reg');
-            // Reload profile after registration
-            await profileProvider.loadProfile(address);
-          } catch (e) {
-            debugPrint('Backend registration failed: $e');
-          }
-          // Update ChatProvider cache so messages/conversations show correct avatar/name immediately
-          try {
-            final updated = profileProvider.currentUser;
-            if (updated != null) {
-              final user = User(
-                id: updated.walletAddress,
-                name: updated.displayName,
-                username: updated.username,
-                bio: updated.bio,
-                profileImageUrl: updated.avatar,
-                followersCount: updated.stats?.followersCount ?? 0,
-                followingCount: updated.stats?.followingCount ?? 0,
-                postsCount: updated.stats?.artworksCreated ?? 0,
-                isFollowing: false,
-                isVerified: false,
-                joinedDate: updated.createdAt.toIso8601String(),
-                achievementProgress: [],
-              );
-              try {
-                EventBus().emitProfileUpdated(user);
-              } catch (_) {}
-            }
-          } catch (_) {}
-        }
+        await _ensureWalletAccountAndProfile(
+          address: address,
+          profileProvider: profileProvider,
+        );
 
         if (!mounted) return;
         await const WalletSessionSyncService().bindAuthenticatedWallet(
@@ -817,14 +859,17 @@ class _ConnectWalletState extends State<ConnectWallet>
           if (!mounted) return;
           if (!ok) return;
         }
-        messenger.showKubusSnackBar(
-          SnackBar(
-            content: Text(
-                l10n.connectWalletImportSuccessToast(address.substring(0, 8))),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        messenger.clearSnackBars();
+        if (!_isAuthEntryFlow) {
+          messenger.showKubusSnackBar(
+            SnackBar(
+              content: Text(l10n
+                  .connectWalletImportSuccessToast(address.substring(0, 8))),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
         _trackWalletAuthSuccess();
         navigator.pop();
       }
@@ -1486,77 +1531,23 @@ class _ConnectWalletState extends State<ConnectWallet>
               Provider.of<SecurityGateProvider>(context, listen: false);
           final profileProvider =
               Provider.of<ProfileProvider>(context, listen: false);
-          messenger.showKubusSnackBar(
-            SnackBar(
-              content:
-                  Text(l10n.connectWalletWalletConnectConnectedToast(address)),
-              backgroundColor: Colors.green,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          messenger.clearSnackBars();
+          if (!_isAuthEntryFlow) {
+            messenger.showKubusSnackBar(
+              SnackBar(
+                content: Text(
+                    l10n.connectWalletWalletConnectConnectedToast(address)),
+                backgroundColor: Colors.green,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
 
-          // Load or create profile for this wallet, similar to import flow
           try {
-            // use captured profileProvider
-            debugPrint(
-                'connectwallet: calling profileProvider.loadProfile for $address');
-            final backendApiService = BackendApiService();
-            bool profileExistsOnBackend = false;
-            try {
-              final freshUser =
-                  await UserService.getUserById(address, forceRefresh: true);
-              if (freshUser != null) {
-                profileExistsOnBackend = true;
-              } else {
-                try {
-                  await backendApiService.getProfileByWallet(address);
-                  profileExistsOnBackend = true;
-                } catch (_) {}
-              }
-            } catch (_) {}
-
-            await profileProvider.loadProfile(address);
-            debugPrint(
-                'connectwallet: profileProvider.loadProfile completed for $address');
-            if (!profileExistsOnBackend &&
-                profileProvider.currentUser != null) {
-              try {
-                final reg = await BackendApiService().registerWallet(
-                  walletAddress: address,
-                  username: profileProvider.currentUser!.username
-                      .replaceFirst(RegExp(r'^@+'), ''),
-                );
-                debugPrint(
-                    'connectwallet (onConnected): registerWallet response: $reg');
-                await profileProvider.loadProfile(address);
-                // Update ChatProvider cache to immediately reflect profile changes in messages UI
-                try {
-                  final u = profileProvider.currentUser;
-                  if (u != null) {
-                    final user = User(
-                      id: u.walletAddress,
-                      name: u.displayName,
-                      username: u.username,
-                      bio: u.bio,
-                      profileImageUrl: u.avatar,
-                      followersCount: u.stats?.followersCount ?? 0,
-                      followingCount: u.stats?.followingCount ?? 0,
-                      postsCount: u.stats?.artworksCreated ?? 0,
-                      isFollowing: false,
-                      isVerified: false,
-                      joinedDate: u.createdAt.toIso8601String(),
-                      achievementProgress: [],
-                    );
-                    try {
-                      EventBus().emitProfileUpdated(user);
-                    } catch (_) {}
-                  }
-                } catch (_) {}
-              } catch (e) {
-                debugPrint(
-                    'connectwallet (onConnected): backend registration failed: $e');
-              }
-            }
+            await _ensureWalletAccountAndProfile(
+              address: address,
+              profileProvider: profileProvider,
+            );
           } catch (e, st) {
             debugPrint(
                 'connectwallet: profile load/create failed after walletconnect: $e\n$st');
@@ -1651,7 +1642,7 @@ class _ConnectWalletState extends State<ConnectWallet>
     try {
       final walletProvider =
           Provider.of<WalletProvider>(context, listen: false);
-      // Capture providers and UI state before any awaits to avoid use_build_context_synchronously
+      final gate = Provider.of<SecurityGateProvider>(context, listen: false);
       final profileProvider =
           Provider.of<ProfileProvider>(context, listen: false);
 
@@ -1659,8 +1650,15 @@ class _ConnectWalletState extends State<ConnectWallet>
 
       // Show the mnemonic to the user
       if (mounted) {
-        await _showMnemonicDialog(result['mnemonic']!, result['address']!);
+        final didConfirmMnemonic =
+            await _showMnemonicDialog(result['mnemonic']!, result['address']!);
         if (!mounted) return;
+        if (!didConfirmMnemonic) {
+          setState(() {
+            _isLoading = false;
+          });
+          return;
+        }
 
         await const WalletSessionSyncService().bindAuthenticatedWallet(
           context: context,
@@ -1669,62 +1667,40 @@ class _ConnectWalletState extends State<ConnectWallet>
           loadProfile: false,
         );
 
-        // Create user profile linked to wallet
         if (mounted) {
-          // profileProvider captured earlier
-          final backendApiService = BackendApiService();
           final address = result['address']!;
-
-          // Prefer cache-first lookup via UserService to avoid unnecessary network calls
-          bool profileExistsOnBackend = false;
-          try {
-            // Force fresh lookup during wallet creation
-            final freshUser =
-                await UserService.getUserById(address, forceRefresh: true);
-            if (freshUser != null) {
-              profileExistsOnBackend = true;
-              debugPrint('Profile found (fresh) for wallet: $address');
-            } else {
-              try {
-                await backendApiService.getProfileByWallet(address);
-                profileExistsOnBackend = true;
-                debugPrint('Profile exists on backend for wallet: $address');
-              } catch (e) {
-                debugPrint('Profile not found on backend, will create new: $e');
-              }
-            }
-          } catch (e) {
-            debugPrint('Profile lookup failed: $e');
-          }
-
-          // Only create profile if it doesn't exist on backend
-          if (!profileExistsOnBackend) {
-            debugPrint('Creating new profile for wallet: $address');
-            final created = await profileProvider.createProfileFromWallet(
-              walletAddress: address,
-            );
-            if (created) {
-              // Load the newly created profile to update local state
-              debugPrint('Profile created, now loading it...');
-              await profileProvider.loadProfile(address);
-            }
-          } else {
-            debugPrint('Profile already exists, loading it');
-            await profileProvider.loadProfile(address);
-          }
+          await _ensureWalletAccountAndProfile(
+            address: address,
+            profileProvider: profileProvider,
+          );
         }
 
         if (mounted) {
           try {
             await _runPostWalletConnectRefresh(result['address']!);
           } catch (_) {}
-          messenger.showKubusSnackBar(
-            SnackBar(
-              content: Text(l10n.connectWalletCreateSuccessToast),
-              backgroundColor: Colors.green,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          final hasAuth =
+              (BackendApiService().getAuthToken() ?? '').trim().isNotEmpty;
+          if (hasAuth) {
+            final ok = await const PostAuthSecuritySetupService()
+                .ensurePostAuthSecuritySetup(
+              navigator: navigator,
+              walletProvider: walletProvider,
+              securityGateProvider: gate,
+            );
+            if (!mounted) return;
+            if (!ok) return;
+          }
+          messenger.clearSnackBars();
+          if (!_isAuthEntryFlow) {
+            messenger.showKubusSnackBar(
+              SnackBar(
+                content: Text(l10n.connectWalletCreateSuccessToast),
+                backgroundColor: Colors.green,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
           _trackWalletAuthSuccess();
           navigator.pop();
         }
@@ -1747,139 +1723,206 @@ class _ConnectWalletState extends State<ConnectWallet>
     }
   }
 
-  Future<void> _showMnemonicDialog(String mnemonic, String address) async {
-    final l10n = AppLocalizations.of(context)!;
+  Future<bool> _showMnemonicDialog(String mnemonic, String address) async {
+    final hostContext = context;
+    final l10n = AppLocalizations.of(hostContext)!;
+    final isDesktop = DesktopBreakpoints.isDesktop(hostContext);
     final TextEditingController confirmController = TextEditingController();
     bool confirmed = false;
     final shortAddress =
         '${address.substring(0, 8)}...${address.substring(address.length - 6)}';
 
-    await showKubusDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => KubusAlertDialog(
-          title: Text(
-            l10n.connectWalletMnemonicDialogTitle,
-            style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border:
-                        Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+    Widget buildMnemonicContent(
+      BuildContext innerContext,
+      StateSetter setDialogState,
+    ) {
+      final scheme = Theme.of(innerContext).colorScheme;
+
+      return SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.warning_amber_rounded,
+                    color: Colors.orange,
+                    size: 20,
                   ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.warning_amber_rounded,
-                          color: Colors.orange, size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          l10n.connectWalletMnemonicDialogWarning,
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.orange,
-                          ),
-                        ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      l10n.connectWalletMnemonicDialogWarning,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.orange,
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                        color: Theme.of(context).colorScheme.outline),
-                  ),
-                  child: SelectableText(
-                    mnemonic,
-                    style: GoogleFonts.robotoMono(
-                      fontSize: 14,
-                      height: 1.6,
-                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  l10n.connectWalletMnemonicDialogConfirmPrompt,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: confirmController,
-                  maxLines: 3,
-                  decoration: InputDecoration(
-                    hintText: l10n.connectWalletMnemonicDialogConfirmHint,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  onChanged: (value) {
-                    setDialogState(() {
-                      confirmed = value.trim() == mnemonic;
-                    });
-                  },
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  l10n.connectWalletMnemonicDialogAddressLabel(shortAddress),
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.6),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(
-                l10n.commonCancel,
-                style: GoogleFonts.inter(color: Colors.grey),
+                ],
               ),
             ),
-            ElevatedButton(
-              onPressed: confirmed
-                  ? () {
-                      confirmController.dispose();
-                      Navigator.pop(context);
-                    }
-                  : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                disabledBackgroundColor: Colors.grey.withValues(alpha: 0.3),
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: scheme.surface,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: scheme.outline),
               ),
-              child: Text(
-                l10n.connectWalletMnemonicDialogConfirmButton,
-                style: GoogleFonts.inter(
-                  color: confirmed ? Colors.white : Colors.grey,
+              child: SelectableText(
+                mnemonic,
+                style: GoogleFonts.robotoMono(
+                  fontSize: 14,
+                  height: 1.6,
+                  color: scheme.onSurface,
                 ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              l10n.connectWalletMnemonicDialogConfirmPrompt,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: confirmController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: l10n.connectWalletMnemonicDialogConfirmHint,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              onChanged: (value) {
+                setDialogState(() {
+                  confirmed = value.trim() == mnemonic;
+                });
+              },
+            ),
+            const SizedBox(height: 8),
+            Text(
+              l10n.connectWalletMnemonicDialogAddressLabel(shortAddress),
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: scheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ],
         ),
-      ),
-    );
+      );
+    }
+
+    Future<bool?> showDesktopMnemonicDialog() {
+      return showKubusDialog<bool>(
+        context: hostContext,
+        barrierDismissible: false,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (dialogContext, setDialogState) => KubusAlertDialog(
+            title: Text(
+              l10n.connectWalletMnemonicDialogTitle,
+              style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+            ),
+            content: buildMnemonicContent(dialogContext, setDialogState),
+            actions: [
+              ElevatedButton(
+                onPressed:
+                    confirmed ? () => Navigator.pop(dialogContext, true) : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  disabledBackgroundColor: Colors.grey.withValues(alpha: 0.3),
+                ),
+                child: Text(
+                  l10n.connectWalletMnemonicDialogConfirmButton,
+                  style: GoogleFonts.inter(
+                    color: confirmed ? Colors.white : Colors.grey,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    Future<bool?> showMobileMnemonicSheet() {
+      return showModalBottomSheet<bool>(
+        context: hostContext,
+        useRootNavigator: true,
+        isScrollControlled: true,
+        isDismissible: false,
+        enableDrag: false,
+        backgroundColor: Colors.transparent,
+        builder: (sheetContext) => StatefulBuilder(
+          builder: (sheetContext, setDialogState) {
+            final scheme = Theme.of(sheetContext).colorScheme;
+            return FractionallySizedBox(
+              heightFactor: 0.94,
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                  child: LiquidGlassPanel(
+                    borderRadius: BorderRadius.circular(24),
+                    padding: const EdgeInsets.all(KubusSpacing.lg),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          l10n.connectWalletMnemonicDialogTitle,
+                          style: GoogleFonts.inter(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            color: scheme.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: KubusSpacing.md),
+                        Expanded(
+                          child: buildMnemonicContent(
+                            sheetContext,
+                            setDialogState,
+                          ),
+                        ),
+                        const SizedBox(height: KubusSpacing.md),
+                        KubusButton(
+                          onPressed: confirmed
+                              ? () => Navigator.pop(sheetContext, true)
+                              : null,
+                          label: l10n.connectWalletMnemonicDialogConfirmButton,
+                          isFullWidth: true,
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      );
+    }
+
+    final didConfirm = isDesktop
+        ? await showDesktopMnemonicDialog()
+        : await showMobileMnemonicSheet();
+
+    confirmController.dispose();
+    return didConfirm == true;
   }
 
   Widget _buildConnectedView() {
