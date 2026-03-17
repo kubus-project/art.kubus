@@ -104,4 +104,56 @@ void main() {
       'https://checkout.example/session-1',
     );
   });
+
+  test(
+      'getPublicFeaturedHome uses top-level fallback values when nested entity is sparse',
+      () async {
+    final api = BackendApiService();
+    api.setHttpClient(
+      MockClient((request) async {
+        expect(request.method, 'GET');
+        expect(request.url.path, '/api/public/featured-home');
+        return http.Response(
+          jsonEncode(<String, Object?>{
+            'success': true,
+            'data': <String, Object?>{
+              'kind': 'profile',
+              'locale': 'en',
+              'items': <Object?>[
+                <String, Object?>{
+                  'entityType': 'profile',
+                  'id': 'wallet-artist-1',
+                  'title': 'Featured Artist',
+                  'subtitle': 'Contemporary painter',
+                  'walletAddress': 'wallet-artist-1',
+                  'imageUrl': '/uploads/artist-1.png',
+                  'entity': <String, Object?>{
+                    'bio': 'Sparse nested payload',
+                  },
+                  'promotion': <String, Object?>{
+                    'isPromoted': true,
+                    'placementMode': 'priority_ranked',
+                  },
+                },
+              ],
+            },
+          }),
+          200,
+          headers: const <String, String>{'content-type': 'application/json'},
+        );
+      }),
+    );
+
+    final items = await api.getPublicFeaturedHome(
+      kind: PromotionEntityType.profile,
+      locale: 'en',
+    );
+
+    expect(items, hasLength(1));
+    expect(items.first.id, 'wallet-artist-1');
+    expect(items.first.title, 'Featured Artist');
+    expect(items.first.subtitle, 'Contemporary painter');
+    expect(items.first.walletAddress, 'wallet-artist-1');
+    expect(items.first.imageUrl, '/uploads/artist-1.png');
+  });
 }

@@ -387,20 +387,40 @@ class FeaturedPromotionItem {
 
     final entityMap = json['entity'] is Map
         ? Map<String, dynamic>.from(json['entity'] as Map)
-        : json;
-    final title = pickString([
-          entityMap['title'],
-          entityMap['displayName'],
-          entityMap['name'],
+        : <String, dynamic>{};
+
+    String? pickMerged(List<String> keys) {
+      final values = <dynamic>[];
+      for (final key in keys) {
+        values.add(json[key]);
+      }
+      for (final key in keys) {
+        values.add(entityMap[key]);
+      }
+      return pickString(values);
+    }
+
+    final title = pickMerged([
+          'title',
+          'displayName',
+          'display_name',
+          'name',
+          'username',
         ]) ??
         'Untitled';
 
     return FeaturedPromotionItem(
-      id: pickString([
-            entityMap['id'],
-            entityMap['_id'],
-            entityMap['profileId'],
-            entityMap['artworkId'],
+      id: pickMerged([
+            'id',
+            '_id',
+            'profileId',
+            'profile_id',
+            'artworkId',
+            'artwork_id',
+            'entityId',
+            'entity_id',
+            'walletAddress',
+            'wallet_address',
           ]) ??
           '',
       entityType: (() {
@@ -417,29 +437,36 @@ class FeaturedPromotionItem {
             : parsed;
       })(),
       title: title,
-      subtitle: pickString([
-        entityMap['subtitle'],
-        entityMap['artist'],
-        entityMap['username'],
-        entityMap['type'],
+      subtitle: pickMerged([
+        'subtitle',
+        'artist',
+        'artistName',
+        'artist_name',
+        'username',
+        'type',
+        'bio',
       ]),
-      imageUrl: pickString([
-        entityMap['imageUrl'],
-        entityMap['image_url'],
-        entityMap['avatar'],
-        entityMap['avatar_url'],
-        entityMap['coverImage'],
-        entityMap['cover_image'],
+      imageUrl: pickMerged([
+        'imageUrl',
+        'image_url',
+        'imageURL',
+        'avatar',
+        'avatarUrl',
+        'avatar_url',
+        'coverImage',
+        'cover_image',
+        'coverUrl',
+        'cover_url',
       ]),
-      walletAddress: pickString([
-        entityMap['walletAddress'],
-        entityMap['wallet_address'],
+      walletAddress: pickMerged([
+        'walletAddress',
+        'wallet_address',
       ]),
       promotion: PromotionMetadata.readFrom(
         json,
         fallbackMaps: <Map<String, dynamic>?>[entityMap],
       ),
-      raw: entityMap,
+      raw: entityMap.isNotEmpty ? entityMap : Map<String, dynamic>.from(json),
     );
   }
 }

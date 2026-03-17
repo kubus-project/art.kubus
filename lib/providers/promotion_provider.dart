@@ -129,27 +129,49 @@ class PromotionProvider extends ChangeNotifier {
     _featuredLoading = true;
     _error = null;
     notifyListeners();
+    String? artworkError;
+    String? profileError;
+    var loadedAny = false;
+
     try {
-      final results = await Future.wait<List<FeaturedPromotionItem>>([
-        _api.getPublicFeaturedHome(
+      try {
+        final artworkItems = await _api.getPublicFeaturedHome(
           kind: PromotionEntityType.artwork,
           locale: locale,
-        ),
-        _api.getPublicFeaturedHome(
+        );
+        _featuredArtworks = artworkItems
+            .map(_featuredArtworkFromItem)
+            .whereType<Artwork>()
+            .toList(growable: false);
+        loadedAny = true;
+      } catch (e) {
+        artworkError = e.toString();
+      }
+
+      try {
+        _featuredProfiles = await _api.getPublicFeaturedHome(
           kind: PromotionEntityType.profile,
           locale: locale,
-        ),
-      ]);
-      final artworkItems = results[0];
-      _featuredArtworks = artworkItems
-          .map(_featuredArtworkFromItem)
-          .whereType<Artwork>()
-          .toList(growable: false);
-      _featuredProfiles = results[1];
+        );
+        loadedAny = true;
+      } catch (e) {
+        profileError = e.toString();
+      }
+
       _lastFeaturedLocale = locale;
-    } catch (e) {
-      _error = e.toString();
-      rethrow;
+
+      final errors = <String>[
+        if (artworkError != null && artworkError!.trim().isNotEmpty)
+          artworkError!,
+        if (profileError != null && profileError!.trim().isNotEmpty)
+          profileError!,
+      ];
+
+      if (!loadedAny && errors.isNotEmpty) {
+        _error = errors.join(' | ');
+      } else if (errors.isNotEmpty) {
+        _error = errors.join(' | ');
+      }
     } finally {
       _featuredLoading = false;
       notifyListeners();
