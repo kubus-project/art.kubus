@@ -96,7 +96,12 @@ jobs:
             client_id = os.environ["KUBUS_GOOGLE_WEB_CLIENT_ID"]
             text = path.read_text(encoding="utf-8")
             pattern = r'(<meta name="google-signin-client_id" content=")[^"]*(">)'
-            updated, count = re.subn(pattern, rf'\1{client_id}\2', text, count=1)
+            updated, count = re.subn(
+              pattern,
+              lambda match: f'{match.group(1)}{client_id}{match.group(2)}',
+              text,
+              count=1,
+            )
             if count != 1:
               sys.exit("google-signin-client_id meta tag not found in web/index.html")
             path.write_text(updated, encoding="utf-8")
