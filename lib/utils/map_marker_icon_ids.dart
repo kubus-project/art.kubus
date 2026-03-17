@@ -6,16 +6,18 @@ class MapMarkerIconIds {
     required String typeName,
     required String tierName,
     required bool isDark,
+    bool promoted = false,
   }) {
-    return 'mk_${typeName}_${tierName}_${isDark ? 'd' : 'l'}';
+    return 'mk_${typeName}_${tierName}_${isDark ? 'd' : 'l'}_${promoted ? 'pro' : 'std'}';
   }
 
   static String markerSelected({
     required String typeName,
     required String tierName,
     required bool isDark,
+    bool promoted = false,
   }) {
-    return 'mk_${typeName}_${tierName}_sel_${isDark ? 'd' : 'l'}';
+    return 'mk_${typeName}_${tierName}_sel_${isDark ? 'd' : 'l'}_${promoted ? 'pro' : 'std'}';
   }
 
   static String cluster({

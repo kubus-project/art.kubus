@@ -17,6 +17,7 @@ import '../../../providers/profile_provider.dart';
 import '../../../providers/dao_provider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../models/dao.dart';
+import '../../../models/promotion.dart';
 import '../../../models/user_persona.dart';
 import '../../../utils/dao_role_verification.dart';
 import '../../../utils/wallet_utils.dart';
@@ -24,6 +25,7 @@ import '../../../utils/kubus_color_roles.dart';
 import '../../collab/invites_inbox_screen.dart';
 import '../../events/exhibition_list_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import '../../../widgets/promotion/promotion_request_sheet.dart';
 
 class ArtistStudio extends StatefulWidget {
   final VoidCallback? onOpenArtworkCreator;
@@ -273,6 +275,12 @@ class _ArtistStudioState extends State<ArtistStudio> {
               },
             ),
           IconButton(
+            icon: Icon(Icons.campaign_outlined,
+                color: Theme.of(context).colorScheme.onSurface),
+            tooltip: 'Promote my profile',
+            onPressed: _openProfilePromotionFlow,
+          ),
+          IconButton(
             icon: Icon(Icons.settings,
                 color: Theme.of(context).colorScheme.onSurface),
             onPressed: _showSettings,
@@ -383,6 +391,15 @@ class _ArtistStudioState extends State<ArtistStudio> {
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: KubusSpacing.sm),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: OutlinedButton.icon(
+                        onPressed: _openProfilePromotionFlow,
+                        icon: const Icon(Icons.campaign_outlined),
+                        label: const Text('Promote my profile'),
+                      ),
                     ),
                   ],
                 ),
@@ -996,6 +1013,20 @@ class _ArtistStudioState extends State<ArtistStudio> {
           ),
         );
       },
+    );
+  }
+
+  Future<void> _openProfilePromotionFlow() async {
+    final profile = context.read<ProfileProvider>().currentUser;
+    final wallet = _resolveWalletAddress();
+    final entityId = (profile?.id ?? wallet).trim();
+    if (entityId.isEmpty) return;
+
+    await showPromotionRequestSheet(
+      context: context,
+      entityType: PromotionEntityType.profile,
+      entityId: entityId,
+      entityLabel: profile?.displayName ?? 'my profile',
     );
   }
 

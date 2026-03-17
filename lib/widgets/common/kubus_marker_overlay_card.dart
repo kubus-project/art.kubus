@@ -129,6 +129,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
 
     final showChips = _hasChips(marker: marker, artwork: artwork) ||
         canPresentExhibition;
+    final isPromoted = marker.isPromoted || (artwork?.promotion.isPromoted ?? false);
 
     final actionFg = AppColorUtils.contrastText(baseColor);
 
@@ -236,6 +237,34 @@ class KubusMarkerOverlayCard extends StatelessWidget {
                           ],
                         ),
                       ),
+                    if (isPromoted) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Icon(Icons.star, size: 12, color: Colors.amber),
+                            SizedBox(width: 4),
+                            Text(
+                              'Promoted',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.amber,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(width: 6),
                     _OverlayIconButton(
                       icon: Icons.close,

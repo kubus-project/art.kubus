@@ -1,10 +1,11 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../models/artwork.dart';
+import '../../../models/promotion.dart';
 import '../../../models/portfolio_entry.dart';
 import '../../../providers/portfolio_provider.dart';
 import '../../../utils/artwork_media_resolver.dart';
@@ -13,6 +14,10 @@ import '../../../utils/artwork_edit_navigation.dart';
 import '../../art/collection_detail_screen.dart';
 import '../../events/exhibition_detail_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import '../../../widgets/promotion/promotion_request_sheet.dart';
+
+bool _artworkCanBePromoted(Artwork artwork) =>
+    artwork.isPublic && artwork.isActive;
 
 class ArtistPortfolioScreen extends StatefulWidget {
   final String walletAddress;
@@ -52,7 +57,8 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
 
     return Consumer<PortfolioProvider>(
       builder: (context, provider, _) {
-        final entries = provider.entries.where(_matchesFilters).toList(growable: false);
+        final entries =
+            provider.entries.where(_matchesFilters).toList(growable: false);
 
         return Container(
           color: Colors.transparent,
@@ -60,7 +66,8 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
             children: [
               _buildHeader(
                 title: l10n.artistGalleryTitle,
-                countLabel: l10n.artistGalleryArtworkCount(provider.entries.length),
+                countLabel:
+                    l10n.artistGalleryArtworkCount(provider.entries.length),
                 isBusy: provider.isLoading,
                 error: provider.error,
               ),
@@ -74,10 +81,12 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
                           physics: const AlwaysScrollableScrollPhysics(),
                           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                           itemCount: entries.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 10),
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 10),
                           itemBuilder: (context, index) {
                             final entry = entries[index];
-                            return _buildEntryCard(context, entry, provider, scheme, l10n);
+                            return _buildEntryCard(
+                                context, entry, provider, scheme, l10n);
                           },
                         ),
                 ),
@@ -91,7 +100,9 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
 
   bool _matchesFilters(PortfolioEntry entry) {
     if (_typeFilter != null && entry.type != _typeFilter) return false;
-    if (_statusFilter != null && entry.publishState != _statusFilter) return false;
+    if (_statusFilter != null && entry.publishState != _statusFilter) {
+      return false;
+    }
     return true;
   }
 
@@ -203,9 +214,15 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
               value: _typeFilter,
               items: <_DropdownItem<PortfolioEntryType>>[
                 _DropdownItem(value: null, label: l10n.artistGalleryFilterAll),
-                _DropdownItem(value: PortfolioEntryType.artwork, label: l10n.userProfileArtworksTitle),
-                _DropdownItem(value: PortfolioEntryType.collection, label: l10n.userProfileCollectionsTitle),
-                _DropdownItem(value: PortfolioEntryType.exhibition, label: l10n.artistStudioTabExhibitions),
+                _DropdownItem(
+                    value: PortfolioEntryType.artwork,
+                    label: l10n.userProfileArtworksTitle),
+                _DropdownItem(
+                    value: PortfolioEntryType.collection,
+                    label: l10n.userProfileCollectionsTitle),
+                _DropdownItem(
+                    value: PortfolioEntryType.exhibition,
+                    label: l10n.artistStudioTabExhibitions),
               ],
               onSelected: (value) => setState(() => _typeFilter = value),
             ),
@@ -217,8 +234,12 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
               value: _statusFilter,
               items: <_DropdownItem<PortfolioPublishState>>[
                 _DropdownItem(value: null, label: l10n.artistGalleryFilterAll),
-                _DropdownItem(value: PortfolioPublishState.published, label: l10n.artistGalleryFilterActive),
-                _DropdownItem(value: PortfolioPublishState.draft, label: l10n.artistGalleryFilterDraft),
+                _DropdownItem(
+                    value: PortfolioPublishState.published,
+                    label: l10n.artistGalleryFilterActive),
+                _DropdownItem(
+                    value: PortfolioPublishState.draft,
+                    label: l10n.artistGalleryFilterDraft),
               ],
               onSelected: (value) => setState(() => _statusFilter = value),
             ),
@@ -280,9 +301,11 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
     ColorScheme scheme,
     AppLocalizations l10n,
   ) {
+    final artwork = entry.type == PortfolioEntryType.artwork
+        ? provider.artworkById(entry.id)
+        : null;
     final coverUrl = () {
       if (entry.type == PortfolioEntryType.artwork) {
-        final artwork = provider.artworkById(entry.id);
         if (artwork != null) {
           return ArtworkMediaResolver.resolveCover(artwork: artwork) ??
               MediaUrlResolver.resolve(entry.coverUrl);
@@ -291,9 +314,7 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
       return MediaUrlResolver.resolve(entry.coverUrl);
     }();
 
-    final statusColor = entry.isPublished
-        ? scheme.primary
-        : scheme.tertiary;
+    final statusColor = entry.isPublished ? scheme.primary : scheme.tertiary;
 
     String typeLabel() {
       switch (entry.type) {
@@ -322,7 +343,8 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
+            border:
+                Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -349,7 +371,8 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
                         ),
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             color: statusColor.withValues(alpha: 0.14),
                             borderRadius: BorderRadius.circular(999),
@@ -375,7 +398,8 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
                             color: scheme.onSurface.withValues(alpha: 0.65),
                           ),
                         ),
-                        if (entry.subtitle != null && entry.subtitle!.trim().isNotEmpty) ...[
+                        if (entry.subtitle != null &&
+                            entry.subtitle!.trim().isNotEmpty) ...[
                           Text(
                             ' • ',
                             style: GoogleFonts.inter(
@@ -401,7 +425,12 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
                 ),
               ),
               const SizedBox(width: 6),
-              _EntryMenu(entry: entry, onSelected: (action) => _handleAction(context, provider, entry, action)),
+              _EntryMenu(
+                entry: entry,
+                canPromote: artwork != null && _artworkCanBePromoted(artwork),
+                onSelected: (action) =>
+                    _handleAction(context, provider, entry, action),
+              ),
             ],
           ),
         ),
@@ -409,7 +438,8 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
     );
   }
 
-  Future<void> _openEntry(BuildContext context, PortfolioEntry entry, PortfolioProvider provider) async {
+  Future<void> _openEntry(BuildContext context, PortfolioEntry entry,
+      PortfolioProvider provider) async {
     switch (entry.type) {
       case PortfolioEntryType.artwork:
         final artwork = provider.artworkById(entry.id);
@@ -455,22 +485,44 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
 
     switch (action) {
       case 'edit':
-        await openArtworkEditor(context, artwork.id, source: 'artist_portfolio');
+        await openArtworkEditor(context, artwork.id,
+            source: 'artist_portfolio');
         return;
       case 'publish':
         await provider.publishArtwork(artwork.id);
-        messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commonSavedToast)));
+        messenger
+            .showKubusSnackBar(SnackBar(content: Text(l10n.commonSavedToast)));
         return;
       case 'unpublish':
         await provider.unpublishArtwork(artwork.id);
-        messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commonSavedToast)));
+        messenger
+            .showKubusSnackBar(SnackBar(content: Text(l10n.commonSavedToast)));
         return;
       case 'delete':
         final confirmed = await _confirmDeleteArtwork(context, artwork.title);
         if (confirmed != true) return;
         await provider.deleteArtwork(artwork.id);
         messenger.showKubusSnackBar(
-          SnackBar(content: Text(l10n.artistGalleryDeletedToast(artwork.title))),
+          SnackBar(
+              content: Text(l10n.artistGalleryDeletedToast(artwork.title))),
+        );
+        return;
+      case 'promote':
+        if (!_artworkCanBePromoted(artwork)) {
+          messenger.showKubusSnackBar(
+            const SnackBar(
+              content: Text(
+                'Only active public artworks can be promoted.',
+              ),
+            ),
+          );
+          return;
+        }
+        await showPromotionRequestSheet(
+          context: context,
+          entityType: PromotionEntityType.artwork,
+          entityId: artwork.id,
+          entityLabel: artwork.title,
         );
         return;
     }
@@ -520,12 +572,16 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
                 title: Text(l10n.commonEdit),
                 onTap: () {
                   Navigator.of(sheetContext).pop();
-                  openArtworkEditor(context, artwork.id, source: 'artist_portfolio_sheet');
+                  openArtworkEditor(context, artwork.id,
+                      source: 'artist_portfolio_sheet');
                 },
               ),
               ListTile(
-                leading: Icon(isPublished ? Icons.visibility_off : Icons.visibility),
-                title: Text(isPublished ? l10n.exhibitionCreatorPublishDraft : l10n.exhibitionCreatorPublishTitle),
+                leading:
+                    Icon(isPublished ? Icons.visibility_off : Icons.visibility),
+                title: Text(isPublished
+                    ? l10n.exhibitionCreatorPublishDraft
+                    : l10n.exhibitionCreatorPublishTitle),
                 onTap: () async {
                   Navigator.of(sheetContext).pop();
                   if (isPublished) {
@@ -540,20 +596,33 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
                 title: Text(l10n.commonDelete),
                 onTap: () async {
                   Navigator.of(sheetContext).pop();
-                  final confirmed = await _confirmDeleteArtwork(context, artwork.title);
+                  final confirmed =
+                      await _confirmDeleteArtwork(context, artwork.title);
                   if (confirmed == true) {
                     await provider.deleteArtwork(artwork.id);
                   }
                 },
               ),
+              if (_artworkCanBePromoted(artwork))
+                ListTile(
+                  leading: const Icon(Icons.campaign_outlined),
+                  title: const Text('Promote this artwork'),
+                  onTap: () async {
+                    Navigator.of(sheetContext).pop();
+                    await showPromotionRequestSheet(
+                      context: context,
+                      entityType: PromotionEntityType.artwork,
+                      entityId: artwork.id,
+                      entityLabel: artwork.title,
+                    );
+                  },
+                ),
             ],
           ),
         );
       },
     );
   }
-
-
 }
 
 class _CoverThumb extends StatelessWidget {
@@ -591,9 +660,14 @@ class _CoverThumb extends StatelessWidget {
 
 class _EntryMenu extends StatelessWidget {
   final PortfolioEntry entry;
+  final bool canPromote;
   final ValueChanged<String> onSelected;
 
-  const _EntryMenu({required this.entry, required this.onSelected});
+  const _EntryMenu({
+    required this.entry,
+    required this.canPromote,
+    required this.onSelected,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -608,11 +682,20 @@ class _EntryMenu extends StatelessWidget {
 
         if (entry.type == PortfolioEntryType.artwork) {
           if (entry.isPublished) {
-            items.add(PopupMenuItem(value: 'unpublish', child: Text(l10n.exhibitionCreatorPublishDraft)));
+            items.add(PopupMenuItem(
+                value: 'unpublish',
+                child: Text(l10n.exhibitionCreatorPublishDraft)));
           } else {
-            items.add(PopupMenuItem(value: 'publish', child: Text(l10n.exhibitionCreatorPublishTitle)));
+            items.add(PopupMenuItem(
+                value: 'publish',
+                child: Text(l10n.exhibitionCreatorPublishTitle)));
           }
-          items.add(PopupMenuItem(value: 'delete', child: Text(l10n.commonDelete)));
+          if (canPromote) {
+            items.add(
+                const PopupMenuItem(value: 'promote', child: Text('Promote')));
+          }
+          items.add(
+              PopupMenuItem(value: 'delete', child: Text(l10n.commonDelete)));
         }
 
         return items;

@@ -13,6 +13,7 @@ import '../../../providers/analytics_filters_provider.dart';
 import '../../../providers/desktop_dashboard_state_provider.dart';
 import '../../../config/config.dart';
 import '../../../models/dao.dart';
+import '../../../models/promotion.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/dao_role_verification.dart';
 import '../../../utils/kubus_color_roles.dart';
@@ -33,6 +34,7 @@ import '../../events/exhibition_list_screen.dart';
 import '../../map_markers/manage_markers_screen.dart';
 import '../../../widgets/glass_components.dart';
 import '../../../widgets/kubus_action_sidebar.dart';
+import '../../../widgets/promotion/promotion_request_sheet.dart';
 
 /// Desktop Artist Studio screen with split-panel layout
 /// Left: Mobile artist studio view
@@ -392,6 +394,14 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                   );
                 },
               ),
+            if (isApprovedArtist)
+              KubusActionSidebarTile(
+                title: 'Promote my profile',
+                subtitle: 'Request featured placement on home and map',
+                icon: Icons.campaign_outlined,
+                semantic: KubusActionSemantic.publish,
+                onTap: _openProfilePromotionFlow,
+              ),
 
             if (isApprovedArtist &&
                 section == DesktopArtistStudioSection.create)
@@ -638,6 +648,20 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _openProfilePromotionFlow() async {
+    final profile = context.read<ProfileProvider>().currentUser;
+    final wallet = _resolveWalletAddress(listen: false);
+    final entityId = (profile?.id ?? wallet).trim();
+    if (entityId.isEmpty) return;
+
+    await showPromotionRequestSheet(
+      context: context,
+      entityType: PromotionEntityType.profile,
+      entityId: entityId,
+      entityLabel: profile?.displayName ?? 'my profile',
     );
   }
 

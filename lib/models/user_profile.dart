@@ -1,5 +1,6 @@
 import '../services/backend_api_service.dart';
 import '../config/config.dart';
+import 'promotion.dart';
 
 class UserProfile {
   final String id;
@@ -15,6 +16,7 @@ class UserProfile {
   final ArtistInfo? artistInfo;
   final ProfilePreferences? preferences;
   final UserStats? stats;
+  final PromotionMetadata promotion;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -32,6 +34,7 @@ class UserProfile {
     this.artistInfo,
     this.preferences,
     this.stats,
+    this.promotion = PromotionMetadata.none,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -50,6 +53,7 @@ class UserProfile {
     ArtistInfo? artistInfo,
     ProfilePreferences? preferences,
     UserStats? stats,
+    PromotionMetadata? promotion,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -67,6 +71,7 @@ class UserProfile {
       artistInfo: artistInfo ?? this.artistInfo,
       preferences: preferences ?? this.preferences,
       stats: stats ?? this.stats,
+      promotion: promotion ?? this.promotion,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -115,6 +120,16 @@ class UserProfile {
       artistInfo: json['artistInfo'] != null ? ArtistInfo.fromJson(json['artistInfo']) : null,
       preferences: json['preferences'] != null ? ProfilePreferences.fromJson(json['preferences']) : null,
       stats: json['stats'] != null ? UserStats.fromJson(json['stats']) : null,
+      promotion: PromotionMetadata.readFrom(
+        json,
+        fallbackMaps: <Map<String, dynamic>?>[
+          json['artistInfo'] is Map<String, dynamic>
+              ? json['artistInfo'] as Map<String, dynamic>
+              : (json['artistInfo'] is Map
+                  ? Map<String, dynamic>.from(json['artistInfo'] as Map)
+                  : null),
+        ],
+      ),
       createdAt: parseDate(json['createdAt'] ?? json['created_at']),
       updatedAt: parseDate(json['updatedAt'] ?? json['updated_at']),
     );
@@ -134,6 +149,7 @@ class UserProfile {
       'isInstitution': isInstitution,
       'artistInfo': artistInfo?.toJson(),
       'preferences': preferences?.toJson(),
+      'promotion': promotion.toJson(),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };

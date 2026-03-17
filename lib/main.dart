@@ -21,6 +21,7 @@ import 'providers/navigation_provider.dart';
 import 'providers/artwork_provider.dart';
 import 'providers/artwork_drafts_provider.dart';
 import 'providers/artwork_ar_config_provider.dart';
+import 'providers/promotion_provider.dart';
 import 'providers/institution_provider.dart';
 import 'providers/dao_provider.dart';
 import 'providers/wallet_provider.dart';
@@ -76,6 +77,7 @@ import 'screens/art/art_detail_screen.dart';
 import 'screens/desktop/art/desktop_artwork_detail_screen.dart';
 import 'screens/desktop/desktop_shell.dart';
 import 'screens/web3/wallet/connectwallet_screen.dart';
+import 'screens/web3/promotions/promotion_checkout_return_screen.dart';
 // user_service initialization moved to profile and wallet flows.
 import 'services/push_notification_service.dart';
 import 'services/notification_handler.dart';
@@ -563,6 +565,7 @@ class _AppLauncherState extends State<AppLauncher> {
                   create: (context) => ArtworkDraftsProvider()),
               ChangeNotifierProvider(
                   create: (context) => ArtworkArConfigProvider()),
+              ChangeNotifierProvider(create: (context) => PromotionProvider()),
               ChangeNotifierProxyProvider2<ArtworkProvider, AppRefreshProvider,
                   PortfolioProvider>(
                 create: (context) => PortfolioProvider(),
@@ -866,6 +869,24 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
               }
             }
 
+            if (uri.path == '/promotions') {
+              final status = (uri.queryParameters['status'] ?? '').trim();
+              final sessionId = (uri.queryParameters['session_id'] ?? '').trim();
+              return MaterialPageRoute(
+                builder: (_) => PromotionCheckoutReturnScreen(
+                  status: status.isNotEmpty ? status : null,
+                  sessionId: sessionId.isNotEmpty ? sessionId : null,
+                ),
+                settings: RouteSettings(
+                  name: '/promotions',
+                  arguments: {
+                    if (status.isNotEmpty) 'status': status,
+                    if (sessionId.isNotEmpty) 'sessionId': sessionId,
+                  },
+                ),
+              );
+            }
+
             final target = const ShareDeepLinkParser().parse(uri);
             if (target != null) {
               return MaterialPageRoute(
@@ -972,6 +993,19 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
                 token = args['token']?.toString();
               }
               return ResetPasswordScreen(token: token);
+            },
+            '/promotions': (context) {
+              final args = ModalRoute.of(context)?.settings.arguments;
+              String? status;
+              String? sessionId;
+              if (args is Map) {
+                status = args['status']?.toString();
+                sessionId = args['sessionId']?.toString() ?? args['session_id']?.toString();
+              }
+              return PromotionCheckoutReturnScreen(
+                status: status?.trim().isNotEmpty == true ? status!.trim() : null,
+                sessionId: sessionId?.trim().isNotEmpty == true ? sessionId!.trim() : null,
+              );
             },
             '/web3': (context) {
               final l10n = AppLocalizations.of(context)!;

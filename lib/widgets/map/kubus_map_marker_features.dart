@@ -41,11 +41,13 @@ Future<Map<String, dynamic>> kubusMarkerFeatureFor({
     typeName: typeName,
     tierName: tier.name,
     isDark: isDark,
+    promoted: marker.isPromoted,
   );
   final selectedIconId = MapMarkerIconIds.markerSelected(
     typeName: typeName,
     tierName: tier.name,
     isDark: isDark,
+    promoted: marker.isPromoted,
   );
 
   if (!registeredMapImages.contains(iconId)) {
@@ -58,6 +60,7 @@ Future<Map<String, dynamic>> kubusMarkerFeatureFor({
       roles: roles,
       isDark: isDark,
       forceGlow: false,
+      showPromotionStar: marker.isPromoted,
       pixelRatio: pixelRatio,
     );
 

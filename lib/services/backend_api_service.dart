@@ -7,6 +7,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/art_marker.dart';
+import '../models/promotion.dart';
 import '../models/artwork.dart';
 import '../models/artwork_comment.dart';
 import '../models/community_group.dart';
@@ -2749,6 +2750,164 @@ class BackendApiService
       }
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.listArtists failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Get app promotion packages by entity type.
+  /// GET /api/app/promotion-packages?entityType=artwork|profile
+  Future<List<PromotionPackage>> getPromotionPackages({
+    required PromotionEntityType entityType,
+  }) async {
+    try {
+      await _ensureAuthBeforeRequest();
+      final uri = Uri.parse('$baseUrl/api/app/promotion-packages').replace(
+        queryParameters: <String, String>{
+          'entityType': entityType.apiValue,
+        },
+      );
+      final dynamic data = await _fetchJson(
+        uri,
+        includeAuth: true,
+        allowOrbitFallback: false,
+      );
+      final List<dynamic> list = (() {
+        if (data is List) return data;
+        if (data is Map<String, dynamic>) {
+          final payload = data['data'] ?? data['packages'];
+          if (payload is List) return payload;
+        }
+        return const <dynamic>[];
+      })();
+      return list
+          .whereType<Map>()
+          .map((e) => PromotionPackage.fromJson(Map<String, dynamic>.from(e)))
+          .toList(growable: false);
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.getPromotionPackages failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Create an app promotion request.
+  /// POST /api/app/promotion-requests
+  Future<PromotionRequestSubmission> createPromotionRequest({
+    required String targetEntityId,
+    required PromotionEntityType entityType,
+    required String packageId,
+    required PromotionPaymentMethod paymentMethod,
+    DateTime? requestedStartDate,
+  }) async {
+    try {
+      await _ensureAuthBeforeRequest();
+      final uri = Uri.parse('$baseUrl/api/app/promotion-requests');
+      final payload = <String, dynamic>{
+        'targetEntityId': targetEntityId,
+        'entityType': entityType.apiValue,
+        'packageId': packageId,
+        'paymentMethod': paymentMethod.apiValue,
+        if (requestedStartDate != null)
+          'requestedStartDate': requestedStartDate.toIso8601String(),
+      };
+      final response = await _post(
+        uri,
+        headers: _getHeaders(),
+        body: jsonEncode(payload),
+      );
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: uri.path,
+          body: response.body,
+        );
+      }
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) {
+        return PromotionRequestSubmission.fromJson(decoded);
+      }
+      throw Exception('Invalid promotion request response payload');
+    } catch (e) {
+      AppConfig.debugPrint(
+          'BackendApiService.createPromotionRequest failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Get my promotion requests.
+  /// GET /api/app/promotion-requests/me
+  Future<List<PromotionRequest>> getMyPromotionRequests() async {
+    try {
+      await _ensureAuthBeforeRequest();
+      final uri = Uri.parse('$baseUrl/api/app/promotion-requests/me');
+      final dynamic data = await _fetchJson(
+        uri,
+        includeAuth: true,
+        allowOrbitFallback: false,
+      );
+      final List<dynamic> list = (() {
+        if (data is List) return data;
+        if (data is Map<String, dynamic>) {
+          final payload = data['data'] ?? data['requests'];
+          if (payload is List) return payload;
+        }
+        return const <dynamic>[];
+      })();
+      return list
+          .whereType<Map>()
+          .map((e) => PromotionRequest.fromJson(Map<String, dynamic>.from(e)))
+          .toList(growable: false);
+    } catch (e) {
+      AppConfig.debugPrint(
+          'BackendApiService.getMyPromotionRequests failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Public homepage featured promotions.
+  /// GET /api/public/featured-home?kind=artwork|profile&locale=en|sl
+  Future<List<FeaturedPromotionItem>> getPublicFeaturedHome({
+    required PromotionEntityType kind,
+    String locale = 'en',
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl/api/public/featured-home').replace(
+        queryParameters: <String, String>{
+          'kind': kind.apiValue,
+          'locale': locale,
+        },
+      );
+      final dynamic data = await _fetchJson(
+        uri,
+        includeAuth: false,
+        allowOrbitFallback: true,
+      );
+      final List<dynamic> list = (() {
+        if (data is List) return data;
+        if (data is Map<String, dynamic>) {
+          final payload = data['data'];
+          if (payload is Map<String, dynamic>) {
+            final nestedItems = payload['items'];
+            if (nestedItems is List) return nestedItems;
+          } else if (payload is Map) {
+            final nestedItems = payload['items'];
+            if (nestedItems is List) return nestedItems;
+          }
+          final flatItems = data['items'];
+          if (flatItems is List) return flatItems;
+          if (payload is List) return payload;
+        }
+        return const <dynamic>[];
+      })();
+      return list
+          .whereType<Map>()
+          .map((e) => FeaturedPromotionItem.fromJson(
+                Map<String, dynamic>.from(e),
+                kind,
+              ))
+          .toList(growable: false);
+    } catch (e) {
+      AppConfig.debugPrint(
+          'BackendApiService.getPublicFeaturedHome failed: $e');
       rethrow;
     }
   }
@@ -8399,6 +8558,10 @@ ArtMarker _artMarkerFromBackendJson(Map<String, dynamic> json) {
     'isPublic': json['isPublic'] ?? json['is_public'] ?? true,
     'isActive': json['isActive'] ?? json['is_active'] ?? true,
     'markerType': json['markerType'] ?? json['type'],
+    'promotion': PromotionMetadata.readFrom(
+      json,
+      fallbackMaps: <Map<String, dynamic>?>[mergedMeta],
+    ).toJson(),
   };
 
   return ArtMarker.fromMap(normalized);
@@ -8420,6 +8583,9 @@ Map<String, dynamic>? _mergeMarkerMetadata(Map<String, dynamic> json) {
   merge(json['metadata']);
   merge(json['meta']);
   merge(json['marker_data'] ?? json['markerData']);
+  if (json['promotion'] is Map) {
+    merge({'promotion': json['promotion']});
+  }
 
   final subjectType = json['subjectType'] ?? json['subject_type'];
   final subjectId = json['subjectId'] ?? json['subject_id'];
@@ -8574,6 +8740,7 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
     addMeta('isForSale', json['isForSale']);
     addMeta('imageCID', json['imageCID'] ?? json['image_cid']);
     addMeta('poap', json['poap']);
+    addMeta('promotion', json['promotion']);
 
     return metadata;
   }
@@ -8930,6 +9097,10 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
       (discoveredFlag || discoveredAt != null)) {
     status = ArtworkStatus.discovered;
   }
+  final promotion = PromotionMetadata.readFrom(
+    json,
+    fallbackMaps: <Map<String, dynamic>?>[metadata],
+  );
 
   return Artwork(
     id: id,
@@ -8996,6 +9167,7 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
     poapDescription: poapDescription,
     poapImageUrl: poapImageUrl,
     metadata: metadata.isEmpty ? null : metadata,
+    promotion: promotion,
   );
 }
 

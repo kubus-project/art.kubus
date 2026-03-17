@@ -1,5 +1,6 @@
 import 'package:latlong2/latlong.dart';
 
+import 'promotion.dart';
 import '../providers/storage_provider.dart';
 import '../utils/media_url_resolver.dart';
 
@@ -60,6 +61,7 @@ class ArtMarker {
   final bool requiresProximity; // Must be near to activate
   final bool isPublic; // Visible to all users
   final bool isActive; // Published/active (draft markers are inactive)
+  final PromotionMetadata promotion;
 
   const ArtMarker({
     required this.id,
@@ -90,6 +92,7 @@ class ArtMarker {
     this.requiresProximity = true,
     this.isPublic = true,
     this.isActive = true,
+    this.promotion = PromotionMetadata.none,
   });
 
   /// Convenience getter for map visuals
@@ -204,6 +207,7 @@ class ArtMarker {
       'requiresProximity': requiresProximity,
       'isPublic': isPublic,
       'isActive': isActive,
+      'promotion': promotion.toJson(),
     };
   }
 
@@ -253,6 +257,10 @@ class ArtMarker {
       requiresProximity: _parseBool(map['requiresProximity'], true),
       isPublic: _parseBool(map['isPublic'], true),
       isActive: _parseBool(map['isActive'] ?? map['is_active'], true),
+      promotion: PromotionMetadata.readFrom(
+        map,
+        fallbackMaps: <Map<String, dynamic>?>[metadata],
+      ),
     );
   }
 
@@ -286,6 +294,7 @@ class ArtMarker {
     bool? requiresProximity,
     bool? isPublic,
     bool? isActive,
+    PromotionMetadata? promotion,
   }) {
     return ArtMarker(
       id: id ?? this.id,
@@ -316,6 +325,7 @@ class ArtMarker {
       requiresProximity: requiresProximity ?? this.requiresProximity,
       isPublic: isPublic ?? this.isPublic,
       isActive: isActive ?? this.isActive,
+      promotion: promotion ?? this.promotion,
     );
   }
 
@@ -520,6 +530,8 @@ class ArtMarker {
     if (resolved == null || resolved.id.trim().isEmpty) return false;
     return artworkId == null || artworkId!.isEmpty;
   }
+
+  bool get isPromoted => promotion.isPromoted;
 }
 
 /// Lightweight summary for exhibition linkage on markers.

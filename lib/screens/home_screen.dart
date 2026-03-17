@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import 'package:flutter/material.dart';
@@ -8,6 +10,7 @@ import '../providers/web3provider.dart';
 import '../providers/wallet_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/artwork_provider.dart';
+import '../providers/promotion_provider.dart';
 import '../providers/config_provider.dart';
 import '../providers/notification_provider.dart';
 import '../providers/recent_activity_provider.dart';
@@ -17,6 +20,7 @@ import '../models/artwork.dart';
 import '../models/recent_activity.dart';
 import '../models/user_persona.dart';
 import '../models/user_profile.dart';
+import '../models/promotion.dart';
 import 'web3/dao/governance_hub.dart';
 import 'web3/artist/artist_studio.dart';
 import 'web3/institution/institution_hub.dart';
@@ -50,6 +54,7 @@ import '../utils/artwork_navigation.dart';
 import '../widgets/glass_components.dart';
 import '../widgets/common/kubus_labs_adornment.dart';
 import '../widgets/support/support_section.dart';
+import 'community/user_profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -69,6 +74,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       vsync: this,
     );
     _animationController.forward();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final locale = Localizations.localeOf(context).languageCode;
+      unawaited(
+        context.read<PromotionProvider>().loadFeaturedHome(locale: locale),
+      );
+    });
   }
 
   @override
@@ -162,6 +174,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     sections.add(animated(_buildRecentActivity()));
     sections.add(SizedBox(height: spacing));
     sections.add(animated(_buildFeaturedArtworks()));
+    sections.add(SizedBox(height: spacing));
+    sections.add(animated(_buildFeaturedProfiles()));
     sections.add(SizedBox(height: spacing));
     sections.add(animated(const SupportSectionCard()));
 
@@ -1547,10 +1561,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildFeaturedArtworks() {
-    return Consumer<ArtworkProvider>(
-      builder: (context, artworkProvider, child) {
+    return Consumer2<ArtworkProvider, PromotionProvider>(
+      builder: (context, artworkProvider, promotionProvider, child) {
         final l10n = AppLocalizations.of(context)!;
-        final featuredArtworks = artworkProvider.artworks.take(5).toList();
+        final featuredArtworks = (promotionProvider.featuredArtworks.isNotEmpty
+                ? promotionProvider.featuredArtworks
+                : artworkProvider.artworks)
+            .take(6)
+            .toList();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1607,6 +1625,40 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
+  Widget _buildFeaturedProfiles() {
+    return Consumer<PromotionProvider>(
+      builder: (context, promotionProvider, _) {
+        final profiles = promotionProvider.featuredProfiles.take(6).toList();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Featured Artists & Institutions',
+              style: GoogleFonts.inter(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 148,
+              child: profiles.isEmpty
+                  ? const SizedBox.shrink()
+                  : ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: profiles.length,
+                      itemBuilder: (context, index) =>
+                          _buildFeaturedProfileCard(profiles[index]),
+                    ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildArtworkCard(Artwork artwork, int index) {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
@@ -1632,7 +1684,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               child: ClipRRect(
                 borderRadius:
                     const BorderRadius.vertical(top: Radius.circular(16)),
-                child: _buildCardCover(artwork, themeProvider),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    _buildCardCover(artwork, themeProvider),
+                    if (artwork.promotion.isPromoted)
+                      const Positioned(
+                        top: 8,
+                        left: 8,
+                        child: Icon(Icons.star, color: Colors.amber, size: 18),
+                      ),
+                  ],
+                ),
               ),
             ),
             Padding(
@@ -1665,6 +1728,77 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ],
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeaturedProfileCard(FeaturedPromotionItem item) {
+    final scheme = Theme.of(context).colorScheme;
+    final subtitle = (item.subtitle ?? '').trim();
+
+    return GestureDetector(
+      onTap: () {
+        final target = item.id.trim().isNotEmpty ? item.id : (item.walletAddress ?? '');
+        if (target.trim().isEmpty) return;
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => UserProfileScreen(userId: target),
+          ),
+        );
+      },
+      child: Container(
+        width: 180,
+        margin: const EdgeInsets.only(right: 12),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: scheme.primaryContainer,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 18,
+                  backgroundImage: (item.imageUrl ?? '').isNotEmpty
+                      ? NetworkImage(item.imageUrl!)
+                      : null,
+                  child: (item.imageUrl ?? '').isEmpty
+                      ? const Icon(Icons.person_outline, size: 18)
+                      : null,
+                ),
+                const Spacer(),
+                if (item.promotion.isPromoted)
+                  const Icon(Icons.star, color: Colors.amber, size: 16),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              item.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: scheme.onSurface,
+              ),
+            ),
+            if (subtitle.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: scheme.onSurface.withValues(alpha: 0.65),
+                ),
+              ),
+            ],
           ],
         ),
       ),

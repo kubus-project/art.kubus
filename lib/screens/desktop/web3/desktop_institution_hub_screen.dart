@@ -13,6 +13,7 @@ import '../../../providers/analytics_filters_provider.dart';
 import '../../../providers/desktop_dashboard_state_provider.dart';
 import '../../../config/config.dart';
 import '../../../models/dao.dart';
+import '../../../models/promotion.dart';
 import '../../../models/user_persona.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/dao_role_verification.dart';
@@ -30,6 +31,7 @@ import '../../events/exhibition_list_screen.dart';
 import '../../map_markers/manage_markers_screen.dart';
 import '../../../widgets/glass_components.dart';
 import '../../../widgets/kubus_action_sidebar.dart';
+import '../../../widgets/promotion/promotion_request_sheet.dart';
 
 /// Desktop Institution Hub screen with split-panel layout
 /// Left: Mobile institution hub view
@@ -315,6 +317,14 @@ class _DesktopInstitutionHubScreenState
                   );
                 },
               ),
+            if (isApprovedInstitution)
+              KubusActionSidebarTile(
+                title: 'Promote my profile',
+                subtitle: 'Request featured institution placement',
+                icon: Icons.campaign_outlined,
+                semantic: KubusActionSemantic.publish,
+                onTap: _openProfilePromotionFlow,
+              ),
             if (section == DesktopInstitutionSection.create &&
                 isApprovedInstitution &&
                 showCreateActions &&
@@ -528,6 +538,20 @@ class _DesktopInstitutionHubScreenState
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _openProfilePromotionFlow() async {
+    final profile = context.read<ProfileProvider>().currentUser;
+    final wallet = _resolveWalletAddress(listen: false);
+    final entityId = (profile?.id ?? wallet).trim();
+    if (entityId.isEmpty) return;
+
+    await showPromotionRequestSheet(
+      context: context,
+      entityType: PromotionEntityType.profile,
+      entityId: entityId,
+      entityLabel: profile?.displayName ?? 'my institution profile',
     );
   }
 

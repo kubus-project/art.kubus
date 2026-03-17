@@ -136,11 +136,13 @@ Future<void> kubusPreregisterMarkerIcons({
           typeName: typeName,
           tierName: tier.name,
           isDark: isDark,
+          promoted: marker.isPromoted,
         );
         final selectedIconId = MapMarkerIconIds.markerSelected(
           typeName: typeName,
           tierName: tier.name,
           isDark: isDark,
+          promoted: marker.isPromoted,
         );
 
         if (!registeredMapImages.contains(baseIconId)) {
@@ -202,11 +204,13 @@ Future<void> kubusPreregisterMarkerIcons({
           typeName: typeName,
           tierName: tier.name,
           isDark: isDark,
+          promoted: marker.isPromoted,
         );
         final selectedIconId = MapMarkerIconIds.markerSelected(
           typeName: typeName,
           tierName: tier.name,
           isDark: isDark,
+          promoted: marker.isPromoted,
         );
 
         if (!registeredMapImages.contains(baseIconId)) {
@@ -307,6 +311,7 @@ Future<void> kubusPreregisterMarkerIcons({
             roles: roles,
             isDark: isDark,
             forceGlow: task.selected,
+            showPromotionStar: marker.isPromoted,
             pixelRatio: pixelRatio,
           );
         } else {

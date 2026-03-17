@@ -16,6 +16,7 @@ import '../../../providers/profile_provider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../config/config.dart';
 import '../../../models/dao.dart';
+import '../../../models/promotion.dart';
 import '../../../models/user_persona.dart';
 import '../../../utils/dao_role_verification.dart';
 import '../../../utils/wallet_utils.dart';
@@ -23,6 +24,7 @@ import '../../collab/invites_inbox_screen.dart';
 import '../../events/exhibition_list_screen.dart';
 import '../../map_markers/manage_markers_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import '../../../widgets/promotion/promotion_request_sheet.dart';
 
 class InstitutionHub extends StatefulWidget {
   final ValueChanged<int>? onTabChanged;
@@ -267,6 +269,12 @@ class _InstitutionHubState extends State<InstitutionHub> {
               },
             ),
           IconButton(
+            tooltip: 'Promote my profile',
+            icon: Icon(Icons.campaign_outlined,
+                color: Theme.of(context).colorScheme.onSurface),
+            onPressed: _openProfilePromotionFlow,
+          ),
+          IconButton(
             icon: Icon(Icons.notifications,
                 color: Theme.of(context).colorScheme.onSurface),
             onPressed: _showNotifications,
@@ -388,6 +396,15 @@ class _InstitutionHubState extends State<InstitutionHub> {
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: OutlinedButton.icon(
+                        onPressed: _openProfilePromotionFlow,
+                        icon: const Icon(Icons.campaign_outlined),
+                        label: const Text('Promote my profile'),
+                      ),
                     ),
                     if (isApprovedInstitution) ...[
                       const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
@@ -978,6 +995,20 @@ class _InstitutionHubState extends State<InstitutionHub> {
           ),
         );
       },
+    );
+  }
+
+  Future<void> _openProfilePromotionFlow() async {
+    final profile = context.read<ProfileProvider>().currentUser;
+    final wallet = _resolveWalletAddress();
+    final entityId = (profile?.id ?? wallet).trim();
+    if (entityId.isEmpty) return;
+
+    await showPromotionRequestSheet(
+      context: context,
+      entityType: PromotionEntityType.profile,
+      entityId: entityId,
+      entityLabel: profile?.displayName ?? 'my institution profile',
     );
   }
 

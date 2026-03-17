@@ -58,6 +58,7 @@ class _MarkerPngCacheKey {
     required this.tierIndex,
     required this.isDark,
     required this.forceGlow,
+    required this.showPromotionStar,
     required this.shadowColorValue,
     required this.highlightColorValue,
     required this.legendaryRingValue,
@@ -71,6 +72,7 @@ class _MarkerPngCacheKey {
   final int tierIndex;
   final bool isDark;
   final bool forceGlow;
+  final bool showPromotionStar;
   final int shadowColorValue;
   final int highlightColorValue;
   final int legendaryRingValue;
@@ -87,6 +89,7 @@ class _MarkerPngCacheKey {
             other.tierIndex == tierIndex &&
             other.isDark == isDark &&
             other.forceGlow == forceGlow &&
+            other.showPromotionStar == showPromotionStar &&
             other.shadowColorValue == shadowColorValue &&
             other.highlightColorValue == highlightColorValue &&
             other.legendaryRingValue == legendaryRingValue &&
@@ -102,6 +105,7 @@ class _MarkerPngCacheKey {
         tierIndex,
         isDark,
         forceGlow,
+        showPromotionStar,
         shadowColorValue,
         highlightColorValue,
         legendaryRingValue,
@@ -395,6 +399,7 @@ class ArtMarkerCubeIconRenderer {
     required KubusColorRoles roles,
     required bool isDark,
     bool forceGlow = false,
+    bool showPromotionStar = false,
     double pixelRatio = 2.0,
   }) async {
     final style = CubeMarkerStyle.fromScheme(
@@ -411,6 +416,7 @@ class ArtMarkerCubeIconRenderer {
       tierIndex: tier.index,
       isDark: isDark,
       forceGlow: forceGlow,
+      showPromotionStar: showPromotionStar,
       shadowColorValue: scheme.shadow.toARGB32(),
       highlightColorValue: style.highlightColor.toARGB32(),
       legendaryRingValue: roles.achievementGold.toARGB32(),
@@ -434,6 +440,7 @@ class ArtMarkerCubeIconRenderer {
         roles: roles,
         showGlow: showGlow,
         forceGlow: forceGlow,
+        showPromotionStar: showPromotionStar,
         isDark: isDark,
         pixelRatio: pixelRatio,
       );
@@ -451,6 +458,7 @@ class ArtMarkerCubeIconRenderer {
     required KubusColorRoles roles,
     required bool showGlow,
     required bool forceGlow,
+    required bool showPromotionStar,
     required bool isDark,
     double pixelRatio = 2.0,
   }) async {
@@ -562,7 +570,52 @@ class ArtMarkerCubeIconRenderer {
             roles: roles,
           );
         }
+
+        if (showPromotionStar) {
+          _paintPromotionStar(canvas, center, squareSize);
+        }
       },
+    );
+  }
+
+  static void _paintPromotionStar(Canvas canvas, Offset center, double squareSize) {
+    final starCenter = Offset(
+      center.dx + (squareSize * 0.31),
+      center.dy - (squareSize * 0.31),
+    );
+    final outerRadius = squareSize * 0.16;
+    final innerRadius = outerRadius * 0.52;
+    final path = Path();
+    for (int i = 0; i < 10; i++) {
+      final angle = (-math.pi / 2) + (math.pi / 5) * i;
+      final radius = i.isEven ? outerRadius : innerRadius;
+      final point = Offset(
+        starCenter.dx + math.cos(angle) * radius,
+        starCenter.dy + math.sin(angle) * radius,
+      );
+      if (i == 0) {
+        path.moveTo(point.dx, point.dy);
+      } else {
+        path.lineTo(point.dx, point.dy);
+      }
+    }
+    path.close();
+
+    canvas.drawCircle(
+      starCenter,
+      outerRadius + 2.5,
+      Paint()..color = const Color(0xCC111827),
+    );
+    canvas.drawPath(
+      path,
+      Paint()..color = const Color(0xFFFFD54F),
+    );
+    canvas.drawPath(
+      path,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1
+        ..color = const Color(0xFFF59E0B),
     );
   }
 

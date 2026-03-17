@@ -10,6 +10,7 @@ import '../../providers/themeprovider.dart';
 import '../../providers/web3provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../providers/artwork_provider.dart';
+import '../../providers/promotion_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/recent_activity_provider.dart';
@@ -330,6 +331,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   Future<void> _loadInitialData() async {
     if (!mounted) return;
     final artworkProvider = context.read<ArtworkProvider>();
+    final promotionProvider = context.read<PromotionProvider>();
     final communityProvider = context.read<CommunityHubProvider>();
     final configProvider = context.read<ConfigProvider>();
 
@@ -359,6 +361,13 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         refresh: true,
       );
     }
+
+    if (!mounted) return;
+    unawaited(
+      promotionProvider.loadFeaturedHome(
+        locale: Localizations.localeOf(context).languageCode,
+      ),
+    );
 
     if (!mounted) return;
 
@@ -609,6 +618,13 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                     padding: const EdgeInsets.fromLTRB(
                         DetailSpacing.xxl, 0, DetailSpacing.xxl, 56),
                     child: _buildFeaturedArtworks(),
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                        DetailSpacing.xxl, 0, DetailSpacing.xxl, 56),
+                    child: _buildFeaturedProfiles(),
                   ),
                 ),
 
@@ -1347,6 +1363,22 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     }
   }
 
+  void _openUserProfile(String userId, String title) {
+    final shellScope = DesktopShellScope.of(context);
+    if (shellScope != null) {
+      shellScope.pushScreen(
+        DesktopSubScreen(
+          title: title,
+          child: UserProfileScreen(userId: userId),
+        ),
+      );
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => UserProfileScreen(userId: userId)),
+    );
+  }
+
   String _indexToRoute(int index) {
     switch (index) {
       case 1:
@@ -1535,10 +1567,14 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   }
 
   Widget _buildFeaturedArtworks() {
-    return Consumer<ArtworkProvider>(
-      builder: (context, artworkProvider, _) {
+    return Consumer2<ArtworkProvider, PromotionProvider>(
+      builder: (context, artworkProvider, promotionProvider, _) {
         final l10n = AppLocalizations.of(context)!;
-        final artworks = artworkProvider.artworks.take(6).toList();
+        final artworks = (promotionProvider.featuredArtworks.isNotEmpty
+                ? promotionProvider.featuredArtworks
+                : artworkProvider.artworks)
+            .take(6)
+            .toList();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1578,6 +1614,87 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     );
   }
 
+  Widget _buildFeaturedProfiles() {
+    return Consumer<PromotionProvider>(
+      builder: (context, promotionProvider, _) {
+        final profiles = promotionProvider.featuredProfiles.take(6).toList();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            DesktopSectionHeader(
+              title: 'Featured Artists & Institutions',
+              subtitle: 'Promoted creators and institutions',
+              icon: Icons.star_outline,
+              iconColor: Colors.amber,
+            ),
+            const SizedBox(height: DetailSpacing.xl),
+            if (profiles.isEmpty)
+              const SizedBox.shrink()
+            else
+              SizedBox(
+                height: 180,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: profiles.length,
+                  itemBuilder: (context, index) {
+                    final item = profiles[index];
+                    return DesktopCard(
+                      width: 240,
+                      margin: EdgeInsets.only(
+                        right: index < profiles.length - 1 ? DetailSpacing.lg : 0,
+                      ),
+                      onTap: () {
+                        final target = item.id.trim().isNotEmpty
+                            ? item.id
+                            : (item.walletAddress ?? '');
+                        if (target.trim().isEmpty) return;
+                        _openUserProfile(target, item.title);
+                      },
+                      child: Row(
+                        children: [
+                          AvatarWidget(
+                            avatarUrl: item.imageUrl,
+                            wallet: item.walletAddress ?? item.id,
+                            radius: 22,
+                            allowFabricatedFallback: true,
+                          ),
+                          const SizedBox(width: DetailSpacing.md),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  item.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: DetailTypography.cardTitle(context),
+                                ),
+                                if ((item.subtitle ?? '').trim().isNotEmpty)
+                                  Text(
+                                    item.subtitle!.trim(),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: DetailTypography.caption(context),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          if (item.promotion.isPromoted)
+                            const Icon(Icons.star, color: Colors.amber, size: 18),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildArtworkCard(Artwork artwork, int index) {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
@@ -1597,7 +1714,18 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             child: ClipRRect(
               borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(DetailRadius.lg)),
-              child: _buildDesktopCardCover(artwork, themeProvider),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  _buildDesktopCardCover(artwork, themeProvider),
+                  if (artwork.promotion.isPromoted)
+                    const Positioned(
+                      top: 8,
+                      left: 8,
+                      child: Icon(Icons.star, color: Colors.amber, size: 18),
+                    ),
+                ],
+              ),
             ),
           ),
 

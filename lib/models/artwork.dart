@@ -1,4 +1,5 @@
 import 'package:latlong2/latlong.dart';
+import 'promotion.dart';
 
 enum ArtworkStatus {
   undiscovered,
@@ -140,6 +141,7 @@ class Artwork {
   final double? averageRating;
   final int ratingsCount;
   final Map<String, dynamic>? metadata;
+  final PromotionMetadata promotion;
 
   const Artwork({
     required this.id,
@@ -196,6 +198,7 @@ class Artwork {
     this.averageRating,
     this.ratingsCount = 0,
     this.metadata,
+    this.promotion = PromotionMetadata.none,
   });
 
   /// Get distance from current position (in meters)
@@ -285,6 +288,7 @@ class Artwork {
       'averageRating': averageRating,
       'ratingsCount': ratingsCount,
       'metadata': metadata,
+      'promotion': promotion.toJson(),
     };
   }
 
@@ -382,6 +386,16 @@ class Artwork {
       averageRating: map['averageRating']?.toDouble(),
       ratingsCount: map['ratingsCount']?.toInt() ?? 0,
       metadata: map['metadata'],
+      promotion: PromotionMetadata.readFrom(
+        map,
+        fallbackMaps: <Map<String, dynamic>?>[
+          map['metadata'] is Map<String, dynamic>
+              ? map['metadata'] as Map<String, dynamic>
+              : (map['metadata'] is Map
+                  ? Map<String, dynamic>.from(map['metadata'] as Map)
+                  : null),
+        ],
+      ),
     );
   }
 
@@ -441,6 +455,7 @@ class Artwork {
     double? averageRating,
     int? ratingsCount,
     Map<String, dynamic>? metadata,
+    PromotionMetadata? promotion,
   }) {
     return Artwork(
       id: id ?? this.id,
@@ -498,6 +513,7 @@ class Artwork {
       averageRating: averageRating ?? this.averageRating,
       ratingsCount: ratingsCount ?? this.ratingsCount,
       metadata: metadata ?? this.metadata,
+      promotion: promotion ?? this.promotion,
     );
   }
 
