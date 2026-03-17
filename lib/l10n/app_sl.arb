@@ -1796,6 +1796,8 @@
   "connectWalletOptionRegisterTitle": "Registriraj se",
   "connectWalletOptionRegisterDescription": "Registriraj nov račun z e-naslovom ali Google računom",
   "connectWalletHybridHelpLink": "Kaj je WalletConnect?",
+  "connectWalletLinkExistingTitle": "Poveži obstoječo denarnico",
+  "connectWalletAdvancedBadge": "Napredno",
   "connectWalletImportTitle": "Uvozi denarnico",
   "connectWalletImportDescription": "Vnesi 12-besedno obnovitveno frazo za uvoz denarnice z druge naprave.",
   "connectWalletImportHint": "Vnesi 12 besed, ločenih s presledki",

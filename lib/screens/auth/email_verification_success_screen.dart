@@ -19,10 +19,12 @@ class EmailVerificationSuccessScreen extends StatefulWidget {
   final String token;
 
   @override
-  State<EmailVerificationSuccessScreen> createState() => _EmailVerificationSuccessScreenState();
+  State<EmailVerificationSuccessScreen> createState() =>
+      _EmailVerificationSuccessScreenState();
 }
 
-class _EmailVerificationSuccessScreenState extends State<EmailVerificationSuccessScreen> {
+class _EmailVerificationSuccessScreenState
+    extends State<EmailVerificationSuccessScreen> {
   bool _verifying = true;
   bool _verified = false;
   String? _error;
@@ -44,7 +46,9 @@ class _EmailVerificationSuccessScreenState extends State<EmailVerificationSucces
 
   Future<void> _verifyToken() async {
     try {
-      await BackendApiService().verifyEmail(token: widget.token);
+      final response =
+          await BackendApiService().verifyEmail(token: widget.token);
+      await BackendApiService().syncSecureAccountStatusFromResponse(response);
       if (!mounted) return;
       setState(() {
         _verifying = false;
@@ -78,12 +82,13 @@ class _EmailVerificationSuccessScreenState extends State<EmailVerificationSucces
 
   Future<void> _handleCountdownComplete() async {
     if (kDebugMode) {
-      debugPrint('EmailVerificationSuccessScreen: Countdown complete, attempting to close tab');
+      debugPrint(
+          'EmailVerificationSuccessScreen: Countdown complete, attempting to close tab');
     }
-    
+
     // Small delay to ensure UI updates complete
     await Future.delayed(const Duration(milliseconds: 200));
-    
+
     // Attempt to close the window
     _attemptCloseWindow();
   }
@@ -92,18 +97,20 @@ class _EmailVerificationSuccessScreenState extends State<EmailVerificationSucces
     if (kDebugMode) {
       debugPrint('EmailVerificationSuccessScreen: Calling window.close()');
     }
-    
+
     final initiated = attemptCloseWindow();
     if (!initiated && kDebugMode) {
-      debugPrint('EmailVerificationSuccessScreen: window.close() not supported on this platform');
+      debugPrint(
+          'EmailVerificationSuccessScreen: window.close() not supported on this platform');
     }
-    
+
     // After a short delay, check if window is still open
     // If we're still here, the close was blocked
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) {
         if (kDebugMode) {
-          debugPrint('EmailVerificationSuccessScreen: Tab still open after close attempt - browser blocked it');
+          debugPrint(
+              'EmailVerificationSuccessScreen: Tab still open after close attempt - browser blocked it');
         }
         setState(() => _tabCloseFailed = true);
       }
@@ -228,7 +235,8 @@ class _EmailVerificationSuccessScreenState extends State<EmailVerificationSucces
                                         'Closing in',
                                         style: GoogleFonts.inter(
                                           fontSize: 14,
-                                          color: scheme.onSurface.withValues(alpha: 0.7),
+                                          color: scheme.onSurface
+                                              .withValues(alpha: 0.7),
                                         ),
                                         textAlign: TextAlign.center,
                                       ),
@@ -250,7 +258,8 @@ class _EmailVerificationSuccessScreenState extends State<EmailVerificationSucces
                                   style: GoogleFonts.inter(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
-                                    color: scheme.onSurface.withValues(alpha: 0.85),
+                                    color: scheme.onSurface
+                                        .withValues(alpha: 0.85),
                                   ),
                                   textAlign: TextAlign.center,
                                 ),
@@ -280,7 +289,8 @@ class _EmailVerificationSuccessScreenState extends State<EmailVerificationSucces
                                   style: GoogleFonts.inter(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
-                                    color: scheme.onSurface.withValues(alpha: 0.85),
+                                    color: scheme.onSurface
+                                        .withValues(alpha: 0.85),
                                   ),
                                   textAlign: TextAlign.center,
                                 ),
@@ -291,8 +301,8 @@ class _EmailVerificationSuccessScreenState extends State<EmailVerificationSucces
                         Padding(
                           padding: const EdgeInsets.only(top: 16.0),
                           child: TextButton(
-                            onPressed: () =>
-                                Navigator.of(context).pushReplacementNamed('/sign-in'),
+                            onPressed: () => Navigator.of(context)
+                                .pushReplacementNamed('/sign-in'),
                             child: Text(
                               'Or sign in manually →',
                               style: GoogleFonts.inter(
@@ -336,7 +346,8 @@ class _EmailVerificationSuccessScreenState extends State<EmailVerificationSucces
                         ),
                         const SizedBox(height: 24),
                         TextButton(
-                          onPressed: () => Navigator.of(context).pushReplacementNamed('/sign-in'),
+                          onPressed: () => Navigator.of(context)
+                              .pushReplacementNamed('/sign-in'),
                           child: Text(
                             'Go to Sign In',
                             style: GoogleFonts.inter(

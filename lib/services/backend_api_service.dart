@@ -1182,6 +1182,89 @@ class BackendApiService
     }
   }
 
+  Map<String, dynamic> _responsePayload(Map<String, dynamic> body) {
+    return body['data'] is Map<String, dynamic>
+        ? body['data'] as Map<String, dynamic>
+        : body;
+  }
+
+  Map<String, dynamic>? _mapOrNull(Object? value) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) {
+      return Map<String, dynamic>.from(value);
+    }
+    return null;
+  }
+
+  Future<void> _persistSecureAccountStatus({
+    required String? email,
+    required bool emailVerified,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final normalizedEmail = (email ?? '').trim();
+    if (normalizedEmail.isEmpty) {
+      await prefs.remove(PreferenceKeys.secureAccountEmail);
+      await prefs.setBool(
+        PreferenceKeys.secureAccountEmailVerifiedV1,
+        false,
+      );
+      return;
+    }
+
+    await prefs.setString(PreferenceKeys.secureAccountEmail, normalizedEmail);
+    await prefs.setBool(
+      PreferenceKeys.secureAccountEmailVerifiedV1,
+      emailVerified,
+    );
+  }
+
+  Future<void> syncSecureAccountStatusFromResponse(
+    Map<String, dynamic> body, {
+    bool fetchIfMissing = true,
+  }) async {
+    try {
+      if (!AppConfig.isFeatureEnabled('emailAuth')) return;
+
+      final payload = _responsePayload(body);
+      final securityStatus = _mapOrNull(payload['securityStatus']) ??
+          _mapOrNull(body['securityStatus']);
+      if (securityStatus != null) {
+        final hasEmail = securityStatus['hasEmail'] == true;
+        final email = hasEmail ? securityStatus['email']?.toString() : null;
+        final emailVerified = securityStatus['emailVerified'] == true;
+        await _persistSecureAccountStatus(
+          email: email,
+          emailVerified: emailVerified,
+        );
+        return;
+      }
+
+      final user = _mapOrNull(payload['user']) ?? _mapOrNull(body['user']);
+      if (user != null) {
+        final email = (user['email'] ?? '').toString().trim();
+        final hasEmail = email.isNotEmpty;
+        final hasVerificationFlag = user.containsKey('emailVerified') ||
+            user.containsKey('email_verified');
+        if (hasEmail || hasVerificationFlag) {
+          await _persistSecureAccountStatus(
+            email: hasEmail ? email : null,
+            emailVerified:
+                user['emailVerified'] == true || user['email_verified'] == true,
+          );
+          return;
+        }
+      }
+
+      if (fetchIfMissing && (_authToken ?? '').trim().isNotEmpty) {
+        await syncSecureAccountStatusToPrefs();
+      }
+    } catch (e) {
+      AppConfig.debugPrint(
+        'BackendApiService.syncSecureAccountStatusFromResponse failed: $e',
+      );
+    }
+  }
+
   bool _isSuccessStatus(int statusCode) =>
       statusCode >= 200 && statusCode < 300;
 
@@ -1374,6 +1457,7 @@ class BackendApiService
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         await _persistTokenFromResponse(data);
+        await syncSecureAccountStatusFromResponse(data);
         return data;
       } else {
         throw Exception(
@@ -1428,6 +1512,7 @@ class BackendApiService
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       if (response.statusCode == 200 || response.statusCode == 201) {
         await _persistTokenFromResponse(data);
+        await syncSecureAccountStatusFromResponse(data);
         return data;
       }
       if (response.statusCode == 429) {
@@ -1467,6 +1552,7 @@ class BackendApiService
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       if (response.statusCode == 200) {
         await _persistTokenFromResponse(data);
+        await syncSecureAccountStatusFromResponse(data);
         return data;
       }
       if (response.statusCode == 429) {
@@ -1483,22 +1569,35 @@ class BackendApiService
 
   /// Resend email verification link
   /// POST /api/auth/resend-verification { email }
-  Future<Map<String, dynamic>> resendEmailVerification(
-      {required String email}) async {
+  Future<Map<String, dynamic>> _resendEmailVerificationRequest({
+    required String email,
+    required bool includeAuth,
+  }) async {
     try {
       final uri = Uri.parse('$baseUrl/api/auth/resend-verification');
       final key = _rateLimitKey('POST', uri);
       if (_isRateLimited(key)) {
         throw Exception(_rateLimitMessage(key));
       }
+      if (includeAuth) {
+        await loadAuthToken();
+        if ((_authToken ?? '').trim().isEmpty) {
+          throw Exception('Authentication required');
+        }
+      }
+      final normalizedEmail = email.trim();
       final response = await _post(
         uri,
-        includeAuth: false,
-        headers: _getHeaders(includeAuth: false),
-        body: jsonEncode({'email': email}),
+        includeAuth: includeAuth,
+        headers: _getHeaders(includeAuth: includeAuth),
+        body: normalizedEmail.isEmpty
+            ? jsonEncode(<String, dynamic>{})
+            : jsonEncode(<String, dynamic>{'email': normalizedEmail}),
       );
       if (response.statusCode == 200) {
-        return jsonDecode(response.body) as Map<String, dynamic>;
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        await syncSecureAccountStatusFromResponse(data, fetchIfMissing: false);
+        return data;
       }
       if (response.statusCode == 429) {
         _markRateLimited(key, response, defaultWindowMs: 900000);
@@ -1511,6 +1610,23 @@ class BackendApiService
           'BackendApiService.resendEmailVerification failed: $e');
       rethrow;
     }
+  }
+
+  Future<Map<String, dynamic>> resendEmailVerification(
+      {required String email}) {
+    return _resendEmailVerificationRequest(
+      email: email,
+      includeAuth: false,
+    );
+  }
+
+  Future<Map<String, dynamic>> resendEmailVerificationForCurrentAccount({
+    String? email,
+  }) {
+    return _resendEmailVerificationRequest(
+      email: email ?? '',
+      includeAuth: true,
+    );
   }
 
   /// Check whether an email has been verified.
@@ -1585,24 +1701,13 @@ class BackendApiService
     try {
       if (!AppConfig.isFeatureEnabled('emailAuth')) return;
       final status = await getAccountSecurityStatus();
-      final prefs = await SharedPreferences.getInstance();
       final email = (status['email'] ?? '').toString().trim();
       final emailVerified = status['emailVerified'] == true;
       final hasEmail = status['hasEmail'] == true && email.isNotEmpty;
 
-      if (!hasEmail) {
-        await prefs.remove(PreferenceKeys.secureAccountEmail);
-        await prefs.setBool(
-          PreferenceKeys.secureAccountEmailVerifiedV1,
-          false,
-        );
-        return;
-      }
-
-      await prefs.setString(PreferenceKeys.secureAccountEmail, email);
-      await prefs.setBool(
-        PreferenceKeys.secureAccountEmailVerifiedV1,
-        emailVerified,
+      await _persistSecureAccountStatus(
+        email: hasEmail ? email : null,
+        emailVerified: emailVerified,
       );
     } catch (e) {
       AppConfig.debugPrint(
@@ -1627,7 +1732,9 @@ class BackendApiService
         body: jsonEncode({'token': token}),
       );
       if (response.statusCode == 200) {
-        return jsonDecode(response.body) as Map<String, dynamic>;
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        await syncSecureAccountStatusFromResponse(data);
+        return data;
       }
       if (response.statusCode == 429) {
         _markRateLimited(key, response, defaultWindowMs: 900000);
@@ -1748,6 +1855,7 @@ class BackendApiService
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       if (response.statusCode == 200 || response.statusCode == 201) {
         await _persistTokenFromResponse(data);
+        await syncSecureAccountStatusFromResponse(data);
         return data;
       }
       if (response.statusCode == 429) {

@@ -93,12 +93,13 @@ class GoogleAuthService {
         clientId: selectedClientId,
         serverClientId: serverClientId,
       );
+      _initialized = true;
     } catch (e) {
       if (kDebugMode) {
         debugPrint('GoogleAuthService: Failed to initialize: $e');
       }
+      rethrow;
     }
-    _initialized = true;
   }
 
   GoogleAuthResult resultFromAccount(GoogleSignInAccount account) {
@@ -160,7 +161,7 @@ class GoogleAuthService {
     if (!_initialized) {
       return;
     }
-    
+
     try {
       await GoogleSignIn.instance.signOut();
     } catch (e) {
@@ -177,7 +178,7 @@ class GoogleAuthService {
     if (!_initialized) {
       return;
     }
-    
+
     try {
       await GoogleSignIn.instance.disconnect();
     } catch (e) {

@@ -1807,6 +1807,8 @@
   "connectWalletOptionRegisterTitle": "Register account",
   "connectWalletOptionRegisterDescription": "Register with your e-mail or Google account",
   "connectWalletHybridHelpLink": "What’s WalletConnect?",
+  "connectWalletLinkExistingTitle": "Link existing wallet",
+  "connectWalletAdvancedBadge": "Advanced",
   "connectWalletImportTitle": "Import wallet",
   "connectWalletImportDescription": "Enter your 12-word recovery phrase to import a wallet stored on another device.",
   "connectWalletImportHint": "Enter 12 words separated by spaces",

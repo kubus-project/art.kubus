@@ -1,12 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:google_sign_in_platform_interface/google_sign_in_platform_interface.dart';
 import 'package:google_sign_in_web/google_sign_in_web.dart' as gweb;
 
 import '../services/google_auth_service.dart';
-import 'google_sign_in_button.dart';
 
 class GoogleSignInWebButton extends StatefulWidget {
   const GoogleSignInWebButton({
@@ -29,8 +29,13 @@ class GoogleSignInWebButton extends StatefulWidget {
 class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
   StreamSubscription<GoogleSignInAuthenticationEvent>? _sub;
   bool _ready = false;
+  bool _initializing = false;
   bool _processingAuth = false;
   String? _lastProcessedUid;
+  Object? _initError;
+  Widget? _renderedButton;
+  double? _renderedWidth;
+  Brightness? _renderedBrightness;
 
   @override
   void initState() {
@@ -38,50 +43,67 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
     unawaited(_init());
   }
 
-  Future<void> _init() async {
-    try {
-      await GoogleAuthService().ensureInitialized();
-    } catch (error) {
-      widget.onAuthError?.call(error);
+  Future<void> _init({bool force = false}) async {
+    if (_initializing) return;
+    if (_ready && !force) return;
+    if (mounted) {
+      setState(() {
+        _initializing = true;
+        _initError = null;
+      });
     }
 
-    if (!mounted) return;
+    try {
+      await GoogleAuthService().ensureInitialized();
 
-    _sub ??= GoogleSignIn.instance.authenticationEvents.listen(
-      (GoogleSignInAuthenticationEvent event) async {
-        if (event is! GoogleSignInAuthenticationEventSignIn) {
-          return;
-        }
-        if (!mounted || widget.isLoading || _processingAuth) {
-          return;
-        }
+      _sub ??= GoogleSignIn.instance.authenticationEvents.listen(
+        (GoogleSignInAuthenticationEvent event) async {
+          if (event is! GoogleSignInAuthenticationEventSignIn) {
+            return;
+          }
+          if (!mounted || widget.isLoading || _processingAuth) {
+            return;
+          }
 
-        final uid = event.user.id;
-        if (_lastProcessedUid == uid) {
-          return;
-        }
+          final uid = event.user.id;
+          if (_lastProcessedUid == uid) {
+            return;
+          }
 
-        try {
-          _processingAuth = true;
-          final result = GoogleAuthService().resultFromAccount(event.user);
-          await widget.onAuthResult(result);
-          _lastProcessedUid = uid;
-        } catch (error) {
-          _lastProcessedUid = null;
+          try {
+            _processingAuth = true;
+            final result = GoogleAuthService().resultFromAccount(event.user);
+            await widget.onAuthResult(result);
+            _lastProcessedUid = uid;
+          } catch (error) {
+            _lastProcessedUid = null;
+            widget.onAuthError?.call(error);
+          } finally {
+            _processingAuth = false;
+          }
+        },
+        onError: (Object error) {
           widget.onAuthError?.call(error);
-        } finally {
-          _processingAuth = false;
-        }
-      },
-      onError: (Object error) {
-        widget.onAuthError?.call(error);
-      },
-    );
+        },
+      );
 
-    if (!mounted) return;
-    setState(() {
-      _ready = true;
-    });
+      if (!mounted) return;
+      setState(() {
+        _ready = true;
+        _initializing = false;
+      });
+    } catch (error) {
+      widget.onAuthError?.call(error);
+      if (!mounted) return;
+      setState(() {
+        _ready = false;
+        _initializing = false;
+        _initError = error;
+        _renderedButton = null;
+        _renderedWidth = null;
+        _renderedBrightness = null;
+      });
+    }
   }
 
   @override
@@ -100,72 +122,156 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
     super.dispose();
   }
 
-  Future<void> _handleFallbackPress() async {
-    if (widget.isLoading || _processingAuth) return;
-    try {
-      _processingAuth = true;
-      final result = await GoogleAuthService().signIn();
-      if (result == null) {
-        throw StateError('Google sign-in cancelled or unavailable.');
-      }
-      await widget.onAuthResult(result);
-      final email = result.email.trim().toLowerCase();
-      _lastProcessedUid = email.isNotEmpty ? email : null;
-    } catch (error) {
-      _lastProcessedUid = null;
-      widget.onAuthError?.call(error);
-    } finally {
-      _processingAuth = false;
-    }
-  }
-
-  Widget _buildRenderedButton(BoxConstraints constraints) {
+  Widget _createRenderedButton(double width, Brightness brightness) {
     final platform = GoogleSignInPlatform.instance;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final maxWidth =
-        constraints.maxWidth.isFinite ? constraints.maxWidth : 400.0;
-
     final config = gweb.GSIButtonConfiguration(
       type: gweb.GSIButtonType.standard,
-      theme: isDark
+      theme: brightness == Brightness.dark
           ? gweb.GSIButtonTheme.filledBlack
           : gweb.GSIButtonTheme.outline,
       size: gweb.GSIButtonSize.large,
       text: gweb.GSIButtonText.continueWith,
       shape: gweb.GSIButtonShape.rectangular,
       logoAlignment: gweb.GSIButtonLogoAlignment.left,
-      minimumWidth: maxWidth,
+      minimumWidth: width,
     );
 
-    try {
-      final rendered = platform is gweb.GoogleSignInPlugin
-          ? platform.renderButton(configuration: config)
-          : (platform as dynamic).renderButton(configuration: config);
-      if (rendered is Widget) {
-        return SizedBox(
-          width: maxWidth,
-          height: 56,
-          child: rendered,
-        );
-      }
-    } catch (_) {
-      // Fall back to the interactive Flutter button below.
+    final rendered = platform is gweb.GoogleSignInPlugin
+        ? platform.renderButton(configuration: config)
+        : (platform as dynamic).renderButton(configuration: config);
+    if (rendered is! Widget) {
+      throw StateError('Google Sign-In web button did not return a widget.');
     }
 
-    return GoogleSignInButton(
-      onPressed: _handleFallbackPress,
-      isLoading: widget.isLoading || _processingAuth,
-      colorScheme: widget.colorScheme,
+    return SizedBox(
+      width: width,
+      height: 56,
+      child: rendered,
+    );
+  }
+
+  Widget _buildRenderedHost(BoxConstraints constraints) {
+    final brightness = Theme.of(context).brightness;
+    final maxWidth =
+        constraints.maxWidth.isFinite ? constraints.maxWidth : 400.0;
+    final shouldRebuild = _renderedButton == null ||
+        _renderedWidth == null ||
+        (_renderedWidth! - maxWidth).abs() > 1 ||
+        _renderedBrightness != brightness;
+
+    if (shouldRebuild) {
+      try {
+        _renderedButton = _createRenderedButton(maxWidth, brightness);
+        _renderedWidth = maxWidth;
+        _renderedBrightness = brightness;
+        _initError = null;
+      } catch (error) {
+        _initError = error;
+        widget.onAuthError?.call(error);
+      }
+    }
+
+    if (_initError != null || _renderedButton == null) {
+      return _buildRetryState();
+    }
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        _renderedButton!,
+        if (widget.isLoading)
+          Positioned.fill(
+            child: AbsorbPointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: widget.colorScheme.surface.withValues(alpha: 0.58),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Center(
+                  child: SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Future<void> _retryInit() async {
+    await _init(force: true);
+  }
+
+  Widget _buildRetryState() {
+    final scheme = widget.colorScheme;
+    return Container(
+      height: 56,
+      decoration: BoxDecoration(
+        color: scheme.surface.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.5)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline, color: scheme.error, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Google Sign-In is not ready. Retry setup.',
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: scheme.onSurface,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: _initializing ? null : _retryInit,
+            child: Text(
+              _initializing ? 'Retrying…' : 'Retry',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_ready || widget.isLoading) {
-      return GoogleSignInButton(
-        onPressed: _handleFallbackPress,
-        isLoading: widget.isLoading || (!_ready && _processingAuth),
-        colorScheme: widget.colorScheme,
+    if (_initError != null) {
+      return _buildRetryState();
+    }
+
+    if (!_ready) {
+      return SizedBox(
+        height: 56,
+        width: double.infinity,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: widget.colorScheme.surface.withValues(alpha: 0.92),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: widget.colorScheme.outlineVariant.withValues(alpha: 0.45),
+            ),
+          ),
+          child: Center(
+            child: SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  widget.colorScheme.onSurface,
+                ),
+              ),
+            ),
+          ),
+        ),
       );
     }
 
@@ -174,7 +280,7 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
       width: double.infinity,
       child: LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
-          return _buildRenderedButton(constraints);
+          return _buildRenderedHost(constraints);
         },
       ),
     );

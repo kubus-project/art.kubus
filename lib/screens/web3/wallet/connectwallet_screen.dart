@@ -22,12 +22,11 @@ import '../../../services/user_service.dart';
 import '../../../services/telemetry/telemetry_service.dart';
 import '../../../services/wallet_session_sync_service.dart';
 import '../../../models/user.dart';
+import '../../../widgets/auth_wallet_entry_menu.dart';
 import '../../../widgets/gradient_icon_card.dart';
 import '../../../widgets/kubus_button.dart';
 import '../../../widgets/glass_components.dart';
 import '../../../utils/design_tokens.dart';
-import '../../auth/sign_in_screen.dart';
-import '../../auth/register_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class ConnectWallet extends StatefulWidget {
@@ -259,7 +258,7 @@ class _ConnectWalletState extends State<ConnectWallet>
   String _getStepTitle(AppLocalizations l10n) {
     switch (_currentStep) {
       case 0:
-        return l10n.authSignInTitle;
+        return l10n.connectWalletChooseTitle;
       case 1:
         return l10n.connectWalletSecureAccessTitle;
       case 2:
@@ -267,7 +266,7 @@ class _ConnectWalletState extends State<ConnectWallet>
       case 3:
         return l10n.connectWalletSecureAccessTitle;
       default:
-        return l10n.authSignInTitle;
+        return l10n.connectWalletChooseTitle;
     }
   }
 
@@ -348,27 +347,30 @@ class _ConnectWalletState extends State<ConnectWallet>
                 ),
                 SizedBox(height: isSmallScreen ? 16 : 24),
                 _buildActionButton(
-                  icon: Icons.qr_code_scanner,
-                  label: l10n.connectWalletOptionWalletConnectTitle,
-                  description: l10n.connectWalletOptionWalletConnectDescription,
+                  icon: AuthWalletEntryOption.walletConnect.icon,
+                  label: AuthWalletEntryOption.walletConnect.label(l10n),
+                  description:
+                      AuthWalletEntryOption.walletConnect.description(l10n),
                   onTap: () => setState(() => _currentStep = 3),
                   isSmallScreen: isSmallScreen,
                 ),
                 _buildActionButton(
-                  icon: Icons.login,
-                  label: l10n.connectWalletOptionSignInTitle,
-                  description: l10n.connectWalletOptionSignInDescription,
-                  onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const SignInScreen())),
+                  icon: AuthWalletEntryOption.createNewWallet.icon,
+                  label: AuthWalletEntryOption.createNewWallet.label(l10n),
+                  description:
+                      AuthWalletEntryOption.createNewWallet.description(l10n),
+                  onTap: () => setState(() => _currentStep = 2),
                   isSmallScreen: isSmallScreen,
+                  isAdvanced: true,
                 ),
                 _buildActionButton(
-                  icon: Icons.person_add_alt,
-                  label: l10n.connectWalletOptionRegisterTitle,
-                  description: l10n.connectWalletOptionRegisterDescription,
-                  onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                      builder: (_) => const RegisterScreen())),
+                  icon: AuthWalletEntryOption.linkExistingWallet.icon,
+                  label: AuthWalletEntryOption.linkExistingWallet.label(l10n),
+                  description: AuthWalletEntryOption.linkExistingWallet
+                      .description(l10n),
+                  onTap: () => setState(() => _currentStep = 1),
                   isSmallScreen: isSmallScreen,
+                  isAdvanced: true,
                 ),
                 SizedBox(height: isSmallScreen ? 16 : 24),
                 GestureDetector(
@@ -397,24 +399,26 @@ class _ConnectWalletState extends State<ConnectWallet>
     required String description,
     required VoidCallback onTap,
     required bool isSmallScreen,
+    bool isAdvanced = false,
   }) {
     final accent =
         Provider.of<ThemeProvider>(context, listen: false).accentColor;
     final colorScheme = Theme.of(context).colorScheme;
-    final iconColor = icon == Icons.qr_code_scanner
-        ? colorScheme.secondary
-        : icon == Icons.login
-            ? colorScheme.primary
-            : icon == Icons.person_add_alt
-                ? colorScheme.tertiary
-                : accent;
+    final iconColor =
+        icon == Icons.qr_code_scanner || icon == Icons.qr_code_2_outlined
+            ? colorScheme.secondary
+            : icon == Icons.add_circle_outline_rounded
+                ? colorScheme.primary
+                : icon == Icons.link_rounded
+                    ? colorScheme.tertiary
+                    : accent;
     return _buildOptionCard(
       label,
       description,
       icon,
       iconColor,
       onTap,
-      isSubdued: false,
+      isSubdued: isAdvanced,
     );
   }
 
@@ -429,14 +433,15 @@ class _ConnectWalletState extends State<ConnectWallet>
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 360;
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardTint = scheme.surface.withValues(alpha: isDark ? 0.22 : 0.26);
     Color startColor;
     Color endColor;
-    if (icon == Icons.qr_code_scanner) {
+    if (icon == Icons.qr_code_scanner || icon == Icons.qr_code_2_outlined) {
       startColor = const Color(0xFF06B6D4);
       endColor = const Color(0xFF3B82F6);
-    } else if (icon == Icons.login) {
+    } else if (icon == Icons.add_circle_outline_rounded) {
       startColor = const Color.fromARGB(255, 3, 115, 185);
       endColor = const Color.fromARGB(255, 13, 228, 49);
     } else {
@@ -475,12 +480,38 @@ class _ConnectWalletState extends State<ConnectWallet>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: KubusTypography.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: scheme.onSurface,
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          style:
+                              KubusTypography.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: scheme.onSurface,
+                          ),
+                        ),
+                      ),
+                      if (isSubdued)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: KubusSpacing.sm,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: scheme.secondary.withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            l10n.connectWalletAdvancedBadge,
+                            style:
+                                KubusTypography.textTheme.labelSmall?.copyWith(
+                              color: scheme.secondary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 3),
                   Text(
@@ -1421,6 +1452,7 @@ class _ConnectWalletState extends State<ConnectWallet>
           walletAddress.isEmpty) {
         setState(() {
           _isLoading = false;
+          _currentStep = 0;
         });
         messenger.showKubusSnackBar(
           SnackBar(

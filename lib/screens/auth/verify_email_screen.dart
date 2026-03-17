@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../config/config.dart';
@@ -62,17 +61,10 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       _inlineError = null;
     });
     try {
-      await BackendApiService().verifyEmail(token: token);
+      final response = await BackendApiService().verifyEmail(token: token);
+      await BackendApiService().syncSecureAccountStatusFromResponse(response);
       if (!mounted) return;
       setState(() => _verified = true);
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setBool(PreferenceKeys.secureAccountEmailVerifiedV1, true);
-        final email = _emailController.text.trim();
-        if (email.isNotEmpty) {
-          await prefs.setString(PreferenceKeys.secureAccountEmail, email);
-        }
-      } catch (_) {}
       if (!mounted) return;
       final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showKubusSnackBar(
@@ -80,7 +72,8 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       );
     } catch (_) {
       if (!mounted) return;
-      setState(() => _inlineError = AppLocalizations.of(context)!.authVerifyEmailFailedInline);
+      setState(() => _inlineError =
+          AppLocalizations.of(context)!.authVerifyEmailFailedInline);
     } finally {
       if (mounted) setState(() => _verifying = false);
     }
@@ -104,11 +97,31 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       _inlineError = null;
     });
     try {
-      await BackendApiService().resendEmailVerification(email: email);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showKubusSnackBar(
-        SnackBar(content: Text(l10n.authVerifyEmailResendToast)),
+      final response =
+          await BackendApiService().resendEmailVerification(email: email);
+      await BackendApiService().syncSecureAccountStatusFromResponse(
+        response,
+        fetchIfMissing: false,
       );
+      final payload = response['data'] is Map<String, dynamic>
+          ? response['data'] as Map<String, dynamic>
+          : response;
+      final emailVerificationSent = payload['emailVerificationSent'] == true;
+      if (!mounted) return;
+      if (emailVerificationSent || payload['message'] != null) {
+        ScaffoldMessenger.of(context).showKubusSnackBar(
+          SnackBar(
+            content: Text(
+              emailVerificationSent
+                  ? l10n.authVerifyEmailResendToast
+                  : (payload['message'] ?? l10n.authVerifyEmailResendToast)
+                      .toString(),
+            ),
+          ),
+        );
+      } else {
+        setState(() => _inlineError = l10n.authVerifyEmailResendFailedInline);
+      }
     } catch (_) {
       if (!mounted) return;
       setState(() => _inlineError = l10n.authVerifyEmailResendFailedInline);
@@ -132,7 +145,9 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     final tokenPresent = (widget.token ?? '').trim().isNotEmpty;
     final statusText = _verified
         ? l10n.authVerifyEmailStatusVerified
-        : (_verifying ? l10n.authVerifyEmailStatusVerifying : l10n.authVerifyEmailStatusPending);
+        : (_verifying
+            ? l10n.authVerifyEmailStatusVerifying
+            : l10n.authVerifyEmailStatusPending);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -203,7 +218,8 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final roles = KubusColorRoles.of(context);
-    final isDesktop = MediaQuery.of(context).size.width >= DesktopBreakpoints.medium;
+    final isDesktop =
+        MediaQuery.of(context).size.width >= DesktopBreakpoints.medium;
 
     final form = _buildForm(l10n: l10n, scheme: scheme);
 
@@ -246,7 +262,8 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
 
     final bgStart = scheme.primary.withValues(alpha: 0.55);
     final bgEnd = roles.positiveAction.withValues(alpha: 0.50);
-    final bgMid = (Color.lerp(bgStart, bgEnd, 0.55) ?? bgEnd).withValues(alpha: 0.52);
+    final bgMid =
+        (Color.lerp(bgStart, bgEnd, 0.55) ?? bgEnd).withValues(alpha: 0.52);
     final bgColors = <Color>[bgStart, bgMid, bgEnd, bgStart];
 
     return Scaffold(
@@ -327,7 +344,8 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                                     l10n.authVerifyEmailSubtitle,
                                     style: GoogleFonts.inter(
                                       fontSize: 14,
-                                      color: scheme.onSurface.withValues(alpha: 0.85),
+                                      color: scheme.onSurface
+                                          .withValues(alpha: 0.85),
                                     ),
                                     textAlign: TextAlign.center,
                                   ),

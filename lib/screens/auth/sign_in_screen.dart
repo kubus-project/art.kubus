@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:art_kubus/l10n/app_localizations.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/config.dart';
@@ -22,6 +21,7 @@ import '../../services/telemetry/telemetry_service.dart';
 import '../../services/wallet_session_sync_service.dart';
 import '../../widgets/google_sign_in_button.dart';
 import '../../widgets/google_sign_in_web_button.dart';
+import '../../widgets/auth_wallet_entry_menu.dart';
 import '../../widgets/kubus_button.dart';
 import '../../widgets/auth_entry_shell.dart';
 import '../../utils/design_tokens.dart';
@@ -534,6 +534,18 @@ class _SignInScreenState extends State<SignInScreen> {
     _setGoogleAuthDiagnostics('success');
   }
 
+  Future<void> _openConnectWalletRoute(AuthWalletEntryOption option) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ConnectWallet(
+          initialStep: option.initialStep,
+          telemetryAuthFlow: 'signin',
+        ),
+        settings: RouteSettings(name: option.routeName),
+      ),
+    );
+  }
+
   void _showConnectWalletModal() {
     final l10n = AppLocalizations.of(context)!;
     if (!AppConfig.enableWalletConnect || !AppConfig.enableWeb3) {
@@ -543,90 +555,14 @@ class _SignInScreenState extends State<SignInScreen> {
     }
 
     unawaited(TelemetryService().trackSignInAttempt(method: 'wallet'));
-    final isDesktop =
-        MediaQuery.of(context).size.width >= DesktopBreakpoints.medium;
-    if (isDesktop) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) =>
-              const ConnectWallet(initialStep: 0, telemetryAuthFlow: 'signin'),
-          settings: const RouteSettings(name: '/connect-wallet'),
-        ),
+    unawaited(() async {
+      final option = await showAuthWalletEntryMenu(
+        context: context,
+        description: l10n.authConnectWalletModalDescriptionSignIn,
       );
-      return;
-    }
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) {
-        final colorScheme = Theme.of(ctx).colorScheme;
-        final sheetL10n = AppLocalizations.of(ctx)!;
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(sheetL10n.authConnectWalletModalTitle,
-                    style: GoogleFonts.inter(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: colorScheme.onSurface)),
-                const SizedBox(height: 12),
-                Text(sheetL10n.authConnectWalletModalDescriptionSignIn,
-                    style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: colorScheme.onSurface.withValues(alpha: 0.7))),
-                const SizedBox(height: 24),
-                const SizedBox(height: 16),
-                _walletOptionButton(
-                    ctx,
-                    sheetL10n.authWalletOptionWalletConnect,
-                    Icons.qr_code_2_outlined, () {
-                  Navigator.of(ctx).pop();
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const ConnectWallet(
-                          initialStep: 3, telemetryAuthFlow: 'signin'),
-                      settings: const RouteSettings(
-                          name: '/connect-wallet/walletconnect'),
-                    ),
-                  );
-                }),
-                const SizedBox(height: 16),
-                _walletOptionButton(ctx, sheetL10n.authWalletOptionOtherWallets,
-                    Icons.apps_outlined, () {
-                  Navigator.of(ctx).pop();
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const ConnectWallet(
-                          initialStep: 0, telemetryAuthFlow: 'signin'),
-                      settings: const RouteSettings(name: '/connect-wallet'),
-                    ),
-                  );
-                }),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _walletOptionButton(
-      BuildContext context, String label, IconData icon, VoidCallback onTap) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return KubusButton(
-      onPressed: onTap,
-      icon: icon,
-      label: label,
-      variant: KubusButtonVariant.secondary,
-      foregroundColor: colorScheme.onSurface,
-      isFullWidth: true,
-    );
+      if (!mounted || option == null) return;
+      await _openConnectWalletRoute(option);
+    }());
   }
 
   @override
@@ -710,8 +646,8 @@ class _SignInScreenState extends State<SignInScreen> {
     final compactLayout =
         widget.embedded || MediaQuery.sizeOf(context).height < 820;
     final showSectionCopy = !widget.embedded && !compactLayout;
-    final emailSurface =
-        Color.lerp(colorScheme.surface, colorScheme.primary, isDark ? 0.18 : 0.10)!;
+    final emailSurface = Color.lerp(
+        colorScheme.surface, colorScheme.primary, isDark ? 0.18 : 0.10)!;
     final walletSurface = Color.lerp(
       colorScheme.surface,
       roles.web3MarketplaceAccent,
@@ -865,8 +801,7 @@ class _SignInScreenState extends State<SignInScreen> {
   }
 
   Widget _buildEmailForm() {
-    final compact =
-        widget.embedded || MediaQuery.sizeOf(context).height < 820;
+    final compact = widget.embedded || MediaQuery.sizeOf(context).height < 820;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -911,8 +846,10 @@ class _SignInScreenState extends State<SignInScreen> {
               );
             },
             style: TextButton.styleFrom(
-              foregroundColor:
-                  Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.82),
+              foregroundColor: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.82),
             ),
             child: Text(AppLocalizations.of(context)!.authForgotPasswordLink),
           ),

@@ -7828,6 +7828,18 @@ abstract class AppLocalizations {
   /// **'What’s WalletConnect?'**
   String get connectWalletHybridHelpLink;
 
+  /// No description provided for @connectWalletLinkExistingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Link existing wallet'**
+  String get connectWalletLinkExistingTitle;
+
+  /// No description provided for @connectWalletAdvancedBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced'**
+  String get connectWalletAdvancedBadge;
+
   /// No description provided for @connectWalletImportTitle.
   ///
   /// In en, this message translates to:

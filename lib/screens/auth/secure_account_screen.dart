@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
@@ -18,7 +17,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class SecureAccountScreen extends StatefulWidget {
   const SecureAccountScreen({super.key});
@@ -103,21 +101,29 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
         // Best-effort only. The backend may still accept the request depending on config.
       }
 
-      await BackendApiService().registerWithEmail(
+      final response = await BackendApiService().registerWithEmail(
         email: email,
         password: password,
         walletAddress: walletAddress,
       );
-
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(PreferenceKeys.secureAccountEmail, email);
-      await prefs.setBool(PreferenceKeys.secureAccountEmailVerifiedV1, false);
+      await BackendApiService().syncSecureAccountStatusFromResponse(response);
+      final payload = response['data'] is Map<String, dynamic>
+          ? response['data'] as Map<String, dynamic>
+          : response;
+      final emailVerificationSent = payload['emailVerificationSent'] == true;
 
       if (!mounted) return;
-      setState(() => _verificationSent = true);
-      messenger.showKubusSnackBar(
-        SnackBar(content: Text(l10n.authVerifyEmailRegistrationToast)),
-      );
+      if (emailVerificationSent) {
+        setState(() => _verificationSent = true);
+        messenger.showKubusSnackBar(
+          SnackBar(content: Text(l10n.authVerifyEmailRegistrationToast)),
+        );
+      } else {
+        setState(() {
+          _verificationSent = false;
+          _inlineError = l10n.authVerifyEmailResendFailedInline;
+        });
+      }
     } catch (e) {
       if (kDebugMode) {
         debugPrint('SecureAccountScreen: registerWithEmail failed: $e');
@@ -140,11 +146,31 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
       _inlineError = null;
     });
     try {
-      await BackendApiService().resendEmailVerification(email: email);
-      if (!mounted) return;
-      messenger.showKubusSnackBar(
-        SnackBar(content: Text(l10n.authVerifyEmailResendToast)),
+      final response = await BackendApiService()
+          .resendEmailVerificationForCurrentAccount(email: email);
+      await BackendApiService().syncSecureAccountStatusFromResponse(
+        response,
+        fetchIfMissing: false,
       );
+      final payload = response['data'] is Map<String, dynamic>
+          ? response['data'] as Map<String, dynamic>
+          : response;
+      final emailVerificationSent = payload['emailVerificationSent'] == true;
+      if (!mounted) return;
+      if (emailVerificationSent || payload['message'] != null) {
+        messenger.showKubusSnackBar(
+          SnackBar(
+            content: Text(
+              emailVerificationSent
+                  ? l10n.authVerifyEmailResendToast
+                  : (payload['message'] ?? l10n.authVerifyEmailResendToast)
+                      .toString(),
+            ),
+          ),
+        );
+      } else {
+        setState(() => _inlineError = l10n.authVerifyEmailResendFailedInline);
+      }
     } catch (_) {
       if (!mounted) return;
       setState(() => _inlineError = l10n.authVerifyEmailResendFailedInline);

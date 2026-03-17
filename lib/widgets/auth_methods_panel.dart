@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -23,11 +23,11 @@ import 'package:art_kubus/widgets/auth_entry_shell.dart';
 import 'package:art_kubus/widgets/email_registration_form.dart';
 import 'package:art_kubus/widgets/google_sign_in_button.dart';
 import 'package:art_kubus/widgets/google_sign_in_web_button.dart';
+import 'package:art_kubus/widgets/auth_wallet_entry_menu.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -136,7 +136,8 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         (user['username'] ?? _usernameController.text ?? '').toString();
     final userId = user['id'];
     try {
-      AppConfig.debugPrint('AuthMethodsPanel._handleAuthSuccess: ensuring wallet provisioning');
+      AppConfig.debugPrint(
+          'AuthMethodsPanel._handleAuthSuccess: ensuring wallet provisioning');
       walletAddress = await _ensureWalletProvisioned(walletAddress?.toString(),
           desiredUsername: usernameFromUser);
     } catch (e) {
@@ -184,7 +185,8 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       }
     }
     if (!mounted) return;
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
     if (await _maybeRouteToStructuredOnboarding(
       prefs: prefs,
       profileProvider: profileProvider,
@@ -193,13 +195,15 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       return;
     }
     if (widget.embedded) {
-      AppConfig.debugPrint('AuthMethodsPanel._handleAuthSuccess: embedded flow auth success callback');
+      AppConfig.debugPrint(
+          'AuthMethodsPanel._handleAuthSuccess: embedded flow auth success callback');
       if (widget.onAuthSuccess != null) {
         await widget.onAuthSuccess!();
       }
       return;
     }
-    AppConfig.debugPrint('AuthMethodsPanel._handleAuthSuccess: navigating to /main');
+    AppConfig.debugPrint(
+        'AuthMethodsPanel._handleAuthSuccess: navigating to /main');
     navigator.pushReplacementNamed('/main');
   }
 
@@ -240,11 +244,14 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     unawaited(TelemetryService().trackSignUpAttempt(method: 'email'));
     setState(() => _isSubmitting = true);
     try {
-      AppConfig.debugPrint('AuthMethodsPanel._registerWithEmail: start email registration for $email');
+      AppConfig.debugPrint(
+          'AuthMethodsPanel._registerWithEmail: start email registration for $email');
       String? provisionalWalletAddress;
       if (widget.prepareProvisionalProfileBeforeRegister) {
-        AppConfig.debugPrint('AuthMethodsPanel._registerWithEmail: preparing provisional profile');
-        provisionalWalletAddress = await _prepareProvisionalProfileBeforeRegister(
+        AppConfig.debugPrint(
+            'AuthMethodsPanel._registerWithEmail: preparing provisional profile');
+        provisionalWalletAddress =
+            await _prepareProvisionalProfileBeforeRegister(
           desiredUsername: username,
         ).timeout(const Duration(seconds: 16));
         AppConfig.debugPrint(
@@ -254,14 +261,15 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       final api = BackendApiService();
       await api
           .registerWithEmail(
-        email: email,
-        password: password,
-        username: username.isNotEmpty ? username : null,
-        displayName: greetingName,
-        walletAddress: provisionalWalletAddress,
-      )
+            email: email,
+            password: password,
+            username: username.isNotEmpty ? username : null,
+            displayName: greetingName,
+            walletAddress: provisionalWalletAddress,
+          )
           .timeout(const Duration(seconds: 16));
-      AppConfig.debugPrint('AuthMethodsPanel._registerWithEmail: registerWithEmail completed');
+      AppConfig.debugPrint(
+          'AuthMethodsPanel._registerWithEmail: registerWithEmail completed');
       widget.onEmailRegistrationAttempted?.call(email);
       if (widget.onEmailCredentialsCaptured != null) {
         await widget.onEmailCredentialsCaptured!(email, password);
@@ -283,7 +291,8 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         SnackBar(content: Text(l10n.authVerifyEmailRegistrationToast)),
       );
       unawaited(TelemetryService().trackSignUpSuccess(method: 'email'));
-      AppConfig.debugPrint('AuthMethodsPanel._registerWithEmail: success path complete');
+      AppConfig.debugPrint(
+          'AuthMethodsPanel._registerWithEmail: success path complete');
       // Note: email registration no longer creates a session until verification.
       // Avoid writing local account/session state here.
     } on TimeoutException catch (e) {
@@ -310,7 +319,8 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         );
       }
     } finally {
-      AppConfig.debugPrint('AuthMethodsPanel._registerWithEmail: clearing submit loading state');
+      AppConfig.debugPrint(
+          'AuthMethodsPanel._registerWithEmail: clearing submit loading state');
       if (mounted) setState(() => _isSubmitting = false);
     }
   }
@@ -335,7 +345,8 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
               .connectWalletWithAddress(address)
               .timeout(walletConnectTimeout);
         } catch (e) {
-          AppConfig.debugPrint('AuthMethodsPanel: connectWalletWithAddress failed: $e');
+          AppConfig.debugPrint(
+              'AuthMethodsPanel: connectWalletWithAddress failed: $e');
         }
       }
       return address;
@@ -352,7 +363,8 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
           await BackendApiService().issueTokenForWallet(address);
         }
       } catch (e) {
-        AppConfig.debugPrint('AuthMethodsPanel: issueTokenForWallet failed: $e');
+        AppConfig.debugPrint(
+            'AuthMethodsPanel: issueTokenForWallet failed: $e');
       }
     } catch (e) {
       AppConfig.debugPrint('AuthMethodsPanel: wallet creation failed: $e');
@@ -368,7 +380,8 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
   Future<String?> _prepareProvisionalProfileBeforeRegister({
     required String desiredUsername,
   }) async {
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
     String? walletAddress;
     try {
       walletAddress = await _ensureWalletProvisioned(
@@ -427,7 +440,8 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       await profileProvider.createProfileFromWallet(
           walletAddress: address, username: effectiveUsername);
     } catch (e) {
-      AppConfig.debugPrint('AuthMethodsPanel: createProfileFromWallet failed: $e');
+      AppConfig.debugPrint(
+          'AuthMethodsPanel: createProfileFromWallet failed: $e');
     }
     if (effectiveUsername != null && effectiveUsername.isNotEmpty) {
       try {
@@ -533,79 +547,14 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       return;
     }
     unawaited(TelemetryService().trackSignUpAttempt(method: 'wallet'));
-    final isDesktop =
-        MediaQuery.of(context).size.width >= DesktopBreakpoints.medium;
-    if (isDesktop) {
-      await _openConnectWalletRoute(
-        initialStep: 0,
-        routeName: '/connect-wallet',
-      );
-      return;
-    }
-    showModalBottomSheet(
+    final option = await showAuthWalletEntryMenu(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) {
-        final colorScheme = Theme.of(ctx).colorScheme;
-        final sheetL10n = AppLocalizations.of(ctx)!;
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(sheetL10n.authConnectWalletModalTitle,
-                    style: GoogleFonts.inter(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: colorScheme.onSurface)),
-                const SizedBox(height: 6),
-                Text(sheetL10n.authConnectWalletModalDescriptionRegister,
-                    style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: colorScheme.onSurface.withValues(alpha: 0.7))),
-                const SizedBox(height: 16),
-                const SizedBox(height: 8),
-                _walletOptionButton(
-                    ctx,
-                    sheetL10n.authWalletOptionWalletConnect,
-                    Icons.qr_code_2_outlined, () {
-                  Navigator.of(ctx).pop();
-                  unawaited(_openConnectWalletRoute(
-                    initialStep: 3,
-                    routeName: '/connect-wallet/walletconnect',
-                  ));
-                }),
-                const SizedBox(height: 8),
-                _walletOptionButton(ctx, sheetL10n.authWalletOptionOtherWallets,
-                    Icons.apps_outlined, () {
-                  Navigator.of(ctx).pop();
-                  unawaited(_openConnectWalletRoute(
-                    initialStep: 0,
-                    routeName: '/connect-wallet',
-                  ));
-                }),
-              ],
-            ),
-          ),
-        );
-      },
+      description: l10n.authConnectWalletModalDescriptionRegister,
     );
-  }
-
-  Widget _walletOptionButton(
-      BuildContext context, String label, IconData icon, VoidCallback onTap) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return KubusButton(
-      onPressed: onTap,
-      icon: icon,
-      label: label,
-      variant: KubusButtonVariant.secondary,
-      foregroundColor: colorScheme.onSurface,
-      isFullWidth: true,
+    if (!mounted || option == null) return;
+    await _openConnectWalletRoute(
+      initialStep: option.initialStep,
+      routeName: option.routeName,
     );
   }
 
@@ -677,8 +626,8 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     final compactLayout =
         widget.embedded || MediaQuery.sizeOf(context).height < 820;
     final showSectionCopy = !widget.embedded && !compactLayout;
-    final emailSurface =
-        Color.lerp(colorScheme.surface, colorScheme.primary, isDark ? 0.18 : 0.10)!;
+    final emailSurface = Color.lerp(
+        colorScheme.surface, colorScheme.primary, isDark ? 0.18 : 0.10)!;
     final walletSurface = Color.lerp(
       colorScheme.surface,
       roles.web3MarketplaceAccent,
