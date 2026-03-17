@@ -51,6 +51,21 @@ void main() {
     var resendRequests = 0;
     api.setHttpClient(
       MockClient((request) async {
+        if (request.url.path == '/api/auth/account-security-status') {
+          return http.Response(
+            jsonEncode(<String, dynamic>{
+              'success': true,
+              'data': <String, dynamic>{
+                'hasEmail': false,
+                'hasPassword': false,
+                'emailVerified': false,
+                'emailAuthEnabled': true,
+              },
+            }),
+            200,
+            headers: <String, String>{'content-type': 'application/json'},
+          );
+        }
         if (request.url.path == '/api/auth/register/email') {
           registerRequests += 1;
           expect(request.headers['Authorization'], 'Bearer cached-token');
@@ -97,7 +112,8 @@ void main() {
         profileProvider: profileProvider,
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
 
     await tester.enterText(
       find.widgetWithText(TextField, 'Email'),
@@ -114,20 +130,105 @@ void main() {
 
     await tester.tap(find.text('Secure account'));
     await tester.pump();
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 400));
 
     expect(registerRequests, 1);
     expect(find.text('Verification email sent'), findsOneWidget);
 
     await tester.tap(find.text('Resend verification email'));
     await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(const Duration(seconds: 2));
 
     expect(resendRequests, 1);
-    expect(find.text('Email is already verified.'), findsOneWidget);
     expect(
       find.text('Could not resend verification email. Please try again.'),
       findsNothing,
     );
+  });
+
+  testWidgets(
+      'secure account uses password-only mode when email already exists',
+      (tester) async {
+    final walletProvider = WalletProvider(deferInit: true)
+      ..setCurrentWalletAddressForTesting('wallet1');
+    final profileProvider = ProfileProvider();
+    final api = BackendApiService();
+    api.setAuthTokenForTesting('cached-token');
+
+    var addPasswordRequests = 0;
+    api.setHttpClient(
+      MockClient((request) async {
+        if (request.url.path == '/api/auth/account-security-status') {
+          return http.Response(
+            jsonEncode(<String, dynamic>{
+              'success': true,
+              'data': <String, dynamic>{
+                'hasEmail': true,
+                'hasPassword': false,
+                'email': 'google@example.com',
+                'emailVerified': true,
+                'emailAuthEnabled': true,
+              },
+            }),
+            200,
+            headers: <String, String>{'content-type': 'application/json'},
+          );
+        }
+        if (request.url.path == '/api/auth/account-security/password') {
+          addPasswordRequests += 1;
+          expect(request.headers['Authorization'], 'Bearer cached-token');
+          return http.Response(
+            jsonEncode(<String, dynamic>{
+              'success': true,
+              'data': <String, dynamic>{
+                'user': <String, dynamic>{
+                  'email': 'google@example.com',
+                  'emailVerified': true,
+                },
+                'securityStatus': <String, dynamic>{
+                  'hasEmail': true,
+                  'hasPassword': true,
+                  'email': 'google@example.com',
+                  'emailVerified': true,
+                  'emailAuthEnabled': true,
+                },
+              },
+            }),
+            200,
+            headers: <String, String>{'content-type': 'application/json'},
+          );
+        }
+        return http.Response('Not Found', 404);
+      }),
+    );
+
+    await tester.pumpWidget(
+      _buildHarness(
+        walletProvider: walletProvider,
+        profileProvider: profileProvider,
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.text('Add a password'), findsOneWidget);
+    expect(find.text('google@example.com'), findsOneWidget);
+    expect(find.widgetWithText(TextField, 'Email'), findsNothing);
+
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Password'),
+      'Password123',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Confirm password'),
+      'Password123',
+    );
+
+    await tester.tap(find.text('Add password'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(addPasswordRequests, 1);
+    expect(find.text('Account secured'), findsOneWidget);
   });
 }

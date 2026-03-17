@@ -93,6 +93,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
   bool _showAchievements = true;
   bool _showFriends = true;
   bool _allowMessages = true;
+  bool _secureAccountHasEmail = false;
+  bool _secureAccountHasPassword = false;
 
   @override
   void initState() {
@@ -106,6 +108,11 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     _loadSettings();
   }
 
+  String get _secureAccountSubtitle =>
+      _secureAccountHasEmail && !_secureAccountHasPassword
+          ? 'Add a password for recovery'
+          : 'Add email + password for recovery';
+
   Future<void> _loadSettings() async {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final settings = await SettingsService.loadSettings(
@@ -115,6 +122,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     );
     final hasPin = await walletProvider.hasPin();
     final biometricsSupported = await walletProvider.canUseBiometrics();
+    final secureAccountStatus = await _loadSecureAccountStatus();
     if (!mounted) return;
 
     setState(() {
@@ -152,7 +160,32 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
 
       _networkSelection = settings.networkSelection;
       _autoBackup = settings.autoBackup;
+      _secureAccountHasEmail = secureAccountStatus['hasEmail'] == true;
+      _secureAccountHasPassword = secureAccountStatus['hasPassword'] == true;
     });
+  }
+
+  Future<Map<String, dynamic>> _loadSecureAccountStatus() async {
+    final api = BackendApiService();
+    try {
+      final status = await api.getAccountSecurityStatus();
+      if (mounted) {
+        setState(() {
+          _secureAccountHasEmail = status['hasEmail'] == true;
+          _secureAccountHasPassword = status['hasPassword'] == true;
+        });
+      }
+      return status;
+    } catch (_) {
+      final status = await api.getCachedSecureAccountStatus();
+      if (mounted) {
+        setState(() {
+          _secureAccountHasEmail = status['hasEmail'] == true;
+          _secureAccountHasPassword = status['hasPassword'] == true;
+        });
+      }
+      return status;
+    }
   }
 
   Future<void> _saveSettings() async {
@@ -2878,14 +2911,16 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
               children: [
                 _buildSettingsRow(
                   'Secure account',
-                  'Add email + password for recovery',
+                  _secureAccountSubtitle,
                   Icons.verified_user_outlined,
                   trailing: const EmailVerificationStatusBadge(
                     dense: true,
                     alignment: Alignment.centerRight,
                   ),
-                  onTap: () {
-                    Navigator.of(context).pushNamed('/secure-account');
+                  onTap: () async {
+                    await Navigator.of(context).pushNamed('/secure-account');
+                    if (!mounted) return;
+                    await _loadSecureAccountStatus();
                   },
                 ),
                 const Divider(height: 32),

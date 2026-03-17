@@ -19,7 +19,8 @@ class SecureAccountBannerCard extends StatefulWidget {
   final double bottomSpacing;
 
   @override
-  State<SecureAccountBannerCard> createState() => _SecureAccountBannerCardState();
+  State<SecureAccountBannerCard> createState() =>
+      _SecureAccountBannerCardState();
 }
 
 class _SecureAccountBannerCardState extends State<SecureAccountBannerCard> {
@@ -27,6 +28,8 @@ class _SecureAccountBannerCardState extends State<SecureAccountBannerCard> {
 
   bool _loaded = false;
   bool _shouldShow = false;
+  bool _hasEmail = false;
+  bool _hasPassword = false;
 
   @override
   void initState() {
@@ -47,7 +50,8 @@ class _SecureAccountBannerCardState extends State<SecureAccountBannerCard> {
       var loadedFromCache = false;
 
       final cachedRaw =
-          (prefs.getString(PreferenceKeys.secureAccountStatusCacheV1) ?? '').trim();
+          (prefs.getString(PreferenceKeys.secureAccountStatusCacheV1) ?? '')
+              .trim();
       final cachedTs =
           prefs.getInt(PreferenceKeys.secureAccountStatusCacheTsV1) ?? 0;
       final nowMs = DateTime.now().millisecondsSinceEpoch;
@@ -100,6 +104,8 @@ class _SecureAccountBannerCardState extends State<SecureAccountBannerCard> {
       if (!mounted) return;
       setState(() {
         _loaded = true;
+        _hasEmail = hasEmail;
+        _hasPassword = hasPassword;
         _shouldShow =
             emailAuthEnabled && !dismissed && !(hasEmail && hasPassword);
       });
@@ -134,6 +140,11 @@ class _SecureAccountBannerCardState extends State<SecureAccountBannerCard> {
     }
 
     final scheme = Theme.of(context).colorScheme;
+    final title =
+        _hasEmail && !_hasPassword ? 'Add a password' : 'Secure your account';
+    final subtitle = _hasEmail && !_hasPassword
+        ? 'Your email is already attached. Add a password for recovery.'
+        : 'Add email + password for recovery. Verification is last and non-blocking.';
 
     Widget card = KubusCard(
       padding: const EdgeInsets.all(KubusSpacing.md),
@@ -152,7 +163,7 @@ class _SecureAccountBannerCardState extends State<SecureAccountBannerCard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Secure your account',
+                      title,
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
@@ -161,7 +172,7 @@ class _SecureAccountBannerCardState extends State<SecureAccountBannerCard> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Add email + password for recovery. Verification is last and non-blocking.',
+                      subtitle,
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         height: 1.3,
@@ -209,7 +220,8 @@ class _SecureAccountBannerCardState extends State<SecureAccountBannerCard> {
                 ),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: scheme.primary,
-                  side: BorderSide(color: scheme.primary.withValues(alpha: 0.45)),
+                  side:
+                      BorderSide(color: scheme.primary.withValues(alpha: 0.45)),
                   padding: const EdgeInsets.symmetric(
                     horizontal: KubusSpacing.md,
                     vertical: KubusSpacing.sm,

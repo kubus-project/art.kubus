@@ -75,30 +75,31 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final expandEmail =
-        find.widgetWithText(OutlinedButton, 'Continue with email');
+    final expandEmail = find.text('Continue with email');
     if (expandEmail.evaluate().isNotEmpty) {
       await tester.tap(expandEmail.first);
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
     }
 
     await tester.enterText(
-      find.byType(TextField).at(0),
+      find.widgetWithText(TextField, 'Email'),
       'duplicate@example.com',
     );
     await tester.enterText(
-      find.byType(TextField).at(1),
+      find.widgetWithText(TextField, 'Password'),
       'Pass1234A',
     );
     await tester.enterText(
-      find.byType(TextField).at(2),
+      find.widgetWithText(TextField, 'Confirm password'),
       'Pass1234A',
     );
 
     final submitLabel = find.text('Continue with email');
     expect(submitLabel, findsWidgets);
     await tester.tap(submitLabel.last);
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
 
     expect(
       find.text('An account with this email already exists. Sign in instead.'),

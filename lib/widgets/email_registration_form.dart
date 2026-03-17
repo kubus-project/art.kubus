@@ -19,6 +19,7 @@ class EmailRegistrationForm extends StatefulWidget {
     this.isSubmitting = false,
     this.compact = false,
     this.showUsername = true,
+    this.showEmailField = true,
     this.autofocusEmail = false,
     this.icon = Icons.person_add_alt,
   });
@@ -40,6 +41,7 @@ class EmailRegistrationForm extends StatefulWidget {
   final bool isSubmitting;
   final bool compact;
   final bool showUsername;
+  final bool showEmailField;
   final bool autofocusEmail;
 
   @override
@@ -69,8 +71,7 @@ class _EmailRegistrationFormState extends State<EmailRegistrationForm> {
     final isDark = theme.brightness == Brightness.dark;
     final submitBackground =
         isDark ? Colors.white.withValues(alpha: 0.96) : const Color(0xFF1A1A1A);
-    final submitForeground =
-        isDark ? const Color(0xFF1A1A1A) : Colors.white;
+    final submitForeground = isDark ? const Color(0xFF1A1A1A) : Colors.white;
     final border = OutlineInputBorder(
       borderRadius: BorderRadius.circular(18),
       borderSide: BorderSide(
@@ -83,24 +84,27 @@ class _EmailRegistrationFormState extends State<EmailRegistrationForm> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          TextField(
-            controller: widget.emailController,
-            focusNode: _emailFocusNode,
-            autofocus: widget.autofocusEmail,
-            keyboardType: TextInputType.emailAddress,
-            textInputAction: TextInputAction.next,
-            autofillHints: const [AutofillHints.email],
-            onSubmitted: (_) => _passwordFocusNode.requestFocus(),
-            onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
-            decoration: _decoration(
-              labelText: l10n.commonEmail,
-              errorText: widget.emailError,
-              border: border,
-              colorScheme: colorScheme,
-              compact: widget.compact,
+          if (widget.showEmailField) ...[
+            TextField(
+              controller: widget.emailController,
+              focusNode: _emailFocusNode,
+              autofocus: widget.autofocusEmail,
+              keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.next,
+              autofillHints: const [AutofillHints.email],
+              onSubmitted: (_) => _passwordFocusNode.requestFocus(),
+              onTapOutside: (_) =>
+                  FocusManager.instance.primaryFocus?.unfocus(),
+              decoration: _decoration(
+                labelText: l10n.commonEmail,
+                errorText: widget.emailError,
+                border: border,
+                colorScheme: colorScheme,
+                compact: widget.compact,
+              ),
             ),
-          ),
-          SizedBox(height: fieldSpacing),
+            SizedBox(height: fieldSpacing),
+          ],
           TextField(
             controller: widget.passwordController,
             focusNode: _passwordFocusNode,
@@ -153,7 +157,8 @@ class _EmailRegistrationFormState extends State<EmailRegistrationForm> {
               textInputAction: TextInputAction.done,
               autofillHints: const [AutofillHints.username],
               onSubmitted: (_) => widget.onSubmit?.call(),
-              onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
+              onTapOutside: (_) =>
+                  FocusManager.instance.primaryFocus?.unfocus(),
               decoration: _decoration(
                 labelText: l10n.commonUsernameOptional,
                 border: border,
@@ -167,8 +172,9 @@ class _EmailRegistrationFormState extends State<EmailRegistrationForm> {
             onPressed: widget.isSubmitting ? null : widget.onSubmit,
             isLoading: widget.isSubmitting,
             icon: widget.isSubmitting ? null : widget.icon,
-            label:
-                widget.isSubmitting ? widget.submittingLabel : widget.submitLabel,
+            label: widget.isSubmitting
+                ? widget.submittingLabel
+                : widget.submitLabel,
             backgroundColor: submitBackground,
             foregroundColor: submitForeground,
             isFullWidth: true,

@@ -21,6 +21,7 @@ import '../../services/telemetry/telemetry_service.dart';
 import '../../services/wallet_session_sync_service.dart';
 import '../../widgets/google_sign_in_button.dart';
 import '../../widgets/google_sign_in_web_button.dart';
+import '../../widgets/secure_account_password_prompt.dart';
 import '../../widgets/auth_wallet_entry_menu.dart';
 import '../../widgets/kubus_button.dart';
 import '../../widgets/auth_entry_shell.dart';
@@ -235,6 +236,11 @@ class _SignInScreenState extends State<SignInScreen> {
           );
         }
       }
+      if (!mounted) return;
+    }
+
+    if (!isModalReauth) {
+      await maybeShowGooglePasswordUpgradePrompt(context, payload);
       if (!mounted) return;
     }
 

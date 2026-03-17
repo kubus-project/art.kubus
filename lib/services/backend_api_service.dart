@@ -1198,25 +1198,89 @@ class BackendApiService
   }
 
   Future<void> _persistSecureAccountStatus({
+    required bool hasEmail,
+    required bool hasPassword,
     required String? email,
     required bool emailVerified,
+    required bool emailAuthEnabled,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final normalizedEmail = (email ?? '').trim();
-    if (normalizedEmail.isEmpty) {
+    if (!hasEmail || normalizedEmail.isEmpty) {
       await prefs.remove(PreferenceKeys.secureAccountEmail);
       await prefs.setBool(
         PreferenceKeys.secureAccountEmailVerifiedV1,
         false,
       );
-      return;
+    } else {
+      await prefs.setString(PreferenceKeys.secureAccountEmail, normalizedEmail);
+      await prefs.setBool(
+        PreferenceKeys.secureAccountEmailVerifiedV1,
+        emailVerified,
+      );
     }
 
-    await prefs.setString(PreferenceKeys.secureAccountEmail, normalizedEmail);
-    await prefs.setBool(
-      PreferenceKeys.secureAccountEmailVerifiedV1,
-      emailVerified,
+    await prefs.setString(
+      PreferenceKeys.secureAccountStatusCacheV1,
+      jsonEncode(<String, dynamic>{
+        'hasEmail': hasEmail,
+        'hasPassword': hasPassword,
+        'email': hasEmail ? normalizedEmail : null,
+        'emailVerified': emailVerified,
+        'emailAuthEnabled': emailAuthEnabled,
+      }),
     );
+    await prefs.setInt(
+      PreferenceKeys.secureAccountStatusCacheTsV1,
+      DateTime.now().millisecondsSinceEpoch,
+    );
+  }
+
+  Map<String, dynamic> _normalizeSecurityStatusMap(
+    Map<String, dynamic> data,
+  ) {
+    final email = (data['email'] ?? '').toString().trim();
+    final hasEmail = data['hasEmail'] == true || email.isNotEmpty;
+    return <String, dynamic>{
+      'hasEmail': hasEmail,
+      'hasPassword': data['hasPassword'] == true,
+      'email': hasEmail ? email : null,
+      'emailVerified': data['emailVerified'] == true,
+      'emailAuthEnabled': data['emailAuthEnabled'] != false,
+    };
+  }
+
+  Future<Map<String, dynamic>> getCachedSecureAccountStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final cachedRaw =
+        (prefs.getString(PreferenceKeys.secureAccountStatusCacheV1) ?? '')
+            .trim();
+    if (cachedRaw.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(cachedRaw);
+        if (decoded is Map<String, dynamic>) {
+          return _normalizeSecurityStatusMap(decoded);
+        }
+        if (decoded is Map) {
+          return _normalizeSecurityStatusMap(
+              Map<String, dynamic>.from(decoded));
+        }
+      } catch (_) {
+        // Fall through to legacy prefs.
+      }
+    }
+
+    final email =
+        (prefs.getString(PreferenceKeys.secureAccountEmail) ?? '').trim();
+    final emailVerified =
+        prefs.getBool(PreferenceKeys.secureAccountEmailVerifiedV1) ?? false;
+    return <String, dynamic>{
+      'hasEmail': email.isNotEmpty,
+      'hasPassword': false,
+      'email': email.isNotEmpty ? email : null,
+      'emailVerified': emailVerified,
+      'emailAuthEnabled': true,
+    };
   }
 
   Future<void> syncSecureAccountStatusFromResponse(
@@ -1230,12 +1294,13 @@ class BackendApiService
       final securityStatus = _mapOrNull(payload['securityStatus']) ??
           _mapOrNull(body['securityStatus']);
       if (securityStatus != null) {
-        final hasEmail = securityStatus['hasEmail'] == true;
-        final email = hasEmail ? securityStatus['email']?.toString() : null;
-        final emailVerified = securityStatus['emailVerified'] == true;
+        final normalized = _normalizeSecurityStatusMap(securityStatus);
         await _persistSecureAccountStatus(
-          email: email,
-          emailVerified: emailVerified,
+          hasEmail: normalized['hasEmail'] == true,
+          hasPassword: normalized['hasPassword'] == true,
+          email: normalized['email']?.toString(),
+          emailVerified: normalized['emailVerified'] == true,
+          emailAuthEnabled: normalized['emailAuthEnabled'] != false,
         );
         return;
       }
@@ -1248,9 +1313,12 @@ class BackendApiService
             user.containsKey('email_verified');
         if (hasEmail || hasVerificationFlag) {
           await _persistSecureAccountStatus(
+            hasEmail: hasEmail,
+            hasPassword: false,
             email: hasEmail ? email : null,
             emailVerified:
                 user['emailVerified'] == true || user['email_verified'] == true,
+            emailAuthEnabled: true,
           );
           return;
         }
@@ -1678,13 +1746,7 @@ class BackendApiService
         final data = raw['data'] is Map<String, dynamic>
             ? raw['data'] as Map<String, dynamic>
             : raw;
-        return {
-          'hasEmail': data['hasEmail'] == true,
-          'hasPassword': data['hasPassword'] == true,
-          'email': (data['email'] ?? '').toString().trim(),
-          'emailVerified': data['emailVerified'] == true,
-          'emailAuthEnabled': data['emailAuthEnabled'] != false,
-        };
+        return _normalizeSecurityStatusMap(data);
       }
       throw BackendApiRequestException(
         statusCode: response.statusCode,
@@ -1701,19 +1763,52 @@ class BackendApiService
   Future<void> syncSecureAccountStatusToPrefs() async {
     try {
       if (!AppConfig.isFeatureEnabled('emailAuth')) return;
-      final status = await getAccountSecurityStatus();
-      final email = (status['email'] ?? '').toString().trim();
-      final emailVerified = status['emailVerified'] == true;
-      final hasEmail = status['hasEmail'] == true && email.isNotEmpty;
+      final status = _normalizeSecurityStatusMap(
+        await getAccountSecurityStatus(),
+      );
 
       await _persistSecureAccountStatus(
-        email: hasEmail ? email : null,
-        emailVerified: emailVerified,
+        hasEmail: status['hasEmail'] == true,
+        hasPassword: status['hasPassword'] == true,
+        email: status['email']?.toString(),
+        emailVerified: status['emailVerified'] == true,
+        emailAuthEnabled: status['emailAuthEnabled'] != false,
       );
     } catch (e) {
       AppConfig.debugPrint(
         'BackendApiService.syncSecureAccountStatusToPrefs failed: $e',
       );
+    }
+  }
+
+  /// Add a password to the currently authenticated account.
+  /// POST /api/auth/account-security/password { password }
+  Future<Map<String, dynamic>> addPasswordToCurrentAccount({
+    required String password,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl/api/auth/account-security/password');
+      final response = await _post(
+        uri,
+        includeAuth: true,
+        headers: _getHeaders(),
+        body: jsonEncode(<String, dynamic>{'password': password}),
+      );
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode == 200) {
+        await syncSecureAccountStatusFromResponse(data);
+        return data;
+      }
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: uri.path,
+        body: response.body,
+      );
+    } catch (e) {
+      AppConfig.debugPrint(
+        'BackendApiService.addPasswordToCurrentAccount failed: $e',
+      );
+      rethrow;
     }
   }
 

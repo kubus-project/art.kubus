@@ -26,6 +26,7 @@ import 'package:art_kubus/widgets/google_sign_in_web_button.dart';
 import 'package:art_kubus/widgets/auth_wallet_entry_menu.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import 'package:art_kubus/widgets/secure_account_password_prompt.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -184,6 +185,8 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         );
       }
     }
+    if (!mounted) return;
+    await maybeShowGooglePasswordUpgradePrompt(context, payload);
     if (!mounted) return;
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
