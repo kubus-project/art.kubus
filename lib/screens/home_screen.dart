@@ -1740,7 +1740,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     return GestureDetector(
       onTap: () {
-        final target = item.id.trim().isNotEmpty ? item.id : (item.walletAddress ?? '');
+        final wallet = (item.walletAddress ?? '').trim();
+        final target = wallet.isNotEmpty ? wallet : item.id;
         if (target.trim().isEmpty) return;
         Navigator.of(context).push(
           MaterialPageRoute(

@@ -156,4 +156,51 @@ void main() {
     expect(items.first.walletAddress, 'wallet-artist-1');
     expect(items.first.imageUrl, '/uploads/artist-1.png');
   });
+
+  test(
+      'getPublicFeaturedHome normalizes profile id to wallet when both uuid and wallet exist',
+      () async {
+    final api = BackendApiService();
+    api.setHttpClient(
+      MockClient((request) async {
+        expect(request.method, 'GET');
+        expect(request.url.path, '/api/public/featured-home');
+        return http.Response(
+          jsonEncode(<String, Object?>{
+            'success': true,
+            'data': <String, Object?>{
+              'kind': 'profile',
+              'locale': 'en',
+              'items': <Object?>[
+                <String, Object?>{
+                  'entityType': 'profile',
+                  'id': '108b0fff-0514-4acc-a508-465e7aa97b87',
+                  'walletAddress': 'A1b2C3Wallet',
+                  'title': 'Featured Institution',
+                  'entity': <String, Object?>{
+                    'id': '108b0fff-0514-4acc-a508-465e7aa97b87',
+                    'wallet_address': 'A1b2C3Wallet',
+                  },
+                  'promotion': <String, Object?>{
+                    'isPromoted': true,
+                  },
+                },
+              ],
+            },
+          }),
+          200,
+          headers: const <String, String>{'content-type': 'application/json'},
+        );
+      }),
+    );
+
+    final items = await api.getPublicFeaturedHome(
+      kind: PromotionEntityType.profile,
+      locale: 'en',
+    );
+
+    expect(items, hasLength(1));
+    expect(items.first.walletAddress, 'A1b2C3Wallet');
+    expect(items.first.id, 'A1b2C3Wallet');
+  });
 }

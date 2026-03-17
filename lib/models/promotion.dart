@@ -409,33 +409,45 @@ class FeaturedPromotionItem {
         ]) ??
         'Untitled';
 
+    final parsedEntityType = (() {
+      final parsed = PromotionEntityTypeApi.fromApiValue(
+        (json['entityType'] ??
+                json['entity_type'] ??
+                entityMap['entityType'] ??
+                entityMap['entity_type'])
+            ?.toString(),
+      );
+      return parsed == PromotionEntityType.artwork &&
+              fallbackType == PromotionEntityType.profile
+          ? fallbackType
+          : parsed;
+    })();
+
+    final walletAddress = pickMerged([
+      'walletAddress',
+      'wallet_address',
+    ]);
+
+    final fallbackId = pickMerged([
+      'id',
+      '_id',
+      'profileId',
+      'profile_id',
+      'artworkId',
+      'artwork_id',
+      'entityId',
+      'entity_id',
+      'walletAddress',
+      'wallet_address',
+    ]);
+
+    final resolvedId = parsedEntityType == PromotionEntityType.profile
+        ? (walletAddress ?? fallbackId ?? '')
+        : (fallbackId ?? '');
+
     return FeaturedPromotionItem(
-      id: pickMerged([
-            'id',
-            '_id',
-            'profileId',
-            'profile_id',
-            'artworkId',
-            'artwork_id',
-            'entityId',
-            'entity_id',
-            'walletAddress',
-            'wallet_address',
-          ]) ??
-          '',
-      entityType: (() {
-        final parsed = PromotionEntityTypeApi.fromApiValue(
-          (json['entityType'] ??
-                  json['entity_type'] ??
-                  entityMap['entityType'] ??
-                  entityMap['entity_type'])
-              ?.toString(),
-        );
-        return parsed == PromotionEntityType.artwork &&
-                fallbackType == PromotionEntityType.profile
-            ? fallbackType
-            : parsed;
-      })(),
+      id: resolvedId,
+      entityType: parsedEntityType,
       title: title,
       subtitle: pickMerged([
         'subtitle',
@@ -458,10 +470,7 @@ class FeaturedPromotionItem {
         'coverUrl',
         'cover_url',
       ]),
-      walletAddress: pickMerged([
-        'walletAddress',
-        'wallet_address',
-      ]),
+      walletAddress: walletAddress,
       promotion: PromotionMetadata.readFrom(
         json,
         fallbackMaps: <Map<String, dynamic>?>[entityMap],

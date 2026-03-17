@@ -108,6 +108,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   bool _platformStatsPrefetchQueued = false;
   String _lastDiscoveredStatsWallet = '';
   String? _queuedDiscoveredStatsWallet;
+  String _lastFeaturedLocaleRefresh = '';
 
   final Map<String, ({String displayName, String? username})>
       _resolvedCreatorIdentityByWallet =
@@ -140,6 +141,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       final navigationProvider =
           Provider.of<NavigationProvider>(context, listen: false);
       navigationProvider.initialize();
+      _refreshFeaturedHomePromotions();
       _loadInitialData();
     });
   }
@@ -148,6 +150,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   void didChangeDependencies() {
     super.didChangeDependencies();
     _schedulePlatformStatsPrefetch();
+    _refreshFeaturedHomePromotions();
 
     final walletAddress =
         (context.watch<WalletProvider>().currentWalletAddress ?? '').trim();
@@ -158,6 +161,18 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     if (walletAddress == _lastDiscoveredStatsWallet) return;
     _lastDiscoveredStatsWallet = walletAddress;
     _scheduleDiscoveredStatsPrefetch(walletAddress);
+  }
+
+  void _refreshFeaturedHomePromotions({bool force = false}) {
+    if (!mounted) return;
+    final locale = Localizations.localeOf(context).languageCode;
+    final shouldForce = force || _lastFeaturedLocaleRefresh != locale;
+    _lastFeaturedLocaleRefresh = locale;
+    unawaited(
+      context
+          .read<PromotionProvider>()
+          .loadFeaturedHome(locale: locale, force: shouldForce),
+    );
   }
 
   void _queueArtFeedLoad({
@@ -331,7 +346,6 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   Future<void> _loadInitialData() async {
     if (!mounted) return;
     final artworkProvider = context.read<ArtworkProvider>();
-    final promotionProvider = context.read<PromotionProvider>();
     final communityProvider = context.read<CommunityHubProvider>();
     final configProvider = context.read<ConfigProvider>();
 
@@ -361,15 +375,6 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         refresh: true,
       );
     }
-
-    if (!mounted) return;
-    unawaited(
-      promotionProvider.loadFeaturedHome(
-        locale: Localizations.localeOf(context).languageCode,
-      ),
-    );
-
-    if (!mounted) return;
 
     await _loadPopularCommunityPosts();
   }
@@ -1645,9 +1650,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                         right: index < profiles.length - 1 ? DetailSpacing.lg : 0,
                       ),
                       onTap: () {
-                        final target = item.id.trim().isNotEmpty
-                            ? item.id
-                            : (item.walletAddress ?? '');
+                        final wallet = (item.walletAddress ?? '').trim();
+                        final target = wallet.isNotEmpty ? wallet : item.id;
                         if (target.trim().isEmpty) return;
                         _openUserProfile(target, item.title);
                       },

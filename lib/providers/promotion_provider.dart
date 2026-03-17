@@ -161,10 +161,10 @@ class PromotionProvider extends ChangeNotifier {
       _lastFeaturedLocale = locale;
 
       final errors = <String>[
-        if (artworkError != null && artworkError!.trim().isNotEmpty)
-          artworkError!,
-        if (profileError != null && profileError!.trim().isNotEmpty)
-          profileError!,
+        if (artworkError != null && artworkError.trim().isNotEmpty)
+          artworkError,
+        if (profileError != null && profileError.trim().isNotEmpty)
+          profileError,
       ];
 
       if (!loadedAny && errors.isNotEmpty) {
