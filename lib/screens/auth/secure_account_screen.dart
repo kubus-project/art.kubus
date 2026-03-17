@@ -535,7 +535,7 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
         title: const AppLogoStatic(
           width: 36,
           height: 36,
-          forLightMode: true,
+          forLightMode: false,
         ),
       ),
       body: Stack(
