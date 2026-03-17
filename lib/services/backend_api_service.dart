@@ -3525,7 +3525,8 @@ class BackendApiService
       final List<dynamic> artworks =
           listCandidate is List ? listCandidate : <dynamic>[];
       return artworks
-          .map((json) => _artworkFromBackendJson(json as Map<String, dynamic>))
+          .map((json) =>
+              parseArtworkFromBackendJson(json as Map<String, dynamic>))
           .toList();
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getArtworks failed: $e');
@@ -3546,7 +3547,7 @@ class BackendApiService
           await _fetchJson(uri, includeAuth: true, allowOrbitFallback: true);
       final payload = data['artwork'] ?? data['data'] ?? data;
       if (payload is Map<String, dynamic>) {
-        return _artworkFromBackendJson(payload);
+        return parseArtworkFromBackendJson(payload);
       }
       throw Exception('Invalid artwork payload');
     } catch (e) {
@@ -3571,7 +3572,7 @@ class BackendApiService
         if (decoded is Map<String, dynamic>) {
           final payload = decoded['data'] ?? decoded['artwork'] ?? decoded;
           if (payload is Map<String, dynamic>) {
-            return _artworkFromBackendJson(payload);
+            return parseArtworkFromBackendJson(payload);
           }
         }
         return null;
@@ -3598,7 +3599,7 @@ class BackendApiService
         if (decoded is Map<String, dynamic>) {
           final payload = decoded['data'] ?? decoded['artwork'] ?? decoded;
           if (payload is Map<String, dynamic>) {
-            return _artworkFromBackendJson(payload);
+            return parseArtworkFromBackendJson(payload);
           }
         }
         return null;
@@ -3625,7 +3626,7 @@ class BackendApiService
         if (decoded is Map<String, dynamic>) {
           final payload = decoded['data'] ?? decoded['artwork'] ?? decoded;
           if (payload is Map<String, dynamic>) {
-            return _artworkFromBackendJson(payload);
+            return parseArtworkFromBackendJson(payload);
           }
         }
         return null;
@@ -3947,7 +3948,7 @@ class BackendApiService
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final payload = data['data'] ?? data['artwork'] ?? data;
         if (payload is Map<String, dynamic>) {
-          return _artworkFromBackendJson(payload);
+          return parseArtworkFromBackendJson(payload);
         }
         return null;
       } else {
@@ -8454,7 +8455,7 @@ Map<String, dynamic>? _mergeMarkerMetadata(Map<String, dynamic> json) {
   return metadata;
 }
 
-Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
+Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
   String stringVal(dynamic v, [String fallback = '']) {
     if (v == null) return fallback;
     return v.toString();
@@ -8613,6 +8614,12 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
     json['mediaUrl'],
     json['media_url'],
   ]);
+
+  final nftJson = json['nft'] is Map<String, dynamic>
+      ? (json['nft'] as Map<String, dynamic>)
+      : (json['nft'] is Map
+          ? Map<String, dynamic>.from(json['nft'] as Map)
+          : null);
 
   final arAsset =
       (json['arAsset'] ?? json['ar_asset']) as Map<String, dynamic>?;
@@ -8864,6 +8871,23 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
   final isForSale = boolVal(json['isForSale'] ?? json['is_for_sale']) ?? false;
   final price = doubleVal(json['price']);
   final currency = nullableString(json['currency']);
+  final isNft = boolVal(
+        json['isNft'] ?? json['is_nft'] ?? nftJson,
+      ) ??
+      (nftJson != null);
+  final nftMintAddress = pickString([
+    json['nftMintAddress'],
+    json['nft_mint_address'],
+    nftJson?['mintAddress'],
+    nftJson?['mint_address'],
+  ]);
+  final nftMetadataUri = pickString([
+    json['nftMetadataUri'],
+    json['nft_metadata_uri'],
+    nftJson?['metadataUri'],
+    nftJson?['metadata_uri'],
+    nftJson?['uri'],
+  ]);
   final createdAt =
       parseDate(json['createdAt'] ?? json['created_at']) ?? DateTime.now();
   final updatedAt = parseDate(json['updatedAt'] ?? json['updated_at']);
@@ -8946,6 +8970,9 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
     isForSale: isForSale,
     price: price,
     currency: currency,
+    isNft: isNft,
+    nftMintAddress: nftMintAddress,
+    nftMetadataUri: nftMetadataUri,
     createdAt: createdAt,
     updatedAt: updatedAt,
     discoveredAt: discoveredAt,

@@ -102,7 +102,8 @@ class CollectibleSeries {
       metadata: metadata ?? this.metadata,
       createdAt: createdAt ?? this.createdAt,
       isActive: isActive ?? this.isActive,
-      requiresARInteraction: requiresARInteraction ?? this.requiresARInteraction,
+      requiresARInteraction:
+          requiresARInteraction ?? this.requiresARInteraction,
       royaltyPercentage: royaltyPercentage ?? this.royaltyPercentage,
     );
   }
@@ -185,20 +186,26 @@ class CollectibleSeries {
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? '',
       description: json['description']?.toString() ?? '',
-      artworkId: json['artworkId']?.toString() ?? json['artwork_id']?.toString() ?? '',
-      creatorAddress: json['creatorAddress']?.toString() ?? json['creator_address']?.toString() ?? '',
+      artworkId:
+          json['artworkId']?.toString() ?? json['artwork_id']?.toString() ?? '',
+      creatorAddress: json['creatorAddress']?.toString() ??
+          json['creator_address']?.toString() ??
+          '',
       totalSupply: parseInt(json['totalSupply'] ?? json['total_supply']),
       mintedCount: parseInt(json['mintedCount'] ?? json['minted_count']),
       rarity: parseRarity(json['rarity']),
       type: parseType(json['type']),
       mintPrice: parseDouble(json['mintPrice'] ?? json['mint_price']),
       imageUrl: json['imageUrl']?.toString() ?? json['image_url']?.toString(),
-      animationUrl: json['animationUrl']?.toString() ?? json['animation_url']?.toString(),
+      animationUrl:
+          json['animationUrl']?.toString() ?? json['animation_url']?.toString(),
       metadata: metadata,
       createdAt: parseDate(json['createdAt'] ?? json['created_at']),
       isActive: json['isActive'] == null ? true : json['isActive'] == true,
-      requiresARInteraction: json['requiresARInteraction'] == true || json['requires_ar_interaction'] == true,
-      royaltyPercentage: parseNullableDouble(json['royaltyPercentage'] ?? json['royalty_percentage']),
+      requiresARInteraction: json['requiresARInteraction'] == true ||
+          json['requires_ar_interaction'] == true,
+      royaltyPercentage: parseNullableDouble(
+          json['royaltyPercentage'] ?? json['royalty_percentage']),
     );
   }
 }
@@ -236,8 +243,10 @@ class Collectible {
     this.lastTransferAt,
   });
 
-  bool get isForSale => status == CollectibleStatus.listed && currentListingPrice != null;
-  bool get isOwnedByUser => status == CollectibleStatus.minted || status == CollectibleStatus.listed;
+  bool get isForSale =>
+      status == CollectibleStatus.listed && currentListingPrice != null;
+  bool get isOwnedByUser =>
+      status == CollectibleStatus.minted || status == CollectibleStatus.listed;
 
   Collectible copyWith({
     String? id,
@@ -283,12 +292,14 @@ class Collectible {
       'mintedAt': mintedAt.toIso8601String(),
       if (lastSalePrice != null) 'lastSalePrice': lastSalePrice,
       if (lastSaleAt != null) 'lastSaleAt': lastSaleAt!.toIso8601String(),
-      if (currentListingPrice != null) 'currentListingPrice': currentListingPrice,
+      if (currentListingPrice != null)
+        'currentListingPrice': currentListingPrice,
       if (listedAt != null) 'listedAt': listedAt!.toIso8601String(),
       'properties': properties,
       if (transactionHash != null) 'transactionHash': transactionHash,
       'isAuthentic': isAuthentic,
-      if (lastTransferAt != null) 'lastTransferAt': lastTransferAt!.toIso8601String(),
+      if (lastTransferAt != null)
+        'lastTransferAt': lastTransferAt!.toIso8601String(),
     };
   }
 
@@ -323,24 +334,108 @@ class Collectible {
 
     return Collectible(
       id: json['id']?.toString() ?? '',
-      seriesId: json['seriesId']?.toString() ?? json['series_id']?.toString() ?? '',
-      tokenId: json['tokenId']?.toString() ?? json['token_id']?.toString() ?? '',
-      ownerAddress: json['ownerAddress']?.toString() ?? json['owner_address']?.toString() ?? '',
+      seriesId:
+          json['seriesId']?.toString() ?? json['series_id']?.toString() ?? '',
+      tokenId:
+          json['tokenId']?.toString() ?? json['token_id']?.toString() ?? '',
+      ownerAddress: json['ownerAddress']?.toString() ??
+          json['owner_address']?.toString() ??
+          '',
       status: parseStatus(json['status']),
       mintedAt: parseDate(json['mintedAt'] ?? json['minted_at']),
-      lastSalePrice: parseNullableDouble(json['lastSalePrice'] ?? json['last_sale_price']),
+      lastSalePrice:
+          parseNullableDouble(json['lastSalePrice'] ?? json['last_sale_price']),
       lastSaleAt: json['lastSaleAt'] == null && json['last_sale_at'] == null
           ? null
           : parseDate(json['lastSaleAt'] ?? json['last_sale_at']),
-      currentListingPrice: json['currentListingPrice']?.toString() ?? json['current_listing_price']?.toString(),
-      listedAt: json['listedAt'] == null && json['listed_at'] == null ? null : parseDate(json['listedAt'] ?? json['listed_at']),
-      properties: properties,
-      transactionHash: json['transactionHash']?.toString() ?? json['transaction_hash']?.toString(),
-      isAuthentic: json['isAuthentic'] == null ? true : json['isAuthentic'] == true,
-      lastTransferAt: json['lastTransferAt'] == null && json['last_transfer_at'] == null
+      currentListingPrice: json['currentListingPrice']?.toString() ??
+          json['current_listing_price']?.toString(),
+      listedAt: json['listedAt'] == null && json['listed_at'] == null
           ? null
-          : parseDate(json['lastTransferAt'] ?? json['last_transfer_at']),
+          : parseDate(json['listedAt'] ?? json['listed_at']),
+      properties: properties,
+      transactionHash: json['transactionHash']?.toString() ??
+          json['transaction_hash']?.toString(),
+      isAuthentic:
+          json['isAuthentic'] == null ? true : json['isAuthentic'] == true,
+      lastTransferAt:
+          json['lastTransferAt'] == null && json['last_transfer_at'] == null
+              ? null
+              : parseDate(json['lastTransferAt'] ?? json['last_transfer_at']),
     );
+  }
+}
+
+enum MarketplaceValueSource {
+  listing,
+  artworkListing,
+  lastSale,
+  mint,
+}
+
+class MarketplaceDisplayValue {
+  final MarketplaceValueSource source;
+  final String label;
+  final double? amount;
+  final String currency;
+
+  const MarketplaceDisplayValue({
+    required this.source,
+    required this.label,
+    required this.amount,
+    required this.currency,
+  });
+
+  bool get hasAmount => amount != null;
+}
+
+class MarketplaceArtworkEntry {
+  final Artwork artwork;
+  final CollectibleSeries? series;
+  final List<Collectible> collectibles;
+  final String? coverUrl;
+  final MarketplaceDisplayValue? displayValue;
+  final bool hasMintedProof;
+  final bool isListed;
+  final bool requiresArInteraction;
+
+  const MarketplaceArtworkEntry({
+    required this.artwork,
+    required this.series,
+    required this.collectibles,
+    required this.coverUrl,
+    required this.displayValue,
+    required this.hasMintedProof,
+    required this.isListed,
+    required this.requiresArInteraction,
+  });
+
+  String get id => series?.id ?? artwork.id;
+  String get title => series?.name ?? artwork.title;
+  String get artistName => artwork.artist;
+  bool get hasSeries => series != null;
+  bool get isSoldOut => series?.isSoldOut ?? false;
+  int? get mintedCount => series?.mintedCount;
+  int? get totalSupply => series?.totalSupply;
+  double? get mintProgress => series?.mintProgress;
+  CollectibleRarity? get rarity => series?.rarity;
+  DateTime get sortTimestamp {
+    DateTime latest = artwork.updatedAt ?? artwork.createdAt;
+    final seriesCreatedAt = series?.createdAt;
+    if (seriesCreatedAt != null && seriesCreatedAt.isAfter(latest)) {
+      latest = seriesCreatedAt;
+    }
+
+    for (final collectible in collectibles) {
+      final candidate = collectible.listedAt ??
+          collectible.lastSaleAt ??
+          collectible.lastTransferAt ??
+          collectible.mintedAt;
+      if (candidate.isAfter(latest)) {
+        latest = candidate;
+      }
+    }
+    return latest;
   }
 }
 

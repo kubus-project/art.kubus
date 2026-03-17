@@ -93,20 +93,23 @@ class Artwork {
   final bool isForSale;
   final double? price;
   final String? currency;
+  final bool isNft;
+  final String? nftMintAddress;
+  final String? nftMetadataUri;
   final bool arEnabled;
   final int rewards; // KUB8 tokens
   final DateTime createdAt;
   final DateTime? updatedAt;
   final DateTime? discoveredAt;
   final String? discoveryUserId;
-  
+
   // AR-specific fields
-  final String? arMarkerId;      // Reference to ArtMarker
-  final String? arConfigId;      // Reference to AR config (printable marker / setup)
+  final String? arMarkerId; // Reference to ArtMarker
+  final String? arConfigId; // Reference to AR config (printable marker / setup)
   final ArtworkArStatus arStatus;
-  final String? model3DCID;      // IPFS CID for 3D model
-  final String? model3DURL;      // HTTP URL for 3D model
-  final double? arScale;         // Scale for AR display
+  final String? model3DCID; // IPFS CID for 3D model
+  final String? model3DURL; // HTTP URL for 3D model
+  final double? arScale; // Scale for AR display
   final Map<String, double>? arRotation; // AR rotation {x, y, z}
   final bool? arEnableAnimation;
   final String? arAnimationName;
@@ -122,7 +125,7 @@ class Artwork {
   final String? poapTitle;
   final String? poapDescription;
   final String? poapImageUrl;
-  
+
   // Social metrics
   final int likesCount;
   final int commentsCount;
@@ -130,7 +133,7 @@ class Artwork {
   final int discoveryCount;
   final bool isLikedByCurrentUser;
   final bool isFavoriteByCurrentUser;
-  
+
   // Additional metadata
   final List<String> tags;
   final String category;
@@ -154,6 +157,9 @@ class Artwork {
     this.isForSale = false,
     this.price,
     this.currency,
+    this.isNft = false,
+    this.nftMintAddress,
+    this.nftMetadataUri,
     this.arEnabled = false,
     required this.rewards,
     required this.createdAt,
@@ -240,6 +246,9 @@ class Artwork {
       'isForSale': isForSale,
       'price': price,
       'currency': currency,
+      'isNft': isNft,
+      'nftMintAddress': nftMintAddress,
+      'nftMetadataUri': nftMetadataUri,
       'arEnabled': arEnabled,
       'rewards': rewards,
       'createdAt': createdAt.toIso8601String(),
@@ -281,9 +290,15 @@ class Artwork {
 
   /// Create from Map (from storage/API)
   factory Artwork.fromMap(Map<String, dynamic> map) {
+    final nft = map['nft'] is Map<String, dynamic>
+        ? Map<String, dynamic>.from(map['nft'] as Map<String, dynamic>)
+        : (map['nft'] is Map
+            ? Map<String, dynamic>.from(map['nft'] as Map)
+            : null);
     return Artwork(
       id: map['id'] ?? '',
-      walletAddress: map['walletAddress']?.toString() ?? map['wallet_address']?.toString(),
+      walletAddress:
+          map['walletAddress']?.toString() ?? map['wallet_address']?.toString(),
       title: map['title'] ?? '',
       artist: map['artist'] ?? '',
       description: map['description'] ?? '',
@@ -299,14 +314,27 @@ class Artwork {
       isPublic: map['isPublic'] ?? map['is_public'] ?? true,
       isActive: map['isActive'] ?? map['is_active'] ?? true,
       isForSale: map['isForSale'] ?? map['is_for_sale'] ?? false,
-      price: map['price'] is num ? (map['price'] as num).toDouble() : double.tryParse('${map['price'] ?? ''}'),
+      price: map['price'] is num
+          ? (map['price'] as num).toDouble()
+          : double.tryParse('${map['price'] ?? ''}'),
       currency: map['currency']?.toString(),
+      isNft: map['isNft'] == true || map['is_nft'] == true || nft != null,
+      nftMintAddress: map['nftMintAddress']?.toString() ??
+          map['nft_mint_address']?.toString() ??
+          nft?['mintAddress']?.toString() ??
+          nft?['mint_address']?.toString(),
+      nftMetadataUri: map['nftMetadataUri']?.toString() ??
+          map['nft_metadata_uri']?.toString() ??
+          nft?['metadataUri']?.toString() ??
+          nft?['metadata_uri']?.toString() ??
+          nft?['uri']?.toString(),
       arEnabled: map['arEnabled'] ?? false,
       rewards: map['rewards']?.toInt() ?? 0,
       createdAt: DateTime.tryParse(map['createdAt'] ?? '') ?? DateTime.now(),
-      updatedAt: map['updatedAt'] != null ? DateTime.tryParse(map['updatedAt']) : null,
-      discoveredAt: map['discoveredAt'] != null 
-          ? DateTime.tryParse(map['discoveredAt']) 
+      updatedAt:
+          map['updatedAt'] != null ? DateTime.tryParse(map['updatedAt']) : null,
+      discoveredAt: map['discoveredAt'] != null
+          ? DateTime.tryParse(map['discoveredAt'])
           : null,
       discoveryUserId: map['discoveryUserId'],
       arMarkerId: map['arMarkerId'],
@@ -315,7 +343,7 @@ class Artwork {
       model3DCID: map['model3DCID'],
       model3DURL: map['model3DURL'],
       arScale: map['arScale']?.toDouble(),
-      arRotation: map['arRotation'] != null 
+      arRotation: map['arRotation'] != null
           ? Map<String, double>.from(map['arRotation'])
           : null,
       arEnableAnimation: map['arEnableAnimation'],
@@ -331,8 +359,12 @@ class Artwork {
       poapEnabled: map['poapEnabled'] == true,
       poapEventId: map['poapEventId']?.toString(),
       poapClaimUrl: map['poapClaimUrl']?.toString(),
-      poapValidFrom: map['poapValidFrom'] != null ? DateTime.tryParse(map['poapValidFrom'].toString()) : null,
-      poapValidTo: map['poapValidTo'] != null ? DateTime.tryParse(map['poapValidTo'].toString()) : null,
+      poapValidFrom: map['poapValidFrom'] != null
+          ? DateTime.tryParse(map['poapValidFrom'].toString())
+          : null,
+      poapValidTo: map['poapValidTo'] != null
+          ? DateTime.tryParse(map['poapValidTo'].toString())
+          : null,
       poapRewardAmount: map['poapRewardAmount'] is num
           ? (map['poapRewardAmount'] as num).toInt()
           : int.tryParse(map['poapRewardAmount']?.toString() ?? ''),
@@ -370,6 +402,9 @@ class Artwork {
     bool? isForSale,
     double? price,
     String? currency,
+    bool? isNft,
+    String? nftMintAddress,
+    String? nftMetadataUri,
     bool? arEnabled,
     int? rewards,
     DateTime? createdAt,
@@ -423,6 +458,9 @@ class Artwork {
       isForSale: isForSale ?? this.isForSale,
       price: price ?? this.price,
       currency: currency ?? this.currency,
+      isNft: isNft ?? this.isNft,
+      nftMintAddress: nftMintAddress ?? this.nftMintAddress,
+      nftMetadataUri: nftMetadataUri ?? this.nftMetadataUri,
       arEnabled: arEnabled ?? this.arEnabled,
       rewards: rewards ?? this.rewards,
       createdAt: createdAt ?? this.createdAt,
@@ -453,7 +491,8 @@ class Artwork {
       viewsCount: viewsCount ?? this.viewsCount,
       discoveryCount: discoveryCount ?? this.discoveryCount,
       isLikedByCurrentUser: isLikedByCurrentUser ?? this.isLikedByCurrentUser,
-      isFavoriteByCurrentUser: isFavoriteByCurrentUser ?? this.isFavoriteByCurrentUser,
+      isFavoriteByCurrentUser:
+          isFavoriteByCurrentUser ?? this.isFavoriteByCurrentUser,
       tags: tags ?? this.tags,
       category: category ?? this.category,
       averageRating: averageRating ?? this.averageRating,

@@ -855,7 +855,8 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
           collectiblesProvider.allSeries.isEmpty &&
           collectiblesProvider.allCollectibles.isEmpty) {
         await collectiblesProvider.initialize(
-            loadMockIfEmpty: AppConfig.isDevelopment);
+          loadMockIfEmpty: AppConfig.isDevelopment,
+        );
       }
 
       final seriesById = <String, CollectibleSeries>{

@@ -35,7 +35,9 @@ class _NFTGalleryState extends State<NFTGallery> {
     if (!provider.isLoading &&
         provider.allSeries.isEmpty &&
         provider.allCollectibles.isEmpty) {
-      unawaited(provider.initialize(loadMockIfEmpty: AppConfig.isDevelopment));
+      unawaited(
+        provider.initialize(loadMockIfEmpty: AppConfig.isDevelopment),
+      );
     }
   }
 
@@ -69,8 +71,9 @@ class _NFTGalleryState extends State<NFTGallery> {
             onPressed: () {
               final provider =
                   Provider.of<CollectiblesProvider>(context, listen: false);
-              unawaited(provider.initialize(
-                  loadMockIfEmpty: AppConfig.isDevelopment));
+              unawaited(
+                provider.initialize(loadMockIfEmpty: AppConfig.isDevelopment),
+              );
             },
             tooltip: l10n.commonRefresh,
           ),

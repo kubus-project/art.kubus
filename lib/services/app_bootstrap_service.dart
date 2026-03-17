@@ -90,9 +90,11 @@ class AppBootstrapService {
     final p1 = <Future<void>>[
       _runTask('artworks', () => artworkProvider.loadArtworks(refresh: true)),
       _runTask(
-          'collectibles',
-          () => collectiblesProvider.initialize(
-              loadMockIfEmpty: AppConfig.isDevelopment)),
+        'collectibles',
+        () => collectiblesProvider.initialize(
+          loadMockIfEmpty: AppConfig.isDevelopment,
+        ),
+      ),
       _runTask(
           'institutions',
           () => institutionProvider.initialize(

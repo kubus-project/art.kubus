@@ -1,12 +1,17 @@
 import 'package:flutter/foundation.dart';
+import 'package:latlong2/latlong.dart';
+import '../models/artwork.dart';
 import '../models/collectible.dart';
 import '../services/collectibles_storage.dart';
+import '../utils/artwork_media_resolver.dart';
+import 'artwork_provider.dart';
 
 class CollectiblesProvider with ChangeNotifier {
   final List<CollectibleSeries> _series = [];
   final List<Collectible> _collectibles = [];
   final CollectiblesStorage _storage = CollectiblesStorage();
-  
+  ArtworkProvider? _artworkProvider;
+
   bool _isLoading = false;
   String? _error;
 
@@ -15,6 +20,26 @@ class CollectiblesProvider with ChangeNotifier {
   List<Collectible> get allCollectibles => List.unmodifiable(_collectibles);
   bool get isLoading => _isLoading;
   String? get error => _error;
+  List<MarketplaceArtworkEntry> get marketplaceEntries =>
+      _buildMarketplaceEntries();
+
+  void bindArtworkProvider(ArtworkProvider? artworkProvider) {
+    if (identical(_artworkProvider, artworkProvider)) return;
+    _artworkProvider?.removeListener(_handleArtworkProviderChanged);
+    _artworkProvider = artworkProvider;
+    _artworkProvider?.addListener(_handleArtworkProviderChanged);
+    notifyListeners();
+  }
+
+  void _handleArtworkProviderChanged() {
+    notifyListeners();
+  }
+
+  String _nextSeriesId() =>
+      'series_${DateTime.now().microsecondsSinceEpoch}_${_series.length + 1}';
+
+  String _nextCollectibleId() =>
+      'collectible_${DateTime.now().microsecondsSinceEpoch}_${_collectibles.length + 1}';
 
   Future<void> initialize({bool loadMockIfEmpty = false}) async {
     _setLoading(true);
@@ -56,6 +81,105 @@ class CollectiblesProvider with ChangeNotifier {
     return _series.where((series) => series.requiresARInteraction).toList();
   }
 
+  List<MarketplaceArtworkEntry> getFeaturedMarketplaceEntries({int limit = 6}) {
+    final featured = marketplaceEntries.where((entry) {
+      final series = entry.series;
+      return entry.requiresArInteraction ||
+          entry.isListed ||
+          (series?.isLimitedEdition ?? false) ||
+          entry.rarity == CollectibleRarity.legendary ||
+          entry.rarity == CollectibleRarity.mythic;
+    }).toList();
+
+    featured.sort((a, b) {
+      final listedCompare = (b.isListed ? 1 : 0).compareTo(a.isListed ? 1 : 0);
+      if (listedCompare != 0) return listedCompare;
+      final soldOutCompare =
+          (a.isSoldOut ? 1 : 0).compareTo(b.isSoldOut ? 1 : 0);
+      if (soldOutCompare != 0) return soldOutCompare;
+      return b.sortTimestamp.compareTo(a.sortTimestamp);
+    });
+    return featured.take(limit).toList(growable: false);
+  }
+
+  List<MarketplaceArtworkEntry> getTrendingMarketplaceEntries(
+      {int limit = 10}) {
+    final trending = marketplaceEntries.toList();
+    trending.sort((a, b) => b.sortTimestamp.compareTo(a.sortTimestamp));
+    return trending.take(limit).toList(growable: false);
+  }
+
+  MarketplaceArtworkEntry? getMarketplaceEntryForCollectible(
+      Collectible collectible) {
+    CollectibleSeries? series;
+    for (final candidate in _series) {
+      if (candidate.id == collectible.seriesId) {
+        series = candidate;
+        break;
+      }
+    }
+    if (series == null) return null;
+
+    final artwork = _resolveArtworkForSeries(
+      series,
+      allowFallback: true,
+      includeNonPublic: true,
+    );
+    if (artwork == null) return null;
+    final seriesId = series.id;
+
+    final linkedCollectibles = _collectibles
+        .where((candidate) =>
+            candidate.seriesId == seriesId &&
+            candidate.status != CollectibleStatus.burned)
+        .toList(growable: false);
+
+    final hasMintedProof =
+        _hasBackendMintedProof(artwork) || linkedCollectibles.isNotEmpty;
+    if (!hasMintedProof) return null;
+
+    return _createMarketplaceEntry(
+      artwork: artwork,
+      series: series,
+      linkedCollectibles: linkedCollectibles,
+      hasMintedProof: hasMintedProof,
+    );
+  }
+
+  MarketplaceDisplayValue? getDisplayValueForCollectible(
+    Collectible collectible,
+  ) {
+    var resolvedCollectible = collectible;
+    for (final candidate in _collectibles) {
+      final sameIdentity = candidate.id == collectible.id ||
+          (candidate.seriesId == collectible.seriesId &&
+              candidate.tokenId == collectible.tokenId);
+      if (sameIdentity) {
+        resolvedCollectible = candidate;
+        break;
+      }
+    }
+
+    CollectibleSeries? series;
+    for (final candidate in _series) {
+      if (candidate.id == resolvedCollectible.seriesId) {
+        series = candidate;
+        break;
+      }
+    }
+
+    final artwork = series == null
+        ? null
+        : _artworkProvider?.getArtworkById(series.artworkId);
+
+    return _resolveDisplayValue(
+      artwork: artwork,
+      series: series,
+      collectibles: const <Collectible>[],
+      preferredCollectible: resolvedCollectible,
+    );
+  }
+
   // Get collectibles by owner
   List<Collectible> getCollectiblesByOwner(String ownerAddress) {
     return _collectibles
@@ -77,13 +201,14 @@ class CollectiblesProvider with ChangeNotifier {
 
   // Get featured series (high activity, limited edition, etc.)
   List<CollectibleSeries> getFeaturedSeries({int limit = 6}) {
-    final featuredSeries = _series.where((series) => 
-      series.isLimitedEdition || 
-      series.rarity == CollectibleRarity.legendary ||
-      series.rarity == CollectibleRarity.mythic ||
-      series.requiresARInteraction
-    ).toList();
-    
+    final featuredSeries = _series
+        .where((series) =>
+            series.isLimitedEdition ||
+            series.rarity == CollectibleRarity.legendary ||
+            series.rarity == CollectibleRarity.mythic ||
+            series.requiresARInteraction)
+        .toList();
+
     featuredSeries.sort((a, b) => b.mintProgress.compareTo(a.mintProgress));
     return featuredSeries.take(limit).toList();
   }
@@ -104,10 +229,10 @@ class CollectiblesProvider with ChangeNotifier {
     double? royaltyPercentage,
   }) async {
     _setLoading(true);
-    
+
     try {
       final series = CollectibleSeries(
-        id: 'series_${DateTime.now().millisecondsSinceEpoch}',
+        id: _nextSeriesId(),
         name: name,
         description: description,
         artworkId: artworkId,
@@ -127,7 +252,7 @@ class CollectiblesProvider with ChangeNotifier {
       _series.add(series);
       notifyListeners();
       await _persist();
-      
+
       return series;
     } catch (e) {
       _setError('Failed to create NFT series: $e');
@@ -145,16 +270,16 @@ class CollectiblesProvider with ChangeNotifier {
     Map<String, dynamic> properties = const {},
   }) async {
     _setLoading(true);
-    
+
     try {
       final series = _series.firstWhere((s) => s.id == seriesId);
-      
+
       if (series.isSoldOut) {
         throw Exception('Series is sold out');
       }
 
       final collectible = Collectible(
-        id: 'collectible_${DateTime.now().millisecondsSinceEpoch}',
+        id: _nextCollectibleId(),
         seriesId: seriesId,
         tokenId: '${series.mintedCount + 1}',
         ownerAddress: ownerAddress,
@@ -165,15 +290,16 @@ class CollectiblesProvider with ChangeNotifier {
       );
 
       _collectibles.add(collectible);
-      
+
       // Update series minted count
-      final updatedSeries = series.copyWith(mintedCount: series.mintedCount + 1);
+      final updatedSeries =
+          series.copyWith(mintedCount: series.mintedCount + 1);
       final seriesIndex = _series.indexWhere((s) => s.id == seriesId);
       _series[seriesIndex] = updatedSeries;
-      
+
       notifyListeners();
       await _persist();
-      
+
       return collectible;
     } catch (e) {
       _setError('Failed to mint collectible: $e');
@@ -189,9 +315,10 @@ class CollectiblesProvider with ChangeNotifier {
     required String price,
   }) async {
     _setLoading(true);
-    
+
     try {
-      final collectibleIndex = _collectibles.indexWhere((c) => c.id == collectibleId);
+      final collectibleIndex =
+          _collectibles.indexWhere((c) => c.id == collectibleId);
       if (collectibleIndex == -1) {
         throw Exception('Collectible not found');
       }
@@ -221,9 +348,10 @@ class CollectiblesProvider with ChangeNotifier {
     required String transactionHash,
   }) async {
     _setLoading(true);
-    
+
     try {
-      final collectibleIndex = _collectibles.indexWhere((c) => c.id == collectibleId);
+      final collectibleIndex =
+          _collectibles.indexWhere((c) => c.id == collectibleId);
       if (collectibleIndex == -1) {
         throw Exception('Collectible not found');
       }
@@ -252,7 +380,7 @@ class CollectiblesProvider with ChangeNotifier {
   // Initialize with mock data
   Future<void> initializeMockData() async {
     _setLoading(true);
-    
+
     try {
       _series.clear();
       _collectibles.clear();
@@ -281,7 +409,8 @@ class CollectiblesProvider with ChangeNotifier {
       CollectibleSeries(
         id: 'series_1',
         name: 'Digital Echoes Collection',
-        description: 'Interactive AR sculptures that respond to viewer presence',
+        description:
+            'Interactive AR sculptures that respond to viewer presence',
         artworkId: 'artwork_1',
         creatorAddress: '0x1234...5678',
         totalSupply: 100,
@@ -419,5 +548,242 @@ class CollectiblesProvider with ChangeNotifier {
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _artworkProvider?.removeListener(_handleArtworkProviderChanged);
+    super.dispose();
+  }
+
+  List<MarketplaceArtworkEntry> _buildMarketplaceEntries() {
+    final artworkProvider = _artworkProvider;
+    if (artworkProvider == null) return const <MarketplaceArtworkEntry>[];
+
+    final artworksById = <String, Artwork>{
+      for (final artwork in artworkProvider.artworks) artwork.id: artwork,
+    };
+
+    final publicArtworksById = <String, Artwork>{
+      for (final artwork in artworksById.values)
+        if (artwork.isActive && artwork.isPublic) artwork.id: artwork,
+    };
+
+    final collectiblesBySeriesId = <String, List<Collectible>>{};
+    for (final collectible in _collectibles) {
+      if (collectible.status == CollectibleStatus.burned) continue;
+      collectiblesBySeriesId
+          .putIfAbsent(collectible.seriesId, () => <Collectible>[])
+          .add(collectible);
+    }
+
+    final entries = <MarketplaceArtworkEntry>[];
+    final artworkIdsWithSeriesEntries = <String>{};
+
+    for (final series in _series) {
+      final artwork = publicArtworksById[series.artworkId];
+      if (artwork == null) continue;
+
+      final linkedCollectibles = List<Collectible>.unmodifiable(
+        collectiblesBySeriesId[series.id] ?? const <Collectible>[],
+      );
+      final hasMintedProof =
+          _hasBackendMintedProof(artwork) || linkedCollectibles.isNotEmpty;
+      if (!hasMintedProof) continue;
+
+      artworkIdsWithSeriesEntries.add(artwork.id);
+      entries.add(
+        _createMarketplaceEntry(
+          artwork: artwork,
+          series: series,
+          linkedCollectibles: linkedCollectibles,
+          hasMintedProof: hasMintedProof,
+        ),
+      );
+    }
+
+    for (final artwork in publicArtworksById.values) {
+      if (artworkIdsWithSeriesEntries.contains(artwork.id) ||
+          !_hasBackendMintedProof(artwork)) {
+        continue;
+      }
+
+      entries.add(
+        _createMarketplaceEntry(
+          artwork: artwork,
+          series: null,
+          linkedCollectibles: const <Collectible>[],
+          hasMintedProof: true,
+        ),
+      );
+    }
+
+    entries.sort((a, b) => b.sortTimestamp.compareTo(a.sortTimestamp));
+    return List<MarketplaceArtworkEntry>.unmodifiable(entries);
+  }
+
+  MarketplaceArtworkEntry _createMarketplaceEntry({
+    required Artwork artwork,
+    required CollectibleSeries? series,
+    required List<Collectible> linkedCollectibles,
+    required bool hasMintedProof,
+  }) {
+    return MarketplaceArtworkEntry(
+      artwork: artwork,
+      series: series,
+      collectibles: linkedCollectibles,
+      coverUrl: ArtworkMediaResolver.resolveCover(
+        artwork: artwork,
+        metadata: series?.metadata,
+        fallbackUrl: series?.imageUrl,
+      ),
+      displayValue: _resolveDisplayValue(
+        artwork: artwork,
+        series: series,
+        collectibles: linkedCollectibles,
+      ),
+      hasMintedProof: hasMintedProof,
+      isListed: linkedCollectibles.any((candidate) => candidate.isForSale),
+      requiresArInteraction:
+          (series?.requiresARInteraction ?? false) || artwork.arEnabled,
+    );
+  }
+
+  bool _hasBackendMintedProof(Artwork artwork) {
+    final mintAddress = artwork.nftMintAddress?.trim() ?? '';
+    return mintAddress.isNotEmpty;
+  }
+
+  Artwork? _resolveArtworkForSeries(
+    CollectibleSeries series, {
+    bool allowFallback = false,
+    bool includeNonPublic = false,
+  }) {
+    final artwork = _artworkProvider?.getArtworkById(series.artworkId);
+    if (artwork != null) {
+      if (includeNonPublic || (artwork.isActive && artwork.isPublic)) {
+        return artwork;
+      }
+    }
+
+    if (!allowFallback) return null;
+
+    return Artwork(
+      id: series.artworkId,
+      title: series.name,
+      artist: series.creatorAddress.isNotEmpty
+          ? series.creatorAddress
+          : 'Unknown artist',
+      description: series.description,
+      imageUrl: series.imageUrl,
+      position: const LatLng(0, 0),
+      rewards: 0,
+      createdAt: series.createdAt,
+      isActive: series.isActive,
+      isPublic: includeNonPublic,
+      currency: 'KUB8',
+    );
+  }
+
+  MarketplaceDisplayValue? _resolveDisplayValue({
+    Artwork? artwork,
+    required CollectibleSeries? series,
+    required List<Collectible> collectibles,
+    Collectible? preferredCollectible,
+  }) {
+    final fallbackCurrency = _normalizeCurrency(artwork?.currency);
+    if (preferredCollectible != null && preferredCollectible.isForSale) {
+      final price =
+          _parseNumericPrice(preferredCollectible.currentListingPrice);
+      if (price != null) {
+        return MarketplaceDisplayValue(
+          source: MarketplaceValueSource.listing,
+          label: 'Listed for',
+          amount: price,
+          currency: fallbackCurrency,
+        );
+      }
+    }
+
+    final listedCollectibles = collectibles
+        .where((candidate) => candidate.isForSale)
+        .toList(growable: false)
+      ..sort((a, b) {
+        final aListedAt = a.listedAt ?? a.mintedAt;
+        final bListedAt = b.listedAt ?? b.mintedAt;
+        return bListedAt.compareTo(aListedAt);
+      });
+
+    if (listedCollectibles.isNotEmpty) {
+      final price =
+          _parseNumericPrice(listedCollectibles.first.currentListingPrice);
+      if (price != null) {
+        return MarketplaceDisplayValue(
+          source: MarketplaceValueSource.listing,
+          label: 'Listed for',
+          amount: price,
+          currency: fallbackCurrency,
+        );
+      }
+    }
+
+    if (artwork != null && artwork.isForSale && artwork.price != null) {
+      return MarketplaceDisplayValue(
+        source: MarketplaceValueSource.artworkListing,
+        label: 'Listed for',
+        amount: artwork.price,
+        currency: fallbackCurrency,
+      );
+    }
+
+    if (preferredCollectible?.lastSalePrice != null) {
+      return MarketplaceDisplayValue(
+        source: MarketplaceValueSource.lastSale,
+        label: 'Last sale',
+        amount: preferredCollectible!.lastSalePrice,
+        currency: fallbackCurrency,
+      );
+    }
+
+    final soldCollectibles = collectibles
+        .where((candidate) => candidate.lastSalePrice != null)
+        .toList(growable: false)
+      ..sort((a, b) {
+        final aSoldAt = a.lastSaleAt ?? a.mintedAt;
+        final bSoldAt = b.lastSaleAt ?? b.mintedAt;
+        return bSoldAt.compareTo(aSoldAt);
+      });
+    if (soldCollectibles.isNotEmpty) {
+      return MarketplaceDisplayValue(
+        source: MarketplaceValueSource.lastSale,
+        label: 'Last sale',
+        amount: soldCollectibles.first.lastSalePrice,
+        currency: fallbackCurrency,
+      );
+    }
+
+    if (series != null) {
+      return MarketplaceDisplayValue(
+        source: MarketplaceValueSource.mint,
+        label: 'Mint price',
+        amount: series.mintPrice,
+        currency: fallbackCurrency,
+      );
+    }
+
+    return null;
+  }
+
+  double? _parseNumericPrice(String? raw) {
+    if (raw == null) return null;
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return null;
+    return double.tryParse(trimmed);
+  }
+
+  String _normalizeCurrency(String? raw) {
+    final trimmed = raw?.trim();
+    if (trimmed == null || trimmed.isEmpty) return 'KUB8';
+    return trimmed;
   }
 }

@@ -574,8 +574,16 @@ class _AppLauncherState extends State<AppLauncher> {
                   return provider;
                 },
               ),
-              ChangeNotifierProvider(
-                  create: (context) => CollectiblesProvider()),
+              ChangeNotifierProxyProvider<ArtworkProvider,
+                  CollectiblesProvider>(
+                create: (context) => CollectiblesProvider(),
+                update: (context, artworkProvider, collectiblesProvider) {
+                  final provider =
+                      collectiblesProvider ?? CollectiblesProvider();
+                  provider.bindArtworkProvider(artworkProvider);
+                  return provider;
+                },
+              ),
               ChangeNotifierProvider(
                   create: (context) => InstitutionProvider()),
               ChangeNotifierProvider(

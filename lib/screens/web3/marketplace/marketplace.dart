@@ -1,22 +1,20 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import '../../../config/config.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
-import '../../../config/config.dart';
 import '../../onboarding/web3/web3_onboarding.dart';
 import '../../onboarding/web3/onboarding_data.dart';
-import '../../../providers/artwork_provider.dart';
 import '../../../providers/collectibles_provider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/navigation_provider.dart';
-import '../../../models/artwork.dart';
 import '../../../models/collectible.dart';
 import '../../../widgets/empty_state_card.dart';
-import '../../../utils/artwork_media_resolver.dart';
+import '../../../utils/marketplace_value_formatter.dart';
 import '../../../utils/rarity_ui.dart';
 import '../../../utils/app_color_utils.dart';
 import '../../../utils/kubus_color_roles.dart';
@@ -62,7 +60,8 @@ class _MarketplaceState extends State<Marketplace>
       if (!collectiblesProvider.isLoading &&
           collectiblesProvider.allSeries.isEmpty) {
         await collectiblesProvider.initialize(
-            loadMockIfEmpty: AppConfig.isDevelopment);
+          loadMockIfEmpty: AppConfig.isDevelopment,
+        );
       }
     });
   }
@@ -377,14 +376,13 @@ class _MarketplaceState extends State<Marketplace>
   }
 
   Widget _buildFeaturedNFTs() {
-    return Consumer4<CollectiblesProvider, ArtworkProvider, Web3Provider,
-        ThemeProvider>(
-      builder: (context, collectiblesProvider, artworkProvider, web3Provider,
-          themeProvider, child) {
-        var featuredSeries = collectiblesProvider.getFeaturedSeries();
+    return Consumer2<CollectiblesProvider, ThemeProvider>(
+      builder: (context, collectiblesProvider, themeProvider, child) {
+        var featuredEntries =
+            collectiblesProvider.getFeaturedMarketplaceEntries();
         if (_showArOnly) {
-          featuredSeries = featuredSeries
-              .where((series) => series.requiresARInteraction)
+          featuredEntries = featuredEntries
+              .where((entry) => entry.requiresArInteraction)
               .toList();
         }
 
@@ -441,14 +439,14 @@ class _MarketplaceState extends State<Marketplace>
               const SizedBox(height: 16),
               if (collectiblesProvider.isLoading)
                 const AppLoading()
-              else if (featuredSeries.isEmpty)
+              else if (featuredEntries.isEmpty)
                 Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: EmptyStateCard(
-                    icon: Icons.collections_outlined,
-                    title: 'No NFT collections available yet',
+                    icon: Icons.storefront_outlined,
+                    title: 'No minted NFTs available yet',
                     description:
-                        'Upload AR artwork to create your first NFT series',
+                        'Marketplace listings appear once an artwork has a real NFT mint.',
                     showAction: false,
                   ),
                 )
@@ -468,12 +466,10 @@ class _MarketplaceState extends State<Marketplace>
                         mainAxisSpacing: 8,
                         childAspectRatio: childAspectRatio,
                       ),
-                      itemCount: featuredSeries.length,
+                      itemCount: featuredEntries.length,
                       itemBuilder: (context, index) {
-                        final series = featuredSeries[index];
-                        final artwork =
-                            artworkProvider.getArtworkById(series.artworkId);
-                        return _buildNFTSeriesCard(series, artwork);
+                        final entry = featuredEntries[index];
+                        return _buildMarketplaceEntryCard(entry);
                       },
                     );
                   },
@@ -486,14 +482,13 @@ class _MarketplaceState extends State<Marketplace>
   }
 
   Widget _buildTrendingNFTs() {
-    return Consumer3<CollectiblesProvider, ArtworkProvider, ThemeProvider>(
-      builder: (context, collectiblesProvider, artworkProvider, themeProvider,
-          child) {
-        // Show trending series from provider (loaded from backend/blockchain)
-        var trendingSeries = collectiblesProvider.getTrendingSeries();
+    return Consumer2<CollectiblesProvider, ThemeProvider>(
+      builder: (context, collectiblesProvider, themeProvider, child) {
+        var trendingEntries =
+            collectiblesProvider.getTrendingMarketplaceEntries();
         if (_showArOnly) {
-          trendingSeries = trendingSeries
-              .where((series) => series.requiresARInteraction)
+          trendingEntries = trendingEntries
+              .where((entry) => entry.requiresArInteraction)
               .toList();
         }
 
@@ -511,13 +506,14 @@ class _MarketplaceState extends State<Marketplace>
                 ),
               ),
               const SizedBox(height: 16),
-              if (trendingSeries.isEmpty)
+              if (trendingEntries.isEmpty)
                 Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: EmptyStateCard(
                     icon: Icons.trending_up,
-                    title: 'No trending collections yet',
-                    description: 'Check back later for new drops',
+                    title: 'No trending NFTs yet',
+                    description:
+                        'Check back later as minted artwork activity picks up.',
                     showAction: false,
                   ),
                 )
@@ -537,12 +533,10 @@ class _MarketplaceState extends State<Marketplace>
                         mainAxisSpacing: 8,
                         childAspectRatio: childAspectRatio,
                       ),
-                      itemCount: trendingSeries.length,
+                      itemCount: trendingEntries.length,
                       itemBuilder: (context, index) {
-                        final series = trendingSeries[index];
-                        final artwork =
-                            artworkProvider.getArtworkById(series.artworkId);
-                        return _buildNFTSeriesCard(series, artwork);
+                        final entry = trendingEntries[index];
+                        return _buildMarketplaceEntryCard(entry);
                       },
                     );
                   },
@@ -555,10 +549,9 @@ class _MarketplaceState extends State<Marketplace>
   }
 
   Widget _buildMyListings() {
-    return Consumer4<CollectiblesProvider, ArtworkProvider, Web3Provider,
-        ThemeProvider>(
-      builder: (context, collectiblesProvider, artworkProvider, web3Provider,
-          themeProvider, child) {
+    return Consumer3<CollectiblesProvider, Web3Provider, ThemeProvider>(
+      builder:
+          (context, collectiblesProvider, web3Provider, themeProvider, child) {
         // Show user's collectibles using real wallet address
         final walletAddress = web3Provider.walletAddress;
         final myCollectibles = walletAddress.isNotEmpty
@@ -702,15 +695,15 @@ class _MarketplaceState extends State<Marketplace>
                     itemCount: myCollectiblesForSale.length,
                     itemBuilder: (context, index) {
                       final collectible = myCollectiblesForSale[index];
-                      final series = collectiblesProvider.allSeries
-                          .firstWhere((s) => s.id == collectible.seriesId);
-                      final artwork =
-                          artworkProvider.getArtworkById(series.artworkId);
+                      final entry = collectiblesProvider
+                          .getMarketplaceEntryForCollectible(collectible);
+                      if (entry == null) {
+                        return const SizedBox.shrink();
+                      }
                       return Container(
                         width: 150,
                         margin: const EdgeInsets.only(right: 12),
-                        child: _buildCollectibleCard(
-                            collectible, series, artwork,
+                        child: _buildCollectibleCard(collectible, entry,
                             isForSale: true),
                       );
                     },
@@ -738,12 +731,12 @@ class _MarketplaceState extends State<Marketplace>
                     itemCount: myCollectibles.length,
                     itemBuilder: (context, index) {
                       final collectible = myCollectibles[index];
-                      final series = collectiblesProvider.allSeries
-                          .firstWhere((s) => s.id == collectible.seriesId);
-                      final artwork =
-                          artworkProvider.getArtworkById(series.artworkId);
-                      return _buildCollectibleCard(
-                          collectible, series, artwork);
+                      final entry = collectiblesProvider
+                          .getMarketplaceEntryForCollectible(collectible);
+                      if (entry == null) {
+                        return const SizedBox.shrink();
+                      }
+                      return _buildCollectibleCard(collectible, entry);
                     },
                   );
                 },
@@ -756,16 +749,18 @@ class _MarketplaceState extends State<Marketplace>
   }
 
   Widget _buildCollectibleCard(
-      Collectible collectible, CollectibleSeries series, Artwork? artwork,
+      Collectible collectible, MarketplaceArtworkEntry entry,
       {bool isForSale = false}) {
     final roles = KubusColorRoles.of(context);
-    final coverUrl = ArtworkMediaResolver.resolveCover(
-      artwork: artwork,
-      metadata: series.metadata,
-      fallbackUrl: series.imageUrl,
-    );
+    final series = entry.series;
+    final coverUrl = entry.coverUrl;
+    final collectiblesProvider =
+        Provider.of<CollectiblesProvider>(context, listen: false);
+    final value =
+        collectiblesProvider.getDisplayValueForCollectible(collectible) ??
+            entry.displayValue;
     return GestureDetector(
-      onTap: () => _showCollectibleDetails(collectible, series, artwork),
+      onTap: () => _showCollectibleDetails(collectible, entry),
       child: Container(
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.primaryContainer,
@@ -788,7 +783,7 @@ class _MarketplaceState extends State<Marketplace>
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: _getSeriesGradientColors(series.rarity),
+                    colors: _getSeriesGradientColors(series?.rarity),
                   ),
                   borderRadius:
                       const BorderRadius.vertical(top: Radius.circular(16)),
@@ -806,11 +801,11 @@ class _MarketplaceState extends State<Marketplace>
                           height: double.infinity,
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) =>
-                              _buildDefaultSeriesIcon(series),
+                              _buildDefaultSeriesIcon(entry),
                         ),
                       )
                     else
-                      _buildDefaultSeriesIcon(series),
+                      _buildDefaultSeriesIcon(entry),
 
                     // For sale badge
                     if (isForSale)
@@ -866,13 +861,12 @@ class _MarketplaceState extends State<Marketplace>
             Expanded(
               flex: 2,
               child: Padding(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      series.name,
+                      entry.title,
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -915,7 +909,11 @@ class _MarketplaceState extends State<Marketplace>
                                   ),
                                 ),
                                 Text(
-                                  '${collectible.currentListingPrice} KUB8',
+                                  MarketplaceValueFormatter.formatDisplayValue(
+                                    value,
+                                    fallback:
+                                        '${collectible.currentListingPrice} KUB8',
+                                  ),
                                   style: GoogleFonts.inter(
                                     fontSize: 9,
                                     fontWeight: FontWeight.bold,
@@ -945,16 +943,36 @@ class _MarketplaceState extends State<Marketplace>
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            'Owned',
-                            style: GoogleFonts.inter(
-                              fontSize: 9,
-                              color: AppColorUtils.amberAccent,
-                              fontWeight: FontWeight.w500,
+                          Flexible(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  value?.label ?? 'Owned',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 9,
+                                    color: AppColorUtils.amberAccent,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                Text(
+                                  MarketplaceValueFormatter.formatDisplayValue(
+                                    value,
+                                  ),
+                                  style: GoogleFonts.inter(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    color:
+                                        Theme.of(context).colorScheme.onSurface,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
                             ),
                           ),
                           IconButton(
-                            onPressed: () => _listForSale(collectible, series),
+                            onPressed: () =>
+                                _listForSale(collectible, entry.title),
                             icon: Icon(
                               Icons.sell,
                               color: roles.warningAction,
@@ -979,7 +997,13 @@ class _MarketplaceState extends State<Marketplace>
   }
 
   void _showCollectibleDetails(
-      Collectible collectible, CollectibleSeries series, Artwork? artwork) {
+      Collectible collectible, MarketplaceArtworkEntry entry) {
+    final series = entry.series;
+    final collectiblesProvider =
+        Provider.of<CollectiblesProvider>(context, listen: false);
+    final collectibleValue =
+        collectiblesProvider.getDisplayValueForCollectible(collectible) ??
+            entry.displayValue;
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -1009,7 +1033,7 @@ class _MarketplaceState extends State<Marketplace>
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    '${series.name} #${collectible.tokenId}',
+                    '${entry.title} #${collectible.tokenId}',
                     style: GoogleFonts.inter(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -1101,13 +1125,19 @@ class _MarketplaceState extends State<Marketplace>
                       ),
                     ),
                     const SizedBox(height: 12),
-                    _buildDetailRow('Collection', series.name),
+                    if (series != null)
+                      _buildDetailRow('Collection', series.name),
+                    _buildDetailRow('Artwork', entry.artwork.title),
                     _buildDetailRow('Token ID', '#${collectible.tokenId}'),
                     _buildDetailRow(
                         'Minted', _formatDate(collectible.mintedAt)),
-                    if (collectible.lastSalePrice != null)
-                      _buildDetailRow('Last Sale',
-                          '${collectible.lastSalePrice!.toInt()} KUB8'),
+                    if (collectibleValue != null)
+                      _buildDetailRow(
+                        collectibleValue.label,
+                        MarketplaceValueFormatter.formatDisplayValue(
+                          collectibleValue,
+                        ),
+                      ),
                     _buildDetailRow(
                         'Status', collectible.status.name.toUpperCase()),
                     const SizedBox(height: 24),
@@ -1154,7 +1184,7 @@ class _MarketplaceState extends State<Marketplace>
     return '${date.day}/${date.month}/${date.year}';
   }
 
-  void _listForSale(Collectible collectible, CollectibleSeries series) {
+  void _listForSale(Collectible collectible, String entryTitle) {
     final priceController = TextEditingController();
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
 
@@ -1177,7 +1207,9 @@ class _MarketplaceState extends State<Marketplace>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '${series.name} #${collectible.tokenId}',
+              entryTitle.isEmpty
+                  ? 'Token #${collectible.tokenId}'
+                  : '$entryTitle #${collectible.tokenId}',
               style: GoogleFonts.inter(
                 color: Colors.grey[300],
               ),
@@ -1341,18 +1373,16 @@ class _MarketplaceState extends State<Marketplace>
     );
   }
 
-  Widget _buildNFTSeriesCard(CollectibleSeries series, Artwork? artwork) {
-    final progressPercentage = (series.mintProgress * 100).toInt();
-    final isNearSoldOut = series.mintProgress > 0.8;
-    final hasARFeature = series.requiresARInteraction;
-    final coverUrl = ArtworkMediaResolver.resolveCover(
-      artwork: artwork,
-      metadata: series.metadata,
-      fallbackUrl: series.imageUrl,
-    );
+  Widget _buildMarketplaceEntryCard(MarketplaceArtworkEntry entry) {
+    final series = entry.series;
+    final progress = entry.mintProgress ?? 0;
+    final progressPercentage = (progress * 100).toInt();
+    final isNearSoldOut = progress > 0.8;
+    final hasARFeature = entry.requiresArInteraction;
+    final value = entry.displayValue;
 
     return GestureDetector(
-      onTap: () => _showNFTSeriesDetails(series, artwork),
+      onTap: () => _showNFTSeriesDetails(entry),
       child: Container(
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.primaryContainer,
@@ -1375,31 +1405,28 @@ class _MarketplaceState extends State<Marketplace>
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: _getSeriesGradientColors(series.rarity),
+                    colors: _getSeriesGradientColors(entry.rarity),
                   ),
                   borderRadius:
                       const BorderRadius.vertical(top: Radius.circular(16)),
                 ),
                 child: Stack(
                   children: [
-                    // Series image or artwork preview
-                    if (coverUrl != null)
+                    if (entry.coverUrl != null)
                       ClipRRect(
                         borderRadius: const BorderRadius.vertical(
                             top: Radius.circular(16)),
                         child: Image.network(
-                          coverUrl,
+                          entry.coverUrl!,
                           width: double.infinity,
                           height: double.infinity,
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) =>
-                              _buildDefaultSeriesIcon(series),
+                              _buildDefaultSeriesIcon(entry),
                         ),
                       )
                     else
-                      _buildDefaultSeriesIcon(series),
-
-                    // AR Badge
+                      _buildDefaultSeriesIcon(entry),
                     if (hasARFeature)
                       Positioned(
                         top: 8,
@@ -1433,9 +1460,7 @@ class _MarketplaceState extends State<Marketplace>
                           ),
                         ),
                       ),
-
-                    // Sold out badge
-                    if (series.isSoldOut)
+                    if (entry.isSoldOut)
                       Positioned(
                         top: 8,
                         left: 8,
@@ -1456,32 +1481,31 @@ class _MarketplaceState extends State<Marketplace>
                           ),
                         ),
                       ),
-
-                    // Rarity badge
-                    Positioned(
-                      bottom: 8,
-                      left: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.7),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          series.rarity.name.toUpperCase(),
-                          style: GoogleFonts.inter(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: RarityUi.collectibleColor(
-                                context, series.rarity),
+                    if (entry.rarity != null)
+                      Positioned(
+                        bottom: 8,
+                        left: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.7),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            entry.rarity!.name.toUpperCase(),
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: RarityUi.collectibleColor(
+                                  context, entry.rarity!),
+                            ),
                           ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -1495,7 +1519,7 @@ class _MarketplaceState extends State<Marketplace>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      series.name,
+                      entry.title,
                       style: GoogleFonts.inter(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
@@ -1506,7 +1530,7 @@ class _MarketplaceState extends State<Marketplace>
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'by ${artwork?.artist ?? 'Unknown Artist'}',
+                      'by ${entry.artistName}',
                       style: GoogleFonts.inter(
                         fontSize: 9,
                         color: Theme.of(context)
@@ -1517,61 +1541,61 @@ class _MarketplaceState extends State<Marketplace>
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 6),
-
-                    // Mint progress
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Flexible(
-                              child: Text(
-                                '${series.mintedCount}/${series.totalSupply}',
+                    const SizedBox(height: 4),
+                    if (series != null) ...[
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  '${entry.mintedCount}/${entry.totalSupply}',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 8,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.6),
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              Text(
+                                '$progressPercentage%',
                                 style: GoogleFonts.inter(
                                   fontSize: 8,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.6),
+                                  fontWeight: FontWeight.w500,
+                                  color: isNearSoldOut
+                                      ? KubusColorRoles.of(context)
+                                          .warningAction
+                                      : KubusColorRoles.of(context)
+                                          .web3MarketplaceAccent,
                                 ),
-                                overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                            Text(
-                              '$progressPercentage%',
-                              style: GoogleFonts.inter(
-                                fontSize: 8,
-                                fontWeight: FontWeight.w500,
+                            ],
+                          ),
+                          const SizedBox(height: 1),
+                          SizedBox(
+                            height: 8,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: InlineLoading(
+                                tileSize: 3.0,
+                                progress: progress,
                                 color: isNearSoldOut
                                     ? KubusColorRoles.of(context).warningAction
                                     : KubusColorRoles.of(context)
                                         .web3MarketplaceAccent,
                               ),
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 1),
-                        SizedBox(
-                          height: 8,
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: InlineLoading(
-                              tileSize: 3.0,
-                              progress: series.mintProgress,
-                              color: isNearSoldOut
-                                  ? KubusColorRoles.of(context).warningAction
-                                  : KubusColorRoles.of(context)
-                                      .web3MarketplaceAccent,
-                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-
-                    // Price and mint button
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                    ],
+                    const Spacer(),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -1580,7 +1604,7 @@ class _MarketplaceState extends State<Marketplace>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Price',
+                                value?.label ?? 'Status',
                                 style: GoogleFonts.inter(
                                   fontSize: 7,
                                   color: Theme.of(context)
@@ -1590,7 +1614,9 @@ class _MarketplaceState extends State<Marketplace>
                                 ),
                               ),
                               Text(
-                                '${series.mintPrice.toInt()} KUB8',
+                                MarketplaceValueFormatter.formatDisplayValue(
+                                  value,
+                                ),
                                 style: GoogleFonts.inter(
                                   fontSize: 9,
                                   fontWeight: FontWeight.bold,
@@ -1606,17 +1632,23 @@ class _MarketplaceState extends State<Marketplace>
                           padding: const EdgeInsets.symmetric(
                               horizontal: 6, vertical: 3),
                           decoration: BoxDecoration(
-                            color: series.isSoldOut
-                                ? Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.3)
-                                : KubusColorRoles.of(context)
-                                    .web3MarketplaceAccent,
+                            color: entry.isListed
+                                ? KubusColorRoles.of(context).warningAction
+                                : (entry.isSoldOut
+                                    ? Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.3)
+                                    : KubusColorRoles.of(context)
+                                        .web3MarketplaceAccent),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            series.isSoldOut ? 'Sold' : 'Mint',
+                            entry.isListed
+                                ? 'Listed'
+                                : (series != null && !entry.isSoldOut
+                                    ? 'Mint'
+                                    : 'View'),
                             style: GoogleFonts.inter(
                               fontSize: 8,
                               fontWeight: FontWeight.w600,
@@ -1636,20 +1668,20 @@ class _MarketplaceState extends State<Marketplace>
     );
   }
 
-  Widget _buildDefaultSeriesIcon(CollectibleSeries series) {
+  Widget _buildDefaultSeriesIcon(MarketplaceArtworkEntry entry) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            series.requiresARInteraction ? Icons.view_in_ar : Icons.collections,
+            entry.requiresArInteraction ? Icons.view_in_ar : Icons.collections,
             size: 48,
             color:
                 Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
           ),
           const SizedBox(height: 8),
           Text(
-            series.name,
+            entry.title,
             style: GoogleFonts.inter(
               fontSize: 12,
               fontWeight: FontWeight.w500,
@@ -1667,15 +1699,18 @@ class _MarketplaceState extends State<Marketplace>
     );
   }
 
-  List<Color> _getSeriesGradientColors(CollectibleRarity rarity) {
-    final base = RarityUi.collectibleColor(context, rarity);
+  List<Color> _getSeriesGradientColors(CollectibleRarity? rarity) {
+    final base = rarity == null
+        ? KubusColorRoles.of(context).web3MarketplaceAccent
+        : RarityUi.collectibleColor(context, rarity);
     return [
       base.withValues(alpha: 0.22),
       base.withValues(alpha: 0.5),
     ];
   }
 
-  void _showNFTSeriesDetails(CollectibleSeries series, Artwork? artwork) {
+  void _showNFTSeriesDetails(MarketplaceArtworkEntry entry) {
+    final series = entry.series;
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
 
     showModalBottomSheet(
@@ -1707,7 +1742,7 @@ class _MarketplaceState extends State<Marketplace>
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    series.name,
+                    entry.title,
                     style: GoogleFonts.inter(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -1716,7 +1751,7 @@ class _MarketplaceState extends State<Marketplace>
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'NFT Collection${series.requiresARInteraction ? ' • AR Enabled' : ''}',
+                    'NFT Artwork${entry.requiresArInteraction ? ' • AR Enabled' : ''}',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.inter(
                       fontSize: 14,
@@ -1745,7 +1780,9 @@ class _MarketplaceState extends State<Marketplace>
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      series.description,
+                      series != null && series.description.isNotEmpty
+                          ? series.description
+                          : entry.artwork.description,
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         color: Colors.grey[300],
@@ -1754,37 +1791,44 @@ class _MarketplaceState extends State<Marketplace>
                     ),
                     const SizedBox(height: 24),
 
-                    // Collection stats
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildStatCard(
-                              'Total Supply', '${series.totalSupply}'),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child:
-                              _buildStatCard('Minted', '${series.mintedCount}'),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildStatCard('Available',
-                              '${series.totalSupply - series.mintedCount}'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
+                    if (series != null) ...[
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildStatCard(
+                                'Total Supply', '${series.totalSupply}'),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildStatCard(
+                                'Minted', '${series.mintedCount}'),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildStatCard('Available',
+                                '${series.totalSupply - series.mintedCount}'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                    ],
 
                     Row(
                       children: [
                         Expanded(
                           child: _buildStatCard(
-                              'Mint Price', '${series.mintPrice.toInt()} KUB8'),
+                            entry.displayValue?.label ?? 'Status',
+                            MarketplaceValueFormatter.formatDisplayValue(
+                              entry.displayValue,
+                            ),
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: _buildStatCard(
-                              'Rarity', series.rarity.name.toUpperCase()),
+                            'Rarity',
+                            entry.rarity?.name.toUpperCase() ?? 'NFT',
+                          ),
                         ),
                       ],
                     ),
@@ -1795,7 +1839,7 @@ class _MarketplaceState extends State<Marketplace>
                       children: [
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: series.isSoldOut
+                            onPressed: series == null || series.isSoldOut
                                 ? null
                                 : () {
                                     Navigator.of(context).pop();
@@ -1811,7 +1855,11 @@ class _MarketplaceState extends State<Marketplace>
                               ),
                             ),
                             child: Text(
-                              series.isSoldOut ? 'Sold Out' : 'Mint NFT',
+                              series == null
+                                  ? 'Mint unavailable'
+                                  : (series.isSoldOut
+                                      ? 'Sold Out'
+                                      : 'Mint NFT'),
                               style: GoogleFonts.inter(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -1825,8 +1873,8 @@ class _MarketplaceState extends State<Marketplace>
                             ShareService().showShareSheet(
                               context,
                               target: ShareTarget.artwork(
-                                artworkId: series.artworkId,
-                                title: series.name,
+                                artworkId: entry.artwork.id,
+                                title: entry.title,
                               ),
                               sourceScreen: 'marketplace_series',
                             );
@@ -2279,203 +2327,4 @@ class _MarketplaceState extends State<Marketplace>
       );
     }
   }
-
-  /*
-  Widget _buildNFTCard(Artwork artwork, {bool isFeatured = false, bool isTrending = false, bool isOwned = false}) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-    
-    // Generate mock market data based on artwork properties
-    final isPositive = artwork.rarity == ArtworkRarity.legendary || artwork.rarity == ArtworkRarity.epic;
-    final change = isPositive 
-        ? '+${(10 + (artwork.rewards % 20))}%' 
-        : '-${(1 + (artwork.rewards % 5))}%';
-    final changeColor = isPositive ? Colors.green : Colors.red;
-    
-    return GestureDetector(
-      onTap: () => _showNFTDetails(artwork),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.primaryContainer,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isFeatured 
-                ? themeProvider.accentColor
-                : Theme.of(context).colorScheme.outline,
-            width: isFeatured ? 2 : 1,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              flex: 3,
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      RarityUi.artworkColor(context, artwork.rarity).withValues(alpha: 0.3),
-                      RarityUi.artworkColor(context, artwork.rarity).withValues(alpha: 0.6),
-                    ],
-                  ),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                ),
-                child: Stack(
-                  children: [
-                    if (artwork.arEnabled)
-                      Positioned(
-                        top: 8,
-                        left: 8,
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
-                            Icons.view_in_ar,
-                            color: Theme.of(context).colorScheme.onSurface,
-                            size: 16,
-                          ),
-                        ),
-                      ),
-                    if (isFeatured)
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: themeProvider.accentColor,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            'FEATURED',
-                            style: GoogleFonts.inter(
-                              color: Theme.of(context).colorScheme.onSurface,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                    if (isTrending && !isFeatured)
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: changeColor.withValues(alpha: 0.8),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            change,
-                            style: GoogleFonts.inter(
-                              color: Theme.of(context).colorScheme.onSurface,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                    if (isOwned && !isFeatured && !isTrending)
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
-                            Icons.verified,
-                            color: Theme.of(context).colorScheme.onSurface,
-                            size: 16,
-                          ),
-                        ),
-                      ),
-                    Center(
-                      child: Icon(
-                        artwork.arEnabled ? Icons.view_in_ar : Icons.palette,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
-                        size: 48,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Expanded(
-              flex: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      artwork.title,
-                      style: GoogleFonts.inter(
-                        color: Theme.of(context).colorScheme.onSurface,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    ArtworkCreatorByline(
-                      artwork: artwork,
-                      style: GoogleFonts.inter(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                        fontSize: 10,
-                      ),
-                      maxLines: 1,
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            '${artwork.rewards} KUB8',
-                            style: GoogleFonts.inter(
-                              color: themeProvider.accentColor,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                          decoration: BoxDecoration(
-                            color: RarityUi.artworkColor(context, artwork.rarity).withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            artwork.rarity.name.toUpperCase(),
-                            style: GoogleFonts.inter(
-                              color: RarityUi.artworkColor(context, artwork.rarity),
-                              fontSize: 7,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-  */
 }

@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../../../models/collectible.dart';
+import '../../../providers/collectibles_provider.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/web3provider.dart';
-import '../../../providers/artwork_provider.dart';
-import '../../../models/artwork.dart';
 import '../../../utils/app_animations.dart';
+import '../../../utils/marketplace_value_formatter.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../widgets/artwork_creator_byline.dart';
@@ -51,6 +52,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
       vsync: this,
     );
     _tabController = TabController(length: _tabs.length, vsync: this);
+    _tabController.addListener(_handleTabChanged);
     _scrollController = ScrollController();
     _animationController.forward();
   }
@@ -58,9 +60,15 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
   @override
   void dispose() {
     _animationController.dispose();
+    _tabController.removeListener(_handleTabChanged);
     _tabController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _handleTabChanged() {
+    if (!mounted || _tabController.indexIsChanging) return;
+    setState(() {});
   }
 
   @override
@@ -158,8 +166,9 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                 style: ElevatedButton.styleFrom(
                   backgroundColor: themeProvider.accentColor,
                   foregroundColor: Colors.white,
-                  padding:
-                      EdgeInsets.symmetric(horizontal: DetailSpacing.lg + DetailSpacing.xs, vertical: DetailSpacing.md + 2),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: DetailSpacing.lg + DetailSpacing.xs,
+                      vertical: DetailSpacing.md + 2),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(DetailRadius.md),
                   ),
@@ -214,11 +223,12 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
         ),
         borderRadius: BorderRadius.circular(DetailRadius.xl),
       ),
-      child: Consumer<ArtworkProvider>(
-        builder: (context, artworkProvider, _) {
-          final totalArtworks = artworkProvider.artworks.length;
+      child: Consumer<CollectiblesProvider>(
+        builder: (context, collectiblesProvider, _) {
+          final entries = _resolveVisibleEntries(collectiblesProvider);
+          final totalArtworks = entries.length;
           final arEnabled =
-              artworkProvider.artworks.where((a) => a.arEnabled).length;
+              entries.where((entry) => entry.requiresArInteraction).length;
 
           return Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -273,7 +283,8 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
 
   Widget _buildToolbar(ThemeProvider themeProvider) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: DetailSpacing.xl, vertical: DetailSpacing.md),
+      padding: EdgeInsets.symmetric(
+          horizontal: DetailSpacing.xl, vertical: DetailSpacing.md),
       child: Row(
         children: [
           // Filter button
@@ -294,7 +305,8 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                     .outline
                     .withValues(alpha: 0.3),
               ),
-              padding: EdgeInsets.symmetric(horizontal: DetailSpacing.lg, vertical: DetailSpacing.md),
+              padding: EdgeInsets.symmetric(
+                  horizontal: DetailSpacing.lg, vertical: DetailSpacing.md),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(DetailRadius.sm + 2),
               ),
@@ -303,10 +315,10 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
           SizedBox(width: DetailSpacing.lg),
 
           // Results count
-          Consumer<ArtworkProvider>(
-            builder: (context, artworkProvider, _) {
+          Consumer<CollectiblesProvider>(
+            builder: (context, collectiblesProvider, _) {
               return Text(
-                '${artworkProvider.artworks.length} items',
+                '${_resolveVisibleEntries(collectiblesProvider).length} items',
                 style: DetailTypography.caption(context),
               );
             },
@@ -445,7 +457,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
 
           // Price range
           Text(
-            'Price Range (SOL)',
+            'Price Range (KUB8)',
             style: DetailTypography.label(context),
           ),
           SizedBox(height: DetailSpacing.md),
@@ -463,11 +475,11 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '${_priceRange.start.toInt()} SOL',
+                '${_priceRange.start.toInt()} KUB8',
                 style: DetailTypography.caption(context),
               ),
               Text(
-                '${_priceRange.end.toInt()} SOL',
+                '${_priceRange.end.toInt()} KUB8',
                 style: DetailTypography.caption(context),
               ),
             ],
@@ -535,12 +547,82 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
     );
   }
 
-  Widget _buildNFTGrid(ThemeProvider themeProvider, bool isLarge) {
-    return Consumer<ArtworkProvider>(
-      builder: (context, artworkProvider, _) {
-        final artworks = artworkProvider.artworks;
+  List<MarketplaceArtworkEntry> _resolveVisibleEntries(
+    CollectiblesProvider collectiblesProvider,
+  ) {
+    final selectedTab = _tabs[_tabController.index].toLowerCase();
+    final entries = collectiblesProvider.marketplaceEntries.where((entry) {
+      if (selectedTab == 'all nfts') return true;
+      final haystack = <String>[
+        entry.title,
+        entry.artwork.category,
+        entry.artwork.description,
+      ].join(' ').toLowerCase();
+      switch (selectedTab) {
+        case 'art':
+          return true;
+        case 'photography':
+          return haystack.contains('photo');
+        case 'music':
+          return haystack.contains('music') || haystack.contains('audio');
+        case 'virtual worlds':
+          return haystack.contains('virtual') ||
+              haystack.contains('3d') ||
+              haystack.contains('world');
+        default:
+          return true;
+      }
+    }).where((entry) {
+      final amount = entry.displayValue?.amount;
+      if (amount == null) {
+        return _priceRange.start <= 0;
+      }
+      return amount >= _priceRange.start && amount <= _priceRange.end;
+    }).toList();
 
-        if (artworks.isEmpty) {
+    int compareByAmount(MarketplaceArtworkEntry a, MarketplaceArtworkEntry b) {
+      final aAmount = a.displayValue?.amount;
+      final bAmount = b.displayValue?.amount;
+      if (aAmount == null && bAmount == null) return 0;
+      if (aAmount == null) return 1;
+      if (bAmount == null) return -1;
+      return aAmount.compareTo(bAmount);
+    }
+
+    switch (_selectedSort) {
+      case 'price_low':
+        entries.sort(compareByAmount);
+        break;
+      case 'price_high':
+        entries.sort((a, b) => compareByAmount(b, a));
+        break;
+      case 'popular':
+        entries.sort(
+          (a, b) => b.artwork.likesCount.compareTo(a.artwork.likesCount),
+        );
+        break;
+      case 'ending':
+        entries.sort((a, b) {
+          final aRemaining = (a.totalSupply ?? 0) - (a.mintedCount ?? 0);
+          final bRemaining = (b.totalSupply ?? 0) - (b.mintedCount ?? 0);
+          return aRemaining.compareTo(bRemaining);
+        });
+        break;
+      case 'recent':
+      default:
+        entries.sort((a, b) => b.sortTimestamp.compareTo(a.sortTimestamp));
+        break;
+    }
+
+    return entries;
+  }
+
+  Widget _buildNFTGrid(ThemeProvider themeProvider, bool isLarge) {
+    return Consumer<CollectiblesProvider>(
+      builder: (context, collectiblesProvider, _) {
+        final entries = _resolveVisibleEntries(collectiblesProvider);
+
+        if (entries.isEmpty) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -582,21 +664,23 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
             mainAxisSpacing: DetailSpacing.lg + DetailSpacing.xs,
             childAspectRatio: 0.75,
           ),
-          itemCount: artworks.length,
+          itemCount: entries.length,
           itemBuilder: (context, index) {
-            return _buildNFTCard(artworks[index], themeProvider);
+            return _buildNFTCard(entries[index], themeProvider);
           },
         );
       },
     );
   }
 
-  Widget _buildNFTCard(Artwork artwork, ThemeProvider themeProvider) {
+  Widget _buildNFTCard(
+      MarketplaceArtworkEntry entry, ThemeProvider themeProvider) {
+    final artwork = entry.artwork;
     final marketplaceAccent = KubusColorRoles.of(context).web3MarketplaceAccent;
     return DesktopCard(
       padding: EdgeInsets.zero,
       onTap: () {
-        _showNFTDetail(artwork, themeProvider);
+        _showNFTDetail(entry, themeProvider);
       },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -614,26 +698,46 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                     marketplaceAccent.withValues(alpha: 0.1),
                   ],
                 ),
-                borderRadius:
-                    BorderRadius.vertical(top: Radius.circular(DetailRadius.lg)),
+                borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(DetailRadius.lg)),
               ),
               child: Stack(
                 children: [
-                  const Center(
-                    child: Icon(
-                      Icons.image,
-                      size: 52,
-                      color: Colors.white,
+                  if (entry.coverUrl != null)
+                    ClipRRect(
+                      borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(DetailRadius.lg)),
+                      child: Image.network(
+                        entry.coverUrl!,
+                        width: double.infinity,
+                        height: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Center(
+                          child: Icon(
+                            Icons.image,
+                            size: 52,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    const Center(
+                      child: Icon(
+                        Icons.image,
+                        size: 52,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
                   // AR badge
-                  if (artwork.arEnabled)
+                  if (entry.requiresArInteraction)
                     Positioned(
                       top: DetailSpacing.md,
                       right: DetailSpacing.md,
                       child: Container(
                         padding: EdgeInsets.symmetric(
-                            horizontal: DetailSpacing.sm, vertical: DetailSpacing.xs),
+                            horizontal: DetailSpacing.sm,
+                            vertical: DetailSpacing.xs),
                         decoration: BoxDecoration(
                           color: const Color(0xFF4ECDC4),
                           borderRadius: BorderRadius.circular(DetailRadius.xs),
@@ -665,11 +769,13 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        artwork.isDiscovered
+                        artwork.isLikedByCurrentUser
                             ? Icons.favorite
                             : Icons.favorite_border,
                         size: 16,
-                        color: artwork.isDiscovered ? Colors.red : Colors.white,
+                        color: artwork.isLikedByCurrentUser
+                            ? Colors.red
+                            : Colors.white,
                       ),
                     ),
                   ),
@@ -687,7 +793,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    artwork.title,
+                    entry.title,
                     style: DetailTypography.cardTitle(context),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -709,13 +815,15 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Price',
+                            entry.displayValue?.label ?? 'Status',
                             style: DetailTypography.caption(context).copyWith(
                               fontSize: 11,
                             ),
                           ),
                           Text(
-                            '${(artwork.id.hashCode % 10 + 1) / 2.0} SOL',
+                            MarketplaceValueFormatter.formatDisplayValue(
+                              entry.displayValue,
+                            ),
                             style: DetailTypography.cardTitle(context),
                           ),
                         ],
@@ -750,7 +858,9 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
     );
   }
 
-  void _showNFTDetail(Artwork artwork, ThemeProvider themeProvider) {
+  void _showNFTDetail(
+      MarketplaceArtworkEntry entry, ThemeProvider themeProvider) {
+    final artwork = entry.artwork;
     showKubusDialog<void>(
       context: context,
       builder: (dialogContext) {
@@ -784,14 +894,33 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                         ),
                         child: Stack(
                           children: [
-                            const Center(
-                              child: Icon(
-                                Icons.view_in_ar,
-                                size: 110,
-                                color: Colors.white,
+                            if (entry.coverUrl != null)
+                              ClipRRect(
+                                borderRadius: BorderRadius.horizontal(
+                                    left: Radius.circular(DetailRadius.xl)),
+                                child: Image.network(
+                                  entry.coverUrl!,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => const Center(
+                                    child: Icon(
+                                      Icons.image,
+                                      size: 110,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            else
+                              const Center(
+                                child: Icon(
+                                  Icons.image,
+                                  size: 110,
+                                  color: Colors.white,
+                                ),
                               ),
-                            ),
-                            if (artwork.arEnabled)
+                            if (entry.requiresArInteraction)
                               Positioned(
                                 bottom: DetailSpacing.lg + DetailSpacing.xs,
                                 left: DetailSpacing.lg + DetailSpacing.xs,
@@ -812,8 +941,8 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                                     padding: EdgeInsets.symmetric(
                                         vertical: DetailSpacing.lg),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius:
-                                          BorderRadius.circular(DetailRadius.md),
+                                      borderRadius: BorderRadius.circular(
+                                          DetailRadius.md),
                                     ),
                                   ),
                                 ),
@@ -835,7 +964,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                               children: [
                                 Expanded(
                                   child: Text(
-                                    artwork.title,
+                                    entry.title,
                                     style: DetailTypography.screenTitle(
                                         dialogContext),
                                     overflow: TextOverflow.ellipsis,
@@ -850,13 +979,15 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                             ),
                             SizedBox(height: DetailSpacing.sm),
                             Text(
-                              'by ${artwork.artist}',
-                              style: DetailTypography.body(dialogContext).copyWith(
+                              'by ${entry.artistName}',
+                              style:
+                                  DetailTypography.body(dialogContext).copyWith(
                                 color: themeProvider.accentColor,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
-                            SizedBox(height: DetailSpacing.lg + DetailSpacing.xs),
+                            SizedBox(
+                                height: DetailSpacing.lg + DetailSpacing.xs),
                             if (artwork.description.isNotEmpty)
                               Expanded(
                                 child: SingleChildScrollView(
@@ -869,7 +1000,8 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                                   ),
                                 ),
                               ),
-                            SizedBox(height: DetailSpacing.lg + DetailSpacing.xs),
+                            SizedBox(
+                                height: DetailSpacing.lg + DetailSpacing.xs),
 
                             // Price
                             Container(
@@ -891,13 +1023,17 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Current Price',
+                                        entry.displayValue?.label ??
+                                            'Current status',
                                         style: DetailTypography.caption(
                                             dialogContext),
                                       ),
                                       SizedBox(height: DetailSpacing.xs),
                                       Text(
-                                        '${(artwork.id.hashCode % 10 + 1) / 2.0} SOL',
+                                        MarketplaceValueFormatter
+                                            .formatDisplayValue(
+                                          entry.displayValue,
+                                        ),
                                         style: GoogleFonts.inter(
                                           fontSize: 30,
                                           fontWeight: FontWeight.bold,
@@ -914,8 +1050,8 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                                         children: [
                                           Icon(Icons.favorite,
                                               size: 16,
-                                              color: Colors.red.withValues(
-                                                  alpha: 0.7)),
+                                              color: Colors.red
+                                                  .withValues(alpha: 0.7)),
                                           SizedBox(width: DetailSpacing.xs),
                                           Text('${artwork.likesCount}'),
                                         ],
@@ -938,7 +1074,8 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                                 ],
                               ),
                             ),
-                            SizedBox(height: DetailSpacing.lg + DetailSpacing.xs),
+                            SizedBox(
+                                height: DetailSpacing.lg + DetailSpacing.xs),
 
                             // Actions
                             Row(
