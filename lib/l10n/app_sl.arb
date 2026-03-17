@@ -42,6 +42,7 @@
   "commonReplace": "Zamenjaj",
   "commonSearch": "Išči",
   "commonNotifications": "Obvestila",
+  "commonLabLabel": "Lab",
   "commonShare": "Deli",
   "shareOptionCreatePost": "Ustvari objavo v skupnosti",
   "shareOptionSendMessage": "Pošlji v sporočilu",
@@ -3142,6 +3143,8 @@
   "navigationScreenInstitutionHub": "Institucijsko središče",
 
   "daoHubAppBarTitle": "DAO upravljanje",
+  "labsDaoSemanticLabel": "DAO Lab",
+  "labsMarketplaceSemanticLabel": "Lab tržnice",
   "daoHubHeaderSubtitle": "Decentralizirano upravljanje za AR umetniško platformo",
   "daoHubInfoDialogTitle": "Kako deluje DAO upravljanje",
   "daoHubInfoDialogBody": "DAO omogoča skupnosti, da predlaga in glasuje o odločitvah platforme. Glasovalna moč temelji na tvojem stanju KUB8. Glasovalno moč lahko tudi delegiraš zaupanja vrednim delegatom.",

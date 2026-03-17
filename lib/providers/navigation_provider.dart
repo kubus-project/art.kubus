@@ -14,16 +14,19 @@ import '../screens/web3/achievements/achievements_page.dart';
 import '../screens/web3/dao/governance_hub.dart';
 import '../screens/web3/artist/artist_studio.dart';
 import '../screens/web3/institution/institution_hub.dart';
+import '../utils/kubus_labs_feature.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 @immutable
 class ScreenDefinition {
   final NavigationScreenLabelKey labelKey;
   final IconData icon;
+  final KubusLabsFeature? labsFeature;
 
   const ScreenDefinition({
     required this.labelKey,
     required this.icon,
+    this.labsFeature,
   });
 }
 
@@ -82,12 +85,14 @@ class QuickActionScreen {
   final NavigationScreenLabelKey labelKey;
   final IconData icon;
   final int visitCount;
+  final KubusLabsFeature? labsFeature;
 
   const QuickActionScreen({
     required this.key,
     required this.labelKey,
     required this.icon,
     required this.visitCount,
+    this.labsFeature,
   });
 }
 
@@ -95,7 +100,7 @@ class NavigationProvider with ChangeNotifier {
   static const String _visitCountKey = 'screen_visit_counts';
   static const String _lastVisitKey = 'screen_last_visit_times';
   static const Duration _visitDecayDuration = Duration(hours: 24);
-  
+
   Map<String, int> _visitCounts = {};
   Map<String, DateTime> _lastVisitTimes = {};
   List<String> _frequentScreens = [];
@@ -104,20 +109,42 @@ class NavigationProvider with ChangeNotifier {
   List<String> get frequentScreens => _frequentScreens;
 
   // Screen definitions with their display names and navigation actions
-  static const Map<String, ScreenDefinition> screenDefinitions = {
-    'ar': ScreenDefinition(labelKey: NavigationScreenLabelKey.createAr, icon: Icons.add_box),
-    'map': ScreenDefinition(labelKey: NavigationScreenLabelKey.exploreMap, icon: Icons.explore),
-    'community': ScreenDefinition(labelKey: NavigationScreenLabelKey.community, icon: Icons.people),
-    'profile': ScreenDefinition(labelKey: NavigationScreenLabelKey.profile, icon: Icons.person),
-    'marketplace': ScreenDefinition(labelKey: NavigationScreenLabelKey.marketplace, icon: Icons.store),
-    'wallet': ScreenDefinition(labelKey: NavigationScreenLabelKey.wallet, icon: Icons.account_balance_wallet),
-    'analytics': ScreenDefinition(labelKey: NavigationScreenLabelKey.analytics, icon: Icons.analytics),
-    'settings': ScreenDefinition(labelKey: NavigationScreenLabelKey.settings, icon: Icons.settings),
-    'stats': ScreenDefinition(labelKey: NavigationScreenLabelKey.myStats, icon: Icons.bar_chart),
-    'achievements': ScreenDefinition(labelKey: NavigationScreenLabelKey.achievements, icon: Icons.emoji_events),
-    'dao_hub': ScreenDefinition(labelKey: NavigationScreenLabelKey.daoHub, icon: Icons.how_to_vote),
-    'studio': ScreenDefinition(labelKey: NavigationScreenLabelKey.artistStudio, icon: Icons.palette),
-    'institution_hub': ScreenDefinition(labelKey: NavigationScreenLabelKey.institutionHub, icon: Icons.location_city),
+  static final Map<String, ScreenDefinition> screenDefinitions = {
+    'ar': ScreenDefinition(
+        labelKey: NavigationScreenLabelKey.createAr, icon: Icons.add_box),
+    'map': ScreenDefinition(
+        labelKey: NavigationScreenLabelKey.exploreMap, icon: Icons.explore),
+    'community': ScreenDefinition(
+        labelKey: NavigationScreenLabelKey.community, icon: Icons.people),
+    'profile': ScreenDefinition(
+        labelKey: NavigationScreenLabelKey.profile, icon: Icons.person),
+    'marketplace': ScreenDefinition(
+      labelKey: NavigationScreenLabelKey.marketplace,
+      icon: KubusLabsFeature.marketplace.screenIcon,
+      labsFeature: KubusLabsFeature.marketplace,
+    ),
+    'wallet': ScreenDefinition(
+        labelKey: NavigationScreenLabelKey.wallet,
+        icon: Icons.account_balance_wallet),
+    'analytics': ScreenDefinition(
+        labelKey: NavigationScreenLabelKey.analytics, icon: Icons.analytics),
+    'settings': ScreenDefinition(
+        labelKey: NavigationScreenLabelKey.settings, icon: Icons.settings),
+    'stats': ScreenDefinition(
+        labelKey: NavigationScreenLabelKey.myStats, icon: Icons.bar_chart),
+    'achievements': ScreenDefinition(
+        labelKey: NavigationScreenLabelKey.achievements,
+        icon: Icons.emoji_events),
+    'dao_hub': ScreenDefinition(
+      labelKey: NavigationScreenLabelKey.daoHub,
+      icon: KubusLabsFeature.dao.screenIcon,
+      labsFeature: KubusLabsFeature.dao,
+    ),
+    'studio': ScreenDefinition(
+        labelKey: NavigationScreenLabelKey.artistStudio, icon: Icons.palette),
+    'institution_hub': ScreenDefinition(
+        labelKey: NavigationScreenLabelKey.institutionHub,
+        icon: Icons.location_city),
   };
 
   Future<void> initialize() async {
@@ -130,19 +157,20 @@ class NavigationProvider with ChangeNotifier {
   void _applyVisitDecay() {
     final now = DateTime.now();
     final keysToDecay = <String>[];
-    
+
     for (final entry in _lastVisitTimes.entries) {
       final timeSinceVisit = now.difference(entry.value);
       if (timeSinceVisit > _visitDecayDuration) {
         keysToDecay.add(entry.key);
       }
     }
-    
+
     for (final key in keysToDecay) {
       final currentCount = _visitCounts[key] ?? 0;
       if (currentCount > 0) {
         // Decay by 1 for each 24h period elapsed
-        final periodsElapsed = now.difference(_lastVisitTimes[key]!).inHours ~/ 24;
+        final periodsElapsed =
+            now.difference(_lastVisitTimes[key]!).inHours ~/ 24;
         final newCount = (currentCount - periodsElapsed).clamp(0, currentCount);
         if (newCount <= 0) {
           _visitCounts.remove(key);
@@ -152,14 +180,14 @@ class NavigationProvider with ChangeNotifier {
         }
       }
     }
-    
+
     _saveVisitCounts();
   }
 
   Future<void> _loadVisitCounts() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      
+
       // Load visit counts
       final visitCountsJson = prefs.getString(_visitCountKey);
       if (visitCountsJson != null) {
@@ -172,7 +200,7 @@ class NavigationProvider with ChangeNotifier {
         });
         _visitCounts = decoded.cast<String, int>();
       }
-      
+
       // Load last visit times
       final lastVisitJson = prefs.getString(_lastVisitKey);
       if (lastVisitJson != null) {
@@ -182,7 +210,8 @@ class NavigationProvider with ChangeNotifier {
           if (parts.length == 2) {
             final timestamp = int.tryParse(parts[1]);
             if (timestamp != null) {
-              decoded[parts[0]] = DateTime.fromMillisecondsSinceEpoch(timestamp);
+              decoded[parts[0]] =
+                  DateTime.fromMillisecondsSinceEpoch(timestamp);
             }
           }
         });
@@ -197,13 +226,13 @@ class NavigationProvider with ChangeNotifier {
   Future<void> _saveVisitCounts() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      
+
       // Save visit counts
       final visitCountsString = _visitCounts.entries
           .map((entry) => '${entry.key}:${entry.value}')
           .join(',');
       await prefs.setString(_visitCountKey, visitCountsString);
-      
+
       // Save last visit times
       final lastVisitString = _lastVisitTimes.entries
           .map((entry) => '${entry.key}:${entry.value.millisecondsSinceEpoch}')
@@ -219,7 +248,7 @@ class NavigationProvider with ChangeNotifier {
     _visitCounts.clear();
     _lastVisitTimes.clear();
     _frequentScreens.clear();
-    
+
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_visitCountKey);
@@ -227,7 +256,7 @@ class NavigationProvider with ChangeNotifier {
     } catch (e) {
       // Handle error silently
     }
-    
+
     notifyListeners();
   }
 
@@ -245,21 +274,22 @@ class NavigationProvider with ChangeNotifier {
     // Sort screens by MOST RECENT visit time (not by count)
     final sortedEntries = _lastVisitTimes.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value)); // Most recent first
-    
+
     _frequentScreens = sortedEntries
         .take(4)
         .map((entry) => entry.key)
         .where((key) => screenDefinitions.containsKey(key))
         .toList();
-    
+
     // If we don't have enough recent screens, fill with defaults
     final defaultScreens = ['ar', 'map', 'community', 'profile'];
     for (String defaultScreen in defaultScreens) {
-      if (_frequentScreens.length < 4 && !_frequentScreens.contains(defaultScreen)) {
+      if (_frequentScreens.length < 4 &&
+          !_frequentScreens.contains(defaultScreen)) {
         _frequentScreens.add(defaultScreen);
       }
     }
-    
+
     // Ensure we have exactly 4 screens
     _frequentScreens = _frequentScreens.take(4).toList();
   }
@@ -274,6 +304,7 @@ class NavigationProvider with ChangeNotifier {
         labelKey: definition.labelKey,
         icon: definition.icon,
         visitCount: _visitCounts[screenKey] ?? 0,
+        labsFeature: definition.labsFeature,
       );
     }).toList();
   }
@@ -286,11 +317,13 @@ class NavigationProvider with ChangeNotifier {
         .where((e) => e.value > 0 && screenDefinitions.containsKey(e.key))
         .map((e) => e.key)
         .toList();
-    
+
     // Sort by most recent visit time
     visitedScreens.sort((a, b) {
-      final aTime = _lastVisitTimes[a] ?? DateTime.fromMillisecondsSinceEpoch(0);
-      final bTime = _lastVisitTimes[b] ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final aTime =
+          _lastVisitTimes[a] ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final bTime =
+          _lastVisitTimes[b] ?? DateTime.fromMillisecondsSinceEpoch(0);
       return bTime.compareTo(aTime);
     });
 
@@ -301,6 +334,7 @@ class NavigationProvider with ChangeNotifier {
         labelKey: definition.labelKey,
         icon: definition.icon,
         visitCount: _visitCounts[key] ?? 0,
+        labsFeature: definition.labsFeature,
       );
     }).toList();
   }
@@ -352,7 +386,8 @@ class NavigationProvider with ChangeNotifier {
     }
 
     if (destination != null) {
-      Navigator.of(context).push(MaterialPageRoute(builder: (_) => destination!));
+      Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => destination!));
       return;
     }
 
@@ -369,5 +404,4 @@ class NavigationProvider with ChangeNotifier {
       ),
     );
   }
-
 }

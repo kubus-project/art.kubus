@@ -42,6 +42,7 @@
   "commonReplace": "Replace",
   "commonSearch": "Search",
   "commonNotifications": "Notifications",
+  "commonLabLabel": "Lab",
   "commonShare": "Share",
   "shareOptionCreatePost": "Create community post",
   "shareOptionSendMessage": "Send in message",
@@ -3142,6 +3143,8 @@
   "navigationScreenInstitutionHub": "Institution Hub",
 
   "daoHubAppBarTitle": "DAO Governance",
+  "labsDaoSemanticLabel": "DAO Lab",
+  "labsMarketplaceSemanticLabel": "Marketplace Lab",
   "daoHubHeaderSubtitle": "Decentralized governance for the AR art platform",
   "daoHubInfoDialogTitle": "How DAO governance works",
   "daoHubInfoDialogBody": "The DAO lets the community propose and vote on platform decisions. Voting power is based on your KUB8 balance. You can also delegate your voting power to trusted delegates.",

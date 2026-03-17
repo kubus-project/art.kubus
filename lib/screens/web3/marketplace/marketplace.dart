@@ -18,9 +18,12 @@ import '../../../utils/marketplace_value_formatter.dart';
 import '../../../utils/rarity_ui.dart';
 import '../../../utils/app_color_utils.dart';
 import '../../../utils/kubus_color_roles.dart';
+import '../../../utils/kubus_labs_feature.dart';
+import '../../../utils/design_tokens.dart';
 import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import 'package:art_kubus/widgets/common/kubus_labs_adornment.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 
 class Marketplace extends StatefulWidget {
@@ -98,14 +101,26 @@ class _MarketplaceState extends State<Marketplace>
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
-        title: Text(
-          'NFT Marketplace',
-          style: GoogleFonts.inter(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-          overflow: TextOverflow.ellipsis,
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                'NFT Marketplace',
+                style: GoogleFonts.inter(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: KubusSpacing.sm),
+            const KubusLabsAdornment.inlinePill(
+              feature: KubusLabsFeature.marketplace,
+              emphasized: true,
+            ),
+          ],
         ),
         actions: [
           IconButton(
@@ -243,9 +258,13 @@ class _MarketplaceState extends State<Marketplace>
 
   Widget _buildMarketplaceHeader() {
     final roles = KubusColorRoles.of(context);
+    final labsFeature = KubusLabsFeature.marketplace;
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.symmetric(
+        horizontal: KubusSpacing.md,
+        vertical: KubusSpacing.sm,
+      ),
+      padding: const EdgeInsets.all(KubusSpacing.md - KubusSpacing.xs),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -270,7 +289,7 @@ class _MarketplaceState extends State<Marketplace>
               borderRadius: BorderRadius.circular(20),
             ),
             child: Icon(
-              Icons.storefront,
+              labsFeature.screenIcon,
               color: Theme.of(context).colorScheme.onSurface,
               size: 22,
             ),
@@ -280,13 +299,24 @@ class _MarketplaceState extends State<Marketplace>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'NFT Marketplace',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
+                Wrap(
+                  spacing: KubusSpacing.sm,
+                  runSpacing: KubusSpacing.xs,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      'NFT Marketplace',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                    const KubusLabsAdornment.inlinePill(
+                      feature: KubusLabsFeature.marketplace,
+                      emphasized: true,
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Text(

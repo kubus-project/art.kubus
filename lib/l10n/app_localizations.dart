@@ -358,6 +358,12 @@ abstract class AppLocalizations {
   /// **'Notifications'**
   String get commonNotifications;
 
+  /// No description provided for @commonLabLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Lab'**
+  String get commonLabLabel;
+
   /// No description provided for @commonShare.
   ///
   /// In en, this message translates to:
@@ -13408,6 +13414,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'DAO Governance'**
   String get daoHubAppBarTitle;
+
+  /// No description provided for @labsDaoSemanticLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'DAO Lab'**
+  String get labsDaoSemanticLabel;
+
+  /// No description provided for @labsMarketplaceSemanticLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Marketplace Lab'**
+  String get labsMarketplaceSemanticLabel;
 
   /// No description provided for @daoHubHeaderSubtitle.
   ///

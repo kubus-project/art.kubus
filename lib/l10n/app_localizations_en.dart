@@ -127,6 +127,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonNotifications => 'Notifications';
 
   @override
+  String get commonLabLabel => 'Lab';
+
+  @override
   String get commonShare => 'Share';
 
   @override
@@ -7582,6 +7585,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get daoHubAppBarTitle => 'DAO Governance';
+
+  @override
+  String get labsDaoSemanticLabel => 'DAO Lab';
+
+  @override
+  String get labsMarketplaceSemanticLabel => 'Marketplace Lab';
 
   @override
   String get daoHubHeaderSubtitle =>

@@ -17,6 +17,7 @@ import '../../models/recent_activity.dart';
 import '../../utils/activity_navigation.dart';
 import '../../services/telemetry/telemetry_service.dart';
 import '../../utils/kubus_color_roles.dart';
+import '../../utils/kubus_labs_feature.dart';
 import 'desktop_home_screen.dart';
 import 'desktop_map_screen.dart';
 import 'community/desktop_community_screen.dart';
@@ -96,7 +97,7 @@ class _DesktopShellState extends State<DesktopShell>
   bool _pendingRouteCorrection = false;
   bool _pendingNavCollapse = false;
 
-  static const List<DesktopNavItem> _signedInNavItems = [
+  static final List<DesktopNavItem> _signedInNavItems = [
     DesktopNavItem(
       icon: Icons.home_outlined,
       activeIcon: Icons.home,
@@ -128,16 +129,18 @@ class _DesktopShellState extends State<DesktopShell>
       route: '/institution',
     ),
     DesktopNavItem(
-      icon: Icons.account_balance_outlined,
-      activeIcon: Icons.account_balance,
+      icon: KubusLabsFeature.dao.navIcon,
+      activeIcon: KubusLabsFeature.dao.navActiveIcon,
       labelKey: DesktopNavLabelKey.govern,
       route: '/governance',
+      labsFeature: KubusLabsFeature.dao,
     ),
     DesktopNavItem(
-      icon: Icons.storefront_outlined,
-      activeIcon: Icons.storefront,
+      icon: KubusLabsFeature.marketplace.navIcon,
+      activeIcon: KubusLabsFeature.marketplace.navActiveIcon,
       labelKey: DesktopNavLabelKey.trade,
       route: '/marketplace',
+      labsFeature: KubusLabsFeature.marketplace,
     ),
   ];
 
@@ -600,171 +603,176 @@ class _DesktopShellState extends State<DesktopShell>
                               : _buildCurrentScreen(effectiveRoute),
                         ),
 
-                      // Functions sidebar (contextual panels like Notifications)
-                      if (isExpanded || isLarge)
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 220),
-                          curve: Curves.easeOutCubic,
-                          width: _functionsPanel == DesktopFunctionsPanel.none
-                              ? 0
-                              : (isLarge ? 380 : 320),
-                          child: ClipRect(
-                            child: IgnorePointer(
-                              ignoring:
-                                  _functionsPanel == DesktopFunctionsPanel.none,
-                              child: AnimatedOpacity(
-                                opacity: _functionsPanel ==
-                                        DesktopFunctionsPanel.none
-                                    ? 0
-                                    : 1,
-                                duration: const Duration(milliseconds: 150),
-                                child: Builder(
-                                  builder: (context) {
-                                    final panel = Container(
-                                      decoration: BoxDecoration(
-                                        border: Border(
-                                          left: BorderSide(
-                                            color: theme.brightness ==
-                                                    Brightness.dark
-                                                ? Colors.white
-                                                    .withValues(alpha: 0.06)
-                                                : theme.colorScheme.outline
-                                                    .withValues(alpha: 0.10),
-                                            width: 1,
+                        // Functions sidebar (contextual panels like Notifications)
+                        if (isExpanded || isLarge)
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 220),
+                            curve: Curves.easeOutCubic,
+                            width: _functionsPanel == DesktopFunctionsPanel.none
+                                ? 0
+                                : (isLarge ? 380 : 320),
+                            child: ClipRect(
+                              child: IgnorePointer(
+                                ignoring: _functionsPanel ==
+                                    DesktopFunctionsPanel.none,
+                                child: AnimatedOpacity(
+                                  opacity: _functionsPanel ==
+                                          DesktopFunctionsPanel.none
+                                      ? 0
+                                      : 1,
+                                  duration: const Duration(milliseconds: 150),
+                                  child: Builder(
+                                    builder: (context) {
+                                      final panel = Container(
+                                        decoration: BoxDecoration(
+                                          border: Border(
+                                            left: BorderSide(
+                                              color: theme.brightness ==
+                                                      Brightness.dark
+                                                  ? Colors.white
+                                                      .withValues(alpha: 0.06)
+                                                  : theme.colorScheme.outline
+                                                      .withValues(alpha: 0.10),
+                                              width: 1,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                      child: LiquidGlassPanel(
-                                        padding: EdgeInsets.zero,
-                                        margin: EdgeInsets.zero,
-                                        borderRadius: BorderRadius.zero,
-                                        blurSigma:
-                                            KubusGlassEffects.blurSigmaLight,
-                                        showBorder: false,
-                                        backgroundColor: theme
-                                            .colorScheme.surface
-                                            .withValues(
-                                          alpha: theme.brightness ==
-                                                  Brightness.dark
-                                              ? 0.16
-                                              : 0.10,
+                                        child: LiquidGlassPanel(
+                                          padding: EdgeInsets.zero,
+                                          margin: EdgeInsets.zero,
+                                          borderRadius: BorderRadius.zero,
+                                          blurSigma:
+                                              KubusGlassEffects.blurSigmaLight,
+                                          showBorder: false,
+                                          backgroundColor: theme
+                                              .colorScheme.surface
+                                              .withValues(
+                                            alpha: theme.brightness ==
+                                                    Brightness.dark
+                                                ? 0.16
+                                                : 0.10,
+                                          ),
+                                          child: AnimatedSwitcher(
+                                            duration: const Duration(
+                                                milliseconds: 220),
+                                            switchInCurve: Curves.easeOutCubic,
+                                            switchOutCurve: Curves.easeInCubic,
+                                            child: switch (_functionsPanel) {
+                                              DesktopFunctionsPanel
+                                                    .notifications =>
+                                                _NotificationsPanel(
+                                                  key: const ValueKey<String>(
+                                                      'functions_notifications'),
+                                                  onClose: _closeFunctionsPanel,
+                                                  onActivitySelected:
+                                                      (activity) async {
+                                                    final parentContext =
+                                                        context;
+                                                    _closeFunctionsPanel();
+                                                    await ActivityNavigation
+                                                        .open(parentContext,
+                                                            activity);
+                                                  },
+                                                ),
+                                              DesktopFunctionsPanel
+                                                    .exploreNearby =>
+                                                _functionsPanelContent ??
+                                                    const SizedBox.shrink(
+                                                      key: ValueKey<String>(
+                                                          'functions_explore_nearby_empty'),
+                                                    ),
+                                              DesktopFunctionsPanel.none =>
+                                                const SizedBox.shrink(
+                                                  key: ValueKey<String>(
+                                                      'functions_empty'),
+                                                ),
+                                            },
+                                          ),
                                         ),
-                                        child: AnimatedSwitcher(
-                                          duration:
-                                              const Duration(milliseconds: 220),
-                                          switchInCurve: Curves.easeOutCubic,
-                                          switchOutCurve: Curves.easeInCubic,
-                                          child: switch (_functionsPanel) {
-                                            DesktopFunctionsPanel
-                                                  .notifications =>
-                                              _NotificationsPanel(
-                                                key: const ValueKey<String>(
-                                                    'functions_notifications'),
-                                                onClose: _closeFunctionsPanel,
-                                                onActivitySelected:
-                                                    (activity) async {
-                                                  final parentContext = context;
-                                                  _closeFunctionsPanel();
-                                                  await ActivityNavigation.open(
-                                                      parentContext, activity);
-                                                },
-                                              ),
-                                            DesktopFunctionsPanel
-                                                  .exploreNearby =>
-                                              _functionsPanelContent ??
-                                                  const SizedBox.shrink(
-                                                    key: ValueKey<String>(
-                                                        'functions_explore_nearby_empty'),
-                                                  ),
-                                            DesktopFunctionsPanel.none =>
-                                              const SizedBox.shrink(
-                                                key: ValueKey<String>(
-                                                    'functions_empty'),
-                                              ),
-                                          },
-                                        ),
-                                      ),
-                                    );
+                                      );
 
-                                    if (!kIsWeb ||
-                                        _functionsPanel ==
-                                            DesktopFunctionsPanel.none) {
-                                      return panel;
-                                    }
-                                    return PointerInterceptor(child: panel);
-                                  },
+                                      if (!kIsWeb ||
+                                          _functionsPanel ==
+                                              DesktopFunctionsPanel.none) {
+                                        return panel;
+                                      }
+                                      return PointerInterceptor(child: panel);
+                                    },
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
 
-                      // Primary navigation (must stay on the RIGHT).
-                      AnimatedBuilder(
-                        animation: _navExpandAnimation,
-                        builder: (context, child) {
-                          final expandedWidth = isLarge
-                              ? DesktopNavigation.expandedWidthLarge
-                              : DesktopNavigation.expandedWidthMedium;
-                          final collapsedWidth =
-                              DesktopNavigation.collapsedWidth;
-                          final currentWidth = collapsedWidth +
-                              (expandedWidth - collapsedWidth) *
-                                  _navExpandAnimation.value;
+                        // Primary navigation (must stay on the RIGHT).
+                        AnimatedBuilder(
+                          animation: _navExpandAnimation,
+                          builder: (context, child) {
+                            final expandedWidth = isLarge
+                                ? DesktopNavigation.expandedWidthLarge
+                                : DesktopNavigation.expandedWidthMedium;
+                            final collapsedWidth =
+                                DesktopNavigation.collapsedWidth;
+                            final currentWidth = collapsedWidth +
+                                (expandedWidth - collapsedWidth) *
+                                    _navExpandAnimation.value;
 
-                          final scheme = theme.colorScheme;
-                          final glassTint = theme.brightness == Brightness.dark
-                              ? Colors.black.withValues(alpha: 0.22)
-                              : Colors.white.withValues(alpha: 0.26);
+                            final scheme = theme.colorScheme;
+                            final glassTint =
+                                theme.brightness == Brightness.dark
+                                    ? Colors.black.withValues(alpha: 0.22)
+                                    : Colors.white.withValues(alpha: 0.26);
 
-                          return ClipRRect(
-                            child: Container(
-                              width: currentWidth,
-                              decoration: BoxDecoration(
-                                border: Border(
-                                  left: BorderSide(
-                                    color: theme.brightness == Brightness.dark
-                                        ? Colors.white.withValues(alpha: 0.06)
-                                        : scheme.outline
-                                            .withValues(alpha: 0.15),
-                                    width: 1,
+                            return ClipRRect(
+                              child: Container(
+                                width: currentWidth,
+                                decoration: BoxDecoration(
+                                  border: Border(
+                                    left: BorderSide(
+                                      color: theme.brightness == Brightness.dark
+                                          ? Colors.white.withValues(alpha: 0.06)
+                                          : scheme.outline
+                                              .withValues(alpha: 0.15),
+                                      width: 1,
+                                    ),
+                                  ),
+                                ),
+                                child: LiquidGlassPanel(
+                                  padding: EdgeInsets.zero,
+                                  margin: EdgeInsets.zero,
+                                  borderRadius: BorderRadius.zero,
+                                  blurSigma: KubusGlassEffects.blurSigmaLight,
+                                  showBorder: false,
+                                  backgroundColor: glassTint,
+                                  child: DesktopNavigation(
+                                    items: navItems,
+                                    selectedIndex:
+                                        selectedIndex < 0 ? 0 : selectedIndex,
+                                    onItemSelected: (index) =>
+                                        _onNavItemSelected(
+                                            index, navItems, isSignedIn),
+                                    isExpanded: _isNavigationExpanded,
+                                    expandAnimation: _navExpandAnimation,
+                                    onToggleExpand: _toggleNavigation,
+                                    onProfileTap: () =>
+                                        _showProfileMenu(context),
+                                    onSettingsTap: () =>
+                                        _showSettingsScreen(context),
+                                    onNotificationsTap: () =>
+                                        unawaited(_toggleNotificationsPanel()),
+                                    onWalletTap: () =>
+                                        _handleWalletTap(isSignedIn),
+                                    onCollabInvitesTap: isSignedIn &&
+                                            AppConfig.isFeatureEnabled(
+                                                'collabInvites')
+                                        ? () => _showCollabInvites()
+                                        : null,
                                   ),
                                 ),
                               ),
-                              child: LiquidGlassPanel(
-                                padding: EdgeInsets.zero,
-                                margin: EdgeInsets.zero,
-                                borderRadius: BorderRadius.zero,
-                                blurSigma: KubusGlassEffects.blurSigmaLight,
-                                showBorder: false,
-                                backgroundColor: glassTint,
-                                child: DesktopNavigation(
-                                  items: navItems,
-                                  selectedIndex:
-                                      selectedIndex < 0 ? 0 : selectedIndex,
-                                  onItemSelected: (index) => _onNavItemSelected(
-                                      index, navItems, isSignedIn),
-                                  isExpanded: _isNavigationExpanded,
-                                  expandAnimation: _navExpandAnimation,
-                                  onToggleExpand: _toggleNavigation,
-                                  onProfileTap: () => _showProfileMenu(context),
-                                  onSettingsTap: () =>
-                                      _showSettingsScreen(context),
-                                  onNotificationsTap: () =>
-                                      unawaited(_toggleNotificationsPanel()),
-                                  onWalletTap: () =>
-                                      _handleWalletTap(isSignedIn),
-                                  onCollabInvitesTap: isSignedIn &&
-                                          AppConfig.isFeatureEnabled(
-                                              'collabInvites')
-                                      ? () => _showCollabInvites()
-                                      : null,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+                            );
+                          },
+                        ),
                       ],
                     ),
                   ),

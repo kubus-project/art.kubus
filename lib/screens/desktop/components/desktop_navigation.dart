@@ -11,8 +11,9 @@ import '../../../config/config.dart';
 import '../../../widgets/avatar_widget.dart';
 import '../../../widgets/app_logo.dart';
 import '../../../utils/app_animations.dart';
-
 import '../../../utils/design_tokens.dart';
+import '../../../utils/kubus_labs_feature.dart';
+import '../../../widgets/common/kubus_labs_adornment.dart';
 
 /// Navigation item data model
 enum DesktopNavLabelKey {
@@ -55,6 +56,7 @@ class DesktopNavItem {
   final DesktopNavLabelKey labelKey;
   final String route;
   final int badgeCount;
+  final KubusLabsFeature? labsFeature;
 
   const DesktopNavItem({
     required this.icon,
@@ -62,6 +64,7 @@ class DesktopNavItem {
     required this.labelKey,
     required this.route,
     this.badgeCount = 0,
+    this.labsFeature,
   });
 }
 
@@ -203,15 +206,15 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
-                   Text(
-                     l10n.desktopNavigationSubtitle,
-                     style: KubusTypography.textTheme.bodySmall?.copyWith(
-                       color: Theme.of(context)
-                           .colorScheme
-                           .onSurface
-                           .withValues(alpha: 0.6),
-                     ),
-                   ),
+                  Text(
+                    l10n.desktopNavigationSubtitle,
+                    style: KubusTypography.textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.6),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -245,6 +248,11 @@ class _DesktopNavigationState extends State<DesktopNavigation>
     final isSelected = widget.selectedIndex == index;
     final isHovered = _hoveredIndex == index;
     final collapsedItemHorizontalPadding = 6.0;
+    final labsFeature = item.labsFeature;
+    final showInlineLabs =
+        widget.isExpanded && (labsFeature?.showLabsMarker ?? false);
+    final showCompactLabs =
+        !widget.isExpanded && (labsFeature?.showLabsMarker ?? false);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 1),
@@ -283,16 +291,37 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                   children: [
                     AnimatedSwitcher(
                       duration: animationTheme.short,
-                      child: Icon(
-                        isSelected ? item.activeIcon : item.icon,
+                      child: SizedBox(
                         key: ValueKey('${item.route}_$isSelected'),
-                        color: isSelected
-                            ? themeProvider.accentColor
-                            : Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.7),
-                        size: 24,
+                        width: 24,
+                        height: 24,
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Align(
+                              alignment: Alignment.center,
+                              child: Icon(
+                                isSelected ? item.activeIcon : item.icon,
+                                color: isSelected
+                                    ? themeProvider.accentColor
+                                    : Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.7),
+                                size: 24,
+                              ),
+                            ),
+                            if (showCompactLabs && labsFeature != null)
+                              Positioned(
+                                top: -4,
+                                right: -6,
+                                child: KubusLabsAdornment.compactOverlay(
+                                  feature: labsFeature,
+                                  emphasized: isSelected,
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
                     ),
                     if (widget.isExpanded) ...[
@@ -303,7 +332,8 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                           duration: const Duration(milliseconds: 150),
                           child: Text(
                             item.labelKey.resolve(l10n),
-                            style: KubusTypography.textTheme.bodyMedium?.copyWith(
+                            style:
+                                KubusTypography.textTheme.bodyMedium?.copyWith(
                               fontWeight: isSelected
                                   ? FontWeight.w600
                                   : FontWeight.w500,
@@ -314,6 +344,13 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                           ),
                         ),
                       ),
+                      if (showInlineLabs && labsFeature != null) ...[
+                        const SizedBox(width: KubusSpacing.xs),
+                        KubusLabsAdornment.inlinePill(
+                          feature: labsFeature,
+                          emphasized: isSelected,
+                        ),
+                      ],
                     ],
                     if (item.badgeCount > 0)
                       _buildBadge(item.badgeCount, themeProvider),
@@ -700,18 +737,19 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                             Row(
                               children: [
                                 Icon(
-                                   Icons.account_balance_wallet,
-                                   color: Colors.white,
-                                   size: 16,
-                                 ),
-                                  const SizedBox(width: 5),
-                                  Text(
-                                    AppLocalizations.of(context)!.walletHomeTitle,
-                                    style: KubusTypography.textTheme.labelSmall?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.white.withValues(alpha: 0.9),
-                                    ),
-                                 ),
+                                  Icons.account_balance_wallet,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  AppLocalizations.of(context)!.walletHomeTitle,
+                                  style: KubusTypography.textTheme.labelSmall
+                                      ?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white.withValues(alpha: 0.9),
+                                  ),
+                                ),
                               ],
                             ),
                             const SizedBox(height: 5),
@@ -726,7 +764,9 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                                     children: [
                                       Text(
                                         'KUB8',
-                                        style: KubusTypography.textTheme.bodySmall?.copyWith(
+                                        style: KubusTypography
+                                            .textTheme.bodySmall
+                                            ?.copyWith(
                                           fontSize: 10,
                                           color: Colors.white
                                               .withValues(alpha: 0.7),
@@ -734,7 +774,9 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                                       ),
                                       Text(
                                         kub8Balance.toStringAsFixed(2),
-                                        style: KubusTypography.textTheme.bodySmall?.copyWith(
+                                        style: KubusTypography
+                                            .textTheme.bodySmall
+                                            ?.copyWith(
                                           fontSize: 11,
                                           fontWeight: FontWeight.bold,
                                           color: Colors.white,
@@ -749,7 +791,9 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                                     children: [
                                       Text(
                                         'SOL',
-                                        style: KubusTypography.textTheme.bodySmall?.copyWith(
+                                        style: KubusTypography
+                                            .textTheme.bodySmall
+                                            ?.copyWith(
                                           fontSize: 10,
                                           color: Colors.white
                                               .withValues(alpha: 0.7),
@@ -757,7 +801,9 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                                       ),
                                       Text(
                                         solBalance.toStringAsFixed(3),
-                                        style: KubusTypography.textTheme.bodySmall?.copyWith(
+                                        style: KubusTypography
+                                            .textTheme.bodySmall
+                                            ?.copyWith(
                                           fontSize: 11,
                                           fontWeight: FontWeight.bold,
                                           color: Colors.white,
@@ -835,7 +881,8 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                           children: [
                             Text(
                               user?.displayName ??
-                                  AppLocalizations.of(context)!.profilePersonaArtEnthusiast,
+                                  AppLocalizations.of(context)!
+                                      .profilePersonaArtEnthusiast,
                               style: GoogleFonts.inter(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,

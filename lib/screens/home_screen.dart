@@ -1,4 +1,4 @@
-﻿import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -44,11 +44,12 @@ import '../utils/app_color_utils.dart';
 import '../utils/kubus_color_roles.dart';
 import '../utils/artwork_media_resolver.dart';
 import '../utils/design_tokens.dart';
+import '../utils/kubus_labs_feature.dart';
 import '../widgets/staggered_fade_slide.dart';
 import '../utils/artwork_navigation.dart';
 import '../widgets/glass_components.dart';
+import '../widgets/common/kubus_labs_adornment.dart';
 import '../widgets/support/support_section.dart';
- 
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -200,91 +201,95 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               // parts of the gradient.
               color: glassTint,
               child: SafeArea(
-                    bottom: false,
-                    child: Padding(
-                      padding: EdgeInsets.fromLTRB(
-                        isSmallScreen ? 16 : 24,
-                        8,
-                        isSmallScreen ? 16 : 24,
-                        8,
+                bottom: false,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    isSmallScreen ? 16 : 24,
+                    8,
+                    isSmallScreen ? 16 : 24,
+                    8,
+                  ),
+                  child: Row(
+                    children: [
+                      // Logo and app name
+                      AppLogo(
+                        width: isSmallScreen ? 36 : 40,
+                        height: isSmallScreen ? 36 : 40,
                       ),
-                      child: Row(
-                        children: [
-                          // Logo and app name
-                          AppLogo(
-                            width: isSmallScreen ? 36 : 40,
-                            height: isSmallScreen ? 36 : 40,
-                          ),
-                          SizedBox(width: isSmallScreen ? 8 : 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'art.kubus',
-                                  style: GoogleFonts.inter(
-                                    fontSize: isSmallScreen ? 16 : 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: scheme.onSurface,
+                      SizedBox(width: isSmallScreen ? 8 : 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'art.kubus',
+                              style: GoogleFonts.inter(
+                                fontSize: isSmallScreen ? 16 : 18,
+                                fontWeight: FontWeight.bold,
+                                color: scheme.onSurface,
+                              ),
+                            ),
+                            if (web3Provider.isConnected) ...[
+                              Text(
+                                web3Provider
+                                    .formatAddress(web3Provider.walletAddress),
+                                style: GoogleFonts.robotoMono(
+                                  fontSize: isSmallScreen ? 10 : 12,
+                                  color:
+                                      scheme.onSurface.withValues(alpha: 0.6),
+                                ),
+                              ),
+                              Container(
+                                margin:
+                                    EdgeInsets.only(top: isSmallScreen ? 2 : 4),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: isSmallScreen ? 6 : 8,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: Colors.orange.withValues(alpha: 0.3),
+                                    width: 1,
                                   ),
                                 ),
-                                if (web3Provider.isConnected) ...[
-                                  Text(
-                                    web3Provider.formatAddress(web3Provider.walletAddress),
-                                    style: GoogleFonts.robotoMono(
-                                      fontSize: isSmallScreen ? 10 : 12,
-                                      color: scheme.onSurface.withValues(alpha: 0.6),
-                                    ),
+                                child: Text(
+                                  'DEVNET',
+                                  style: GoogleFonts.inter(
+                                    fontSize: isSmallScreen ? 8 : 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.orange,
                                   ),
-                                  Container(
-                                    margin: EdgeInsets.only(top: isSmallScreen ? 2 : 4),
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: isSmallScreen ? 6 : 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.orange.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: Colors.orange.withValues(alpha: 0.3),
-                                        width: 1,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      'DEVNET',
-                                      style: GoogleFonts.inter(
-                                        fontSize: isSmallScreen ? 8 : 10,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.orange,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                          // Notification bell
-                          Consumer<NotificationProvider>(
-                            builder: (context, np, _) => TopBarIcon(
-                              tooltip: l10n.commonNotifications,
-                              icon: Icon(
-                                Icons.notifications_outlined,
-                                color: scheme.onSurface,
-                                size: isSmallScreen ? 22 : 26,
+                                ),
                               ),
-                              onPressed: () {
-                                _showNotificationsBottomSheet(context);
-                              },
-                              badgeCount: np.unreadCount,
-                              badgeColor: Provider.of<ThemeProvider>(context).accentColor,
-                            ),
-                          ),
-                        ],
+                            ],
+                          ],
+                        ),
                       ),
-                    ),
+                      // Notification bell
+                      Consumer<NotificationProvider>(
+                        builder: (context, np, _) => TopBarIcon(
+                          tooltip: l10n.commonNotifications,
+                          icon: Icon(
+                            Icons.notifications_outlined,
+                            color: scheme.onSurface,
+                            size: isSmallScreen ? 22 : 26,
+                          ),
+                          onPressed: () {
+                            _showNotificationsBottomSheet(context);
+                          },
+                          badgeCount: np.unreadCount,
+                          badgeColor:
+                              Provider.of<ThemeProvider>(context).accentColor,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+              ),
+            ),
           );
         },
       ),
@@ -523,11 +528,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         final theme = Theme.of(context);
         final scheme = theme.colorScheme;
         final isDark = theme.brightness == Brightness.dark;
-        final glassTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
+        final glassTint =
+            scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
         final frequentScreens =
             navigationProvider.getQuickActionScreens(maxItems: 12);
         final persona = profileProvider.userPersona;
-        final suggestedKeys = _suggestedQuickActionKeys(persona, profileProvider.currentUser)
+        final suggestedKeys = _suggestedQuickActionKeys(
+                persona, profileProvider.currentUser)
             .where(
                 (key) => NavigationProvider.screenDefinitions.containsKey(key))
             .toList(growable: false);
@@ -650,7 +657,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  List<String> _suggestedQuickActionKeys(UserPersona? persona, UserProfile? currentUser) {
+  List<String> _suggestedQuickActionKeys(
+      UserPersona? persona, UserProfile? currentUser) {
     // Base suggestions by persona
     List<String> suggestions;
     switch (persona) {
@@ -675,13 +683,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     if (isArtist && isInstitution) {
       // Both badges are active - hide institution_hub, keep studio
-      suggestions = suggestions.where((key) => key != 'institution_hub').toList();
+      suggestions =
+          suggestions.where((key) => key != 'institution_hub').toList();
     } else if (isInstitution && !isArtist) {
       // Only institution badge is active - hide studio
       suggestions = suggestions.where((key) => key != 'studio').toList();
     } else if (isArtist && !isInstitution) {
       // Only artist badge is active - hide institution_hub
-      suggestions = suggestions.where((key) => key != 'institution_hub').toList();
+      suggestions =
+          suggestions.where((key) => key != 'institution_hub').toList();
     }
 
     return suggestions;
@@ -824,7 +834,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return Consumer2<ProfileProvider, StatsProvider>(
       builder: (context, profileProvider, statsProvider, child) {
         final l10n = AppLocalizations.of(context)!;
-        final wallet = (profileProvider.currentUser?.walletAddress ?? '').trim();
+        final wallet =
+            (profileProvider.currentUser?.walletAddress ?? '').trim();
 
         if (wallet.isEmpty) {
           return Column(
@@ -885,6 +896,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           if (error != null) return 'â€”';
           return '0';
         }
+
         final stats = [
           ('artworks', displayCounter('artworks'), Icons.image),
           ('followers', displayCounter('followers'), Icons.people),
@@ -977,7 +989,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       builder: (context, constraints) {
         final isSmallScreen = constraints.maxWidth < 375;
         final radius = BorderRadius.circular(isSmallScreen ? 10 : 12);
-        final glassTint = scheme.surface.withValues(alpha: isDark ? 0.18 : 0.12);
+        final glassTint =
+            scheme.surface.withValues(alpha: isDark ? 0.18 : 0.12);
 
         return Container(
           width: isVerticalLayout ? double.infinity : null,
@@ -1195,7 +1208,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   child: _buildWeb3Card(
                     l10n.homeWeb3DaoTitle,
                     l10n.homeWeb3DaoSubtitle,
-                    Icons.how_to_vote,
+                    KubusLabsFeature.dao.screenIcon,
                     KubusColorRoles.of(context).web3DaoAccent,
                     isEffectivelyConnected
                         ? () => Navigator.push(
@@ -1205,6 +1218,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             )
                         : () => _showWalletOnboarding(context),
                     isLocked: !isEffectivelyConnected,
+                    labsFeature: KubusLabsFeature.dao,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1250,7 +1264,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   child: _buildWeb3Card(
                     l10n.homeWeb3MarketplaceTitle,
                     l10n.homeWeb3MarketplaceSubtitle,
-                    Icons.store,
+                    KubusLabsFeature.marketplace.screenIcon,
                     KubusColorRoles.of(context).web3MarketplaceAccent,
                     isEffectivelyConnected
                         ? () => Navigator.push(
@@ -1260,6 +1274,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             )
                         : () => _showWalletOnboarding(context),
                     isLocked: !isEffectivelyConnected,
+                    labsFeature: KubusLabsFeature.marketplace,
                   ),
                 ),
               ],
@@ -1272,7 +1287,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Widget _buildWeb3Card(String title, String subtitle, IconData icon,
       Color color, VoidCallback onTap,
-      {bool isLocked = false}) {
+      {bool isLocked = false, KubusLabsFeature? labsFeature}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -1294,6 +1309,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ),
         child: Stack(
           children: [
+            if (labsFeature?.showLabsMarker ?? false)
+              Positioned(
+                top: 0,
+                left: 0,
+                child: KubusLabsAdornment.inlinePill(
+                  feature: labsFeature!,
+                  emphasized: !isLocked,
+                ),
+              ),
             // Use Center widget for perfect centering when unlocked
             if (!isLocked)
               Center(
@@ -2004,9 +2028,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     Navigator.pushReplacementNamed(context, '/main');
   }
 
-    void _showArtworkDetail(Artwork artwork) {
-      openArtwork(context, artwork.id, source: 'home');
-    }
+  void _showArtworkDetail(Artwork artwork) {
+    openArtwork(context, artwork.id, source: 'home');
+  }
 
   void _showStatsDialog(String statType, IconData icon) {
     final l10n = AppLocalizations.of(context)!;
@@ -2029,10 +2053,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
           content: SizedBox(
             width: double.maxFinite,
-             height: 400,
-             child: SingleChildScrollView(
-               child: Column(
-                 children: [
+            height: 400,
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
                   Consumer<StatsProvider>(
                     builder: (context, statsProvider, _) {
                       final accent =
@@ -2080,7 +2104,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       final now = DateTime.now().toUtc();
                       final today = DateTime.utc(now.year, now.month, now.day);
                       final currentTo = today.add(const Duration(days: 1));
-                      final currentFrom = currentTo.subtract(const Duration(days: 7));
+                      final currentFrom =
+                          currentTo.subtract(const Duration(days: 7));
 
                       statsProvider.ensureSeries(
                         entityType: 'user',
@@ -2161,20 +2186,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         (i) => today.subtract(Duration(days: 6 - i)),
                       );
                       final valuesByDay = <String, int>{};
-                      for (final point in series?.series ?? const <StatsSeriesPoint>[]) {
+                      for (final point
+                          in series?.series ?? const <StatsSeriesPoint>[]) {
                         final dt = point.t.toUtc();
                         final key =
                             '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
                         valuesByDay[key] = (valuesByDay[key] ?? 0) + point.v;
                       }
 
-                      final data = buckets
-                          .map((d) {
-                            final key =
-                                '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-                            return (valuesByDay[key] ?? 0).toDouble();
-                          })
-                          .toList(growable: false);
+                      final data = buckets.map((d) {
+                        final key =
+                            '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+                        return (valuesByDay[key] ?? 0).toDouble();
+                      }).toList(growable: false);
 
                       String weekdayLabel(int weekday) {
                         switch (weekday) {

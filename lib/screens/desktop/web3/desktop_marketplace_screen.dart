@@ -6,10 +6,12 @@ import '../../../providers/collectibles_provider.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../utils/app_animations.dart';
+import '../../../utils/kubus_labs_feature.dart';
 import '../../../utils/marketplace_value_formatter.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../widgets/artwork_creator_byline.dart';
+import '../../../widgets/common/kubus_labs_adornment.dart';
 import '../../../widgets/detail/detail_shell_components.dart';
 import '../../../widgets/glass_components.dart';
 import '../components/desktop_widgets.dart';
@@ -135,9 +137,19 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
       padding: EdgeInsets.all(DetailSpacing.xl),
       child: Row(
         children: [
-          Text(
-            'Marketplace',
-            style: DetailTypography.screenTitle(context),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'NFT Marketplace',
+                style: DetailTypography.screenTitle(context),
+              ),
+              const SizedBox(width: KubusSpacing.sm),
+              const KubusLabsAdornment.inlinePill(
+                feature: KubusLabsFeature.marketplace,
+                emphasized: true,
+              ),
+            ],
           ),
           const Spacer(),
           SizedBox(

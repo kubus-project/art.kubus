@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -16,9 +16,10 @@ import '../../../utils/wallet_utils.dart';
 import '../../../config/config.dart';
 import '../../../utils/app_color_utils.dart';
 import '../../../utils/kubus_color_roles.dart';
+import '../../../utils/kubus_labs_feature.dart';
 import '../../../utils/design_tokens.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
- 
+import 'package:art_kubus/widgets/common/kubus_labs_adornment.dart';
 
 class GovernanceHub extends StatefulWidget {
   final ValueNotifier<int>? selectedIndexNotifier;
@@ -139,14 +140,26 @@ class _GovernanceHubState extends State<GovernanceHub>
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
-        title: Text(
-          l10n.daoHubAppBarTitle,
-          style: GoogleFonts.inter(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-          overflow: TextOverflow.ellipsis,
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                l10n.daoHubAppBarTitle,
+                style: GoogleFonts.inter(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: KubusSpacing.sm),
+            const KubusLabsAdornment.inlinePill(
+              feature: KubusLabsFeature.dao,
+              emphasized: true,
+            ),
+          ],
         ),
         actions: [
           IconButton(
@@ -200,24 +213,28 @@ class _GovernanceHubState extends State<GovernanceHub>
         final activeProposals =
             daoProvider.getActiveProposals().length.toString();
         final totalMembers = daoProvider.delegates.length.toString();
+        final accent = KubusLabsFeature.dao.accent(_roles);
 
         return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          padding: const EdgeInsets.all(20),
+          margin: const EdgeInsets.symmetric(
+            horizontal: KubusSpacing.md,
+            vertical: KubusSpacing.sm,
+          ),
+          padding: const EdgeInsets.all(KubusSpacing.lg - KubusSpacing.xs),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
+            gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Color.fromARGB(255, 6, 215, 37),
-                Color.fromARGB(255, 5, 112, 87)
+                accent,
+                accent.withValues(alpha: 0.76),
               ],
             ),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius:
+                BorderRadius.circular(KubusRadius.lg + KubusRadius.xs),
             boxShadow: [
               BoxShadow(
-                color: const Color.fromARGB(255, 4, 236, 124)
-                    .withValues(alpha: 0.3),
+                color: accent.withValues(alpha: 0.28),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -234,8 +251,8 @@ class _GovernanceHubState extends State<GovernanceHub>
                       color: Colors.white.withValues(alpha: 0.25),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: const Icon(
-                      Icons.how_to_vote,
+                    child: Icon(
+                      KubusLabsFeature.dao.screenIcon,
                       color: Colors.white,
                       size: 30,
                     ),
@@ -245,13 +262,24 @@ class _GovernanceHubState extends State<GovernanceHub>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'art.kubus DAO',
-                          style: GoogleFonts.inter(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
+                        Wrap(
+                          spacing: KubusSpacing.sm,
+                          runSpacing: KubusSpacing.xs,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(
+                              'art.kubus DAO',
+                              style: GoogleFonts.inter(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const KubusLabsAdornment.inlinePill(
+                              feature: KubusLabsFeature.dao,
+                              emphasized: true,
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -269,32 +297,32 @@ class _GovernanceHubState extends State<GovernanceHub>
                 ],
               ),
               const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildStatCard(
-                        l10n.daoHubStatYourVotingPowerLabel,
-                        votingPower,
-                      ),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildStatCard(
+                      l10n.daoHubStatYourVotingPowerLabel,
+                      votingPower,
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _buildStatCard(
-                        l10n.daoHubStatActiveProposalsLabel,
-                        activeProposals,
-                      ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildStatCard(
+                      l10n.daoHubStatActiveProposalsLabel,
+                      activeProposals,
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _buildStatCard(
-                        l10n.daoHubStatTotalDelegatesLabel,
-                        totalMembers,
-                      ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildStatCard(
+                      l10n.daoHubStatTotalDelegatesLabel,
+                      totalMembers,
                     ),
-                  ],
-                ),
-              ],
-            ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         );
       },
     );
@@ -381,9 +409,11 @@ class _GovernanceHubState extends State<GovernanceHub>
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
-              _buildTabButton(l10n.daoHubTabActiveProposals, Icons.how_to_vote, 0),
+              _buildTabButton(
+                  l10n.daoHubTabActiveProposals, Icons.how_to_vote, 0),
               _buildTabButton(l10n.daoHubTabVotingHistory, Icons.history, 1),
-              _buildTabButton(l10n.daoHubTabCreateProposal, Icons.add_circle_outline, 2),
+              _buildTabButton(
+                  l10n.daoHubTabCreateProposal, Icons.add_circle_outline, 2),
               _buildTabButton(l10n.daoHubTabTreasury, Icons.account_balance, 3),
               _buildTabButton(l10n.daoHubTabDelegation, Icons.people, 4),
             ],
@@ -1081,7 +1111,10 @@ class _GovernanceHubState extends State<GovernanceHub>
             proposal.description,
             style: GoogleFonts.inter(
               fontSize: 14,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.78),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.78),
               height: 1.4,
             ),
           ),
@@ -1098,7 +1131,10 @@ class _GovernanceHubState extends State<GovernanceHub>
                     ),
                     style: GoogleFonts.inter(
                       fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.6),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -1253,7 +1289,8 @@ class _GovernanceHubState extends State<GovernanceHub>
               final resultLabel = vote['resultLabel']?.toString() ?? '';
               final dateLabel = vote['date']?.toString() ?? '';
               final yourVoteLabel = vote['vote']?.toString() ?? '';
-              final participationLabel = vote['participation']?.toString() ?? '';
+              final participationLabel =
+                  vote['participation']?.toString() ?? '';
               final yourPowerLabel = vote['yourPower']?.toString() ?? '';
               final isPassing = vote['isPassing'] == true;
               final accent =
@@ -1264,7 +1301,8 @@ class _GovernanceHubState extends State<GovernanceHub>
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: scheme.outline.withValues(alpha: 0.25)),
+                  border:
+                      Border.all(color: scheme.outline.withValues(alpha: 0.25)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1305,12 +1343,16 @@ class _GovernanceHubState extends State<GovernanceHub>
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        _buildHistoryInfo(l10n.daoVotingHistoryInfoDateLabel, dateLabel),
-                        const SizedBox(width: 24),
-                        _buildHistoryInfo(l10n.daoVotingHistoryInfoYourVoteLabel, yourVoteLabel),
+                        _buildHistoryInfo(
+                            l10n.daoVotingHistoryInfoDateLabel, dateLabel),
                         const SizedBox(width: 24),
                         _buildHistoryInfo(
-                            l10n.daoVotingHistoryInfoParticipationLabel, participationLabel),
+                            l10n.daoVotingHistoryInfoYourVoteLabel,
+                            yourVoteLabel),
+                        const SizedBox(width: 24),
+                        _buildHistoryInfo(
+                            l10n.daoVotingHistoryInfoParticipationLabel,
+                            participationLabel),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -1437,46 +1479,49 @@ class _GovernanceHubState extends State<GovernanceHub>
     int maxLines = 1,
     TextInputType? keyboardType,
   }) {
-     final scheme = Theme.of(context).colorScheme;
-     return Column(
-       crossAxisAlignment: CrossAxisAlignment.start,
-       children: [
-         Text(
-           label,
-           style: GoogleFonts.inter(
-             fontSize: 14,
-             fontWeight: FontWeight.w600,
-             color: scheme.onSurface,
-           ),
-         ),
-         const SizedBox(height: 8),
-         TextField(
-           controller: controller,
-           maxLines: maxLines,
-           keyboardType: keyboardType,
-           style: TextStyle(color: scheme.onSurface),
-           decoration: InputDecoration(
-             hintText: hint,
-             hintStyle: TextStyle(color: scheme.onSurface.withValues(alpha: 0.45)),
-             filled: true,
-             fillColor: scheme.surfaceContainerHighest,
-             border: OutlineInputBorder(
-               borderRadius: BorderRadius.circular(12),
-               borderSide: BorderSide(color: scheme.outline.withValues(alpha: 0.25)),
-             ),
-             enabledBorder: OutlineInputBorder(
-               borderRadius: BorderRadius.circular(12),
-               borderSide: BorderSide(color: scheme.outline.withValues(alpha: 0.25)),
-             ),
-             focusedBorder: OutlineInputBorder(
-               borderRadius: BorderRadius.circular(12),
-               borderSide: BorderSide(color: _daoAccent),
-             ),
-           ),
-         ),
-       ],
-     );
-   }
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: scheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          maxLines: maxLines,
+          keyboardType: keyboardType,
+          style: TextStyle(color: scheme.onSurface),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle:
+                TextStyle(color: scheme.onSurface.withValues(alpha: 0.45)),
+            filled: true,
+            fillColor: scheme.surfaceContainerHighest,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide:
+                  BorderSide(color: scheme.outline.withValues(alpha: 0.25)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide:
+                  BorderSide(color: scheme.outline.withValues(alpha: 0.25)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: _daoAccent),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
   Widget _buildCategorySelector() {
     final l10n = AppLocalizations.of(context)!;
@@ -2417,147 +2462,150 @@ class _GovernanceHubState extends State<GovernanceHub>
           final l10n = AppLocalizations.of(context)!;
           final scheme = Theme.of(context).colorScheme;
           return Container(
-          decoration: BoxDecoration(
-            color: scheme.surfaceContainerHighest,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: scheme.outline.withValues(alpha: 0.6),
-                        borderRadius: BorderRadius.circular(2),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerHighest,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: scheme.outline.withValues(alpha: 0.6),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      l10n.daoDelegationSelectDelegateTitle,
-                      style: GoogleFonts.inter(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: scheme.onSurface,
+                      const SizedBox(height: 16),
+                      Text(
+                        l10n.daoDelegationSelectDelegateTitle,
+                        style: GoogleFonts.inter(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: scheme.onSurface,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      l10n.daoDelegationSelectDelegateSubtitle,
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: scheme.onSurface.withValues(alpha: 0.7),
+                      const SizedBox(height: 8),
+                      Text(
+                        l10n.daoDelegationSelectDelegateSubtitle,
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          color: scheme.onSurface.withValues(alpha: 0.7),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              Expanded(
-                child: Consumer<DAOProvider>(
-                  builder: (context, daoProvider, child) {
-                    final delegates = daoProvider.delegates.take(10).toList();
+                Expanded(
+                  child: Consumer<DAOProvider>(
+                    builder: (context, daoProvider, child) {
+                      final delegates = daoProvider.delegates.take(10).toList();
 
-                    return ListView.builder(
-                      controller: scrollController,
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      itemCount: delegates.length,
-                      itemBuilder: (context, index) {
-                        final delegate = delegates[index];
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                              _delegateVote(delegate.name);
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: scheme.surfaceContainerHighest,
-                              foregroundColor: scheme.onSurface,
-                              padding: const EdgeInsets.all(16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    color: _daoAccent,
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      delegate.name
-                                          .substring(0, 1)
-                                          .toUpperCase(),
-                                      style: GoogleFonts.inter(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface,
-                                      ),
-                                    ),
-                                  ),
+                      return ListView.builder(
+                        controller: scrollController,
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        itemCount: delegates.length,
+                        itemBuilder: (context, index) {
+                          final delegate = delegates[index];
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            child: ElevatedButton(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                                _delegateVote(delegate.name);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: scheme.surfaceContainerHighest,
+                                foregroundColor: scheme.onSurface,
+                                padding: const EdgeInsets.all(16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        delegate.name,
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      color: _daoAccent,
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        delegate.name
+                                            .substring(0, 1)
+                                            .toUpperCase(),
                                         style: GoogleFonts.inter(
                                           fontSize: 16,
-                                          fontWeight: FontWeight.w600,
+                                          fontWeight: FontWeight.bold,
                                           color: Theme.of(context)
                                               .colorScheme
                                               .onSurface,
                                         ),
                                       ),
-                                      Text(
-                                        '${l10n.daoDelegationDelegatorsCountLabel(delegate.delegatorCount)} • ${l10n.daoDelegationParticipationRateLabel((delegate.participationRate * 100).toStringAsFixed(0))}',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 12,
-                                          color: scheme.onSurface.withValues(alpha: 0.7),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          delegate.name,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface,
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                        Text(
+                                          '${l10n.daoDelegationDelegatorsCountLabel(delegate.delegatorCount)} • ${l10n.daoDelegationParticipationRateLabel((delegate.participationRate * 100).toStringAsFixed(0))}',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 12,
+                                            color: scheme.onSurface
+                                                .withValues(alpha: 0.7),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                                Text(
-                                  '${(delegate.votingPower / 1000).toStringAsFixed(1)}K KUB8',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: scheme.primary,
+                                  Text(
+                                    '${(delegate.votingPower / 1000).toStringAsFixed(1)}K KUB8',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: scheme.primary,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 8),
-                                Icon(
-                                  Icons.arrow_forward_ios,
-                                  color: scheme.onSurface.withValues(alpha: 0.55),
-                                  size: 16,
-                                ),
-                              ],
+                                  const SizedBox(width: 8),
+                                  Icon(
+                                    Icons.arrow_forward_ios,
+                                    color: scheme.onSurface
+                                        .withValues(alpha: 0.55),
+                                    size: 16,
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        );
-                      },
-                    );
-                  },
+                          );
+                        },
+                      );
+                    },
+                  ),
                 ),
-              ),
-            ],
-          ),
-        );
+              ],
+            ),
+          );
         },
       ),
     );
@@ -2841,34 +2889,34 @@ class _GovernanceHubState extends State<GovernanceHub>
         final l10n = AppLocalizations.of(context)!;
         final scheme = Theme.of(context).colorScheme;
         return Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              l10n.daoHubInfoDialogTitle,
-              style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                l10n.daoHubInfoDialogTitle,
+                style: GoogleFonts.inter(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              l10n.daoHubInfoDialogBody,
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: scheme.onSurface.withValues(alpha: 0.7),
-                height: 1.4,
+              const SizedBox(height: 16),
+              Text(
+                l10n.daoHubInfoDialogBody,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: scheme.onSurface.withValues(alpha: 0.7),
+                  height: 1.4,
+                ),
               ),
-            ),
-          ],
-        ),
-      );
+            ],
+          ),
+        );
       },
     );
   }
