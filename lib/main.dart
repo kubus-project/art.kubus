@@ -202,6 +202,10 @@ class _UnhandledErrorDedupe {
 
 SemanticsHandle? _webSemanticsHandle;
 RawReceivePort? _isolateErrorPort;
+const bool _enableWebSemantics = bool.fromEnvironment(
+  'KUBUS_ENABLE_WEB_SEMANTICS',
+  defaultValue: false,
+);
 
 void main() {
   // We'll initialize the bindings inside the runZonedGuarded callback so the
@@ -251,9 +255,10 @@ void main() {
       try {
         // Initialize Flutter bindings in the guarded zone.
         WidgetsFlutterBinding.ensureInitialized();
-        if (kIsWeb) {
-          // Keep web semantics enabled so Playwright can target UI elements
-          // via Semantics labels in release builds.
+        if (kIsWeb && _enableWebSemantics) {
+          // Opt in only for dedicated automation runs. Leaving semantics forced
+          // on in production can place a Flutter overlay above DOM-backed
+          // platform views such as the Google Sign-In web button.
           _webSemanticsHandle ??= WidgetsBinding.instance.ensureSemantics();
         }
 

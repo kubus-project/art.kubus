@@ -203,12 +203,42 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Prepare web Google Sign-In config
+        if: ${{ steps.sftp.outputs.ok == 'true' && steps.deploy_target.outputs.ok == 'true' && steps.net.outputs.sftp_ok == 'true' }}
+        shell: bash
+        env:
+          KUBUS_GOOGLE_WEB_CLIENT_ID: ${{ secrets.KUBUS_GOOGLE_WEB_CLIENT_ID || vars.KUBUS_GOOGLE_WEB_CLIENT_ID }}
+        run: |
+          if [ -z "${KUBUS_GOOGLE_WEB_CLIENT_ID:-}" ]; then
+            echo "KUBUS_GOOGLE_WEB_CLIENT_ID must be configured for web deploys." >&2
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          import os
+          import pathlib
+          import re
+          import sys
+
+          path = pathlib.Path("web/index.html")
+          client_id = os.environ["KUBUS_GOOGLE_WEB_CLIENT_ID"]
+          text = path.read_text(encoding="utf-8")
+          pattern = r'(<meta name="google-signin-client_id" content=")[^"]*(">)'
+          updated, count = re.subn(pattern, rf'\1{client_id}\2', text, count=1)
+          if count != 1:
+            sys.exit("google-signin-client_id meta tag not found in web/index.html")
+          path.write_text(updated, encoding="utf-8")
+          PY
+
       - name: Prepare Dart defines (optional)
         id: defines
         if: ${{ steps.sftp.outputs.ok == 'true' && steps.deploy_target.outputs.ok == 'true' && steps.net.outputs.sftp_ok == 'true' }}
         shell: bash
         env:
           KUBUS_BACKEND_URL: ${{ secrets.KUBUS_BACKEND_URL }}
+          KUBUS_GOOGLE_CLIENT_ID: ${{ secrets.KUBUS_GOOGLE_CLIENT_ID || vars.KUBUS_GOOGLE_CLIENT_ID }}
+          KUBUS_GOOGLE_WEB_CLIENT_ID: ${{ secrets.KUBUS_GOOGLE_WEB_CLIENT_ID || vars.KUBUS_GOOGLE_WEB_CLIENT_ID }}
+          KUBUS_GOOGLE_IOS_CLIENT_ID: ${{ secrets.KUBUS_GOOGLE_IOS_CLIENT_ID || vars.KUBUS_GOOGLE_IOS_CLIENT_ID }}
           KUBUS_WALLETCONNECT_PROJECT_ID: ${{ secrets.KUBUS_WALLETCONNECT_PROJECT_ID }}
           KUBUS_PINATA_API_KEY: ${{ secrets.KUBUS_PINATA_API_KEY }}
           KUBUS_PINATA_SECRET_KEY: ${{ secrets.KUBUS_PINATA_SECRET_KEY }}
@@ -222,6 +252,10 @@ jobs:
             fi
           }
           add KUBUS_BACKEND_URL "$KUBUS_BACKEND_URL"
+          add KUBUS_GOOGLE_CLIENT_ID "$KUBUS_GOOGLE_CLIENT_ID"
+          add KUBUS_GOOGLE_WEB_CLIENT_ID "$KUBUS_GOOGLE_WEB_CLIENT_ID"
+          add KUBUS_GOOGLE_IOS_CLIENT_ID "$KUBUS_GOOGLE_IOS_CLIENT_ID"
+          add KUBUS_ENABLE_WEB_SEMANTICS "false"
           add KUBUS_WALLETCONNECT_PROJECT_ID "$KUBUS_WALLETCONNECT_PROJECT_ID"
           add KUBUS_PINATA_API_KEY "$KUBUS_PINATA_API_KEY"
           add KUBUS_PINATA_SECRET_KEY "$KUBUS_PINATA_SECRET_KEY"

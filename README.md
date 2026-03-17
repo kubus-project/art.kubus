@@ -85,3 +85,21 @@ For contribution workflow and support, see `CONTRIBUTING.md`, `SECURITY.md`, `SU
 ---
 
 ## Getting Started
+
+### Google Sign-In configuration
+
+Google Sign-In uses separate frontend and backend configuration surfaces:
+
+- Frontend Flutter web build-time defines:
+  - `KUBUS_GOOGLE_WEB_CLIENT_ID`
+  - `KUBUS_GOOGLE_CLIENT_ID`
+  - `KUBUS_GOOGLE_IOS_CLIENT_ID`
+- Backend runtime environment:
+  - `GOOGLE_WEB_CLIENT_ID`
+  - `GOOGLE_CLIENT_ID`
+  - `GOOGLE_IOS_CLIENT_ID`
+  - `GOOGLE_CLIENT_IDS`
+
+The web deploy workflow rewrites the `google-signin-client_id` meta tag in `web/index.html` from `KUBUS_GOOGLE_WEB_CLIENT_ID` and passes the same value to `flutter build web` via `--dart-define`, so the HTML bootstrap and Flutter runtime stay aligned.
+
+When Google auth is enabled on the backend, `GOOGLE_CLIENT_IDS` should include every client ID the frontend can mint tokens for, including the active web client ID. At minimum, authorize `https://app.kubus.site` in Google Cloud for the production web client, and add `http://localhost:8080` if that remains the local web origin.

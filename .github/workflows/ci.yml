@@ -78,10 +78,31 @@ jobs:
         shell: bash
         env:
           KUBUS_BACKEND_URL: ${{ secrets.KUBUS_BACKEND_URL }}
+          KUBUS_GOOGLE_CLIENT_ID: ${{ secrets.KUBUS_GOOGLE_CLIENT_ID || vars.KUBUS_GOOGLE_CLIENT_ID }}
+          KUBUS_GOOGLE_WEB_CLIENT_ID: ${{ secrets.KUBUS_GOOGLE_WEB_CLIENT_ID || vars.KUBUS_GOOGLE_WEB_CLIENT_ID }}
+          KUBUS_GOOGLE_IOS_CLIENT_ID: ${{ secrets.KUBUS_GOOGLE_IOS_CLIENT_ID || vars.KUBUS_GOOGLE_IOS_CLIENT_ID }}
           KUBUS_WALLETCONNECT_PROJECT_ID: ${{ secrets.KUBUS_WALLETCONNECT_PROJECT_ID }}
           KUBUS_PINATA_API_KEY: ${{ secrets.KUBUS_PINATA_API_KEY }}
           KUBUS_PINATA_SECRET_KEY: ${{ secrets.KUBUS_PINATA_SECRET_KEY }}
         run: |
+          if [ -n "${KUBUS_GOOGLE_WEB_CLIENT_ID:-}" ]; then
+            python3 - <<'PY'
+            import os
+            import pathlib
+            import re
+            import sys
+
+            path = pathlib.Path("web/index.html")
+            client_id = os.environ["KUBUS_GOOGLE_WEB_CLIENT_ID"]
+            text = path.read_text(encoding="utf-8")
+            pattern = r'(<meta name="google-signin-client_id" content=")[^"]*(">)'
+            updated, count = re.subn(pattern, rf'\1{client_id}\2', text, count=1)
+            if count != 1:
+              sys.exit("google-signin-client_id meta tag not found in web/index.html")
+            path.write_text(updated, encoding="utf-8")
+            PY
+          fi
+
           ARGS=""
           add() {
             local name="$1"
@@ -91,6 +112,10 @@ jobs:
             fi
           }
           add KUBUS_BACKEND_URL "$KUBUS_BACKEND_URL"
+          add KUBUS_GOOGLE_CLIENT_ID "$KUBUS_GOOGLE_CLIENT_ID"
+          add KUBUS_GOOGLE_WEB_CLIENT_ID "$KUBUS_GOOGLE_WEB_CLIENT_ID"
+          add KUBUS_GOOGLE_IOS_CLIENT_ID "$KUBUS_GOOGLE_IOS_CLIENT_ID"
+          add KUBUS_ENABLE_WEB_SEMANTICS "false"
           add KUBUS_WALLETCONNECT_PROJECT_ID "$KUBUS_WALLETCONNECT_PROJECT_ID"
           add KUBUS_PINATA_API_KEY "$KUBUS_PINATA_API_KEY"
           add KUBUS_PINATA_SECRET_KEY "$KUBUS_PINATA_SECRET_KEY"
