@@ -108,10 +108,10 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     _loadSettings();
   }
 
-  String get _secureAccountSubtitle =>
+  String _secureAccountSubtitle(AppLocalizations l10n) =>
       _secureAccountHasEmail && !_secureAccountHasPassword
-          ? 'Add a password for recovery'
-          : 'Add email + password for recovery';
+          ? l10n.authSecureAccountSettingsAddPasswordSubtitle
+          : l10n.authSecureAccountSettingsAddEmailPasswordSubtitle;
 
   Future<void> _loadSettings() async {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
@@ -2910,8 +2910,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             child: Column(
               children: [
                 _buildSettingsRow(
-                  'Secure account',
-                  _secureAccountSubtitle,
+                  l10n.authSecureAccountTitle,
+                  _secureAccountSubtitle(l10n),
                   Icons.verified_user_outlined,
                   trailing: const EmailVerificationStatusBadge(
                     dense: true,

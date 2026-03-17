@@ -1,3 +1,4 @@
+import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:flutter/material.dart';
@@ -25,7 +26,9 @@ Future<void> maybeShowGooglePasswordUpgradePrompt(
   BuildContext context,
   Map<String, dynamic> payload,
 ) async {
-  if (!shouldPromptForGooglePasswordUpgrade(payload) || !context.mounted) {
+  if (!AppConfig.isFeatureEnabled('emailAuth') ||
+      !shouldPromptForGooglePasswordUpgrade(payload) ||
+      !context.mounted) {
     return;
   }
 
@@ -36,14 +39,14 @@ Future<void> maybeShowGooglePasswordUpgradePrompt(
     builder: (dialogContext) => KubusAlertDialog(
       backgroundColor: scheme.surface,
       title: Text(
-        'Add a password',
+        l10n.authSecureAccountAddPasswordTitle,
         style: GoogleFonts.inter(
           color: scheme.onSurface,
           fontWeight: FontWeight.w800,
         ),
       ),
       content: Text(
-        'Your Google account is ready. Add a password now so you can recover this account even without Google.',
+        l10n.authSecureAccountPromptAddPasswordBody,
         style: GoogleFonts.inter(
           color: scheme.onSurface.withValues(alpha: 0.78),
           height: 1.4,

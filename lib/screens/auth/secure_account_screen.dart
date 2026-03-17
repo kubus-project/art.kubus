@@ -168,7 +168,7 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
         _clearErrors();
         _applyStatus(securityStatus);
         messenger.showKubusSnackBar(
-          const SnackBar(content: Text('Password added to your account.')),
+          SnackBar(content: Text(l10n.authSecureAccountPasswordAddedToast)),
         );
       } else {
         final walletAddress = _resolveWalletAddress();
@@ -282,7 +282,7 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Verification email sent',
+          l10n.authSecureAccountVerificationSentTitle,
           textAlign: TextAlign.center,
           style: GoogleFonts.inter(
             fontSize: 22,
@@ -292,7 +292,7 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
         ),
         const SizedBox(height: KubusSpacing.sm),
         Text(
-          'You’re still signed in. Verify when you can.',
+          l10n.authSecureAccountVerificationSentSubtitle,
           textAlign: TextAlign.center,
           style: GoogleFonts.inter(
             fontSize: 14,
@@ -332,7 +332,7 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Account secured',
+          l10n.authSecureAccountSecuredTitle,
           textAlign: TextAlign.center,
           style: GoogleFonts.inter(
             fontSize: 22,
@@ -343,8 +343,8 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
         const SizedBox(height: KubusSpacing.sm),
         Text(
           _emailVerified
-              ? 'Your email and password are ready for recovery sign-in.'
-              : 'Your password is set. Verify your email to finish securing this account.',
+              ? l10n.authSecureAccountSecuredVerifiedSubtitle
+              : l10n.authSecureAccountSecuredUnverifiedSubtitle,
           textAlign: TextAlign.center,
           style: GoogleFonts.inter(
             fontSize: 14,
@@ -428,7 +428,9 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          passwordOnly ? 'Add a password' : 'Secure your account',
+          passwordOnly
+              ? l10n.authSecureAccountAddPasswordTitle
+              : l10n.authSecureAccountTitle,
           textAlign: TextAlign.center,
           style: GoogleFonts.inter(
             fontSize: 24,
@@ -439,8 +441,8 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
         const SizedBox(height: KubusSpacing.xs),
         Text(
           passwordOnly
-              ? 'Your signed-in email is already attached. Add a password for recovery without changing the Google sign-in.'
-              : 'Add email + password for recovery. Verification is last and non-blocking.',
+              ? l10n.authSecureAccountFormAddPasswordSubtitle
+              : l10n.authSecureAccountFormDefaultSubtitle,
           textAlign: TextAlign.center,
           style: GoogleFonts.inter(
             fontSize: 14,
@@ -457,7 +459,9 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
           emailController: _emailController,
           passwordController: _passwordController,
           confirmPasswordController: _confirmPasswordController,
-          submitLabel: passwordOnly ? 'Add password' : 'Secure account',
+            submitLabel: passwordOnly
+              ? l10n.authSecureAccountAddPasswordButton
+              : l10n.authSecureAccountButton,
           submittingLabel: l10n.commonWorking,
           icon: Icons.lock_outline,
           isSubmitting: _isSubmitting,

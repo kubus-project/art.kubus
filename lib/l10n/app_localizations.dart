@@ -62,43 +62,15 @@ import 'app_localizations_sl.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale) : localeName = _normalizeLocaleName(locale);
+  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
-
-  static const String fallbackLocaleName = 'sl';
-  static const Set<String> _supportedLanguageCodes = <String>{'en', 'sl'};
-
-  static String _normalizeLocaleName(Object? locale) {
-    final raw = locale?.toString().trim() ?? '';
-    if (raw.isEmpty) {
-      return fallbackLocaleName;
-    }
-
-    final lowered = raw.toLowerCase();
-    if (lowered == 'null' || lowered == 'undefined') {
-      return fallbackLocaleName;
-    }
-
-    final canonical = intl.Intl.canonicalizedLocale(raw);
-    if (canonical.isEmpty) {
-      return fallbackLocaleName;
-    }
-
-    final languageCode = canonical.split(RegExp('[-_]')).first.toLowerCase();
-    if (!_supportedLanguageCodes.contains(languageCode)) {
-      return fallbackLocaleName;
-    }
-
-    return canonical;
-  }
 
   static AppLocalizations? of(BuildContext context) {
     return Localizations.of<AppLocalizations>(context, AppLocalizations);
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate =
-      _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
 
   /// A list of this localizations delegate along with the default localizations
   /// delegates.
@@ -110,8 +82,7 @@ abstract class AppLocalizations {
   /// Additional delegates can be added by appending to this list in
   /// MaterialApp. This list does not have to be used at all if a custom list
   /// of delegates is preferred or required.
-  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
-      <LocalizationsDelegate<dynamic>>[
+  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates = <LocalizationsDelegate<dynamic>>[
     delegate,
     GlobalMaterialLocalizations.delegate,
     GlobalCupertinoLocalizations.delegate,
@@ -1341,6 +1312,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Continue with email'**
   String get authContinueWithEmail;
+
+  /// No description provided for @authSecureAccountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Secure your account'**
+  String get authSecureAccountTitle;
+
+  /// No description provided for @authSecureAccountButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Secure account'**
+  String get authSecureAccountButton;
+
+  /// No description provided for @authSecureAccountAddPasswordTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a password'**
+  String get authSecureAccountAddPasswordTitle;
+
+  /// No description provided for @authSecureAccountAddPasswordButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Add password'**
+  String get authSecureAccountAddPasswordButton;
+
+  /// No description provided for @authSecureAccountPasswordAddedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Password added to your account.'**
+  String get authSecureAccountPasswordAddedToast;
+
+  /// No description provided for @authSecureAccountVerificationSentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification email sent'**
+  String get authSecureAccountVerificationSentTitle;
+
+  /// No description provided for @authSecureAccountVerificationSentSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You’re still signed in. Verify when you can.'**
+  String get authSecureAccountVerificationSentSubtitle;
+
+  /// No description provided for @authSecureAccountSecuredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Account secured'**
+  String get authSecureAccountSecuredTitle;
+
+  /// No description provided for @authSecureAccountSecuredVerifiedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your email and password are ready for recovery sign-in.'**
+  String get authSecureAccountSecuredVerifiedSubtitle;
+
+  /// No description provided for @authSecureAccountSecuredUnverifiedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your password is set. Verify your email to finish securing this account.'**
+  String get authSecureAccountSecuredUnverifiedSubtitle;
+
+  /// No description provided for @authSecureAccountFormAddPasswordSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your signed-in email is already attached. Add a password for recovery without changing the Google sign-in.'**
+  String get authSecureAccountFormAddPasswordSubtitle;
+
+  /// No description provided for @authSecureAccountFormDefaultSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add email + password for recovery. Verification is last and non-blocking.'**
+  String get authSecureAccountFormDefaultSubtitle;
+
+  /// No description provided for @authSecureAccountPromptAddPasswordBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Google account is ready. Add a password now so you can recover this account even without Google.'**
+  String get authSecureAccountPromptAddPasswordBody;
+
+  /// No description provided for @authSecureAccountBannerAddPasswordSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your email is already attached. Add a password for recovery.'**
+  String get authSecureAccountBannerAddPasswordSubtitle;
+
+  /// No description provided for @authSecureAccountSettingsAddPasswordSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a password for recovery'**
+  String get authSecureAccountSettingsAddPasswordSubtitle;
+
+  /// No description provided for @authSecureAccountSettingsAddEmailPasswordSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add email + password for recovery'**
+  String get authSecureAccountSettingsAddEmailPasswordSubtitle;
 
   /// No description provided for @commonEnable.
   ///
@@ -10568,8 +10635,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Are you sure you want to delegate your {votingPower} voting power to {delegateName}?'**
-  String daoDelegateVotingPowerDialogBody(
-      Object votingPower, Object delegateName);
+  String daoDelegateVotingPowerDialogBody(Object votingPower, Object delegateName);
 
   /// No description provided for @daoDelegationBenefitsTitle.
   ///
@@ -15843,10 +15909,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Activity was recorded on {activeBuckets} of {totalBuckets} buckets.'**
-  String analyticsRecommendationConsistencyDescription(
-    Object activeBuckets,
-    Object totalBuckets,
-  );
+  String analyticsRecommendationConsistencyDescription(Object activeBuckets, Object totalBuckets);
 
   /// No description provided for @analyticsRecommendationReverseDecline.
   ///
@@ -16164,8 +16227,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{totalVotes} votes • {supportPct}% support'**
-  String daoProposalVotesSupportSummaryLabel(
-      Object totalVotes, Object supportPct);
+  String daoProposalVotesSupportSummaryLabel(Object totalVotes, Object supportPct);
 
   /// No description provided for @commonSearchHint.
   ///
@@ -16210,8 +16272,7 @@ abstract class AppLocalizations {
   String get onboardingWelcomeJoinBody;
 }
 
-class _AppLocalizationsDelegate
-    extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -16220,25 +16281,25 @@ class _AppLocalizationsDelegate
   }
 
   @override
-  bool isSupported(Locale locale) =>
-      <String>['en', 'sl'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>['en', 'sl'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
 }
 
 AppLocalizations lookupAppLocalizations(Locale locale) {
+
+
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
-    case 'en':
-      return AppLocalizationsEn();
-    case 'sl':
-      return AppLocalizationsSl();
+    case 'en': return AppLocalizationsEn();
+    case 'sl': return AppLocalizationsSl();
   }
 
   throw FlutterError(
-      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-      'an issue with the localizations generation tool. Please file an issue '
-      'on GitHub with a reproducible sample app and the gen-l10n configuration '
-      'that was used.');
+    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+    'an issue with the localizations generation tool. Please file an issue '
+    'on GitHub with a reproducible sample app and the gen-l10n configuration '
+    'that was used.'
+  );
 }

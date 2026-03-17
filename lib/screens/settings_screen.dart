@@ -177,10 +177,10 @@ class _SettingsScreenState extends State<SettingsScreen>
     super.dispose();
   }
 
-  String get _secureAccountSubtitle =>
+  String _secureAccountSubtitle(AppLocalizations l10n) =>
       _secureAccountHasEmail && !_secureAccountHasPassword
-          ? 'Add a password for recovery'
-          : 'Add email + password for recovery';
+          ? l10n.authSecureAccountSettingsAddPasswordSubtitle
+          : l10n.authSecureAccountSettingsAddEmailPasswordSubtitle;
 
   @override
   Widget build(BuildContext context) {
@@ -1106,8 +1106,8 @@ class _SettingsScreenState extends State<SettingsScreen>
           },
         ),
         _buildSettingsTile(
-          'Secure account',
-          _secureAccountSubtitle,
+          l10n.authSecureAccountTitle,
+          _secureAccountSubtitle(l10n),
           Icons.lock_outline,
           trailing: Row(
             mainAxisSize: MainAxisSize.min,

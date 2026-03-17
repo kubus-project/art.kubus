@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:art_kubus/config/config.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/widgets/kubus_card.dart';
@@ -140,11 +141,14 @@ class _SecureAccountBannerCardState extends State<SecureAccountBannerCard> {
     }
 
     final scheme = Theme.of(context).colorScheme;
+  final l10n = AppLocalizations.of(context)!;
     final title =
-        _hasEmail && !_hasPassword ? 'Add a password' : 'Secure your account';
+    _hasEmail && !_hasPassword
+      ? l10n.authSecureAccountAddPasswordTitle
+      : l10n.authSecureAccountTitle;
     final subtitle = _hasEmail && !_hasPassword
-        ? 'Your email is already attached. Add a password for recovery.'
-        : 'Add email + password for recovery. Verification is last and non-blocking.';
+    ? l10n.authSecureAccountBannerAddPasswordSubtitle
+    : l10n.authSecureAccountFormDefaultSubtitle;
 
     Widget card = KubusCard(
       padding: const EdgeInsets.all(KubusSpacing.md),
