@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 
 import '../../models/promotion.dart';
+import '../../utils/kubus_color_roles.dart';
 
 /// A visual card for selecting a promotion tier (Premium, Featured, Boost)
 class TierSelectionCard extends StatelessWidget {
@@ -20,11 +21,12 @@ class TierSelectionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final roles = KubusColorRoles.of(context);
     final l10n = AppLocalizations.of(context)!;
     final tier = rateCard.placementTier;
 
     final tierIcon = _iconForTier(tier);
-    final tierColor = _colorForTier(tier, colors);
+    final tierColor = _colorForTier(tier, colors, roles);
 
     return GestureDetector(
       onTap: onTap,
@@ -76,7 +78,7 @@ class TierSelectionCard extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         l10n.promotionBuilderPerDay(
-                          '\$${rateCard.fiatPricePerDay.toStringAsFixed(2)}',
+                          '€${rateCard.fiatPricePerDay.toStringAsFixed(2)}',
                         ),
                         style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
@@ -132,12 +134,16 @@ class TierSelectionCard extends StatelessWidget {
     }
   }
 
-  Color _colorForTier(PromotionPlacementTier tier, ColorScheme colors) {
+  Color _colorForTier(
+    PromotionPlacementTier tier,
+    ColorScheme colors,
+    KubusColorRoles roles,
+  ) {
     switch (tier) {
       case PromotionPlacementTier.premium:
-        return colors.tertiary;
+        return roles.achievementGold;
       case PromotionPlacementTier.featured:
-        return colors.secondary;
+        return roles.statTeal;
       case PromotionPlacementTier.boost:
         return colors.primary;
     }

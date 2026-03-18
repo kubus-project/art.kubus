@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/utils/kubus_color_roles.dart';
 
 /// A slider for selecting promotion duration with quick pick chips
 class DurationSlider extends StatelessWidget {
@@ -24,6 +25,7 @@ class DurationSlider extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final roles = KubusColorRoles.of(context);
     final l10n = AppLocalizations.of(context)!;
 
     return Column(
@@ -69,16 +71,16 @@ class DurationSlider extends StatelessWidget {
             trackHeight: 6,
             thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
             overlayShape: const RoundSliderOverlayShape(overlayRadius: 20),
-            activeTrackColor: colors.primary,
+            activeTrackColor: roles.statTeal,
             inactiveTrackColor: colors.surfaceContainerHighest,
-            thumbColor: colors.primary,
-            overlayColor: colors.primary.withValues(alpha: 0.2),
+            thumbColor: roles.statTeal,
+            overlayColor: roles.statTeal.withValues(alpha: 0.2),
           ),
           child: Slider(
             value: value.toDouble(),
             min: min.toDouble(),
             max: max.toDouble(),
-            divisions: max - min,
+            divisions: max > min ? (max - min) : null,
             onChanged: (v) => onChanged(v.round()),
           ),
         ),
@@ -121,6 +123,7 @@ class _DurationBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final roles = KubusColorRoles.of(context);
     final l10n = AppLocalizations.of(context)!;
 
     return Row(
@@ -145,7 +148,7 @@ class _DurationBadge extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: colors.tertiaryContainer.withValues(alpha: 0.35),
+              color: roles.positiveAction.withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -154,7 +157,7 @@ class _DurationBadge extends StatelessWidget {
                 Icon(
                   Icons.local_offer,
                   size: 14,
-                  color: colors.onTertiaryContainer,
+                  color: roles.positiveAction,
                 ),
                 const SizedBox(width: 4),
                 Text(
@@ -162,7 +165,7 @@ class _DurationBadge extends StatelessWidget {
                     discountPercent.toStringAsFixed(0),
                   ),
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: colors.onTertiaryContainer,
+                    color: roles.positiveAction,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -190,6 +193,7 @@ class _QuickPickChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final roles = KubusColorRoles.of(context);
     final l10n = AppLocalizations.of(context)!;
 
     final label = days == 7
@@ -208,11 +212,11 @@ class _QuickPickChip extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? colors.primary : colors.surfaceContainerHighest,
+          color: isSelected ? roles.statTeal : colors.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected
-                ? colors.primary
+                ? roles.statTeal
                 : colors.outline.withValues(alpha: 0.3),
           ),
         ),

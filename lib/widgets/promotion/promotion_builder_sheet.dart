@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../models/promotion.dart';
 import '../../providers/promotion_provider.dart';
 import '../../providers/wallet_provider.dart';
+import '../../utils/kubus_color_roles.dart';
 import '../../utils/support_links.dart';
 import 'duration_slider.dart';
 import 'price_summary_card.dart';
@@ -186,12 +187,21 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
 
     try {
       // Compatibility path: backend submission currently accepts packageId.
-      // We pass the selected rate-card id via packageId until endpoint payloads converge.
+      // Resolve closest legacy package from selected tier + duration.
+      final packageId = await provider.resolveLegacyPackageIdForTier(
+        entityType: widget.entityType,
+        placementTier: rateCard.placementTier,
+        durationDays: quote.durationDays,
+      );
+
+      if (!mounted) return;
+
+      final effectivePackageId = packageId ?? rateCard.id;
+
       final submission = await provider.submitPromotionRequest(
         targetEntityId: widget.entityId,
         entityType: widget.entityType,
-        // Passing rate-card id through packageId for current API compatibility.
-        packageId: rateCard.id,
+        packageId: effectivePackageId,
         paymentMethod: _paymentMethod,
         requestedStartDate: _startDate,
       );
@@ -665,11 +675,13 @@ class _ScheduledPromotionTileState extends State<_ScheduledPromotionTile> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final roles = KubusColorRoles.of(context);
     final request = widget.request;
     final status = request.reviewStatus.toLowerCase();
-    final statusColor = _statusColor(status, colors);
-    final canCancel =
-      status == 'pending_review' || status == 'pending' || status == 'approved';
+    final statusColor = _statusColor(status, colors, roles);
+    final canCancel = status == 'pending_review' ||
+        status == 'pending' ||
+        status == 'approved';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -737,14 +749,15 @@ class _ScheduledPromotionTileState extends State<_ScheduledPromotionTile> {
     );
   }
 
-  Color _statusColor(String status, ColorScheme colors) {
+  Color _statusColor(String status, ColorScheme colors, KubusColorRoles roles) {
     switch (status) {
+      case 'pending_review':
       case 'pending':
-        return colors.tertiary;
+        return roles.warningAction;
       case 'approved':
-        return colors.primary;
+        return roles.statTeal;
       case 'active':
-        return colors.secondary;
+        return roles.positiveAction;
       case 'rejected':
         return colors.error;
       case 'completed':
@@ -775,6 +788,7 @@ class _StartDatePicker extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final roles = KubusColorRoles.of(context);
     final l10n = AppLocalizations.of(context)!;
     final now = DateTime.now();
     final isToday = startDate.year == now.year &&
@@ -819,12 +833,12 @@ class _StartDatePicker extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
                     color: !isToday
-                        ? colors.primaryContainer.withValues(alpha: 0.5)
+                        ? roles.statBlue.withValues(alpha: 0.16)
                         : colors.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: !isToday
-                          ? colors.primary
+                          ? roles.statBlue
                           : colors.outline.withValues(alpha: 0.3),
                     ),
                   ),
@@ -835,14 +849,14 @@ class _StartDatePicker extends StatelessWidget {
                         Icons.calendar_today,
                         size: 18,
                         color:
-                            !isToday ? colors.primary : colors.onSurfaceVariant,
+                            !isToday ? roles.statBlue : colors.onSurfaceVariant,
                       ),
                       const SizedBox(width: 8),
                       Text(
                         _formatDate(context, startDate),
                         style: theme.textTheme.labelLarge?.copyWith(
                           color: !isToday
-                              ? colors.primary
+                              ? roles.statBlue
                               : colors.onSurfaceVariant,
                           fontWeight:
                               !isToday ? FontWeight.w600 : FontWeight.normal,
@@ -879,6 +893,7 @@ class _QuickDateChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final roles = KubusColorRoles.of(context);
 
     return GestureDetector(
       onTap: onTap,
@@ -886,12 +901,12 @@ class _QuickDateChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: isSelected
-              ? colors.primaryContainer.withValues(alpha: 0.5)
+              ? roles.statBlue.withValues(alpha: 0.16)
               : colors.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected
-                ? colors.primary
+                ? roles.statBlue
                 : colors.outline.withValues(alpha: 0.3),
           ),
         ),
@@ -899,7 +914,7 @@ class _QuickDateChip extends StatelessWidget {
           label,
           textAlign: TextAlign.center,
           style: theme.textTheme.labelLarge?.copyWith(
-            color: isSelected ? colors.primary : colors.onSurfaceVariant,
+            color: isSelected ? roles.statBlue : colors.onSurfaceVariant,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
           ),
         ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/utils/kubus_color_roles.dart';
 
 import '../../models/promotion.dart';
 
@@ -103,15 +104,16 @@ class _SlotCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final roles = KubusColorRoles.of(context);
     final l10n = AppLocalizations.of(context)!;
 
     final borderColor = isSelected
-        ? (isAvailable ? colors.primary : colors.error)
+        ? (isAvailable ? roles.statTeal : colors.error)
         : colors.outline.withValues(alpha: 0.3);
 
     final backgroundColor = isAvailable
         ? (isSelected
-            ? colors.primaryContainer.withValues(alpha: 0.5)
+            ? roles.statTeal.withValues(alpha: 0.18)
             : colors.surfaceContainerHighest.withValues(alpha: 0.5))
         : colors.errorContainer.withValues(alpha: 0.3);
 
@@ -133,7 +135,7 @@ class _SlotCard extends StatelessWidget {
             Icon(
               isAvailable ? Icons.check_circle_outline : Icons.block,
               color: isAvailable
-                  ? (isSelected ? colors.primary : colors.onSurfaceVariant)
+                  ? (isSelected ? roles.statTeal : colors.onSurfaceVariant)
                   : colors.error,
               size: 28,
             ),
@@ -153,7 +155,7 @@ class _SlotCard extends StatelessWidget {
                       _formatBookingDate(context, bookings),
                     ),
               style: theme.textTheme.bodySmall?.copyWith(
-                color: isAvailable ? colors.secondary : colors.error,
+                color: isAvailable ? roles.statTeal : colors.error,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -184,6 +186,7 @@ class _AlternativeDatesSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final roles = KubusColorRoles.of(context);
     final l10n = AppLocalizations.of(context)!;
 
     if (alternatives.alternatives.isEmpty) {
@@ -218,7 +221,7 @@ class _AlternativeDatesSection extends StatelessWidget {
             Icon(
               Icons.lightbulb_outline,
               size: 18,
-              color: colors.secondary,
+              color: roles.statBlue,
             ),
             const SizedBox(width: 6),
             Text(
@@ -262,6 +265,7 @@ class _AlternativeDateChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final roles = KubusColorRoles.of(context);
     final l10n = AppLocalizations.of(context)!;
 
     final daysLabel = alternative.daysUntilStart == 0
@@ -286,7 +290,7 @@ class _AlternativeDateChip extends StatelessWidget {
               _formatDate(context, alternative.startDate),
               style: theme.textTheme.labelMedium?.copyWith(
                 fontWeight: FontWeight.w600,
-                color: colors.primary,
+                color: roles.statBlue,
               ),
             ),
             const SizedBox(height: 2),

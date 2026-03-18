@@ -108,6 +108,7 @@ void main() {
   BackendApiService buildPromotionApi({
     required PromotionRequestSubmission submission,
     required ValueSetter<int> setCreateCalls,
+    required ValueSetter<String?> setSubmittedPackageId,
   }) {
     final api = BackendApiService();
     api.setAuthTokenForTesting('test-token');
@@ -132,6 +133,28 @@ void main() {
                   'slotCount': null,
                   'isActive': true,
                   'volumeDiscounts': const <Object?>[],
+                },
+              ],
+            }),
+            200,
+            headers: const <String, String>{'content-type': 'application/json'},
+          );
+        }
+        if (request.method == 'GET' &&
+            request.url.path == '/api/app/promotion-packages') {
+          return http.Response(
+            jsonEncode(<String, Object?>{
+              'success': true,
+              'data': <Object?>[
+                <String, Object?>{
+                  'id': 'pkg-7',
+                  'title': 'Boost 7 days',
+                  'entityType': PromotionEntityType.artwork.apiValue,
+                  'placementMode': PromotionPlacementMode.rotationPool.apiValue,
+                  'durationDays': 7,
+                  'fiatPrice': 28.98,
+                  'kub8Price': 10.01,
+                  'isActive': true,
                 },
               ],
             }),
@@ -186,6 +209,9 @@ void main() {
             request.url.path == '/api/app/promotion-requests') {
           createCalls += 1;
           setCreateCalls(createCalls);
+          final requestBody = jsonDecode(request.body) as Map<String, dynamic>;
+          final submittedPackageId = requestBody['packageId']?.toString();
+          setSubmittedPackageId(submittedPackageId);
           return http.Response(
             jsonEncode(<String, Object?>{
               'success': true,
@@ -193,7 +219,7 @@ void main() {
                 'id': submission.request.id,
                 'targetEntityId': submission.request.targetEntityId,
                 'entityType': submission.request.entityType.apiValue,
-                'packageId': submission.request.packageId,
+                'packageId': submittedPackageId ?? submission.request.packageId,
                 'paymentMethod': submission.request.paymentMethod.apiValue,
                 'paymentStatus': submission.request.paymentStatus,
                 'reviewStatus': submission.request.reviewStatus,
@@ -270,12 +296,14 @@ void main() {
     UrlLauncherPlatform.instance = launcher;
 
     var createCalls = 0;
+    String? submittedPackageId;
     final api = buildPromotionApi(
       submission: PromotionRequestSubmission(
         request: buildRequest(PromotionPaymentMethod.fiatCard),
         checkoutUrl: 'https://checkout.example/session-1',
       ),
       setCreateCalls: (value) => createCalls = value,
+      setSubmittedPackageId: (value) => submittedPackageId = value,
     );
     final walletProvider = _FakeWalletProvider(
       <Token>[
@@ -305,6 +333,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(createCalls, 1);
+    expect(submittedPackageId, 'pkg-7');
     expect(
         launcher.launchedUrls, <String>['https://checkout.example/session-1']);
     expect(find.text('Continue to payment'), findsOneWidget);
@@ -328,11 +357,13 @@ void main() {
     UrlLauncherPlatform.instance = launcher;
 
     var createCalls = 0;
+    String? submittedPackageId;
     final api = buildPromotionApi(
       submission: PromotionRequestSubmission(
         request: buildRequest(PromotionPaymentMethod.kub8Balance),
       ),
       setCreateCalls: (value) => createCalls = value,
+      setSubmittedPackageId: (value) => submittedPackageId = value,
     );
     final walletProvider = _FakeWalletProvider(
       <Token>[
@@ -367,6 +398,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(createCalls, 1);
+    expect(submittedPackageId, 'pkg-7');
     expect(launcher.launchedUrls, isEmpty);
     expect(find.text('Promote Test artwork'), findsNothing);
     expect(find.text('Promotion request submitted!'), findsOneWidget);

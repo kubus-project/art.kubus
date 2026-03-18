@@ -85,12 +85,61 @@ class PromotionProvider extends ChangeNotifier {
           await _api.getPromotionRateCards(entityType: entityType);
       _rateCardsByType[entityType] = rateCards;
     } catch (e) {
-      _error = e.toString();
-      rethrow;
+      // Backward compatibility fallback:
+      // Older deployments may not support dynamic pricing endpoints yet.
+      try {
+        await loadPackages(entityType, force: force);
+        final legacy = _packagesByType[entityType] ?? const <PromotionPackage>[];
+        _rateCardsByType[entityType] = _legacyPackagesToRateCards(legacy);
+        _error = null;
+      } catch (_) {
+        _error = e.toString();
+        rethrow;
+      }
     } finally {
       _rateCardsLoading = false;
       notifyListeners();
     }
+  }
+
+  List<PromotionRateCard> _legacyPackagesToRateCards(
+    List<PromotionPackage> packages,
+  ) {
+    PromotionPlacementTier mapTier(PromotionPlacementMode mode) {
+      switch (mode) {
+        case PromotionPlacementMode.reservedTop:
+          return PromotionPlacementTier.premium;
+        case PromotionPlacementMode.priorityRanked:
+          return PromotionPlacementTier.featured;
+        case PromotionPlacementMode.rotationPool:
+          return PromotionPlacementTier.boost;
+      }
+    }
+
+    double perDay(double total, int days) {
+      final safeDays = days <= 0 ? 1 : days;
+      return total / safeDays;
+    }
+
+    return packages
+        .where((p) => p.isActive)
+        .map(
+          (p) => PromotionRateCard(
+            id: p.id,
+            code: p.title ?? p.id,
+            entityType: p.entityType,
+            placementTier: mapTier(p.placementMode),
+            fiatPricePerDay: perDay(p.fiatPrice, p.durationDays),
+            kub8PricePerDay: perDay(p.kub8Price, p.durationDays),
+            minDays: p.durationDays <= 0 ? 1 : p.durationDays,
+            maxDays: p.durationDays <= 0 ? 1 : p.durationDays,
+            slotCount: p.placementMode == PromotionPlacementMode.reservedTop
+                ? 3
+                : null,
+            isActive: p.isActive,
+          ),
+        )
+        .toList(growable: false);
   }
 
   /// Check slot availability for a rate card
@@ -220,6 +269,52 @@ class PromotionProvider extends ChangeNotifier {
       _packagesLoading = false;
       notifyListeners();
     }
+  }
+
+  /// Resolve the closest legacy package id for a dynamic-rate-card selection.
+  ///
+  /// This keeps request submission compatible with deployments that still
+  /// validate `packageId` against `promotion_packages`.
+  Future<String?> resolveLegacyPackageIdForTier({
+    required PromotionEntityType entityType,
+    required PromotionPlacementTier placementTier,
+    required int durationDays,
+  }) async {
+    await loadPackages(entityType);
+
+    final packages = (_packagesByType[entityType] ?? const <PromotionPackage>[])
+        .where((p) => p.isActive)
+        .toList(growable: false);
+
+    if (packages.isEmpty) return null;
+
+    PromotionPlacementMode preferredMode;
+    switch (placementTier) {
+      case PromotionPlacementTier.premium:
+        preferredMode = PromotionPlacementMode.reservedTop;
+        break;
+      case PromotionPlacementTier.featured:
+        preferredMode = PromotionPlacementMode.priorityRanked;
+        break;
+      case PromotionPlacementTier.boost:
+        preferredMode = PromotionPlacementMode.rotationPool;
+        break;
+    }
+
+    final sameMode = packages
+        .where((p) => p.placementMode == preferredMode)
+        .toList(growable: false);
+    final candidatePool = sameMode.isNotEmpty ? sameMode : packages;
+
+    final sorted = [...candidatePool]
+      ..sort((a, b) {
+        final aDelta = (a.durationDays - durationDays).abs();
+        final bDelta = (b.durationDays - durationDays).abs();
+        if (aDelta != bDelta) return aDelta.compareTo(bDelta);
+        return a.durationDays.compareTo(b.durationDays);
+      });
+
+    return sorted.first.id;
   }
 
   Future<void> loadMyRequests({bool force = false}) async {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 
 import '../../models/promotion.dart';
+import '../../utils/kubus_color_roles.dart';
 
 /// A card showing the price breakdown for a promotion quote
 class PriceSummaryCard extends StatelessWidget {
@@ -22,6 +23,7 @@ class PriceSummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final roles = KubusColorRoles.of(context);
     final l10n = AppLocalizations.of(context)!;
 
     final pricing = quote.pricing;
@@ -31,7 +33,7 @@ class PriceSummaryCard extends StatelessWidget {
     final finalPrice = isFiat ? pricing.finalFiatPrice : pricing.finalKub8Price;
     final pricePerDay =
         isFiat ? pricing.fiatPricePerDay : pricing.kub8PricePerDay;
-    final currencySymbol = isFiat ? '\$' : '';
+    final currencySymbol = isFiat ? '€' : '';
     final currencySuffix = isFiat ? '' : ' KUB8';
 
     final hasDiscount = pricing.discountPercent > 0;
@@ -76,6 +78,7 @@ class PriceSummaryCard extends StatelessWidget {
               value:
                   '-$currencySymbol${(basePrice - finalPrice).toStringAsFixed(2)}$currencySuffix',
               isDiscount: true,
+              discountColor: roles.positiveAction,
             ),
           ],
 
@@ -98,7 +101,7 @@ class PriceSummaryCard extends StatelessWidget {
                 '$currencySymbol${finalPrice.toStringAsFixed(2)}$currencySuffix',
                 style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: colors.primary,
+                  color: isFiat ? roles.lockedFeature : roles.positiveAction,
                 ),
               ),
             ],
@@ -123,7 +126,7 @@ class PriceSummaryCard extends StatelessWidget {
                         kub8Balance.toStringAsFixed(2),
                       ),
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: colors.error,
+                        color: roles.negativeAction,
                       ),
                     ),
                   ),
@@ -140,7 +143,7 @@ class PriceSummaryCard extends StatelessWidget {
                 quote.isRefundable ? Icons.check_circle : Icons.info_outline,
                 size: 16,
                 color: quote.isRefundable
-                    ? colors.secondary
+                  ? roles.positiveAction
                     : colors.onSurfaceVariant,
               ),
               const SizedBox(width: 6),
@@ -151,7 +154,7 @@ class PriceSummaryCard extends StatelessWidget {
                       : l10n.promotionBuilderNoRefundNote,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: quote.isRefundable
-                        ? colors.secondary
+                        ? roles.positiveAction
                         : colors.onSurfaceVariant,
                   ),
                 ),
@@ -235,12 +238,14 @@ class _PriceRow extends StatelessWidget {
     required this.value,
     this.isSubtotal = false,
     this.isDiscount = false,
+    this.discountColor,
   });
 
   final String label;
   final String value;
   final bool isSubtotal;
   final bool isDiscount;
+  final Color? discountColor;
 
   @override
   Widget build(BuildContext context) {
@@ -254,7 +259,9 @@ class _PriceRow extends StatelessWidget {
           child: Text(
             label,
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: isDiscount ? colors.secondary : colors.onSurfaceVariant,
+              color: isDiscount
+                  ? (discountColor ?? colors.secondary)
+                  : colors.onSurfaceVariant,
             ),
           ),
         ),
@@ -262,7 +269,9 @@ class _PriceRow extends StatelessWidget {
           value,
           style: theme.textTheme.bodyMedium?.copyWith(
             fontWeight: isSubtotal ? FontWeight.w500 : FontWeight.normal,
-            color: isDiscount ? colors.secondary : colors.onSurface,
+            color: isDiscount
+                ? (discountColor ?? colors.secondary)
+                : colors.onSurface,
           ),
         ),
       ],
