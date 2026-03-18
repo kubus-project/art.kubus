@@ -16270,6 +16270,372 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Start exploring or create your account.'**
   String get onboardingWelcomeJoinBody;
+
+  /// Title for the promotion builder sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Boost Visibility'**
+  String get promotionBuilderTitle;
+
+  /// No description provided for @promotionBuilderSelectTierTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select placement tier'**
+  String get promotionBuilderSelectTierTitle;
+
+  /// No description provided for @promotionBuilderTierPremium.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium Spot'**
+  String get promotionBuilderTierPremium;
+
+  /// No description provided for @promotionBuilderTierPremiumDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Top 3 guaranteed positions on home screen'**
+  String get promotionBuilderTierPremiumDesc;
+
+  /// No description provided for @promotionBuilderTierFeatured.
+  ///
+  /// In en, this message translates to:
+  /// **'Featured'**
+  String get promotionBuilderTierFeatured;
+
+  /// No description provided for @promotionBuilderTierFeaturedDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Priority placement after premium slots'**
+  String get promotionBuilderTierFeaturedDesc;
+
+  /// No description provided for @promotionBuilderTierBoost.
+  ///
+  /// In en, this message translates to:
+  /// **'Boost'**
+  String get promotionBuilderTierBoost;
+
+  /// No description provided for @promotionBuilderTierBoostDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Increased rotation in discovery feeds'**
+  String get promotionBuilderTierBoostDesc;
+
+  /// No description provided for @promotionBuilderPerDay.
+  ///
+  /// In en, this message translates to:
+  /// **'{price}/day'**
+  String promotionBuilderPerDay(Object price);
+
+  /// No description provided for @promotionBuilderSlotsAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 slot} other{{count} slots}} available'**
+  String promotionBuilderSlotsAvailable(num count);
+
+  /// No description provided for @promotionBuilderDurationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration'**
+  String get promotionBuilderDurationTitle;
+
+  /// No description provided for @promotionBuilderDurationDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, =1{1 day} other{{days} days}}'**
+  String promotionBuilderDurationDays(num days);
+
+  /// No description provided for @promotionBuilderQuickPick3Days.
+  ///
+  /// In en, this message translates to:
+  /// **'3 days'**
+  String get promotionBuilderQuickPick3Days;
+
+  /// No description provided for @promotionBuilderQuickPick1Week.
+  ///
+  /// In en, this message translates to:
+  /// **'1 week'**
+  String get promotionBuilderQuickPick1Week;
+
+  /// No description provided for @promotionBuilderQuickPick2Weeks.
+  ///
+  /// In en, this message translates to:
+  /// **'2 weeks'**
+  String get promotionBuilderQuickPick2Weeks;
+
+  /// No description provided for @promotionBuilderQuickPick1Month.
+  ///
+  /// In en, this message translates to:
+  /// **'1 month'**
+  String get promotionBuilderQuickPick1Month;
+
+  /// No description provided for @promotionBuilderDiscountBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}% off'**
+  String promotionBuilderDiscountBadge(Object percent);
+
+  /// No description provided for @promotionBuilderSelectSlotTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select slot'**
+  String get promotionBuilderSelectSlotTitle;
+
+  /// No description provided for @promotionBuilderSlotLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Slot {index}'**
+  String promotionBuilderSlotLabel(Object index);
+
+  /// No description provided for @promotionBuilderSlotAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Available'**
+  String get promotionBuilderSlotAvailable;
+
+  /// No description provided for @promotionBuilderSlotBookedUntil.
+  ///
+  /// In en, this message translates to:
+  /// **'Booked until {date}'**
+  String promotionBuilderSlotBookedUntil(Object date);
+
+  /// No description provided for @promotionBuilderAlternativeDates.
+  ///
+  /// In en, this message translates to:
+  /// **'Try these available dates'**
+  String get promotionBuilderAlternativeDates;
+
+  /// No description provided for @promotionBuilderStartDateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Start date'**
+  String get promotionBuilderStartDateTitle;
+
+  /// No description provided for @promotionBuilderStartImmediately.
+  ///
+  /// In en, this message translates to:
+  /// **'Start immediately'**
+  String get promotionBuilderStartImmediately;
+
+  /// No description provided for @promotionBuilderStartScheduled.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule for later'**
+  String get promotionBuilderStartScheduled;
+
+  /// No description provided for @promotionBuilderPriceSummaryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Price Summary'**
+  String get promotionBuilderPriceSummaryTitle;
+
+  /// No description provided for @promotionBuilderPriceBaseRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Base rate'**
+  String get promotionBuilderPriceBaseRate;
+
+  /// No description provided for @promotionBuilderPriceSubtotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Subtotal'**
+  String get promotionBuilderPriceSubtotal;
+
+  /// No description provided for @promotionBuilderPriceDiscount.
+  ///
+  /// In en, this message translates to:
+  /// **'Volume discount'**
+  String get promotionBuilderPriceDiscount;
+
+  /// No description provided for @promotionBuilderPriceTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get promotionBuilderPriceTotal;
+
+  /// No description provided for @promotionBuilderPaymentFiat.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay with card'**
+  String get promotionBuilderPaymentFiat;
+
+  /// No description provided for @promotionBuilderPaymentKub8.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay with KUB8'**
+  String get promotionBuilderPaymentKub8;
+
+  /// No description provided for @promotionBuilderKub8Balance.
+  ///
+  /// In en, this message translates to:
+  /// **'Balance: {amount} KUB8'**
+  String promotionBuilderKub8Balance(Object amount);
+
+  /// No description provided for @promotionBuilderCancellationNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Full refund if cancelled 24+ hours before start'**
+  String get promotionBuilderCancellationNote;
+
+  /// No description provided for @promotionBuilderSubmitButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit for Review'**
+  String get promotionBuilderSubmitButton;
+
+  /// No description provided for @promotionBuilderSubmitting.
+  ///
+  /// In en, this message translates to:
+  /// **'Submitting...'**
+  String get promotionBuilderSubmitting;
+
+  /// No description provided for @promotionBuilderSubmitSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Promotion request submitted!'**
+  String get promotionBuilderSubmitSuccess;
+
+  /// No description provided for @promotionBuilderSubmitError.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to submit. Please try again.'**
+  String get promotionBuilderSubmitError;
+
+  /// No description provided for @promotionBuilderLoadingRates.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading promotion options...'**
+  String get promotionBuilderLoadingRates;
+
+  /// No description provided for @promotionBuilderNoRatesAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No promotion options available for this item type.'**
+  String get promotionBuilderNoRatesAvailable;
+
+  /// No description provided for @promotionBuilderPromoteEntityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Promote {entityLabel}'**
+  String promotionBuilderPromoteEntityTitle(Object entityLabel);
+
+  /// No description provided for @promotionBuilderHeaderSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose your promotion tier, duration, and payment method'**
+  String get promotionBuilderHeaderSubtitle;
+
+  /// No description provided for @promotionBuilderSelectedSlotUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected slot is not available'**
+  String get promotionBuilderSelectedSlotUnavailable;
+
+  /// No description provided for @promotionBuilderOpeningCheckout.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening payment checkout...'**
+  String get promotionBuilderOpeningCheckout;
+
+  /// No description provided for @promotionBuilderCheckoutOpenFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Request created but checkout could not be opened. Please try again.'**
+  String get promotionBuilderCheckoutOpenFailed;
+
+  /// No description provided for @promotionBuilderContinuePayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue to payment'**
+  String get promotionBuilderContinuePayment;
+
+  /// No description provided for @promotionBuilderScheduledTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Scheduled Promotions'**
+  String get promotionBuilderScheduledTitle;
+
+  /// No description provided for @promotionBuilderCancelDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel Promotion?'**
+  String get promotionBuilderCancelDialogTitle;
+
+  /// No description provided for @promotionBuilderCancelDialogBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to cancel this promotion? A full refund will be issued if cancelled 24+ hours before start.'**
+  String get promotionBuilderCancelDialogBody;
+
+  /// No description provided for @promotionBuilderCancelKeepAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep'**
+  String get promotionBuilderCancelKeepAction;
+
+  /// No description provided for @promotionBuilderCancelConfirmAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel Promotion'**
+  String get promotionBuilderCancelConfirmAction;
+
+  /// No description provided for @promotionBuilderCancelRefundProcessed.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled and refund processed'**
+  String get promotionBuilderCancelRefundProcessed;
+
+  /// No description provided for @promotionBuilderCancelSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Promotion cancelled'**
+  String get promotionBuilderCancelSuccess;
+
+  /// No description provided for @promotionBuilderCancelFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to cancel promotion'**
+  String get promotionBuilderCancelFailed;
+
+  /// No description provided for @promotionBuilderStartsOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Starts {date}'**
+  String promotionBuilderStartsOn(Object date);
+
+  /// No description provided for @promotionBuilderCancelTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel promotion'**
+  String get promotionBuilderCancelTooltip;
+
+  /// No description provided for @promotionBuilderPremiumSlotsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium slots are guaranteed top positions'**
+  String get promotionBuilderPremiumSlotsHint;
+
+  /// No description provided for @promotionBuilderNoAlternativeDates.
+  ///
+  /// In en, this message translates to:
+  /// **'No available dates within the booking window'**
+  String get promotionBuilderNoAlternativeDates;
+
+  /// No description provided for @promotionBuilderNoRefundNote.
+  ///
+  /// In en, this message translates to:
+  /// **'No refund available (starts soon)'**
+  String get promotionBuilderNoRefundNote;
+
+  /// No description provided for @promotionBuilderInsufficientKub8Balance.
+  ///
+  /// In en, this message translates to:
+  /// **'Insufficient KUB8 balance ({amount})'**
+  String promotionBuilderInsufficientKub8Balance(Object amount);
+
+  /// No description provided for @promotionBuilderGuaranteedSlots.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 guaranteed slot} other{{count} guaranteed slots}}'**
+  String promotionBuilderGuaranteedSlots(num count);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

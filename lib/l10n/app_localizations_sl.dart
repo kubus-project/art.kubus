@@ -8633,4 +8633,233 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get onboardingWelcomeJoinBody => 'Začni raziskovati ali ustvari račun.';
+
+  @override
+  String get promotionBuilderTitle => 'Povečaj vidnost';
+
+  @override
+  String get promotionBuilderSelectTierTitle => 'Izberi nivo umestitve';
+
+  @override
+  String get promotionBuilderTierPremium => 'Premium mesto';
+
+  @override
+  String get promotionBuilderTierPremiumDesc => 'Zagotovljene 3 najboljše pozicije na domačem zaslonu';
+
+  @override
+  String get promotionBuilderTierFeatured => 'Izpostavljeno';
+
+  @override
+  String get promotionBuilderTierFeaturedDesc => 'Prednostna umestitev za premium mesti';
+
+  @override
+  String get promotionBuilderTierBoost => 'Pospešek';
+
+  @override
+  String get promotionBuilderTierBoostDesc => 'Pogostejša rotacija v virih odkrivanja';
+
+  @override
+  String promotionBuilderPerDay(Object price) {
+    return '$price/dan';
+  }
+
+  @override
+  String promotionBuilderSlotsAvailable(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count prostih mest',
+      few: '$count prosta mesta',
+      two: '$count prosti mesti',
+      one: '$count prosto mesto',
+    );
+    return '$_temp0 na voljo';
+  }
+
+  @override
+  String get promotionBuilderDurationTitle => 'Trajanje';
+
+  @override
+  String promotionBuilderDurationDays(num days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days dni',
+      few: '$days dni',
+      two: '$days dneva',
+      one: '$days dan',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get promotionBuilderQuickPick3Days => '3 dni';
+
+  @override
+  String get promotionBuilderQuickPick1Week => '1 teden';
+
+  @override
+  String get promotionBuilderQuickPick2Weeks => '2 tedna';
+
+  @override
+  String get promotionBuilderQuickPick1Month => '1 mesec';
+
+  @override
+  String promotionBuilderDiscountBadge(Object percent) {
+    return '$percent% popusta';
+  }
+
+  @override
+  String get promotionBuilderSelectSlotTitle => 'Izberi režo';
+
+  @override
+  String promotionBuilderSlotLabel(Object index) {
+    return 'Reža $index';
+  }
+
+  @override
+  String get promotionBuilderSlotAvailable => 'Na voljo';
+
+  @override
+  String promotionBuilderSlotBookedUntil(Object date) {
+    return 'Zasedeno do $date';
+  }
+
+  @override
+  String get promotionBuilderAlternativeDates => 'Poskusi te proste datume';
+
+  @override
+  String get promotionBuilderStartDateTitle => 'Začetni datum';
+
+  @override
+  String get promotionBuilderStartImmediately => 'Začni takoj';
+
+  @override
+  String get promotionBuilderStartScheduled => 'Načrtuj za pozneje';
+
+  @override
+  String get promotionBuilderPriceSummaryTitle => 'Povzetek cene';
+
+  @override
+  String get promotionBuilderPriceBaseRate => 'Osnovna cena';
+
+  @override
+  String get promotionBuilderPriceSubtotal => 'Vmesni seštevek';
+
+  @override
+  String get promotionBuilderPriceDiscount => 'Količinski popust';
+
+  @override
+  String get promotionBuilderPriceTotal => 'Skupaj';
+
+  @override
+  String get promotionBuilderPaymentFiat => 'Plačilo s kartico';
+
+  @override
+  String get promotionBuilderPaymentKub8 => 'Plačilo s KUB8';
+
+  @override
+  String promotionBuilderKub8Balance(Object amount) {
+    return 'Stanje: $amount KUB8';
+  }
+
+  @override
+  String get promotionBuilderCancellationNote => 'Polno vračilo ob preklicu 24+ ur pred začetkom';
+
+  @override
+  String get promotionBuilderSubmitButton => 'Oddaj v pregled';
+
+  @override
+  String get promotionBuilderSubmitting => 'Oddajanje...';
+
+  @override
+  String get promotionBuilderSubmitSuccess => 'Zahteva za promocijo je oddana!';
+
+  @override
+  String get promotionBuilderSubmitError => 'Oddaja ni uspela. Poskusi znova.';
+
+  @override
+  String get promotionBuilderLoadingRates => 'Nalaganje možnosti promocije...';
+
+  @override
+  String get promotionBuilderNoRatesAvailable => 'Za ta tip vsebine ni razpoložljivih promocijskih možnosti.';
+
+  @override
+  String promotionBuilderPromoteEntityTitle(Object entityLabel) {
+    return 'Promoviraj: $entityLabel';
+  }
+
+  @override
+  String get promotionBuilderHeaderSubtitle => 'Izberi nivo promocije, trajanje in način plačila';
+
+  @override
+  String get promotionBuilderSelectedSlotUnavailable => 'Izbrana reža ni na voljo';
+
+  @override
+  String get promotionBuilderOpeningCheckout => 'Odpiram plačilno stran...';
+
+  @override
+  String get promotionBuilderCheckoutOpenFailed => 'Zahteva je ustvarjena, vendar plačilne strani ni bilo mogoče odpreti. Poskusi znova.';
+
+  @override
+  String get promotionBuilderContinuePayment => 'Nadaljuj na plačilo';
+
+  @override
+  String get promotionBuilderScheduledTitle => 'Načrtovane promocije';
+
+  @override
+  String get promotionBuilderCancelDialogTitle => 'Prekličem promocijo?';
+
+  @override
+  String get promotionBuilderCancelDialogBody => 'Ali res želiš preklicati to promocijo? Ob preklicu 24+ ur pred začetkom prejmeš polno vračilo.';
+
+  @override
+  String get promotionBuilderCancelKeepAction => 'Obdrži';
+
+  @override
+  String get promotionBuilderCancelConfirmAction => 'Prekliči promocijo';
+
+  @override
+  String get promotionBuilderCancelRefundProcessed => 'Preklicano, vračilo obdelano';
+
+  @override
+  String get promotionBuilderCancelSuccess => 'Promocija preklicana';
+
+  @override
+  String get promotionBuilderCancelFailed => 'Preklic promocije ni uspel';
+
+  @override
+  String promotionBuilderStartsOn(Object date) {
+    return 'Začetek: $date';
+  }
+
+  @override
+  String get promotionBuilderCancelTooltip => 'Prekliči promocijo';
+
+  @override
+  String get promotionBuilderPremiumSlotsHint => 'Premium reže zagotavljajo vrhnje pozicije';
+
+  @override
+  String get promotionBuilderNoAlternativeDates => 'V izbranem oknu ni razpoložljivih datumov';
+
+  @override
+  String get promotionBuilderNoRefundNote => 'Vračilo ni na voljo (začetek je kmalu)';
+
+  @override
+  String promotionBuilderInsufficientKub8Balance(Object amount) {
+    return 'Premalo stanja KUB8 ($amount)';
+  }
+
+  @override
+  String promotionBuilderGuaranteedSlots(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count zagotovljenih rež',
+      few: '$count zagotovljene reže',
+      two: '$count zagotovljeni reži',
+      one: '$count zagotovljena reža',
+    );
+    return '$_temp0';
+  }
 }

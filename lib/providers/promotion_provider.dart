@@ -11,34 +11,194 @@ class PromotionProvider extends ChangeNotifier {
   PromotionProvider({BackendApiService? api})
       : _api = api ?? BackendApiService();
 
+  // Legacy package-based state
   final Map<PromotionEntityType, List<PromotionPackage>> _packagesByType =
       <PromotionEntityType, List<PromotionPackage>>{};
+
+  // New rate card-based state
+  final Map<PromotionEntityType, List<PromotionRateCard>> _rateCardsByType =
+      <PromotionEntityType, List<PromotionRateCard>>{};
+
   final List<PromotionRequest> _myRequests = <PromotionRequest>[];
   List<Artwork> _featuredArtworks = <Artwork>[];
   List<FeaturedPromotionItem> _featuredProfiles = <FeaturedPromotionItem>[];
 
   bool _packagesLoading = false;
+  bool _rateCardsLoading = false;
   bool _requestsLoading = false;
   bool _featuredLoading = false;
   bool _submitting = false;
+  bool _cancelling = false;
   String? _error;
   String _lastFeaturedLocale = 'en';
 
+  // Current quote for the promotion builder UI
+  PriceQuote? _currentQuote;
+  SlotAvailability? _currentSlotAvailability;
+  AlternativeDatesResponse? _currentAlternatives;
+
   bool get packagesLoading => _packagesLoading;
+  bool get rateCardsLoading => _rateCardsLoading;
   bool get requestsLoading => _requestsLoading;
   bool get featuredLoading => _featuredLoading;
   bool get submitting => _submitting;
+  bool get cancelling => _cancelling;
   String? get error => _error;
   String get lastFeaturedLocale => _lastFeaturedLocale;
 
+  PriceQuote? get currentQuote => _currentQuote;
+  SlotAvailability? get currentSlotAvailability => _currentSlotAvailability;
+  AlternativeDatesResponse? get currentAlternatives => _currentAlternatives;
+
+  /// Get legacy packages for an entity type (deprecated)
   List<PromotionPackage> packagesFor(PromotionEntityType entityType) =>
       List.unmodifiable(
           _packagesByType[entityType] ?? const <PromotionPackage>[]);
+
+  /// Get rate cards for an entity type (new system)
+  List<PromotionRateCard> rateCardsFor(PromotionEntityType entityType) =>
+      List.unmodifiable(
+          _rateCardsByType[entityType] ?? const <PromotionRateCard>[]);
 
   List<PromotionRequest> get myRequests => List.unmodifiable(_myRequests);
   List<Artwork> get featuredArtworks => List.unmodifiable(_featuredArtworks);
   List<FeaturedPromotionItem> get featuredProfiles =>
       List.unmodifiable(_featuredProfiles);
+
+  // ===========================================================================
+  // RATE CARDS (New Dynamic Pricing System)
+  // ===========================================================================
+
+  /// Load rate cards for dynamic pricing
+  Future<void> loadRateCards(
+    PromotionEntityType entityType, {
+    bool force = false,
+  }) async {
+    if (_rateCardsLoading) return;
+    if (!force && (_rateCardsByType[entityType]?.isNotEmpty ?? false)) return;
+
+    _rateCardsLoading = true;
+    _error = null;
+    notifyListeners();
+    try {
+      final rateCards =
+          await _api.getPromotionRateCards(entityType: entityType);
+      _rateCardsByType[entityType] = rateCards;
+    } catch (e) {
+      _error = e.toString();
+      rethrow;
+    } finally {
+      _rateCardsLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Check slot availability for a rate card
+  Future<SlotAvailability> checkSlotAvailability({
+    required String rateCardId,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    try {
+      final availability = await _api.getSlotAvailability(
+        rateCardId: rateCardId,
+        startDate: startDate,
+        endDate: endDate,
+      );
+      _currentSlotAvailability = availability;
+      notifyListeners();
+      return availability;
+    } catch (e) {
+      _error = e.toString();
+      rethrow;
+    }
+  }
+
+  /// Get alternative dates when a slot is unavailable
+  Future<AlternativeDatesResponse> getAlternativeDates({
+    required String rateCardId,
+    required int slotIndex,
+    required DateTime startDate,
+    required int durationDays,
+  }) async {
+    try {
+      final alternatives = await _api.getAlternativeDates(
+        rateCardId: rateCardId,
+        slotIndex: slotIndex,
+        startDate: startDate,
+        durationDays: durationDays,
+      );
+      _currentAlternatives = alternatives;
+      notifyListeners();
+      return alternatives;
+    } catch (e) {
+      _error = e.toString();
+      rethrow;
+    }
+  }
+
+  /// Calculate a price quote
+  Future<PriceQuote> calculateQuote({
+    required String rateCardId,
+    required int durationDays,
+    int? slotIndex,
+    DateTime? startDate,
+  }) async {
+    try {
+      final quote = await _api.calculatePriceQuote(
+        rateCardId: rateCardId,
+        durationDays: durationDays,
+        slotIndex: slotIndex,
+        startDate: startDate,
+      );
+      _currentQuote = quote;
+      notifyListeners();
+      return quote;
+    } catch (e) {
+      _error = e.toString();
+      rethrow;
+    }
+  }
+
+  /// Clear the current quote (when user closes the builder)
+  void clearQuote() {
+    _currentQuote = null;
+    _currentSlotAvailability = null;
+    _currentAlternatives = null;
+    notifyListeners();
+  }
+
+  /// Cancel a promotion request
+  Future<CancellationResult> cancelRequest(String requestId) async {
+    if (_cancelling) {
+      throw Exception('Already processing a cancellation');
+    }
+    _cancelling = true;
+    _error = null;
+    notifyListeners();
+    try {
+      final result =
+          await _api.cancelPromotionRequest(requestId: requestId);
+      // Only remove locally when cancellation actually succeeded.
+      if (result.cancelled) {
+        final index = _myRequests.indexWhere((r) => r.id == requestId);
+        if (index >= 0) {
+          _myRequests.removeAt(index);
+        }
+      }
+      return result;
+    } catch (e) {
+      _error = e.toString();
+      rethrow;
+    } finally {
+      _cancelling = false;
+      notifyListeners();
+    }
+  }
+
+  // ===========================================================================
+  // LEGACY PACKAGE-BASED SYSTEM (deprecated)
+  // ===========================================================================
 
   Future<void> loadPackages(
     PromotionEntityType entityType, {
@@ -113,6 +273,10 @@ class PromotionProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  // ===========================================================================
+  // FEATURED HOME (public promotions)
+  // ===========================================================================
 
   Future<void> loadFeaturedHome({
     String locale = 'en',

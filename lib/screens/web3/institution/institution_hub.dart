@@ -24,7 +24,7 @@ import '../../collab/invites_inbox_screen.dart';
 import '../../events/exhibition_list_screen.dart';
 import '../../map_markers/manage_markers_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
-import '../../../widgets/promotion/promotion_request_sheet.dart';
+import '../../../widgets/promotion/promotion_builder_sheet.dart';
 
 class InstitutionHub extends StatefulWidget {
   final ValueChanged<int>? onTabChanged;
@@ -1004,7 +1004,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
     final entityId = (profile?.id ?? wallet).trim();
     if (entityId.isEmpty) return;
 
-    await showPromotionRequestSheet(
+    await showPromotionBuilderSheet(
       context: context,
       entityType: PromotionEntityType.profile,
       entityId: entityId,

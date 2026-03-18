@@ -2849,7 +2849,214 @@ class BackendApiService
     }
   }
 
-  /// Get app promotion packages by entity type.
+  // ===========================================================================
+  // PROMOTION RATE CARDS (New Dynamic Pricing System)
+  // ===========================================================================
+
+  /// Get rate cards for dynamic pricing.
+  /// GET /api/app/promotion-rate-cards?entityType=artwork|profile
+  Future<List<PromotionRateCard>> getPromotionRateCards({
+    required PromotionEntityType entityType,
+  }) async {
+    try {
+      await _ensureAuthBeforeRequest();
+      final uri = Uri.parse('$baseUrl/api/app/promotion-rate-cards').replace(
+        queryParameters: <String, String>{
+          'entityType': entityType.apiValue,
+        },
+      );
+      final dynamic data = await _fetchJson(
+        uri,
+        includeAuth: true,
+        allowOrbitFallback: false,
+      );
+      final List<dynamic> list = (() {
+        if (data is List) return data;
+        if (data is Map<String, dynamic>) {
+          final payload = data['data'] ?? data['rateCards'];
+          if (payload is List) return payload;
+        }
+        return const <dynamic>[];
+      })();
+      return list
+          .whereType<Map>()
+          .map((e) => PromotionRateCard.fromJson(Map<String, dynamic>.from(e)))
+          .toList(growable: false);
+    } catch (e) {
+      AppConfig.debugPrint(
+          'BackendApiService.getPromotionRateCards failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Check slot availability for a rate card.
+  /// GET /api/app/promotion-slot-availability?rateCardId=...&startDate=...&endDate=...
+  Future<SlotAvailability> getSlotAvailability({
+    required String rateCardId,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    try {
+      await _ensureAuthBeforeRequest();
+      final params = <String, String>{
+        'rateCardId': rateCardId,
+      };
+      if (startDate != null) {
+        params['startDate'] = startDate.toIso8601String();
+      }
+      if (endDate != null) {
+        params['endDate'] = endDate.toIso8601String();
+      }
+      final uri =
+          Uri.parse('$baseUrl/api/app/promotion-slot-availability').replace(
+        queryParameters: params,
+      );
+      final dynamic data = await _fetchJson(
+        uri,
+        includeAuth: true,
+        allowOrbitFallback: false,
+      );
+      if (data is Map<String, dynamic>) {
+        final payload = data['data'] ?? data;
+        return SlotAvailability.fromJson(
+          payload is Map<String, dynamic>
+              ? payload
+              : <String, dynamic>{},
+        );
+      }
+      throw Exception('Invalid slot availability response');
+    } catch (e) {
+      AppConfig.debugPrint(
+          'BackendApiService.getSlotAvailability failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Get alternative dates when a slot is unavailable.
+  /// GET /api/app/promotion-alternative-dates?rateCardId=...&slotIndex=...&startDate=...&durationDays=...
+  Future<AlternativeDatesResponse> getAlternativeDates({
+    required String rateCardId,
+    required int slotIndex,
+    required DateTime startDate,
+    required int durationDays,
+  }) async {
+    try {
+      await _ensureAuthBeforeRequest();
+      final uri =
+          Uri.parse('$baseUrl/api/app/promotion-alternative-dates').replace(
+        queryParameters: <String, String>{
+          'rateCardId': rateCardId,
+          'slotIndex': slotIndex.toString(),
+          'startDate': startDate.toIso8601String(),
+          'durationDays': durationDays.toString(),
+        },
+      );
+      final dynamic data = await _fetchJson(
+        uri,
+        includeAuth: true,
+        allowOrbitFallback: false,
+      );
+      if (data is Map<String, dynamic>) {
+        final payload = data['data'] ?? data;
+        return AlternativeDatesResponse.fromJson(
+          payload is Map<String, dynamic>
+              ? payload
+              : <String, dynamic>{},
+        );
+      }
+      throw Exception('Invalid alternative dates response');
+    } catch (e) {
+      AppConfig.debugPrint(
+          'BackendApiService.getAlternativeDates failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Calculate a price quote for a promotion.
+  /// POST /api/app/promotion-price-quote
+  Future<PriceQuote> calculatePriceQuote({
+    required String rateCardId,
+    required int durationDays,
+    int? slotIndex,
+    DateTime? startDate,
+  }) async {
+    try {
+      await _ensureAuthBeforeRequest();
+      final uri = Uri.parse('$baseUrl/api/app/promotion-price-quote');
+      final payload = <String, dynamic>{
+        'rateCardId': rateCardId,
+        'durationDays': durationDays,
+        if (slotIndex != null) 'slotIndex': slotIndex,
+        if (startDate != null) 'startDate': startDate.toIso8601String(),
+      };
+      final response = await _post(
+        uri,
+        headers: _getHeaders(),
+        body: jsonEncode(payload),
+      );
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: uri.path,
+          body: response.body,
+        );
+      }
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) {
+        final data = decoded['data'] ?? decoded;
+        return PriceQuote.fromJson(
+          data is Map<String, dynamic> ? data : <String, dynamic>{},
+        );
+      }
+      throw Exception('Invalid price quote response');
+    } catch (e) {
+      AppConfig.debugPrint(
+          'BackendApiService.calculatePriceQuote failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Cancel a promotion request.
+  /// POST /api/app/promotion-requests/:id/cancel
+  Future<CancellationResult> cancelPromotionRequest({
+    required String requestId,
+  }) async {
+    try {
+      await _ensureAuthBeforeRequest();
+      final uri =
+          Uri.parse('$baseUrl/api/app/promotion-requests/$requestId/cancel');
+      final response = await _post(
+        uri,
+        headers: _getHeaders(),
+        body: '{}',
+      );
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: uri.path,
+          body: response.body,
+        );
+      }
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) {
+        final data = decoded['data'] ?? decoded;
+        return CancellationResult.fromJson(
+          data is Map<String, dynamic> ? data : <String, dynamic>{},
+        );
+      }
+      throw Exception('Invalid cancellation response');
+    } catch (e) {
+      AppConfig.debugPrint(
+          'BackendApiService.cancelPromotionRequest failed: $e');
+      rethrow;
+    }
+  }
+
+  // ===========================================================================
+  // END PROMOTION RATE CARDS
+  // ===========================================================================
+
+  /// Get app promotion packages by entity type (DEPRECATED - use getPromotionRateCards).
   /// GET /api/app/promotion-packages?entityType=artwork|profile
   Future<List<PromotionPackage>> getPromotionPackages({
     required PromotionEntityType entityType,

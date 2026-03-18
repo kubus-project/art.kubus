@@ -14,7 +14,7 @@ import '../../../utils/artwork_edit_navigation.dart';
 import '../../art/collection_detail_screen.dart';
 import '../../events/exhibition_detail_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
-import '../../../widgets/promotion/promotion_request_sheet.dart';
+import '../../../widgets/promotion/promotion_builder_sheet.dart';
 
 bool _artworkCanBePromoted(Artwork artwork) =>
     artwork.isPublic && artwork.isActive;
@@ -518,7 +518,7 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
           );
           return;
         }
-        await showPromotionRequestSheet(
+        await showPromotionBuilderSheet(
           context: context,
           entityType: PromotionEntityType.artwork,
           entityId: artwork.id,
@@ -609,7 +609,7 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
                   title: const Text('Promote this artwork'),
                   onTap: () async {
                     Navigator.of(sheetContext).pop();
-                    await showPromotionRequestSheet(
+                    await showPromotionBuilderSheet(
                       context: context,
                       entityType: PromotionEntityType.artwork,
                       entityId: artwork.id,

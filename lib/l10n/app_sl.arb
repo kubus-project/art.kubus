@@ -3397,7 +3397,17 @@
 
   "commonSubmit": "Pošlji",
   "commonTimeAgoMonths": "{count, plural, =1{pred 1 mes.} other{pred {count} mes.}}",
+  "@commonTimeAgoMonths": {
+    "placeholders": {
+      "count": {}
+    }
+  },
   "commonTimeAgoYears": "{count, plural, =1{pred 1 leto} other{pred {count} let}}",
+  "@commonTimeAgoYears": {
+    "placeholders": {
+      "count": {}
+    }
+  },
 
   "communityQuickRepostAction": "Hitro ponovno objavi",
   "communityRepostButtonLabel": "Ponovno objavi",
@@ -3409,7 +3419,17 @@
   "desktopCommunityActiveCommunitiesTitle": "Aktivne skupnosti",
   "desktopCommunityNoCommunitiesFoundLabel": "Ni najdenih skupnosti",
   "desktopCommunityViewAllCommunitiesButtonLabel": "Prikaži vse {count, plural, =1{1 skupnost} other{{count} skupnosti}}",
+  "@desktopCommunityViewAllCommunitiesButtonLabel": {
+    "placeholders": {
+      "count": {}
+    }
+  },
   "desktopCommunityGroupMembersLabel": "{count, plural, one{1 član} two{2 člana} few{{count} člani} other{{count} članov}}",
+  "@desktopCommunityGroupMembersLabel": {
+    "placeholders": {
+      "count": {}
+    }
+  },
   "desktopCommunityGroupsSearchHint": "Išči skupine...",
   "desktopCommunitySearchMessagesHint": "Išči sporočila...",
   "desktopCommunitySelectCommunityDialogTitle": "Izberi skupnost",
@@ -3438,11 +3458,36 @@
   "desktopCommunityArtWiderRadiusButton": "Širši radij",
   "desktopCommunitySharedPhotoFallbackContent": "Delil(-a) fotografijo",
   "desktopCommunityTagFeedEmptyTitle": "Ni objav za #{tag}",
+  "@desktopCommunityTagFeedEmptyTitle": {
+    "placeholders": {
+      "tag": {}
+    }
+  },
   "desktopCommunityTagFeedEmptyBody": "Ustvari ali odkrij objave z oznako #{tag}, da se prikažejo tukaj.",
+  "@desktopCommunityTagFeedEmptyBody": {
+    "placeholders": {
+      "tag": {}
+    }
+  },
   "desktopCommunityTagFeedLoadingPostsLabel": "Nalagam objave za #{tag}...",
+  "@desktopCommunityTagFeedLoadingPostsLabel": {
+    "placeholders": {
+      "tag": {}
+    }
+  },
   "desktopCommunityTagFeedTopPostsTitle": "Najboljše objave za #{tag}",
+  "@desktopCommunityTagFeedTopPostsTitle": {
+    "placeholders": {
+      "tag": {}
+    }
+  },
   "desktopCommunityTagFeedSortedByPopularityDescription": "Razvrščeno po priljubljenosti (všečki, delitve, komentarji in ogledi).",
   "desktopCommunityTagFeedTaggedPostsAcrossCommunityLabel": "{count, plural, one{1 objava z oznako v skupnosti} two{2 objavi z oznako v skupnosti} few{{count} objave z oznako v skupnosti} other{{count} objav z oznako v skupnosti}}",
+  "@desktopCommunityTagFeedTaggedPostsAcrossCommunityLabel": {
+    "placeholders": {
+      "count": {}
+    }
+  },
 
   "postDetailPostUnlikedToast": "Všeček odstranjen",
 
@@ -3476,10 +3521,20 @@
 
   "profileAboutTitle": "O art.kubus",
   "profileAboutVersionLabel": "Različica {version}",
+  "@profileAboutVersionLabel": {
+    "placeholders": {
+      "version": {}
+    }
+  },
   "profileAboutDescription": "AR umetniška platforma, ki povezuje umetnike in institucije prek tehnologije veriženja blokov.",
   "profileAboutCopyright": "Avtorske pravice (c) 2024 kubus Project",
 
   "profileShowcaseEmptyTitle": "Ni {title}",
+  "@profileShowcaseEmptyTitle": {
+    "placeholders": {
+      "title": {}
+    }
+  },
 
   "groupFeedSignInToPostLabel": "Prijavi se za objavo.",
   "groupFeedJoinToPostLabel": "Pridruži se tej skupini za objavo.",
@@ -3690,9 +3745,25 @@
   "daoDelegationSelectDelegateSubtitle": "Izberi zaupanja vrednega člana skupnosti, ki bo glasoval v tvojem imenu",
 
   "daoDelegationDelegatorsCountLabel": "{count, plural, one{1 delegator} two{2 delegatorja} few{{count} delegatorji} other{{count} delegatorjev}}",
+  "@daoDelegationDelegatorsCountLabel": {
+    "placeholders": {
+      "count": {}
+    }
+  },
   "daoDelegationParticipationRateLabel": "{percent}% udeležbe",
+  "@daoDelegationParticipationRateLabel": {
+    "placeholders": {
+      "percent": {}
+    }
+  },
 
   "daoProposalVotesSupportSummaryLabel": "{totalVotes} glasov • {supportPct}% podpore",
+  "@daoProposalVotesSupportSummaryLabel": {
+    "placeholders": {
+      "totalVotes": {},
+      "supportPct": {}
+    }
+  },
 
   "commonSearchHint": "Išči…",
   "commonDialogSemanticLabel": "Dialog",
@@ -3702,13 +3773,29 @@
   "communityBookmarkRemoveTooltip": "Odstrani zaznamek",
   "desktopCommunityGroupJoinedLabel": "Pridruženo",
   "desktopCommunityLatestLabel": "Najnovejše: {timeAgo}",
+  "@desktopCommunityLatestLabel": {
+    "placeholders": {
+      "timeAgo": {}
+    }
+  },
   "desktopCommunitySearchUsersHint": "Išči uporabnike...",
   "desktopCommunitySearchUsersToMessageHint": "Išči uporabnike za sporočila",
   "desktopCommunityNewMessageTitle": "Novo sporočilo",
   "desktopCommunitySearchFailedTryAgain": "Iskanje ni uspelo. Poskusi znova.",
   "desktopCommunityMessagesNoMatchesTitle": "Ni zadetkov",
   "desktopCommunityMessagesNoResultsBody": "Nismo našli nobenih pogovorov, članov ali sporočil, ki bi se ujemali z \"{query}\".",
+  "@desktopCommunityMessagesNoResultsBody": {
+    "placeholders": {
+      "query": {}
+    }
+  },
   "desktopCommunityMessagesSearchResultsLabel": "Prikazujem {count, plural, =1{1 rezultat} other{{count} rezultatov}} za \"{query}\"",
+  "@desktopCommunityMessagesSearchResultsLabel": {
+    "placeholders": {
+      "count": {},
+      "query": {}
+    }
+  },
   "desktopCommunityAddHandleButtonLabel": "Dodaj handle",
   "desktopCommunityAddTagHint": "Dodaj oznako",
   "desktopCommunityMentionDialogTitle": "Omeni nekoga",
@@ -3721,6 +3808,11 @@
   "desktopCommunityTargetCommunityOptionalTitle": "Izberi skupnost (neobvezno)",
   "desktopCommunityTargetCommunityNoGroupHint": "Objave deljene v skupine takoj obvestijo člane.",
   "desktopCommunityTargetCommunityPostingToLabel": "Objavljaš v {groupName}",
+  "@desktopCommunityTargetCommunityPostingToLabel": {
+    "placeholders": {
+      "groupName": {}
+    }
+  },
   "desktopCommunityRemoveGroupTooltip": "Odstrani skupino",
   "desktopCommunityPostPublishedToast": "Objava objavljena!",
   "desktopCommunityPostPublishFailedToast": "Objave ni bilo mogoče objaviti.",
@@ -3741,6 +3833,11 @@
   "desktopCommunityArArtworkLabel": "AR umetnina",
   "desktopCommunityArArtworkSubtitle": "Tapni za ogled v razširjeni resničnosti",
   "desktopCommunityTagFeedNoPostsFoundError": "Ni objav za #{tag}",
+  "@desktopCommunityTagFeedNoPostsFoundError": {
+    "placeholders": {
+      "tag": {}
+    }
+  },
   "profileConnectWalletToSeeProfileLabel": "Poveži denarnico za ogled profila",
   "profileMoreOptionsTitle": "Več možnosti",
   "profileNoBioYetTitle": "Brez opisa",
@@ -3762,5 +3859,103 @@
   "onboardingWelcomeCreateTitle": "Ustvarjaj in zbiraj",
   "onboardingWelcomeCreateBody": "Kovaj svojo umetnost, gradi portfolijo in zbiraj dela umetnikov z vsega sveta.",
   "onboardingWelcomeJoinTitle": "Pripravljen/a?",
-  "onboardingWelcomeJoinBody": "Začni raziskovati ali ustvari račun."
+  "onboardingWelcomeJoinBody": "Začni raziskovati ali ustvari račun.",
+
+  "promotionBuilderTitle": "Povečaj vidnost",
+  "@promotionBuilderTitle": {
+    "description": "Title for the promotion builder sheet"
+  },
+  "promotionBuilderSelectTierTitle": "Izberi nivo umestitve",
+  "promotionBuilderTierPremium": "Premium mesto",
+  "promotionBuilderTierPremiumDesc": "Zagotovljene 3 najboljše pozicije na domačem zaslonu",
+  "promotionBuilderTierFeatured": "Izpostavljeno",
+  "promotionBuilderTierFeaturedDesc": "Prednostna umestitev za premium mesti",
+  "promotionBuilderTierBoost": "Pospešek",
+  "promotionBuilderTierBoostDesc": "Pogostejša rotacija v virih odkrivanja",
+  "promotionBuilderPerDay": "{price}/dan",
+  "@promotionBuilderPerDay": {
+    "placeholders": { "price": {} }
+  },
+  "promotionBuilderSlotsAvailable": "{count, plural, one{{count} prosto mesto} two{{count} prosti mesti} few{{count} prosta mesta} other{{count} prostih mest}} na voljo",
+  "@promotionBuilderSlotsAvailable": {
+    "placeholders": { "count": {} }
+  },
+  "promotionBuilderDurationTitle": "Trajanje",
+  "promotionBuilderDurationDays": "{days, plural, one{{days} dan} two{{days} dneva} few{{days} dni} other{{days} dni}}",
+  "@promotionBuilderDurationDays": {
+    "placeholders": { "days": {} }
+  },
+  "promotionBuilderQuickPick3Days": "3 dni",
+  "promotionBuilderQuickPick1Week": "1 teden",
+  "promotionBuilderQuickPick2Weeks": "2 tedna",
+  "promotionBuilderQuickPick1Month": "1 mesec",
+  "promotionBuilderDiscountBadge": "{percent}% popusta",
+  "@promotionBuilderDiscountBadge": {
+    "placeholders": { "percent": {} }
+  },
+  "promotionBuilderSelectSlotTitle": "Izberi režo",
+  "promotionBuilderSlotLabel": "Reža {index}",
+  "@promotionBuilderSlotLabel": {
+    "placeholders": { "index": {} }
+  },
+  "promotionBuilderSlotAvailable": "Na voljo",
+  "promotionBuilderSlotBookedUntil": "Zasedeno do {date}",
+  "@promotionBuilderSlotBookedUntil": {
+    "placeholders": { "date": {} }
+  },
+  "promotionBuilderAlternativeDates": "Poskusi te proste datume",
+  "promotionBuilderStartDateTitle": "Začetni datum",
+  "promotionBuilderStartImmediately": "Začni takoj",
+  "promotionBuilderStartScheduled": "Načrtuj za pozneje",
+  "promotionBuilderPriceSummaryTitle": "Povzetek cene",
+  "promotionBuilderPriceBaseRate": "Osnovna cena",
+  "promotionBuilderPriceSubtotal": "Vmesni seštevek",
+  "promotionBuilderPriceDiscount": "Količinski popust",
+  "promotionBuilderPriceTotal": "Skupaj",
+  "promotionBuilderPaymentFiat": "Plačilo s kartico",
+  "promotionBuilderPaymentKub8": "Plačilo s KUB8",
+  "promotionBuilderKub8Balance": "Stanje: {amount} KUB8",
+  "@promotionBuilderKub8Balance": {
+    "placeholders": { "amount": {} }
+  },
+  "promotionBuilderCancellationNote": "Polno vračilo ob preklicu 24+ ur pred začetkom",
+  "promotionBuilderSubmitButton": "Oddaj v pregled",
+  "promotionBuilderSubmitting": "Oddajanje...",
+  "promotionBuilderSubmitSuccess": "Zahteva za promocijo je oddana!",
+  "promotionBuilderSubmitError": "Oddaja ni uspela. Poskusi znova.",
+  "promotionBuilderLoadingRates": "Nalaganje možnosti promocije...",
+  "promotionBuilderNoRatesAvailable": "Za ta tip vsebine ni razpoložljivih promocijskih možnosti.",
+  "promotionBuilderPromoteEntityTitle": "Promoviraj: {entityLabel}",
+  "@promotionBuilderPromoteEntityTitle": {
+    "placeholders": { "entityLabel": {} }
+  },
+  "promotionBuilderHeaderSubtitle": "Izberi nivo promocije, trajanje in način plačila",
+  "promotionBuilderSelectedSlotUnavailable": "Izbrana reža ni na voljo",
+  "promotionBuilderOpeningCheckout": "Odpiram plačilno stran...",
+  "promotionBuilderCheckoutOpenFailed": "Zahteva je ustvarjena, vendar plačilne strani ni bilo mogoče odpreti. Poskusi znova.",
+  "promotionBuilderContinuePayment": "Nadaljuj na plačilo",
+  "promotionBuilderScheduledTitle": "Načrtovane promocije",
+  "promotionBuilderCancelDialogTitle": "Prekličem promocijo?",
+  "promotionBuilderCancelDialogBody": "Ali res želiš preklicati to promocijo? Ob preklicu 24+ ur pred začetkom prejmeš polno vračilo.",
+  "promotionBuilderCancelKeepAction": "Obdrži",
+  "promotionBuilderCancelConfirmAction": "Prekliči promocijo",
+  "promotionBuilderCancelRefundProcessed": "Preklicano, vračilo obdelano",
+  "promotionBuilderCancelSuccess": "Promocija preklicana",
+  "promotionBuilderCancelFailed": "Preklic promocije ni uspel",
+  "promotionBuilderStartsOn": "Začetek: {date}",
+  "@promotionBuilderStartsOn": {
+    "placeholders": { "date": {} }
+  },
+  "promotionBuilderCancelTooltip": "Prekliči promocijo",
+  "promotionBuilderPremiumSlotsHint": "Premium reže zagotavljajo vrhnje pozicije",
+  "promotionBuilderNoAlternativeDates": "V izbranem oknu ni razpoložljivih datumov",
+  "promotionBuilderNoRefundNote": "Vračilo ni na voljo (začetek je kmalu)",
+  "promotionBuilderInsufficientKub8Balance": "Premalo stanja KUB8 ({amount})",
+  "@promotionBuilderInsufficientKub8Balance": {
+    "placeholders": { "amount": {} }
+  },
+  "promotionBuilderGuaranteedSlots": "{count, plural, one{{count} zagotovljena reža} two{{count} zagotovljeni reži} few{{count} zagotovljene reže} other{{count} zagotovljenih rež}}",
+  "@promotionBuilderGuaranteedSlots": {
+    "placeholders": { "count": {} }
+  }
 }

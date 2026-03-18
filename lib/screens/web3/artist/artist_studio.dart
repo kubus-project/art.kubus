@@ -25,7 +25,7 @@ import '../../../utils/kubus_color_roles.dart';
 import '../../collab/invites_inbox_screen.dart';
 import '../../events/exhibition_list_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
-import '../../../widgets/promotion/promotion_request_sheet.dart';
+import '../../../widgets/promotion/promotion_builder_sheet.dart';
 
 class ArtistStudio extends StatefulWidget {
   final VoidCallback? onOpenArtworkCreator;
@@ -1022,7 +1022,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
     final entityId = (profile?.id ?? wallet).trim();
     if (entityId.isEmpty) return;
 
-    await showPromotionRequestSheet(
+    await showPromotionBuilderSheet(
       context: context,
       entityType: PromotionEntityType.profile,
       entityId: entityId,

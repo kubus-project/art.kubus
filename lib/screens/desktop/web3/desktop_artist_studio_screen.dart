@@ -34,7 +34,7 @@ import '../../events/exhibition_list_screen.dart';
 import '../../map_markers/manage_markers_screen.dart';
 import '../../../widgets/glass_components.dart';
 import '../../../widgets/kubus_action_sidebar.dart';
-import '../../../widgets/promotion/promotion_request_sheet.dart';
+import '../../../widgets/promotion/promotion_builder_sheet.dart';
 
 /// Desktop Artist Studio screen with split-panel layout
 /// Left: Mobile artist studio view
@@ -657,7 +657,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
     final entityId = (profile?.id ?? wallet).trim();
     if (entityId.isEmpty) return;
 
-    await showPromotionRequestSheet(
+    await showPromotionBuilderSheet(
       context: context,
       entityType: PromotionEntityType.profile,
       entityId: entityId,

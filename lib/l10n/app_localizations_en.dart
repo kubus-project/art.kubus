@@ -8603,4 +8603,227 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingWelcomeJoinBody => 'Start exploring or create your account.';
+
+  @override
+  String get promotionBuilderTitle => 'Boost Visibility';
+
+  @override
+  String get promotionBuilderSelectTierTitle => 'Select placement tier';
+
+  @override
+  String get promotionBuilderTierPremium => 'Premium Spot';
+
+  @override
+  String get promotionBuilderTierPremiumDesc => 'Top 3 guaranteed positions on home screen';
+
+  @override
+  String get promotionBuilderTierFeatured => 'Featured';
+
+  @override
+  String get promotionBuilderTierFeaturedDesc => 'Priority placement after premium slots';
+
+  @override
+  String get promotionBuilderTierBoost => 'Boost';
+
+  @override
+  String get promotionBuilderTierBoostDesc => 'Increased rotation in discovery feeds';
+
+  @override
+  String promotionBuilderPerDay(Object price) {
+    return '$price/day';
+  }
+
+  @override
+  String promotionBuilderSlotsAvailable(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count slots',
+      one: '1 slot',
+    );
+    return '$_temp0 available';
+  }
+
+  @override
+  String get promotionBuilderDurationTitle => 'Duration';
+
+  @override
+  String promotionBuilderDurationDays(num days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days',
+      one: '1 day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get promotionBuilderQuickPick3Days => '3 days';
+
+  @override
+  String get promotionBuilderQuickPick1Week => '1 week';
+
+  @override
+  String get promotionBuilderQuickPick2Weeks => '2 weeks';
+
+  @override
+  String get promotionBuilderQuickPick1Month => '1 month';
+
+  @override
+  String promotionBuilderDiscountBadge(Object percent) {
+    return '$percent% off';
+  }
+
+  @override
+  String get promotionBuilderSelectSlotTitle => 'Select slot';
+
+  @override
+  String promotionBuilderSlotLabel(Object index) {
+    return 'Slot $index';
+  }
+
+  @override
+  String get promotionBuilderSlotAvailable => 'Available';
+
+  @override
+  String promotionBuilderSlotBookedUntil(Object date) {
+    return 'Booked until $date';
+  }
+
+  @override
+  String get promotionBuilderAlternativeDates => 'Try these available dates';
+
+  @override
+  String get promotionBuilderStartDateTitle => 'Start date';
+
+  @override
+  String get promotionBuilderStartImmediately => 'Start immediately';
+
+  @override
+  String get promotionBuilderStartScheduled => 'Schedule for later';
+
+  @override
+  String get promotionBuilderPriceSummaryTitle => 'Price Summary';
+
+  @override
+  String get promotionBuilderPriceBaseRate => 'Base rate';
+
+  @override
+  String get promotionBuilderPriceSubtotal => 'Subtotal';
+
+  @override
+  String get promotionBuilderPriceDiscount => 'Volume discount';
+
+  @override
+  String get promotionBuilderPriceTotal => 'Total';
+
+  @override
+  String get promotionBuilderPaymentFiat => 'Pay with card';
+
+  @override
+  String get promotionBuilderPaymentKub8 => 'Pay with KUB8';
+
+  @override
+  String promotionBuilderKub8Balance(Object amount) {
+    return 'Balance: $amount KUB8';
+  }
+
+  @override
+  String get promotionBuilderCancellationNote => 'Full refund if cancelled 24+ hours before start';
+
+  @override
+  String get promotionBuilderSubmitButton => 'Submit for Review';
+
+  @override
+  String get promotionBuilderSubmitting => 'Submitting...';
+
+  @override
+  String get promotionBuilderSubmitSuccess => 'Promotion request submitted!';
+
+  @override
+  String get promotionBuilderSubmitError => 'Failed to submit. Please try again.';
+
+  @override
+  String get promotionBuilderLoadingRates => 'Loading promotion options...';
+
+  @override
+  String get promotionBuilderNoRatesAvailable => 'No promotion options available for this item type.';
+
+  @override
+  String promotionBuilderPromoteEntityTitle(Object entityLabel) {
+    return 'Promote $entityLabel';
+  }
+
+  @override
+  String get promotionBuilderHeaderSubtitle => 'Choose your promotion tier, duration, and payment method';
+
+  @override
+  String get promotionBuilderSelectedSlotUnavailable => 'Selected slot is not available';
+
+  @override
+  String get promotionBuilderOpeningCheckout => 'Opening payment checkout...';
+
+  @override
+  String get promotionBuilderCheckoutOpenFailed => 'Request created but checkout could not be opened. Please try again.';
+
+  @override
+  String get promotionBuilderContinuePayment => 'Continue to payment';
+
+  @override
+  String get promotionBuilderScheduledTitle => 'Scheduled Promotions';
+
+  @override
+  String get promotionBuilderCancelDialogTitle => 'Cancel Promotion?';
+
+  @override
+  String get promotionBuilderCancelDialogBody => 'Are you sure you want to cancel this promotion? A full refund will be issued if cancelled 24+ hours before start.';
+
+  @override
+  String get promotionBuilderCancelKeepAction => 'Keep';
+
+  @override
+  String get promotionBuilderCancelConfirmAction => 'Cancel Promotion';
+
+  @override
+  String get promotionBuilderCancelRefundProcessed => 'Cancelled and refund processed';
+
+  @override
+  String get promotionBuilderCancelSuccess => 'Promotion cancelled';
+
+  @override
+  String get promotionBuilderCancelFailed => 'Failed to cancel promotion';
+
+  @override
+  String promotionBuilderStartsOn(Object date) {
+    return 'Starts $date';
+  }
+
+  @override
+  String get promotionBuilderCancelTooltip => 'Cancel promotion';
+
+  @override
+  String get promotionBuilderPremiumSlotsHint => 'Premium slots are guaranteed top positions';
+
+  @override
+  String get promotionBuilderNoAlternativeDates => 'No available dates within the booking window';
+
+  @override
+  String get promotionBuilderNoRefundNote => 'No refund available (starts soon)';
+
+  @override
+  String promotionBuilderInsufficientKub8Balance(Object amount) {
+    return 'Insufficient KUB8 balance ($amount)';
+  }
+
+  @override
+  String promotionBuilderGuaranteedSlots(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count guaranteed slots',
+      one: '1 guaranteed slot',
+    );
+    return '$_temp0';
+  }
 }

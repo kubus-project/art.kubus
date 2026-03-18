@@ -1,12 +1,13 @@
 import 'dart:collection';
 import 'dart:convert';
 
+import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/promotion.dart';
 import 'package:art_kubus/models/wallet.dart';
 import 'package:art_kubus/providers/promotion_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
-import 'package:art_kubus/widgets/promotion/promotion_request_sheet.dart';
+import 'package:art_kubus/widgets/promotion/promotion_builder_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -66,7 +67,7 @@ class _SheetLauncher extends StatelessWidget {
     return Scaffold(
       body: Center(
         child: ElevatedButton(
-          onPressed: () => showPromotionRequestSheet(
+          onPressed: () => showPromotionBuilderSheet(
             context: context,
             entityType: PromotionEntityType.artwork,
             entityId: 'art-1',
@@ -93,25 +94,12 @@ void main() {
     UrlLauncherPlatform.instance = originalLauncher;
   });
 
-  PromotionPackage buildPackage() {
-    return const PromotionPackage(
-      id: 'pkg-1',
-      entityType: PromotionEntityType.artwork,
-      placementMode: PromotionPlacementMode.rotationPool,
-      durationDays: 7,
-      fiatPrice: 29,
-      kub8Price: 10,
-      isActive: true,
-      title: 'Featured Artwork',
-    );
-  }
-
   PromotionRequest buildRequest(PromotionPaymentMethod paymentMethod) {
     return PromotionRequest(
       id: 'req-1',
       targetEntityId: 'art-1',
       entityType: PromotionEntityType.artwork,
-      packageId: 'pkg-1',
+      packageId: 'rate-1',
       paymentMethod: paymentMethod,
       paymentStatus: 'pending',
       reviewStatus: 'pending_review',
@@ -129,21 +117,57 @@ void main() {
     api.setHttpClient(
       MockClient((request) async {
         if (request.method == 'GET' &&
-            request.url.path == '/api/app/promotion-packages') {
+            request.url.path == '/api/app/promotion-rate-cards') {
           return http.Response(
             jsonEncode(<String, Object?>{
               'success': true,
               'data': <Object?>[
                 <String, Object?>{
-                  'id': buildPackage().id,
-                  'entityType': buildPackage().entityType.apiValue,
-                  'placementMode': buildPackage().placementMode.apiValue,
-                  'durationDays': buildPackage().durationDays,
-                  'fiatPrice': buildPackage().fiatPrice,
-                  'kub8Price': buildPackage().kub8Price,
+                  'id': 'rate-1',
+                  'code': 'artwork_boost',
+                  'entityType': PromotionEntityType.artwork.apiValue,
+                  'placementTier': PromotionPlacementTier.boost.apiValue,
+                  'fiatPricePerDay': 4.14,
+                  'kub8PricePerDay': 1.43,
+                  'minDays': 3,
+                  'maxDays': 30,
+                  'slotCount': null,
                   'isActive': true,
+                  'volumeDiscounts': const <Object?>[],
                 },
               ],
+            }),
+            200,
+            headers: const <String, String>{'content-type': 'application/json'},
+          );
+        }
+        if (request.method == 'POST' &&
+            request.url.path == '/api/app/promotion-price-quote') {
+          return http.Response(
+            jsonEncode(<String, Object?>{
+              'success': true,
+              'data': <String, Object?>{
+                'rateCardId': 'rate-1',
+                'entityType': PromotionEntityType.artwork.apiValue,
+                'placementTier': PromotionPlacementTier.boost.apiValue,
+                'durationDays': 7,
+                'slotAvailable': true,
+                'pricing': <String, Object?>{
+                  'fiatPricePerDay': 4.14,
+                  'kub8PricePerDay': 1.43,
+                  'baseFiatPrice': 28.98,
+                  'baseKub8Price': 10.01,
+                  'discountPercent': 0,
+                  'finalFiatPrice': 28.98,
+                  'finalKub8Price': 10.01,
+                },
+                'schedule': <String, Object?>{
+                  'startDate': '2026-03-20T00:00:00.000Z',
+                  'endDate': '2026-03-27T00:00:00.000Z',
+                  'cancellationDeadline': '2026-03-19T00:00:00.000Z',
+                },
+                'isRefundable': true,
+              },
             }),
             200,
             headers: const <String, String>{'content-type': 'application/json'},
@@ -203,12 +227,42 @@ void main() {
           ),
           ChangeNotifierProvider<WalletProvider>.value(value: walletProvider),
         ],
-        child: const MaterialApp(home: _SheetLauncher()),
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: _SheetLauncher(),
+        ),
       ),
     );
 
     await tester.tap(find.text('Open sheet'));
     await tester.pumpAndSettle();
+
+    final launchError = tester.takeException();
+    if (launchError != null) {
+      throw launchError;
+    }
+  }
+
+  Future<void> scrollSheetUntilVisible(
+      WidgetTester tester, Finder target) async {
+    final listFinder = find.byKey(const Key('promotionBuilderListView'));
+    expect(listFinder, findsOneWidget);
+
+    for (var i = 0; i < 10 && target.evaluate().isEmpty; i++) {
+      await tester.drag(listFinder, const Offset(0, -220));
+      await tester.pumpAndSettle();
+    }
+
+    expect(target, findsOneWidget);
+  }
+
+  Future<void> scrollToSubmitButton(WidgetTester tester) async {
+    await scrollSheetUntilVisible(
+      tester,
+      find.byKey(const Key('promotionBuilderSubmitButton')),
+    );
   }
 
   testWidgets(
@@ -247,7 +301,9 @@ void main() {
       walletProvider: walletProvider,
     );
 
-    await tester.tap(find.text('Submit promotion request'));
+    await scrollToSubmitButton(tester);
+
+    await tester.tap(find.byKey(const Key('promotionBuilderSubmitButton')));
     await tester.pumpAndSettle();
 
     expect(createCalls, 1);
@@ -255,7 +311,7 @@ void main() {
         launcher.launchedUrls, <String>['https://checkout.example/session-1']);
     expect(find.text('Continue to payment'), findsOneWidget);
 
-    await tester.tap(find.text('Continue to payment'));
+    await tester.tap(find.byKey(const Key('promotionBuilderSubmitButton')));
     await tester.pumpAndSettle();
 
     expect(createCalls, 1);
@@ -302,16 +358,19 @@ void main() {
       walletProvider: walletProvider,
     );
 
-    await tester.tap(find.text('KUB8 balance'));
+    await scrollSheetUntilVisible(tester, find.text('Pay with KUB8'));
+
+    await tester.tap(find.text('Pay with KUB8'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Submit promotion request'));
+    await scrollToSubmitButton(tester);
+
+    await tester.tap(find.byKey(const Key('promotionBuilderSubmitButton')));
     await tester.pumpAndSettle();
 
     expect(createCalls, 1);
     expect(launcher.launchedUrls, isEmpty);
     expect(find.text('Promote Test artwork'), findsNothing);
-    expect(
-        find.text('Promotion request submitted for review.'), findsOneWidget);
+    expect(find.text('Promotion request submitted!'), findsOneWidget);
   });
 }

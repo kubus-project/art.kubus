@@ -248,6 +248,484 @@ class PromotionPackage {
   }
 }
 
+// ============================================================================
+// NEW DYNAMIC PRICING SYSTEM
+// ============================================================================
+
+/// Placement tier for rate cards (maps to placement_mode internally)
+enum PromotionPlacementTier {
+  premium,
+  featured,
+  boost,
+}
+
+extension PromotionPlacementTierApi on PromotionPlacementTier {
+  String get apiValue {
+    switch (this) {
+      case PromotionPlacementTier.premium:
+        return 'premium';
+      case PromotionPlacementTier.featured:
+        return 'featured';
+      case PromotionPlacementTier.boost:
+        return 'boost';
+    }
+  }
+
+  String get displayName {
+    switch (this) {
+      case PromotionPlacementTier.premium:
+        return 'Premium';
+      case PromotionPlacementTier.featured:
+        return 'Featured';
+      case PromotionPlacementTier.boost:
+        return 'Boost';
+    }
+  }
+
+  String get description {
+    switch (this) {
+      case PromotionPlacementTier.premium:
+        return 'Top 3 guaranteed positions on home screen';
+      case PromotionPlacementTier.featured:
+        return 'Priority placement after premium slots';
+      case PromotionPlacementTier.boost:
+        return 'Increased rotation in discovery feeds';
+    }
+  }
+
+  static PromotionPlacementTier fromApiValue(String? value) {
+    final normalized = (value ?? '').trim().toLowerCase();
+    switch (normalized) {
+      case 'premium':
+        return PromotionPlacementTier.premium;
+      case 'featured':
+        return PromotionPlacementTier.featured;
+      case 'boost':
+      default:
+        return PromotionPlacementTier.boost;
+    }
+  }
+}
+
+/// Volume discount tier
+class VolumeDiscount {
+  final int minDays;
+  final double discountPercent;
+
+  const VolumeDiscount({
+    required this.minDays,
+    required this.discountPercent,
+  });
+
+  factory VolumeDiscount.fromJson(Map<String, dynamic> json) {
+    return VolumeDiscount(
+      minDays: (json['minDays'] as num?)?.toInt() ?? 0,
+      discountPercent: (json['discountPercent'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
+}
+
+/// Rate card for dynamic pricing
+class PromotionRateCard {
+  final String id;
+  final String code;
+  final PromotionEntityType entityType;
+  final PromotionPlacementTier placementTier;
+  final double fiatPricePerDay;
+  final double kub8PricePerDay;
+  final int minDays;
+  final int maxDays;
+  final int? slotCount;
+  final bool isActive;
+  final List<VolumeDiscount> volumeDiscounts;
+
+  const PromotionRateCard({
+    required this.id,
+    required this.code,
+    required this.entityType,
+    required this.placementTier,
+    required this.fiatPricePerDay,
+    required this.kub8PricePerDay,
+    required this.minDays,
+    required this.maxDays,
+    this.slotCount,
+    required this.isActive,
+    this.volumeDiscounts = const [],
+  });
+
+  bool get isSlotBased => slotCount != null && slotCount! > 0;
+
+  /// Get the applicable discount percentage for a given duration
+  double getDiscountPercent(int durationDays) {
+    if (volumeDiscounts.isEmpty) return 0.0;
+    final sorted = [...volumeDiscounts]
+      ..sort((a, b) => b.minDays.compareTo(a.minDays));
+    for (final tier in sorted) {
+      if (durationDays >= tier.minDays) {
+        return tier.discountPercent;
+      }
+    }
+    return 0.0;
+  }
+
+  factory PromotionRateCard.fromJson(Map<String, dynamic> json) {
+    final discountsList = json['volumeDiscounts'];
+    final volumeDiscounts = <VolumeDiscount>[];
+    if (discountsList is List) {
+      for (final item in discountsList) {
+        if (item is Map<String, dynamic>) {
+          volumeDiscounts.add(VolumeDiscount.fromJson(item));
+        }
+      }
+    }
+
+    return PromotionRateCard(
+      id: (json['id'] ?? '').toString(),
+      code: (json['code'] ?? '').toString(),
+      entityType: PromotionEntityTypeApi.fromApiValue(
+        (json['entityType'] ?? json['entity_type'])?.toString(),
+      ),
+      placementTier: PromotionPlacementTierApi.fromApiValue(
+        (json['placementTier'] ?? json['placement_tier'])?.toString(),
+      ),
+      fiatPricePerDay:
+          (json['fiatPricePerDay'] ?? json['fiat_price_per_day'] as num?)
+                  ?.toDouble() ??
+              0.0,
+      kub8PricePerDay:
+          (json['kub8PricePerDay'] ?? json['kub8_price_per_day'] as num?)
+                  ?.toDouble() ??
+              0.0,
+      minDays:
+          (json['minDays'] ?? json['min_days'] as num?)?.toInt() ?? 1,
+      maxDays:
+          (json['maxDays'] ?? json['max_days'] as num?)?.toInt() ?? 30,
+      slotCount: (json['slotCount'] ?? json['slot_count'] as num?)?.toInt(),
+      isActive: (json['isActive'] ?? json['is_active']) == true,
+      volumeDiscounts: volumeDiscounts,
+    );
+  }
+}
+
+/// Single slot booking info
+class SlotBooking {
+  final DateTime startsAt;
+  final DateTime endsAt;
+  final String status;
+
+  const SlotBooking({
+    required this.startsAt,
+    required this.endsAt,
+    required this.status,
+  });
+
+  factory SlotBooking.fromJson(Map<String, dynamic> json) {
+    return SlotBooking(
+      startsAt: DateTime.parse(json['startsAt']?.toString() ?? ''),
+      endsAt: DateTime.parse(json['endsAt']?.toString() ?? ''),
+      status: (json['status'] ?? 'reserved').toString(),
+    );
+  }
+}
+
+/// Single slot with availability info
+class SlotInfo {
+  final int slotIndex;
+  final List<SlotBooking> bookings;
+  final bool isAvailable;
+
+  const SlotInfo({
+    required this.slotIndex,
+    required this.bookings,
+    required this.isAvailable,
+  });
+
+  factory SlotInfo.fromJson(Map<String, dynamic> json) {
+    final bookingsList = json['bookings'];
+    final bookings = <SlotBooking>[];
+    if (bookingsList is List) {
+      for (final item in bookingsList) {
+        if (item is Map<String, dynamic>) {
+          try {
+            bookings.add(SlotBooking.fromJson(item));
+          } catch (_) {}
+        }
+      }
+    }
+
+    return SlotInfo(
+      slotIndex: (json['slotIndex'] as num?)?.toInt() ?? 0,
+      bookings: bookings,
+      isAvailable: json['isAvailable'] == true,
+    );
+  }
+}
+
+/// Slot availability response
+class SlotAvailability {
+  final String rateCardId;
+  final int? slotCount;
+  final List<SlotInfo>? slots;
+  final bool isSlotBased;
+  final bool available;
+
+  const SlotAvailability({
+    required this.rateCardId,
+    this.slotCount,
+    this.slots,
+    required this.isSlotBased,
+    required this.available,
+  });
+
+  factory SlotAvailability.fromJson(Map<String, dynamic> json) {
+    final slotsList = json['slots'];
+    List<SlotInfo>? slots;
+    if (slotsList is List) {
+      slots = slotsList
+          .whereType<Map<String, dynamic>>()
+          .map(SlotInfo.fromJson)
+          .toList();
+    }
+
+    return SlotAvailability(
+      rateCardId: (json['rateCardId'] ?? '').toString(),
+      slotCount: (json['slotCount'] as num?)?.toInt(),
+      slots: slots,
+      isSlotBased: json['isSlotBased'] == true,
+      available: json['available'] == true,
+    );
+  }
+}
+
+/// Alternative date suggestion
+class AlternativeDate {
+  final String startDate;
+  final String endDate;
+  final int daysUntilStart;
+
+  const AlternativeDate({
+    required this.startDate,
+    required this.endDate,
+    required this.daysUntilStart,
+  });
+
+  factory AlternativeDate.fromJson(Map<String, dynamic> json) {
+    return AlternativeDate(
+      startDate: (json['startDate'] ?? '').toString(),
+      endDate: (json['endDate'] ?? '').toString(),
+      daysUntilStart: (json['daysUntilStart'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
+/// Alternative dates response
+class AlternativeDatesResponse {
+  final int requestedSlotIndex;
+  final String requestedStartDate;
+  final int requestedDurationDays;
+  final List<AlternativeDate> alternatives;
+
+  const AlternativeDatesResponse({
+    required this.requestedSlotIndex,
+    required this.requestedStartDate,
+    required this.requestedDurationDays,
+    required this.alternatives,
+  });
+
+  factory AlternativeDatesResponse.fromJson(Map<String, dynamic> json) {
+    final altList = json['alternatives'];
+    final alternatives = <AlternativeDate>[];
+    if (altList is List) {
+      for (final item in altList) {
+        if (item is Map<String, dynamic>) {
+          alternatives.add(AlternativeDate.fromJson(item));
+        }
+      }
+    }
+
+    return AlternativeDatesResponse(
+      requestedSlotIndex: (json['requestedSlotIndex'] as num?)?.toInt() ?? 1,
+      requestedStartDate: (json['requestedStartDate'] ?? '').toString(),
+      requestedDurationDays:
+          (json['requestedDurationDays'] as num?)?.toInt() ?? 7,
+      alternatives: alternatives,
+    );
+  }
+}
+
+/// Price breakdown in a quote
+class PricingBreakdown {
+  final double fiatPricePerDay;
+  final double kub8PricePerDay;
+  final double baseFiatPrice;
+  final double baseKub8Price;
+  final double discountPercent;
+  final double finalFiatPrice;
+  final double finalKub8Price;
+
+  const PricingBreakdown({
+    required this.fiatPricePerDay,
+    required this.kub8PricePerDay,
+    required this.baseFiatPrice,
+    required this.baseKub8Price,
+    required this.discountPercent,
+    required this.finalFiatPrice,
+    required this.finalKub8Price,
+  });
+
+  factory PricingBreakdown.fromJson(Map<String, dynamic> json) {
+    return PricingBreakdown(
+      fiatPricePerDay: (json['fiatPricePerDay'] as num?)?.toDouble() ?? 0.0,
+      kub8PricePerDay: (json['kub8PricePerDay'] as num?)?.toDouble() ?? 0.0,
+      baseFiatPrice: (json['baseFiatPrice'] as num?)?.toDouble() ?? 0.0,
+      baseKub8Price: (json['baseKub8Price'] as num?)?.toDouble() ?? 0.0,
+      discountPercent: (json['discountPercent'] as num?)?.toDouble() ?? 0.0,
+      finalFiatPrice: (json['finalFiatPrice'] as num?)?.toDouble() ?? 0.0,
+      finalKub8Price: (json['finalKub8Price'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
+}
+
+/// Schedule info in a quote
+class ScheduleInfo {
+  final String startDate;
+  final String endDate;
+  final DateTime cancellationDeadline;
+
+  const ScheduleInfo({
+    required this.startDate,
+    required this.endDate,
+    required this.cancellationDeadline,
+  });
+
+  factory ScheduleInfo.fromJson(Map<String, dynamic> json) {
+    final startDate = (json['startDate'] ?? '').toString();
+    final endDate = (json['endDate'] ?? '').toString();
+
+    DateTime parseDateOrFallback(dynamic raw, List<String> fallbackValues) {
+      if (raw is DateTime) {
+        return raw;
+      }
+
+      final parsedRaw = DateTime.tryParse(raw?.toString() ?? '');
+      if (parsedRaw != null) {
+        return parsedRaw;
+      }
+
+      for (final fallback in fallbackValues) {
+        final parsed = DateTime.tryParse(fallback);
+        if (parsed != null) {
+          return parsed;
+        }
+      }
+
+      return DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+    }
+
+    return ScheduleInfo(
+      startDate: startDate,
+      endDate: endDate,
+      cancellationDeadline: parseDateOrFallback(
+        json['cancellationDeadline'],
+        <String>[startDate, endDate],
+      ),
+    );
+  }
+}
+
+/// Price quote response
+class PriceQuote {
+  final String rateCardId;
+  final PromotionEntityType entityType;
+  final PromotionPlacementTier placementTier;
+  final int durationDays;
+  final int? slotIndex;
+  final bool slotAvailable;
+  final SlotBooking? slotConflict;
+  final PricingBreakdown pricing;
+  final ScheduleInfo schedule;
+  final bool isRefundable;
+
+  const PriceQuote({
+    required this.rateCardId,
+    required this.entityType,
+    required this.placementTier,
+    required this.durationDays,
+    this.slotIndex,
+    required this.slotAvailable,
+    this.slotConflict,
+    required this.pricing,
+    required this.schedule,
+    required this.isRefundable,
+  });
+
+  factory PriceQuote.fromJson(Map<String, dynamic> json) {
+    final conflictJson = json['slotConflict'];
+    SlotBooking? slotConflict;
+    if (conflictJson is Map<String, dynamic>) {
+      try {
+        slotConflict = SlotBooking.fromJson(conflictJson);
+      } catch (_) {}
+    }
+
+    return PriceQuote(
+      rateCardId: (json['rateCardId'] ?? '').toString(),
+      entityType: PromotionEntityTypeApi.fromApiValue(
+        (json['entityType'] ?? json['entity_type'])?.toString(),
+      ),
+      placementTier: PromotionPlacementTierApi.fromApiValue(
+        (json['placementTier'] ?? json['placement_tier'])?.toString(),
+      ),
+      durationDays: (json['durationDays'] as num?)?.toInt() ?? 7,
+      slotIndex: (json['slotIndex'] as num?)?.toInt(),
+      slotAvailable: json['slotAvailable'] != false,
+      slotConflict: slotConflict,
+      pricing: PricingBreakdown.fromJson(
+        json['pricing'] is Map<String, dynamic>
+            ? json['pricing'] as Map<String, dynamic>
+            : <String, dynamic>{},
+      ),
+      schedule: ScheduleInfo.fromJson(
+        json['schedule'] is Map<String, dynamic>
+            ? json['schedule'] as Map<String, dynamic>
+            : <String, dynamic>{},
+      ),
+      isRefundable: json['isRefundable'] == true,
+    );
+  }
+}
+
+/// Cancellation result
+class CancellationResult {
+  final String requestId;
+  final bool cancelled;
+  final bool refundProcessed;
+  final bool isRefundable;
+  final String message;
+
+  const CancellationResult({
+    required this.requestId,
+    required this.cancelled,
+    required this.refundProcessed,
+    required this.isRefundable,
+    required this.message,
+  });
+
+  factory CancellationResult.fromJson(Map<String, dynamic> json) {
+    return CancellationResult(
+      requestId: (json['requestId'] ?? '').toString(),
+      cancelled: json['cancelled'] == true,
+      refundProcessed: json['refundProcessed'] == true,
+      isRefundable: json['isRefundable'] == true,
+      message: (json['message'] ?? '').toString(),
+    );
+  }
+}
+
+// ============================================================================
+// END NEW DYNAMIC PRICING SYSTEM
+// ============================================================================
+
 class PromotionRequest {
   final String id;
   final String targetEntityId;

@@ -3870,5 +3870,103 @@
   "onboardingWelcomeCreateTitle": "Create & collect",
   "onboardingWelcomeCreateBody": "Mint your art, build your portfolio, and collect pieces from artists worldwide.",
   "onboardingWelcomeJoinTitle": "Ready to begin?",
-  "onboardingWelcomeJoinBody": "Start exploring or create your account."
+  "onboardingWelcomeJoinBody": "Start exploring or create your account.",
+
+  "promotionBuilderTitle": "Boost Visibility",
+  "@promotionBuilderTitle": {
+    "description": "Title for the promotion builder sheet"
+  },
+  "promotionBuilderSelectTierTitle": "Select placement tier",
+  "promotionBuilderTierPremium": "Premium Spot",
+  "promotionBuilderTierPremiumDesc": "Top 3 guaranteed positions on home screen",
+  "promotionBuilderTierFeatured": "Featured",
+  "promotionBuilderTierFeaturedDesc": "Priority placement after premium slots",
+  "promotionBuilderTierBoost": "Boost",
+  "promotionBuilderTierBoostDesc": "Increased rotation in discovery feeds",
+  "promotionBuilderPerDay": "{price}/day",
+  "@promotionBuilderPerDay": {
+    "placeholders": { "price": {} }
+  },
+  "promotionBuilderSlotsAvailable": "{count, plural, =1{1 slot} other{{count} slots}} available",
+  "@promotionBuilderSlotsAvailable": {
+    "placeholders": { "count": {} }
+  },
+  "promotionBuilderDurationTitle": "Duration",
+  "promotionBuilderDurationDays": "{days, plural, =1{1 day} other{{days} days}}",
+  "@promotionBuilderDurationDays": {
+    "placeholders": { "days": {} }
+  },
+  "promotionBuilderQuickPick3Days": "3 days",
+  "promotionBuilderQuickPick1Week": "1 week",
+  "promotionBuilderQuickPick2Weeks": "2 weeks",
+  "promotionBuilderQuickPick1Month": "1 month",
+  "promotionBuilderDiscountBadge": "{percent}% off",
+  "@promotionBuilderDiscountBadge": {
+    "placeholders": { "percent": {} }
+  },
+  "promotionBuilderSelectSlotTitle": "Select slot",
+  "promotionBuilderSlotLabel": "Slot {index}",
+  "@promotionBuilderSlotLabel": {
+    "placeholders": { "index": {} }
+  },
+  "promotionBuilderSlotAvailable": "Available",
+  "promotionBuilderSlotBookedUntil": "Booked until {date}",
+  "@promotionBuilderSlotBookedUntil": {
+    "placeholders": { "date": {} }
+  },
+  "promotionBuilderAlternativeDates": "Try these available dates",
+  "promotionBuilderStartDateTitle": "Start date",
+  "promotionBuilderStartImmediately": "Start immediately",
+  "promotionBuilderStartScheduled": "Schedule for later",
+  "promotionBuilderPriceSummaryTitle": "Price Summary",
+  "promotionBuilderPriceBaseRate": "Base rate",
+  "promotionBuilderPriceSubtotal": "Subtotal",
+  "promotionBuilderPriceDiscount": "Volume discount",
+  "promotionBuilderPriceTotal": "Total",
+  "promotionBuilderPaymentFiat": "Pay with card",
+  "promotionBuilderPaymentKub8": "Pay with KUB8",
+  "promotionBuilderKub8Balance": "Balance: {amount} KUB8",
+  "@promotionBuilderKub8Balance": {
+    "placeholders": { "amount": {} }
+  },
+  "promotionBuilderCancellationNote": "Full refund if cancelled 24+ hours before start",
+  "promotionBuilderSubmitButton": "Submit for Review",
+  "promotionBuilderSubmitting": "Submitting...",
+  "promotionBuilderSubmitSuccess": "Promotion request submitted!",
+  "promotionBuilderSubmitError": "Failed to submit. Please try again.",
+  "promotionBuilderLoadingRates": "Loading promotion options...",
+  "promotionBuilderNoRatesAvailable": "No promotion options available for this item type.",
+  "promotionBuilderPromoteEntityTitle": "Promote {entityLabel}",
+  "@promotionBuilderPromoteEntityTitle": {
+    "placeholders": { "entityLabel": {} }
+  },
+  "promotionBuilderHeaderSubtitle": "Choose your promotion tier, duration, and payment method",
+  "promotionBuilderSelectedSlotUnavailable": "Selected slot is not available",
+  "promotionBuilderOpeningCheckout": "Opening payment checkout...",
+  "promotionBuilderCheckoutOpenFailed": "Request created but checkout could not be opened. Please try again.",
+  "promotionBuilderContinuePayment": "Continue to payment",
+  "promotionBuilderScheduledTitle": "Scheduled Promotions",
+  "promotionBuilderCancelDialogTitle": "Cancel Promotion?",
+  "promotionBuilderCancelDialogBody": "Are you sure you want to cancel this promotion? A full refund will be issued if cancelled 24+ hours before start.",
+  "promotionBuilderCancelKeepAction": "Keep",
+  "promotionBuilderCancelConfirmAction": "Cancel Promotion",
+  "promotionBuilderCancelRefundProcessed": "Cancelled and refund processed",
+  "promotionBuilderCancelSuccess": "Promotion cancelled",
+  "promotionBuilderCancelFailed": "Failed to cancel promotion",
+  "promotionBuilderStartsOn": "Starts {date}",
+  "@promotionBuilderStartsOn": {
+    "placeholders": { "date": {} }
+  },
+  "promotionBuilderCancelTooltip": "Cancel promotion",
+  "promotionBuilderPremiumSlotsHint": "Premium slots are guaranteed top positions",
+  "promotionBuilderNoAlternativeDates": "No available dates within the booking window",
+  "promotionBuilderNoRefundNote": "No refund available (starts soon)",
+  "promotionBuilderInsufficientKub8Balance": "Insufficient KUB8 balance ({amount})",
+  "@promotionBuilderInsufficientKub8Balance": {
+    "placeholders": { "amount": {} }
+  },
+  "promotionBuilderGuaranteedSlots": "{count, plural, =1{1 guaranteed slot} other{{count} guaranteed slots}}",
+  "@promotionBuilderGuaranteedSlots": {
+    "placeholders": { "count": {} }
+  }
 }
