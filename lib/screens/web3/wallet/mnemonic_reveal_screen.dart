@@ -77,6 +77,19 @@ class _MnemonicRevealScreenState extends State<MnemonicRevealScreen> {
         .showKubusSnackBar(SnackBar(content: Text(l10n.mnemonicRevealCopiedToast)));
   }
 
+  Future<void> _markBackupComplete() async {
+    if (_mnemonic == null || _masked) return;
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final wallet = Provider.of<WalletProvider>(context, listen: false);
+    await wallet.markMnemonicBackedUp();
+    if (!mounted) return;
+    messenger.showKubusSnackBar(
+      SnackBar(content: Text(l10n.walletBackupMarkedCompleteToast)),
+    );
+    Navigator.of(context).pop(true);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -180,6 +193,15 @@ class _MnemonicRevealScreenState extends State<MnemonicRevealScreen> {
                           label: l10n.commonClose,
                         ),
                       ],
+                    ),
+                    const SizedBox(height: KubusSpacing.sm),
+                    KubusButton(
+                      onPressed: _masked ? null : _markBackupComplete,
+                      label: l10n.walletBackupConfirmAction,
+                      icon: Icons.verified_user_outlined,
+                      backgroundColor: scheme.primary,
+                      foregroundColor: scheme.onPrimary,
+                      isFullWidth: true,
                     ),
                   ] else ...[
                     Row(

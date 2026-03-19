@@ -731,6 +731,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowProfileBody => 'Add a name and a photo so people can recognize you.';
 
   @override
+  String get onboardingFlowWalletBackupTitle => 'Back up your recovery phrase';
+
+  @override
+  String get onboardingFlowWalletBackupBody => 'This phrase is the only way to recover this wallet on a new device.';
+
+  @override
+  String get onboardingFlowWalletBackupPrivacyWarning => 'Keep it private. Anyone with this phrase can fully control your wallet.';
+
+  @override
+  String get onboardingFlowWalletBackupLossWarning => 'If you lose it, you can lose access to funds and collectibles forever.';
+
+  @override
+  String get onboardingFlowWalletBackupAction => 'Reveal and confirm backup';
+
+  @override
+  String get onboardingFlowWalletBackupCompleted => 'Recovery phrase backup confirmed.';
+
+  @override
+  String get onboardingFlowWalletBackupNoWallet => 'No wallet is available for backup yet.';
+
+  @override
+  String get onboardingFlowWalletBackupContinueHint => 'Reveal your phrase and confirm the backup to continue.';
+
+  @override
   String get onboardingFlowRoleTitle => 'Pick your role';
 
   @override
@@ -6747,6 +6771,30 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mnemonicRevealEnterPinDialogTitle => 'Enter PIN';
+
+  @override
+  String get walletBackupConfirmAction => 'I backed it up safely';
+
+  @override
+  String get walletBackupMarkedCompleteToast => 'Recovery phrase backup marked as complete.';
+
+  @override
+  String get walletBackupBannerTitle => 'Back up your wallet recovery phrase';
+
+  @override
+  String get walletBackupBannerSubtitle => 'Store it safely offline. It is required to recover this wallet.';
+
+  @override
+  String get walletBackupBannerAction => 'Back up now';
+
+  @override
+  String get walletReconnectSuccessToast => 'Wallet session restored.';
+
+  @override
+  String get walletReconnectReadOnlyToast => 'Wallet credentials refreshed. This session is still read-only.';
+
+  @override
+  String get walletReconnectManualRequiredToast => 'Reconnect with your wallet provider to enable signing.';
 
   @override
   String get manageMarkersTitle => 'Manage markers';

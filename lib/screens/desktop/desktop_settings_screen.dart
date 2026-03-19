@@ -113,6 +113,47 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
           ? l10n.authSecureAccountSettingsAddPasswordSubtitle
           : l10n.authSecureAccountSettingsAddEmailPasswordSubtitle;
 
+  Future<void> _handleReadOnlyWalletReconnect(
+    WalletProvider walletProvider,
+  ) async {
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
+
+    final managedEligible = await walletProvider.isManagedReconnectEligible();
+    if (!managedEligible) {
+      if (!mounted) return;
+      navigator.pushNamed('/connect-wallet');
+      return;
+    }
+
+    final outcome = await walletProvider.recoverManagedWalletSession(
+      refreshBackendSession: true,
+    );
+    if (!mounted) return;
+
+    if (walletProvider.canTransact) {
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.walletReconnectSuccessToast)),
+        tone: KubusSnackBarTone.success,
+      );
+      return;
+    }
+
+    if (outcome == ManagedWalletReconnectOutcome.manualConnectRequired) {
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.walletReconnectManualRequiredToast)),
+        tone: KubusSnackBarTone.warning,
+      );
+      return;
+    }
+
+    messenger.showKubusSnackBar(
+      SnackBar(content: Text(l10n.walletReconnectReadOnlyToast)),
+      tone: KubusSnackBarTone.neutral,
+    );
+  }
+
   Future<void> _loadSettings() async {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final settings = await SettingsService.loadSettings(
@@ -804,10 +845,11 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                       ),
                       if (hasWalletIdentity)
                         ElevatedButton.icon(
-                          onPressed: () {
+                          onPressed: () async {
                             if (walletProvider.isReadOnlySession) {
-                              Navigator.of(context)
-                                  .pushNamed('/connect-wallet');
+                              await _handleReadOnlyWalletReconnect(
+                                walletProvider,
+                              );
                               return;
                             }
                             Navigator.push(

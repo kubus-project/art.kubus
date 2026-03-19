@@ -731,6 +731,30 @@ class AppLocalizationsSl extends AppLocalizations {
   String get onboardingFlowProfileBody => 'Dodaj ime in fotografijo, da te drugi lažje prepoznajo.';
 
   @override
+  String get onboardingFlowWalletBackupTitle => 'Varnostno shrani obnovitveno frazo';
+
+  @override
+  String get onboardingFlowWalletBackupBody => 'Ta fraza je edini način, da obnoviš to denarnico na novi napravi.';
+
+  @override
+  String get onboardingFlowWalletBackupPrivacyWarning => 'Frazo ohrani zasebno. Kdor jo ima, lahko popolnoma upravlja tvojo denarnico.';
+
+  @override
+  String get onboardingFlowWalletBackupLossWarning => 'Če jo izgubiš, lahko trajno izgubiš dostop do sredstev in zbirateljskih predmetov.';
+
+  @override
+  String get onboardingFlowWalletBackupAction => 'Prikaži in potrdi varnostno kopijo';
+
+  @override
+  String get onboardingFlowWalletBackupCompleted => 'Varnostna kopija obnovitvene fraze je potrjena.';
+
+  @override
+  String get onboardingFlowWalletBackupNoWallet => 'Denarnica za varnostno kopijo še ni na voljo.';
+
+  @override
+  String get onboardingFlowWalletBackupContinueHint => 'Za nadaljevanje prikaži frazo in potrdi varnostno kopijo.';
+
+  @override
   String get onboardingFlowRoleTitle => 'Izberi svojo vlogo';
 
   @override
@@ -6769,6 +6793,30 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get mnemonicRevealEnterPinDialogTitle => 'Vnesi PIN';
+
+  @override
+  String get walletBackupConfirmAction => 'Frazo sem varno shranil/a';
+
+  @override
+  String get walletBackupMarkedCompleteToast => 'Varnostna kopija obnovitvene fraze je označena kot zaključena.';
+
+  @override
+  String get walletBackupBannerTitle => 'Varnostno shrani obnovitveno frazo denarnice';
+
+  @override
+  String get walletBackupBannerSubtitle => 'Frazo varno shrani brez povezave. Potrebna je za obnovitev denarnice.';
+
+  @override
+  String get walletBackupBannerAction => 'Shrani zdaj';
+
+  @override
+  String get walletReconnectSuccessToast => 'Seja denarnice je obnovljena.';
+
+  @override
+  String get walletReconnectReadOnlyToast => 'Poverilnice denarnice so osvežene. Seja je še vedno samo za branje.';
+
+  @override
+  String get walletReconnectManualRequiredToast => 'Za podpisovanje se znova poveži prek ponudnika denarnice.';
 
   @override
   String get manageMarkersTitle => 'Upravljaj označevalnike';

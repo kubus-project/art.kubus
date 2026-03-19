@@ -13,13 +13,14 @@ class StructuredOnboardingResumeState {
 }
 
 class AuthOnboardingService {
-  static const int onboardingFlowVersion = 4;
+  static const int onboardingFlowVersion = 5;
 
   static const List<String> accountStepIds = <String>[
     'account',
     'verifyEmail',
     'role',
     'profile',
+    'walletBackup',
     'daoReview',
     'accountPermissions',
     'done',
@@ -30,6 +31,7 @@ class AuthOnboardingService {
     'verifyEmail',
     'role',
     'profile',
+    'walletBackup',
     'daoReview',
     'accountPermissions',
     'done',
@@ -56,6 +58,7 @@ class AuthOnboardingService {
     required bool hasPendingAuthOnboarding,
     required bool hasAuthenticatedSession,
     required bool hasHydratedProfile,
+    required bool requiresWalletBackup,
     required String? heuristicNextStepId,
     required String? persona,
     Map<String, dynamic>? payload,
@@ -94,11 +97,15 @@ class AuthOnboardingService {
         normalizedPersona == 'institution';
     final requiresVerifyEmail = completedSteps.contains('verifyEmail') ||
         deferredSteps.contains('verifyEmail');
+    final requiresWalletBackupStep = completedSteps.contains('walletBackup') ||
+        deferredSteps.contains('walletBackup') ||
+        requiresWalletBackup;
 
     if (hasSavedProgress) {
       final nextStepId = _nextIncompleteStepId(
         hasAuthenticatedSession: hasAuthenticatedSession,
         requiresVerifyEmail: requiresVerifyEmail,
+        requiresWalletBackup: requiresWalletBackupStep,
         requiresDaoReview: requiresDaoReview,
         completedSteps: completedSteps,
       );
@@ -116,7 +123,9 @@ class AuthOnboardingService {
     }
 
     if (hasAuthenticatedSession && hasHydratedProfile) {
-      final nextStepId = requiresDaoReview ? 'daoReview' : 'accountPermissions';
+      final nextStepId = requiresWalletBackupStep
+          ? 'walletBackup'
+          : (requiresDaoReview ? 'daoReview' : 'accountPermissions');
       return StructuredOnboardingResumeState(
         requiresStructuredOnboarding: true,
         nextStepId: nextStepId,
@@ -143,6 +152,7 @@ class AuthOnboardingService {
   static String? _nextIncompleteStepId({
     required bool hasAuthenticatedSession,
     required bool requiresVerifyEmail,
+    required bool requiresWalletBackup,
     required bool requiresDaoReview,
     required Set<String> completedSteps,
   }) {
@@ -151,6 +161,7 @@ class AuthOnboardingService {
       if (requiresVerifyEmail) 'verifyEmail',
       'role',
       'profile',
+      if (requiresWalletBackup) 'walletBackup',
       if (requiresDaoReview) 'daoReview',
       'accountPermissions',
       'done',

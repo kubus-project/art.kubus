@@ -488,10 +488,32 @@ class SecurityGateProvider extends ChangeNotifier implements AuthSessionCoordina
         notifyListeners();
         return false;
       }
+    } else if (reason == SecurityLockReason.autoLock) {
+      await _attemptManagedWalletReconnect(refreshBackendSession: false);
     }
 
     _completeAndReset(const AuthReauthResult(AuthReauthOutcome.success));
     return true;
+  }
+
+  Future<void> _attemptManagedWalletReconnect({
+    required bool refreshBackendSession,
+  }) async {
+    final wallet = _walletProvider;
+    if (wallet == null || !wallet.isReadOnlySession) return;
+    try {
+      final managedEligible = await wallet.isManagedReconnectEligible();
+      if (!managedEligible) return;
+      final walletAddress = await _resolveWalletAddress();
+      await wallet.recoverManagedWalletSession(
+        walletAddress: walletAddress?.trim(),
+        refreshBackendSession: refreshBackendSession,
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('SecurityGateProvider: managed reconnect failed: $e');
+      }
+    }
   }
 
   Future<bool> _renewBackendSession() async {
@@ -499,8 +521,24 @@ class SecurityGateProvider extends ChangeNotifier implements AuthSessionCoordina
       final walletAddress = await _resolveWalletAddress();
       if (walletAddress == null || walletAddress.trim().isEmpty) return false;
 
-      await BackendApiService().registerWallet(walletAddress: walletAddress.trim());
-      await BackendApiService().loadAuthToken();
+      final wallet = _walletProvider;
+      if (wallet != null) {
+        final managedEligible = await wallet.isManagedReconnectEligible();
+        if (managedEligible) {
+          await wallet.recoverManagedWalletSession(
+            walletAddress: walletAddress.trim(),
+            refreshBackendSession: true,
+          );
+        } else {
+          await BackendApiService().registerWallet(
+            walletAddress: walletAddress.trim(),
+          );
+          await BackendApiService().loadAuthToken();
+        }
+      } else {
+        await BackendApiService().registerWallet(walletAddress: walletAddress.trim());
+        await BackendApiService().loadAuthToken();
+      }
       return (BackendApiService().getAuthToken() ?? '').trim().isNotEmpty;
     } catch (e) {
       if (kDebugMode) {

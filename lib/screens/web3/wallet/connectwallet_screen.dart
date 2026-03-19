@@ -249,6 +249,7 @@ class _ConnectWalletState extends State<ConnectWallet>
       final reg = await backendApiService.registerWallet(
         walletAddress: address,
         username: username,
+        recordSignInMethod: _isAuthEntryFlow,
       );
       debugPrint('connectwallet: registerWallet response: $reg');
     }

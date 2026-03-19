@@ -32,6 +32,7 @@ void main() {
       hasPendingAuthOnboarding: false,
       hasAuthenticatedSession: true,
       hasHydratedProfile: false,
+      requiresWalletBackup: false,
       heuristicNextStepId: null,
       persona: null,
       payload: const <String, dynamic>{
@@ -53,6 +54,7 @@ void main() {
       hasPendingAuthOnboarding: true,
       hasAuthenticatedSession: true,
       hasHydratedProfile: true,
+      requiresWalletBackup: false,
       heuristicNextStepId: null,
       persona: 'creator',
     );
@@ -71,6 +73,7 @@ void main() {
       hasPendingAuthOnboarding: true,
       hasAuthenticatedSession: true,
       hasHydratedProfile: true,
+      requiresWalletBackup: false,
       heuristicNextStepId: null,
       persona: 'lover',
     );
@@ -89,11 +92,30 @@ void main() {
       hasPendingAuthOnboarding: true,
       hasAuthenticatedSession: true,
       hasHydratedProfile: true,
+      requiresWalletBackup: false,
       heuristicNextStepId: null,
       persona: 'creator',
     );
 
     expect(state.requiresStructuredOnboarding, isFalse);
     expect(state.nextStepId, isNull);
+  });
+
+  test('resumes at wallet backup when backup is still required', () async {
+    final prefs = await seedProgress(
+      completedSteps: <String>{'account', 'role', 'profile'},
+    );
+    final state = await AuthOnboardingService.resolveStructuredOnboardingResume(
+      prefs: prefs,
+      hasPendingAuthOnboarding: true,
+      hasAuthenticatedSession: true,
+      hasHydratedProfile: true,
+      requiresWalletBackup: true,
+      heuristicNextStepId: null,
+      persona: 'lover',
+    );
+
+    expect(state.requiresStructuredOnboarding, isTrue);
+    expect(state.nextStepId, 'walletBackup');
   });
 }

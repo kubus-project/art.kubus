@@ -148,6 +148,40 @@ abstract class MarkerBackendApi {
   Future<bool> deleteArtMarkerRecord(String markerId);
 }
 
+enum AuthSignInMethod {
+  unknown,
+  email,
+  google,
+  wallet,
+}
+
+String _authSignInMethodToStorageValue(AuthSignInMethod method) {
+  switch (method) {
+    case AuthSignInMethod.email:
+      return 'email';
+    case AuthSignInMethod.google:
+      return 'google';
+    case AuthSignInMethod.wallet:
+      return 'wallet';
+    case AuthSignInMethod.unknown:
+      return '';
+  }
+}
+
+AuthSignInMethod _authSignInMethodFromStorageValue(String? value) {
+  final normalized = (value ?? '').trim().toLowerCase();
+  switch (normalized) {
+    case 'email':
+      return AuthSignInMethod.email;
+    case 'google':
+      return AuthSignInMethod.google;
+    case 'wallet':
+      return AuthSignInMethod.wallet;
+    default:
+      return AuthSignInMethod.unknown;
+  }
+}
+
 class BackendApiService
     implements ArtworkBackendApi, ProfileBackendApi, MarkerBackendApi {
   static final BackendApiService _instance = BackendApiService._internal();
@@ -229,21 +263,103 @@ class BackendApiService
     final payload = _tryDecodeJwtPayload(t);
     if (payload == null) return null;
 
-    // Try common claim keys across backend variants.
-    final candidates = <Object?>[
-      payload['walletAddress'],
-      payload['wallet_address'],
-      payload['wallet'],
-      payload['user_id'],
-      payload['id'],
-      payload['sub'],
-    ];
-    for (final c in candidates) {
-      final s = (c ?? '').toString();
-      final canonical = WalletUtils.canonical(s);
+    // Prefer explicit wallet claims first.
+    for (final key in const ['walletAddress', 'wallet_address', 'wallet']) {
+      final raw = (payload[key] ?? '').toString();
+      final canonical = WalletUtils.canonical(raw);
       if (canonical.isNotEmpty) return canonical;
     }
+
+    // Backward compatibility: only use id/sub claims when value actually
+    // looks like a wallet to avoid treating UUIDs as wallet addresses.
+    for (final key in const ['user_id', 'id', 'sub']) {
+      final raw = (payload[key] ?? '').toString();
+      final canonical = WalletUtils.canonical(raw);
+      if (canonical.isEmpty) continue;
+      if (WalletUtils.looksLikeWallet(canonical)) {
+        return canonical;
+      }
+    }
     return null;
+  }
+
+  AuthSignInMethod inferSignInMethodFromClaims([Map<String, dynamic>? claims]) {
+    final resolvedClaims = claims ?? getCurrentAuthTokenClaims();
+    if (resolvedClaims == null) return AuthSignInMethod.unknown;
+
+    final provider = (resolvedClaims['authProvider'] ??
+            resolvedClaims['auth_provider'] ??
+            resolvedClaims['provider'] ??
+            resolvedClaims['signInMethod'] ??
+            resolvedClaims['signin_method'] ??
+            '')
+        .toString()
+        .trim()
+        .toLowerCase();
+    if (provider.contains('google')) {
+      return AuthSignInMethod.google;
+    }
+    if (provider.contains('email') || provider.contains('password')) {
+      return AuthSignInMethod.email;
+    }
+    if (provider.contains('wallet') || provider.contains('solana')) {
+      return AuthSignInMethod.wallet;
+    }
+
+    final email = (resolvedClaims['email'] ??
+            resolvedClaims['emailAddress'] ??
+            resolvedClaims['email_address'] ??
+            '')
+        .toString()
+        .trim();
+    if (email.isNotEmpty) return AuthSignInMethod.email;
+
+    final wallet = getCurrentAuthWalletAddress();
+    if ((wallet ?? '').isNotEmpty) return AuthSignInMethod.wallet;
+
+    return AuthSignInMethod.unknown;
+  }
+
+  Future<void> setLastSignInMethod(AuthSignInMethod method) async {
+    final value = _authSignInMethodToStorageValue(method);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (value.isEmpty) {
+        await prefs.remove(PreferenceKeys.authLastSignInMethodV1);
+      } else {
+        await prefs.setString(PreferenceKeys.authLastSignInMethodV1, value);
+      }
+    } catch (e) {
+      AppConfig.debugPrint(
+          'BackendApiService.setLastSignInMethod failed: $e');
+    }
+  }
+
+  Future<AuthSignInMethod> getLastSignInMethod() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return _authSignInMethodFromStorageValue(
+        prefs.getString(PreferenceKeys.authLastSignInMethodV1),
+      );
+    } catch (e) {
+      AppConfig.debugPrint(
+          'BackendApiService.getLastSignInMethod failed: $e');
+      return AuthSignInMethod.unknown;
+    }
+  }
+
+  Future<AuthSignInMethod> resolveLastSignInMethod({
+    bool inferFromToken = true,
+  }) async {
+    final stored = await getLastSignInMethod();
+    if (stored != AuthSignInMethod.unknown || !inferFromToken) {
+      return stored;
+    }
+    final inferred = inferSignInMethodFromClaims();
+    if (inferred != AuthSignInMethod.unknown) {
+      await setLastSignInMethod(inferred);
+    }
+    return inferred;
   }
 
   @visibleForTesting
@@ -661,6 +777,7 @@ class BackendApiService
         if (AuthGatingService.isAccessTokenValid(token)) {
           _authToken = token;
           _authWalletCanonical = _tryExtractWalletFromToken(token);
+          await resolveLastSignInMethod();
           AppConfig.debugPrint(
               'BackendApiService: Auth token loaded (in-memory)');
         } else {
@@ -724,6 +841,7 @@ class BackendApiService
       for (final key in AuthGatingService.refreshTokenKeys) {
         await prefs.remove(key);
       }
+      await prefs.remove(PreferenceKeys.authLastSignInMethodV1);
       AppConfig.debugPrint(
           'BackendApiService: Auth cleared from SharedPreferences');
     } catch (e) {
@@ -1476,6 +1594,7 @@ class BackendApiService
   Future<Map<String, dynamic>> registerWallet({
     required String walletAddress,
     String? username,
+    bool recordSignInMethod = false,
   }) async {
     try {
       // Keep preferred wallet in sync with successful auth issuance.
@@ -1493,6 +1612,9 @@ class BackendApiService
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         await _persistTokenFromResponse(data);
+        if (recordSignInMethod) {
+          await setLastSignInMethod(AuthSignInMethod.wallet);
+        }
         return data;
       } else {
         throw Exception(
@@ -1527,6 +1649,7 @@ class BackendApiService
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         await _persistTokenFromResponse(data);
         await syncSecureAccountStatusFromResponse(data);
+        await setLastSignInMethod(AuthSignInMethod.wallet);
         return data;
       } else {
         throw Exception(
@@ -1582,6 +1705,7 @@ class BackendApiService
       if (response.statusCode == 200 || response.statusCode == 201) {
         await _persistTokenFromResponse(data);
         await syncSecureAccountStatusFromResponse(data);
+        await setLastSignInMethod(AuthSignInMethod.email);
         return data;
       }
       if (response.statusCode == 429) {
@@ -1622,6 +1746,7 @@ class BackendApiService
       if (response.statusCode == 200) {
         await _persistTokenFromResponse(data);
         await syncSecureAccountStatusFromResponse(data);
+        await setLastSignInMethod(AuthSignInMethod.email);
         return data;
       }
       if (response.statusCode == 429) {
@@ -1952,6 +2077,7 @@ class BackendApiService
       if (response.statusCode == 200 || response.statusCode == 201) {
         await _persistTokenFromResponse(data);
         await syncSecureAccountStatusFromResponse(data);
+        await setLastSignInMethod(AuthSignInMethod.google);
         return data;
       }
       if (response.statusCode == 429) {

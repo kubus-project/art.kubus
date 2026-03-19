@@ -1,14 +1,17 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/dao.dart';
 import 'package:art_kubus/models/user_persona.dart';
 import 'package:art_kubus/providers/dao_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
+import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/screens/auth/sign_in_screen.dart';
 import 'package:art_kubus/screens/desktop/desktop_shell.dart';
+import 'package:art_kubus/screens/web3/wallet/mnemonic_reveal_screen.dart';
 import 'package:art_kubus/services/auth_onboarding_service.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/notification_helper.dart';
@@ -47,6 +50,7 @@ enum _OnboardingStep {
   verifyEmail,
   role,
   profile,
+  walletBackup,
   daoReview,
   accountPermissions,
   done,
@@ -205,6 +209,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   bool _autoAdvancingVerification = false;
   bool _finishSignInPromptShown = false;
   bool _verifiedSigningInMessageShown = false;
+  bool _requiresWalletBackupStep = false;
 
   _StepPalette _paletteForStep(_OnboardingStep step) {
     switch (step) {
@@ -243,6 +248,12 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           start: Color(0xFF00796B),
           end: Color(0xFF4DB6AC),
           accent: KubusColors.accentTealDark,
+        );
+      case _OnboardingStep.walletBackup:
+        return const _StepPalette(
+          start: Color(0xFF0D47A1),
+          end: Color(0xFF1E88E5),
+          accent: Color(0xFF90CAF9),
         );
       case _OnboardingStep.daoReview:
         return const _StepPalette(
@@ -342,6 +353,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
       final prefs = await SharedPreferences.getInstance();
       _hydrateLocalDrafts(prefs);
+      await _syncWalletBackupRequirement();
 
       // Infer branch from initialStepId so that tests and deep-links can jump
       // directly into account or guest steps without going through the welcome
@@ -587,6 +599,34 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     return (BackendApiService().getCurrentAuthWalletAddress() ?? '').trim();
   }
 
+  Future<String?> _resolveWalletForBackupCheck() async {
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final fromProfile = (profileProvider.currentUser?.walletAddress ?? '').trim();
+    if (fromProfile.isNotEmpty) return fromProfile;
+    final fromWallet = (walletProvider.currentWalletAddress ?? '').trim();
+    if (fromWallet.isNotEmpty) return fromWallet;
+    final fromSession = _currentSessionWalletAddress();
+    if (fromSession.isNotEmpty) return fromSession;
+    final prefs = await SharedPreferences.getInstance();
+    final fallback = (prefs.getString(PreferenceKeys.walletAddress) ??
+            prefs.getString('wallet_address') ??
+            prefs.getString('walletAddress') ??
+            prefs.getString('wallet') ??
+            '')
+        .trim();
+    return fallback.isEmpty ? null : fallback;
+  }
+
+  Future<void> _syncWalletBackupRequirement() async {
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final walletAddress = await _resolveWalletForBackupCheck();
+    _requiresWalletBackupStep = await walletProvider.isMnemonicBackupRequired(
+      walletAddress: walletAddress,
+    );
+  }
+
   bool _sessionMatchesPendingVerificationEmail() {
     if (!_pendingEmailVerification) return true;
     final pending = (_pendingVerificationEmail ?? '').trim().toLowerCase();
@@ -602,6 +642,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
     await profileProvider.loadProfile(wallet);
+    await _syncWalletBackupRequirement();
     _refreshAuthDerivedSteps();
   }
 
@@ -621,6 +662,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       warmUp: false,
       loadProfile: true,
     );
+    await _syncWalletBackupRequirement();
   }
 
   void _showVerificationSnack(
@@ -652,6 +694,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           if (_verificationRequired) _OnboardingStep.verifyEmail,
           _OnboardingStep.role,
           _OnboardingStep.profile,
+          if (_requiresWalletBackupStep) _OnboardingStep.walletBackup,
           if (_requiresDaoReviewStep) _OnboardingStep.daoReview,
           _OnboardingStep.accountPermissions,
           _OnboardingStep.done,
@@ -1209,6 +1252,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   }
 
   Future<void> _selectAccountBranch() async {
+    await _syncWalletBackupRequirement();
     setState(() {
       _branch = _OnboardingBranch.account;
       _steps = _buildSteps();
@@ -1411,6 +1455,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   }
 
   Future<void> _handleEmbeddedRegistrationSuccess() async {
+    await _syncWalletBackupRequirement();
     _refreshAuthDerivedSteps();
     await _syncLocalProfileDraftToBackendIfPossible();
     await _flushPendingAvatarUploadIfPossible();
@@ -1496,6 +1541,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       preferredWalletAddress: signedInWallet.isEmpty ? null : signedInWallet,
       userId: user['id'],
     );
+    await _syncWalletBackupRequirement();
     _refreshAuthDerivedSteps();
     try {
       await _refreshProfileForCurrentSessionWallet();
@@ -1615,6 +1661,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
       await BackendApiService().refreshAuthTokenFromStorage();
       await _syncWalletSessionIntoProviders();
+      await _syncWalletBackupRequirement();
       try {
         await _refreshProfileForCurrentSessionWallet();
       } catch (error) {
@@ -1698,6 +1745,42 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     }
     if (!mounted) return;
     await _markCompleted(_OnboardingStep.role);
+  }
+
+  Future<void> _handleWalletBackupStep() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    if (!_requiresWalletBackupStep) {
+      await _markCompleted(_OnboardingStep.walletBackup);
+      return;
+    }
+    final walletAddress = await _resolveWalletForBackupCheck();
+    if (!mounted) return;
+
+    if ((walletAddress ?? '').isEmpty) {
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.onboardingFlowWalletBackupNoWallet)),
+        tone: KubusSnackBarTone.warning,
+      );
+      return;
+    }
+
+    final completed = await navigator.push<bool>(
+      MaterialPageRoute(
+        builder: (_) => const MnemonicRevealScreen(),
+      ),
+    );
+    if (!mounted) return;
+    await _syncWalletBackupRequirement();
+    if (!_requiresWalletBackupStep || completed == true) {
+      await _markCompleted(_OnboardingStep.walletBackup);
+      return;
+    }
+    messenger.showKubusSnackBar(
+      SnackBar(content: Text(l10n.onboardingFlowWalletBackupContinueHint)),
+      tone: KubusSnackBarTone.neutral,
+    );
   }
 
   Future<void> _finishOnboarding() async {
@@ -1814,6 +1897,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         } else {
           await _deferCurrentStep();
         }
+        return;
+      case _OnboardingStep.walletBackup:
+        await _handleWalletBackupStep();
         return;
       case _OnboardingStep.daoReview:
         if (_completed.contains(_OnboardingStep.daoReview)) {
@@ -2061,6 +2147,18 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           onAvatarStaged: _stageAvatarForLaterUpload,
         );
         break;
+      case _OnboardingStep.walletBackup:
+        content = _WalletBackupStep(
+          title: l10n.onboardingFlowWalletBackupTitle,
+          body: l10n.onboardingFlowWalletBackupBody,
+          privacyWarning: l10n.onboardingFlowWalletBackupPrivacyWarning,
+          lossWarning: l10n.onboardingFlowWalletBackupLossWarning,
+          actionLabel: l10n.onboardingFlowWalletBackupAction,
+          completed: _completed.contains(_OnboardingStep.walletBackup) ||
+              !_requiresWalletBackupStep,
+          onRevealMnemonic: _handleWalletBackupStep,
+        );
+        break;
       case _OnboardingStep.daoReview:
         content = _DaoReviewStep(
           title: 'DAO review',
@@ -2174,6 +2272,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         return Icons.tune_outlined;
       case _OnboardingStep.profile:
         return Icons.badge_outlined;
+      case _OnboardingStep.walletBackup:
+        return Icons.vpn_key_outlined;
       case _OnboardingStep.daoReview:
         return Icons.fact_check_outlined;
       case _OnboardingStep.accountPermissions:
@@ -2212,6 +2312,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
     if (_currentStep == _OnboardingStep.role ||
         _currentStep == _OnboardingStep.profile ||
+        _currentStep == _OnboardingStep.walletBackup ||
         _currentStep == _OnboardingStep.daoReview) {
       if (_currentIndex == 0) {
         return const SizedBox.shrink();
@@ -2287,6 +2388,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           return l10n.onboardingFlowRoleTitle;
         case _OnboardingStep.profile:
           return l10n.onboardingFlowProfileTitle;
+        case _OnboardingStep.walletBackup:
+          return l10n.onboardingFlowWalletBackupTitle;
         case _OnboardingStep.daoReview:
           return 'DAO review';
         case _OnboardingStep.accountPermissions:
@@ -2687,6 +2790,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       case _OnboardingStep.daoReview:
       case _OnboardingStep.accountPermissions:
         return l10n.commonContinue;
+      case _OnboardingStep.walletBackup:
+        return l10n.onboardingFlowWalletBackupAction;
       case _OnboardingStep.verifyEmail:
         return l10n.onboardingFlowVerifyContinue;
       case _OnboardingStep.done:
@@ -4360,6 +4465,134 @@ class _PermissionTile extends StatelessWidget {
               ),
               child: Text(l10n.commonEnable),
             ),
+    );
+  }
+}
+
+class _WalletBackupStep extends StatelessWidget {
+  const _WalletBackupStep({
+    required this.title,
+    required this.body,
+    required this.privacyWarning,
+    required this.lossWarning,
+    required this.actionLabel,
+    required this.completed,
+    required this.onRevealMnemonic,
+  });
+
+  final String title;
+  final String body;
+  final String privacyWarning;
+  final String lossWarning;
+  final String actionLabel;
+  final bool completed;
+  final Future<void> Function() onRevealMnemonic;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxHeight < 380;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AuthTitleRow(
+              title: title,
+              subtitle: body,
+              compact: compact,
+              foregroundColor: Colors.white,
+              subtitleColor: Colors.white.withValues(alpha: 0.85),
+            ),
+            const SizedBox(height: KubusSpacing.sm),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(KubusSpacing.md),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.16),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.only(top: 2),
+                        child: Icon(Icons.privacy_tip_outlined,
+                            color: Colors.white, size: 18),
+                      ),
+                      const SizedBox(width: KubusSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          privacyWarning,
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Colors.white.withValues(alpha: 0.9),
+                                  ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: KubusSpacing.sm),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.only(top: 2),
+                        child: Icon(Icons.warning_amber_rounded,
+                            color: Colors.white, size: 18),
+                      ),
+                      const SizedBox(width: KubusSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          lossWarning,
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Colors.white.withValues(alpha: 0.9),
+                                  ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: KubusSpacing.md),
+            if (completed)
+              Padding(
+                padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle_outline,
+                        color: Color(0xFF81C784)),
+                    const SizedBox(width: KubusSpacing.xs),
+                    Expanded(
+                      child: Text(
+                        l10n.onboardingFlowWalletBackupCompleted,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: const Color(0xFF81C784),
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            KubusButton(
+              onPressed: () => unawaited(onRevealMnemonic()),
+              label: actionLabel,
+              icon: Icons.visibility_outlined,
+              isFullWidth: true,
+            ),
+            const Spacer(),
+          ],
+        );
+      },
     );
   }
 }

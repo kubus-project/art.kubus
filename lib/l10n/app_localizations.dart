@@ -1523,6 +1523,54 @@ abstract class AppLocalizations {
   /// **'Add a name and a photo so people can recognize you.'**
   String get onboardingFlowProfileBody;
 
+  /// No description provided for @onboardingFlowWalletBackupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Back up your recovery phrase'**
+  String get onboardingFlowWalletBackupTitle;
+
+  /// No description provided for @onboardingFlowWalletBackupBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This phrase is the only way to recover this wallet on a new device.'**
+  String get onboardingFlowWalletBackupBody;
+
+  /// No description provided for @onboardingFlowWalletBackupPrivacyWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep it private. Anyone with this phrase can fully control your wallet.'**
+  String get onboardingFlowWalletBackupPrivacyWarning;
+
+  /// No description provided for @onboardingFlowWalletBackupLossWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'If you lose it, you can lose access to funds and collectibles forever.'**
+  String get onboardingFlowWalletBackupLossWarning;
+
+  /// No description provided for @onboardingFlowWalletBackupAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Reveal and confirm backup'**
+  String get onboardingFlowWalletBackupAction;
+
+  /// No description provided for @onboardingFlowWalletBackupCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery phrase backup confirmed.'**
+  String get onboardingFlowWalletBackupCompleted;
+
+  /// No description provided for @onboardingFlowWalletBackupNoWallet.
+  ///
+  /// In en, this message translates to:
+  /// **'No wallet is available for backup yet.'**
+  String get onboardingFlowWalletBackupNoWallet;
+
+  /// No description provided for @onboardingFlowWalletBackupContinueHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Reveal your phrase and confirm the backup to continue.'**
+  String get onboardingFlowWalletBackupContinueHint;
+
   /// No description provided for @onboardingFlowRoleTitle.
   ///
   /// In en, this message translates to:
@@ -12814,6 +12862,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter PIN'**
   String get mnemonicRevealEnterPinDialogTitle;
+
+  /// No description provided for @walletBackupConfirmAction.
+  ///
+  /// In en, this message translates to:
+  /// **'I backed it up safely'**
+  String get walletBackupConfirmAction;
+
+  /// No description provided for @walletBackupMarkedCompleteToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery phrase backup marked as complete.'**
+  String get walletBackupMarkedCompleteToast;
+
+  /// No description provided for @walletBackupBannerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Back up your wallet recovery phrase'**
+  String get walletBackupBannerTitle;
+
+  /// No description provided for @walletBackupBannerSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Store it safely offline. It is required to recover this wallet.'**
+  String get walletBackupBannerSubtitle;
+
+  /// No description provided for @walletBackupBannerAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Back up now'**
+  String get walletBackupBannerAction;
+
+  /// No description provided for @walletReconnectSuccessToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet session restored.'**
+  String get walletReconnectSuccessToast;
+
+  /// No description provided for @walletReconnectReadOnlyToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet credentials refreshed. This session is still read-only.'**
+  String get walletReconnectReadOnlyToast;
+
+  /// No description provided for @walletReconnectManualRequiredToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Reconnect with your wallet provider to enable signing.'**
+  String get walletReconnectManualRequiredToast;
 
   /// No description provided for @manageMarkersTitle.
   ///

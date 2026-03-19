@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/providers/email_preferences_provider.dart';
 import 'package:art_kubus/providers/glass_capabilities_provider.dart';
@@ -18,9 +19,12 @@ import 'package:art_kubus/screens/settings_screen.dart';
 import 'package:art_kubus/screens/web3/wallet/token_swap.dart';
 import 'package:art_kubus/screens/web3/wallet/wallet_home.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
+import 'package:art_kubus/services/http_client_factory.dart';
 import 'package:art_kubus/services/solana_wallet_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -52,6 +56,7 @@ Future<
     })> _createTestProviders({
   bool withSigner = true,
   bool withAuthenticatedSession = true,
+  String? lastSignInMethod,
 }) async {
   final solanaWalletService = SolanaWalletService();
   final mnemonic = solanaWalletService.generateMnemonic();
@@ -65,6 +70,12 @@ Future<
   await prefs.setString('walletAddress', derived.address);
   await prefs.setString('wallet', derived.address);
   await prefs.setBool('has_wallet', true);
+  if ((lastSignInMethod ?? '').isNotEmpty) {
+    await prefs.setString(
+      PreferenceKeys.authLastSignInMethodV1,
+      lastSignInMethod!,
+    );
+  }
 
   final themeProvider = ThemeProvider();
   final profileProvider = ProfileProvider();
@@ -170,6 +181,19 @@ void main() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     BackendApiService().setAuthTokenForTesting(null);
     BackendApiService().setPreferredWalletAddress(null);
+    BackendApiService().setHttpClient(
+      MockClient((_) async {
+        return http.Response(
+          jsonEncode(<String, dynamic>{'success': true, 'data': <String, dynamic>{}}),
+          200,
+          headers: <String, String>{'content-type': 'application/json'},
+        );
+      }),
+    );
+  });
+
+  tearDown(() {
+    BackendApiService().setHttpClient(createPlatformHttpClient());
   });
 
   testWidgets(
@@ -293,6 +317,43 @@ void main() {
     await tester.tap(find.byKey(const Key('wallet_home_action_swap')));
     await _pumpFrames(tester, count: 4);
     expect(find.text('connect-wallet'), findsOneWidget);
+  });
+
+  testWidgets(
+      'managed read-only wallet home reconnect stays in-app for email/google sessions',
+      (tester) async {
+    tester.view.devicePixelRatio = 1.0;
+    await tester.binding.setSurfaceSize(const Size(1200, 900));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final providers = await _createTestProviders(
+      withSigner: false,
+      lastSignInMethod: 'email',
+    );
+
+    await tester.pumpWidget(
+      _wrapWithApp(
+        home: const WalletHome(),
+        themeProvider: providers.themeProvider,
+        profileProvider: providers.profileProvider,
+        walletProvider: providers.walletProvider,
+        web3Provider: providers.web3Provider,
+        platformProvider: providers.platformProvider,
+        notificationProvider: providers.notificationProvider,
+        navigationProvider: providers.navigationProvider,
+        localeProvider: providers.localeProvider,
+        statsProvider: providers.statsProvider,
+        securityGateProvider: providers.securityGateProvider,
+        glassCapabilitiesProvider: providers.glassCapabilitiesProvider,
+      ),
+    );
+    await _pumpFrames(tester);
+
+    await tester.tap(find.byKey(const Key('wallet_home_action_send')));
+    await _pumpFrames(tester, count: 4);
+
+    expect(find.text('connect-wallet'), findsNothing);
   });
 
   testWidgets('token swap screen shows reconnect prompt in read-only mode',

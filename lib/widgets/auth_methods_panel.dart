@@ -85,10 +85,15 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
   Future<bool> _maybeRouteToStructuredOnboarding({
     required SharedPreferences prefs,
     required ProfileProvider profileProvider,
+    required WalletProvider walletProvider,
+    String? walletAddress,
     required Map<String, dynamic> payload,
   }) async {
     if (widget.embedded || widget.onAuthSuccess != null) return false;
 
+    final requiresWalletBackup = await walletProvider.isMnemonicBackupRequired(
+      walletAddress: walletAddress,
+    );
     final resumeState =
         await AuthOnboardingService.resolveStructuredOnboardingResume(
       prefs: prefs,
@@ -96,6 +101,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
           OnboardingStateService.hasPendingAuthOnboardingSync(prefs),
       hasAuthenticatedSession: true,
       hasHydratedProfile: profileProvider.hasHydratedProfile,
+      requiresWalletBackup: requiresWalletBackup,
       heuristicNextStepId: profileProvider.nextStructuredOnboardingStepId,
       persona: profileProvider.userPersona?.storageValue,
       payload: payload,
@@ -132,6 +138,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     final gate = Provider.of<SecurityGateProvider>(context, listen: false);
     final data = (payload['data'] as Map<String, dynamic>?) ?? payload;
     final user = (data['user'] as Map<String, dynamic>?) ?? data;
+    final isNewAccount = AuthOnboardingService.payloadIndicatesNewAccount(payload);
     String? walletAddress = user['walletAddress'] ?? user['wallet_address'];
     final usernameFromUser =
         (user['username'] ?? _usernameController.text ?? '').toString();
@@ -143,6 +150,22 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
           desiredUsername: usernameFromUser);
     } catch (e) {
       AppConfig.debugPrint('AuthMethodsPanel: wallet provisioning failed: $e');
+    }
+    final normalizedWalletAddress = (walletAddress ?? '').toString().trim();
+    if (isNewAccount &&
+        normalizedWalletAddress.isNotEmpty &&
+        walletProvider.hasSigner &&
+        (walletProvider.currentWalletAddress ?? '').trim() ==
+            normalizedWalletAddress) {
+      try {
+        await walletProvider.setMnemonicBackupRequired(
+          required: true,
+          walletAddress: normalizedWalletAddress,
+        );
+      } catch (e) {
+        AppConfig.debugPrint(
+            'AuthMethodsPanel: failed to set wallet backup-required state: $e');
+      }
     }
     final prefs = await SharedPreferences.getInstance();
     if (userId != null && userId.toString().isNotEmpty) {
@@ -193,6 +216,10 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     if (await _maybeRouteToStructuredOnboarding(
       prefs: prefs,
       profileProvider: profileProvider,
+      walletProvider: walletProvider,
+      walletAddress: normalizedWalletAddress.isEmpty
+          ? walletProvider.currentWalletAddress
+          : normalizedWalletAddress,
       payload: payload,
     )) {
       return;
@@ -350,6 +377,22 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         } catch (e) {
           AppConfig.debugPrint(
               'AuthMethodsPanel: connectWalletWithAddress failed: $e');
+        }
+      }
+      if (walletProvider.isReadOnlySession) {
+        try {
+          final managedEligible = await walletProvider.isManagedReconnectEligible();
+          if (managedEligible) {
+            await walletProvider
+                .recoverManagedWalletSession(
+                  walletAddress: address,
+                  refreshBackendSession: false,
+                )
+                .timeout(walletConnectTimeout);
+          }
+        } catch (e) {
+          AppConfig.debugPrint(
+              'AuthMethodsPanel: managed reconnect after auth failed: $e');
         }
       }
       return address;

@@ -242,6 +242,25 @@ class _AppInitializerState extends State<AppInitializer> {
               'AppInitializer: refreshAuthTokenFromStorage failed: $e');
         }
       }
+      if (hasValidSession &&
+          walletProvider.hasWalletIdentity &&
+          walletProvider.isReadOnlySession) {
+        try {
+          final managedEligible = await walletProvider.isManagedReconnectEligible();
+          if (managedEligible) {
+            await walletProvider
+                .recoverManagedWalletSession(
+                  walletAddress: walletAddress,
+                  refreshBackendSession: true,
+                )
+                .timeout(const Duration(seconds: 10));
+            walletAddress = walletProvider.currentWalletAddress;
+          }
+        } catch (e) {
+          AppConfig.debugPrint(
+              'AppInitializer: managed wallet reconnect failed: $e');
+        }
+      }
       final hasLocalAccount =
           AuthGatingService.hasLocalAccountSync(prefs: prefs);
       final shouldShowFirstRunOnboarding =
@@ -257,12 +276,15 @@ class _AppInitializerState extends State<AppInitializer> {
               AppConfig.enableWalletConnect);
       final hasPendingAuthOnboarding =
           OnboardingStateService.hasPendingAuthOnboardingSync(prefs);
+      final requiresWalletBackup =
+          await walletProvider.isMnemonicBackupRequired(walletAddress: walletAddress);
       final pendingAuthOnboardingResume = hasValidSession
           ? await AuthOnboardingService.resolveStructuredOnboardingResume(
               prefs: prefs,
               hasPendingAuthOnboarding: hasPendingAuthOnboarding,
               hasAuthenticatedSession: hasValidSession,
               hasHydratedProfile: profileProvider.hasHydratedProfile,
+              requiresWalletBackup: requiresWalletBackup,
               heuristicNextStepId:
                   profileProvider.nextStructuredOnboardingStepId,
               persona: profileProvider.userPersona?.storageValue,

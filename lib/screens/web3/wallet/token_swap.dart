@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -56,6 +57,46 @@ class _TokenSwapState extends State<TokenSwap> {
         .toList();
     list.sort((a, b) => b.balance.compareTo(a.balance));
     return list;
+  }
+
+  Future<void> _handleReadOnlyReconnect() async {
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    final walletProvider = context.read<WalletProvider>();
+
+    final managedEligible = await walletProvider.isManagedReconnectEligible();
+    if (!managedEligible) {
+      if (!mounted) return;
+      navigator.pushNamed('/connect-wallet');
+      return;
+    }
+
+    final outcome = await walletProvider.recoverManagedWalletSession(
+      refreshBackendSession: true,
+    );
+    if (!mounted) return;
+
+    if (walletProvider.canTransact) {
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.walletReconnectSuccessToast)),
+        tone: KubusSnackBarTone.success,
+      );
+      return;
+    }
+
+    if (outcome == ManagedWalletReconnectOutcome.manualConnectRequired) {
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.walletReconnectManualRequiredToast)),
+        tone: KubusSnackBarTone.warning,
+      );
+      return;
+    }
+
+    messenger.showKubusSnackBar(
+      SnackBar(content: Text(l10n.walletReconnectReadOnlyToast)),
+      tone: KubusSnackBarTone.neutral,
+    );
   }
 
   @override
@@ -190,8 +231,7 @@ class _TokenSwapState extends State<TokenSwap> {
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton(
-                  onPressed: () =>
-                      Navigator.of(context).pushNamed('/connect-wallet'),
+                  onPressed: _handleReadOnlyReconnect,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: swapColor,
                     foregroundColor: theme.colorScheme.onPrimary,

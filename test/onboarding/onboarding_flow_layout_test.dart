@@ -1,10 +1,12 @@
 import 'dart:convert';
 
+import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/user_profile.dart';
 import 'package:art_kubus/providers/locale_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
+import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/screens/auth/sign_in_screen.dart';
 import 'package:art_kubus/screens/onboarding/onboarding_flow_screen.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
@@ -35,6 +37,9 @@ Widget _buildTestApp({
       ChangeNotifierProvider<LocaleProvider>(create: (_) => LocaleProvider()),
       ChangeNotifierProvider<ProfileProvider>.value(
           value: resolvedProfileProvider),
+      ChangeNotifierProvider<WalletProvider>(
+        create: (_) => WalletProvider(deferInit: true),
+      ),
     ],
     child: MaterialApp(
       theme: theme ?? ThemeData.light(useMaterial3: true),
@@ -191,6 +196,29 @@ void main() {
 
     // Should show account step with auth panel
     expect(find.text('Create your account'), findsOneWidget);
+  });
+
+  testWidgets('wallet backup step renders when backup is required',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+
+    const walletAddress = '4Nd1m5sP3v1bE7c9Q2w6z8YkLmNoPrStUvWxYzABcDeF';
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'wallet_address': walletAddress,
+      '${PreferenceKeys.walletMnemonicBackupRequiredV1Prefix}:$walletAddress':
+          true,
+    });
+
+    await tester.pumpWidget(
+      _buildTestApp(
+        child: const OnboardingFlowScreen(initialStepId: 'walletBackup'),
+        locale: const Locale('en'),
+      ),
+    );
+    await _pumpOnboardingReady(tester);
+
+    expect(find.text('Back up your recovery phrase'), findsOneWidget);
   });
 
   testWidgets(

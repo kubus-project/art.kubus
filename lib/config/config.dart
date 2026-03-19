@@ -47,6 +47,7 @@ class AppConfig {
   static const bool enableGoogleOneTapWeb = false;
   static const bool enableMultiAuthEntry = true;
   static const bool enforceWalletOnboarding = false; // Don't force wallet during onboarding - let users set it up when needed
+  static const bool enableWalletBackupOnboarding = true;
   
   /// AR and Camera features
   static const bool enableARViewer = true;
@@ -295,6 +296,7 @@ class AppConfig {
       case 'googleAuth': return enableGoogleAuth;
       case 'googleOneTapWeb': return enableGoogleOneTapWeb;
       case 'multiAuth': return enableMultiAuthEntry;
+      case 'walletBackupOnboarding': return enableWalletBackupOnboarding;
       case 'marketplace': return enableMarketplace;
       case 'nftMinting': return enableNFTMinting;
       case 'events': return enableEvents;
@@ -388,9 +390,14 @@ class PreferenceKeys {
       'secure_account_prompt_dismissed_v1';
     static const String secureAccountStatusCacheV1 =
       'secure_account_status_cache_v1';
-    static const String secureAccountStatusCacheTsV1 =
+  static const String secureAccountStatusCacheTsV1 =
       'secure_account_status_cache_ts_v1';
+  static const String authLastSignInMethodV1 = 'auth_last_sign_in_method_v1';
   static const String walletAddress = 'wallet_address';
+  static const String walletMnemonicBackedUpV1Prefix =
+      'wallet_mnemonic_backed_up_v1';
+  static const String walletMnemonicBackupRequiredV1Prefix =
+      'wallet_mnemonic_backup_required_v1';
   /// User persona UX preference (stored per-wallet by ProfileProvider).
   static const String userPersona = 'user_persona';
   /// Marks that persona onboarding has been completed (stored per-wallet).

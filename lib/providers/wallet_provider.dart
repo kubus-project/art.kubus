@@ -37,6 +37,14 @@ enum WalletSessionPhase {
   error,
 }
 
+enum ManagedWalletReconnectOutcome {
+  signerRestored,
+  readOnlyRefreshed,
+  manualConnectRequired,
+  noWalletIdentity,
+  failed,
+}
+
 void _walletLog(String message) {
   if (!kDebugMode) return;
   debugPrint('WalletProvider: $message');
@@ -469,7 +477,11 @@ class WalletProvider extends ChangeNotifier {
       {DerivedKeyPairResult? derived}) async {
     try {
       final candidate = derived ?? _cachedDerivedCandidate;
-      await importWalletFromMnemonic(mnemonic, preDerived: candidate);
+      await importWalletFromMnemonic(
+        mnemonic,
+        preDerived: candidate,
+        markBackedUp: false,
+      );
       _cachedDerivedCandidate = null;
       // reset retry state
       _importRetryAttempts = 0;
@@ -550,6 +562,191 @@ class WalletProvider extends ChangeNotifier {
     await prefs.setString('walletAddress', address);
     await prefs.setString('wallet', address);
     await prefs.setBool('has_wallet', true);
+  }
+
+  String _walletScopedPreferenceKey({
+    required String prefix,
+    required String walletAddress,
+  }) {
+    final canonical = WalletUtils.canonical(walletAddress);
+    return '$prefix:$canonical';
+  }
+
+  Future<String?> _resolveWalletAddressFromPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final fromPrefs = (prefs.getString(PreferenceKeys.walletAddress) ??
+              prefs.getString('wallet_address') ??
+              prefs.getString('walletAddress') ??
+              prefs.getString('wallet'))
+          ?.trim();
+      if (fromPrefs != null && fromPrefs.isNotEmpty) return fromPrefs;
+    } catch (e) {
+      _walletLog('failed to resolve wallet from prefs: $e');
+    }
+    return null;
+  }
+
+  Future<String?> _resolveWalletForRecovery({String? preferredWallet}) async {
+    final preferred = (preferredWallet ?? '').trim();
+    if (preferred.isNotEmpty) return preferred;
+
+    final current = (_currentWalletAddress ?? '').trim();
+    if (current.isNotEmpty) return current;
+
+    final authWallet = (_apiService.getCurrentAuthWalletAddress() ?? '').trim();
+    if (authWallet.isNotEmpty) return authWallet;
+
+    return _resolveWalletAddressFromPrefs();
+  }
+
+  Future<bool> isManagedReconnectEligible() async {
+    final method = await _apiService.resolveLastSignInMethod();
+    return method == AuthSignInMethod.email ||
+        method == AuthSignInMethod.google;
+  }
+
+  Future<ManagedWalletReconnectOutcome> recoverManagedWalletSession({
+    String? walletAddress,
+    bool refreshBackendSession = true,
+  }) async {
+    final targetWallet = await _resolveWalletForRecovery(
+      preferredWallet: walletAddress,
+    );
+    if (targetWallet == null || targetWallet.isEmpty) {
+      return ManagedWalletReconnectOutcome.noWalletIdentity;
+    }
+
+    final eligible = await isManagedReconnectEligible();
+    if (!eligible) {
+      return ManagedWalletReconnectOutcome.manualConnectRequired;
+    }
+
+    _lastError = null;
+    _sessionPhase = WalletSessionPhase.restoring;
+    notifyListeners();
+
+    try {
+      if (refreshBackendSession) {
+        try {
+          await _apiService
+              .registerWallet(
+                walletAddress: targetWallet,
+              )
+              .timeout(const Duration(seconds: 8));
+          await _apiService
+              .loadAuthToken()
+              .timeout(const Duration(seconds: 4));
+        } catch (e) {
+          _walletLog('managed reconnect backend refresh failed: $e');
+        }
+      }
+
+      await connectWalletWithAddress(targetWallet);
+      if (WalletUtils.equals(_currentWalletAddress, targetWallet) && canTransact) {
+        _clearLastError();
+        return ManagedWalletReconnectOutcome.signerRestored;
+      }
+
+      final mnemonic = await readCachedMnemonic();
+      final normalizedMnemonic = (mnemonic ?? '').trim();
+      if (normalizedMnemonic.isEmpty) {
+        _clearLastError();
+        return ManagedWalletReconnectOutcome.manualConnectRequired;
+      }
+
+      if (!_solanaWalletService.validateMnemonic(normalizedMnemonic)) {
+        await clearCachedMnemonic();
+        _clearLastError();
+        return ManagedWalletReconnectOutcome.manualConnectRequired;
+      }
+
+      final derived =
+          await _solanaWalletService.derivePreferredKeyPair(normalizedMnemonic);
+      if (!WalletUtils.equals(derived.address, targetWallet)) {
+        _walletLog(
+          'managed reconnect: mnemonic wallet mismatch, preserving wallet identity',
+        );
+        _clearLastError();
+        return ManagedWalletReconnectOutcome.manualConnectRequired;
+      }
+
+      await importWalletFromMnemonic(
+        normalizedMnemonic,
+        preDerived: derived,
+        markBackedUp: false,
+      );
+      if (WalletUtils.equals(_currentWalletAddress, targetWallet) && canTransact) {
+        _clearLastError();
+        return ManagedWalletReconnectOutcome.signerRestored;
+      }
+
+      _clearLastError();
+      return ManagedWalletReconnectOutcome.readOnlyRefreshed;
+    } catch (e, stackTrace) {
+      _walletLog('recoverManagedWalletSession failed: $e\n$stackTrace');
+      _setLastError(e);
+      return ManagedWalletReconnectOutcome.failed;
+    } finally {
+      if (_sessionPhase == WalletSessionPhase.restoring) {
+        _sessionPhase = WalletSessionPhase.ready;
+      }
+      notifyListeners();
+    }
+  }
+
+  Future<void> setMnemonicBackupRequired({
+    bool required = true,
+    String? walletAddress,
+  }) async {
+    final targetWallet =
+        (walletAddress ?? _currentWalletAddress ?? '').trim();
+    if (targetWallet.isEmpty) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final requiredKey = _walletScopedPreferenceKey(
+      prefix: PreferenceKeys.walletMnemonicBackupRequiredV1Prefix,
+      walletAddress: targetWallet,
+    );
+    final backedUpKey = _walletScopedPreferenceKey(
+      prefix: PreferenceKeys.walletMnemonicBackedUpV1Prefix,
+      walletAddress: targetWallet,
+    );
+
+    await prefs.setBool(requiredKey, required);
+    if (required) {
+      await prefs.setBool(backedUpKey, false);
+    }
+  }
+
+  Future<void> markMnemonicBackedUp({String? walletAddress}) async {
+    final targetWallet =
+        (walletAddress ?? _currentWalletAddress ?? '').trim();
+    if (targetWallet.isEmpty) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final requiredKey = _walletScopedPreferenceKey(
+      prefix: PreferenceKeys.walletMnemonicBackupRequiredV1Prefix,
+      walletAddress: targetWallet,
+    );
+    final backedUpKey = _walletScopedPreferenceKey(
+      prefix: PreferenceKeys.walletMnemonicBackedUpV1Prefix,
+      walletAddress: targetWallet,
+    );
+    await prefs.setBool(requiredKey, false);
+    await prefs.setBool(backedUpKey, true);
+  }
+
+  Future<bool> isMnemonicBackupRequired({String? walletAddress}) async {
+    final targetWallet =
+        (walletAddress ?? _currentWalletAddress ?? '').trim();
+    if (targetWallet.isEmpty) return false;
+    final prefs = await SharedPreferences.getInstance();
+    final requiredKey = _walletScopedPreferenceKey(
+      prefix: PreferenceKeys.walletMnemonicBackupRequiredV1Prefix,
+      walletAddress: targetWallet,
+    );
+    return prefs.getBool(requiredKey) ?? false;
   }
 
   Future<void> _clearPersistedWalletIdentity() async {
@@ -1178,6 +1375,14 @@ class WalletProvider extends ChangeNotifier {
     try {
       await _cacheMnemonic(mnemonic);
     } catch (_) {}
+    try {
+      await setMnemonicBackupRequired(
+        required: true,
+        walletAddress: _currentWalletAddress,
+      );
+    } catch (e) {
+      _walletLog('createWallet: failed to persist backup-required flag: $e');
+    }
 
     _clearLastError();
     notifyListeners();
@@ -1188,8 +1393,11 @@ class WalletProvider extends ChangeNotifier {
     };
   }
 
-  Future<String> importWalletFromMnemonic(String mnemonic,
-      {DerivedKeyPairResult? preDerived}) async {
+  Future<String> importWalletFromMnemonic(
+    String mnemonic, {
+    DerivedKeyPairResult? preDerived,
+    bool markBackedUp = true,
+  }) async {
     _walletLog('importWalletFromMnemonic start');
     _lastError = null;
     _sessionPhase = WalletSessionPhase.restoring;
@@ -1250,6 +1458,14 @@ class WalletProvider extends ChangeNotifier {
       // Mnemonic cached.
     } catch (e) {
       _walletLog('error caching mnemonic: $e');
+    }
+    if (markBackedUp) {
+      try {
+        await markMnemonicBackedUp(walletAddress: _currentWalletAddress);
+      } catch (e) {
+        _walletLog(
+            'importWalletFromMnemonic: failed to mark backup complete: $e');
+      }
     }
 
     // Final notification to update all listeners
