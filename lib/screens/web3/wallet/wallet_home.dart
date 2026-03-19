@@ -16,6 +16,7 @@ import '../../settings_screen.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../utils/app_color_utils.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import 'package:art_kubus/utils/wallet_reconnect_action.dart';
 
 class WalletHome extends StatefulWidget {
   const WalletHome({super.key});
@@ -36,41 +37,10 @@ class _WalletHomeState extends State<WalletHome> {
   }
 
   Future<void> _handleReadOnlyReconnect(WalletProvider walletProvider) async {
-    final navigator = Navigator.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-    final l10n = AppLocalizations.of(context)!;
-
-    final managedEligible = await walletProvider.isManagedReconnectEligible();
-    if (!managedEligible) {
-      if (!mounted) return;
-      navigator.pushNamed('/connect-wallet');
-      return;
-    }
-
-    final outcome = await walletProvider.recoverManagedWalletSession(
+    await WalletReconnectAction.handleReadOnlyReconnect(
+      context: context,
+      walletProvider: walletProvider,
       refreshBackendSession: true,
-    );
-    if (!mounted) return;
-
-    if (walletProvider.canTransact) {
-      messenger.showKubusSnackBar(
-        SnackBar(content: Text(l10n.walletReconnectSuccessToast)),
-        tone: KubusSnackBarTone.success,
-      );
-      return;
-    }
-
-    if (outcome == ManagedWalletReconnectOutcome.manualConnectRequired) {
-      messenger.showKubusSnackBar(
-        SnackBar(content: Text(l10n.walletReconnectManualRequiredToast)),
-        tone: KubusSnackBarTone.warning,
-      );
-      return;
-    }
-
-    messenger.showKubusSnackBar(
-      SnackBar(content: Text(l10n.walletReconnectReadOnlyToast)),
-      tone: KubusSnackBarTone.neutral,
     );
   }
 

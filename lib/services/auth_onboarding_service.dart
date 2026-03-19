@@ -1,5 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../config/config.dart';
 import 'onboarding_state_service.dart';
 
 class StructuredOnboardingResumeState {
@@ -61,6 +62,7 @@ class AuthOnboardingService {
     required bool requiresWalletBackup,
     required String? heuristicNextStepId,
     required String? persona,
+    String? flowScopeKey,
     Map<String, dynamic>? payload,
   }) async {
     final payloadIsNewAccount =
@@ -75,6 +77,7 @@ class AuthOnboardingService {
     final progress = await OnboardingStateService.loadFlowProgress(
       prefs: prefs,
       onboardingVersion: onboardingFlowVersion,
+      flowScopeKey: flowScopeKey,
     );
     final completedSteps = progress.completedSteps
         .where(isAccountStepId)
@@ -87,9 +90,14 @@ class AuthOnboardingService {
     final hasSavedProgress =
         completedSteps.isNotEmpty || deferredSteps.isNotEmpty;
 
-    final normalizedHeuristic = isAccountStepId(heuristicNextStepId)
+    final walletBackupOnboardingEnabled =
+        AppConfig.isFeatureEnabled('walletBackupOnboarding');
+    String? normalizedHeuristic = isAccountStepId(heuristicNextStepId)
         ? heuristicNextStepId!.trim()
         : null;
+    if (!walletBackupOnboardingEnabled && normalizedHeuristic == 'walletBackup') {
+      normalizedHeuristic = null;
+    }
     final normalizedPersona = (persona ?? '').trim().toLowerCase();
     final requiresDaoReview = completedSteps.contains('daoReview') ||
         deferredSteps.contains('daoReview') ||
@@ -97,9 +105,10 @@ class AuthOnboardingService {
         normalizedPersona == 'institution';
     final requiresVerifyEmail = completedSteps.contains('verifyEmail') ||
         deferredSteps.contains('verifyEmail');
-    final requiresWalletBackupStep = completedSteps.contains('walletBackup') ||
-        deferredSteps.contains('walletBackup') ||
-        requiresWalletBackup;
+    final requiresWalletBackupStep = walletBackupOnboardingEnabled &&
+        (completedSteps.contains('walletBackup') ||
+            deferredSteps.contains('walletBackup') ||
+            requiresWalletBackup);
 
     if (hasSavedProgress) {
       final nextStepId = _nextIncompleteStepId(

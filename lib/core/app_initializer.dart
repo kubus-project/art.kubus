@@ -275,9 +275,24 @@ class _AppInitializerState extends State<AppInitializer> {
               AppConfig.enableGoogleAuth ||
               AppConfig.enableWalletConnect);
       final hasPendingAuthOnboarding =
-          OnboardingStateService.hasPendingAuthOnboardingSync(prefs);
+          OnboardingStateService.hasPendingAuthOnboardingSync(
+        prefs,
+        scopeKey: OnboardingStateService.buildAuthOnboardingScopeKey(
+          walletAddress: walletAddress,
+          userId: (prefs.getString('user_id') ?? '').trim(),
+        ),
+      );
       final requiresWalletBackup =
-          await walletProvider.isMnemonicBackupRequired(walletAddress: walletAddress);
+          AppConfig.isFeatureEnabled('walletBackupOnboarding')
+              ? await walletProvider.isMnemonicBackupRequired(
+                  walletAddress: walletAddress,
+                )
+              : false;
+      final authOnboardingScopeKey =
+          OnboardingStateService.buildAuthOnboardingScopeKey(
+        walletAddress: walletAddress,
+        userId: (prefs.getString('user_id') ?? '').trim(),
+      );
       final pendingAuthOnboardingResume = hasValidSession
           ? await AuthOnboardingService.resolveStructuredOnboardingResume(
               prefs: prefs,
@@ -288,6 +303,7 @@ class _AppInitializerState extends State<AppInitializer> {
               heuristicNextStepId:
                   profileProvider.nextStructuredOnboardingStepId,
               persona: profileProvider.userPersona?.storageValue,
+              flowScopeKey: authOnboardingScopeKey,
             )
           : const StructuredOnboardingResumeState(
               requiresStructuredOnboarding: false,
@@ -445,7 +461,10 @@ class _AppInitializerState extends State<AppInitializer> {
         } else if (!pendingAuthOnboardingResume.requiresStructuredOnboarding ||
             pendingAuthOnboardingStepId == null ||
             pendingAuthOnboardingStepId.isEmpty) {
-          await OnboardingStateService.clearPendingAuthOnboarding(prefs: prefs);
+          await OnboardingStateService.clearPendingAuthOnboarding(
+            prefs: prefs,
+            scopeKey: authOnboardingScopeKey,
+          );
         } else {
           if (kDebugMode) {
             debugPrint(

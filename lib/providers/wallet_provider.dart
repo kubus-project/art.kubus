@@ -74,6 +74,7 @@ class WalletProvider extends ChangeNotifier {
   String? _lastError;
   DerivedKeyPairResult? _cachedDerivedCandidate;
   Completer<void>? _initializeCompleter;
+  Future<ManagedWalletReconnectOutcome>? _managedReconnectInFlight;
 
   // Backend supplemental data
   Map<String, dynamic>? _backendProfile;
@@ -607,6 +608,28 @@ class WalletProvider extends ChangeNotifier {
   }
 
   Future<ManagedWalletReconnectOutcome> recoverManagedWalletSession({
+    String? walletAddress,
+    bool refreshBackendSession = true,
+  }) async {
+    final inFlight = _managedReconnectInFlight;
+    if (inFlight != null) {
+      return inFlight;
+    }
+    final reconnectFuture = _recoverManagedWalletSessionInternal(
+      walletAddress: walletAddress,
+      refreshBackendSession: refreshBackendSession,
+    );
+    _managedReconnectInFlight = reconnectFuture;
+    try {
+      return await reconnectFuture;
+    } finally {
+      if (identical(_managedReconnectInFlight, reconnectFuture)) {
+        _managedReconnectInFlight = null;
+      }
+    }
+  }
+
+  Future<ManagedWalletReconnectOutcome> _recoverManagedWalletSessionInternal({
     String? walletAddress,
     bool refreshBackendSession = true,
   }) async {

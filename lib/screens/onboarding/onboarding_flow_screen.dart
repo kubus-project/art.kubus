@@ -210,6 +210,10 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   bool _finishSignInPromptShown = false;
   bool _verifiedSigningInMessageShown = false;
   bool _requiresWalletBackupStep = false;
+  String? _flowScopeKey;
+
+  bool get _walletBackupOnboardingEnabled =>
+      AppConfig.isFeatureEnabled('walletBackupOnboarding');
 
   _StepPalette _paletteForStep(_OnboardingStep step) {
     switch (step) {
@@ -370,9 +374,13 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       }
 
       _steps = _buildSteps();
+      final flowScopeKey =
+          _flowScopeKey ?? await _resolveFlowScopeKey(prefs: prefs);
+      _flowScopeKey = flowScopeKey;
       final progress = await OnboardingStateService.loadFlowProgress(
         prefs: prefs,
         onboardingVersion: _flowVersion,
+        flowScopeKey: flowScopeKey,
       );
 
       if (!mounted) return;
@@ -599,7 +607,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     return (BackendApiService().getCurrentAuthWalletAddress() ?? '').trim();
   }
 
-  Future<String?> _resolveWalletForBackupCheck() async {
+  Future<String?> _resolveWalletForBackupCheck({
+    SharedPreferences? prefs,
+  }) async {
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
@@ -609,19 +619,41 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     if (fromWallet.isNotEmpty) return fromWallet;
     final fromSession = _currentSessionWalletAddress();
     if (fromSession.isNotEmpty) return fromSession;
-    final prefs = await SharedPreferences.getInstance();
-    final fallback = (prefs.getString(PreferenceKeys.walletAddress) ??
-            prefs.getString('wallet_address') ??
-            prefs.getString('walletAddress') ??
-            prefs.getString('wallet') ??
+    final resolvedPrefs = prefs ?? await SharedPreferences.getInstance();
+    final fallback = (resolvedPrefs.getString(PreferenceKeys.walletAddress) ??
+            resolvedPrefs.getString('wallet_address') ??
+            resolvedPrefs.getString('walletAddress') ??
+            resolvedPrefs.getString('wallet') ??
             '')
         .trim();
     return fallback.isEmpty ? null : fallback;
   }
 
+  Future<String?> _resolveFlowScopeKey({
+    SharedPreferences? prefs,
+  }) async {
+    final resolvedPrefs = prefs ?? await SharedPreferences.getInstance();
+    final walletAddress =
+        await _resolveWalletForBackupCheck(prefs: resolvedPrefs);
+    final userId = (resolvedPrefs.getString('user_id') ?? '').trim();
+    return OnboardingStateService.buildAuthOnboardingScopeKey(
+      walletAddress: walletAddress,
+      userId: userId,
+    );
+  }
+
   Future<void> _syncWalletBackupRequirement() async {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final walletAddress = await _resolveWalletForBackupCheck();
+    final prefs = await SharedPreferences.getInstance();
+    final walletAddress = await _resolveWalletForBackupCheck(prefs: prefs);
+    _flowScopeKey = OnboardingStateService.buildAuthOnboardingScopeKey(
+      walletAddress: walletAddress,
+      userId: (prefs.getString('user_id') ?? '').trim(),
+    );
+    if (!_walletBackupOnboardingEnabled) {
+      _requiresWalletBackupStep = false;
+      return;
+    }
     _requiresWalletBackupStep = await walletProvider.isMnemonicBackupRequired(
       walletAddress: walletAddress,
     );
@@ -694,7 +726,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           if (_verificationRequired) _OnboardingStep.verifyEmail,
           _OnboardingStep.role,
           _OnboardingStep.profile,
-          if (_requiresWalletBackupStep) _OnboardingStep.walletBackup,
+          if (_walletBackupOnboardingEnabled && _requiresWalletBackupStep)
+            _OnboardingStep.walletBackup,
           if (_requiresDaoReviewStep) _OnboardingStep.daoReview,
           _OnboardingStep.accountPermissions,
           _OnboardingStep.done,
@@ -883,11 +916,15 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
   Future<void> _persistProgress() async {
     final prefs = await SharedPreferences.getInstance();
+    final flowScopeKey =
+        _flowScopeKey ?? await _resolveFlowScopeKey(prefs: prefs);
+    _flowScopeKey = flowScopeKey;
     await OnboardingStateService.saveFlowProgress(
       prefs: prefs,
       onboardingVersion: _flowVersion,
       completedSteps: _completed.map(_stepId).toSet(),
       deferredSteps: _deferred.map(_stepId).toSet(),
+      flowScopeKey: flowScopeKey,
     );
   }
 
@@ -1751,7 +1788,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
-    if (!_requiresWalletBackupStep) {
+    if (!_walletBackupOnboardingEnabled || !_requiresWalletBackupStep) {
       await _markCompleted(_OnboardingStep.walletBackup);
       return;
     }
@@ -1829,7 +1866,10 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       await _persistLocalDrafts();
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('has_seen_permissions', true);
-      await OnboardingStateService.markCompleted(prefs: prefs);
+      await OnboardingStateService.markCompleted(
+        prefs: prefs,
+        authOnboardingScopeKey: _flowScopeKey,
+      );
       await _persistProgress();
       unawaited(TelemetryService()
           .trackOnboardingComplete(reason: 'step_flow_complete'));
@@ -1852,7 +1892,10 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       _clearPendingEmailVerificationState();
       await _persistLocalDrafts();
       final prefs = await SharedPreferences.getInstance();
-      await OnboardingStateService.markCompleted(prefs: prefs);
+      await OnboardingStateService.markCompleted(
+        prefs: prefs,
+        authOnboardingScopeKey: _flowScopeKey,
+      );
       await _persistProgress();
       unawaited(
         TelemetryService().trackOnboardingComplete(reason: 'skip_for_now'),

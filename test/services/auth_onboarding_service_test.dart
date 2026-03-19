@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  const testScope = 'wallet:test-wallet-1';
 
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
@@ -20,6 +21,7 @@ void main() {
       onboardingVersion: AuthOnboardingService.onboardingFlowVersion,
       completedSteps: completedSteps,
       deferredSteps: deferredSteps,
+      flowScopeKey: testScope,
     );
     return prefs;
   }
@@ -35,6 +37,7 @@ void main() {
       requiresWalletBackup: false,
       heuristicNextStepId: null,
       persona: null,
+      flowScopeKey: testScope,
       payload: const <String, dynamic>{
         'data': <String, dynamic>{'isNewUser': true},
       },
@@ -57,6 +60,7 @@ void main() {
       requiresWalletBackup: false,
       heuristicNextStepId: null,
       persona: 'creator',
+      flowScopeKey: testScope,
     );
 
     expect(state.requiresStructuredOnboarding, isTrue);
@@ -76,6 +80,7 @@ void main() {
       requiresWalletBackup: false,
       heuristicNextStepId: null,
       persona: 'lover',
+      flowScopeKey: testScope,
     );
 
     expect(state.requiresStructuredOnboarding, isTrue);
@@ -95,6 +100,7 @@ void main() {
       requiresWalletBackup: false,
       heuristicNextStepId: null,
       persona: 'creator',
+      flowScopeKey: testScope,
     );
 
     expect(state.requiresStructuredOnboarding, isFalse);
@@ -113,6 +119,7 @@ void main() {
       requiresWalletBackup: true,
       heuristicNextStepId: null,
       persona: 'lover',
+      flowScopeKey: testScope,
     );
 
     expect(state.requiresStructuredOnboarding, isTrue);

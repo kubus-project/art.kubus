@@ -71,4 +71,28 @@ void main() {
     expect(find.byType(WalletBackupBannerCard), findsOneWidget);
     expect(find.text('Back up your wallet recovery phrase'), findsNothing);
   });
+
+  testWidgets('updates visibility when active wallet changes', (tester) async {
+    const walletA = '4Nd1m5sP3v1bE7c9Q2w6z8YkLmNoPrStUvWxYzABcDeF';
+    const walletB = '8Jd7n2yQ4pRt6uVwX9zAbCdEfGhIjKlMnOpQrStUvWxY';
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'wallet_address': walletA,
+      '${PreferenceKeys.walletMnemonicBackupRequiredV1Prefix}:$walletA': false,
+      '${PreferenceKeys.walletMnemonicBackupRequiredV1Prefix}:$walletB': true,
+    });
+
+    final walletProvider = WalletProvider(deferInit: true);
+    walletProvider.setCurrentWalletAddressForTesting(walletA);
+
+    await tester.pumpWidget(_buildHarness(walletProvider: walletProvider));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Back up your wallet recovery phrase'), findsNothing);
+
+    walletProvider.setCurrentWalletAddressForTesting(walletB);
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Back up your wallet recovery phrase'), findsOneWidget);
+  });
 }

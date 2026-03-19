@@ -91,31 +91,50 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
   }) async {
     if (widget.embedded || widget.onAuthSuccess != null) return false;
 
-    final requiresWalletBackup = await walletProvider.isMnemonicBackupRequired(
-      walletAddress: walletAddress,
+    final normalizedWalletAddress = (walletAddress ?? '').trim();
+    final flowScopeKey = OnboardingStateService.buildAuthOnboardingScopeKey(
+      walletAddress:
+          normalizedWalletAddress.isEmpty ? null : normalizedWalletAddress,
+      userId: (prefs.getString('user_id') ?? '').trim(),
     );
+    final requiresWalletBackup =
+        AppConfig.isFeatureEnabled('walletBackupOnboarding')
+            ? await walletProvider.isMnemonicBackupRequired(
+                walletAddress: walletAddress,
+              )
+            : false;
     final resumeState =
         await AuthOnboardingService.resolveStructuredOnboardingResume(
       prefs: prefs,
       hasPendingAuthOnboarding:
-          OnboardingStateService.hasPendingAuthOnboardingSync(prefs),
+          OnboardingStateService.hasPendingAuthOnboardingSync(
+        prefs,
+        scopeKey: flowScopeKey,
+      ),
       hasAuthenticatedSession: true,
       hasHydratedProfile: profileProvider.hasHydratedProfile,
       requiresWalletBackup: requiresWalletBackup,
       heuristicNextStepId: profileProvider.nextStructuredOnboardingStepId,
       persona: profileProvider.userPersona?.storageValue,
       payload: payload,
+      flowScopeKey: flowScopeKey,
     );
     final nextStepId = resumeState.nextStepId;
 
     if (!resumeState.requiresStructuredOnboarding ||
         nextStepId == null ||
         nextStepId.isEmpty) {
-      await OnboardingStateService.clearPendingAuthOnboarding(prefs: prefs);
+      await OnboardingStateService.clearPendingAuthOnboarding(
+        prefs: prefs,
+        scopeKey: flowScopeKey,
+      );
       return false;
     }
 
-    await OnboardingStateService.markAuthOnboardingPending(prefs: prefs);
+    await OnboardingStateService.markAuthOnboardingPending(
+      prefs: prefs,
+      scopeKey: flowScopeKey,
+    );
     if (!mounted) return true;
 
     final isDesktop = DesktopBreakpoints.isDesktop(context);
@@ -305,7 +324,14 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         await widget.onEmailCredentialsCaptured!(email, password);
       }
       final prefs = await SharedPreferences.getInstance();
-      await OnboardingStateService.markAuthOnboardingPending(prefs: prefs);
+      final authOnboardingScopeKey =
+          OnboardingStateService.buildAuthOnboardingScopeKey(
+        walletAddress: provisionalWalletAddress,
+      );
+      await OnboardingStateService.markAuthOnboardingPending(
+        prefs: prefs,
+        scopeKey: authOnboardingScopeKey,
+      );
       if (!mounted) return;
       if (widget.embedded) {
         // Embedded onboarding is verification-first: avoid immediate login

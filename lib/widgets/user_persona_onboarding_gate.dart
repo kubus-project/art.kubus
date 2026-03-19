@@ -53,7 +53,14 @@ class _UserPersonaOnboardingGateState extends State<UserPersonaOnboardingGate> {
       if (!profile.needsPersonaOnboarding) return;
 
       final prefs = await SharedPreferences.getInstance();
-      if (OnboardingStateService.hasPendingAuthOnboardingSync(prefs)) {
+      final flowScopeKey = OnboardingStateService.buildAuthOnboardingScopeKey(
+        walletAddress: wallet,
+        userId: (prefs.getString('user_id') ?? '').trim(),
+      );
+      if (OnboardingStateService.hasPendingAuthOnboardingSync(
+        prefs,
+        scopeKey: flowScopeKey,
+      )) {
         return;
       }
 

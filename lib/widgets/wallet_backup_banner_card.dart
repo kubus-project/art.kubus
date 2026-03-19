@@ -30,11 +30,26 @@ class WalletBackupBannerCard extends StatefulWidget {
 class _WalletBackupBannerCardState extends State<WalletBackupBannerCard> {
   bool _loaded = false;
   bool _shouldShow = false;
+  String? _lastResolvedWallet;
+  String? _lastObservedProviderWallet;
 
   @override
   void initState() {
     super.initState();
     unawaited(_load());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    unawaited(_refreshForContextChange());
+  }
+
+  Future<void> _refreshForContextChange() async {
+    final walletAddress = await _resolveWalletAddress();
+    if (!mounted) return;
+    if (_lastResolvedWallet == walletAddress && _loaded) return;
+    await _load();
   }
 
   Future<String?> _resolveWalletAddress() async {
@@ -68,12 +83,14 @@ class _WalletBackupBannerCardState extends State<WalletBackupBannerCard> {
       if (!mounted) return;
       setState(() {
         _loaded = true;
+        _lastResolvedWallet = walletAddress;
         _shouldShow = shouldShow;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _loaded = true;
+        _lastResolvedWallet = null;
         _shouldShow = false;
       });
     }
@@ -89,6 +106,28 @@ class _WalletBackupBannerCardState extends State<WalletBackupBannerCard> {
 
   @override
   Widget build(BuildContext context) {
+    final currentWallet =
+        context.select<WalletProvider, String?>((provider) {
+      final wallet = (provider.currentWalletAddress ?? '').trim();
+      return wallet.isEmpty ? null : wallet;
+    });
+    final currentProfileWallet =
+        context.select<ProfileProvider, String?>((provider) {
+      final wallet = (provider.currentUser?.walletAddress ?? '').trim();
+      return wallet.isEmpty ? null : wallet;
+    });
+    final activeWalletRaw = currentProfileWallet ?? currentWallet;
+    final activeWallet = (activeWalletRaw ?? '').trim().isEmpty
+        ? null
+        : activeWalletRaw!.trim();
+    if (_loaded && _lastObservedProviderWallet != activeWallet) {
+      _lastObservedProviderWallet = activeWallet;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        unawaited(_refreshForContextChange());
+      });
+    }
+
     if (!_loaded || !_shouldShow) return const SizedBox.shrink();
 
     final l10n = AppLocalizations.of(context)!;
