@@ -8,8 +8,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 String _buildWalletToken(String walletAddress) {
-  final header =
-      base64Url.encode(utf8.encode(jsonEncode(<String, String>{'alg': 'none'})));
+  final header = base64Url
+      .encode(utf8.encode(jsonEncode(<String, String>{'alg': 'none'})));
   final payload = base64Url.encode(
     utf8.encode(
       jsonEncode(<String, String>{'walletAddress': walletAddress}),
@@ -149,5 +149,31 @@ void main() {
     walletProvider.switchSolanaNetwork('Devnet');
     expect(walletProvider.currentSolanaNetwork.toLowerCase(), 'devnet');
     expect(web3Provider.currentNetwork.toLowerCase(), 'devnet');
+  });
+
+  test('read-only wallet sessions can still require mnemonic backup', () async {
+    final providers = await _createBoundWalletProviders(withSigner: false);
+    final walletProvider = providers.walletProvider;
+
+    expect(walletProvider.isReadOnlySession, isTrue);
+
+    await walletProvider.setMnemonicBackupRequired(
+      required: true,
+      walletAddress: providers.walletAddress,
+    );
+
+    final required = await walletProvider.isMnemonicBackupRequired(
+      walletAddress: providers.walletAddress,
+    );
+    expect(required, isTrue);
+
+    await walletProvider.markMnemonicBackedUp(
+      walletAddress: providers.walletAddress,
+    );
+
+    final requiredAfterBackup = await walletProvider.isMnemonicBackupRequired(
+      walletAddress: providers.walletAddress,
+    );
+    expect(requiredAfterBackup, isFalse);
   });
 }

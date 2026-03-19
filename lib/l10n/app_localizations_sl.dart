@@ -474,6 +474,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get authAccountAlreadyExistsToast => 'Račun s tem e-poštnim naslovom že obstaja. Prijavi se.';
 
   @override
+  String get authUsernameAlreadyTaken => 'Uporabniško ime je že zasedeno';
+
+  @override
   String get authEmailSignInFailed => 'Prijava z e-pošto ni uspela. Poskusi znova.';
 
   @override
@@ -7334,6 +7337,9 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get profileEditUsernameMinLengthError => 'Uporabniško ime mora imeti vsaj 3 znake';
+
+  @override
+  String get profileEditUsernameMaxLengthError => 'Uporabniško ime ima lahko največ 50 znakov';
 
   @override
   String get profileEditDisplayNameLabel => 'Prikazno ime';

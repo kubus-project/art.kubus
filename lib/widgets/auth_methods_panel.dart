@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -19,6 +20,7 @@ import 'package:art_kubus/services/wallet_session_sync_service.dart';
 import 'package:art_kubus/utils/auth_password_policy.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
+import 'package:art_kubus/utils/auth_google_wallet.dart';
 import 'package:art_kubus/widgets/auth_entry_shell.dart';
 import 'package:art_kubus/widgets/email_registration_form.dart';
 import 'package:art_kubus/widgets/google_sign_in_button.dart';
@@ -42,6 +44,7 @@ class AuthMethodsPanel extends StatefulWidget {
     this.onEmailCredentialsCaptured,
     this.preferredEmailGreetingName,
     this.prepareProvisionalProfileBeforeRegister = false,
+    this.requireUsernameForEmailRegistration = false,
     this.onError,
     this.onSwitchToSignIn,
   });
@@ -54,6 +57,7 @@ class AuthMethodsPanel extends StatefulWidget {
       onEmailCredentialsCaptured;
   final String? preferredEmailGreetingName;
   final bool prepareProvisionalProfileBeforeRegister;
+  final bool requireUsernameForEmailRegistration;
   final ValueChanged<Object>? onError;
   final VoidCallback? onSwitchToSignIn;
 
@@ -62,6 +66,9 @@ class AuthMethodsPanel extends StatefulWidget {
 }
 
 class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
+  static const int _usernameMinLength = 3;
+  static const int _usernameMaxLength = 50;
+
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -71,7 +78,43 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
   String? _emailError;
   String? _passwordError;
   String? _confirmPasswordError;
+  String? _usernameError;
   bool _showCompactEmailForm = false;
+
+  bool _isUsernameTakenConflict(BackendApiRequestException error) {
+    try {
+      final decoded = jsonDecode((error.body ?? '').toString());
+      final bodyMap = decoded is Map<String, dynamic> ? decoded : null;
+      final errorCode =
+          (bodyMap?['errorCode'] ?? bodyMap?['code'] ?? '').toString().trim();
+      if (errorCode.toUpperCase() == 'USERNAME_ALREADY_TAKEN') {
+        return true;
+      }
+      final rawError = (bodyMap?['error'] ?? '').toString().toLowerCase();
+      return rawError.contains('username') &&
+          (rawError.contains('taken') || rawError.contains('exists'));
+    } catch (_) {
+      return false;
+    }
+  }
+
+  String? _validateUsername(
+    AppLocalizations l10n,
+    String rawUsername, {
+    required bool required,
+  }) {
+    final username = rawUsername.trim();
+    if (username.isEmpty) {
+      return required ? l10n.profileEditUsernameRequiredError : null;
+    }
+    if (username.length < _usernameMinLength) {
+      return l10n.profileEditUsernameMinLengthError;
+    }
+    if (username.length > _usernameMaxLength) {
+      return l10n.profileEditUsernameMaxLengthError;
+    }
+    return null;
+  }
 
   @override
   void dispose() {
@@ -157,7 +200,8 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     final gate = Provider.of<SecurityGateProvider>(context, listen: false);
     final data = (payload['data'] as Map<String, dynamic>?) ?? payload;
     final user = (data['user'] as Map<String, dynamic>?) ?? data;
-    final isNewAccount = AuthOnboardingService.payloadIndicatesNewAccount(payload);
+    final isNewAccount =
+        AuthOnboardingService.payloadIndicatesNewAccount(payload);
     String? walletAddress = user['walletAddress'] ?? user['wallet_address'];
     final usernameFromUser =
         (user['username'] ?? _usernameController.text ?? '').toString();
@@ -170,12 +214,20 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     } catch (e) {
       AppConfig.debugPrint('AuthMethodsPanel: wallet provisioning failed: $e');
     }
-    final normalizedWalletAddress = (walletAddress ?? '').toString().trim();
+    var normalizedWalletAddress = (walletAddress ?? '').toString().trim();
+    final lastSignInMethod = await BackendApiService().getLastSignInMethod();
     if (isNewAccount &&
-        normalizedWalletAddress.isNotEmpty &&
-        walletProvider.hasSigner &&
-        (walletProvider.currentWalletAddress ?? '').trim() ==
-            normalizedWalletAddress) {
+        !walletProvider.hasSigner &&
+        lastSignInMethod == AuthSignInMethod.google) {
+      final reboundWalletAddress = await _bindManagedWalletForNewAccount(
+        currentWalletAddress: normalizedWalletAddress,
+      );
+      normalizedWalletAddress = (reboundWalletAddress ?? '').trim();
+      if (normalizedWalletAddress.isNotEmpty) {
+        walletAddress = normalizedWalletAddress;
+      }
+    }
+    if (isNewAccount && normalizedWalletAddress.isNotEmpty) {
       try {
         await walletProvider.setMnemonicBackupRequired(
           required: true,
@@ -278,17 +330,31 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         : (rawGreetingName.length > profileDisplayNameMaxLength
             ? rawGreetingName.substring(0, profileDisplayNameMaxLength)
             : rawGreetingName);
+    final fallbackDisplayNameFromUsername = username.isEmpty
+        ? null
+        : (username.length > profileDisplayNameMaxLength
+            ? username.substring(0, profileDisplayNameMaxLength)
+            : username);
+    final effectiveDisplayName =
+        greetingName ?? fallbackDisplayNameFromUsername;
     final emailLooksValid = email.contains('@') && email.contains('.');
     final passwordOk = AuthPasswordPolicy.isValid(password);
     final confirmOk = password == confirm;
+    final usernameError = _validateUsername(
+      l10n,
+      username,
+      required: widget.requireUsernameForEmailRegistration,
+    );
+    final usernameOk = usernameError == null;
 
     setState(() {
       _emailError = emailLooksValid ? null : l10n.authEnterValidEmailInline;
       _passwordError = passwordOk ? null : l10n.authPasswordPolicyError;
       _confirmPasswordError =
           confirmOk ? null : l10n.authPasswordMismatchInline;
+      _usernameError = usernameError;
     });
-    if (!emailLooksValid || !passwordOk || !confirmOk) return;
+    if (!emailLooksValid || !passwordOk || !confirmOk || !usernameOk) return;
 
     unawaited(TelemetryService().trackSignUpAttempt(method: 'email'));
     setState(() => _isSubmitting = true);
@@ -313,7 +379,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
             email: email,
             password: password,
             username: username.isNotEmpty ? username : null,
-            displayName: greetingName,
+            displayName: effectiveDisplayName,
             walletAddress: provisionalWalletAddress,
           )
           .timeout(const Duration(seconds: 16));
@@ -363,6 +429,17 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
           method: 'email', errorClass: e.runtimeType.toString()));
       if (!mounted) return;
       if (e is BackendApiRequestException && e.statusCode == 409) {
+        final usernameTaken = _isUsernameTakenConflict(e);
+        if (usernameTaken) {
+          setState(() {
+            _usernameError = l10n.authUsernameAlreadyTaken;
+          });
+          messenger.showKubusSnackBar(
+            SnackBar(content: Text(l10n.authUsernameAlreadyTaken)),
+            tone: KubusSnackBarTone.error,
+          );
+          return;
+        }
         messenger.showKubusSnackBar(
           SnackBar(content: Text(l10n.authAccountAlreadyExistsToast)),
           tone: KubusSnackBarTone.error,
@@ -407,7 +484,8 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       }
       if (walletProvider.isReadOnlySession) {
         try {
-          final managedEligible = await walletProvider.isManagedReconnectEligible();
+          final managedEligible =
+              await walletProvider.isManagedReconnectEligible();
           if (managedEligible) {
             await walletProvider
                 .recoverManagedWalletSession(
@@ -558,6 +636,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         email: googleResult.email,
         // Don't pass username to let backend preserve existing account data if email matches
         username: null,
+        walletAddress: _signerBackedWalletForGoogleAuth(),
       );
       await _handleAuthSuccess(result);
       unawaited(TelemetryService().trackSignUpSuccess(method: 'google'));
@@ -608,6 +687,51 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       } else {
         Navigator.of(context).pushReplacementNamed('/main');
       }
+    }
+  }
+
+  String? _signerBackedWalletForGoogleAuth() {
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    return signerBackedGoogleWalletAddress(
+      hasSigner: walletProvider.hasSigner,
+      currentWalletAddress: walletProvider.currentWalletAddress,
+    );
+  }
+
+  Future<String?> _bindManagedWalletForNewAccount({
+    required String currentWalletAddress,
+  }) async {
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final previousWalletAddress = currentWalletAddress.trim();
+    try {
+      final created =
+          await walletProvider.createWallet().timeout(const Duration(seconds: 14));
+      final managedWalletAddress = (created['address'] ?? '').trim();
+      if (managedWalletAddress.isEmpty) {
+        return previousWalletAddress.isEmpty ? null : previousWalletAddress;
+      }
+      final result =
+          await BackendApiService().bindAuthenticatedWallet(managedWalletAddress);
+      final data = (result['data'] as Map<String, dynamic>?) ?? result;
+      final user = (data['user'] as Map<String, dynamic>?) ?? data;
+      final reboundWalletAddress =
+          (user['walletAddress'] ?? user['wallet_address'] ?? '')
+              .toString()
+              .trim();
+      return reboundWalletAddress.isEmpty
+          ? managedWalletAddress
+          : reboundWalletAddress;
+    } catch (e) {
+      AppConfig.debugPrint(
+          'AuthMethodsPanel: failed to bind managed wallet after auth: $e');
+      if (previousWalletAddress.isNotEmpty) {
+        try {
+          await walletProvider
+              .connectWalletWithAddress(previousWalletAddress)
+              .timeout(const Duration(seconds: 6));
+        } catch (_) {}
+      }
+      return previousWalletAddress.isEmpty ? null : previousWalletAddress;
     }
   }
 
@@ -748,6 +872,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
                     code: googleResult.serverAuthCode,
                     email: googleResult.email,
                     username: null,
+                    walletAddress: _signerBackedWalletForGoogleAuth(),
                   );
                   if (!mounted) return;
                   await _handleAuthSuccess(result);
@@ -840,9 +965,12 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       passwordController: _passwordController,
       confirmPasswordController: _confirmPasswordController,
       usernameController: _usernameController,
+      requireUsername: widget.requireUsernameForEmailRegistration,
+      showUsernameInCompact: widget.requireUsernameForEmailRegistration,
       emailError: _emailError,
       passwordError: _passwordError,
       confirmPasswordError: _confirmPasswordError,
+      usernameError: _usernameError,
       onSubmit: _registerWithEmail,
       isSubmitting: _isSubmitting,
       compact: compact,

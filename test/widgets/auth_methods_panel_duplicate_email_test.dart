@@ -108,4 +108,300 @@ void main() {
     expect(verificationTriggered, isFalse);
     expect(find.textContaining('Working'), findsNothing);
   });
+
+  testWidgets(
+      'embedded email registration shows username field when required for onboarding',
+      (tester) async {
+    await tester.pumpWidget(
+      _buildTestApp(
+        const AuthMethodsPanel(
+          embedded: true,
+          requireUsernameForEmailRegistration: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final expandEmail = find.text('Continue with email');
+    if (expandEmail.evaluate().isNotEmpty) {
+      await tester.tap(expandEmail.first);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
+    expect(find.widgetWithText(TextField, 'Enter username'), findsOneWidget);
+  });
+
+  testWidgets(
+      'embedded email registration blocks submit when required username is missing',
+      (tester) async {
+    var verificationTriggered = false;
+
+    await tester.pumpWidget(
+      _buildTestApp(
+        AuthMethodsPanel(
+          embedded: true,
+          requireUsernameForEmailRegistration: true,
+          onVerificationRequired: (_) => verificationTriggered = true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final expandEmail = find.text('Continue with email');
+    if (expandEmail.evaluate().isNotEmpty) {
+      await tester.tap(expandEmail.first);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Email'),
+      'required-username@example.com',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Password'),
+      'Pass1234A',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Confirm password'),
+      'Pass1234A',
+    );
+
+    final submit = find.text('Continue with email');
+    await tester.tap(submit.last);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.text('Username is required'), findsOneWidget);
+    expect(verificationTriggered, isFalse);
+    expect(find.textContaining('Working'), findsNothing);
+  });
+
+  testWidgets(
+      'embedded email registration blocks submit when username is too short',
+      (tester) async {
+    await tester.pumpWidget(
+      _buildTestApp(
+        const AuthMethodsPanel(
+          embedded: true,
+          requireUsernameForEmailRegistration: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final expandEmail = find.text('Continue with email');
+    if (expandEmail.evaluate().isNotEmpty) {
+      await tester.tap(expandEmail.first);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Email'),
+      'short-username@example.com',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Password'),
+      'Pass1234A',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Confirm password'),
+      'Pass1234A',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Enter username'),
+      'ab',
+    );
+
+    await tester.tap(find.text('Continue with email').last);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.text('Username must be at least 3 characters'), findsOneWidget);
+  });
+
+  testWidgets(
+      'embedded email registration blocks submit when username is too long',
+      (tester) async {
+    await tester.pumpWidget(
+      _buildTestApp(
+        const AuthMethodsPanel(
+          embedded: true,
+          requireUsernameForEmailRegistration: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final expandEmail = find.text('Continue with email');
+    if (expandEmail.evaluate().isNotEmpty) {
+      await tester.tap(expandEmail.first);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Email'),
+      'long-username@example.com',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Password'),
+      'Pass1234A',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Confirm password'),
+      'Pass1234A',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Enter username'),
+      List<String>.filled(51, 'a').join(),
+    );
+
+    await tester.tap(find.text('Continue with email').last);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.text('Username must be 50 characters or fewer'), findsOneWidget);
+  });
+
+  testWidgets('duplicate username shows explicit username taken message',
+      (tester) async {
+    _installBackendMock((request) async {
+      if (request.url.path == '/api/auth/register/email') {
+        return http.Response(
+          jsonEncode(<String, dynamic>{
+            'success': false,
+            'error': 'Username already taken.',
+            'errorCode': 'USERNAME_ALREADY_TAKEN',
+          }),
+          409,
+          headers: <String, String>{'content-type': 'application/json'},
+        );
+      }
+      return http.Response(
+        jsonEncode(<String, dynamic>{'success': true}),
+        200,
+        headers: <String, String>{'content-type': 'application/json'},
+      );
+    });
+
+    await tester.pumpWidget(
+      _buildTestApp(
+        const AuthMethodsPanel(
+          embedded: true,
+          requireUsernameForEmailRegistration: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final expandEmail = find.text('Continue with email');
+    if (expandEmail.evaluate().isNotEmpty) {
+      await tester.tap(expandEmail.first);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Email'),
+      'duplicate-username@example.com',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Password'),
+      'Pass1234A',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Confirm password'),
+      'Pass1234A',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Enter username'),
+      'taken_name',
+    );
+
+    final submit = find.text('Continue with email');
+    await tester.tap(submit.last);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Username already taken'), findsWidgets);
+  });
+
+  testWidgets('register form exposes show-password icons', (tester) async {
+    await tester.pumpWidget(
+      _buildTestApp(
+        const AuthMethodsPanel(
+          embedded: true,
+          requireUsernameForEmailRegistration: true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final expandEmail = find.text('Continue with email');
+    if (expandEmail.evaluate().isNotEmpty) {
+      await tester.tap(expandEmail.first);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
+    expect(find.byIcon(Icons.visibility_outlined), findsAtLeast(2));
+  });
+
+  testWidgets('standalone register surfaces duplicate username message',
+      (tester) async {
+    _installBackendMock((request) async {
+      if (request.url.path == '/api/auth/register/email') {
+        return http.Response(
+          jsonEncode(<String, dynamic>{
+            'success': false,
+            'error': 'Username already taken.',
+            'errorCode': 'USERNAME_ALREADY_TAKEN',
+          }),
+          409,
+          headers: <String, String>{'content-type': 'application/json'},
+        );
+      }
+      return http.Response(
+        jsonEncode(<String, dynamic>{'success': true}),
+        200,
+        headers: <String, String>{'content-type': 'application/json'},
+      );
+    });
+
+    await tester.pumpWidget(_buildTestApp(const AuthMethodsPanel()));
+    await tester.pumpAndSettle();
+
+    final expandEmail = find.text('Continue with email');
+    if (expandEmail.evaluate().isNotEmpty) {
+      await tester.tap(expandEmail.first);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Email'),
+      'standalone-duplicate@example.com',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Password'),
+      'Pass1234A',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Confirm password'),
+      'Pass1234A',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Username (optional)'),
+      'taken_name',
+    );
+
+    await tester.tap(find.text('Continue with email').last);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Username already taken'), findsWidgets);
+  });
 }

@@ -2111,6 +2111,33 @@ class BackendApiService
     }
   }
 
+  Future<Map<String, dynamic>> bindAuthenticatedWallet(String walletAddress) async {
+    try {
+      final uri = Uri.parse('$baseUrl/api/auth/bind-wallet');
+      final response = await _post(
+        uri,
+        includeAuth: true,
+        headers: _getHeaders(includeAuth: true),
+        body: jsonEncode(<String, dynamic>{'walletAddress': walletAddress}),
+      );
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        await _persistTokenFromResponse(data);
+        await syncSecureAccountStatusFromResponse(data);
+        return data;
+      }
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: uri.path,
+        body: response.body,
+      );
+    } catch (e) {
+      AppConfig.debugPrint(
+          'BackendApiService.bindAuthenticatedWallet failed: $e');
+      rethrow;
+    }
+  }
+
   /// Get user profile by ID
   /// GET /api/users/:userId
   Future<Map<String, dynamic>> getUserProfile(String userId) async {

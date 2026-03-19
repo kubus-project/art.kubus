@@ -1013,6 +1013,12 @@ abstract class AppLocalizations {
   /// **'An account with this email already exists. Sign in instead.'**
   String get authAccountAlreadyExistsToast;
 
+  /// No description provided for @authUsernameAlreadyTaken.
+  ///
+  /// In en, this message translates to:
+  /// **'Username already taken'**
+  String get authUsernameAlreadyTaken;
+
   /// No description provided for @authEmailSignInFailed.
   ///
   /// In en, this message translates to:
@@ -13912,6 +13918,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Username must be at least 3 characters'**
   String get profileEditUsernameMinLengthError;
+
+  /// No description provided for @profileEditUsernameMaxLengthError.
+  ///
+  /// In en, this message translates to:
+  /// **'Username must be 50 characters or fewer'**
+  String get profileEditUsernameMaxLengthError;
 
   /// No description provided for @profileEditDisplayNameLabel.
   ///

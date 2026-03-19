@@ -87,36 +87,41 @@ class AuthEntryShell extends StatelessWidget {
                           ),
                           Expanded(
                             child: isDesktop
-                                ? Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    children: [
-                                      Expanded(
-                                        child: _HeroColumn(
-                                          title: title,
-                                          subtitle: subtitle,
-                                          eyebrow: eyebrow,
-                                          highlights: highlights,
-                                          heroIcon: heroIcon,
-                                          gradientStart: gradientStart,
-                                          gradientEnd: gradientEnd,
-                                          compact: compactSurface,
-                                        ),
-                                      ),
-                                      const SizedBox(width: KubusSpacing.xl),
-                                      Flexible(
-                                        child: ConstrainedBox(
-                                          constraints: const BoxConstraints(
-                                            maxWidth: 470,
-                                          ),
-                                          child: _FormSurface(
-                                            footer: footer,
+                                ? Center(
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Expanded(
+                                          child: _HeroColumn(
+                                            title: title,
+                                            subtitle: subtitle,
+                                            eyebrow: eyebrow,
+                                            highlights: highlights,
+                                            heroIcon: heroIcon,
+                                            gradientStart: gradientStart,
+                                            gradientEnd: gradientEnd,
                                             compact: compactSurface,
-                                            child: form,
                                           ),
                                         ),
-                                      ),
-                                    ],
+                                        const SizedBox(width: KubusSpacing.xl),
+                                        Flexible(
+                                          child: Align(
+                                            alignment: Alignment.topCenter,
+                                            child: ConstrainedBox(
+                                              constraints: const BoxConstraints(
+                                                maxWidth: 470,
+                                              ),
+                                              child: _FormSurface(
+                                                footer: footer,
+                                                compact: compactSurface,
+                                                child: form,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   )
                                 : Column(
                                     crossAxisAlignment:

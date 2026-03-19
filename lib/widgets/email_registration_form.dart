@@ -12,12 +12,15 @@ class EmailRegistrationForm extends StatefulWidget {
     required this.submitLabel,
     required this.submittingLabel,
     this.usernameController,
+    this.usernameError,
     this.emailError,
     this.passwordError,
     this.confirmPasswordError,
     this.onSubmit,
     this.isSubmitting = false,
     this.compact = false,
+    this.requireUsername = false,
+    this.showUsernameInCompact = false,
     this.showUsername = true,
     this.showEmailField = true,
     this.autofocusEmail = false,
@@ -33,6 +36,7 @@ class EmailRegistrationForm extends StatefulWidget {
   final String submittingLabel;
   final IconData icon;
 
+  final String? usernameError;
   final String? emailError;
   final String? passwordError;
   final String? confirmPasswordError;
@@ -40,6 +44,8 @@ class EmailRegistrationForm extends StatefulWidget {
   final VoidCallback? onSubmit;
   final bool isSubmitting;
   final bool compact;
+  final bool requireUsername;
+  final bool showUsernameInCompact;
   final bool showUsername;
   final bool showEmailField;
   final bool autofocusEmail;
@@ -53,6 +59,8 @@ class _EmailRegistrationFormState extends State<EmailRegistrationForm> {
   final _passwordFocusNode = FocusNode();
   final _confirmPasswordFocusNode = FocusNode();
   final _usernameFocusNode = FocusNode();
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
   @override
   void dispose() {
@@ -108,7 +116,7 @@ class _EmailRegistrationFormState extends State<EmailRegistrationForm> {
           TextField(
             controller: widget.passwordController,
             focusNode: _passwordFocusNode,
-            obscureText: true,
+            obscureText: _obscurePassword,
             textInputAction: TextInputAction.next,
             autofillHints: const [AutofillHints.newPassword],
             onSubmitted: (_) => _confirmPasswordFocusNode.requestFocus(),
@@ -116,6 +124,16 @@ class _EmailRegistrationFormState extends State<EmailRegistrationForm> {
             decoration: _decoration(
               labelText: l10n.commonPassword,
               errorText: widget.passwordError,
+              suffixIcon: IconButton(
+                onPressed: () {
+                  setState(() => _obscurePassword = !_obscurePassword);
+                },
+                icon: Icon(
+                  _obscurePassword
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                ),
+              ),
               border: border,
               colorScheme: colorScheme,
               compact: widget.compact,
@@ -125,7 +143,7 @@ class _EmailRegistrationFormState extends State<EmailRegistrationForm> {
           TextField(
             controller: widget.confirmPasswordController,
             focusNode: _confirmPasswordFocusNode,
-            obscureText: true,
+            obscureText: _obscureConfirmPassword,
             textInputAction:
                 widget.showUsername && widget.usernameController != null
                     ? TextInputAction.next
@@ -142,14 +160,25 @@ class _EmailRegistrationFormState extends State<EmailRegistrationForm> {
             decoration: _decoration(
               labelText: l10n.commonConfirmPassword,
               errorText: widget.confirmPasswordError,
+              suffixIcon: IconButton(
+                onPressed: () {
+                  setState(
+                      () => _obscureConfirmPassword = !_obscureConfirmPassword);
+                },
+                icon: Icon(
+                  _obscureConfirmPassword
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                ),
+              ),
               border: border,
               colorScheme: colorScheme,
               compact: widget.compact,
             ),
           ),
-          if (!widget.compact &&
-              widget.showUsername &&
-              widget.usernameController != null) ...[
+          if (widget.showUsername &&
+              widget.usernameController != null &&
+              (!widget.compact || widget.showUsernameInCompact)) ...[
             SizedBox(height: fieldSpacing),
             TextField(
               controller: widget.usernameController,
@@ -160,7 +189,10 @@ class _EmailRegistrationFormState extends State<EmailRegistrationForm> {
               onTapOutside: (_) =>
                   FocusManager.instance.primaryFocus?.unfocus(),
               decoration: _decoration(
-                labelText: l10n.commonUsernameOptional,
+                labelText: widget.requireUsername
+                    ? l10n.profileEditUsernameHint
+                    : l10n.commonUsernameOptional,
+                errorText: widget.usernameError,
                 border: border,
                 colorScheme: colorScheme,
                 compact: widget.compact,
@@ -191,10 +223,12 @@ class _EmailRegistrationFormState extends State<EmailRegistrationForm> {
     required ColorScheme colorScheme,
     bool compact = false,
     String? errorText,
+    Widget? suffixIcon,
   }) {
     return InputDecoration(
       labelText: labelText,
       errorText: errorText,
+      suffixIcon: suffixIcon,
       filled: true,
       fillColor: Colors.white.withValues(alpha: 0.06),
       contentPadding: EdgeInsets.symmetric(

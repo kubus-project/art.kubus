@@ -27,6 +27,7 @@ import '../../widgets/kubus_button.dart';
 import '../../widgets/auth_entry_shell.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
+import '../../utils/auth_google_wallet.dart';
 import '../web3/wallet/connectwallet_screen.dart';
 import '../desktop/desktop_shell.dart';
 import '../community/profile_edit_screen.dart';
@@ -63,6 +64,7 @@ class _SignInScreenState extends State<SignInScreen> {
   final _passwordFocusNode = FocusNode();
   bool _isEmailSubmitting = false;
   bool _isGoogleSubmitting = false;
+  bool _obscureEmailPassword = true;
   int? _googleRateLimitUntilMs;
   String _googleAuthDiagStage = 'idle';
   String? _googleAuthDiagCode;
@@ -213,12 +215,21 @@ class _SignInScreenState extends State<SignInScreen> {
     } catch (e) {
       AppConfig.debugPrint('SignInScreen: wallet provisioning failed: $e');
     }
-    final normalizedWalletAddress = (walletAddress ?? '').toString().trim();
+    var normalizedWalletAddress = (walletAddress ?? '').toString().trim();
+    final lastSignInMethod = await BackendApiService().getLastSignInMethod();
     if (isNewAccount &&
-        normalizedWalletAddress.isNotEmpty &&
-        walletProvider.hasSigner &&
-        (walletProvider.currentWalletAddress ?? '').trim() ==
-            normalizedWalletAddress) {
+        !walletProvider.hasSigner &&
+        lastSignInMethod == AuthSignInMethod.google) {
+      final reboundWalletAddress = await _bindManagedWalletForNewAccount(
+        currentWalletAddress: normalizedWalletAddress,
+      );
+      normalizedWalletAddress = (reboundWalletAddress ?? '').trim();
+      if (normalizedWalletAddress.isNotEmpty) {
+        walletAddress = normalizedWalletAddress;
+      }
+    }
+    if (isNewAccount &&
+        normalizedWalletAddress.isNotEmpty) {
       try {
         await walletProvider.setMnemonicBackupRequired(
           required: true,
@@ -573,9 +584,9 @@ class _SignInScreenState extends State<SignInScreen> {
 
     final api = BackendApiService();
     _setGoogleAuthDiagnostics('backend_exchange');
-
     // For email account merge: pass email but NOT username to avoid overwriting
-    // existing account data. Backend preserves existing username/avatar/name.
+    // existing account data. Backend preserves existing username/avatar/name
+    // for existing users and only uses walletAddress when creating a new user.
     Map<String, dynamic> result;
     try {
       result = await api.loginWithGoogle(
@@ -583,6 +594,7 @@ class _SignInScreenState extends State<SignInScreen> {
         code: googleResult.serverAuthCode,
         email: googleResult.email,
         username: null,
+        walletAddress: _signerBackedWalletForGoogleAuth(),
       );
     } catch (e) {
       _setGoogleAuthDiagnostics('backend_error', code: _googleErrorCode(e));
@@ -600,6 +612,50 @@ class _SignInScreenState extends State<SignInScreen> {
     _setGoogleAuthDiagnostics('profile_hydration');
     await _handleAuthSuccess(result);
     _setGoogleAuthDiagnostics('success');
+  }
+
+  String? _signerBackedWalletForGoogleAuth() {
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    return signerBackedGoogleWalletAddress(
+      hasSigner: walletProvider.hasSigner,
+      currentWalletAddress: walletProvider.currentWalletAddress,
+    );
+  }
+
+  Future<String?> _bindManagedWalletForNewAccount({
+    required String currentWalletAddress,
+  }) async {
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final previousWalletAddress = currentWalletAddress.trim();
+    try {
+      final result = await walletProvider.createWallet();
+      final managedWalletAddress = (result['address'] ?? '').trim();
+      if (managedWalletAddress.isEmpty) {
+        return previousWalletAddress.isEmpty ? null : previousWalletAddress;
+      }
+      final bindResult =
+          await BackendApiService().bindAuthenticatedWallet(managedWalletAddress);
+      final data = (bindResult['data'] as Map<String, dynamic>?) ?? bindResult;
+      final user = (data['user'] as Map<String, dynamic>?) ?? data;
+      final reboundWalletAddress =
+          (user['walletAddress'] ?? user['wallet_address'] ?? '')
+              .toString()
+              .trim();
+      return reboundWalletAddress.isEmpty
+          ? managedWalletAddress
+          : reboundWalletAddress;
+    } catch (e) {
+      AppConfig.debugPrint(
+          'SignInScreen: failed to bind managed wallet after auth: $e');
+      if (previousWalletAddress.isNotEmpty) {
+        try {
+          await walletProvider
+              .connectWalletWithAddress(previousWalletAddress)
+              .timeout(const Duration(seconds: 6));
+        } catch (_) {}
+      }
+      return previousWalletAddress.isEmpty ? null : previousWalletAddress;
+    }
   }
 
   Future<void> _openConnectWalletRoute(AuthWalletEntryOption option) async {
@@ -892,7 +948,7 @@ class _SignInScreenState extends State<SignInScreen> {
         TextField(
           controller: _passwordController,
           focusNode: _passwordFocusNode,
-          obscureText: true,
+          obscureText: _obscureEmailPassword,
           textInputAction: TextInputAction.done,
           autofillHints: const [AutofillHints.password],
           onSubmitted: (_) => _submitEmail(),
@@ -901,6 +957,16 @@ class _SignInScreenState extends State<SignInScreen> {
             context,
             label: AppLocalizations.of(context)!.commonPassword,
             compact: compact,
+            suffixIcon: IconButton(
+              onPressed: () {
+                setState(() => _obscureEmailPassword = !_obscureEmailPassword);
+              },
+              icon: Icon(
+                _obscureEmailPassword
+                    ? Icons.visibility_outlined
+                    : Icons.visibility_off_outlined,
+              ),
+            ),
           ),
         ),
         Align(
@@ -970,6 +1036,7 @@ class _SignInScreenState extends State<SignInScreen> {
     BuildContext context, {
     required String label,
     bool compact = false,
+    Widget? suffixIcon,
   }) {
     final scheme = Theme.of(context).colorScheme;
     final border = OutlineInputBorder(
@@ -980,6 +1047,7 @@ class _SignInScreenState extends State<SignInScreen> {
     );
     return InputDecoration(
       labelText: label,
+      suffixIcon: suffixIcon,
       filled: true,
       fillColor: scheme.surface.withValues(alpha: 0.54),
       contentPadding: EdgeInsets.symmetric(

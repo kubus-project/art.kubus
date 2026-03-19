@@ -613,7 +613,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final fromProfile = (profileProvider.currentUser?.walletAddress ?? '').trim();
+    final fromProfile =
+        (profileProvider.currentUser?.walletAddress ?? '').trim();
     if (fromProfile.isNotEmpty) return fromProfile;
     final fromWallet = (walletProvider.currentWalletAddress ?? '').trim();
     if (fromWallet.isNotEmpty) return fromWallet;
@@ -2924,11 +2925,12 @@ class _AccountStepState extends State<_AccountStep> {
                   : AuthMethodsPanel(
                       embedded: true,
                       onAuthSuccess: widget.onAuthCompleted,
+                      requireUsernameForEmailRegistration: true,
                       preferredEmailGreetingName:
                           widget.profileDisplayName.trim().isEmpty
                               ? null
                               : widget.profileDisplayName.trim(),
-                      prepareProvisionalProfileBeforeRegister: false,
+                      prepareProvisionalProfileBeforeRegister: true,
                       onEmailRegistrationAttempted: (email) =>
                           unawaited(widget.onEmailRegistrationAttempted(email)),
                       onVerificationRequired: widget.onVerificationRequired,

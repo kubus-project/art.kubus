@@ -474,6 +474,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authAccountAlreadyExistsToast => 'An account with this email already exists. Sign in instead.';
 
   @override
+  String get authUsernameAlreadyTaken => 'Username already taken';
+
+  @override
   String get authEmailSignInFailed => 'Email sign-in failed. Please try again.';
 
   @override
@@ -7310,6 +7313,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileEditUsernameMinLengthError => 'Username must be at least 3 characters';
+
+  @override
+  String get profileEditUsernameMaxLengthError => 'Username must be 50 characters or fewer';
 
   @override
   String get profileEditDisplayNameLabel => 'Display name';
