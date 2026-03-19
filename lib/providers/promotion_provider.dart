@@ -369,6 +369,42 @@ class PromotionProvider extends ChangeNotifier {
     }
   }
 
+  /// Submit a dynamic promotion request using rate cards (new system).
+  Future<PromotionRequestSubmission?> submitDynamicPromotionRequest({
+    required String targetEntityId,
+    required PromotionEntityType entityType,
+    required String rateCardId,
+    required int durationDays,
+    required PromotionPaymentMethod paymentMethod,
+    int? slotIndex,
+    DateTime? startDate,
+  }) async {
+    if (_submitting) return null;
+    _submitting = true;
+    _error = null;
+    notifyListeners();
+    try {
+      final submission = await _api.createDynamicPromotionRequest(
+        targetEntityId: targetEntityId,
+        entityType: entityType,
+        rateCardId: rateCardId,
+        durationDays: durationDays,
+        paymentMethod: paymentMethod,
+        slotIndex: slotIndex,
+        startDate: startDate,
+      );
+      _myRequests.removeWhere((r) => r.id == submission.request.id);
+      _myRequests.insert(0, submission.request);
+      return submission;
+    } catch (e) {
+      _error = e.toString();
+      rethrow;
+    } finally {
+      _submitting = false;
+      notifyListeners();
+    }
+  }
+
   // ===========================================================================
   // FEATURED HOME (public promotions)
   // ===========================================================================

@@ -186,24 +186,15 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
     final navigator = Navigator.of(context);
 
     try {
-      // Compatibility path: backend submission currently accepts packageId.
-      // Resolve closest legacy package from selected tier + duration.
-      final packageId = await provider.resolveLegacyPackageIdForTier(
-        entityType: widget.entityType,
-        placementTier: rateCard.placementTier,
-        durationDays: quote.durationDays,
-      );
-
-      if (!mounted) return;
-
-      final effectivePackageId = packageId ?? rateCard.id;
-
-      final submission = await provider.submitPromotionRequest(
+      // Use the new dynamic rate-card-based submission endpoint
+      final submission = await provider.submitDynamicPromotionRequest(
         targetEntityId: widget.entityId,
         entityType: widget.entityType,
-        packageId: effectivePackageId,
+        rateCardId: rateCard.id,
+        durationDays: _durationDays,
         paymentMethod: _paymentMethod,
-        requestedStartDate: _startDate,
+        slotIndex: rateCard.isSlotBased ? _selectedSlot : null,
+        startDate: _startDate,
       );
 
       if (!mounted) return;
@@ -449,7 +440,7 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
               if (_selectedRateCard != null) ...[
                 _StartDatePicker(
                   startDate: _startDate,
-                  maxDaysAhead: 30,
+                  maxDaysAhead: 90, // Match backend MAX_BOOKING_DAYS_AHEAD
                   onChanged: (date) {
                     setState(() => _startDate = date);
                     _updateQuote();

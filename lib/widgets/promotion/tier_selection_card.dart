@@ -143,7 +143,7 @@ class TierSelectionCard extends StatelessWidget {
       case PromotionPlacementTier.premium:
         return roles.achievementGold;
       case PromotionPlacementTier.featured:
-        return roles.statTeal;
+        return roles.negativeAction; // Red for Featured tier
       case PromotionPlacementTier.boost:
         return colors.primary;
     }

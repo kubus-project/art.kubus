@@ -3261,6 +3261,53 @@ class BackendApiService
     }
   }
 
+  /// Create a dynamic promotion request using rate cards.
+  /// POST /api/app/promotion-requests-dynamic
+  Future<PromotionRequestSubmission> createDynamicPromotionRequest({
+    required String targetEntityId,
+    required PromotionEntityType entityType,
+    required String rateCardId,
+    required int durationDays,
+    required PromotionPaymentMethod paymentMethod,
+    int? slotIndex,
+    DateTime? startDate,
+  }) async {
+    try {
+      await _ensureAuthBeforeRequest();
+      final uri = Uri.parse('$baseUrl/api/app/promotion-requests-dynamic');
+      final payload = <String, dynamic>{
+        'targetEntityId': targetEntityId,
+        'entityType': entityType.apiValue,
+        'rateCardId': rateCardId,
+        'durationDays': durationDays,
+        'paymentMethod': paymentMethod.apiValue,
+        if (slotIndex != null) 'slotIndex': slotIndex,
+        if (startDate != null) 'startDate': startDate.toIso8601String(),
+      };
+      final response = await _post(
+        uri,
+        headers: _getHeaders(),
+        body: jsonEncode(payload),
+      );
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: uri.path,
+          body: response.body,
+        );
+      }
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) {
+        return PromotionRequestSubmission.fromJson(decoded);
+      }
+      throw Exception('Invalid promotion request response payload');
+    } catch (e) {
+      AppConfig.debugPrint(
+          'BackendApiService.createDynamicPromotionRequest failed: $e');
+      rethrow;
+    }
+  }
+
   /// Get my promotion requests.
   /// GET /api/app/promotion-requests/me
   Future<List<PromotionRequest>> getMyPromotionRequests() async {
