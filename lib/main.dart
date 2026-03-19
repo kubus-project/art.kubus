@@ -76,6 +76,7 @@ import 'screens/art/ar_screen.dart';
 import 'screens/art/art_detail_screen.dart';
 import 'screens/desktop/art/desktop_artwork_detail_screen.dart';
 import 'screens/desktop/desktop_shell.dart';
+import 'screens/desktop/web3/desktop_connect_wallet_screen.dart';
 import 'screens/web3/wallet/connectwallet_screen.dart';
 import 'screens/web3/promotions/promotion_checkout_return_screen.dart';
 // user_service initialization moved to profile and wallet flows.
@@ -951,9 +952,18 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
                       attendanceMarkerId: attendanceMarkerId,
                     );
             },
-            '/connect-wallet': (context) => const ConnectWallet(),
-            '/wallet_connect': (context) => const ConnectWallet(),
-            '/connect_wallet': (context) => const ConnectWallet(),
+            '/connect-wallet': (context) => DesktopBreakpoints.isDesktop(context)
+                ? const DesktopConnectWalletScreen()
+                : const ConnectWallet(),
+            '/wallet_connect': (context) => DesktopBreakpoints.isDesktop(context)
+                ? const DesktopConnectWalletScreen()
+                : const ConnectWallet(),
+            '/connect_wallet': (context) => DesktopBreakpoints.isDesktop(context)
+                ? const DesktopConnectWalletScreen()
+                : const ConnectWallet(),
+            '/import-wallet': (context) => DesktopBreakpoints.isDesktop(context)
+                ? const DesktopConnectWalletScreen(initialStep: 1)
+                : const ConnectWallet(initialStep: 1),
             '/sign-in': (context) {
               final args = ModalRoute.of(context)?.settings.arguments;
               if (args is Map) {

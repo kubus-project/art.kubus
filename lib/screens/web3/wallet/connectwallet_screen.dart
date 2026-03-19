@@ -22,7 +22,6 @@ import '../../../services/user_service.dart';
 import '../../../services/telemetry/telemetry_service.dart';
 import '../../../services/wallet_session_sync_service.dart';
 import '../../../models/user.dart';
-import '../../desktop/desktop_shell.dart';
 import '../../../widgets/auth_wallet_entry_menu.dart';
 import '../../../widgets/gradient_icon_card.dart';
 import '../../../widgets/kubus_button.dart';
